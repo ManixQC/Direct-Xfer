@@ -38,6 +38,12 @@ services:
       # Behind a reverse proxy, ALSO set TRUST_PROXY so the real visitor IP is used.
       # ADMIN_ALLOWED_IPS: "203.0.113.5, 198.51.100.0/24"
       # TRUST_PROXY: "1"
+      # Public HTTPS address of this instance, as seen by the browser. REQUIRED
+      # behind an HTTPS reverse proxy: it is the origin the PWA is allowed to POST
+      # to. Without it (and without TRUST_PROXY so X-Forwarded-Proto is honored),
+      # /app mutations such as creating a reception link fail with 403 invalid-origin
+      # ("Could not create the link" in the PWA). Also fixes generated link URLs.
+      # PUBLIC_URL: "https://your-domain.example"
       # Public resource guards (defaults shown). Set a byte cap to 0 only if a
       # reverse proxy or another layer already enforces equivalent limits.
       # MAX_UPLOAD_BYTES: "10737418240"       # 10 GiB per received file
@@ -53,7 +59,9 @@ services:
       # Native HTTPS (so encrypted shares / secret notes / E2E reception work
       # without a reverse proxy — WebCrypto needs a secure context). Provide a
       # cert/key pair, OR set TLS_SELF_SIGNED to auto-generate one (cached in
-      # /data/tls; browsers warn once on the self-signed cert). Serves HTTPS on PORT.
+      # /data/tls). Android WebAPK installation requires a certificate trusted by
+      # Chrome; an untrusted self-signed certificate still yields only a shortcut.
+      # Serves HTTPS on PORT.
       # TLS_SELF_SIGNED: "true"
       # TLS_CERT: "/data/tls/fullchain.pem"
       # TLS_KEY: "/data/tls/privkey.pem"

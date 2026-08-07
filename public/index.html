@@ -29,7 +29,7 @@
           <p id="setup-warn-images" class="sm hidden" data-i18n="setup.images"></p>
           <p class="sm setup-hint" data-i18n="setup.hint"></p>
         </div>
-        <a class="pwa-cta login-pwa btn ghost sm" href="/app/" data-i18n="pwa.openApp">📱 Mobile send app</a>
+        <a class="pwa-cta login-pwa btn ghost sm" href="/app" data-i18n="pwa.openApp">📱 Mobile send app</a>
         <select class="lang-select login-lang" aria-label="Language">
           <option value="fr">Français</option>
           <option value="en">English</option>
@@ -55,9 +55,21 @@
           type="password"
           data-i18n-ph="login.password"
           placeholder="Password"
-          autocomplete="current-password"
+          autocomplete="off"
+          readonly
           required
         />
+        <div class="login-remember-options">
+          <label class="login-check" for="remember-username">
+            <input id="remember-username" type="checkbox" />
+            <span data-i18n="login.rememberUsername">Se souvenir du nom d’utilisateur</span>
+          </label>
+          <label class="login-check" for="remember-password">
+            <input id="remember-password" type="checkbox" />
+            <span data-i18n="login.rememberPassword">Se souvenir du mot de passe</span>
+          </label>
+          <small data-i18n="login.rememberPasswordHint">Le mot de passe est chiffré dans ce navigateur uniquement lorsque cette case est cochée.</small>
+        </div>
         <div id="login-totp-row" class="hidden">
           <p class="muted sm" data-i18n="login.totpHint">Enter the 6-digit code from your authenticator app (or a recovery code).</p>
           <input
@@ -81,7 +93,7 @@
     <!-- ===================== Application ===================== -->
     <main id="app-view" class="app-view hidden">
       <header class="topbar">
-        <div class="brand admin-brand"><img class="brand-logo" src="/logo.svg" alt="" /> <span data-i18n="app.name">Direct-Xfer</span></div>
+        <div class="brand admin-brand"><img class="brand-logo brand-home" src="/logo.svg" alt="" role="link" tabindex="0" data-i18n-title="menu.backToShares" title="Back to shares" /> <span class="brand-home" role="link" tabindex="0" data-i18n-title="menu.backToShares" title="Back to shares" data-i18n="app.name">Direct-Xfer</span></div>
         <div class="topbar-menus">
           <a class="pwa-cta btn ghost sm" href="/app/" data-i18n="pwa.openApp" title="Mobile send app">📱 Mobile send app</a>
           <div class="dash-menu">
@@ -323,8 +335,8 @@
           <button id="dashboards-back" class="icon-btn" data-i18n-title="dashboards.back" title="Back" aria-label="Back">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M15.5 4.5 8 12l7.5 7.5 1.4-1.4L10.8 12l6.1-6.1z"/></svg>
           </button>
-          <img class="brand-logo" src="/logo.svg" alt="" />
-          <span data-i18n="dashboards.title">Dashboards</span>
+          <img class="brand-logo brand-home" src="/logo.svg" alt="" role="link" tabindex="0" data-i18n-title="menu.backToShares" title="Back to shares" />
+          <span class="brand-home" role="link" tabindex="0" data-i18n-title="menu.backToShares" title="Back to shares" data-i18n="dashboards.title">Dashboards</span>
         </div>
         <div class="topbar-menus">
           <div class="dashboard-tabs" role="tablist" data-i18n-aria="dashboards.title" aria-label="Dashboards">
@@ -680,8 +692,8 @@
           <button id="images-back" class="icon-btn" data-i18n-title="photo.back" title="Back" aria-label="Back">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M15.5 4.5 8 12l7.5 7.5 1.4-1.4L10.8 12l6.1-6.1z"/></svg>
           </button>
-          <img class="brand-logo" src="/logo.svg" alt="" />
-          <span data-i18n="photo.title">Images</span>
+          <img class="brand-logo brand-home" src="/logo.svg" alt="" role="link" tabindex="0" data-i18n-title="menu.backToShares" title="Back to shares" />
+          <span class="brand-home" role="link" tabindex="0" data-i18n-title="menu.backToShares" title="Back to shares" data-i18n="photo.title">Images</span>
         </div>
         <div class="topbar-menus">
           <button id="images-dash-btn" class="btn ghost sm" aria-controls="dashboards-page" data-i18n="idash.toggle">📊 Dashboard</button>
@@ -771,6 +783,15 @@
           </select>
           <button id="photos-favorites-toggle" class="btn ghost sm" type="button" aria-pressed="false" data-i18n="photo.favoritesOnly">☆ Favorites</button>
           <button id="photos-filter-reset" class="btn ghost sm" type="button" data-i18n="photo.filterReset">Reset filters</button>
+        </div>
+        <div class="photos-upload-options">
+          <label class="photos-privacy-option" for="photos-strip-exif">
+            <input type="checkbox" id="photos-strip-exif" checked />
+            <span class="photos-privacy-copy">
+              <strong data-i18n="photo.stripExif">Nettoyer l’EXIF/GPS</strong>
+              <small class="muted" data-i18n="photo.stripExifHelp">Réencode les images localement avant le partage afin de retirer les métadonnées privées. Les images animées peuvent devenir statiques.</small>
+            </span>
+          </label>
         </div>
         <label id="photos-dropzone" class="photos-dropzone">
           <input type="file" id="photos-file-input" accept="image/*" multiple hidden />
@@ -2232,6 +2253,20 @@
       </div>
     </div>
 
+    <!-- EXIF/GPS details for one shared image (loaded on demand) -->
+    <div id="photo-exif-overlay" class="overlay hidden">
+      <div class="modal photo-exif-modal" role="dialog" aria-modal="true" aria-labelledby="photo-exif-title">
+        <div class="modal-head photo-exif-head">
+          <div>
+            <h3 id="photo-exif-title" data-i18n="photo.exifTitle">EXIF / GPS information</h3>
+            <p id="photo-exif-subtitle" class="muted sm"></p>
+          </div>
+          <button id="photo-exif-close" class="icon-btn" aria-label="Close">✕</button>
+        </div>
+        <div id="photo-exif-body" class="photo-exif-body" aria-live="polite"></div>
+      </div>
+    </div>
+
     <!-- Detailed statistics for a share or a shared image -->
     <div id="stats-overlay" class="overlay hidden">
       <div class="modal stats-modal" role="dialog" aria-modal="true" aria-labelledby="stats-title">
@@ -2258,6 +2293,7 @@
     </div>
 
     <div id="toast" class="toast hidden"></div>
+    <script src="/login-vault.js"></script>
     <script src="/dxcrypto.js"></script>
     <script src="/app.js"></script>
   </body>

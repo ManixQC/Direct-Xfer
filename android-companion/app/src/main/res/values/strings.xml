@@ -1,0 +1,205 @@
+<resources>
+    <string name="app_name">Direct-Xfer</string>
+    <string name="header_subtitle">Compagnon Android</string>
+    <string name="cd_app_icon">Logo Direct-Xfer</string>
+
+    <!-- Notification channels -->
+    <string name="notification_channel_uploads">Transferts Direct-Xfer</string>
+    <string name="notification_channel_uploads_description">Progression et résultat des transferts en arrière-plan</string>
+    <string name="notification_channel_results">Résultats des transferts</string>
+    <string name="notification_channel_results_description">Confirmation de réussite ou d\'échec des envois</string>
+
+    <!-- Notifications -->
+    <string name="notif_generic_title">Direct-Xfer</string>
+    <string name="notif_sending">Envoi : %1$s</string>
+    <string name="notif_progress">%1$d %% — reprise automatique active</string>
+    <string name="notif_waiting">En file d\'attente…</string>
+    <string name="notif_done_title">Envoi terminé</string>
+    <string name="notif_failed_title">Échec de l\'envoi</string>
+    <string name="notif_result_line">%1$s — %2$s</string>
+    <string name="notif_transfer_done">Transfert terminé</string>
+    <string name="action_cancel">Annuler</string>
+
+    <!-- Connection -->
+    <string name="connected">Connecté à %1$s</string>
+    <string name="not_connected">Non connecté — connexion administrateur requise une fois.</string>
+    <string name="btn_connect">Connecter / remplacer le serveur</string>
+    <string name="btn_pick_files">Choisir des fichiers</string>
+    <string name="btn_open_pwa">Ouvrir la PWA</string>
+
+    <!-- Sharing behaviour -->
+    <string name="section_share_behavior">Comportement du partage</string>
+    <string name="opt_image_links">Créer des liens d\'image pour les photos</string>
+    <string name="opt_clean_exif">Nettoyer EXIF/GPS avant l\'envoi des images</string>
+    <string name="opt_biometric">Verrouiller l\'application par biométrie/code</string>
+    <string name="opt_wifi_only">Envoyer uniquement en Wi-Fi</string>
+    <string name="btn_image_settings">Réglages image</string>
+    <string name="btn_language">Langue</string>
+    <string name="btn_battery">Fiabiliser la reprise (batterie)</string>
+
+    <!-- Destination -->
+    <string name="section_destination">Destination des fichiers ordinaires</string>
+    <string name="no_destination">Aucun lien de réception sélectionné.</string>
+    <string name="btn_add">Ajouter</string>
+    <string name="btn_choose">Choisir</string>
+
+    <!-- Queue -->
+    <string name="section_queue">File d\'envoi persistante</string>
+    <string name="queue_empty">Aucun transfert.</string>
+    <string name="btn_clear_finished">Effacer les terminés</string>
+    <string name="btn_pause_all">Tout suspendre</string>
+    <string name="btn_resume_all">Tout reprendre</string>
+    <string name="paused_banner">Transferts suspendus — appuyez sur « Tout reprendre ».</string>
+
+    <!-- Security -->
+    <string name="btn_test_connection">Tester la connexion</string>
+    <string name="btn_revoke">Révoquer l\'appareil</string>
+
+    <!-- Transfer states -->
+    <string name="state_queued">En attente</string>
+    <string name="state_running">Envoi</string>
+    <string name="state_success">Terminé</string>
+    <string name="state_failed">Erreur</string>
+    <string name="state_cancelled">Annulé</string>
+
+    <!-- Transfer card -->
+    <string name="card_meta">%1$s · %2$d %% · %3$s · tentative %4$d</string>
+    <string name="card_mode_image">Lien d\'image</string>
+    <string name="card_mode_reception">Réception → %1$s</string>
+    <string name="card_speed_eta">%1$s · reste ~%2$s</string>
+    <string name="btn_retry">Réessayer</string>
+    <string name="btn_copy_link">Copier le lien</string>
+    <string name="btn_share">Partager</string>
+    <string name="btn_open_link">Ouvrir le lien</string>
+    <string name="btn_remove">Retirer</string>
+    <string name="btn_details">Détails</string>
+    <string name="btn_prioritize">Prioriser</string>
+
+    <!-- Login dialog -->
+    <string name="dlg_login_title">Connecter le compagnon</string>
+    <string name="hint_server">https://votre-serveur</string>
+    <string name="hint_username">Nom d\'utilisateur</string>
+    <string name="hint_password">Mot de passe</string>
+    <string name="hint_totp">Code 2FA ou récupération (facultatif)</string>
+    <string name="btn_login">Connecter</string>
+    <string name="btn_login_progress">Connexion…</string>
+    <string name="toast_paired">Appareil associé ✓</string>
+    <string name="toast_login_failed">Échec : %1$s</string>
+
+    <!-- Destination dialogs -->
+    <string name="dlg_add_destination_title">Ajouter un lien de réception</string>
+    <string name="hint_dest_name">Nom de la destination</string>
+    <string name="default_dest_name">Réception</string>
+    <string name="hint_dest_link">https://…/u/…</string>
+    <string name="toast_invalid_link">Lien invalide</string>
+    <string name="dlg_choose_destination_title">Destinations</string>
+    <string name="btn_close">Fermer</string>
+    <string name="btn_rename">Renommer</string>
+    <string name="btn_delete">Supprimer</string>
+    <string name="dlg_rename_destination_title">Renommer la destination</string>
+    <string name="toast_destination_added">Destination ajoutée</string>
+    <string name="shared_destination_name">Réception partagée</string>
+    <string name="badge_selected">✓ </string>
+
+    <!-- Image settings dialog -->
+    <string name="dlg_image_settings_title">Réglages des images</string>
+    <string name="lbl_full_max">Côté max Pleine (px)</string>
+    <string name="lbl_thumb_max">Côté max Mini (px)</string>
+    <string name="lbl_micro_max">Côté max Micro (px)</string>
+    <string name="lbl_jpeg_quality">Qualité JPEG (1–100)</string>
+    <string name="btn_save">Enregistrer</string>
+
+    <!-- Language dialog -->
+    <string name="dlg_language_title">Langue</string>
+    <string name="lang_system">Système</string>
+    <string name="lang_fr">Français</string>
+    <string name="lang_en">English</string>
+    <string name="lang_es">Español</string>
+
+    <!-- Battery -->
+    <string name="battery_already">Optimisation batterie déjà désactivée ✓</string>
+    <string name="battery_unsupported">Réglage batterie indisponible sur cet appareil.</string>
+
+    <!-- Detail sheet -->
+    <string name="dlg_detail_title">Détails du transfert</string>
+    <string name="detail_name">Nom</string>
+    <string name="detail_mode">Mode</string>
+    <string name="detail_destination">Destination</string>
+    <string name="detail_state">État</string>
+    <string name="detail_size">Taille</string>
+    <string name="detail_sent">Envoyé</string>
+    <string name="detail_attempts">Tentatives</string>
+    <string name="detail_created">Créé</string>
+    <string name="detail_updated">Mis à jour</string>
+    <string name="detail_error">Erreur</string>
+    <string name="detail_link">Lien</string>
+    <string name="detail_qr_hint">Scannez pour ouvrir le lien</string>
+    <string name="detail_none">—</string>
+    <string name="cd_qr">QR du lien</string>
+
+    <!-- Revoke -->
+    <string name="dlg_revoke_title">Révoquer cet appareil ?</string>
+    <string name="dlg_revoke_message">Le jeton du compagnon sera supprimé du serveur. Les transferts en cours pourront échouer.</string>
+    <string name="btn_revoke_confirm">Révoquer</string>
+    <string name="toast_revoked">Appareil révoqué</string>
+
+    <!-- Misc -->
+    <string name="chooser_share_link">Partager le lien</string>
+    <string name="default_server">https://xfer.manix123.ca</string>
+    <string name="toast_connect_first_images">Connecte d\'abord le compagnon pour créer des liens d\'image.</string>
+    <string name="toast_add_reception_first">Ajoute d\'abord un lien de réception.</string>
+    <string name="toast_preparing">Préparation de %1$d fichier(s)…</string>
+    <string name="toast_added">%1$d transfert(s) ajouté(s)</string>
+    <string name="toast_error">Erreur : %1$s</string>
+    <string name="toast_copied">Copié</string>
+    <string name="toast_connection_ok">Connexion valide — %1$s</string>
+    <string name="toast_cannot_read">Impossible de lire %1$s</string>
+    <string name="device_default">appareil</string>
+    <string name="toast_paused_all">Transferts suspendus</string>
+    <string name="toast_resumed_all">Reprise des transferts</string>
+    <string name="toast_cleared">%1$d transfert(s) effacé(s)</string>
+    <string name="toast_prioritized">Placé en priorité</string>
+    <string name="version_footer">Version %1$s</string>
+
+    <!-- App shortcuts -->
+    <string name="shortcut_pick_short">Fichiers</string>
+    <string name="shortcut_pick_long">Choisir des fichiers</string>
+    <string name="shortcut_pwa_short">PWA</string>
+    <string name="shortcut_pwa_long">Ouvrir la PWA</string>
+
+    <!-- Bottom navigation (mirrors the PWA panels) -->
+    <string name="title_send">Envoyer</string>
+    <string name="nav_send">Envoyer</string>
+    <string name="nav_send_hint">Préparer et envoyer des fichiers vers une destination.</string>
+    <string name="nav_images">Images</string>
+    <string name="nav_images_hint">Créer, gérer et suivre vos liens d\'image.</string>
+    <string name="nav_activity">Activité</string>
+    <string name="nav_activity_hint">Consulter l\'historique local des transferts.</string>
+    <string name="nav_settings">Réglages</string>
+    <string name="nav_settings_hint">Configurer le compagnon, la sécurité et le stockage.</string>
+
+    <!-- Header -->
+    <string name="paired_badge">Appareil associé</string>
+    <string name="network_online">En ligne</string>
+    <string name="network_offline">Hors ligne</string>
+    <string name="cd_open_admin">Ouvrir l\'administration</string>
+
+    <!-- Panels -->
+    <string name="section_files">Fichiers</string>
+    <string name="btn_pick_camera">Photo</string>
+    <string name="btn_pick_image_links">Ajouter des images</string>
+    <string name="images_title">Liens d\'image</string>
+    <string name="images_hint">Créez des liens directs : chaque lien offre les versions Pleine, Mini et Micro.</string>
+    <string name="images_library">Vos liens</string>
+    <string name="images_empty">Aucun lien d\'image pour l\'instant.</string>
+    <string name="activity_title">Activité</string>
+    <string name="activity_empty">Aucun transfert terminé sur cet appareil.</string>
+    <string name="btn_copy_full">🔗 Pleine</string>
+    <string name="btn_copy_mini">🔗 Mini</string>
+    <string name="btn_copy_micro">🔗 Micro</string>
+    <string name="btn_qr">QR</string>
+    <string name="group_security">Sécurité et appareil</string>
+    <string name="group_appearance">Apparence et langue</string>
+    <string name="group_images">Images</string>
+    <string name="group_network">Réseau et reprise</string>
+</resources>

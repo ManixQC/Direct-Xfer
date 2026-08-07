@@ -63,6 +63,12 @@ link domain is set in the UI.
   sheet** (Web Share Target), add reception links by **QR scan**, unlock password links,
   upload chunked+resumable, works offline. Needs an **admin login** and a **secure
   context** (HTTPS or `localhost`) for the camera.
+- **Native Android companion** (`android-companion/`) — optional Android Studio
+  project with a real system share target, a persistent WorkManager upload queue,
+  resumable checkpoints across process death/device reboot/app updates, foreground
+  progress notifications, local EXIF/GPS cleanup, Android Keystore storage
+  and biometric/device-credential locking. It pairs once through an administrator login
+  and receives a revocable device token limited to the mobile `/app` capability.
 - **Manage & find** — live **usage bar** per card, **sort/filters**, **keyboard
   shortcuts** (`N`/`R`/`C` new, `/` filter, `?` help), a **shares summary** (count /
   active / size), a **private admin note** per link, bounded **full-text content
@@ -101,6 +107,24 @@ Forward `55750/tcp`. For **HTTPS**, put a reverse proxy in front and add
 always allowed; otherwise admin stays LAN-only). If a reception link goes through the
 proxy, disable request buffering for it (Nginx: `proxy_request_buffering off;`) so
 uploads progress live. On **Unraid**, set `PUID: "99"` / `PGID: "100"` so data persists.
+
+### Android PWA installation
+
+A full Android installation (WebAPK, Share Target, standalone window) requires an
+**HTTPS URL with a certificate trusted by Android/Chrome**. Opening Direct-Xfer through
+`http://192.168.x.x:55750` can only create a home-screen shortcut. Prefer a reverse
+proxy with a valid certificate, set `PUBLIC_URL` to that HTTPS address and
+`TRUST_PROXY: "1"`, then uninstall the old shortcut and install again from Chrome.
+`TLS_SELF_SIGNED` does not qualify unless the certificate is explicitly trusted by the
+Android device.
+
+When using **Cloudflare Access**, the PWA installation assets must not be redirected to
+an Access sign-in page. Create a path-specific **Bypass / Everyone** policy for these
+public static endpoints only: `/direct-xfer-pwa-sw.js*`,
+`/direct-xfer-pwa*.webmanifest*`, `/app/launch*`, `/app/icon*`,
+`/app/apple-touch-icon.png` and `/app/screenshot-*`. Keep `/app/`, `/app/login` and all
+`/app/*` APIs protected by Direct-Xfer authentication. A service-worker script behind
+any HTTP redirect is rejected by Chrome, even when the final response is `200 OK`.
 
 ### Security
 
@@ -161,6 +185,11 @@ compagnon installable est à `…/app`. Le domaine des liens se règle dans l'in
   liens par **scan de QR**, déverrouillez les liens protégés, téléversez par morceaux avec
   reprise, hors ligne. Exige une **connexion admin** et un **contexte sécurisé** (HTTPS
   ou `localhost`) pour la caméra.
+- **Compagnon Android natif** (`android-companion/`) — projet Android Studio
+  facultatif avec une véritable cible de partage système, une file WorkManager
+  persistante, des notifications de progression au premier plan, le nettoyage EXIF/GPS
+  local, le stockage Android Keystore et un verrou biométrique/code de l’appareil. Une
+  connexion administrateur initiale crée un jeton révocable limité aux fonctions `/app`.
 - **Gérer & trouver** — **barre d'utilisation** par carte, **tri/filtres**, **raccourcis
   clavier** (`N`/`R`/`C`, `/` filtre, `?` aide), un **résumé** (nombre / actifs / taille),
   une **note privée admin** par lien, une **recherche plein-texte** bornée, un **journal
@@ -202,6 +231,17 @@ loopback est toujours autorisé ; sinon l'admin reste limitée au LAN). Si un li
 réception passe par le proxy, désactivez-y la mise en tampon des requêtes (Nginx :
 `proxy_request_buffering off;`) pour un suivi en temps réel. Sur **Unraid**, réglez
 `PUID: "99"` / `PGID: "100"` pour la persistance des données.
+
+### Installation PWA Android
+
+Une installation Android complète exige une URL **HTTPS** avec certificat reconnu.
+Avec **Cloudflare Access**, ajoutez une application/règle de chemin avec l’action
+**Bypass** et le sélecteur **Everyone**, uniquement pour les ressources statiques
+suivantes : `/direct-xfer-pwa-sw.js*`, `/direct-xfer-pwa*.webmanifest*`,
+`/app/launch*`, `/app/icon*`, `/app/apple-touch-icon.png` et `/app/screenshot-*`.
+Conservez `/app/`, `/app/login` et toutes les API `/app/*` sous l’authentification
+Direct-Xfer. Chrome refuse un service worker qui traverse la moindre redirection HTTP,
+même lorsque la réponse finale est `200 OK`.
 
 ### Sécurité
 
@@ -262,6 +302,12 @@ está en `…/app`. El dominio de los enlaces se ajusta en la interfaz.
   **hoja de compartir** del sistema (Web Share Target), añade enlaces por **escaneo de
   QR**, desbloquea enlaces protegidos, sube por fragmentos y reanudable, sin conexión.
   Requiere **inicio de sesión admin** y un **contexto seguro** (HTTPS o `localhost`) para la cámara.
+- **Compañero Android nativo** (`android-companion/`) — proyecto opcional de Android
+  Studio con destino de compartir del sistema, cola persistente WorkManager,
+  notificaciones de progreso, limpieza EXIF/GPS local, almacenamiento Android Keystore
+  y bloqueo biométrico o por credencial del dispositivo. El inicio de sesión inicial de
+  administrador crea un token revocable limitado a las funciones móviles `/app`.
+
 - **Gestionar y buscar** — **barra de uso** por tarjeta, **orden/filtros**, **atajos de
   teclado** (`N`/`R`/`C`, `/` filtro, `?` ayuda), un **resumen** (número / activos /
   tamaño), una **nota privada de admin** por enlace, una **búsqueda de texto completo**
@@ -340,6 +386,9 @@ services:
       # ADMIN_ALLOW_ANY: "true"    # admin outside the local network
       # ADMIN_ALLOWED_IPS: "203.0.113.5, 198.51.100.0/24"
       # TRUST_PROXY: "1"           # behind a reverse proxy (evaluate the real visitor IP)
+      # PUBLIC_URL: "https://your-domain.example"   # REQUIRED behind an HTTPS reverse proxy
+      #                            # (the origin the PWA may POST to). Without it (and TRUST_PROXY),
+      #                            # creating a reception link fails with 403 invalid-origin.
       # DATA_KEY: "a-long-random-secret"   # encrypt shares.json at rest (keep it SAFE & STABLE)
       # TLS_SELF_SIGNED: "true"    # native HTTPS on PORT (or TLS_CERT / TLS_KEY)
       # SMTP_URL: "smtps://user:pass@smtp.example.com:465"
@@ -383,7 +432,7 @@ window. (Shared reference — variable names are identical in every language.)
 | `TRUST_PROXY` | `false` | Trust `X-Forwarded-For` (set behind a reverse proxy for the real visitor IP). |
 | `PUBLIC_URL` / `PUBLIC_HOST` | *(auto)* | Base URL/host used to build share links. |
 | `DATA_KEY` | *(empty)* | Encrypt the metadata store (`shares.json`) at rest (AES-256-GCM). Keep it **safe & stable** — if lost/changed the store can't be read and the container won't start. |
-| `TLS_SELF_SIGNED` | `false` | Serve **HTTPS** on `PORT` with an auto self-signed cert (cached in `/data/tls`). Unblocks encrypted shares/secret notes/E2E without a reverse proxy. |
+| `TLS_SELF_SIGNED` | `false` | Serve HTTPS on `PORT` with an auto self-signed cert (cached in `/data/tls`). An untrusted self-signed certificate does **not** qualify for Android WebAPK installation. |
 | `TLS_CERT` / `TLS_KEY` | *(empty)* | Paths to a PEM cert + key to serve HTTPS (takes precedence over `TLS_SELF_SIGNED`). |
 | `SMTP_URL` | *(empty)* | SMTP transport for e-mail notifications (e.g. `smtps://user:pass@host:465`). Overrides the in-app fields. |
 | `EMAIL_FROM` / `EMAIL_TO` | *(empty)* | Default sender / recipient for e-mail notifications. |
@@ -438,3 +487,141 @@ https://raw.githubusercontent.com/ManixQC/Direct-Xfer/refs/heads/main/unraid/dir
 If an old missing icon remains cached, use the supplied XML template or remove and
 re-add the container from its saved template. Application data remains in the mapped
 `/data` and `/Direct-Xfer` host folders.
+
+## PWA — fonctions avancées ajoutées (build pwa80)
+
+- **Remplacement d’image sans changer le lien** : la nouvelle image conserve le même jeton public. Les dix versions précédentes peuvent être restaurées depuis la carte de l’image.
+- **Liens de contribution temporaires** : un album peut recevoir des images via un lien limité dans le temps, en nombre de fichiers et en taille par fichier.
+- **Albums collaboratifs avec rôles** : invitations `reader`, `contributor` et `manager`. Un lecteur consulte, un contributeur ajoute des images et un gestionnaire peut aussi retirer des éléments de l’album.
+- **Optimisation adaptative** : l’URL `/i/<token>/auto` choisit Micro, Mini ou Pleine selon la largeur demandée et l’économie de données, puis privilégie AVIF ou WebP lorsque le navigateur les accepte et que la PWA a pu les générer.
+
+Les secrets des invitations ne sont jamais stockés en clair : seul leur hachage SHA-256 est conservé dans les métadonnées du serveur.
+
+## 1.28.0 — correctifs de connexion et installation mobile
+
+- Le mot de passe administrateur n’est conservé dans le coffre chiffré que lorsque la case correspondante est cochée.
+- Direct-Xfer n’enregistre plus les identifiants dans le gestionnaire de mots de passe du navigateur, ce qui permet à la case de rester l’unique source de vérité.
+- Les anciens secrets du coffre local sont supprimés automatiquement lorsque la mémorisation est désactivée.
+- Le logo Installer est de nouveau disponible sur la connexion mobile et reste visible pendant la préparation de l’invite native.
+- Cache PWA de la version 1.28.0 : `pwa82`.
+
+
+## PWA — reprise après fermeture (build pwa80)
+
+- Avant le premier bloc réseau, chaque fichier est copié dans l’**Origin Private File System (OPFS)** du navigateur lorsque cette API est disponible.
+- IndexedDB ne conserve que les métadonnées légères : destination, identifiant stable d’envoi, état et intention de reprise.
+- Si Android ferme la PWA, le fichier et l’identifiant d’envoi restent présents. À la prochaine ouverture, Direct-Xfer interroge le serveur pour connaître le dernier octet reçu et reprend automatiquement à cet endroit.
+- Les versions préparées (optimisation, nettoyage EXIF/GPS ou chiffrement) sont elles aussi conservées localement lorsqu’il reste assez d’espace.
+- Les transferts actifs sont enregistrés lors de `pagehide` et lorsque l’application passe en arrière-plan.
+- La suppression d’un transfert, sa réussite ou l’effacement des données locales supprime également ses fichiers OPFS.
+
+Une PWA ne peut pas garantir que le réseau continue à travailler après sa fermeture complète par Android. Cette fonction garantit la **conservation et la reprise automatique à la réouverture**. Pour un envoi qui continue réellement écran éteint ou application fermée, utilisez le compagnon Android natif inclus.
+
+
+## 1.29.0 — interface « Liens d’image » réorganisée (build pwa85)
+
+- La création de liens, les options avancées et la bibliothèque d’images sont maintenant séparées en zones distinctes.
+- Le sélecteur de format favori et le nettoyage EXIF/GPS sont regroupés avec l’ajout d’images.
+- La recherche, le tri et les filtres sont réunis dans une barre de gestion adaptée au mobile.
+- Les actions globales (copie groupée, QR et export CSV) sont rangées dans un panneau repliable.
+- Chaque carte d’image distingue clairement l’identité, les statistiques globales, les variantes Pleine/Mini/Micro et les actions.
+- Sur petit écran, les variantes et les groupes d’actions passent automatiquement sur une seule colonne.
+- Les aperçus ouverts depuis la PWA utilisent maintenant une route propriétaire authentifiée et ne modifient plus les vues ni les visiteurs publics.
+- Après une mise à jour, un appareil jumelé retrouve aussi les images des versions précédentes appartenant au compte qui l’a jumelé; les anciens enregistrements sans identifiant moderne restent récupérables par un appareil d’administrateur.
+- Cache PWA de la version 1.29.0 : `pwa85`, afin de forcer la mise à jour des installations existantes.
+
+
+## 1.30.0 — appareil d’origine, EXIF/GPS et indicateurs de confidentialité (build pwa87)
+
+- La page Images standard affiche le nom de l’appareil ayant téléversé chaque nouvelle image.
+- Les images envoyées par la PWA ou le compagnon Android conservent le nom de l’appareil jumelé; les ajouts Web, les fichiers choisis sur l’hôte et les contributions d’album reçoivent aussi une origine lisible.
+- Un bouton **EXIF / GPS** ouvre une fenêtre d’information à la demande avec l’appareil photo, l’objectif, la date, l’exposition, les dimensions et les coordonnées disponibles.
+- Les coordonnées GPS ne sont jamais ajoutées aux réponses périodiques de la galerie : elles sont lues uniquement après un clic, via une route administrateur authentifiée.
+- La lecture prend en charge les blocs TIFF/EXIF intégrés aux fichiers JPEG, PNG et WebP, sans nouvelle dépendance serveur.
+- Un lien OpenStreetMap est proposé lorsque des coordonnées valides sont présentes.
+- Cache PWA de la version 1.30.0 : `pwa87`.
+
+
+- Indicateur persistant « EXIF/GPS supprimés » sur toutes les interfaces d’images.
+
+
+## 1.30.1 — version de maintenance et persistance PWA (build pwa89)
+
+- Version du projet et du verrou de dépendances conservée à `1.30.1`.
+- Les fiches des images mises en ligne sont mises en cache dans IndexedDB et restaurées immédiatement au redémarrage, même hors ligne, avant la resynchronisation avec le serveur.
+- L’historique local des transferts dispose maintenant d’une sauvegarde redondante dans IndexedDB et `localStorage`; l’historique des actions d’image est migré vers IndexedDB.
+- L’état persistant est enregistré avant la fermeture de la PWA et avant l’activation d’une nouvelle version du service worker.
+- La PWA demande silencieusement au navigateur de protéger son stockage contre l’éviction automatique lorsqu’il le permet.
+- Cache PWA incrémenté à `pwa89` pour déployer le correctif sur les installations existantes.
+
+## 1.30.2 — version de maintenance (build pwa90)
+
+- Version du projet et du verrou de dépendances portée à `1.30.2`.
+- Les correctifs de persistance des images et des historiques introduits en 1.30.1 sont inclus sans changement de format de données.
+- Cache PWA incrémenté à `pwa90` pour forcer le déploiement de cette version sur les installations existantes.
+
+
+## 1.30.2 — fermeture de session PWA (build pwa91)
+
+- Ajout d’un bouton **Fermer la session** au bas des réglages de la PWA.
+- La fermeture conserve les transferts, images et historiques locaux persistants.
+- L’appareil jumelé est verrouillé plutôt que supprimé afin de préserver l’accès futur aux images qu’il a créées.
+- Une nouvelle connexion administrateur déverrouille automatiquement le même appareil.
+- Les flux en direct, notifications push et caches de navigation privés sont arrêtés ou purgés à la fermeture.
+
+## 1.30.3 — persistance des images après actualisation (build pwa92)
+
+- La synchronisation de la bibliothèque PWA fusionne désormais les réponses du serveur avec le cache IndexedDB au lieu d’effacer entièrement ce cache.
+- Une réponse `/app/images` ancienne ou momentanément incomplète ne peut plus supprimer une image qui vient d’être téléversée.
+- Les requêtes de statistiques concurrentes sont annulées lorsqu’une synchronisation plus récente démarre.
+- Toute image absente de la liste générale est vérifiée individuellement par sa route authentifiée avant d’être considérée supprimée.
+- Trois confirmations directes et un délai de grâce sont requis avant d’effacer une fiche locale; les révocations demandées dans la PWA restent immédiates.
+- Version du projet portée à `1.30.3` et cache PWA incrémenté à `pwa92`.
+
+
+## 1.30.4 — restauration robuste des images et version PWA (build pwa93)
+
+- La version `1.30.4` est affichée directement dans le pied de page, avant toute restauration asynchrone, avec une valeur HTML de secours si JavaScript s'interrompt.
+- La bibliothèque d'images est restaurée avant les transferts et l'historique afin qu'un ancien enregistrement de file d'attente invalide ne puisse plus bloquer les images.
+- Une copie compacte des fiches d'images est conservée dans `localStorage` en plus d'IndexedDB et fusionnée au démarrage.
+- La synchronisation réseau des images, des albums et des réglages est isolée avec `Promise.allSettled`, de sorte qu'une erreur d'un sous-système n'empêche plus les autres de démarrer.
+- Cache PWA incrémenté à `pwa93`.
+
+## Correctif 1.30.6 — identité PWA durable par compte (build pwa98)
+
+- La connexion mobile passe maintenant par `/app/login` et associe automatiquement le navigateur à une identité PWA persistante.
+- Les images, albums et liens de réception créés depuis un appareil sont également rattachés au compte qui a autorisé cet appareil.
+- Si Android supprime ou remplace le cookie d’appareil, une nouvelle connexion au même compte récupère automatiquement l’espace de travail précédent.
+- Une table de correspondance durable conserve le compte propriétaire des anciennes identités d’appareil afin de migrer les enregistrements existants sans élargir l’accès aux autres comptes.
+- Cache PWA `pwa98` et manifeste `v=86`.
+
+## 1.30.6 — déconnexion, appairage, logo et persistance PWA (build pwa98)
+
+- Le bouton « Fermer la session » exécute désormais les sauvegardes locales, PushManager et CacheStorage avec des délais maximums afin qu’une promesse Android bloquée ne puisse plus laisser le bouton grisé indéfiniment.
+- Après confirmation du serveur, la redirection vers la connexion est garantie même si le nettoyage local du cache tarde à répondre; en cas d’échec réseau réel, le bouton est réactivé avec un message clair.
+- Les boutons « Appairer cet appareil » et « Désappairer cet appareil » sont de nouveau explicites dans les réglages et leur état est chargé indépendamment de la restauration des transferts et des images.
+- Le logo de la page de connexion utilise désormais la ressource SVG valide; les icônes PNG 192, 512, maskables et Apple Touch ont aussi été régénérées avec des en-têtes PNG conformes.
+- Correction définitive du rafraîchissement de la galerie : `/app/` embarque maintenant un instantané authentifié des images dans le document HTML, avant IndexedDB et avant l'appel secondaire à `/app/images`.
+- Le journal local des images est fusionné avec IndexedDB, la mémoire active et la réponse serveur; une réponse partielle ne peut plus écraser la copie de secours d'une image fraîchement téléversée.
+- Version du projet maintenue à `1.30.6`, cache PWA incrémenté à `pwa98` et manifeste versionné `v=86`.
+
+## 1.31.0 — version de consolidation PWA (build pwa99)
+
+- Version du projet portée à `1.31.0`.
+- Tous les correctifs de persistance de l’espace de travail, d’images, de session, d’appairage et de logo de la branche 1.30.x sont conservés.
+- Cache PWA incrémenté à `pwa99` et manifeste versionné `v=87` afin de forcer le renouvellement des ressources sur les installations existantes.
+
+## 1.31.2 — galerie d’images restaurée sur la PWA installée (build pwa101)
+
+- Correction d’un blocage où **rien ne s’affichait dans l’onglet Images de la PWA installée sur Android** après un rafraîchissement, une déconnexion/reconnexion ou un relancement, alors que le serveur renvoyait bien les images (visibles sur navigateur de bureau).
+- Cause : `indexedDB.open()` pouvait rester **bloqué indéfiniment** dans certains contextes WebAPK/WebView Android (événement `blocked`, ou aucune réponse). Le premier `await` IndexedDB de l’initialisation restait alors suspendu et l’étape qui charge les images depuis `/app/images` n’était jamais atteinte.
+- `openDb()` gère désormais `onblocked` et un **délai maximum** : en cas de blocage, l’initialisation se poursuit via la sauvegarde `localStorage` et les API réseau au lieu de figer la galerie.
+- Le rendu de chaque carte d’image est isolé (`try/catch`) : une seule fiche défaillante ne peut plus vider toute la liste.
+- Nouveau **panneau de diagnostic** accessible via `/app/?diag=1` (bootstrap serveur, IndexedDB, `/app/images`, cartes en mémoire/DOM) pour diagnostiquer un souci d’affichage directement sur l’appareil.
+- Version portée à `1.31.2`, cache PWA `pwa101`, manifeste `v=89`.
+
+## 1.31.1 — session PWA préservée au relancement (build pwa100)
+
+- Les cookies d’authentification `sid` (session admin) et `dxpwa` (appareil PWA) passent de `SameSite=Strict` à `SameSite=Lax`. Un cookie `Strict` n’est pas transmis lors d’une navigation de haut niveau *cross-site* — c’est précisément le cas d’une PWA installée lancée depuis l’écran d’accueil (WebAPK) et d’un partage système (Web Share Target). L’application arrivait alors non authentifiée et l’espace de travail paraissait réinitialisé après une déconnexion/reconnexion ou un relancement.
+- Le correctif ne réduit pas la protection CSRF : chaque mutation exige toujours un jeton `X-CSRF-Token` (`requireAuth` / `requireAppAuth`) et, sous `/app`, un contrôle d’origine exacte même sur les sous-domaines frères.
+- Version du projet portée à `1.31.1`, cache PWA incrémenté à `pwa100` et manifeste versionné `v=88` afin de forcer le renouvellement des ressources sur les installations existantes.

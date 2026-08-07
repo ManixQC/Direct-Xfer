@@ -186,11 +186,13 @@ const FULL_IMAGES_DIR = path.join(IMAGE_STORE_DIR, 'Full');
 const THUMBS_DIR = path.join(IMAGE_STORE_DIR, 'Mini');
 const MICROS_DIR = path.join(IMAGE_STORE_DIR, 'Micro');
 const PHOTO_HISTORY_DIR = path.join(IMAGE_STORE_DIR, 'History');
+const PHOTO_VERSIONS_DIR = path.join(IMAGE_STORE_DIR, 'Versions');
+const ADAPTIVE_IMAGES_DIR = path.join(IMAGE_STORE_DIR, 'Adaptive');
 const LEGACY_IMAGES_DIR = path.join(DATA_DIR, 'images');
 const LEGACY_THUMBS_DIR = path.join(DATA_DIR, 'thumbs');
 const LEGACY_MICROS_DIR = path.join(DATA_DIR, 'micros');
 const LEGACY_PHOTO_HISTORY_DIR = path.join(DATA_DIR, 'photo-history');
-for (const dir of [IMAGE_STORE_DIR, FULL_IMAGES_DIR, THUMBS_DIR, MICROS_DIR, PHOTO_HISTORY_DIR]) {
+for (const dir of [IMAGE_STORE_DIR, FULL_IMAGES_DIR, THUMBS_DIR, MICROS_DIR, PHOTO_HISTORY_DIR, PHOTO_VERSIONS_DIR, ADAPTIVE_IMAGES_DIR]) {
   try { fs.mkdirSync(dir, { recursive: true }); } catch (_) {}
 }
 
@@ -1221,7 +1223,14 @@ function sendWebPush(kind, title, body, payload, subs) {
   if (!keys) return 0;
   const targets = subs || pushSubs().slice();
   if (!targets.length) return 0;
-  const data = JSON.stringify({ title: title || APP_NAME, body: body || '', kind: kind || '', url: '/', ts: Date.now() });
+  const data = JSON.stringify({
+    title: title || APP_NAME,
+    body: body || '',
+    kind: kind || '',
+    url: payload && payload.url ? String(payload.url) : '/',
+    token: payload && payload.token ? String(payload.token) : null,
+    ts: Date.now(),
+  });
   const opts = { vapidDetails: { subject: vapidSubject(), publicKey: keys.publicKey, privateKey: keys.privateKey }, TTL: 3600 };
   for (const sub of targets) {
     webpush.sendNotification({ endpoint: sub.endpoint, keys: sub.keys }, data, opts)
@@ -1754,6 +1763,7 @@ function normalizePhotoHistory(items) {
       revokedAt: Math.max(0, Number(r.revokedAt) || 0),
       ownerId: r.ownerId ? String(r.ownerId).slice(0, 128) : null,
       ownerName: r.ownerName ? String(r.ownerName).replace(/[\r\n\t]+/g, ' ').slice(0, 80) : null,
+      metadataRemoved: !!r.metadataRemoved,
       fullViews: photoHistoryCount(r.fullViews),
       fullVisitors: photoHistoryCount(r.fullVisitors),
       thumbViews: photoHistoryCount(r.thumbViews),
@@ -1950,6 +1960,13 @@ function isActive(s, now = Date.now()) {
   if (s.startsAt && now < s.startsAt) return false; // deferred activation (not yet live)
   if (s.expiresAt && now > s.expiresAt) return false;
   if (s.maxDownloads != null && s.downloads >= s.maxDownloads) return false;
+  // PWA image links may be configured with a total view cap. The limit covers
+  // Full, Mini and Micro together, so embedding a smaller variant cannot bypass it.
+  if (s.type === 'photo' && Number(s.maxViews) > 0) {
+    const ps = photoStatsOf(s);
+    const totalViews = (Number(ps.full.v) || 0) + (Number(ps.thumb.v) || 0) + (Number(ps.micro.v) || 0);
+    if (totalViews >= Number(s.maxViews)) return false;
+  }
   return true;
 }
 // A share that only becomes active later (scheduled), not yet live.
@@ -2025,6 +2042,18 @@ function safePhotoToken(token) {
 function photoOriginalPaths(photo) {
   const name = photo && safeManagedImageName(photo.imgPath);
   return name ? uniquePhotoPaths([path.join(FULL_IMAGES_DIR, name), path.join(LEGACY_IMAGES_DIR, name)]) : [];
+}
+
+function photoAdaptivePath(token, format) {
+  const safeToken = safePhotoToken(token);
+  const ext = String(format || '').toLowerCase();
+  if (!safeToken || !/^(webp|avif)$/.test(ext)) return null;
+  return path.join(ADAPTIVE_IMAGES_DIR, safeToken + '.' + ext);
+}
+
+function photoVersionDir(token) {
+  const safeToken = safePhotoToken(token);
+  return safeToken ? path.join(PHOTO_VERSIONS_DIR, safeToken) : null;
 }
 
 function photoVariantPaths(token, variant) {
@@ -2110,6 +2139,7 @@ function archiveRevokedPhoto(photo) {
     revokedAt: Date.now(),
     ownerId: photo.ownerId || null,
     ownerName: photo.ownerName || null,
+    metadataRemoved: !!photo.metadataRemoved,
     fullViews: photoHistoryCount(stats.full.v),
     fullVisitors: photoHistoryCount(Array.isArray(stats.full.u) ? stats.full.u.length : 0),
     thumbViews: photoHistoryCount(stats.thumb.v),
@@ -2149,6 +2179,9 @@ function removeShare(id, persistAfter = true) {
       unlinkPhotoFiles(photoVariantPaths(removed.token, 'thumb')); // drop Mini
       unlinkPhotoFiles(photoVariantPaths(removed.token, 'micro')); // drop Micro
       unlinkPhotoFiles(photoOriginalPaths(removed)); // drop the managed Full copy; never touches the source file
+      unlinkPhotoFiles([photoAdaptivePath(removed.token, 'webp'), photoAdaptivePath(removed.token, 'avif')]);
+      const versionsDir = photoVersionDir(removed.token);
+      if (versionsDir) fs.rm(versionsDir, { recursive: true, force: true }, () => {});
     }
   }
   if (persistAfter) persist();
@@ -2261,6 +2294,12 @@ function notePhotoView(s, req, kind) {
     flag: geo.flag || null,
   });
   if (allStats.recent.length > 100) allStats.recent.length = 100;
+  if (s.notifyFirstView && !s.firstViewNotifiedAt) {
+    s.firstViewNotifiedAt = now;
+    s.firstViewKind = kind;
+    s.firstViewIp = ip || null;
+    try { notifyFirstPhotoView(s, req, kind, ip, geo); } catch (_) {}
+  }
   scheduleFlush();
 }
 
@@ -2477,6 +2516,44 @@ function setUnlockCookie(req, res, s) {
 // the list of recent request timestamps (ms) for that IP; pruned lazily on read
 // and by a periodic sweep so the map stays bounded.
 const publicHits = new Map();
+const publicMessageHits = new Map();
+const PUBLIC_MESSAGE_WINDOW_MS = 60000;
+const PUBLIC_MESSAGE_MAX = 5;
+const PUBLIC_MESSAGE_DUP_MS = 30000;
+const PUBLIC_MESSAGE_NOTIFY_COOLDOWN_MS = 15000;
+
+function publicMessageDecision(req, token, text, file) {
+  const ip = clientIp(req);
+  const key = `${token}|${ip}`;
+  const now = Date.now();
+  if (!publicMessageHits.has(key) && publicMessageHits.size >= 10000) {
+    const oldest = publicMessageHits.keys().next();
+    if (!oldest.done) publicMessageHits.delete(oldest.value);
+  }
+  const rec = publicMessageHits.get(key) || { hits: [], lastHash: '', lastAt: 0, lastNotifyAt: 0 };
+  rec.hits = rec.hits.filter((t) => now - t < PUBLIC_MESSAGE_WINDOW_MS);
+  const hash = crypto.createHash('sha256').update(`${text}\n${file || ''}`).digest('hex');
+  if (rec.lastHash === hash && now - rec.lastAt < PUBLIC_MESSAGE_DUP_MS) {
+    publicMessageHits.set(key, rec);
+    return { duplicate: true, notify: false, retryAfter: 0 };
+  }
+  if (rec.hits.length >= PUBLIC_MESSAGE_MAX) {
+    publicMessageHits.set(key, rec);
+    return {
+      duplicate: false,
+      notify: false,
+      retryAfter: Math.max(1, Math.ceil((PUBLIC_MESSAGE_WINDOW_MS - (now - rec.hits[0])) / 1000)),
+    };
+  }
+  rec.hits.push(now);
+  rec.lastHash = hash;
+  rec.lastAt = now;
+  const notify = now - rec.lastNotifyAt >= PUBLIC_MESSAGE_NOTIFY_COOLDOWN_MS;
+  if (notify) rec.lastNotifyAt = now;
+  publicMessageHits.set(key, rec);
+  return { duplicate: false, notify, retryAfter: 0 };
+}
+
 function publicRateRetryAfter(req) {
   const s = getSettings();
   if (!s.publicRateLimit) return 0;
@@ -2499,6 +2576,11 @@ setInterval(() => {
   for (const [ip, arr] of publicHits) {
     const keep = arr.filter((t) => now - t < windowMs);
     if (keep.length) publicHits.set(ip, keep); else publicHits.delete(ip);
+  }
+  for (const [key, rec] of publicMessageHits) {
+    rec.hits = (rec.hits || []).filter((t) => now - t < PUBLIC_MESSAGE_WINDOW_MS);
+    if (rec.hits.length || now - (rec.lastAt || 0) < PUBLIC_MESSAGE_DUP_MS) publicMessageHits.set(key, rec);
+    else publicMessageHits.delete(key);
   }
   pruneLeakTrackers();
 }, 60000).unref();
@@ -2571,7 +2653,15 @@ function createSession(req, res, account) {
     role: account ? account.role : null,
   });
   const maxAge = Math.floor(sessionTtlMs() / 1000);
-  res.setHeader('Set-Cookie', `sid=${sid}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${maxAge}${secureCookie(req)}`);
+  // SameSite=Lax (not Strict): an installed PWA launched from the Android home
+  // screen (WebAPK) or a Web Share Target POST is a *cross-site* top-level
+  // navigation, and a Strict cookie is withheld there — so the relaunch arrives
+  // unauthenticated and the workspace looks reset. Lax is still sent on top-level
+  // GET navigations while remaining withheld on cross-site subrequests/POSTs, and
+  // every mutating route additionally verifies an X-CSRF-Token (requireAuth /
+  // requireAppAuth) plus, under /app, an exact same-origin check — so Lax does not
+  // weaken CSRF protection.
+  res.setHeader('Set-Cookie', `sid=${sid}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${maxAge}${secureCookie(req)}`);
   return { sid, csrf };
 }
 
@@ -2632,7 +2722,7 @@ function auditReq(req, action, detail) {
 function destroySession(req, res) {
   const { sid } = parseCookies(req);
   if (sid) sessions.delete(sid);
-  res.setHeader('Set-Cookie', `sid=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0${secureCookie(req)}`);
+  res.setHeader('Set-Cookie', `sid=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0${secureCookie(req)}`);
 }
 
 function getSession(req) {
@@ -2713,7 +2803,7 @@ function attemptLogin(req, res, username, password, totp) {
   scheduleFlush();
   const sess = createSession(req, res, acc);
   logAudit('login', { account: acc, ip });
-  return { ok: true, csrf: sess.csrf, account: acc };
+  return { ok: true, sid: sess.sid, csrf: sess.csrf, account: acc };
 }
 
 // Changes an account's password (durable synchronous write). Marks it as changed
@@ -3113,6 +3203,7 @@ const PUB = {
     albumTitle: 'Galerie d\'images',
     albumCount: '{n} images',
     albumEmpty: 'Aucune image dans cette galerie.',
+    photoMetadataRemoved: 'EXIF/GPS supprimés',
     folderUnavailable: 'Dossier indisponible.',
     folderNotFound: 'Dossier introuvable.',
     zipError: 'Erreur de compression.',
@@ -3233,6 +3324,7 @@ const PUB = {
     albumTitle: 'Image gallery',
     albumCount: '{n} images',
     albumEmpty: 'No images in this gallery.',
+    photoMetadataRemoved: 'EXIF/GPS removed',
     folderUnavailable: 'Folder unavailable.',
     folderNotFound: 'Folder not found.',
     zipError: 'Compression error.',
@@ -3353,6 +3445,7 @@ const PUB = {
     albumTitle: 'Galería de imágenes',
     albumCount: '{n} imágenes',
     albumEmpty: 'No hay imágenes en esta galería.',
+    photoMetadataRemoved: 'EXIF/GPS eliminados',
     folderUnavailable: 'Carpeta no disponible.',
     folderNotFound: 'Carpeta no encontrada.',
     zipError: 'Error de compresión.',
@@ -3974,10 +4067,11 @@ function albumPage(lang, album, members, req) {
   const L = PUB[lang] || PUB.en;
   const title = album.name || (L.albumTitle || 'Gallery');
   const cells = members.map((m) => {
-    const full = '/i/' + m.token + '.' + photoExt(m);
-    const thumb = '/i/' + m.token + '/thumb';
+    const full = '/i/' + m.token + '/auto?w=1920';
+    const thumb = '/i/' + m.token + '/auto?w=480';
+    const privacy = m.metadataRemoved ? `<span class="gal-privacy">🛡 ${esc(L.photoMetadataRemoved || 'EXIF/GPS removed')}</span>` : '';
     return `<a class="gal-cell" href="${esc(full)}" target="_blank" rel="noopener" title="${esc(m.name || '')}">`
-      + `<img loading="lazy" src="${esc(thumb)}" alt="${esc(m.name || '')}"></a>`;
+      + `<img loading="lazy" src="${esc(thumb)}" alt="${esc(m.name || '')}">${privacy}</a>`;
   }).join('');
   const countTxt = (L.albumCount || '{n} images').replace('{n}', members.length);
   const body = `
@@ -3985,9 +4079,10 @@ function albumPage(lang, album, members, req) {
   .gal-head { display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
   .gal-head h1 { margin:0; font-size:1.4rem; word-break:break-word; }
   .gallery-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; }
-  .gal-cell { display:block; aspect-ratio:1/1; border-radius:10px; overflow:hidden; background:var(--card-2,rgba(127,127,127,.12)); }
+  .gal-cell { position:relative; display:block; aspect-ratio:1/1; border-radius:10px; overflow:hidden; background:var(--card-2,rgba(127,127,127,.12)); }
   .gal-cell img { width:100%; height:100%; object-fit:cover; display:block; transition:transform .2s ease; }
   .gal-cell:hover img { transform:scale(1.05); }
+  .gal-privacy { position:absolute; left:7px; bottom:7px; max-width:calc(100% - 14px); padding:4px 7px; border-radius:999px; background:rgba(8,24,18,.86); color:#d9ffe9; font-size:.72rem; font-weight:700; line-height:1.2; }
   .gal-empty { text-align:center; padding:36px 0; }
 </style>
 <div class="card">
@@ -4504,6 +4599,191 @@ function imageDimensions(filePath) {
     return null;
   } catch (_) { return null; }
   finally { if (fd !== undefined) { try { fs.closeSync(fd); } catch (_) {} } }
+}
+
+// Reads a privacy-conscious subset of EXIF/GPS metadata without an image library.
+// The parser is deliberately bounded and defensive: only TIFF data embedded in
+// JPEG APP1, PNG eXIf or WEBP EXIF chunks is inspected, and malformed offsets are
+// ignored instead of escaping the file buffer.
+function parseExifTiff(tiff) {
+  if (!Buffer.isBuffer(tiff) || tiff.length < 8) return null;
+  const little = tiff.toString('ascii', 0, 2) === 'II';
+  const big = tiff.toString('ascii', 0, 2) === 'MM';
+  if (!little && !big) return null;
+  const u16 = (o) => {
+    if (o < 0 || o + 2 > tiff.length) return null;
+    return little ? tiff.readUInt16LE(o) : tiff.readUInt16BE(o);
+  };
+  const i32 = (o) => {
+    if (o < 0 || o + 4 > tiff.length) return null;
+    return little ? tiff.readInt32LE(o) : tiff.readInt32BE(o);
+  };
+  const u32 = (o) => {
+    if (o < 0 || o + 4 > tiff.length) return null;
+    return little ? tiff.readUInt32LE(o) : tiff.readUInt32BE(o);
+  };
+  if (u16(2) !== 42) return null;
+
+  const typeSize = { 1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 7: 1, 9: 4, 10: 8 };
+  const groups = { root: {}, exif: {}, gps: {} };
+  const seen = new Set();
+
+  function readValue(entry, type, count) {
+    const unit = typeSize[type];
+    if (!unit || !Number.isFinite(count) || count < 0 || count > 4096) return null;
+    const bytes = unit * count;
+    const valueOffset = bytes <= 4 ? entry + 8 : u32(entry + 8);
+    if (valueOffset === null || valueOffset < 0 || valueOffset + bytes > tiff.length) return null;
+    if (type === 2) return tiff.toString('utf8', valueOffset, valueOffset + bytes).replace(/\0+$/g, '').trim();
+    const out = [];
+    for (let i = 0; i < count; i += 1) {
+      const o = valueOffset + i * unit;
+      let value = null;
+      if (type === 1 || type === 7) value = tiff[o];
+      else if (type === 3) value = u16(o);
+      else if (type === 4) value = u32(o);
+      else if (type === 9) value = i32(o);
+      else if (type === 5 || type === 10) {
+        const n = type === 10 ? i32(o) : u32(o);
+        const d = type === 10 ? i32(o + 4) : u32(o + 4);
+        value = n === null || d === null || d === 0 ? null : n / d;
+      }
+      out.push(value);
+    }
+    return count === 1 ? out[0] : out;
+  }
+
+  function readIfd(offset, groupName, depth) {
+    if (!Number.isFinite(offset) || offset < 8 || offset + 2 > tiff.length || depth > 4) return;
+    const key = groupName + ':' + offset;
+    if (seen.has(key)) return;
+    seen.add(key);
+    const count = u16(offset);
+    if (count === null || count > 512 || offset + 2 + count * 12 > tiff.length) return;
+    const group = groups[groupName];
+    for (let i = 0; i < count; i += 1) {
+      const entry = offset + 2 + i * 12;
+      const tag = u16(entry), type = u16(entry + 2), valueCount = u32(entry + 4);
+      if (tag === null || type === null || valueCount === null) continue;
+      const value = readValue(entry, type, valueCount);
+      group[tag] = value;
+      if (groupName === 'root' && tag === 0x8769 && Number.isFinite(value)) readIfd(value, 'exif', depth + 1);
+      if (groupName === 'root' && tag === 0x8825 && Number.isFinite(value)) readIfd(value, 'gps', depth + 1);
+    }
+  }
+
+  readIfd(u32(4), 'root', 0);
+  const root = groups.root, exif = groups.exif, gps = groups.gps;
+  const str = (value) => typeof value === 'string' && value ? value : null;
+  const num = (value) => Number.isFinite(value) ? value : null;
+  const first = (value) => Array.isArray(value) ? value[0] : value;
+  const coord = (parts, ref) => {
+    if (!Array.isArray(parts) || parts.length < 3 || !parts.slice(0, 3).every(Number.isFinite)) return null;
+    let value = parts[0] + parts[1] / 60 + parts[2] / 3600;
+    if (/^[SW]$/i.test(String(ref || ''))) value *= -1;
+    return Number(value.toFixed(7));
+  };
+  const lat = coord(gps[0x0002], first(gps[0x0001]));
+  const lon = coord(gps[0x0004], first(gps[0x0003]));
+  let altitude = num(gps[0x0006]);
+  if (altitude !== null && Number(first(gps[0x0005])) === 1) altitude *= -1;
+  const gpsTime = Array.isArray(gps[0x0007]) && gps[0x0007].length >= 3
+    ? gps[0x0007].slice(0, 3).map((v) => Number.isFinite(v) ? String(Math.floor(v)).padStart(2, '0') : '00').join(':')
+    : null;
+  const gpsDate = str(gps[0x001d]);
+
+  const result = {
+    camera: {
+      make: str(root[0x010f]), model: str(root[0x0110]), lensMake: str(exif[0xa433]),
+      lensModel: str(exif[0xa434]), software: str(root[0x0131]),
+    },
+    capture: {
+      dateTimeOriginal: str(exif[0x9003]) || str(exif[0x9004]) || str(root[0x0132]),
+      exposureTime: num(exif[0x829a]), fNumber: num(exif[0x829d]), iso: num(first(exif[0x8827])),
+      focalLength: num(exif[0x920a]), focalLength35mm: num(exif[0xa405]),
+      exposureBias: num(exif[0x9204]), flash: num(exif[0x9209]), orientation: num(root[0x0112]),
+      width: num(exif[0xa002]), height: num(exif[0xa003]), whiteBalance: num(exif[0xa403]),
+      exposureMode: num(exif[0xa402]), sceneType: num(exif[0xa406]),
+      description: str(root[0x010e]), artist: str(root[0x013b]), copyright: str(root[0x8298]),
+    },
+    gps: lat !== null && lon !== null ? {
+      latitude: lat, longitude: lon, altitude: altitude === null ? null : Number(altitude.toFixed(2)),
+      direction: num(gps[0x0011]), directionRef: str(gps[0x0010]),
+      dateTimeUtc: gpsDate ? gpsDate.replace(/:/g, '-') + (gpsTime ? ' ' + gpsTime + ' UTC' : '') : gpsTime,
+    } : null,
+  };
+  const hasCamera = Object.values(result.camera).some((v) => v !== null);
+  const hasCapture = Object.values(result.capture).some((v) => v !== null);
+  return hasCamera || hasCapture || result.gps ? result : null;
+}
+
+function readPhotoMetadata(filePath) {
+  let fd;
+  try {
+    fd = fs.openSync(filePath, 'r');
+    const stat = fs.fstatSync(fd);
+    const max = Math.min(stat.size, 4 * 1024 * 1024);
+    if (max < 8) return { found: false, format: null, camera: {}, capture: {}, gps: null };
+    const buf = Buffer.alloc(max);
+    const n = fs.readSync(fd, buf, 0, max, 0);
+    const b = buf.subarray(0, n);
+    let tiff = null, format = null;
+
+    if (b[0] === 0xff && b[1] === 0xd8) {
+      format = 'JPEG';
+      let o = 2;
+      while (o + 4 <= b.length) {
+        if (b[o] !== 0xff) { o += 1; continue; }
+        const marker = b[o + 1];
+        if (marker === 0xda || marker === 0xd9) break;
+        if (marker === 0x00 || marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) { o += 2; continue; }
+        const len = b.readUInt16BE(o + 2);
+        if (len < 2 || o + 2 + len > b.length) break;
+        const start = o + 4, end = o + 2 + len;
+        if (marker === 0xe1 && end - start >= 6 && b.toString('ascii', start, start + 6) === 'Exif\0\0') {
+          tiff = b.subarray(start + 6, end); break;
+        }
+        o += 2 + len;
+      }
+    } else if (b.length >= 12 && b.toString('ascii', 0, 4) === 'RIFF' && b.toString('ascii', 8, 12) === 'WEBP') {
+      format = 'WEBP';
+      let o = 12;
+      while (o + 8 <= b.length) {
+        const kind = b.toString('ascii', o, o + 4);
+        const size = b.readUInt32LE(o + 4);
+        const start = o + 8, end = start + size;
+        if (end > b.length) break;
+        if (kind === 'EXIF') {
+          tiff = b.subarray(start, end);
+          if (tiff.length >= 6 && tiff.toString('ascii', 0, 6) === 'Exif\0\0') tiff = tiff.subarray(6);
+          break;
+        }
+        o = end + (size % 2);
+      }
+    } else if (b.length >= 8 && b[0] === 0x89 && b.toString('ascii', 1, 4) === 'PNG') {
+      format = 'PNG';
+      let o = 8;
+      while (o + 12 <= b.length) {
+        const size = b.readUInt32BE(o);
+        const kind = b.toString('ascii', o + 4, o + 8);
+        const start = o + 8, end = start + size;
+        if (end + 4 > b.length) break;
+        if (kind === 'eXIf') { tiff = b.subarray(start, end); break; }
+        o = end + 4;
+      }
+    } else if (b.toString('ascii', 0, 2) === 'II' || b.toString('ascii', 0, 2) === 'MM') {
+      format = 'TIFF'; tiff = b;
+    }
+
+    const parsed = tiff ? parseExifTiff(tiff) : null;
+    return parsed
+      ? { found: true, format, camera: parsed.camera, capture: parsed.capture, gps: parsed.gps }
+      : { found: false, format, camera: {}, capture: {}, gps: null };
+  } catch (_) {
+    return { found: false, format: null, camera: {}, capture: {}, gps: null };
+  } finally {
+    if (fd !== undefined) { try { fs.closeSync(fd); } catch (_) {} }
+  }
 }
 
 // Feature 3 — subtitles. Converts SubRip (.srt) to WebVTT (what <track> needs);
@@ -5286,11 +5566,16 @@ function hotlinkRefererHost(req) {
   if (!ref) return null;
   try { return new URL(ref).hostname.toLowerCase(); } catch (_) { return null; }
 }
-function hotlinkAllowed(req) {
-  const list = getSettings().imageHotlinkHosts;
+function hotlinkAllowed(req, share) {
+  // A PWA-created image may carry its own explicit policy. An empty array means
+  // protection disabled for that image; absence of the property inherits the
+  // instance-wide Images setting for backwards compatibility.
+  const list = share && Object.prototype.hasOwnProperty.call(share, 'hotlinkHosts')
+    ? share.hotlinkHosts
+    : getSettings().imageHotlinkHosts;
   if (!Array.isArray(list) || !list.length) return true; // protection off
   const host = hotlinkRefererHost(req);
-  if (!host) return true; // direct navigation / no Referer — always allowed
+  if (!host) return true; // direct navigation / privacy-stripped Referer
   const self = String(req.headers.host || '').toLowerCase().split(':')[0];
   if (self && (host === self || host.endsWith('.' + self))) return true; // same site
   return list.some((h) => host === h || host.endsWith('.' + h));
@@ -5302,8 +5587,15 @@ async function servePhoto(req, res, variant) {
   if (dot > 0) token = token.slice(0, dot); // strip a cosmetic /i/<token>.jpg extension
   const s = getByToken(token);
   if (!s || s.type !== 'photo' || !isActive(s)) return sendError(req, res, 404, 'fileNotFound');
-  if (!hotlinkAllowed(req)) return sendError(req, res, 403, 'hotlinkBlocked');
+  // Reject foreign embeds before password/visitor processing so a blocked site
+  // cannot probe protected images or consume visitor-limit capacity.
+  if (!hotlinkAllowed(req, s)) return sendError(req, res, 403, 'hotlinkBlocked');
+  if (s.pwHash && !isUnlocked(req, s)) {
+    return res.status(401).type('html').send(passwordPage(pickLang(req), s, false, token));
+  }
+  if (!recordAndCheckVisitor(s, req)) return sendError(req, res, 404, 'fileNotFound');
   const kind = variant || 'full';
+  const restrictedCache = !!s.pwHash || Number(s.maxViews) > 0 || !!s.expiresAt;
   const candidates = variant === 'micro'
     ? [
         ...photoVariantPaths(token, 'micro').map((file) => ({ ready: s.micro, file, immutable: true })),
@@ -5319,7 +5611,7 @@ async function servePhoto(req, res, variant) {
         return streamFile(req, res, candidate.file, token + '.jpg', () => notePhotoView(s, req, kind), null, {
           inline: true,
           contentType: 'image/jpeg',
-          cacheControl: candidate.immutable ? PHOTO_PUBLIC_CACHE : 'no-store',
+          cacheControl: restrictedCache ? 'no-store' : (candidate.immutable ? PHOTO_PUBLIC_CACHE : 'no-store'),
         });
       }
     } catch (_) {}
@@ -5334,12 +5626,55 @@ async function servePhoto(req, res, variant) {
     streamFile(req, res, abs, s.name, () => notePhotoView(s, req, kind), null, {
       inline: true,
       contentType: ct,
-      cacheControl: variant ? 'no-store' : PHOTO_PUBLIC_CACHE,
+      cacheControl: restrictedCache || variant ? 'no-store' : PHOTO_PUBLIC_CACHE,
     });
   } catch (e) {
     sendError(req, res, e.code === 'ENOENT' ? 404 : 403, 'fileUnavailable');
   }
 }
+async function serveAdaptivePhoto(req, res) {
+  let token = String(req.params.token || '');
+  const dot = token.lastIndexOf('.');
+  if (dot > 0) token = token.slice(0, dot);
+  const s = getByToken(token);
+  if (!s || s.type !== 'photo' || !isActive(s)) return sendError(req, res, 404, 'fileNotFound');
+
+  const width = Math.max(0, Math.min(10000, parseInt(req.query.w, 10) || parseInt(req.headers.width, 10) || parseInt(req.headers['viewport-width'], 10) || 0));
+  const saveData = String(req.headers['save-data'] || '').toLowerCase() === 'on';
+  const ect = String(req.headers.ect || '').toLowerCase();
+  const slow = saveData || /(^|-)2g$/.test(ect) || ect === 'slow-2g';
+  if (slow || (width && width <= 320)) return servePhoto(req, res, 'micro');
+  if (width && width <= 900) return servePhoto(req, res, 'thumb');
+
+  const accept = String(req.headers.accept || '');
+  let format = null;
+  if (/image\/avif/i.test(accept) && s.adaptiveAvif) format = 'avif';
+  else if (/image\/webp/i.test(accept) && s.adaptiveWebp) format = 'webp';
+  if (!format) return servePhoto(req, res, null);
+
+  const file = photoAdaptivePath(token, format);
+  try {
+    if (!file || !(await fs.promises.stat(file)).isFile()) {
+      if (format === 'avif') delete s.adaptiveAvif; else delete s.adaptiveWebp;
+      scheduleFlush();
+      return servePhoto(req, res, null);
+    }
+    if (!hotlinkAllowed(req, s)) return sendError(req, res, 403, 'hotlinkBlocked');
+    if (s.pwHash && !isUnlocked(req, s)) return res.status(401).type('html').send(passwordPage(pickLang(req), s, false, token));
+    if (!recordAndCheckVisitor(s, req)) return sendError(req, res, 404, 'fileNotFound');
+    const restrictedCache = !!s.pwHash || Number(s.maxViews) > 0 || !!s.expiresAt;
+    res.setHeader('Accept-CH', 'DPR, Width, Viewport-Width, Save-Data, ECT');
+    res.setHeader('Vary', 'Accept, Save-Data, Width, Viewport-Width, DPR, ECT');
+    return streamFile(req, res, file, token + '.' + format, () => notePhotoView(s, req, 'full'), null, {
+      inline: true,
+      contentType: 'image/' + format,
+      cacheControl: restrictedCache ? 'no-store' : PHOTO_PUBLIC_CACHE,
+    });
+  } catch (_) {
+    return servePhoto(req, res, null);
+  }
+}
+downloadRouter.get('/i/:token/auto', serveAdaptivePhoto);
 downloadRouter.get('/i/:token/thumb', (req, res) => servePhoto(req, res, 'thumb'));
 downloadRouter.get('/i/:token/micro', (req, res) => servePhoto(req, res, 'micro'));
 downloadRouter.get('/i/:token', (req, res) => servePhoto(req, res, null));
@@ -5349,11 +5684,94 @@ downloadRouter.get('/g/:token', (req, res) => {
   const lang = pickLang(req);
   const s = getByToken(String(req.params.token || ''));
   if (!s || s.type !== 'album' || !isActive(s)) return sendError(req, res, 404, 'shareGone');
+  if (s.pwHash && !isUnlocked(req, s)) {
+    return res.status(401).type('html').send(passwordPage(lang, s, false, req.params.token));
+  }
+  if (!recordAndCheckVisitor(s, req)) return sendError(req, res, 404, 'shareGone');
   const members = (Array.isArray(s.members) ? s.members : [])
     .map((tok) => getByToken(tok))
     .filter((m) => m && m.type === 'photo' && isActive(m));
   s.views = (s.views || 0) + 1; scheduleFlush(); // count gallery page loads
+  res.setHeader('Cache-Control', 'no-store');
   res.type('html').send(albumPage(lang, s, members, req));
+});
+
+function albumInviteHash(secret) {
+  return crypto.createHash('sha256').update(String(secret || '')).digest('hex');
+}
+function activeAlbumInvite(album, secret) {
+  if (!album || album.type !== 'album' || !Array.isArray(album.collaborators)) return null;
+  const hash = albumInviteHash(secret);
+  const now = Date.now();
+  return album.collaborators.find((entry) => entry && !entry.disabled && entry.tokenHash === hash && (!entry.expiresAt || entry.expiresAt > now)) || null;
+}
+function albumCollaborationPage(lang, album, members, invite, secret) {
+  const L = PUB[lang] || PUB.en;
+  const title = album.name || L.albumTitle || 'Gallery';
+  const canUpload = invite.role === 'contributor' || invite.role === 'manager';
+  const canManage = invite.role === 'manager';
+  const base = '/g/' + encodeURIComponent(album.token) + '/c/' + encodeURIComponent(secret);
+  const cells = members.map((m) => {
+    const full = '/i/' + m.token + '/auto?w=1920';
+    const thumb = '/i/' + m.token + '/auto?w=480';
+    const remove = canManage ? `<button class="collab-remove" type="button" data-token="${esc(m.token)}">×</button>` : '';
+    const privacy = m.metadataRemoved ? `<span class="gal-privacy">🛡 ${esc(L.photoMetadataRemoved || 'EXIF/GPS removed')}</span>` : '';
+    return `<div class="gal-cell-wrap"><a class="gal-cell" href="${esc(full)}" target="_blank" rel="noopener"><img loading="lazy" src="${esc(thumb)}" alt="${esc(m.name || '')}">${privacy}</a>${remove}</div>`;
+  }).join('');
+  const remaining = invite.maxFiles > 0 ? Math.max(0, invite.maxFiles - (invite.usedFiles || 0)) : null;
+  const upload = canUpload ? `<div class="collab-upload"><h2>${lang === 'fr' ? 'Ajouter des images' : lang === 'es' ? 'Añadir imágenes' : 'Add images'}</h2><input id="collab-files" type="file" accept="image/*" multiple><button id="collab-send" class="btn" type="button">${lang === 'fr' ? 'Envoyer' : lang === 'es' ? 'Enviar' : 'Upload'}</button><p id="collab-status" class="muted"></p>${remaining === null ? '' : `<p class="muted">${remaining} ${lang === 'fr' ? 'fichier(s) restant(s)' : lang === 'es' ? 'archivo(s) restantes' : 'file(s) remaining'}</p>`}</div>` : '';
+  const script = canUpload || canManage ? `<script>(function(){const base=${JSON.stringify(base)};const status=document.getElementById('collab-status');const btn=document.getElementById('collab-send');if(btn)btn.onclick=async()=>{const files=[...document.getElementById('collab-files').files];if(!files.length)return;btn.disabled=true;let ok=0;for(const file of files){status.textContent=(ok+1)+'/'+files.length+'…';const r=await fetch(base+'/upload?name='+encodeURIComponent(file.name),{method:'POST',headers:{'Content-Type':file.type||'application/octet-stream'},body:file});if(r.ok)ok++;else{let e={};try{e=await r.json()}catch(_){ }status.textContent='Erreur: '+(e.error||r.status);break;}}btn.disabled=false;if(ok===files.length)location.reload();};document.querySelectorAll('.collab-remove').forEach(b=>b.onclick=async()=>{if(!confirm('Retirer cette image de l’album ?'))return;const r=await fetch(base+'/remove/'+encodeURIComponent(b.dataset.token),{method:'POST'});if(r.ok)location.reload();});})();</script>` : '';
+  return pageShell(lang, title, `<style>.gal-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:16px}.gal-head h1{margin:0;font-size:1.4rem;word-break:break-word}.gallery-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}.gal-cell-wrap{position:relative}.gal-cell{position:relative;display:block;aspect-ratio:1/1;border-radius:10px;overflow:hidden;background:rgba(127,127,127,.12)}.gal-cell img{width:100%;height:100%;object-fit:cover;display:block}.gal-privacy{position:absolute;left:7px;bottom:7px;max-width:calc(100% - 14px);padding:4px 7px;border-radius:999px;background:rgba(8,24,18,.86);color:#d9ffe9;font-size:.72rem;font-weight:700;line-height:1.2}.collab-remove{position:absolute;right:5px;top:5px;border:0;border-radius:999px;background:#b91c1c;color:white;width:30px;height:30px;font-size:20px}.collab-upload{margin:0 0 18px;padding:16px;border:1px solid rgba(127,127,127,.25);border-radius:12px}.collab-upload input{display:block;margin:10px 0;max-width:100%}</style><div class="card"><div class="gal-head"><h1>${esc(title)}</h1><span class="muted">${esc(invite.label || invite.role)}</span></div>${upload}<div class="gallery-grid">${cells}</div></div>${script}`);
+}
+
+downloadRouter.get('/g/:token/c/:secret', (req, res) => {
+  const album = getByToken(String(req.params.token || ''));
+  const invite = activeAlbumInvite(album, req.params.secret);
+  if (!album || !invite || !isActive(album)) return sendError(req, res, 404, 'shareGone');
+  const members = (Array.isArray(album.members) ? album.members : []).map(getByToken).filter((m) => m && m.type === 'photo' && isActive(m));
+  res.setHeader('Cache-Control', 'no-store');
+  res.type('html').send(albumCollaborationPage(pickLang(req), album, members, invite, req.params.secret));
+});
+downloadRouter.post('/g/:token/c/:secret/upload', (req, res) => {
+  const album = getByToken(String(req.params.token || ''));
+  const invite = activeAlbumInvite(album, req.params.secret);
+  if (!album || !invite || !isActive(album) || !['contributor', 'manager'].includes(invite.role)) return res.status(404).json({ error: 'not-found' });
+  if (invite.maxFiles > 0 && (invite.usedFiles || 0) >= invite.maxFiles) return res.status(409).json({ error: 'file-limit' });
+  const type = String(req.headers['content-type'] || '').split(';')[0].toLowerCase();
+  if (!type.startsWith('image/')) return res.status(415).json({ error: 'image-required' });
+  const rawName = String(req.query.name || 'image.jpg').replace(/[\/\r\n\t]+/g, ' ').trim().slice(0, 120);
+  let ext = (rawName.split('.').pop() || mimeExt || '').toLowerCase(); if (ext === 'jpeg') ext = 'jpg';
+  if (!PWA_IMG_EXT.test(ext)) return res.status(415).json({ error: 'unsupported-image' });
+  const max = Math.min(IMAGE_MAX_BYTES, invite.maxFileBytes > 0 ? invite.maxFileBytes : IMAGE_MAX_BYTES);
+  const fname = crypto.randomBytes(12).toString('hex') + '.' + ext;
+  const dest = path.join(FULL_IMAGES_DIR, fname);
+  streamToFileBounded(req, res, dest, max, (size) => {
+    const dims = imageDimensions(dest);
+    const share = { type: 'photo', name: rawName || ('image.' + ext), imgPath: fname, ext, size, contributedViaAlbum: album.token, contributedByInviteId: invite.id };
+    stampPhotoUploadDevice(share, req, 'collaborator');
+    if (dims) { share.w = dims.w; share.h = dims.h; }
+    if (album.ownerId) share.ownerId = album.ownerId;
+    if (album.ownerDeviceId) share.ownerDeviceId = album.ownerDeviceId;
+    share.ownerName = album.ownerName || 'Album';
+    const rec = addShare(share);
+    if (!Array.isArray(album.members)) album.members = [];
+    album.members.push(rec.token);
+    invite.usedFiles = (invite.usedFiles || 0) + 1; invite.lastUsedAt = Date.now();
+    persistNow();
+    res.status(201).json({ ok: true, token: rec.token, url: '/i/' + rec.token + '.' + photoExt(rec) });
+  });
+});
+downloadRouter.post('/g/:token/c/:secret/remove/:imageToken', (req, res) => {
+  const album = getByToken(String(req.params.token || ''));
+  const invite = activeAlbumInvite(album, req.params.secret);
+  if (!album || !invite || invite.role !== 'manager') return res.status(404).json({ error: 'not-found' });
+  const token = String(req.params.imageToken || '');
+  const before = Array.isArray(album.members) ? album.members.length : 0;
+  album.members = (album.members || []).filter((t) => t !== token);
+  if (album.members.length === before) return res.status(404).json({ error: 'not-found' });
+  const photo = getByToken(token);
+  if (photo && photo.type === 'photo' && photo.contributedViaAlbum === album.token) removeShare(photo.id, false);
+  persistNow(); res.json({ ok: true });
 });
 
 // Feature 6 — rendered preview (Markdown, highlighted code, ZIP listing) for an
@@ -5987,6 +6405,7 @@ function webhookHousekeeping() {
   try { maybeSendDigest(false); } catch (e) { console.error('[digest]', e.message); }
   try { purgeOldLog(); } catch (e) { console.error('[log-retention]', e.message); }
   try { purgeOldInbox(); } catch (e) { console.error('[inbox-retention]', e.message); }
+  try { purgeExpiredFiles(); } catch (e) { console.error('[file-expiry]', e.message); }
   try { purgeExpiredSecrets(); } catch (e) { console.error('[secrets]', e.message); }
   try { maybeRunScheduledBackup(); } catch (e) { console.error('[backup]', e.message); }
 }
@@ -6291,6 +6710,48 @@ function purgeOldInbox() {
   walk(INBOX_DIR, true);
 }
 
+// Per-file expiry (PWA "self-destruct"): a visitor may ask that THEIR uploaded file
+// be deleted after a delay. We record absolutePath -> expiresAt in state.meta and a
+// housekeeping pass removes files whose time has come. Independent of the global
+// inboxRetentionDays sweep above (which is mtime-based and off by default).
+const MAX_FILE_EXPIRE_SEC = 90 * 24 * 3600; // clamp: at most 90 days
+function clampExpireSec(v) {
+  const n = parseInt(v, 10);
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  return Math.min(MAX_FILE_EXPIRE_SEC, n);
+}
+function fileExpiryMap() {
+  if (!state.meta || typeof state.meta !== 'object') state.meta = {};
+  if (!state.meta.fileExpiry || typeof state.meta.fileExpiry !== 'object') state.meta.fileExpiry = {};
+  return state.meta.fileExpiry;
+}
+function recordFileExpiry(absPath, sec) {
+  if (!absPath || sec <= 0) return;
+  const map = fileExpiryMap();
+  map[absPath] = Date.now() + sec * 1000;
+  if (Object.keys(map).length > 20000) { // sane cap; drop the soonest-expired stale keys
+    const now = Date.now();
+    for (const k of Object.keys(map)) { if (map[k] <= now) delete map[k]; }
+  }
+  persist();
+}
+function purgeExpiredFiles() {
+  const map = (state.meta && state.meta.fileExpiry) || null;
+  if (!map) return;
+  const now = Date.now();
+  let changed = false;
+  for (const p of Object.keys(map)) {
+    const exp = map[p];
+    if (!exp || exp <= now) {
+      try { fs.unlinkSync(p); } catch (_) {}
+      delete map[p]; changed = true;
+    } else {
+      try { fs.statSync(p); } catch (_) { delete map[p]; changed = true; } // file already gone
+    }
+  }
+  if (changed) persist();
+}
+
 // Reception page: the visitor uploads files.
 downloadRouter.get('/u/:token', (req, res) => {
   const s = getByToken(req.params.token);
@@ -6590,6 +7051,7 @@ async function handleUpload(req, res) {
     : (Number.isFinite(clen) && clen > 0 ? clen : 0);
   const id = safeUploadId(req.query.id);
   const uploadId = id ? scopedUploadId(s, id) : null;
+  const expireSec = clampExpireSec(req.query.expire); // optional per-file self-destruct
 
   // Quota / filter gate (uses the announced total size).
   const reason = inboxRejectReason(s, relForCheck, total);
@@ -6659,6 +7121,8 @@ async function handleUpload(req, res) {
     }
     const target = outcome.target;
     if (transfer && transfer.uploadId) uploadTransfers.delete(transfer.uploadId);
+    if (expireSec > 0) { try { recordFileExpiry(target, expireSec); } catch (_) {} } // schedule self-destruct
+    if (s.type === 'inbox') { try { emitInboxEvent(s, { type: 'received', name: path.basename(target), dest: s.name || '', at: Date.now() }); } catch (_) {} }
     endTransfer(transfer, true);
     if (!res.headersSent) {
       res.json({
@@ -6870,6 +7334,8 @@ function unlockHandler(req, res) {
 downloadRouter.post('/s/:token/unlock', unlockParser, unlockHandler);
 downloadRouter.post('/u/:token/unlock', unlockParser, unlockHandler);
 downloadRouter.post('/c/:token/unlock', unlockParser, unlockHandler);
+downloadRouter.post('/i/:token/unlock', unlockParser, unlockHandler);
+downloadRouter.post('/g/:token/unlock', unlockParser, unlockHandler);
 
 // A visitor attaches a short message to a reception link (kept with the link,
 // shown to the admin). Optional and independent from the file uploads.
@@ -6882,6 +7348,12 @@ downloadRouter.post('/u/:token/message', messageParser, (req, res) => {
   if (!text) return res.status(400).json({ error: 'empty' });
   // Optional per-file tag: the visitor-facing path of the file this note is about.
   const file = String((req.body && req.body.file) || '').replace(/[\r\n]+/g, ' ').trim().slice(0, 512);
+  const decision = publicMessageDecision(req, s.token, text, file);
+  if (decision.duplicate) return res.json({ ok: true, duplicate: true, notified: false });
+  if (decision.retryAfter) {
+    res.setHeader('Retry-After', String(decision.retryAfter));
+    return res.status(429).json({ error: 'rate-limited', retryAfter: decision.retryAfter });
+  }
   const ip = String(clientIp(req) || '').replace(/^::ffff:/i, '');
   const geo = geoSync(ip) || {};
   if (!Array.isArray(s.messages)) s.messages = [];
@@ -6889,8 +7361,8 @@ downloadRouter.post('/u/:token/message', messageParser, (req, res) => {
   if (s.messages.length > 50) s.messages.length = 50; // keep the most recent
   persistNow(); // durable: a message must survive a restart
   geolocate(ip).catch(() => {}); // warm the cache for the admin view
-  notify('message', { name: s.name, ip, country: geo.country, text, file: file || null });
-  res.json({ ok: true });
+  if (decision.notify) notify('message', { name: s.name, ip, country: geo.country, text, file: file || null });
+  res.json({ ok: true, notified: decision.notify });
 });
 
 // ===================================================================
@@ -7073,6 +7545,8 @@ function decorateShare(s, req) {
         microVisitors: Array.isArray(ps.micro.u) ? ps.micro.u.length : 0,
         w: s.w || null,
         h: s.h || null,
+        uploadDeviceName: photoUploadDeviceName(s),
+        metadataRemoved: !!s.metadataRemoved,
       };
     })() : null,
     // Shareable image gallery (feature 18): a public /g/<token> page over member images.
@@ -7125,6 +7599,9 @@ function decorateShare(s, req) {
       moderated: !!s.moderated,
       encrypted: !!s.encrypted,
       encMode: s.encrypted ? (s.encMode || 'key') : null,
+      // Live name of the mobile companion device that created this reception link
+      // (null when created from the browser admin). Reflects in-app renames.
+      deviceName: shareCreatorDeviceName(s),
     } : undefined,
     // Collaboration-link settings (undefined on other share types).
     collab: s.type === 'collab' ? {
@@ -7421,6 +7898,7 @@ adminRouter.get('/photos/history', (req, res) => {
       createdAt: record.createdAt,
       revokedAt: record.revokedAt,
       ownerName: record.ownerName,
+      metadataRemoved: !!record.metadataRemoved,
       fullViews: record.fullViews,
       fullVisitors: record.fullVisitors,
       thumbViews: record.thumbViews,
@@ -8703,6 +9181,7 @@ adminRouter.post('/photos', async (req, res) => {
     try { imgPath = await copyHostPhotoToStore(item); }
     catch (_) { errors.push({ path: p, error: 'image-copy-failed' }); continue; }
     const share = { type: 'photo', hostPath: item.hostPath, imgPath, name: item.name, size: item.size, expiresAt: parseExpiry(req.body.expiresInSeconds) };
+    stampPhotoUploadDevice(share, req, 'host');
     stampOwner(share, req);
     try { created.push(decorateShare(addShare(share), req)); }
     catch (_) {
@@ -8765,6 +9244,41 @@ adminRouter.post('/photos/:id/micro', (req, res) => {
   req.pipe(ws);
 });
 
+// Streams one image selected in the authenticated host-file picker back to the
+// admin browser so it can be re-encoded locally before sharing. This endpoint is
+// used only when the Images-page EXIF/GPS cleaning option is enabled: the source
+// file remains untouched and no public link exists until the cleaned bytes return.
+adminRouter.post('/photos/source', async (req, res) => {
+  const requested = String((req.body && req.body.path) || '').trim();
+  if (!requested) return res.status(400).json({ error: 'missing-path' });
+  let item;
+  try { item = await resolveHostItem(requested); }
+  catch (e) { return res.status(e.code === 'not-found' ? 404 : 400).json({ error: e.code || 'invalid-path' }); }
+  const contentType = item.type === 'file' ? imageContentType(item.name) : null;
+  if (!contentType) return res.status(415).json({ error: 'not-image' });
+  if (!Number.isFinite(item.size) || item.size <= 0) return res.status(400).json({ error: 'empty-image' });
+  if (item.size > IMAGE_MAX_BYTES) return res.status(413).json({ error: 'image-too-large', maxBytes: IMAGE_MAX_BYTES });
+
+  let source;
+  try {
+    source = hostToContainer(item.hostPath);
+    await assertRealWithin(HOST_ROOT, source);
+  } catch (_) { return res.status(400).json({ error: 'invalid-path' }); }
+
+  res.status(200);
+  res.setHeader('Content-Type', contentType);
+  res.setHeader('Content-Length', String(item.size));
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Direct-Xfer-Filename', encodeURIComponent(item.name || 'image'));
+  const stream = fs.createReadStream(source);
+  stream.on('error', (error) => {
+    if (!res.headersSent) res.status(500).json({ error: 'image-read-failed' });
+    else res.destroy(error);
+  });
+  stream.pipe(res);
+});
+
 // Create an image link from raw uploaded bytes (drag-drop / paste on the Images
 // page — the file isn't necessarily on the read-only host FS). Mirrors /app/image
 // but under the admin session; Mini/Micro are generated and uploaded separately.
@@ -8777,6 +9291,8 @@ adminRouter.post('/photos/upload', (req, res) => {
   streamToFileBounded(req, res, dest, IMAGE_MAX_BYTES, (size) => {
     const name = String(req.query.name || '').replace(/[\r\n\t/\\]+/g, ' ').trim().slice(0, 120) || ('image.' + ext);
     const share = { type: 'photo', name, imgPath: fname, ext, size };
+    if (String(req.query.metadataRemoved || '') === '1') share.metadataRemoved = true;
+    stampPhotoUploadDevice(share, req, 'web');
     stampOwner(share, req);
     const dim = imageDimensions(dest);
     if (dim && dim.w > 0 && dim.h > 0) { share.w = dim.w; share.h = dim.h; }
@@ -8884,6 +9400,31 @@ adminRouter.get('/photos/:id/dims', async (req, res) => {
     full,
     thumb: variantMeta('thumb', s.thumb),
     micro: variantMeta('micro', s.micro),
+  });
+});
+
+
+// EXIF/GPS details are loaded only when the administrator asks for them. Keeping
+// this separate from /shares and /dims avoids parsing every image during gallery
+// polling and prevents sensitive coordinates from appearing in routine payloads.
+adminRouter.get('/photos/:id/metadata', async (req, res) => {
+  const photo = getById(req.params.id);
+  if (!photo || photo.type !== 'photo' || !ownsShare(req, photo)) return res.status(404).json({ error: 'not-found' });
+  let file = firstExistingPhotoFile(photoOriginalPaths(photo));
+  if (!file && photo.hostPath) {
+    try {
+      file = hostToContainer(photo.hostPath);
+      await assertRealWithin(HOST_ROOT, file);
+    } catch (_) { file = null; }
+  }
+  if (!file) return res.status(404).json({ error: 'file-unavailable' });
+  const metadata = readPhotoMetadata(file);
+  res.json({
+    name: photo.name || '',
+    deviceName: photoUploadDeviceName(photo),
+    source: photo.uploadSource || null,
+    metadataRemoved: !!photo.metadataRemoved,
+    ...metadata,
   });
 });
 
@@ -10530,52 +11071,189 @@ app.get('/dxcollab.js', (req, res) => {
 // link), served at /app. A paired device receives a revocable HttpOnly cookie that
 // authorizes ONLY this PWA surface — never /api or the admin interface. Pairing itself
 // still requires a valid admin session and the normal admin IP allowlist.
+function pwaDeviceOwnerMap() {
+  if (!state.meta || typeof state.meta !== 'object') state.meta = {};
+  if (!state.meta.pwaDeviceOwners || typeof state.meta.pwaDeviceOwners !== 'object' || Array.isArray(state.meta.pwaDeviceOwners)) {
+    state.meta.pwaDeviceOwners = {};
+  }
+  return state.meta.pwaDeviceOwners;
+}
+function rememberPwaDeviceOwner(device) {
+  if (!device || !device.id) return false;
+  const creator = (device.createdByAccountId && getAccountById(device.createdByAccountId)) || findAccountByName(device.createdBy || '');
+  if (!creator) return false;
+  const owners = pwaDeviceOwnerMap();
+  const previous = owners[device.id];
+  const next = { accountId: creator.id, username: creator.username || device.createdBy || null, updatedAt: Date.now() };
+  if (previous && previous.accountId === next.accountId && previous.username === next.username) return false;
+  owners[device.id] = next;
+  return true;
+}
+function pwaDeviceOwnerAccount(deviceId) {
+  deviceId = String(deviceId || '');
+  if (!deviceId) return null;
+  const current = Array.isArray(state.meta && state.meta.pwaDevices)
+    ? state.meta.pwaDevices.find((device) => device && device.id === deviceId)
+    : null;
+  if (current) {
+    const creator = (current.createdByAccountId && getAccountById(current.createdByAccountId)) || findAccountByName(current.createdBy || '');
+    if (creator) return creator;
+  }
+  const remembered = pwaDeviceOwnerMap()[deviceId];
+  return remembered && remembered.accountId ? getAccountById(remembered.accountId) : null;
+}
 function pwaDevices() {
   if (!state.meta || typeof state.meta !== 'object') state.meta = {};
   if (!Array.isArray(state.meta.pwaDevices)) state.meta.pwaDevices = [];
   const cutoff = Date.now() - 400 * 86400000;
+  let changed = false;
+  // Record the account behind every capability before old device records are pruned.
+  // This durable index lets a replacement/reinstalled PWA recover links created by
+  // the previous device credential instead of opening an apparently empty workspace.
+  for (const d of state.meta.pwaDevices) {
+    if (!d || !d.id) continue;
+    if (!d.createdByAccountId && d.createdBy) {
+      const creator = findAccountByName(d.createdBy);
+      if (creator) { d.createdByAccountId = creator.id; changed = true; }
+    }
+    if (rememberPwaDeviceOwner(d)) changed = true;
+  }
   state.meta.pwaDevices = state.meta.pwaDevices.filter((d) => d && d.id && d.hash && (d.createdAt || 0) > cutoff);
+  // Devices created before 1.23.1 did not have their own CSRF token. Upgrade
+  // them lazily so existing pairings remain valid without weakening mutations.
+  for (const d of state.meta.pwaDevices) {
+    if (!d.csrf || !/^[A-Za-z0-9_-]{32,128}$/.test(String(d.csrf))) {
+      d.csrf = crypto.randomBytes(32).toString('base64url');
+      changed = true;
+    }
+  }
+  const owners = pwaDeviceOwnerMap();
+  const ownerIds = Object.keys(owners);
+  if (ownerIds.length > 500) {
+    ownerIds.sort((a, b) => Number(owners[b] && owners[b].updatedAt || 0) - Number(owners[a] && owners[a].updatedAt || 0));
+    for (const id of ownerIds.slice(500)) { delete owners[id]; changed = true; }
+  }
+  if (changed) scheduleFlush();
   return state.meta.pwaDevices;
 }
+
+function cleanDeviceLabel(value) {
+  return String(value || '').replace(/[\r\n\t]+/g, ' ').trim().slice(0, 120) || null;
+}
+function requestClientDeviceName(req, source) {
+  if (req && req.pwaDevice && req.pwaDevice.name) return cleanDeviceLabel(req.pwaDevice.name);
+  if (source === 'host') return 'Serveur · fichier hôte';
+  const ua = String((req && req.headers && req.headers['user-agent']) || '');
+  let browser = '';
+  if (/Firefox\//i.test(ua)) browser = 'Firefox';
+  else if (/Edg\//i.test(ua)) browser = 'Edge';
+  else if (/OPR\//i.test(ua)) browser = 'Opera';
+  else if (/Chrome\//i.test(ua) || /CriOS\//i.test(ua)) browser = 'Chrome';
+  else if (/Safari\//i.test(ua) && /Version\//i.test(ua)) browser = 'Safari';
+  let platform = '';
+  if (/Android/i.test(ua)) platform = 'Android';
+  else if (/iPhone|iPad|iPod/i.test(ua)) platform = 'iOS';
+  else if (/Windows/i.test(ua)) platform = 'Windows';
+  else if (/Macintosh|Mac OS X/i.test(ua)) platform = 'macOS';
+  else if (/Linux/i.test(ua)) platform = 'Linux';
+  const prefix = source === 'collaborator' ? 'Collaborateur' : 'Web';
+  return cleanDeviceLabel([prefix, browser, platform].filter(Boolean).join(' · ')) || prefix;
+}
+function stampPhotoUploadDevice(share, req, source) {
+  if (!share || share.type !== 'photo') return share;
+  const label = requestClientDeviceName(req, source);
+  if (label) share.uploadDeviceName = label;
+  if (source) share.uploadSource = String(source).slice(0, 32);
+  return share;
+}
+// Live name of the paired PWA / Android-companion device that created a share,
+// resolved from its stable ownerDeviceId. Reading the current device.name (not a
+// snapshot) means a rename done in the companion app is reflected everywhere the
+// creator device is shown. Returns null for links created from a browser admin
+// session or that predate device stamping.
+function shareCreatorDeviceName(share) {
+  if (!share || !share.ownerDeviceId) return null;
+  const device = pwaDevices().find((d) => d.id === share.ownerDeviceId);
+  return (device && cleanDeviceLabel(device.name)) || null;
+}
+function photoUploadDeviceName(share) {
+  if (!share || share.type !== 'photo') return null;
+  const stored = cleanDeviceLabel(share.uploadDeviceName);
+  if (stored) return stored;
+  return shareCreatorDeviceName(share);
+}
+
 function pwaSecretHash(secret) { return crypto.createHash('sha256').update(String(secret)).digest('hex'); }
-function getPwaDevice(req, touch = true) {
-  const raw = parseCookies(req).dxpwa || '';
+function validatePwaDeviceCredential(raw, touch = true, allowLocked = false) {
+  raw = String(raw || '');
   const dot = raw.indexOf('.');
   if (dot < 1) return null;
   const id = raw.slice(0, dot), secret = raw.slice(dot + 1);
+  if (!/^[a-f0-9]{24}$/i.test(id) || !/^[A-Za-z0-9_-]{32,128}$/.test(secret)) return null;
   const device = pwaDevices().find((d) => d.id === id);
-  if (!device || !secret || !timingSafeEqualStr(device.hash, pwaSecretHash(secret))) return null;
+  if (!device || !timingSafeEqualStr(device.hash, pwaSecretHash(secret))) return null;
+  if (device.sessionLockedAt && !allowLocked) return null;
   if (touch && Date.now() - (device.lastUsedAt || 0) > 3600000) {
     device.lastUsedAt = Date.now();
     scheduleFlush();
   }
   return device;
 }
+function getPwaDevice(req, touch = true, allowLocked = false) {
+  return validatePwaDeviceCredential(parseCookies(req).dxpwa || '', touch, allowLocked);
+}
+// Native Android companion authentication. The credential is deliberately the
+// same revocable device capability as the PWA cookie, transported in an
+// Authorization header so WorkManager can upload without a WebView/session.
+// Format: Authorization: Bearer dxpwa_<device-id>.<secret>
+function getPwaBearerDevice(req, touch = true) {
+  const auth = String(req.headers.authorization || '');
+  const m = /^Bearer\s+dxpwa_([a-f0-9]{24}\.[A-Za-z0-9_-]{32,128})$/i.exec(auth);
+  return m ? validatePwaDeviceCredential(m[1], touch) : null;
+}
+function appendSetCookie(res, value) {
+  const current = res.getHeader('Set-Cookie');
+  if (!current) return res.setHeader('Set-Cookie', value);
+  if (Array.isArray(current)) return res.setHeader('Set-Cookie', current.concat(value));
+  return res.setHeader('Set-Cookie', [current, value]);
+}
 function setPwaDeviceCookie(req, res, id, secret) {
   const maxAge = 365 * 86400;
-  res.setHeader('Set-Cookie', `dxpwa=${id}.${secret}; HttpOnly; SameSite=Strict; Path=/app; Max-Age=${maxAge}${secureCookie(req)}`);
+  // SameSite=Lax so the durable device capability survives a home-screen WebAPK
+  // launch and a Web Share Target (both cross-site top-level navigations, where a
+  // Strict cookie would be dropped and the device would appear unpaired / its
+  // images and albums "reset"). Mutations under /app still require the per-device
+  // X-CSRF-Token and an exact same-origin Origin header, so Lax is CSRF-safe here.
+  appendSetCookie(res, `dxpwa=${id}.${secret}; HttpOnly; SameSite=Lax; Path=/app; Max-Age=${maxAge}${secureCookie(req)}`);
 }
 function clearPwaDeviceCookie(req, res) {
-  res.setHeader('Set-Cookie', `dxpwa=; HttpOnly; SameSite=Strict; Path=/app; Max-Age=0${secureCookie(req)}`);
+  appendSetCookie(res, `dxpwa=; HttpOnly; SameSite=Lax; Path=/app; Max-Age=0${secureCookie(req)}`);
 }
-function issuePwaDevice(req, res, name, createdBy) {
+function createPwaDevice(name, createdBy) {
   const id = crypto.randomBytes(12).toString('hex');
   const secret = crypto.randomBytes(32).toString('base64url');
   const now = Date.now();
+  const creator = findAccountByName(createdBy);
   const device = {
     id,
     hash: pwaSecretHash(secret),
+    csrf: crypto.randomBytes(32).toString('base64url'),
     name: String(name || 'Direct-Xfer PWA').replace(/[\r\n]+/g, ' ').trim().slice(0, 100) || 'Direct-Xfer PWA',
     createdAt: now,
     lastUsedAt: now,
     createdBy: createdBy || null,
+    createdByAccountId: creator ? creator.id : null,
   };
   const list = pwaDevices();
   list.push(device);
   while (list.length > 30) list.shift();
   scheduleFlush();
-  setPwaDeviceCookie(req, res, id, secret);
-  return device;
+  return { device, secret };
+}
+function issuePwaDevice(req, res, name, createdBy) {
+  const issued = createPwaDevice(name, createdBy);
+  setPwaDeviceCookie(req, res, issued.device.id, issued.secret);
+  return issued.device;
 }
 
 // One-time QR pairing tickets are kept only in memory. They expire after five
@@ -10598,50 +11276,448 @@ app.get('/app/device/claim', (req, res) => {
   res.redirect(303, '/app/?paired=1');
 });
 
+// Canonical installation resources deliberately live outside /app. Some reverse
+// proxies and identity gateways attach redirects to protected /app paths; Chrome
+// refuses a service-worker script after ANY redirect, even when the final response
+// is HTTP 200. These aliases are immutable public assets only — no API or private
+// data is exposed — and are served directly by Express with exact MIME headers.
+function sendPwaInstallAsset(res, filename, contentType, serviceWorker) {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Content-Type', contentType);
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+  if (serviceWorker) res.setHeader('Service-Worker-Allowed', '/app/');
+  return res.sendFile(path.join(__dirname, 'pwa', filename));
+}
+app.get('/direct-xfer-pwa.webmanifest', (req, res) => sendPwaInstallAsset(res, 'manifest.webmanifest', 'application/manifest+json; charset=utf-8', false));
+app.get('/direct-xfer-pwa-en.webmanifest', (req, res) => sendPwaInstallAsset(res, 'manifest-en.webmanifest', 'application/manifest+json; charset=utf-8', false));
+app.get('/direct-xfer-pwa-es.webmanifest', (req, res) => sendPwaInstallAsset(res, 'manifest-es.webmanifest', 'application/manifest+json; charset=utf-8', false));
+app.get('/direct-xfer-pwa-sw.js', (req, res) => sendPwaInstallAsset(res, 'sw.js', 'application/javascript; charset=utf-8', true));
+
+// Only static PWA resources are public. The application document itself now
+// requires either an administrator session or an already-paired device. A new
+// mobile visit is sent to /app/login, a dedicated administrator sign-in screen.
+const PWA_PUBLIC_ASSET_PATHS = new Set([
+  '/app.css',
+  '/app.js',
+  '/login.css',
+  '/login.js',
+  '/login-vault.js',
+  '/theme-init.js',
+  '/sw.js',
+  '/manifest.webmanifest',
+  '/manifest-en.webmanifest',
+  '/manifest-es.webmanifest',
+  '/icon.svg',
+  '/icon-192.png',
+  '/icon-512.png',
+  '/icon-maskable.svg',
+  '/icon-maskable-192.png',
+  '/icon-maskable-512.png',
+  '/apple-touch-icon.png',
+  '/screenshot-mobile.png',
+  '/screenshot-wide.png',
+  '/launch',
+  '/launch.html',
+]);
+function isPublicPwaAssetRequest(req) {
+  return (req.method === 'GET' || req.method === 'HEAD') && PWA_PUBLIC_ASSET_PATHS.has(req.path);
+}
 function pwaNetworkGuard(req, res, next) {
-  if (getPwaDevice(req, false)) return next();
+  if (isPublicPwaAssetRequest(req) || getPwaDevice(req, false) || getPwaBearerDevice(req, false)) return next();
   return adminGuard(req, res, next);
 }
+
+function pwaHttpsInstallUrl() {
+  const origin = normalizedOrigin(PUBLIC_URL);
+  return origin.startsWith('https://') ? origin + '/app' : '';
+}
+
+// Installability diagnostics used by the mobile login and PWA. PUBLIC_URL is
+// already the externally advertised base, so returning its HTTPS /app URL does
+// not reveal any private configuration.
+app.get('/app/install-info', pwaNetworkGuard, (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ secure: req.secure, httpsUrl: pwaHttpsInstallUrl(), requiresTrustedHttps: true });
+});
+
+function safePwaNext(raw) {
+  const value = String(raw || '/app/');
+  if (!/^\/app(?:\/|\?|$)/.test(value) || value.startsWith('//') || /[\r\n]/.test(value)) return '/app/';
+  return value === '/app' ? '/app/' : value;
+}
+
+// The bare /app entry is intentionally a login entry point. The installed PWA
+// and existing paired devices keep using /app/ directly.
+app.get('/app', adminGuard, (req, res, next) => {
+  if (req.originalUrl.split('?')[0].endsWith('/')) return next();
+  const q = req.originalUrl.includes('?') ? req.originalUrl.slice(req.originalUrl.indexOf('?')) : '';
+  const destination = '/app/' + q;
+  res.redirect(302, '/app/login?next=' + encodeURIComponent(destination));
+});
+
+// Dedicated mobile administrator login. An active admin session proceeds to the
+// requested PWA URL; otherwise the compact mobile login document is served.
+app.get('/app/login', adminGuard, (req, res) => {
+  const destination = safePwaNext(req.query.next);
+  if (getSession(req)) return res.redirect(302, destination);
+  res.setHeader('Cache-Control', 'no-store');
+  res.sendFile(path.join(__dirname, 'pwa', 'login.html'));
+});
+
+function normalizedOrigin(raw) {
+  try {
+    const u = new URL(String(raw || ''));
+    if (!/^https?:$/.test(u.protocol) || !u.hostname) return '';
+    return u.origin;
+  } catch (_) {
+    return '';
+  }
+}
+
+// Browser mutations under /app must originate from the exact Direct-Xfer
+// origin. SameSite cookies alone are insufficient because sibling subdomains
+// are "same-site" while still being different, potentially hostile origins.
+function validAppMutationOrigin(req) {
+  const supplied = normalizedOrigin(req.headers.origin);
+  if (!supplied || supplied === 'null') return false;
+  const allowed = new Set();
+  const host = String(req.get('host') || '').trim();
+  if (/^[A-Za-z0-9.:[\]-]+$/.test(host)) {
+    const requestOrigin = normalizedOrigin(`${externalProto(req)}://${host}`);
+    if (requestOrigin) allowed.add(requestOrigin);
+  }
+  const publicOrigin = normalizedOrigin(PUBLIC_URL);
+  if (publicOrigin) allowed.add(publicOrigin);
+  return allowed.has(supplied);
+}
+
 function requireAppAuth(req, res, next) {
-  if (req.path === '/sw.js') return next();
+  if (isPublicPwaAssetRequest(req)) return next();
   const session = getSession(req);
-  const device = getPwaDevice(req);
+  const bearerDevice = getPwaBearerDevice(req);
+  let device = bearerDevice || getPwaDevice(req);
+  if (!device && session) {
+    const lockedDevice = getPwaDevice(req, false, true);
+    if (lockedDevice && lockedDevice.sessionLockedAt) {
+      delete lockedDevice.sessionLockedAt;
+      lockedDevice.lastUsedAt = Date.now();
+      scheduleFlush();
+      device = lockedDevice;
+    }
+  }
   if (session || device) {
     req.pwaSession = session;
     req.pwaDevice = device;
+    req.pwaAuthMode = bearerDevice ? 'bearer' : (device ? 'cookie' : 'session');
     const mutating = !['GET', 'HEAD', 'OPTIONS'].includes(req.method);
-    // A paired device keeps its deliberately narrow PWA capability. Without a
-    // device, normal admin invariants (role, forced password change and CSRF)
-    // apply to the companion surface as well.
-    if (mutating && !device) {
-      const acc = session && session.accountId ? getAccountById(session.accountId) : null;
-      if (!session || !['owner', 'admin', 'operator'].includes(session.role)) {
-        return res.status(403).type('text').send('Forbidden');
+    if (mutating) {
+      // Browser cookie/session requests must be exact same-origin. Native bearer
+      // requests have no browser Origin header and instead rely on the unguessable
+      // device credential plus the per-device CSRF secret.
+      if (!bearerDevice && !validAppMutationOrigin(req)) return res.status(403).json({ error: 'invalid-origin' });
+      const csrf = String(req.headers['x-csrf-token'] || '');
+      const deviceCsrfOk = !!(device && csrf && timingSafeEqualStr(csrf, device.csrf));
+      const sessionCsrfOk = !!(session && csrf && timingSafeEqualStr(csrf, session.csrf));
+      if (!deviceCsrfOk && !sessionCsrfOk) return res.status(403).json({ error: 'invalid-csrf' });
+
+      // A paired device keeps its deliberately narrow PWA capability. Requests
+      // authenticated through the admin session retain the normal role and
+      // forced-password-change invariants.
+      if (!deviceCsrfOk) {
+        const acc = session && session.accountId ? getAccountById(session.accountId) : null;
+        if (!session || !['owner', 'admin', 'operator'].includes(session.role)) {
+          return res.status(403).type('text').send('Forbidden');
+        }
+        if (accountNeedsPwChange(acc)) return res.status(403).json({ error: 'password-change-required' });
       }
-      if (accountNeedsPwChange(acc)) return res.status(403).json({ error: 'password-change-required' });
-      const csrf = req.headers['x-csrf-token'];
-      if (!csrf || !timingSafeEqualStr(csrf, session.csrf)) return res.status(403).json({ error: 'invalid-csrf' });
     }
     return next();
   }
   const accept = req.headers.accept || '';
   if (req.method === 'GET' && accept.includes('text/html')) {
     // Preserve the complete query string: Web Share Target batches use ?shared=<id>
-    // and remain recoverable after the user signs back in.
-    return res.redirect(302, '/?next=' + encodeURIComponent(req.originalUrl));
+    // and remain recoverable after the administrator signs in on mobile.
+    return res.redirect(302, '/app/login?next=' + encodeURIComponent(safePwaNext(req.originalUrl)));
   }
   return res.status(401).type('text').send('Authentication required');
 }
+// Native Android companion login. The administrator authenticates once; the
+// response contains a revocable, PWA-scoped bearer capability and its CSRF value.
+// The password and 2FA code are never stored by Direct-Xfer or returned to the app.
+const companionLoginParser = express.json({ limit: '8kb' });
+app.post('/app/companion/login', adminGuard, companionLoginParser, (req, res) => {
+  const body = req.body || {};
+  const result = attemptLogin(req, res, body.username || '', body.password || '', body.totp || '');
+  if (!result.ok) {
+    if (result.locked) return res.status(429).json({ error: 'too-many-attempts', retryAfter: result.retryAfter });
+    if (result.totpRequired) return res.status(401).json({ error: 'totp-required' });
+    if (result.totpInvalid) return res.status(401).json({ error: 'invalid-totp' });
+    return res.status(401).json({ error: 'invalid-password', hints: loginHints() });
+  }
+  const acc = result.account;
+  if (!acc || !['owner', 'admin', 'operator'].includes(acc.role) || accountNeedsPwChange(acc)) {
+    if (result.sid) sessions.delete(result.sid);
+    destroySession(req, res);
+    return res.status(403).json({ error: accountNeedsPwChange(acc) ? 'password-change-required' : 'role-forbidden' });
+  }
+  const issued = createPwaDevice(body.deviceName || 'Direct-Xfer Android', acc.username || null);
+  // This endpoint creates a device capability, not a browser admin session. Clear
+  // the temporary session cookie created by attemptLogin before returning JSON.
+  if (result.sid) sessions.delete(result.sid);
+  destroySession(req, res);
+  logAudit('pwa-device-paired', { account: acc, ip: clientIp(req), detail: issued.device.name + ' (Android companion)' });
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({
+    ok: true,
+    server: normalizedOrigin(PUBLIC_URL) || `${externalProto(req)}://${String(req.get('host') || '')}`,
+    deviceToken: `dxpwa_${issued.device.id}.${issued.secret}`,
+    csrf: issued.device.csrf,
+    device: publicPwaDevice(issued.device, issued.device.id),
+  });
+});
+
+
+// Dedicated browser-PWA login. Besides creating the administrator session, bind
+// the browser to a durable PWA device capability. A normal /api/login could leave
+// the installed app in session-only mode; when Android later discarded that cookie,
+// device-owned images and albums appeared to reset even though the files remained.
+app.post('/app/login', adminGuard, companionLoginParser, (req, res) => {
+  const body = req.body || {};
+  const result = attemptLogin(req, res, body.username || '', body.password || '', body.totp || '');
+  if (!result.ok) {
+    if (result.locked) return res.status(429).json({ error: 'too-many-attempts', retryAfter: result.retryAfter });
+    if (result.totpRequired) return res.status(401).json({ error: 'totp-required' });
+    if (result.totpInvalid) return res.status(401).json({ error: 'invalid-totp' });
+    return res.status(401).json({ error: 'invalid-password', hints: loginHints() });
+  }
+  const acc = result.account;
+  if (!acc || !['owner', 'admin', 'operator'].includes(acc.role)) {
+    if (result.sid) sessions.delete(result.sid);
+    destroySession(req, res);
+    return res.status(403).json({ error: 'role-forbidden' });
+  }
+
+  let device = getPwaDevice(req, false, true);
+  const existingDeviceOwner = device ? (pwaDeviceCreatorAccount(device) || pwaDeviceOwnerAccount(device.id)) : null;
+  // A browser may retain a dxpwa cookie while a different account signs in. Never
+  // transfer that capability between accounts: issue a separate device identity so
+  // one operator cannot inherit another account's workspace on a shared phone.
+  if (device && existingDeviceOwner && existingDeviceOwner.id !== acc.id) device = null;
+  if (device) {
+    delete device.sessionLockedAt;
+    device.lastUsedAt = Date.now();
+    device.createdBy = acc.username || device.createdBy || null;
+    device.createdByAccountId = acc.id;
+    if (body.deviceName) device.name = String(body.deviceName).replace(/[\r\n]+/g, ' ').trim().slice(0, 100) || device.name;
+    rememberPwaDeviceOwner(device);
+    scheduleFlush();
+  } else {
+    const label = String(body.deviceName || requestClientDeviceName(req, 'pwa') || 'Direct-Xfer PWA')
+      .replace(/[\r\n]+/g, ' ').trim().slice(0, 100) || 'Direct-Xfer PWA';
+    device = issuePwaDevice(req, res, label, acc.username || null);
+  }
+  const migrated = migratePwaRecordsForAccount(acc);
+  req.session = { sid: result.sid, csrf: result.csrf, accountId: acc.id, username: acc.username, role: acc.role };
+  auditReq(req, 'pwa-login-bound', `${device.name}; migrated=${migrated}`);
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({
+    ok: true,
+    csrf: result.csrf,
+    mustChangePassword: accountNeedsPwChange(acc),
+    username: acc.username,
+    role: acc.role,
+    paired: true,
+    device: publicPwaDevice(device, device.id),
+  });
+});
+
 app.use('/app', pwaNetworkGuard, requireAppAuth);
 
 const pwaJsonParser = express.json({ limit: '8kb' });
 
+// Ends the browser session without deleting local IndexedDB data, public links or
+// the paired-device record. The device capability is locked server-side and is
+// automatically unlocked only after a fresh administrator login reaches /app.
+app.post('/app/session/logout', pwaJsonParser, (req, res) => {
+  const session = req.pwaSession || getSession(req);
+  const device = req.pwaDevice || getPwaDevice(req, false, true);
+  const keys = [];
+  if (device) {
+    device.sessionLockedAt = Date.now();
+    keys.push('dev:' + device.id);
+  }
+  if (session && session.accountId) keys.push('acc:' + session.accountId);
+  for (const key of keys) {
+    const streams = inboxEventSubs.get(key);
+    if (streams) {
+      for (const stream of streams) { try { stream.end(); } catch (_) {} }
+      inboxEventSubs.delete(key);
+    }
+  }
+  if (session) {
+    req.session = session;
+    auditReq(req, 'logout', device ? 'PWA session locked: ' + device.name : 'PWA session');
+  } else if (device) {
+    logAudit('logout', { username: 'PWA: ' + device.name, ip: clientIp(req), detail: 'PWA session locked' });
+  }
+  destroySession(req, res);
+  persistNow();
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ ok: true, paired: !!device });
+});
+
+// QR code (SVG) for a reception link, generated locally (no third-party service).
+// Gated by the same /app auth (paired device or admin session) as the rest of the
+// PWA API. Mirrors the admin /qr route: the `qrcode` package renders `data` purely
+// as QR modules (<path>/<rect> geometry) and never echoes it back as text, so there
+// is no injection surface — nosniff is set as defense in depth.
+app.get('/app/qr', async (req, res) => {
+  const data = String(req.query.data || '');
+  if (!data || data.length > 1024) return res.status(400).json({ error: 'invalid-data' });
+  try {
+    const svg = await QRCode.toString(data, { type: 'svg', margin: 1 });
+    res.type('image/svg+xml');
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    // nosemgrep: javascript.express.security.audit.xss.direct-response-write.direct-response-write
+    res.send(svg);
+  } catch (e) {
+    res.status(500).json({ error: 'qr-failed' });
+  }
+});
+
+// ===================================================================
+//  PWA live inbox events — Server-Sent Events (SSE) + owner-scoped push
+// ===================================================================
+// A device/account that created reception links can watch its inboxes live and,
+// optionally, get a browser push when a file lands (even with the app closed).
+// The upload itself is anonymous (/u/), so the finalize step looks up the share's
+// recorded owner and fans an event out to that owner's live streams + push subs.
+const inboxEventSubs = new Map(); // ownerKey -> Set<res>
+function pwaOwnerKeys(req) {
+  const k = [];
+  if (req.pwaDevice && req.pwaDevice.id) k.push('dev:' + req.pwaDevice.id);
+  if (req.pwaSession && req.pwaSession.accountId) k.push('acc:' + req.pwaSession.accountId);
+  return k;
+}
+function ownerKeysForShare(s) {
+  const k = [];
+  if (s && s.ownerDeviceId) k.push('dev:' + s.ownerDeviceId);
+  if (s && s.ownerId) k.push('acc:' + s.ownerId);
+  return k;
+}
+function notifyFirstPhotoView(s, req, kind, ip, geo) {
+  if (!s || s.type !== 'photo') return;
+  const variant = kind === 'thumb' ? 'Mini' : kind === 'micro' ? 'Micro' : 'Full';
+  const where = geo && geo.country ? ' · ' + geo.country : '';
+  const body = `"${s.name || 'Image'}" · ${variant}${ip ? ' · ' + ip : ''}${where}`;
+  const title = `${APP_NAME} — First image view`;
+  const payload = { name: s.name || '', token: s.token, variant: kind, ip: ip || null, country: geo && geo.country || null, url: '/app/#images' };
+  const wh = effectiveWebhook();
+  if (wh.url) sendWebhook(wh.url, wh.format, `👁 ${title}: ${body}`, 'image-first-view', payload);
+  if (emailConfigured()) sendMail(title, `👁 ${title}: ${body}`);
+  const evt = { type: 'image-first-view', title, body, name: s.name || '', token: s.token, variant: kind, at: Date.now() };
+  emitPwaOwnerEvent(s, evt, true);
+  logAudit('image-first-view', { username: 'system', ip: clientIp(req), detail: `${s.name || s.token} · ${variant}` });
+}
+function sendPwaPush(keys, evt) {
+  if (!webpush || !keys.length) return;
+  const activeKeys = keys.filter((key) => {
+    if (!key.startsWith('dev:')) return true;
+    const device = pwaDevices().find((d) => d.id === key.slice(4));
+    return !!(device && !device.sessionLockedAt);
+  });
+  if (!activeKeys.length) return;
+  const subs = pushSubs().filter((x) => Array.isArray(x.ownerKeys) && x.ownerKeys.some((k) => activeKeys.includes(k)));
+  if (subs.length) sendWebPush(evt.kind || 'pwa', evt.title || APP_NAME, evt.body || '', { url: evt.url || '/app/', token: evt.token || null }, subs);
+}
+function emitPwaOwnerEvent(s, evt, push) {
+  const keys = ownerKeysForShare(s);
+  if (!keys.length) return;
+  const frame = 'data: ' + JSON.stringify(evt) + '\n\n';
+  for (const k of keys) {
+    const set = inboxEventSubs.get(k);
+    if (set) for (const res of set) { try { res.write(frame); } catch (_) {} }
+  }
+  if (push) {
+    try { sendPwaPush(keys, { kind: evt.type || 'pwa', title: evt.title || APP_NAME, body: evt.body || '', url: '/app/#images', token: evt.token || null }); } catch (_) {}
+  }
+}
+// Called from the (anonymous) upload finalize when a file lands on an inbox.
+function emitInboxEvent(s, evt) {
+  emitPwaOwnerEvent(s, evt, false);
+  const keys = ownerKeysForShare(s);
+  try { sendPwaPush(keys, { kind: 'inbox', title: APP_NAME, body: (evt.name ? evt.name + ' — ' : '') + (evt.dest || ''), url: '/app/' }); } catch (_) {}
+}
+
+// Live event stream for the signed-in device/account (cookie-authenticated).
+app.get('/app/events', (req, res) => {
+  const keys = pwaOwnerKeys(req);
+  if (!keys.length) return res.status(403).end();
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream; charset=utf-8',
+    'Cache-Control': 'no-store',
+    'Connection': 'keep-alive',
+    'X-Accel-Buffering': 'no', // keep proxies (nginx) from buffering the stream
+  });
+  res.write('retry: 5000\n\n');
+  res.write(': connected\n\n');
+  for (const k of keys) { if (!inboxEventSubs.has(k)) inboxEventSubs.set(k, new Set()); inboxEventSubs.get(k).add(res); }
+  const ping = setInterval(() => { try { res.write(': ping\n\n'); } catch (_) {} }, 25000);
+  req.on('close', () => {
+    clearInterval(ping);
+    for (const k of keys) { const set = inboxEventSubs.get(k); if (set) { set.delete(res); if (!set.size) inboxEventSubs.delete(k); } }
+  });
+});
+
+// Public VAPID key so the PWA can create a push subscription.
+app.get('/app/push/vapid', (req, res) => {
+  if (!webpush) return res.status(400).json({ error: 'no-module' });
+  const keys = getVapidKeys();
+  res.json({ publicKey: keys ? keys.publicKey : '' });
+});
+// Store an owner-scoped push subscription for this device/account.
+app.post('/app/push/subscribe', pwaJsonParser, (req, res) => {
+  if (!webpush) return res.status(400).json({ error: 'no-module' });
+  const keys = pwaOwnerKeys(req);
+  if (!keys.length) return res.status(403).json({ error: 'forbidden' });
+  const sub = req.body && req.body.subscription;
+  if (!sub || typeof sub.endpoint !== 'string' || !/^https:\/\//.test(sub.endpoint) || !sub.keys || !sub.keys.p256dh || !sub.keys.auth) {
+    return res.status(400).json({ error: 'invalid-subscription' });
+  }
+  const subs = pushSubs();
+  const rec = {
+    endpoint: sub.endpoint.slice(0, 2000),
+    keys: { p256dh: String(sub.keys.p256dh).slice(0, 200), auth: String(sub.keys.auth).slice(0, 100) },
+    ownerKeys: keys, pwa: true,
+    accountId: (req.pwaSession && req.pwaSession.accountId) || null,
+    ua: String(req.headers['user-agent'] || '').slice(0, 200),
+    createdAt: Date.now(),
+  };
+  const i = subs.findIndex((x) => x.endpoint === rec.endpoint);
+  if (i !== -1) subs[i] = { ...subs[i], ...rec }; else subs.push(rec);
+  if (subs.length > 300) subs.splice(0, subs.length - 300);
+  persist();
+  res.json({ ok: true });
+});
+app.post('/app/push/unsubscribe', pwaJsonParser, (req, res) => {
+  const endpoint = String((req.body && req.body.endpoint) || '').trim();
+  if (!endpoint) return res.status(400).json({ error: 'missing-endpoint' });
+  const removed = dropPushSub(endpoint);
+  if (removed) persist();
+  res.json({ ok: true, removed });
+});
+
 // Create a reception link from the PWA. Reachable by a paired device OR an admin
-// session (the /app gate already enforced one of them); both auth cookies are
-// SameSite=Strict, so this is CSRF-safe. Only a NAME is accepted — quotas, geo/IP
-// rules, moderation, encryption, passwords stay admin-panel-only. The new link
-// shows up in the admin like any other, and is returned so the app can select it.
+// session (the /app gate already enforced auth, origin and CSRF). Only a JSON
+// object with a NAME is accepted — quotas, geo/IP rules, moderation, encryption,
+// passwords stay admin-panel-only. The new link shows up in the admin like any
+// other, and is returned so the app can select it.
 app.post('/app/inbox', pwaJsonParser, (req, res) => {
+  if (!req.is('application/json') || !req.body || Array.isArray(req.body) || typeof req.body !== 'object') {
+    return res.status(415).json({ error: 'json-required' });
+  }
   const name = String((req.body && req.body.name) || '').replace(/[\r\n\t]+/g, ' ').trim().slice(0, 80) || 'Réception';
   const dirBase = name.replace(/[^A-Za-z0-9 _.-]/g, '_').replace(/^\.+/, '').trim().slice(0, 50) || 'reception';
   const inbox = {
@@ -10659,8 +11735,7 @@ app.post('/app/inbox', pwaJsonParser, (req, res) => {
   const banner = String(getSettings().receptionBanner || '').slice(0, 2000);
   if (banner) inbox.note = banner;
   // Ownership: an admin session stamps its account; a device records its own name.
-  if (req.pwaSession) { inbox.ownerId = req.pwaSession.accountId || null; inbox.ownerName = req.pwaSession.username || null; }
-  if (req.pwaDevice) { inbox.ownerDeviceId = req.pwaDevice.id; if (!inbox.ownerName) inbox.ownerName = req.pwaDevice.name || 'PWA'; }
+  stampPwaRecordOwner(req, inbox);
   try { fs.mkdirSync(resolveWithin(INBOX_DIR, inbox.relDir), { recursive: true }); } catch (_) {}
   const rec = addShare(inbox);
   const who = (req.pwaSession && req.pwaSession.username) || (req.pwaDevice ? 'PWA: ' + req.pwaDevice.name : 'PWA');
@@ -10674,16 +11749,656 @@ app.post('/app/inbox', pwaJsonParser, (req, res) => {
 // share is created so /i/<token> serves it directly. The thumbnail is uploaded
 // separately (generated on the device). URLs use the Images domain when set.
 const PWA_IMG_EXT = /^(jpg|png|gif|webp|bmp|avif)$/;
-function pwaImgOwner(req, share) {
-  if (req.pwaSession) { share.ownerId = req.pwaSession.accountId || null; share.ownerName = req.pwaSession.username || null; }
-  if (req.pwaDevice) { share.ownerDeviceId = req.pwaDevice.id; if (!share.ownerName) share.ownerName = req.pwaDevice.name || 'PWA'; }
+const COMPANION_IMAGE_UPLOAD_ID = /^[A-Za-z0-9_-]{16,64}$/;
+function pwaDeviceCreatorAccount(device) {
+  if (!device) return null;
+  return (device.createdByAccountId && getAccountById(device.createdByAccountId)) || findAccountByName(device.createdBy || '');
+}
+function stampPwaRecordOwner(req, share) {
+  if (!share) return share;
+  if (req.pwaSession) {
+    share.ownerId = req.pwaSession.accountId || null;
+    share.ownerName = req.pwaSession.username || null;
+  }
+  if (req.pwaDevice) {
+    share.ownerDeviceId = req.pwaDevice.id;
+    const creator = pwaDeviceCreatorAccount(req.pwaDevice);
+    // A device capability is delegated by an account. Persist both identities so
+    // losing/replacing the HttpOnly device cookie never makes its records disappear.
+    if (!share.ownerId && creator) share.ownerId = creator.id;
+    if (!share.ownerName) share.ownerName = (creator && creator.username) || req.pwaDevice.name || 'PWA';
+    rememberPwaDeviceOwner(req.pwaDevice);
+  }
+  return share;
+}
+function pwaImgOwner(req, share) { return stampPwaRecordOwner(req, share); }
+function migratePwaRecordsForAccount(account) {
+  if (!account || !account.id) return 0;
+  let changed = 0;
+  for (const share of state.shares || []) {
+    if (!share || !share.ownerDeviceId || share.ownerId) continue;
+    const owner = pwaDeviceOwnerAccount(share.ownerDeviceId);
+    if (!owner || owner.id !== account.id) continue;
+    share.ownerId = account.id;
+    if (!share.ownerName || share.ownerName === 'PWA') share.ownerName = account.username || share.ownerName;
+    changed += 1;
+  }
+  if (changed) scheduleFlush();
+  return changed;
+}
+function pwaDeviceCanManageRecord(device, share) {
+  if (!device || !share) return false;
+  const creator = pwaDeviceCreatorAccount(device);
+  if (share.ownerDeviceId && share.ownerDeviceId === device.id) {
+    if (!share.ownerId && creator) {
+      share.ownerId = creator.id;
+      if (!share.ownerName || share.ownerName === 'PWA') share.ownerName = creator.username || share.ownerName;
+      scheduleFlush();
+    }
+    return true;
+  }
+
+  // The account, not a disposable browser cookie, is the durable ownership root.
+  // A replacement PWA credential issued to the same account therefore inherits
+  // the records of its previous credential and self-heals their legacy ownerId.
+  if (creator && share.ownerDeviceId) {
+    const previousOwner = pwaDeviceOwnerAccount(share.ownerDeviceId);
+    if (previousOwner && previousOwner.id === creator.id) {
+      if (!share.ownerId) {
+        share.ownerId = creator.id;
+        if (!share.ownerName || share.ownerName === 'PWA') share.ownerName = creator.username || share.ownerName;
+        scheduleFlush();
+      }
+      return true;
+    }
+  }
+  if (creator && share.ownerId && share.ownerId === creator.id) return true;
+  const creatorName = normUsername((creator && creator.username) || device.createdBy || '');
+  if (creatorName && share.ownerName && normUsername(share.ownerName) === creatorName) return true;
+
+  // Very old photo records predate both ownerId and ownerDeviceId. They were
+  // globally manageable before account scoping existed; preserve that behavior
+  // only for devices paired by an owner/admin, never for an operator device.
+  if (!share.ownerId && !share.ownerDeviceId && creator && (creator.role === 'owner' || creator.role === 'admin')) return true;
+  return false;
+}
+// True when the PWA caller acts with administrator authority — either a logged-in
+// owner/admin session, or a device that was paired by an owner/admin account (that
+// device is the administrator's own device). Used so the PWA mirrors the web admin
+// and lists EVERY link, not only those created from the PWA.
+function pwaViewerIsAdmin(req) {
+  const session = req.pwaSession;
+  if (session && (session.role === 'owner' || session.role === 'admin')) return true;
+  const creator = req.pwaDevice ? pwaDeviceCreatorAccount(req.pwaDevice) : null;
+  return !!(creator && (creator.role === 'owner' || creator.role === 'admin'));
 }
 function canManagePwaImage(req, share) {
   const session = req.pwaSession;
   if (session && (session.role === 'owner' || session.role === 'admin')) return true;
   if (session && session.role === 'operator' && share.ownerId === session.accountId) return true;
-  return !!(req.pwaDevice && share.ownerDeviceId && share.ownerDeviceId === req.pwaDevice.id);
+  if (pwaDeviceCanManageRecord(req.pwaDevice, share)) return true;
+  // A device paired by an owner/admin account manages every link like the web admin
+  // (reception, share and image links), including ones created on the standard version.
+  const creator = req.pwaDevice ? pwaDeviceCreatorAccount(req.pwaDevice) : null;
+  return !!(creator && (creator.role === 'owner' || creator.role === 'admin'));
 }
+function pwaImageCreatePayload(req, rec) {
+  return pwaPhotoPayload(req, rec);
+}
+function companionImageByUploadId(req, uploadId) {
+  if (!COMPANION_IMAGE_UPLOAD_ID.test(uploadId)) return null;
+  return state.shares.find((share) => share && share.type === 'photo' &&
+    share.companionUploadId === uploadId && isActive(share) && canManagePwaImage(req, share)) || null;
+}
+function pwaPhotoPayload(req, share) {
+  const ib = getSettings().imageBase || primaryBase(req) || '';
+  const stats = photoStatsOf(share);
+  let changed = false;
+  const readDims = (wKey, hKey, paths) => {
+    let w = Math.max(0, Number(share[wKey]) || 0);
+    let h = Math.max(0, Number(share[hKey]) || 0);
+    if (!w || !h) {
+      const file = firstExistingPhotoFile(paths);
+      const dims = file ? imageDimensions(file) : null;
+      if (dims && dims.w > 0 && dims.h > 0) {
+        w = dims.w; h = dims.h; share[wKey] = w; share[hKey] = h; changed = true;
+      }
+    }
+    return { w: w || null, h: h || null };
+  };
+  const fullPaths = photoOriginalPaths(share);
+  const thumbPaths = photoVariantPaths(share.token, 'thumb');
+  const microPaths = photoVariantPaths(share.token, 'micro');
+  const full = readDims('w', 'h', fullPaths);
+  const thumb = readDims('thumbW', 'thumbH', thumbPaths);
+  const micro = readDims('microW', 'microH', microPaths);
+  const readBytes = (sizeKey, paths) => {
+    let bytes = Math.max(0, Number(share[sizeKey]) || 0);
+    if (!bytes) {
+      const file = firstExistingPhotoFile(paths);
+      try {
+        if (file) bytes = Math.max(0, fs.statSync(file).size || 0);
+      } catch (_) {}
+      if (bytes) { share[sizeKey] = bytes; changed = true; }
+    }
+    return bytes || null;
+  };
+  const fullBytes = readBytes('size', fullPaths);
+  const thumbBytes = readBytes('thumbSize', thumbPaths);
+  const microBytes = readBytes('microSize', microPaths);
+  const uniqueVisitors = new Set();
+  for (const variant of [stats.full, stats.thumb, stats.micro]) {
+    if (variant && Array.isArray(variant.u)) for (const ip of variant.u) uniqueVisitors.add(ip);
+  }
+  const totalViews = (stats.full.v || 0) + (stats.thumb.v || 0) + (stats.micro.v || 0);
+  if (changed) scheduleFlush();
+  const now = Date.now();
+  const active = isActive(share, now);
+  const expired = !!share.expiresAt && now > share.expiresAt;
+  return {
+    token: share.token,
+    name: share.name,
+    createdAt: share.createdAt || 0,
+    expiresAt: share.expiresAt || null,
+    active,
+    expired,
+    disabled: !!share.disabled,
+    status: active ? 'active' : expired ? 'expired' : share.disabled ? 'disabled' : 'inactive',
+    imgUrl: ib + '/i/' + share.token + '.' + photoExt(share),
+    thumbUrl: ib + '/i/' + share.token + '/thumb',
+    microUrl: ib + '/i/' + share.token + '/micro',
+    favorite: !!share.favorite,
+    tags: Array.isArray(share.tags) ? share.tags.slice(0, 20) : [],
+    note: share.adminNote || '',
+    clientHash: share.clientHash || null,
+    maxViews: Math.max(0, Number(share.maxViews) || 0),
+    hasPassword: !!share.pwHash,
+    hotlinkHosts: Object.prototype.hasOwnProperty.call(share, 'hotlinkHosts') && Array.isArray(share.hotlinkHosts) ? share.hotlinkHosts.slice(0, 50) : null,
+    notifyFirstView: !!share.notifyFirstView,
+    firstViewNotifiedAt: share.firstViewNotifiedAt || null,
+    retentionReason: share.retentionReason || null,
+    metadataRemoved: !!share.metadataRemoved,
+    autoUrl: ib + '/i/' + share.token + '/auto',
+    previewUrls: {
+      auto: '/app/image/' + encodeURIComponent(share.token) + '/preview/auto',
+      full: '/app/image/' + encodeURIComponent(share.token) + '/preview/full',
+      thumb: '/app/image/' + encodeURIComponent(share.token) + '/preview/thumb',
+      micro: '/app/image/' + encodeURIComponent(share.token) + '/preview/micro',
+    },
+    adaptive: { webp: !!share.adaptiveWebp, avif: !!share.adaptiveAvif },
+    versionCount: Array.isArray(share.versions) ? share.versions.length : 0,
+    totals: { views: totalViews, visitors: uniqueVisitors.size, bytes: (fullBytes || 0) + (thumbBytes || 0) + (microBytes || 0) },
+    variants: {
+      full: { ...full, bytes: fullBytes, ready: true, views: stats.full.v || 0, visitors: Array.isArray(stats.full.u) ? stats.full.u.length : 0 },
+      thumb: { ...thumb, bytes: thumbBytes, ready: !!share.thumb, views: stats.thumb.v || 0, visitors: Array.isArray(stats.thumb.u) ? stats.thumb.u.length : 0 },
+      micro: { ...micro, bytes: microBytes, ready: !!share.micro, views: stats.micro.v || 0, visitors: Array.isArray(stats.micro.u) ? stats.micro.u.length : 0 },
+    },
+  };
+}
+
+
+// Authenticated owner preview for PWA image cards. Public /i/ URLs intentionally
+// count views and visitors; management previews must never alter those counters,
+// even when Images uses another hostname and the admin session cookie is absent
+// from that public request.
+app.get('/app/image/:token/preview/:variant', async (req, res) => {
+  const share = pwaPhotoByToken(req, req.params.token);
+  if (!share || !isActive(share)) return sendError(req, res, 404, 'fileNotFound');
+
+  const requested = String(req.params.variant || '').toLowerCase();
+  if (!['auto', 'full', 'thumb', 'micro'].includes(requested)) {
+    return sendError(req, res, 400, 'fileNotFound');
+  }
+
+  let variant = requested;
+  let adaptiveFile = null;
+  let adaptiveType = null;
+  if (requested === 'auto') {
+    const width = Math.max(0, Math.min(10000,
+      parseInt(req.query.w, 10) || parseInt(req.headers.width, 10) ||
+      parseInt(req.headers['viewport-width'], 10) || 0));
+    const saveData = String(req.headers['save-data'] || '').toLowerCase() === 'on';
+    const ect = String(req.headers.ect || '').toLowerCase();
+    const slow = saveData || /(^|-)2g$/.test(ect) || ect === 'slow-2g';
+    if (slow || (width && width <= 320)) variant = 'micro';
+    else if (width && width <= 900) variant = 'thumb';
+    else {
+      const accept = String(req.headers.accept || '');
+      const format = /image\/avif/i.test(accept) && share.adaptiveAvif ? 'avif'
+        : /image\/webp/i.test(accept) && share.adaptiveWebp ? 'webp'
+          : null;
+      if (format) {
+        const file = photoAdaptivePath(share.token, format);
+        try {
+          if (file && (await fs.promises.stat(file)).isFile()) {
+            adaptiveFile = file;
+            adaptiveType = 'image/' + format;
+          }
+        } catch (_) {}
+      }
+      variant = 'full';
+    }
+  }
+
+  if (adaptiveFile) {
+    return streamFile(req, res, adaptiveFile, share.token + path.extname(adaptiveFile), null, null, {
+      inline: true,
+      contentType: adaptiveType,
+      cacheControl: 'no-store',
+    });
+  }
+
+  const candidates = variant === 'micro'
+    ? [
+        ...photoVariantPaths(share.token, 'micro').map((file) => ({ ready: share.micro, file })),
+        ...photoVariantPaths(share.token, 'thumb').map((file) => ({ ready: share.thumb, file })),
+      ]
+    : variant === 'thumb'
+      ? photoVariantPaths(share.token, 'thumb').map((file) => ({ ready: share.thumb, file }))
+      : [];
+  for (const candidate of candidates) {
+    if (!candidate.ready) continue;
+    try {
+      if ((await fs.promises.stat(candidate.file)).isFile()) {
+        return streamFile(req, res, candidate.file, share.token + '.jpg', null, null, {
+          inline: true,
+          contentType: 'image/jpeg',
+          cacheControl: 'no-store',
+        });
+      }
+    } catch (_) {}
+  }
+
+  try {
+    let original = firstExistingPhotoFile(photoOriginalPaths(share));
+    if (!original) {
+      original = hostToContainer(share.hostPath);
+      await assertRealWithin(HOST_ROOT, original);
+    }
+    return streamFile(req, res, original, share.name, null, null, {
+      inline: true,
+      contentType: imageContentType(share.imgPath || share.name) || 'application/octet-stream',
+      cacheControl: 'no-store',
+    });
+  } catch (e) {
+    return sendError(req, res, e.code === 'ENOENT' ? 404 : 403, 'fileUnavailable');
+  }
+});
+
+function pwaImagesForRequest(req, { limit = 200, includeInactive = false } = {}) {
+  const boundedLimit = Math.max(1, Math.min(500, parseInt(limit, 10) || 200));
+  return listShares()
+    .filter((share) => share && share.type === 'photo' && canManagePwaImage(req, share) && (includeInactive || isActive(share)))
+    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+    .slice(0, boundedLimit)
+    .map((share) => pwaPhotoPayload(req, share));
+}
+
+app.get('/app/images', (req, res) => {
+  const images = pwaImagesForRequest(req, {
+    limit: req.query.limit,
+    includeInactive: String(req.query.includeInactive || '') === '1',
+  });
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ images });
+});
+
+app.get('/app/image/:token/stats', (req, res) => {
+  const share = getByToken(req.params.token);
+  if (!share || share.type !== 'photo' || !isActive(share) || !canManagePwaImage(req, share)) {
+    return res.status(404).json({ error: 'not-found' });
+  }
+  res.setHeader('Cache-Control', 'no-store');
+  res.json(pwaPhotoPayload(req, share));
+});
+
+function pwaPhotoByToken(req, token) {
+  const share = getByToken(String(token || ''));
+  return share && share.type === 'photo' && canManagePwaImage(req, share) ? share : null;
+}
+function applyPwaPhotoSettings(share, body) {
+  body = body && typeof body === 'object' && !Array.isArray(body) ? body : {};
+  const changed = [];
+  if (body.name !== undefined) {
+    const name = String(body.name || '').replace(/[\r\n\t/\\]+/g, ' ').trim().slice(0, 120);
+    if (name && name !== share.name) { share.name = name; changed.push('name'); }
+  }
+  if (body.expiresInSeconds !== undefined) {
+    share.expiresAt = parseExpiry(body.expiresInSeconds);
+    delete share.expiryWarnedAt;
+    changed.push('expiry');
+  }
+  if (body.maxViews !== undefined) {
+    const n = Math.max(0, Math.min(1000000000, Math.floor(Number(body.maxViews) || 0)));
+    if (n) share.maxViews = n; else delete share.maxViews;
+    changed.push('maxViews');
+  }
+  if (typeof body.password === 'string') {
+    if (body.password) Object.assign(share, makeSharePassword(body.password.slice(0, 256)));
+    else { delete share.pwHash; delete share.pwSalt; }
+    changed.push(body.password ? 'password-set' : 'password-cleared');
+  }
+  if (body.hotlinkHosts !== undefined) {
+    share.hotlinkHosts = parseHotlinkHosts(body.hotlinkHosts); // explicit [] disables protection for this image
+    changed.push(share.hotlinkHosts.length ? 'hotlink-protected' : 'hotlink-off');
+  }
+  if (typeof body.notifyFirstView === 'boolean') {
+    const was = !!share.notifyFirstView;
+    if (body.notifyFirstView) share.notifyFirstView = true; else delete share.notifyFirstView;
+    if (body.notifyFirstView && !was) {
+      delete share.firstViewNotifiedAt; delete share.firstViewKind; delete share.firstViewIp;
+    }
+    changed.push(body.notifyFirstView ? 'first-view-notify-on' : 'first-view-notify-off');
+  }
+  if (Array.isArray(body.tags) || typeof body.tags === 'string') {
+    const tags = normalizeTags(body.tags);
+    if (tags.length) share.tags = tags; else delete share.tags;
+    changed.push('tags');
+  }
+  if (typeof body.note === 'string') {
+    const note = body.note.replace(/\r\n/g, '\n').trim().slice(0, 1000);
+    if (note) share.adminNote = note; else delete share.adminNote;
+    changed.push('note');
+  }
+  if (typeof body.favorite === 'boolean') {
+    if (body.favorite) share.favorite = true; else delete share.favorite;
+    changed.push(body.favorite ? 'favorite' : 'unfavorite');
+  }
+  if (typeof body.disabled === 'boolean') {
+    if (body.disabled) share.disabled = true; else delete share.disabled;
+    changed.push(body.disabled ? 'disabled' : 'enabled');
+  }
+  return changed;
+}
+
+app.get('/app/image/duplicate', (req, res) => {
+  const hash = String(req.query.hash || '').toLowerCase();
+  if (!/^[a-f0-9]{64}$/.test(hash)) return res.status(400).json({ error: 'invalid-hash' });
+  const share = listShares().find((item) => item && item.type === 'photo' && item.clientHash === hash && canManagePwaImage(req, item));
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ duplicate: !!share, image: share ? pwaPhotoPayload(req, share) : null });
+});
+
+app.post('/app/image/:token/settings', pwaJsonParser, (req, res) => {
+  const share = pwaPhotoByToken(req, req.params.token);
+  if (!share) return res.status(404).json({ error: 'not-found' });
+  const changed = applyPwaPhotoSettings(share, req.body);
+  if (changed.length) persistNow();
+  const who = (req.pwaSession && req.pwaSession.username) || (req.pwaDevice ? 'PWA: ' + req.pwaDevice.name : 'PWA');
+  logAudit('image-edited', { username: who, ip: clientIp(req), detail: share.name + ': ' + changed.join(', ') });
+  res.json({ ok: true, image: pwaPhotoPayload(req, share) });
+});
+
+app.post('/app/images/bulk', pwaJsonParser, (req, res) => {
+  const body = req.body || {};
+  const tokens = [...new Set(Array.isArray(body.tokens) ? body.tokens.map(String) : [])].slice(0, 200);
+  if (!tokens.length) return res.status(400).json({ error: 'empty' });
+  const action = String(body.action || 'settings');
+  let count = 0;
+  for (const token of tokens) {
+    const share = pwaPhotoByToken(req, token);
+    if (!share) continue;
+    if (action === 'revoke') {
+      if (removeShare(share.id, false)) count += 1;
+    } else {
+      const changed = applyPwaPhotoSettings(share, body.settings || body);
+      if (changed.length) count += 1;
+    }
+  }
+  if (count) persistNow();
+  res.json({ ok: true, count });
+});
+
+function canManagePwaAlbum(req, album) {
+  if (!album || album.type !== 'album') return false;
+  const session = req.pwaSession;
+  if (session && (session.role === 'owner' || session.role === 'admin')) return true;
+  if (session && session.role === 'operator' && album.ownerId === session.accountId) return true;
+  return pwaDeviceCanManageRecord(req.pwaDevice, album);
+}
+function pwaAlbumPayload(req, album) {
+  const base = getSettings().imageBase || primaryBase(req) || '';
+  const members = (Array.isArray(album.members) ? album.members : []).map((token) => getByToken(token)).filter((s) => s && s.type === 'photo');
+  return {
+    token: album.token,
+    name: album.name,
+    createdAt: album.createdAt || 0,
+    expiresAt: album.expiresAt || null,
+    active: isActive(album),
+    count: members.length,
+    url: base + '/g/' + album.token,
+    views: Number(album.views) || 0,
+    hasPassword: !!album.pwHash,
+    tags: Array.isArray(album.tags) ? album.tags.slice(0, 20) : [],
+    note: album.adminNote || '',
+    collaboration: {
+      invitations: Array.isArray(album.collaborators) ? album.collaborators.filter((x) => x && !x.disabled && (!x.expiresAt || x.expiresAt > Date.now())).length : 0,
+      readers: Array.isArray(album.collaborators) ? album.collaborators.filter((x) => x && !x.disabled && x.role === 'reader').length : 0,
+      contributors: Array.isArray(album.collaborators) ? album.collaborators.filter((x) => x && !x.disabled && x.role === 'contributor').length : 0,
+      managers: Array.isArray(album.collaborators) ? album.collaborators.filter((x) => x && !x.disabled && x.role === 'manager').length : 0,
+    },
+  };
+}
+app.get('/app/albums', (req, res) => {
+  const albums = listShares().filter((s) => s && s.type === 'album' && canManagePwaAlbum(req, s))
+    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).map((s) => pwaAlbumPayload(req, s));
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ albums });
+});
+app.post('/app/albums', pwaJsonParser, (req, res) => {
+  const body = req.body || {};
+  const tokens = [...new Set(Array.isArray(body.tokens) ? body.tokens.map(String) : [])].slice(0, 500);
+  const members = tokens.map((token) => pwaPhotoByToken(req, token)).filter(Boolean).map((s) => s.token);
+  if (!members.length) return res.status(400).json({ error: 'no-images' });
+  const name = String(body.name || '').replace(/[\r\n\t/\\]+/g, ' ').trim().slice(0, 120) || 'Album';
+  const album = { type: 'album', name, members, expiresAt: parseExpiry(body.expiresInSeconds) };
+  stampPwaRecordOwner(req, album);
+  if (typeof body.password === 'string' && body.password) Object.assign(album, makeSharePassword(body.password.slice(0, 256)));
+  const tags = normalizeTags(body.tags || []); if (tags.length) album.tags = tags;
+  const note = String(body.note || '').trim().slice(0, 1000); if (note) album.adminNote = note;
+  const rec = addShare(album);
+  res.status(201).json({ album: pwaAlbumPayload(req, rec) });
+});
+app.post('/app/album/:token/settings', pwaJsonParser, (req, res) => {
+  const album = getByToken(String(req.params.token || ''));
+  if (!canManagePwaAlbum(req, album)) return res.status(404).json({ error: 'not-found' });
+  const body = req.body || {};
+  if (body.name !== undefined) {
+    const name = String(body.name || '').replace(/[\r\n\t/\\]+/g, ' ').trim().slice(0, 120);
+    if (name) album.name = name;
+  }
+  if (body.expiresInSeconds !== undefined) album.expiresAt = parseExpiry(body.expiresInSeconds);
+  if (typeof body.password === 'string') {
+    if (body.password) Object.assign(album, makeSharePassword(body.password.slice(0, 256)));
+    else { delete album.pwHash; delete album.pwSalt; }
+  }
+  const tags = body.tags !== undefined ? normalizeTags(body.tags) : null;
+  if (tags) { if (tags.length) album.tags = tags; else delete album.tags; }
+  if (typeof body.note === 'string') { const note = body.note.trim().slice(0, 1000); if (note) album.adminNote = note; else delete album.adminNote; }
+  persistNow();
+  res.json({ ok: true, album: pwaAlbumPayload(req, album) });
+});
+
+function publicAlbumInvite(entry) {
+  return { id: entry.id, label: entry.label || '', role: entry.role, createdAt: entry.createdAt, expiresAt: entry.expiresAt || null, maxFiles: entry.maxFiles || 0, maxFileBytes: entry.maxFileBytes || 0, usedFiles: entry.usedFiles || 0, disabled: !!entry.disabled };
+}
+app.get('/app/album/:token/invitations', (req, res) => {
+  const album = getByToken(String(req.params.token || ''));
+  if (!canManagePwaAlbum(req, album)) return res.status(404).json({ error: 'not-found' });
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ invitations: (album.collaborators || []).map(publicAlbumInvite) });
+});
+app.post('/app/album/:token/invitations', pwaJsonParser, (req, res) => {
+  const album = getByToken(String(req.params.token || ''));
+  if (!canManagePwaAlbum(req, album)) return res.status(404).json({ error: 'not-found' });
+  const body = req.body || {};
+  const role = ['reader', 'contributor', 'manager'].includes(String(body.role)) ? String(body.role) : 'contributor';
+  const secret = crypto.randomBytes(32).toString('base64url');
+  const entry = {
+    id: crypto.randomBytes(8).toString('hex'), tokenHash: albumInviteHash(secret), role,
+    label: String(body.label || role).replace(/[\r\n\t]+/g, ' ').trim().slice(0, 80), createdAt: Date.now(),
+    expiresAt: parseExpiry(body.expiresInSeconds), maxFiles: Math.max(0, Math.min(10000, Math.floor(Number(body.maxFiles) || 0))),
+    maxFileBytes: Math.max(0, Math.min(IMAGE_MAX_BYTES, Math.floor(Number(body.maxFileBytes) || 0))), usedFiles: 0,
+  };
+  if (!Array.isArray(album.collaborators)) album.collaborators = [];
+  album.collaborators.push(entry); persistNow();
+  const base = getSettings().imageBase || primaryBase(req) || '';
+  res.status(201).json({ invitation: publicAlbumInvite(entry), url: base + '/g/' + album.token + '/c/' + secret });
+});
+app.post('/app/album/:token/invitations/:id/revoke', pwaJsonParser, (req, res) => {
+  const album = getByToken(String(req.params.token || ''));
+  if (!canManagePwaAlbum(req, album)) return res.status(404).json({ error: 'not-found' });
+  const entry = (album.collaborators || []).find((x) => x && x.id === req.params.id);
+  if (!entry) return res.status(404).json({ error: 'not-found' });
+  entry.disabled = true; entry.revokedAt = Date.now(); persistNow(); res.json({ ok: true });
+});
+
+// Owner-scoped automatic image retention rules (PWA feature 24). Rules are
+// disabled by default and are stored separately per administrator account/device.
+function pwaRetentionRuleStore() {
+  if (!state.meta || typeof state.meta !== 'object') state.meta = {};
+  if (!state.meta.pwaImageRetentionRules || typeof state.meta.pwaImageRetentionRules !== 'object') state.meta.pwaImageRetentionRules = {};
+  return state.meta.pwaImageRetentionRules;
+}
+function primaryPwaOwnerKey(req) {
+  // Prefer the signed-in account. PWA-created images are account-owned (ownerId is
+  // set — see stampPwaRecordOwner), so retention rules must use the same account
+  // key or they would never match the photos.
+  if (req.pwaSession && req.pwaSession.accountId) return 'acc:' + req.pwaSession.accountId;
+  if (req.pwaDevice) {
+    // A paired device's images are ALSO account-owned (ownerId = the account that
+    // paired it). Resolve that same account key here so that in the common
+    // device-only state (admin session expired, device still paired) retention
+    // keeps matching the device's images instead of silently targeting an empty
+    // 'dev:<id>' scope. Fall back to the device key only for an unlinked device.
+    const creator = pwaDeviceCreatorAccount(req.pwaDevice);
+    if (creator && creator.id) return 'acc:' + creator.id;
+    if (req.pwaDevice.id) return 'dev:' + req.pwaDevice.id;
+  }
+  return null;
+}
+function ownerKeyForPhoto(photo) {
+  if (photo && photo.ownerId) return 'acc:' + photo.ownerId;
+  // Legacy photos may carry only a device id (ownerId not yet self-healed). Resolve
+  // the device's owning account so they map to the same key as their retention
+  // rules; keep the device key for a device with no owning account.
+  if (photo && photo.ownerDeviceId) {
+    const device = pwaDevices().find((d) => d.id === photo.ownerDeviceId);
+    const creator = device && pwaDeviceCreatorAccount(device);
+    if (creator && creator.id) return 'acc:' + creator.id;
+    return 'dev:' + photo.ownerDeviceId;
+  }
+  return null;
+}
+function normalizePwaRetentionRules(input) {
+  const b = input && typeof input === 'object' && !Array.isArray(input) ? input : {};
+  return {
+    enabled: !!b.enabled,
+    maxAgeDays: Math.max(0, Math.min(3650, Number(b.maxAgeDays) || 0)),
+    inactiveDays: Math.max(0, Math.min(3650, Number(b.inactiveDays) || 0)),
+    maxViews: Math.max(0, Math.min(1000000000, Math.floor(Number(b.maxViews) || 0))),
+    maxStorageMB: Math.max(0, Math.min(1048576, Number(b.maxStorageMB) || 0)),
+  };
+}
+function photoLastPublicViewAt(photo) {
+  const ps = photoStatsOf(photo);
+  return Math.max(Number(ps.full.lastAt) || 0, Number(ps.thumb.lastAt) || 0, Number(ps.micro.lastAt) || 0, Number(photo.createdAt) || 0);
+}
+function photoManagedBytes(photo) {
+  const paths = [...photoOriginalPaths(photo), ...photoVariantPaths(photo.token, 'thumb'), ...photoVariantPaths(photo.token, 'micro')];
+  const seen = new Set(); let total = 0;
+  for (const file of paths) {
+    if (!file || seen.has(file)) continue; seen.add(file);
+    try { const st = fs.statSync(file); if (st.isFile()) total += Math.max(0, Number(st.size) || 0); } catch (_) {}
+  }
+  return total;
+}
+function runPwaImageRetentionForOwner(ownerKey, rules, now = Date.now()) {
+  rules = normalizePwaRetentionRules(rules);
+  if (!ownerKey || !rules.enabled) return { checked: 0, revoked: 0, bytesFreed: 0, reasons: {} };
+  const photos = listShares().filter((s) => s && s.type === 'photo' && !s.revoked && ownerKeyForPhoto(s) === ownerKey);
+  const revoke = new Map();
+  const totalViews = (photo) => { const ps = photoStatsOf(photo); return (Number(ps.full.v) || 0) + (Number(ps.thumb.v) || 0) + (Number(ps.micro.v) || 0); };
+  const ageMs = rules.maxAgeDays * DAY_MS;
+  const inactiveMs = rules.inactiveDays * DAY_MS;
+  for (const photo of photos) {
+    if (ageMs && now - (Number(photo.createdAt) || now) >= ageMs) revoke.set(photo.id, 'age');
+    else if (inactiveMs && now - photoLastPublicViewAt(photo) >= inactiveMs) revoke.set(photo.id, 'inactive');
+    else if (rules.maxViews && totalViews(photo) >= rules.maxViews) revoke.set(photo.id, 'views');
+  }
+  if (rules.maxStorageMB > 0) {
+    const cap = rules.maxStorageMB * 1024 * 1024;
+    const live = photos.filter((p) => !revoke.has(p.id)).map((p) => ({ photo: p, bytes: photoManagedBytes(p), lastAt: photoLastPublicViewAt(p) }));
+    let used = live.reduce((n, x) => n + x.bytes, 0);
+    live.sort((a, b) => a.lastAt - b.lastAt || (a.photo.createdAt || 0) - (b.photo.createdAt || 0));
+    for (const item of live) {
+      if (used <= cap) break;
+      revoke.set(item.photo.id, 'storage'); used -= item.bytes;
+    }
+  }
+  let revoked = 0, bytesFreed = 0; const reasons = {};
+  for (const photo of photos) {
+    const reason = revoke.get(photo.id); if (!reason) continue;
+    const bytes = photoManagedBytes(photo);
+    photo.retentionReason = reason; photo.retentionRevokedAt = now;
+    if (removeShare(photo.id, false)) {
+      revoked += 1; bytesFreed += bytes; reasons[reason] = (reasons[reason] || 0) + 1;
+      logAudit('image-retention-revoked', { username: 'system', detail: `${photo.name || photo.token} · ${reason}` });
+    }
+  }
+  if (revoked) persistNow();
+  return { checked: photos.length, revoked, bytesFreed, reasons };
+}
+function runAllPwaImageRetention() {
+  const store = pwaRetentionRuleStore();
+  for (const [ownerKey, rules] of Object.entries(store)) {
+    try { runPwaImageRetentionForOwner(ownerKey, rules); } catch (e) { console.error('[pwa-image-retention]', ownerKey, e.message); }
+  }
+}
+app.get('/app/images/retention', (req, res) => {
+  const key = primaryPwaOwnerKey(req); if (!key) return res.status(403).json({ error: 'owner-required' });
+  const rules = normalizePwaRetentionRules(pwaRetentionRuleStore()[key]);
+  const owned = listShares().filter((s) => s && s.type === 'photo' && ownerKeyForPhoto(s) === key);
+  const bytes = owned.reduce((n, p) => n + photoManagedBytes(p), 0);
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ rules, summary: { images: owned.length, bytes } });
+});
+app.post('/app/images/retention', pwaJsonParser, (req, res) => {
+  const key = primaryPwaOwnerKey(req); if (!key) return res.status(403).json({ error: 'owner-required' });
+  const rules = normalizePwaRetentionRules(req.body || {});
+  pwaRetentionRuleStore()[key] = rules; persistNow();
+  const result = req.body && req.body.runNow ? runPwaImageRetentionForOwner(key, rules) : { checked: 0, revoked: 0, bytesFreed: 0, reasons: {} };
+  res.json({ ok: true, rules, result });
+});
+setInterval(runAllPwaImageRetention, 5 * 60 * 1000).unref();
+setTimeout(runAllPwaImageRetention, 30 * 1000).unref?.();
+
+app.get('/app/images/dashboard', (req, res) => {
+  const now = Date.now();
+  const days = Math.max(1, Math.min(30, parseInt(req.query.days, 10) || 7));
+  const start = new Date(now); start.setHours(0, 0, 0, 0); start.setDate(start.getDate() - days + 1);
+  const series = Array.from({ length: days }, (_, i) => ({ at: start.getTime() + i * 86400000, created: 0, views: 0 }));
+  const photos = listShares().filter((s) => s && s.type === 'photo' && canManagePwaImage(req, s));
+  let totalViews = 0, totalVisitors = 0, totalBytes = 0;
+  for (const photo of photos) {
+    const ps = photoStatsOf(photo);
+    const views = (ps.full.v || 0) + (ps.thumb.v || 0) + (ps.micro.v || 0);
+    totalViews += views;
+    const visitors = new Set();
+    for (const st of [ps.full, ps.thumb, ps.micro]) if (Array.isArray(st.u)) for (const ip of st.u) visitors.add(ip);
+    totalVisitors += visitors.size;
+    totalBytes += Math.max(0, Number(photo.size) || 0) + Math.max(0, Number(photo.thumbSize) || 0) + Math.max(0, Number(photo.microSize) || 0);
+    const cidx = Math.floor(((photo.createdAt || 0) - start.getTime()) / 86400000);
+    if (cidx >= 0 && cidx < series.length) series[cidx].created += 1;
+    for (const ev of Array.isArray(ps.recent) ? ps.recent : []) {
+      const idx = Math.floor(((ev.at || 0) - start.getTime()) / 86400000);
+      if (idx >= 0 && idx < series.length) series[idx].views += 1;
+    }
+  }
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ totals: { images: photos.length, views: totalViews, visitors: totalVisitors, bytes: totalBytes }, series, generatedAt: now });
+});
+
 function streamToFileBounded(req, res, dest, maxBytes, onDone) {
   const ws = fs.createWriteStream(dest);
   let size = 0, failed = false;
@@ -10704,7 +12419,94 @@ function streamToFileBounded(req, res, dest, maxBytes, onDone) {
   });
   req.pipe(ws);
 }
+function archiveCurrentPhotoVersion(photo) {
+  const source = firstExistingPhotoFile(photoOriginalPaths(photo));
+  if (!source) return null;
+  const id = Date.now().toString(36) + '-' + crypto.randomBytes(4).toString('hex');
+  const dir = path.join(photoVersionDir(photo.token), id); fs.mkdirSync(dir, { recursive: true });
+  const ext = photoExt(photo);
+  fs.copyFileSync(source, path.join(dir, 'full.' + ext));
+  const thumb = firstExistingPhotoFile(photoVariantPaths(photo.token, 'thumb')); if (thumb) fs.copyFileSync(thumb, path.join(dir, 'thumb.jpg'));
+  const micro = firstExistingPhotoFile(photoVariantPaths(photo.token, 'micro')); if (micro) fs.copyFileSync(micro, path.join(dir, 'micro.jpg'));
+  for (const fmt of ['webp', 'avif']) { const src = photoAdaptivePath(photo.token, fmt); try { if (fs.statSync(src).isFile()) fs.copyFileSync(src, path.join(dir, 'adaptive.' + fmt)); } catch (_) {} }
+  const version = { id, at: Date.now(), name: photo.name, ext, size: photo.size || 0, w: photo.w || null, h: photo.h || null, metadataRemoved: !!photo.metadataRemoved, thumb: !!photo.thumb, thumbSize: photo.thumbSize || 0, thumbW: photo.thumbW || null, thumbH: photo.thumbH || null, micro: !!photo.micro, microSize: photo.microSize || 0, microW: photo.microW || null, microH: photo.microH || null, adaptiveWebp: !!photo.adaptiveWebp, adaptiveAvif: !!photo.adaptiveAvif };
+  if (!Array.isArray(photo.versions)) photo.versions = [];
+  photo.versions.unshift(version);
+  while (photo.versions.length > 10) { const old = photo.versions.pop(); fs.rm(path.join(photoVersionDir(photo.token), old.id), { recursive: true, force: true }, () => {}); }
+  return version;
+}
+function restorePhotoVersion(photo, version) {
+  const dir = path.join(photoVersionDir(photo.token), version.id);
+  const full = firstExistingPhotoFile([path.join(dir, 'full.' + version.ext)]); if (!full) return false;
+  archiveCurrentPhotoVersion(photo);
+  const newName = crypto.randomBytes(12).toString('hex') + '.' + version.ext;
+  fs.copyFileSync(full, path.join(FULL_IMAGES_DIR, newName));
+  unlinkPhotoFiles(photoOriginalPaths(photo)); photo.imgPath = newName; photo.ext = version.ext; photo.name = version.name; photo.size = version.size; photo.w = version.w; photo.h = version.h;
+  if (version.metadataRemoved) photo.metadataRemoved = true; else delete photo.metadataRemoved;
+  const thumb = path.join(dir, 'thumb.jpg'); try { fs.copyFileSync(thumb, path.join(THUMBS_DIR, photo.token + '.jpg')); photo.thumb = true; photo.thumbSize = version.thumbSize; photo.thumbW = version.thumbW; photo.thumbH = version.thumbH; } catch (_) { delete photo.thumb; }
+  const micro = path.join(dir, 'micro.jpg'); try { fs.copyFileSync(micro, path.join(MICROS_DIR, photo.token + '.jpg')); photo.micro = true; photo.microSize = version.microSize; photo.microW = version.microW; photo.microH = version.microH; } catch (_) { delete photo.micro; }
+  for (const fmt of ['webp', 'avif']) { const src = path.join(dir, 'adaptive.' + fmt), dest = photoAdaptivePath(photo.token, fmt); try { fs.copyFileSync(src, dest); photo[fmt === 'webp' ? 'adaptiveWebp' : 'adaptiveAvif'] = true; } catch (_) { delete photo[fmt === 'webp' ? 'adaptiveWebp' : 'adaptiveAvif']; try { fs.unlinkSync(dest); } catch (_) {} } }
+  return true;
+}
+app.get('/app/image/:token/versions', (req, res) => {
+  const photo = pwaPhotoByToken(req, req.params.token); if (!photo) return res.status(404).json({ error: 'not-found' });
+  res.setHeader('Cache-Control', 'no-store'); res.json({ versions: (photo.versions || []).map((v) => ({ id: v.id, at: v.at, name: v.name, size: v.size, w: v.w, h: v.h, metadataRemoved: !!v.metadataRemoved })) });
+});
+app.post('/app/image/:token/restore/:versionId', pwaJsonParser, (req, res) => {
+  const photo = pwaPhotoByToken(req, req.params.token); if (!photo) return res.status(404).json({ error: 'not-found' });
+  const version = (photo.versions || []).find((v) => v.id === req.params.versionId); if (!version || !restorePhotoVersion(photo, version)) return res.status(404).json({ error: 'version-not-found' });
+  persistNow(); res.json({ ok: true, image: pwaPhotoPayload(req, photo) });
+});
+app.post('/app/image/:token/replace', (req, res) => {
+  const photo = pwaPhotoByToken(req, req.params.token); if (!photo) return res.status(404).json({ error: 'not-found' });
+  let ext = (String(req.query.name || photo.name || 'image.jpg').split('.').pop() || '').toLowerCase(); if (ext === 'jpeg') ext = 'jpg';
+  if (!PWA_IMG_EXT.test(ext)) return res.status(400).json({ error: 'not-image' });
+  const fname = crypto.randomBytes(12).toString('hex') + '.' + ext; const dest = path.join(FULL_IMAGES_DIR, fname);
+  streamToFileBounded(req, res, dest, IMAGE_MAX_BYTES, (size) => {
+    try { archiveCurrentPhotoVersion(photo); } catch (e) { fs.unlink(dest, () => {}); return res.status(500).json({ error: 'archive-failed' }); }
+    unlinkPhotoFiles(photoOriginalPaths(photo)); unlinkPhotoFiles(photoVariantPaths(photo.token, 'thumb')); unlinkPhotoFiles(photoVariantPaths(photo.token, 'micro')); unlinkPhotoFiles([photoAdaptivePath(photo.token, 'webp'), photoAdaptivePath(photo.token, 'avif')]);
+    photo.imgPath = fname; photo.ext = ext; photo.size = size; photo.name = String(req.query.name || photo.name).replace(/[\/\r\n\t]+/g, ' ').trim().slice(0, 120) || photo.name;
+    if (String(req.query.metadataRemoved || '') === '1') photo.metadataRemoved = true; else delete photo.metadataRemoved;
+    const dims = imageDimensions(dest); if (dims) { photo.w = dims.w; photo.h = dims.h; }
+    delete photo.thumb; delete photo.micro; delete photo.adaptiveWebp; delete photo.adaptiveAvif; delete photo.thumbSize; delete photo.microSize;
+    photo.replacedAt = Date.now(); persistNow(); res.json({ ok: true, image: pwaPhotoPayload(req, photo) });
+  });
+});
+app.post('/app/image/:token/adaptive/:format', (req, res) => {
+  const photo = pwaPhotoByToken(req, req.params.token); const fmt = String(req.params.format || '').toLowerCase();
+  if (!photo || !/^(webp|avif)$/.test(fmt)) return res.status(404).json({ error: 'not-found' });
+  const dest = photoAdaptivePath(photo.token, fmt);
+  streamToFileBounded(req, res, dest, IMAGE_MAX_BYTES, (size) => {
+    const dims = imageDimensions(dest); photo[fmt === 'webp' ? 'adaptiveWebp' : 'adaptiveAvif'] = true; photo[fmt === 'webp' ? 'adaptiveWebpSize' : 'adaptiveAvifSize'] = size;
+    if (dims) { photo[fmt === 'webp' ? 'adaptiveWebpW' : 'adaptiveAvifW'] = dims.w; photo[fmt === 'webp' ? 'adaptiveWebpH' : 'adaptiveAvifH'] = dims.h; }
+    persistNow(); res.json({ ok: true, bytes: size, w: dims && dims.w, h: dims && dims.h });
+  });
+});
+
+app.get('/app/image/upload/:uploadId', (req, res) => {
+  const uploadId = String(req.params.uploadId || '');
+  if (!COMPANION_IMAGE_UPLOAD_ID.test(uploadId)) return res.status(400).json({ error: 'invalid-upload-id' });
+  const existing = companionImageByUploadId(req, uploadId);
+  if (!existing) return res.status(404).json({ error: 'not-found' });
+  res.setHeader('Cache-Control', 'no-store');
+  return res.json(pwaImageCreatePayload(req, existing));
+});
 app.post('/app/image', (req, res) => {
+  const uploadId = String(req.query.uploadId || '');
+  if (uploadId && !COMPANION_IMAGE_UPLOAD_ID.test(uploadId)) return res.status(400).json({ error: 'invalid-upload-id' });
+  const existing = uploadId ? companionImageByUploadId(req, uploadId) : null;
+  if (existing) {
+    // Consume the duplicate request body before replying. This rare path covers a
+    // process death after the server committed the image but before Android saved
+    // the response, without creating a second public link.
+    let received = 0;
+    req.on('data', (chunk) => { received += chunk.length; if (received > IMAGE_MAX_BYTES) req.destroy(); });
+    req.on('end', () => {
+      if (!res.headersSent) res.status(200).json(pwaImageCreatePayload(req, existing));
+    });
+    req.resume();
+    return;
+  }
   let ext = (String(req.query.name || 'image.jpg').split('.').pop() || '').toLowerCase();
   if (ext === 'jpeg') ext = 'jpg';
   if (!PWA_IMG_EXT.test(ext)) return res.status(400).json({ error: 'not-image' });
@@ -10712,35 +12514,254 @@ app.post('/app/image', (req, res) => {
   const dest = path.join(FULL_IMAGES_DIR, fname);
   streamToFileBounded(req, res, dest, IMAGE_MAX_BYTES, (size) => {
     const name = String(req.query.name || '').replace(/[\r\n\t/\\]+/g, ' ').trim().slice(0, 120) || ('image.' + ext);
+    const fileDims = imageDimensions(dest);
+    const queryW = Math.max(0, Math.min(100000, parseInt(req.query.w, 10) || 0));
+    const queryH = Math.max(0, Math.min(100000, parseInt(req.query.h, 10) || 0));
+    const dims = queryW && queryH ? { w: queryW, h: queryH } : fileDims;
     const share = { type: 'photo', name, imgPath: fname, ext, size };
+    if (String(req.query.metadataRemoved || '') === '1') share.metadataRemoved = true;
+    stampPhotoUploadDevice(share, req, 'pwa');
+    if (uploadId) share.companionUploadId = uploadId;
+    const clientHash = String(req.query.clientHash || '').toLowerCase();
+    if (/^[a-f0-9]{64}$/.test(clientHash)) share.clientHash = clientHash;
+    if (dims) { share.w = dims.w; share.h = dims.h; }
     pwaImgOwner(req, share);
     const rec = addShare(share);
     const who = (req.pwaSession && req.pwaSession.username) || (req.pwaDevice ? 'PWA: ' + req.pwaDevice.name : 'PWA');
     logAudit('image-created', { username: who, ip: clientIp(req), detail: 'via PWA — ' + name });
-    const ib = getSettings().imageBase || primaryBase(req) || '';
-    res.status(201).json({
-      token: rec.token, name: rec.name,
-      imgUrl: ib + '/i/' + rec.token + '.' + photoExt(rec),
-      thumbUrl: ib + '/i/' + rec.token + '/thumb',
-      microUrl: ib + '/i/' + rec.token + '/micro',
-    });
+    res.status(201).json(pwaImageCreatePayload(req, rec));
   });
 });
 app.post('/app/image/:token/thumb', (req, res) => {
   const s = getByToken(req.params.token);
   if (!s || s.type !== 'photo' || !canManagePwaImage(req, s)) return res.status(404).json({ error: 'not-found' });
-  streamToFileBounded(req, res, path.join(THUMBS_DIR, s.token + '.jpg'), THUMB_MAX_BYTES, () => {
-    s.thumb = true; scheduleFlush();
-    res.json({ ok: true });
+  const dest = path.join(THUMBS_DIR, s.token + '.jpg');
+  streamToFileBounded(req, res, dest, THUMB_MAX_BYTES, (size) => {
+    const dims = imageDimensions(dest);
+    s.thumb = true;
+    s.thumbSize = size;
+    if (dims) { s.thumbW = dims.w; s.thumbH = dims.h; }
+    scheduleFlush();
+    res.json({ ok: true, w: dims ? dims.w : null, h: dims ? dims.h : null, bytes: size });
   });
 });
 app.post('/app/image/:token/micro', (req, res) => {
   const s = getByToken(req.params.token);
   if (!s || s.type !== 'photo' || !canManagePwaImage(req, s)) return res.status(404).json({ error: 'not-found' });
-  streamToFileBounded(req, res, path.join(MICROS_DIR, s.token + '.jpg'), MICRO_MAX_BYTES, () => {
-    s.micro = true; scheduleFlush();
-    res.json({ ok: true });
+  const dest = path.join(MICROS_DIR, s.token + '.jpg');
+  streamToFileBounded(req, res, dest, MICRO_MAX_BYTES, (size) => {
+    const dims = imageDimensions(dest);
+    s.micro = true;
+    s.microSize = size;
+    if (dims) { s.microW = dims.w; s.microH = dims.h; }
+    scheduleFlush();
+    res.json({ ok: true, w: dims ? dims.w : null, h: dims ? dims.h : null, bytes: size });
   });
+});
+// Revoke a share the PWA created — a reception link (inbox) or an image link
+// (photo). Authorization reuses the per-image ownership rules: only the account
+// or paired device that created it (or an owner/admin session) may revoke it.
+// Received files under INBOX_DIR are intentionally left in place; only the link
+// and, for images, the managed image copies are removed.
+app.post('/app/share/:token/revoke', (req, res) => {
+  const s = getByToken(req.params.token);
+  const revocableTypes = ['photo', 'inbox', 'file', 'folder'];
+  if (!s || !revocableTypes.includes(s.type) || !canManagePwaImage(req, s)) {
+    return res.status(404).json({ error: 'not-found' });
+  }
+  const kind = s.type === 'photo' ? 'image' : s.type === 'inbox' ? 'reception' : 'share';
+  const label = kind + ' ' + (s.name || '');
+  removeShare(s.id);
+  const who = (req.pwaSession && req.pwaSession.username) || (req.pwaDevice ? 'PWA: ' + req.pwaDevice.name : 'PWA');
+  logAudit('share-revoked', { username: who, ip: clientIp(req), detail: 'via PWA — ' + label });
+  res.json({ ok: true });
+});
+
+// ---- Server-file shares: the standard Direct-Xfer function, exposed to the PWA. ----
+// Browsing the whole read-only host filesystem and turning a file/folder into a public
+// /s or /f link is an administrator capability, so these require a logged-in admin
+// session (not a bare paired device). They already pass the PWA network guard, and
+// mutations already require CSRF via requireAppAuth.
+function pwaHostAdminSession(req, res) {
+  const session = req.pwaSession || getSession(req);
+  const role = session && session.role;
+  if (!session || !['owner', 'admin', 'operator'].includes(role)) {
+    res.status(403).json({ error: 'admin-required' });
+    return null;
+  }
+  return session;
+}
+
+app.get('/app/host/browse', async (req, res) => {
+  if (!pwaHostAdminSession(req, res)) return;
+  const reqPath = String(req.query.path || '/');
+  let absDir;
+  try {
+    absDir = hostToContainer(reqPath);
+    await assertRealWithin(HOST_ROOT, absDir);
+  } catch (e) {
+    if (e.code === 'ENOENT') return res.status(404).json({ error: 'host-inaccessible', root: '/' });
+    return res.status(400).json({ error: 'invalid-path' });
+  }
+  let st;
+  try { st = await fs.promises.stat(absDir); } catch (_) { return res.status(404).json({ error: 'not-found' }); }
+  if (!st.isDirectory()) return res.status(400).json({ error: 'not-a-folder' });
+  let dirents;
+  try { dirents = await fs.promises.readdir(absDir, { withFileTypes: true }); } catch (_) { return res.status(403).json({ error: 'read-failed' }); }
+  const entries = [];
+  for (const d of dirents) {
+    const isDir = d.isDirectory();
+    const isFile = d.isFile();
+    if (!isDir && !isFile) continue;
+    entries.push({
+      name: d.name,
+      isDir,
+      isFile,
+      size: null,
+      // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal,javascript.express.security.audit.express-path-join-resolve-traversal.express-path-join-resolve-traversal
+      // d.name is a dirent from fs.readdir(absDir) (absDir already validated), not user text.
+      path: containerToHost(path.join(absDir, d.name)),
+    });
+  }
+  const files = entries.filter((e) => e.isFile);
+  await mapLimit(files, 32, async (e) => {
+    // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal,javascript.express.security.audit.express-path-join-resolve-traversal.express-path-join-resolve-traversal
+    try { e.size = (await fs.promises.stat(path.join(absDir, e.name))).size; } catch (_) {}
+  });
+  entries.forEach((e) => delete e.isFile);
+  const coll = new Intl.Collator('en', { numeric: true, sensitivity: 'base' });
+  entries.sort((a, b) => (a.isDir !== b.isDir ? (a.isDir ? -1 : 1) : coll.compare(a.name, b.name)));
+  const cwd = containerToHost(absDir);
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ root: '/', cwd, parent: cwd === '/' ? null : containerToHost(path.dirname(absDir)), entries });
+});
+
+app.post('/app/host/shares', pwaJsonParser, async (req, res) => {
+  if (!pwaHostAdminSession(req, res)) return;
+  const body = req.body || {};
+  const reqPaths = reqPathList(body);
+  if (!reqPaths.length) return res.status(400).json({ error: 'missing-path' });
+  let resolved;
+  try { resolved = []; for (const p of reqPaths) resolved.push(await resolveHostItem(p)); }
+  catch (e) { return res.status(e.code === 'not-found' ? 404 : 400).json({ error: e.code || 'invalid-path' }); }
+  const first = resolved[0];
+  const type = resolved.length > 1 ? 'file' : first.type; // a multi-select bundle is a 'file' collection
+  const share = {
+    type,
+    hostPath: first.hostPath,
+    name: first.name || first.hostPath || 'share',
+    size: type === 'file' ? first.size : null,
+    expiresAt: parseExpiry(body.expiresInSeconds),
+    maxDownloads: parseMaxDownloads(body.maxDownloads),
+  };
+  if (type === 'file') share.items = resolved.map((it) => ({ hostPath: it.hostPath, name: it.name, size: it.size, type: it.type }));
+  if (resolved.length > 1) share.collection = true;
+  const password = String(body.password || '');
+  // nosemgrep: javascript.express.security.express-data-exfiltration.express-data-exfiltration
+  if (password) Object.assign(share, makeSharePassword(password));
+  if (typeof body.note === 'string') {
+    const note = body.note.replace(/\r\n/g, '\n').trim().slice(0, 2000);
+    if (note) share.note = note;
+  }
+  const maxVisitors = Math.max(0, parseInt(body.maxVisitors, 10) || 0);
+  if (maxVisitors > 0) share.maxVisitors = maxVisitors;
+  stampPwaRecordOwner(req, share);
+  const rec = addShare(share);
+  const who = (req.pwaSession && req.pwaSession.username) || 'PWA';
+  logAudit('share-created', { username: who, ip: clientIp(req), detail: 'via PWA — ' + share.type + ' ' + (share.name || '') });
+  res.status(201).json({ share: decorateShare(rec, req) });
+});
+
+app.get('/app/host/shares', (req, res) => {
+  // Listing existing links is read-only, so an admin's paired device may see them even
+  // without a live session (unlike FS browse / create above, which stay session-only).
+  if (!pwaViewerIsAdmin(req)) return res.status(403).json({ error: 'admin-required' });
+  const list = state.shares
+    .filter((s) => s && (s.type === 'file' || s.type === 'folder') && canManagePwaImage(req, s))
+    .map((s) => decorateShare(s, req))
+    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+    .slice(0, 500);
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ shares: list });
+});
+
+// All reception (inbox) links the caller can manage — including ones created on the
+// standard web version — so they are visible/manageable from the PWA.
+app.get('/app/receptions', (req, res) => {
+  const list = state.shares
+    .filter((s) => s && s.type === 'inbox' && canManagePwaImage(req, s))
+    .map((s) => {
+      const dec = decorateShare(s, req);
+      return {
+        token: s.token,
+        name: s.name || 'Réception',
+        url: dec.url,
+        createdAt: s.createdAt || 0,
+        expiresAt: s.expiresAt || null,
+        bytesReceived: Number(s.bytesReceived) || 0,
+        owned: canManagePwaImage(req, s),
+      };
+    })
+    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+    .slice(0, 500);
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ receptions: list });
+});
+// Files received on a reception link the caller owns. Server-backed on purpose:
+// the received content survives any client-side storage loss (IndexedDB/localStorage
+// eviction, WebAPK relaunch, reconnection) because the server is the source of truth.
+function inboxReceivedFiles(share) {
+  const root = resolveWithin(INBOX_DIR, share.relDir || '');
+  const files = [];
+  const walk = (dir, relPrefix, top) => {
+    let ents;
+    try { ents = fs.readdirSync(dir, { withFileTypes: true }); } catch (_) { return; }
+    for (const e of ents) {
+      if (top && e.name === '.dxparts') continue; // resumable-upload staging area
+      const abs = path.join(dir, e.name);
+      const rel = relPrefix ? relPrefix + '/' + e.name : e.name;
+      if (e.isDirectory()) { walk(abs, rel, false); if (files.length >= 5000) return; continue; }
+      if (!e.isFile()) continue;
+      let st; try { st = fs.statSync(abs); } catch (_) { continue; }
+      files.push({ name: e.name, path: rel, size: st.size, mtime: Math.round(st.mtimeMs) });
+      if (files.length >= 5000) return;
+    }
+  };
+  try { walk(root, '', true); } catch (_) {}
+  files.sort((a, b) => (b.mtime || 0) - (a.mtime || 0));
+  return files;
+}
+app.get('/app/inbox/:token/files', (req, res) => {
+  const s = getByToken(req.params.token);
+  if (!s || (s.type !== 'inbox' && s.type !== 'collab') || !canManagePwaImage(req, s)) {
+    return res.status(404).json({ error: 'not-found' });
+  }
+  const files = inboxReceivedFiles(s);
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ token: s.token, name: s.name || '', count: files.length, files });
+});
+app.get('/app/inbox/:token/file', (req, res) => {
+  const s = getByToken(req.params.token);
+  if (!s || (s.type !== 'inbox' && s.type !== 'collab') || !canManagePwaImage(req, s)) {
+    return res.status(404).json({ error: 'not-found' });
+  }
+  const rel = String(req.query.path || '');
+  if (/(^|\/)\.dxparts(\/|$)/.test(rel)) return res.status(404).json({ error: 'not-found' });
+  let abs;
+  try { abs = resolveWithin(resolveWithin(INBOX_DIR, s.relDir || ''), rel); }
+  catch (_) { return res.status(400).json({ error: 'invalid-path' }); }
+  let st;
+  try { st = fs.statSync(abs); } catch (_) { return res.status(404).json({ error: 'not-found' }); }
+  if (!st.isFile()) return res.status(404).json({ error: 'not-found' });
+  const filename = path.basename(abs);
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('Content-Type', 'application/octet-stream');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Content-Length', String(st.size));
+  res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`);
+  const stream = fs.createReadStream(abs);
+  stream.on('error', () => { if (res.headersSent) res.destroy(); else res.status(500).end(); });
+  stream.pipe(res);
 });
 function publicPwaDevice(d, currentId) {
   return {
@@ -10753,13 +12774,16 @@ function publicPwaDevice(d, currentId) {
 }
 app.get('/app/device/status', (req, res) => {
   const session = getSession(req);
-  const device = getPwaDevice(req);
+  const device = req.pwaDevice || getPwaBearerDevice(req) || getPwaDevice(req);
   const devices = session ? pwaDevices().map((d) => publicPwaDevice(d, device && device.id)) : [];
   res.setHeader('Cache-Control', 'no-store');
   res.json({
     paired: !!device,
     adminSession: !!session,
-    csrf: session ? session.csrf : null,
+    // Prefer the admin-session token when both cookies are present so admin-only
+    // device-management actions continue to work. A paired-only device receives
+    // its own CSRF token.
+    csrf: session ? session.csrf : device ? device.csrf : null,
     device: device ? publicPwaDevice(device, device.id) : null,
     devices,
   });
@@ -10799,8 +12823,9 @@ app.post('/app/device/register', adminGuard, pwaJsonParser, (req, res) => {
 });
 app.post('/app/device/revoke', pwaJsonParser, (req, res) => {
   const session = getSession(req);
-  const current = getPwaDevice(req, false);
+  const current = req.pwaDevice || getPwaBearerDevice(req, false) || getPwaDevice(req, false);
   let id = String((req.body && req.body.id) || '');
+  const revokeShares = !!(req.body && req.body.revokeShares);
 
   const perform = () => {
     if (!id && current) id = current.id;
@@ -10808,13 +12833,33 @@ app.post('/app/device/revoke', pwaJsonParser, (req, res) => {
     const list = pwaDevices();
     const found = list.find((d) => d.id === id);
     state.meta.pwaDevices = list.filter((d) => d.id !== id);
-    scheduleFlush();
+    let revokedShares = 0;
+    if (revokeShares) {
+      const owned = state.shares.filter((s) => s && s.ownerDeviceId === id).map((s) => s.id);
+      for (const shareId of owned) if (removeShare(shareId, false)) revokedShares += 1;
+    }
+    // Device-scoped push subscriptions and live streams must not survive a
+    // revocation, regardless of whether its public links are also removed.
+    const ownerKey = 'dev:' + id;
+    let pushScopesRemoved = 0;
+    state.meta.pushSubs = pushSubs().map((sub) => {
+      if (!Array.isArray(sub.ownerKeys)) return sub;
+      const ownerKeys = sub.ownerKeys.filter((key) => key !== ownerKey);
+      pushScopesRemoved += sub.ownerKeys.length - ownerKeys.length;
+      return { ...sub, ownerKeys };
+    }).filter((sub) => !Array.isArray(sub.ownerKeys) || sub.ownerKeys.length > 0);
+    const streams = inboxEventSubs.get(ownerKey);
+    if (streams) {
+      for (const stream of streams) { try { stream.end(); } catch (_) {} }
+      inboxEventSubs.delete(ownerKey);
+    }
+    persist();
     if (current && current.id === id) clearPwaDeviceCookie(req, res);
     if (session) {
       req.session = session;
-      auditReq(req, 'pwa-device-revoked', found ? found.name : id);
+      auditReq(req, 'pwa-device-revoked', `${found ? found.name : id}; shares=${revokedShares}; push-scopes=${pushScopesRemoved}`);
     }
-    return res.json({ ok: true });
+    return res.json({ ok: true, revokedShares });
   };
 
   // A paired device can always revoke itself. Revoking a different device is an
@@ -10826,13 +12871,67 @@ app.post('/app/device/revoke', pwaJsonParser, (req, res) => {
   return adminGuard(req, res, perform);
 });
 
-// Redirect the bare /app to /app/ — but NOT /app/ itself (Express non-strict
-// routing matches both here), otherwise it would redirect in a loop.
-app.get('/app', (req, res, next) => {
-  if (req.originalUrl.split('?')[0].endsWith('/')) return next();
-  const q = req.originalUrl.includes('?') ? req.originalUrl.slice(req.originalUrl.indexOf('?')) : '';
-  res.redirect(301, '/app/' + q);
+// Rename a paired device. A device can always rename itself (mutation CSRF is
+// already enforced by requireAppAuth); renaming a different device is an admin
+// action guarded by the admin IP allowlist + session CSRF, mirroring revoke.
+app.post('/app/device/rename', pwaJsonParser, (req, res) => {
+  const session = getSession(req);
+  const current = req.pwaDevice || getPwaBearerDevice(req, false) || getPwaDevice(req, false);
+  const name = String((req.body && req.body.name) || '').replace(/[\r\n]+/g, ' ').trim().slice(0, 100);
+  if (!name) return res.status(400).json({ error: 'invalid-name' });
+  let id = String((req.body && req.body.id) || '');
+
+  const perform = () => {
+    if (!id && current) id = current.id;
+    if (!id) return res.status(400).json({ error: 'missing-id' });
+    const device = pwaDevices().find((d) => d.id === id);
+    if (!device) return res.status(404).json({ error: 'not-found' });
+    device.name = name;
+    scheduleFlush();
+    if (session) {
+      req.session = session;
+      auditReq(req, 'pwa-device-renamed', device.name);
+    } else {
+      logAudit('pwa-device-renamed', { username: 'PWA: ' + device.name, ip: clientIp(req), detail: 'device renamed' });
+    }
+    return res.json({ ok: true, device: publicPwaDevice(device, current && current.id) });
+  };
+
+  if (!id || (current && id === current.id)) return perform();
+  if (!session) return res.status(401).json({ error: 'not-authenticated' });
+  const csrf = req.headers['x-csrf-token'];
+  if (!csrf || !timingSafeEqualStr(csrf, session.csrf)) return res.status(403).json({ error: 'invalid-csrf' });
+  return adminGuard(req, res, perform);
 });
+
+const pwaIndexTemplate = fs.readFileSync(path.join(__dirname, 'pwa', 'index.html'), 'utf8');
+function pwaImageBootstrapMarkup(req) {
+  const payload = JSON.stringify({ images: pwaImagesForRequest(req, { limit: 500, includeInactive: true }) });
+  const encoded = Buffer.from(payload, 'utf8').toString('base64');
+  return `<template id="dx-image-bootstrap" data-encoding="base64">${encoded}</template>`;
+}
+function setPwaDocumentHeaders(res) {
+  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=(self)');
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.setHeader('Vary', 'Cookie, Authorization');
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Content-Security-Policy',
+    "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; " +
+    "media-src 'self' blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; frame-src 'self' blob:; " +
+    "base-uri 'none'; form-action 'self'; frame-ancestors 'none'; object-src 'none'");
+}
+
+// The authenticated image inventory is embedded in the navigation document. This
+// makes a manual refresh deterministic even when IndexedDB is temporarily blocked,
+// a reverse proxy delays /app/images, or an older service-worker response races the
+// freshly uploaded record. The payload is base64 inside an inert template: it never
+// executes and cannot break out into markup.
+app.get(['/app/', '/app/index.html'], (req, res) => {
+  setPwaDocumentHeaders(res);
+  const html = pwaIndexTemplate.replace('<!--DX_IMAGE_BOOTSTRAP-->', pwaImageBootstrapMarkup(req));
+  res.send(html);
+});
+
 app.use('/app', express.static(path.join(__dirname, 'pwa'), {
   index: 'index.html',
   extensions: ['html'],
@@ -10842,7 +12941,7 @@ app.use('/app', express.static(path.join(__dirname, 'pwa'), {
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Content-Security-Policy',
       "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; " +
-      "media-src 'self' blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; " +
+      "media-src 'self' blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; frame-src 'self' blob:; " +
       "base-uri 'none'; form-action 'self'; frame-ancestors 'none'; object-src 'none'");
     if (filePath.endsWith('.webmanifest')) res.setHeader('Content-Type', 'application/manifest+json; charset=utf-8');
     if (filePath.endsWith('sw.js')) res.setHeader('Service-Worker-Allowed', '/app/');

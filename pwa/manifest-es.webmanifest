@@ -1,10 +1,10 @@
 {
-  "name": "Direct-Xfer — Enviar",
-  "short_name": "DX Enviar",
+  "name": "Enviar",
+  "short_name": "Direct-Xfer",
   "description": "Envía fotos, documentos, carpetas y archivos a enlaces de recepción Direct-Xfer con reanudación duradera y cifrado de extremo a extremo.",
   "lang": "es",
   "dir": "ltr",
-  "start_url": "/app/",
+  "start_url": "/app/launch",
   "scope": "/app/",
   "id": "/app/",
   "display": "standalone",
@@ -26,8 +26,46 @@
       "auto"
     ]
   },
+  "file_handlers": [
+    {
+      "action": "/app/",
+      "accept": {
+        "image/*": [
+          ".jpg",
+          ".jpeg",
+          ".png",
+          ".gif",
+          ".webp",
+          ".bmp",
+          ".avif",
+          ".heic",
+          ".heif"
+        ],
+        "video/*": [
+          ".mp4",
+          ".mov",
+          ".webm",
+          ".mkv"
+        ],
+        "audio/*": [
+          ".mp3",
+          ".m4a",
+          ".wav",
+          ".ogg"
+        ],
+        "application/pdf": [
+          ".pdf"
+        ],
+        "text/plain": [
+          ".txt",
+          ".md",
+          ".csv"
+        ]
+      }
+    }
+  ],
   "share_target": {
-    "action": "/app/share",
+    "action": "/app/share-target",
     "method": "POST",
     "enctype": "multipart/form-data",
     "params": {
@@ -38,12 +76,51 @@
         {
           "name": "files",
           "accept": [
-            "image/*",
-            "video/*",
-            "audio/*",
-            "application/*",
-            "text/*",
-            "*/*"
+            "image/jpeg",
+            ".jpg",
+            ".jpeg",
+            "image/png",
+            ".png",
+            "image/webp",
+            ".webp",
+            "image/gif",
+            ".gif",
+            "image/bmp",
+            ".bmp",
+            "image/avif",
+            ".avif",
+            "image/heic",
+            ".heic",
+            "image/heif",
+            ".heif",
+            "image/svg+xml",
+            ".svg",
+            "video/mp4",
+            ".mp4",
+            "video/quicktime",
+            ".mov",
+            "video/webm",
+            ".webm",
+            "audio/mpeg",
+            ".mp3",
+            "audio/mp4",
+            ".m4a",
+            "audio/wav",
+            ".wav",
+            "audio/ogg",
+            ".ogg",
+            "application/pdf",
+            ".pdf",
+            "text/plain",
+            ".txt",
+            ".md",
+            ".csv",
+            "application/zip",
+            ".zip",
+            "application/x-7z-compressed",
+            ".7z",
+            "application/vnd.rar",
+            ".rar"
           ]
         }
       ]
@@ -55,6 +132,19 @@
       "short_name": "Foto",
       "description": "Abre Direct-Xfer para tomar y enviar una foto.",
       "url": "/app/?action=camera",
+      "icons": [
+        {
+          "src": "/app/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Escanear un documento",
+      "short_name": "Escanear",
+      "description": "Abrir directamente la cámara para escanear un documento.",
+      "url": "/app/?action=scan",
       "icons": [
         {
           "src": "/app/icon-192.png",
@@ -143,5 +233,6 @@
       "form_factor": "wide",
       "label": "Gestión de destinos y envíos"
     }
-  ]
+  ],
+  "prefer_related_applications": false
 }

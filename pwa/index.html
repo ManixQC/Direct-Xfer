@@ -9,7 +9,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="DX Envoyer">
-  <link id="app-manifest" rel="manifest" href="/app/manifest.webmanifest">
+  <link id="app-manifest" rel="manifest" href="/direct-xfer-pwa.webmanifest?v=104">
   <link rel="icon" href="/app/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" sizes="180x180" href="/app/apple-touch-icon.png">
   <link rel="stylesheet" href="/app/app.css">
@@ -19,18 +19,36 @@
   <title>Direct-Xfer — Envoyer</title>
 </head>
 <body>
+  <!--DX_IMAGE_BOOTSTRAP-->
+  <div id="pull-refresh" class="pull-refresh" role="status" aria-live="polite" aria-hidden="true">
+    <span class="pull-refresh-icon" aria-hidden="true">↻</span>
+    <span class="pull-refresh-text" data-i18n="pullToRefresh">Glissez vers le bas pour actualiser</span>
+  </div>
   <div id="offbar" class="offbar hidden" role="status" aria-live="polite" data-i18n="offline">Hors ligne — les envois reprendront à la reconnexion.</div>
   <div id="updatebar" class="updatebar hidden" role="status">
     <span data-i18n="updateReady">Une nouvelle version est disponible.</span>
     <button id="update-btn" class="btn ghost sm" type="button" data-i18n="updateNow">Actualiser</button>
   </div>
+  <div id="install-diagnostic" class="install-diagnostic hidden" role="status" aria-live="polite">
+    <span class="install-diagnostic-icon" aria-hidden="true">🔒</span>
+    <span id="install-diagnostic-text"></span>
+    <a id="install-https-link" class="btn sm hidden" href="/app" data-i18n="installOpenHttps">Ouvrir en HTTPS</a>
+  </div>
 
   <header class="topbar">
-    <img src="/app/icon.svg" alt="Direct-Xfer" width="34" height="34">
-    <div class="titlebox">
-      <h1 data-i18n="title">Envoyer</h1>
-      <span id="device-badge" class="device-badge hidden" data-i18n="pairedBadge">Appareil associé</span>
+    <div class="brand-stack">
+      <a id="admin-home-link" class="admin-home-link" href="/" title="Ouvrir l'administration" aria-label="Ouvrir l'administration" data-i18n-title="openAdmin" data-i18n-aria="openAdmin">
+        <img src="/app/icon.svg" alt="" width="68" height="68">
+      </a>
+      <div class="titlebox">
+        <h1 data-i18n="title">Envoyer</h1>
+        <span id="device-badge" class="device-badge hidden" data-i18n="pairedBadge">Appareil associé</span>
+      </div>
     </div>
+    <span id="network-pill" class="network-pill" role="status" aria-live="polite">
+      <span class="network-dot" aria-hidden="true"></span>
+      <span id="network-text" data-i18n="onlineStatus">En ligne</span>
+    </span>
     <select id="lang-select" class="compact-select" aria-label="Langue" data-i18n-aria="language">
       <option value="fr">FR</option>
       <option value="en">EN</option>
@@ -40,12 +58,24 @@
       <option value="dark" data-i18n="themeDark">Sombre</option>
       <option value="light" data-i18n="themeLight">Clair</option>
       <option value="auto" data-i18n="themeAuto">Auto</option>
+      <option value="schedule" data-i18n="themeSchedule">Selon l’heure</option>
     </select>
-    <button id="install-btn" class="btn ghost sm hidden" type="button" data-i18n="install">Installer</button>
+    <button id="install-btn" class="install-logo-button hidden" type="button" title="Installer" aria-label="Installer" data-i18n-title="install" data-i18n-aria="install">
+      <span class="install-logo-mark" aria-hidden="true">
+        <img src="/app/icon.svg" alt="" width="52" height="52">
+        <span class="install-logo-badge">⇩</span>
+      </span>
+      <span class="sr-only" data-i18n="install">Installer</span>
+    </button>
+    <button id="help-btn" class="btn ghost icon" type="button" title="Aide" aria-label="Raccourcis et aide" data-i18n-title="help" data-i18n-aria="shortcutsTitle">?</button>
   </header>
 
   <main class="wrap">
-    <section class="card" aria-labelledby="dest-heading">
+    <div id="pwa-panel-heading" class="panel-heading" role="status" aria-live="polite">
+      <span id="pwa-panel-kicker" class="lbl" data-i18n="navSend">Envoyer</span>
+      <span id="pwa-panel-summary" class="panel-summary" data-i18n="navSendHint">Préparer et envoyer des fichiers vers une destination.</span>
+    </div>
+    <section class="card" data-pwa-panel="send" aria-labelledby="dest-heading">
       <div class="section-head">
         <div>
           <p id="dest-heading" class="lbl" data-i18n="destination">Destination</p>
@@ -53,17 +83,23 @@
         </div>
       </div>
 
-      <div class="row">
+      <div class="row destination-toolbar">
         <label class="sr-only" for="dest-select" data-i18n="destination">Destination</label>
         <select id="dest-select" aria-label="Lien de réception"></select>
         <button id="dest-copy-btn" class="btn ghost icon hidden" type="button" title="Copier le lien" aria-label="Copier le lien" data-i18n-title="copyLink" data-i18n-aria="copyLink">🔗</button>
+        <button id="dest-token-btn" class="btn ghost icon hidden" type="button" title="Copier le jeton" aria-label="Copier le jeton" data-i18n-title="copyToken" data-i18n-aria="copyToken">＃</button>
+        <button id="dest-share-btn" class="btn ghost icon hidden" type="button" title="Partager le lien" aria-label="Partager le lien" data-i18n-title="shareLink" data-i18n-aria="shareLink">📤</button>
+        <button id="dest-qr-btn" class="btn ghost icon hidden" type="button" title="QR du lien" aria-label="Afficher le QR du lien" data-i18n-title="qrForLink" data-i18n-aria="qrForLink">▦</button>
+        <button id="dest-received-btn" class="btn ghost icon hidden" type="button" title="Contenu reçu" aria-label="Voir le contenu reçu sur ce lien" data-i18n-title="receivedTitle" data-i18n-aria="receivedTitle">📥</button>
         <button id="dest-paste-btn" class="btn ghost icon" type="button" title="Coller un lien" aria-label="Coller un lien" data-i18n-title="pasteLink" data-i18n-aria="pasteLink">📋</button>
         <button id="dest-edit-btn" class="btn ghost icon hidden" type="button" title="Modifier" aria-label="Modifier la destination" data-i18n-title="editDestination" data-i18n-aria="editDestination">✎</button>
+        <button id="dest-revoke-btn" class="btn ghost icon danger hidden" type="button" title="Révoquer" aria-label="Révoquer ce lien de réception" data-i18n-title="revokeShare" data-i18n-aria="revokeShare">✕</button>
         <button id="dest-add-btn" class="btn ghost icon" type="button" title="Ajouter" aria-label="Ajouter une destination" data-i18n-title="addDestination" data-i18n-aria="addDestination">＋</button>
         <button id="dest-create-btn" class="btn ghost icon" type="button" title="Créer un lien de réception" aria-label="Créer un lien de réception" data-i18n-title="createLinkTitle" data-i18n-aria="createLinkTitle">🆕</button>
       </div>
       <p id="dest-status" class="dest-status muted" role="status" aria-live="polite"></p>
       <p id="dest-limits" class="dest-status muted hidden"></p>
+      <div id="dest-limit-bars" class="limit-bars hidden"></div>
 
       <div id="dest-form" class="form-panel hidden">
         <label class="field" for="dest-url">
@@ -71,15 +107,22 @@
           <input id="dest-url" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://…/u/…" data-i18n-placeholder="destinationPlaceholder">
         </label>
         <label class="field" for="dest-name">
-          <span data-i18n="displayName">Nom affiché</span>
+          <span class="field-head"><span data-i18n="displayName">Nom affiché</span><span id="dest-name-count" class="char-count"></span></span>
           <input id="dest-name" type="text" maxlength="80" autocomplete="off" placeholder="Bureau, Photos, Comptabilité…" data-i18n-placeholder="destinationNamePlaceholder">
         </label>
         <label class="checkline" for="dest-remember">
           <input id="dest-remember" type="checkbox">
           <span data-i18n="rememberDestination">Mémoriser cette destination sur cet appareil</span>
         </label>
+        <label class="checkline" for="dest-remember-key">
+          <input id="dest-remember-key" type="checkbox" disabled>
+          <span data-i18n="rememberKey">Mémoriser aussi la clé secrète sur cet appareil</span>
+        </label>
         <div class="button-row">
           <button id="dest-scan-btn" class="btn ghost sm" type="button" data-i18n="scanQr">📷 Scanner un QR</button>
+          <button id="dest-pin-btn" class="btn ghost sm hidden" type="button" data-i18n="pinDestination">⭐ Épingler</button>
+          <button id="dest-up-btn" class="btn ghost sm hidden" type="button" data-i18n="moveUp">↑ Monter</button>
+          <button id="dest-down-btn" class="btn ghost sm hidden" type="button" data-i18n="moveDown">↓ Descendre</button>
           <button id="dest-save-btn" class="btn sm push" type="button" data-i18n="saveDestination">Ajouter</button>
           <button id="dest-remove-btn" class="btn danger sm hidden" type="button" data-i18n="removeDestination">Retirer</button>
           <button id="dest-cancel-btn" class="btn ghost sm" type="button" data-i18n="cancel">Annuler</button>
@@ -122,12 +165,13 @@
       </div>
     </section>
 
-    <section class="card" aria-labelledby="files-heading">
+    <section class="card" data-pwa-panel="send" aria-labelledby="files-heading">
       <div class="section-head">
         <div>
           <p id="files-heading" class="lbl" data-i18n="addFiles">Ajouter des fichiers</p>
-          <p class="section-sub" data-i18n="durableQueue">La file est conservée localement et peut reprendre après fermeture.</p>
+          <p class="section-sub" data-i18n="durableQueue">Les fichiers sont conservés localement et reprennent après fermeture de la PWA.</p>
         </div>
+        <span id="files-count" class="count-badge hidden" role="status" aria-live="polite"></span>
       </div>
 
       <div class="pickgrid">
@@ -143,6 +187,11 @@
         <label class="pick"><span class="ico">📁</span><span data-i18n="chooseFolder">Choisir un dossier</span>
           <input id="pick-folder" type="file" webkitdirectory directory hidden multiple>
         </label>
+        <button type="button" id="pick-voice" class="pick"><span class="ico">🎙</span><span data-i18n="voiceNote">Note vocale</span></button>
+        <button type="button" id="pick-burst" class="pick"><span class="ico">📸</span><span data-i18n="burst">Rafale photo</span></button>
+        <button type="button" id="pick-text" class="pick"><span class="ico">📋</span><span data-i18n="pasteText">Coller du texte</span></button>
+        <button type="button" id="pick-url" class="pick"><span class="ico">🌐</span><span data-i18n="addFromUrl">Depuis une URL</span></button>
+        <button type="button" id="pick-screen" class="pick hidden"><span class="ico">🖥</span><span data-i18n="screenCapture">Capturer l’écran</span></button>
       </div>
 
       <div class="option-grid">
@@ -160,16 +209,110 @@
         </label>
       </div>
 
-      <div id="sender-row" class="field hidden">
-        <label for="sender-name" data-i18n="senderName">Votre nom</label>
-        <input id="sender-name" type="text" maxlength="60" autocomplete="name" placeholder="Nom demandé par ce lien" data-i18n-placeholder="senderPlaceholder">
+      <label class="field compact preset-field" for="optimize-preset">
+        <span data-i18n="optimizePreset">Préréglage d’optimisation</span>
+        <select id="optimize-preset">
+          <option value="original" data-i18n="imgOriginal">Originale</option>
+          <option value="high" data-i18n="presetHigh">Haute qualité</option>
+          <option value="message" selected data-i18n="presetMessaging">Messagerie</option>
+          <option value="saver" data-i18n="presetSaver">Économie de données</option>
+          <option value="custom" data-i18n="presetCustom">Personnalisé</option>
+        </select>
+      </label>
+
+      <div id="optimize-opts" class="optimize-opts hidden">
+        <label class="field compact" for="img-quality">
+          <span data-i18n="imgQualityLabel">Qualité</span>
+          <select id="img-quality">
+            <option value="0.7" data-i18n="qLow">Basse</option>
+            <option value="0.86" selected data-i18n="qMed">Moyenne</option>
+            <option value="0.95" data-i18n="qHigh">Haute</option>
+          </select>
+        </label>
+        <label class="field compact" for="img-maxdim">
+          <span data-i18n="imgSizeLabel">Taille max</span>
+          <select id="img-maxdim">
+            <option value="1600">1600 px</option>
+            <option value="2560" selected>2560 px</option>
+            <option value="4096">4096 px</option>
+            <option value="0" data-i18n="imgOriginal">Originale</option>
+          </select>
+        </label>
       </div>
 
+      <label class="checkline" for="strip-exif">
+        <input id="strip-exif" type="checkbox">
+        <span data-i18n="stripExif">Retirer les métadonnées (EXIF/GPS)</span>
+      </label>
+
+      <div id="sender-row" class="field hidden">
+        <label for="sender-name" data-i18n="senderName">Votre nom</label>
+        <input id="sender-name" type="text" maxlength="60" autocomplete="name" list="sender-list" placeholder="Nom demandé par ce lien" data-i18n-placeholder="senderPlaceholder">
+        <datalist id="sender-list"></datalist>
+      </div>
+
+      <label class="field" id="batch-note-row" for="batch-note">
+        <span class="field-head"><span data-i18n="batchNote">Étiquette / note (facultatif)</span><span id="note-count" class="char-count"></span></span>
+        <input id="batch-note" type="text" maxlength="120" autocomplete="off" placeholder="Ex. Facture, Vacances…" data-i18n-placeholder="notePlaceholder">
+      </label>
+
+      <label class="field compact" id="expire-row" for="expire-select">
+        <span data-i18n="expireLabel">Expiration (auto-suppression)</span>
+        <select id="expire-select">
+          <option value="0" data-i18n="expNever">Jamais</option>
+          <option value="3600" data-i18n="exp1h">1 heure</option>
+          <option value="86400" data-i18n="exp24h">24 heures</option>
+          <option value="604800" data-i18n="exp7d">7 jours</option>
+          <option value="2592000" data-i18n="exp30d">30 jours</option>
+        </select>
+      </label>
+
+      <div class="button-row batch-reset-row">
+        <button id="reset-batch-btn" class="btn ghost sm push" type="button" data-i18n="resetBatch">↺ Réinitialiser le lot</button>
+      </div>
+
+      <div id="queue-sort" class="queue-sort hidden">
+        <label class="master-sel checkline" for="master-select">
+          <input id="master-select" type="checkbox" aria-label="Tout sélectionner" data-i18n-aria="masterSelect">
+          <span class="muted sm" data-i18n="masterSelect">Tout sélectionner</span>
+        </label>
+        <span class="muted sm push" data-i18n="sortBy">Trier</span>
+        <select id="sort-select" class="compact-select" aria-label="Trier la file" data-i18n-aria="sortBy">
+          <option value="added" data-i18n="sortAdded">Ordre d’ajout</option>
+          <option value="name" data-i18n="sortName">Nom</option>
+          <option value="size" data-i18n="sortSize">Taille</option>
+          <option value="type" data-i18n="sortType">Type</option>
+        </select>
+      </div>
+
+      <input id="queue-search" type="search" class="history-search queue-search hidden" autocomplete="off" placeholder="Filtrer la file…" data-i18n-placeholder="queueSearch" aria-label="Filtrer la file" data-i18n-aria="queueSearch">
+
       <div id="up-list" class="up-list" aria-live="polite"></div>
+
+      <div id="bulk-bar" class="bulk-bar hidden">
+        <span id="bulk-count" class="muted sm"></span>
+        <div class="queue-actions">
+          <button id="bulk-invert-btn" class="btn ghost sm" type="button" data-i18n="bulkInvert">⇄ Inverser</button>
+          <button id="bulk-rename-btn" class="btn ghost sm" type="button" data-i18n="bulkRename">✎ Renommer</button>
+          <button id="bulk-share-btn" class="btn ghost sm hidden" type="button" data-i18n="bulkShare">Partager</button>
+          <button id="bulk-retry-btn" class="btn ghost sm" type="button" data-i18n="bulkRetry">Réessayer</button>
+          <button id="bulk-remove-btn" class="btn ghost sm" type="button" data-i18n="bulkRemove">Retirer</button>
+        </div>
+      </div>
+
+      <div id="undo-bar" class="undo-bar hidden">
+        <span id="undo-text" class="muted sm"></span>
+        <button id="undo-btn" class="btn ghost sm push" type="button" data-i18n="undo">Annuler</button>
+      </div>
 
       <div id="queue-summary" class="queue-summary hidden">
         <span id="queue-text" class="muted sm"></span>
         <div class="queue-actions">
+          <button id="last-batch-btn" class="btn ghost sm hidden" type="button" data-i18n="resendLastBatch">↺ Renvoyer le dernier lot</button>
+          <button id="copy-summary-btn" class="btn ghost sm hidden" type="button" data-i18n="copySummary">⧉ Copier le résumé</button>
+          <button id="share-result-btn" class="btn ghost sm hidden" type="button" data-i18n="shareResult">📤 Partager le résultat</button>
+          <button id="zip-btn" class="btn ghost sm hidden" type="button" data-i18n="zipBundle">🗜 Regrouper en ZIP</button>
+          <button id="multisend-btn" class="btn ghost sm hidden" type="button" data-i18n="multiSend">📢 Envoyer à plusieurs…</button>
           <button id="pause-btn" class="btn ghost sm hidden" type="button" data-i18n="pause">Pause</button>
           <button id="resume-btn" class="btn ghost sm hidden" type="button" data-i18n="resume">Reprendre</button>
           <button id="retry-all-btn" class="btn ghost sm hidden" type="button" data-i18n="retryAll">↻ Réessayer</button>
@@ -186,48 +329,368 @@
       <button id="clear-done-btn" class="btn ghost sm block hidden" type="button" data-i18n="clearCompleted">Effacer les envois terminés</button>
     </section>
 
-    <section class="card" aria-labelledby="imglink-heading">
-      <div class="section-head">
+    <section class="card image-links-workspace" data-pwa-panel="images" aria-labelledby="imglink-heading">
+      <div class="image-links-header">
         <div>
           <p id="imglink-heading" class="lbl" data-i18n="imgLinksTitle">Liens d’image</p>
           <p class="section-sub" data-i18n="imgLinksHint">Créez des liens directs vers vos images : chaque lien offre les versions Pleine, Mini et Micro, sans page relais.</p>
         </div>
+        <span class="image-links-mark" aria-hidden="true">🖼</span>
       </div>
-      <label class="pick pick-wide"><span class="ico">🖼</span><span data-i18n="imgLinksAdd">Ajouter des images</span>
-        <input id="pick-imglink" type="file" accept="image/*" hidden multiple>
-      </label>
+
+      <section class="image-create-panel" aria-labelledby="img-create-heading">
+        <div class="image-create-copy">
+          <p id="img-create-heading" class="image-subheading" data-i18n="imgCreateTitle">Créer des liens</p>
+          <p class="section-sub" data-i18n="imgCreateHint">Choisissez vos images et le format qui sera proposé en priorité.</p>
+        </div>
+        <div class="image-create-main">
+          <label class="pick pick-wide image-add-button"><span class="ico">🖼</span><span data-i18n="imgLinksAdd">Ajouter des images</span>
+            <input id="pick-imglink" type="file" accept="image/*" hidden multiple>
+          </label>
+          <label class="image-default-field" for="img-default-variant">
+            <span data-i18n="imgDefaultVariantLabel">Format d’image favori</span>
+            <select id="img-default-variant" class="compact-select" aria-label="Format d’image favori" data-i18n-aria="imgDefaultVariantLabel">
+              <option value="auto" data-i18n="imgVariantAuto">Automatique</option>
+              <option value="full" data-i18n="imgVariantFull">Pleine</option>
+              <option value="thumb" data-i18n="imgVariantMini">Mini</option>
+              <option value="micro" data-i18n="imgVariantMicro">Micro</option>
+            </select>
+          </label>
+        </div>
+        <div class="imglink-privacy">
+          <label class="checkline" for="imglink-strip-exif">
+            <input id="imglink-strip-exif" type="checkbox" checked>
+            <span data-i18n="imgStripExif">Retirer les données EXIF/GPS avant le partage</span>
+          </label>
+          <p class="section-sub" data-i18n="imgStripExifHint">Le nettoyage est effectué localement sur cet appareil avant le téléversement.</p>
+        </div>
+      </section>
+
+      <details class="image-options advanced-section">
+        <summary data-i18n="imgAdvancedOptions">Options des images</summary>
+        <div class="image-options-grid">
+          <label class="checkline" for="img-compact"><input id="img-compact" type="checkbox"><span data-i18n="imgCompact">Affichage compact</span></label>
+          <label class="checkline" for="img-hide-expired"><input id="img-hide-expired" type="checkbox" checked><span data-i18n="imgHideExpired">Masquer les images expirées</span></label>
+          <label class="checkline" for="img-auto-copy"><input id="img-auto-copy" type="checkbox"><span data-i18n="imgAutoCopy">Copier automatiquement après création</span></label>
+          <label class="field compact" for="img-expiry"><span data-i18n="imgDefaultExpiry">Expiration favorite</span><select id="img-expiry"><option value="0" data-i18n="expNever">Jamais</option><option value="3600">1 h</option><option value="86400">1 j</option><option value="604800">7 j</option><option value="2592000">30 j</option></select></label>
+          <label class="field compact" for="img-max-views"><span data-i18n="imgMaxViews">Limite de vues</span><input id="img-max-views" type="number" min="0" max="1000000000" value="0" inputmode="numeric"></label>
+          <label class="field compact" for="img-password"><span data-i18n="imgPassword">Mot de passe</span><input id="img-password" type="password" maxlength="256" autocomplete="new-password" placeholder="Facultatif" data-i18n-placeholder="optional"></label>
+          <label class="field compact image-template" for="img-hotlink-hosts"><span data-i18n="imgHotlinkHosts">Domaines autorisés pour l’intégration</span><input id="img-hotlink-hosts" type="text" maxlength="1000" placeholder="forum.exemple.com, *.site.net" data-i18n-placeholder="imgHotlinkPlaceholder"><small data-i18n="imgHotlinkHint">Vide = protection désactivée. Les visites directes restent autorisées.</small></label>
+          <label class="checkline" for="img-notify-first-view"><input id="img-notify-first-view" type="checkbox"><span data-i18n="imgNotifyFirstView">Notifier à la première consultation</span></label>
+          <label class="field compact" for="img-smart-blur"><span data-i18n="imgSmartBlur">Floutage intelligent local</span><select id="img-smart-blur"><option value="off" data-i18n="disabled">Désactivé</option><option value="faces" data-i18n="imgSmartBlurFaces">Visages</option><option value="faces-plates" data-i18n="imgSmartBlurFacesPlates">Visages et plaques</option></select><small data-i18n="imgSmartBlurHint">Analyse locale avec révision avant envoi; aucune image n’est envoyée à un service externe.</small></label>
+          <label class="field compact" for="img-tags"><span data-i18n="imgTags">Tags</span><input id="img-tags" type="text" maxlength="240" placeholder="forum, travail…"></label>
+          <label class="field compact" for="img-note"><span data-i18n="imgPrivateNote">Note privée</span><input id="img-note" type="text" maxlength="1000" placeholder="Visible seulement ici"></label>
+          <label class="field compact image-template" for="img-rename-template"><span data-i18n="imgRenameTemplate">Modèle de renommage</span><input id="img-rename-template" type="text" maxlength="120" placeholder="{name}-{date}-{n}.{ext}"></label>
+          <label class="field compact" for="img-action-1"><span data-i18n="imgFavoriteAction1">Action favorite 1</span><select id="img-action-1"><option value="full" data-i18n="imgActionCopy">Copier</option><option value="open" data-i18n="imgActionOpen">Ouvrir</option><option value="qr">QR</option><option value="edit" data-i18n="edit">Modifier</option><option value="pin" data-i18n="pinItem">Épingler</option><option value="qrdl" data-i18n="imgQrDownload">Télécharger QR</option></select></label>
+          <label class="field compact" for="img-action-2"><span data-i18n="imgFavoriteAction2">Action favorite 2</span><select id="img-action-2"><option value="open" data-i18n="imgActionOpen">Ouvrir</option><option value="full" data-i18n="imgActionCopy">Copier</option><option value="qr">QR</option><option value="edit" data-i18n="edit">Modifier</option><option value="pin" data-i18n="pinItem">Épingler</option><option value="qrdl" data-i18n="imgQrDownload">Télécharger QR</option></select></label>
+          <label class="field compact" for="img-action-3"><span data-i18n="imgFavoriteAction3">Action favorite 3</span><select id="img-action-3"><option value="qr">QR</option><option value="full" data-i18n="imgActionCopy">Copier</option><option value="open" data-i18n="imgActionOpen">Ouvrir</option><option value="edit" data-i18n="edit">Modifier</option><option value="pin" data-i18n="pinItem">Épingler</option><option value="qrdl" data-i18n="imgQrDownload">Télécharger QR</option></select></label>
+        </div>
+        <details class="tag-color-settings">
+          <summary data-i18n="tagColors">Couleurs des tags</summary>
+          <div id="tag-color-list" class="tag-color-list"></div>
+          <button id="tag-colors-reset" class="btn ghost sm" type="button" data-i18n="tagColorsReset">Réinitialiser les couleurs</button>
+        </details>
+        <details class="image-retention-settings advanced-section">
+          <summary data-i18n="imgRetentionRules">Règles automatiques de rétention</summary>
+          <p class="section-sub" data-i18n="imgRetentionWarning">Ces règles révoquent définitivement les images et suppriment leurs fichiers. Elles sont désactivées par défaut.</p>
+          <div class="retention-grid">
+            <label class="checkline" for="img-retention-enabled"><input id="img-retention-enabled" type="checkbox"><span data-i18n="enabled">Activé</span></label>
+            <label class="field compact" for="img-retention-age"><span data-i18n="imgRetentionAge">Âge maximal (jours)</span><input id="img-retention-age" type="number" min="0" max="3650" value="0" inputmode="decimal"></label>
+            <label class="field compact" for="img-retention-inactive"><span data-i18n="imgRetentionInactive">Inactivité maximale (jours)</span><input id="img-retention-inactive" type="number" min="0" max="3650" value="0" inputmode="decimal"></label>
+            <label class="field compact" for="img-retention-views"><span data-i18n="imgRetentionViews">Révoquer après ce nombre de vues</span><input id="img-retention-views" type="number" min="0" max="1000000000" value="0" inputmode="numeric"></label>
+            <label class="field compact" for="img-retention-storage"><span data-i18n="imgRetentionStorage">Stockage maximal (Mo)</span><input id="img-retention-storage" type="number" min="0" max="1048576" value="0" inputmode="decimal"></label>
+          </div>
+          <p id="img-retention-summary" class="muted sm"></p>
+          <button id="img-retention-save" class="btn danger ghost sm" type="button" data-i18n="imgRetentionSave">Enregistrer et appliquer</button>
+        </details>
+      </details>
+      <section class="image-library-panel" aria-labelledby="img-library-heading">
+        <div class="image-library-head">
+          <div>
+            <p id="img-library-heading" class="image-subheading" data-i18n="imgLibraryTitle">Vos liens</p>
+            <p class="section-sub" data-i18n="imgLibraryHint">Recherchez, triez et gérez les images déjà partagées.</p>
+          </div>
+          <details class="image-batch-actions">
+            <summary data-i18n="imgGlobalActions">Actions globales</summary>
+            <div class="imglink-tools">
+              <select id="img-format" class="compact-select hidden" aria-label="Format de copie" data-i18n-aria="imgFormatLabel">
+                <option value="url">URL</option>
+                <option value="md">Markdown</option>
+                <option value="html">HTML</option>
+                <option value="bb">BBCode</option>
+              </select>
+              <select id="img-copy-template" class="compact-select hidden" aria-label="Modèle de copie" data-i18n-aria="imgCopyTemplate">
+                <option value="standard" data-i18n="copyTemplateStandard">Standard</option>
+                <option value="discord">Discord</option>
+                <option value="reddit">Reddit</option>
+                <option value="forum" data-i18n="copyTemplateForum">Forum</option>
+                <option value="email" data-i18n="copyTemplateEmail">Courriel</option>
+              </select>
+              <button id="imglink-copyall-btn" class="btn ghost sm hidden" type="button" data-i18n="imgCopyAll">🔗 Copier tous</button>
+              <button id="imglink-qrall-btn" class="btn ghost sm hidden" type="button" data-i18n="imgQrAll">▦ QR groupé</button>
+              <button id="imglink-qrzip-btn" class="btn ghost sm hidden" type="button" data-i18n="imgQrZip">🗜 QR en ZIP</button>
+              <button id="img-export-stats-csv" class="btn ghost sm" type="button" data-i18n="imgExportStatsCsv">CSV statistiques</button>
+            </div>
+          </details>
+        </div>
+        <div class="image-manager-bar">
+          <label class="image-search-field" for="img-search">
+            <span class="sr-only" data-i18n="imgSearch">Rechercher une image…</span>
+            <input id="img-search" type="search" autocomplete="off" placeholder="Rechercher une image…" data-i18n-placeholder="imgSearch">
+          </label>
+          <label class="image-control-field" for="img-sort">
+            <span data-i18n="sortBy">Trier</span>
+            <select id="img-sort" class="compact-select" aria-label="Trier les images" data-i18n-aria="imgSortLabel">
+              <option value="date-desc" data-i18n="imgSortNewest">Plus récentes</option>
+              <option value="date-asc" data-i18n="imgSortOldest">Plus anciennes</option>
+              <option value="name" data-i18n="imgSortName">Nom</option>
+              <option value="size" data-i18n="imgSortSize">Taille</option>
+              <option value="views" data-i18n="imgSortViews">Vues</option>
+              <option value="visitors" data-i18n="imgSortVisitors">Visiteurs</option>
+              <option value="expiry" data-i18n="imgSortExpiry">Expiration</option>
+            </select>
+          </label>
+          <label class="image-control-field" for="img-filter">
+            <span data-i18n="imgFilterLabel">Filtrer les images</span>
+            <select id="img-filter" class="compact-select" aria-label="Filtrer les images" data-i18n-aria="imgFilterLabel">
+              <option value="all" data-i18n="imgFilterAll">Toutes</option>
+              <option value="active" data-i18n="imgFilterActive">Actives</option>
+              <option value="popular" data-i18n="imgFilterPopular">Populaires</option>
+              <option value="large" data-i18n="imgFilterLarge">Volumineuses</option>
+              <option value="expiring" data-i18n="imgFilterExpiring">Bientôt expirées</option>
+              <option value="favorite" data-i18n="imgFilterFavorite">Favorites</option>
+              <option value="protected" data-i18n="imgFilterProtected">Protégées</option>
+            </select>
+          </label>
+        </div>
+      </section>
+      <div id="img-bulk-bar" class="image-bulk-bar hidden">
+        <label class="checkline"><input id="img-select-all" type="checkbox"><span id="img-selected-count">0 sélectionnée</span></label>
+        <button id="img-bulk-edit" class="btn ghost sm" type="button" data-i18n="imgBulkEdit">Modifier</button>
+        <button id="img-bulk-album" class="btn ghost sm" type="button" data-i18n="imgCreateAlbum">Créer un album</button>
+        <button id="img-bulk-revoke" class="btn danger ghost sm" type="button" data-i18n="revokeShare">Révoquer</button>
+      </div>
       <div id="imglink-list" class="imglink-list" aria-live="polite"></div>
+      <details class="image-dashboard-card advanced-section">
+        <summary data-i18n="imgDashboard">Statistiques graphiques</summary>
+        <p id="img-dashboard-summary" class="muted sm"></p>
+        <canvas id="img-dashboard-canvas" width="720" height="240" aria-label="Graphique des images" data-i18n-aria="imgDashboard"></canvas>
+        <button id="img-dashboard-refresh" class="btn ghost sm" type="button" data-i18n="refresh">Rafraîchir</button>
+      </details>
+      <details class="image-albums-card advanced-section">
+        <summary data-i18n="imgAlbums">Albums partageables</summary>
+        <div id="img-album-list" class="album-list"></div>
+      </details>
+      <details class="image-history-card advanced-section">
+        <summary data-i18n="imgActionHistory">Historique des actions d’image</summary>
+        <div id="img-action-history" class="history-list"></div>
+        <button id="img-action-history-clear" class="btn ghost sm" type="button" data-i18n="clearHistory">Effacer l’historique</button>
+      </details>
     </section>
 
-    <details class="card details-card" id="history-card">
+    <section class="card share-workspace" data-pwa-panel="shares" aria-labelledby="share-heading">
+      <div class="image-links-header">
+        <div>
+          <p id="share-heading" class="lbl" data-i18n="sharesTitle">Partager des fichiers du serveur</p>
+          <p class="section-sub" data-i18n="sharesHint">Parcourez les fichiers de votre serveur et créez des liens de partage directs.</p>
+        </div>
+        <span class="image-links-mark" aria-hidden="true">🔗</span>
+      </div>
+
+      <div id="share-auth-note" class="dest-status warn hidden">
+        <span data-i18n="sharesAdminRequired">Connectez-vous avec un compte administrateur pour parcourir les fichiers du serveur.</span>
+        <a id="share-login-link" class="btn sm" href="/app/login?next=%2Fapp%2F%3Faction%3Dshares" data-i18n="sharesSignIn">Se connecter en administrateur</a>
+      </div>
+
+      <section class="share-browser" aria-labelledby="share-browser-heading">
+        <p id="share-browser-heading" class="lbl" data-i18n="sharesBrowse">Fichiers du serveur</p>
+        <div class="row share-path-row">
+          <button id="share-up" class="btn ghost icon" type="button" title="Dossier parent" aria-label="Dossier parent" data-i18n-title="sharesUp" data-i18n-aria="sharesUp">↑</button>
+          <input id="share-path" type="text" readonly aria-label="Chemin courant" value="/">
+          <button id="share-refresh" class="btn ghost icon" type="button" title="Rafraîchir" aria-label="Rafraîchir" data-i18n-title="refresh" data-i18n-aria="refresh">↻</button>
+        </div>
+        <div id="share-browser-list" class="share-browser-list" aria-live="polite"></div>
+      </section>
+
+      <section class="share-create-panel" aria-labelledby="share-create-heading">
+        <p id="share-create-heading" class="lbl" data-i18n="sharesCreate">Créer le partage</p>
+        <p id="share-selected" class="section-sub" data-i18n="sharesNoneSelected">Aucun fichier sélectionné.</p>
+        <label class="field" for="share-expiry">
+          <span data-i18n="sharesExpiry">Expiration</span>
+          <select id="share-expiry">
+            <option value="0" data-i18n="sharesExpiryNever">Jamais</option>
+            <option value="3600" data-i18n="sharesExpiry1h">1 heure</option>
+            <option value="86400" data-i18n="sharesExpiry1d">1 jour</option>
+            <option value="604800" data-i18n="sharesExpiry7d">7 jours</option>
+            <option value="2592000" data-i18n="sharesExpiry30d">30 jours</option>
+          </select>
+        </label>
+        <label class="field" for="share-maxdl">
+          <span data-i18n="sharesMaxDownloads">Téléchargements max (0 = illimité)</span>
+          <input id="share-maxdl" type="number" inputmode="numeric" min="0" step="1" value="0">
+        </label>
+        <label class="field" for="share-password">
+          <span data-i18n="sharesPassword">Mot de passe (facultatif)</span>
+          <input id="share-password" type="text" autocomplete="off" spellcheck="false" placeholder="—" data-i18n-placeholder="sharesPasswordPlaceholder">
+        </label>
+        <button id="share-create-btn" class="btn block" type="button" disabled data-i18n="sharesCreateBtn">Créer le lien de partage</button>
+        <p id="share-create-status" class="dest-status muted" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="share-library" aria-labelledby="share-library-heading">
+        <p id="share-library-heading" class="lbl" data-i18n="sharesLibrary">Vos partages</p>
+        <div id="share-list" class="share-list" aria-live="polite"></div>
+      </section>
+
+      <section class="share-library" aria-labelledby="reception-library-heading">
+        <p id="reception-library-heading" class="lbl" data-i18n="sharesReceptions">Liens de réception</p>
+        <div id="reception-list" class="share-list" aria-live="polite"></div>
+      </section>
+    </section>
+
+    <div class="button-row cards-toggle-row" data-pwa-panel="settings">
+      <button id="toggle-cards-btn" class="btn ghost sm push" type="button" data-i18n="expandAll">Tout déplier</button>
+    </div>
+
+    <details class="card details-card advanced-section" id="history-card" data-pwa-panel="activity">
       <summary data-i18n="history">Historique local</summary>
+      <label class="sr-only" for="history-search" data-i18n="historySearch">Rechercher dans l’historique</label>
+      <input id="history-search" type="search" class="history-search" autocomplete="off" placeholder="Rechercher…" data-i18n-placeholder="historySearch">
       <div id="history-list" class="history-list"></div>
-      <button id="history-clear-btn" class="btn ghost sm" type="button" data-i18n="clearHistory">Effacer l’historique</button>
+      <div class="button-row">
+        <button id="history-export-csv-btn" class="btn ghost sm" type="button">CSV</button>
+        <button id="history-export-json-btn" class="btn ghost sm" type="button">JSON</button>
+        <button id="history-clear-btn" class="btn ghost sm push" type="button" data-i18n="clearHistory">Effacer l’historique</button>
+      </div>
     </details>
 
-    <details class="card details-card" id="settings-card">
+    <details class="card details-card advanced-section" id="settings-card" data-pwa-panel="settings">
       <summary data-i18n="settings">Réglages et sécurité</summary>
       <div class="settings-grid">
         <label class="checkline" for="auto-resume">
           <input id="auto-resume" type="checkbox" checked>
-          <span data-i18n="autoResume">Reprendre automatiquement à la reconnexion</span>
+          <span data-i18n="autoResume">Reprendre automatiquement après fermeture ou reconnexion</span>
+        </label>
+        <label class="checkline" for="wifi-only">
+          <input id="wifi-only" type="checkbox">
+          <span data-i18n="wifiOnly">Envoyer seulement en Wi-Fi</span>
+        </label>
+        <label class="checkline" for="confirm-mobile-data">
+          <input id="confirm-mobile-data" type="checkbox" checked>
+          <span data-i18n="confirmMobileData">Confirmer les gros envois sur données mobiles</span>
+        </label>
+        <label class="checkline" for="privacy-names">
+          <input id="privacy-names" type="checkbox">
+          <span data-i18n="privacyNames">Masquer les noms de fichiers sensibles</span>
+        </label>
+        <label class="checkline" for="vibrate-finish">
+          <input id="vibrate-finish" type="checkbox" checked>
+          <span data-i18n="vibrateFinish">Vibrer à la fin d’un envoi</span>
+        </label>
+        <label class="checkline" for="keep-awake">
+          <input id="keep-awake" type="checkbox">
+          <span data-i18n="keepAwake">Garder l’écran allumé pendant l’envoi</span>
+        </label>
+        <label class="checkline" for="sound-finish">
+          <input id="sound-finish" type="checkbox">
+          <span data-i18n="soundFinish">Son à la fin d’un envoi</span>
+        </label>
+        <label class="checkline" for="auto-clear-done">
+          <input id="auto-clear-done" type="checkbox">
+          <span data-i18n="autoClearDone">Effacer les terminés automatiquement</span>
+        </label>
+        <label class="checkline" for="haptic-feedback">
+          <input id="haptic-feedback" type="checkbox" checked>
+          <span data-i18n="hapticFeedback">Retour haptique pour les actions</span>
+        </label>
+        <label class="checkline" for="advanced-accordion">
+          <input id="advanced-accordion" type="checkbox" checked>
+          <span data-i18n="advancedAccordion">Une seule section avancée ouverte à la fois</span>
+        </label>
+        <label class="checkline" for="confirm-revoke">
+          <input id="confirm-revoke" type="checkbox" checked>
+          <span data-i18n="confirmRevoke">Confirmer les révocations</span>
+        </label>
+        <label class="checkline" for="confirm-delete">
+          <input id="confirm-delete" type="checkbox" checked>
+          <span data-i18n="confirmDelete">Confirmer les suppressions</span>
+        </label>
+        <label class="checkline" for="confirm-replace">
+          <input id="confirm-replace" type="checkbox" checked>
+          <span data-i18n="confirmReplace">Confirmer les remplacements et doublons</span>
+        </label>
+        <label class="field compact" for="density-select">
+          <span data-i18n="densityLabel">Densité</span>
+          <select id="density-select">
+            <option value="normal" data-i18n="densityNormal">Normale</option>
+            <option value="compact" data-i18n="densityCompact">Compacte</option>
+          </select>
+        </label>
+        <label class="checkline" for="live-enable">
+          <input id="live-enable" type="checkbox" checked>
+          <span data-i18n="liveEnable">Notifications de réception</span>
+        </label>
+        <label class="checkline" for="live-push">
+          <input id="live-push" type="checkbox">
+          <span data-i18n="livePush">Notifications push (appli fermée)</span>
         </label>
         <div class="setting-row">
           <div>
+            <strong data-i18n="sessionStats">Cette session</strong>
+            <p id="session-stats" class="muted sm"></p>
+            <p id="lifetime-stats" class="muted sm"></p>
+          </div>
+        </div>
+        <div class="setting-row">
+          <div>
+            <strong data-i18n="maintenance">Maintenance</strong>
+            <p id="diag-status" class="muted sm"></p>
+          </div>
+          <div class="button-row compact-buttons">
+            <button id="check-update-btn" class="btn ghost sm" type="button" data-i18n="checkUpdate">Rechercher une mise à jour</button>
+            <button id="copy-diag-btn" class="btn ghost sm" type="button" data-i18n="copyDiag">Copier le diagnostic</button>
+            <button id="share-app-btn" class="btn ghost sm hidden" type="button" data-i18n="shareApp">Partager l’application</button>
+          </div>
+        </div>
+        <div class="setting-row">
+          <div>
+            <strong data-i18n="accentLabel">Couleur d’accent</strong>
+          </div>
+          <div class="button-row compact-buttons">
+            <input id="accent-color" type="color" class="accent-input" aria-label="Couleur d’accent" data-i18n-aria="accentLabel" value="#3b6ef6">
+            <button id="accent-reset-btn" class="btn ghost sm" type="button" data-i18n="accentReset">Défaut</button>
+          </div>
+        </div>
+        <div class="setting-row">
+          <div>
+            <strong data-i18n="settings">Réglages et sécurité</strong>
+          </div>
+          <div class="button-row compact-buttons">
+            <button id="export-settings-btn" class="btn ghost sm" type="button" data-i18n="exportSettings">Exporter les réglages</button>
+            <button id="import-settings-btn" class="btn ghost sm" type="button" data-i18n="importSettings">Importer</button>
+            <input id="import-settings-input" type="file" accept="application/json,.json" hidden>
+          </div>
+        </div>
+        <div class="setting-row">
+          <div class="storage-info">
             <strong data-i18n="storage">Stockage local</strong>
             <p id="storage-status" class="muted sm"></p>
+            <p id="storage-warning" class="storage-warning hidden" role="status"></p>
+            <progress id="storage-bar" class="storage-bar hidden" max="100" value="0" aria-label="Stockage local utilisé" data-i18n-aria="storageBarLabel"></progress>
+            <label class="field compact storage-threshold" for="storage-warning-threshold"><span data-i18n="storageWarningThreshold">Avertir à partir de</span><select id="storage-warning-threshold"><option value="50">50 %</option><option value="70">70 %</option><option value="80" selected>80 %</option><option value="90">90 %</option><option value="95">95 %</option></select></label>
           </div>
           <button id="persist-storage-btn" class="btn ghost sm" type="button" data-i18n="protectStorage">Protéger</button>
         </div>
         <div class="setting-row">
           <div>
             <strong data-i18n="deviceAccess">Accès de cet appareil</strong>
-            <p id="device-status" class="muted sm"></p>
+            <p id="device-status" class="muted sm" data-i18n="deviceChecking">Vérification de l’appareil…</p>
           </div>
           <div class="button-row compact-buttons">
-            <button id="pair-device-btn" class="btn sm hidden" type="button" data-i18n="pairDevice">Associer cet appareil</button>
-            <button id="pair-other-btn" class="btn ghost sm hidden" type="button" data-i18n="pairOther">Associer par QR</button>
-            <button id="revoke-device-btn" class="btn danger sm hidden" type="button" data-i18n="revokeDevice">Révoquer</button>
+            <button id="pair-device-btn" class="btn sm" type="button" data-i18n="pairDevice">Appairer cet appareil</button>
+            <button id="pair-other-btn" class="btn ghost sm hidden" type="button" data-i18n="pairOther">Appairer par QR</button>
+            <button id="rename-device-btn" class="btn ghost sm hidden" type="button" data-i18n="renameDevice">Renommer</button>
+            <button id="revoke-device-btn" class="btn danger sm hidden" type="button" data-i18n="unpairDevice">Désappairer cet appareil</button>
           </div>
         </div>
         <div id="device-list-wrap" class="hidden">
@@ -235,11 +698,39 @@
           <div id="device-list" class="device-list"></div>
         </div>
         <button id="clear-local-btn" class="btn danger sm" type="button" data-i18n="clearLocalData">Effacer toutes les données locales</button>
+        <button id="logout-session-btn" class="btn danger block" type="button" data-i18n="closeSession">Fermer la session</button>
       </div>
     </details>
 
-    <p class="foot">Direct-Xfer · <span data-i18n="companionApp">application compagnon</span></p>
+    <p class="foot">Direct-Xfer · <span data-i18n="companionApp">application compagnon</span> · <span id="build-tag" class="muted">v1.33.2 · pwa116</span></p>
   </main>
+
+  <nav id="pwa-bottom-nav" class="pwa-bottom-nav" aria-label="Navigation principale" data-i18n-aria="navMain">
+    <button class="pwa-nav-item active" type="button" data-pwa-nav="send" aria-current="page">
+      <span class="pwa-nav-icon" aria-hidden="true">⇈</span>
+      <span data-i18n="navSend">Envoyer</span>
+      <span id="nav-send-badge" class="pwa-nav-badge hidden" aria-hidden="true"></span>
+    </button>
+    <button class="pwa-nav-item" type="button" data-pwa-nav="images">
+      <span class="pwa-nav-icon" aria-hidden="true">▧</span>
+      <span data-i18n="navImages">Images</span>
+      <span id="nav-images-badge" class="pwa-nav-badge hidden" aria-hidden="true"></span>
+    </button>
+    <button class="pwa-nav-item" type="button" data-pwa-nav="shares">
+      <span class="pwa-nav-icon" aria-hidden="true">⇄</span>
+      <span data-i18n="navShares">Partages</span>
+      <span id="nav-shares-badge" class="pwa-nav-badge hidden" aria-hidden="true"></span>
+    </button>
+    <button class="pwa-nav-item" type="button" data-pwa-nav="activity">
+      <span class="pwa-nav-icon" aria-hidden="true">◷</span>
+      <span data-i18n="navActivity">Activité</span>
+      <span id="nav-activity-badge" class="pwa-nav-badge hidden" aria-hidden="true"></span>
+    </button>
+    <button class="pwa-nav-item" type="button" data-pwa-nav="settings">
+      <span class="pwa-nav-icon" aria-hidden="true">⚙</span>
+      <span data-i18n="navSettings">Réglages</span>
+    </button>
+  </nav>
 
   <div id="pair-overlay" class="pair-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="pair-title">
     <div class="pair-dialog">
@@ -256,12 +747,115 @@
     </div>
   </div>
 
+  <div id="received-overlay" class="pair-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="received-title">
+    <div class="pair-dialog">
+      <h2 id="received-title" data-i18n="receivedTitle">Contenu reçu</h2>
+      <p id="received-sub" class="muted sm" data-i18n="receivedHelp">Fichiers reçus sur ce lien de réception, servis par le serveur.</p>
+      <p id="received-status" class="muted sm" role="status" aria-live="polite"></p>
+      <div id="received-list" class="received-list"></div>
+      <div class="button-row">
+        <button id="received-refresh-btn" class="btn ghost sm" type="button" data-i18n="receivedRefresh">Actualiser</button>
+        <button id="received-close" class="btn block" type="button" data-i18n="close">Fermer</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="destqr-overlay" class="pair-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="destqr-title">
+    <div class="pair-dialog">
+      <h2 id="destqr-title" data-i18n="qrTitle">QR du lien de réception</h2>
+      <p class="muted sm" data-i18n="qrDestHelp">Scannez ce code sur un autre appareil pour ouvrir le lien de réception.</p>
+      <img id="destqr-img" class="pair-qr" alt="QR du lien de réception" data-i18n-aria="qrForLink">
+      <p id="destqr-name" class="muted sm" role="status"></p>
+      <button id="destqr-close" class="btn block pair-close" type="button" data-i18n="close">Fermer</button>
+    </div>
+  </div>
+
+  <div id="help-overlay" class="pair-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="help-title">
+    <div class="pair-dialog">
+      <h2 id="help-title" data-i18n="shortcutsTitle">Raccourcis clavier</h2>
+      <ul class="help-list">
+        <li><kbd>Entrée</kbd> · <span data-i18n="shortcutSend">Envoyer la file</span></li>
+        <li><kbd>Échap</kbd> · <span data-i18n="shortcutEsc">Fermer un panneau ou une fenêtre</span></li>
+        <li><kbd>?</kbd> · <span data-i18n="shortcutHelp">Afficher cette aide</span></li>
+        <li><kbd>Ctrl/⌘ K</kbd> · <span data-i18n="cmdPalette">Palette de commandes</span></li>
+      </ul>
+      <button id="help-close" class="btn block pair-close" type="button" data-i18n="close">Fermer</button>
+    </div>
+  </div>
+
+  <div id="voice-overlay" class="pair-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="voice-title">
+    <div class="pair-dialog">
+      <h2 id="voice-title" data-i18n="voiceNote">Note vocale</h2>
+      <p id="voice-timer" class="voice-timer">00:00</p>
+      <audio id="voice-preview" class="voice-preview hidden" controls></audio>
+      <div class="button-row">
+        <button id="voice-record-btn" class="btn sm push" type="button" data-i18n="recording">Enregistrement</button>
+        <button id="voice-add-btn" class="btn sm hidden" type="button" data-i18n="recAdd">Ajouter à la file</button>
+        <button id="voice-close" class="btn ghost sm" type="button" data-i18n="cancel">Annuler</button>
+      </div>
+      <p id="voice-note-err" class="dest-status err hidden"></p>
+    </div>
+  </div>
+
+  <div id="annotate-overlay" class="annotate-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="annotate-title">
+    <div class="annotate-dialog">
+      <h2 id="annotate-title" class="sr-only" data-i18n="annotate">Annoter</h2>
+      <div class="annotate-canvas-wrap"><canvas id="annotate-canvas"></canvas></div>
+      <div class="annotate-tools">
+        <button id="ann-pen" class="btn ghost sm ann-tool is-active" type="button" data-i18n="annPen">✏️ Stylo</button>
+        <button id="ann-blur" class="btn ghost sm ann-tool" type="button" data-i18n="annBlur">🌫 Flou</button>
+        <button id="ann-detect-faces" class="btn ghost sm" type="button" data-i18n="annDetectFaces">🙂 Détecter les visages</button>
+        <button id="ann-detect-plates" class="btn ghost sm" type="button" data-i18n="annDetectPlates">▭ Détecter les plaques</button>
+        <button id="ann-undo" class="btn ghost sm" type="button" data-i18n="annUndo">↶ Défaire</button>
+        <button id="ann-clear" class="btn ghost sm" type="button" data-i18n="annClear">Tout effacer</button>
+        <button id="ann-crop-square" class="btn ghost sm" type="button" data-i18n="cropSquare">Recadrer 1:1</button>
+        <button id="ann-crop-43" class="btn ghost sm" type="button" data-i18n="crop43">Recadrer 4:3</button>
+        <button id="ann-crop-169" class="btn ghost sm" type="button" data-i18n="crop169">Recadrer 16:9</button>
+        <span id="ann-detect-status" class="muted sm ann-detect-status" aria-live="polite"></span>
+        <button id="ann-apply" class="btn sm push" type="button" data-i18n="annApply">Appliquer</button>
+        <button id="ann-cancel" class="btn ghost sm" type="button" data-i18n="cancel">Annuler</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="multisend-overlay" class="pair-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="multisend-title">
+    <div class="pair-dialog">
+      <h2 id="multisend-title" data-i18n="multiSendTitle">Envoyer à plusieurs destinations</h2>
+      <p class="muted sm" data-i18n="multiSendHelp">Le lot sera envoyé à chaque destination cochée. Les liens chiffrés ou exigeant un nom sont ignorés.</p>
+      <div id="multisend-list" class="multisend-list"></div>
+      <div class="button-row">
+        <button id="multisend-go" class="btn sm push" type="button" data-i18n="multiSendGo">Lancer les envois</button>
+        <button id="multisend-cancel" class="btn ghost sm" type="button" data-i18n="cancel">Annuler</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="cmd-overlay" class="cmd-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="cmd-input">
+    <div class="cmd-dialog">
+      <input id="cmd-input" type="text" autocomplete="off" spellcheck="false" placeholder="Tapez une commande…" data-i18n-placeholder="cmdPlaceholder" aria-label="Commande" data-i18n-aria="cmdPalette">
+      <div id="cmd-list" class="cmd-list"></div>
+    </div>
+  </div>
+
   <div id="qr-overlay" class="qr-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="qr-hint">
     <video id="qr-video" playsinline muted></video>
     <div class="qr-bar">
       <span id="qr-hint" class="muted sm" data-i18n="qrHint">Visez un QR code de lien de réception…</span>
       <button id="qr-close" class="btn ghost sm" type="button" data-i18n="close">Fermer</button>
     </div>
+  </div>
+
+  <div id="lightbox-overlay" class="lightbox-overlay hidden" role="dialog" aria-modal="true" aria-label="Aperçu du fichier" data-i18n-aria="preview">
+    <div id="preview-stage" class="preview-stage">
+      <img id="lightbox-img" class="lightbox-img hidden" alt="" data-i18n-aria="preview">
+      <video id="preview-video" class="preview-media hidden" controls playsinline></video>
+      <audio id="preview-audio" class="preview-audio hidden" controls></audio>
+      <iframe id="preview-frame" class="preview-frame hidden" title="Aperçu PDF" data-i18n-title="preview"></iframe>
+      <pre id="preview-text" class="preview-text hidden"></pre>
+      <div id="preview-generic" class="preview-generic hidden"></div>
+    </div>
+    <p id="preview-name" class="preview-name"></p>
+    <button id="lightbox-close" class="btn ghost sm lightbox-close" type="button" data-i18n="close">Fermer</button>
   </div>
 
   <div id="toast" role="status" aria-live="assertive"></div>

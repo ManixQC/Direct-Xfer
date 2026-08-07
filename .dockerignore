@@ -11,3 +11,11 @@ Thumbs.db
 scratchpad
 .claude
 logo.png
+
+android-companion/.gradle
+android-companion/.idea
+android-companion/local.properties
+android-companion/app/build
+android-companion/build
+android-companion/*.jks
+android-companion/*.keystore

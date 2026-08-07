@@ -1,0 +1,187 @@
+<resources>
+    <string name="app_name">Direct-Xfer</string>
+    <string name="header_subtitle">Android companion</string>
+    <string name="cd_app_icon">Direct-Xfer logo</string>
+
+    <string name="notification_channel_uploads">Direct-Xfer transfers</string>
+    <string name="notification_channel_uploads_description">Progress and result of background transfers</string>
+    <string name="notification_channel_results">Transfer results</string>
+    <string name="notification_channel_results_description">Success or failure confirmation for uploads</string>
+
+    <string name="notif_generic_title">Direct-Xfer</string>
+    <string name="notif_sending">Sending: %1$s</string>
+    <string name="notif_progress">%1$d %% — automatic resume active</string>
+    <string name="notif_waiting">Waiting in queue…</string>
+    <string name="notif_done_title">Upload complete</string>
+    <string name="notif_failed_title">Upload failed</string>
+    <string name="notif_result_line">%1$s — %2$s</string>
+    <string name="notif_transfer_done">Transfer complete</string>
+    <string name="action_cancel">Cancel</string>
+
+    <string name="connected">Connected to %1$s</string>
+    <string name="not_connected">Not connected — an admin sign-in is required once.</string>
+    <string name="btn_connect">Connect / replace the server</string>
+    <string name="btn_pick_files">Choose files</string>
+    <string name="btn_open_pwa">Open the PWA</string>
+
+    <string name="section_share_behavior">Sharing behaviour</string>
+    <string name="opt_image_links">Create image links for photos</string>
+    <string name="opt_clean_exif">Strip EXIF/GPS before sending images</string>
+    <string name="opt_biometric">Lock the app with biometrics/PIN</string>
+    <string name="opt_wifi_only">Send over Wi-Fi only</string>
+    <string name="btn_image_settings">Image settings</string>
+    <string name="btn_language">Language</string>
+    <string name="btn_battery">Improve resume reliability (battery)</string>
+
+    <string name="section_destination">Destination for regular files</string>
+    <string name="no_destination">No reception link selected.</string>
+    <string name="btn_add">Add</string>
+    <string name="btn_choose">Choose</string>
+
+    <string name="section_queue">Persistent upload queue</string>
+    <string name="queue_empty">No transfers.</string>
+    <string name="btn_clear_finished">Clear finished</string>
+    <string name="btn_pause_all">Pause all</string>
+    <string name="btn_resume_all">Resume all</string>
+    <string name="paused_banner">Transfers paused — tap “Resume all”.</string>
+
+    <string name="btn_test_connection">Test connection</string>
+    <string name="btn_revoke">Revoke device</string>
+
+    <string name="state_queued">Queued</string>
+    <string name="state_running">Sending</string>
+    <string name="state_success">Done</string>
+    <string name="state_failed">Error</string>
+    <string name="state_cancelled">Cancelled</string>
+
+    <string name="card_meta">%1$s · %2$d %% · %3$s · attempt %4$d</string>
+    <string name="card_mode_image">Image link</string>
+    <string name="card_mode_reception">Reception → %1$s</string>
+    <string name="card_speed_eta">%1$s · ~%2$s left</string>
+    <string name="btn_retry">Retry</string>
+    <string name="btn_copy_link">Copy link</string>
+    <string name="btn_share">Share</string>
+    <string name="btn_open_link">Open link</string>
+    <string name="btn_remove">Remove</string>
+    <string name="btn_details">Details</string>
+    <string name="btn_prioritize">Prioritize</string>
+
+    <string name="dlg_login_title">Connect the companion</string>
+    <string name="hint_server">https://your-server</string>
+    <string name="hint_username">Username</string>
+    <string name="hint_password">Password</string>
+    <string name="hint_totp">2FA or recovery code (optional)</string>
+    <string name="btn_login">Connect</string>
+    <string name="btn_login_progress">Connecting…</string>
+    <string name="toast_paired">Device paired ✓</string>
+    <string name="toast_login_failed">Failed: %1$s</string>
+
+    <string name="dlg_add_destination_title">Add a reception link</string>
+    <string name="hint_dest_name">Destination name</string>
+    <string name="default_dest_name">Reception</string>
+    <string name="hint_dest_link">https://…/u/…</string>
+    <string name="toast_invalid_link">Invalid link</string>
+    <string name="dlg_choose_destination_title">Destinations</string>
+    <string name="btn_close">Close</string>
+    <string name="btn_rename">Rename</string>
+    <string name="btn_delete">Delete</string>
+    <string name="dlg_rename_destination_title">Rename destination</string>
+    <string name="toast_destination_added">Destination added</string>
+    <string name="shared_destination_name">Shared reception</string>
+    <string name="badge_selected">✓ </string>
+
+    <string name="dlg_image_settings_title">Image settings</string>
+    <string name="lbl_full_max">Full max side (px)</string>
+    <string name="lbl_thumb_max">Mini max side (px)</string>
+    <string name="lbl_micro_max">Micro max side (px)</string>
+    <string name="lbl_jpeg_quality">JPEG quality (1–100)</string>
+    <string name="btn_save">Save</string>
+
+    <string name="dlg_language_title">Language</string>
+    <string name="lang_system">System</string>
+    <string name="lang_fr">Français</string>
+    <string name="lang_en">English</string>
+    <string name="lang_es">Español</string>
+
+    <string name="battery_already">Battery optimization already disabled ✓</string>
+    <string name="battery_unsupported">Battery setting unavailable on this device.</string>
+
+    <string name="dlg_detail_title">Transfer details</string>
+    <string name="detail_name">Name</string>
+    <string name="detail_mode">Mode</string>
+    <string name="detail_destination">Destination</string>
+    <string name="detail_state">State</string>
+    <string name="detail_size">Size</string>
+    <string name="detail_sent">Sent</string>
+    <string name="detail_attempts">Attempts</string>
+    <string name="detail_created">Created</string>
+    <string name="detail_updated">Updated</string>
+    <string name="detail_error">Error</string>
+    <string name="detail_link">Link</string>
+    <string name="detail_qr_hint">Scan to open the link</string>
+    <string name="detail_none">—</string>
+    <string name="cd_qr">Link QR code</string>
+
+    <string name="dlg_revoke_title">Revoke this device?</string>
+    <string name="dlg_revoke_message">The companion token will be removed from the server. Transfers in progress may fail.</string>
+    <string name="btn_revoke_confirm">Revoke</string>
+    <string name="toast_revoked">Device revoked</string>
+
+    <string name="chooser_share_link">Share the link</string>
+    <string name="default_server">https://xfer.manix123.ca</string>
+    <string name="toast_connect_first_images">Connect the companion first to create image links.</string>
+    <string name="toast_add_reception_first">Add a reception link first.</string>
+    <string name="toast_preparing">Preparing %1$d file(s)…</string>
+    <string name="toast_added">%1$d transfer(s) added</string>
+    <string name="toast_error">Error: %1$s</string>
+    <string name="toast_copied">Copied</string>
+    <string name="toast_connection_ok">Connection valid — %1$s</string>
+    <string name="toast_cannot_read">Cannot read %1$s</string>
+    <string name="device_default">device</string>
+    <string name="toast_paused_all">Transfers paused</string>
+    <string name="toast_resumed_all">Resuming transfers</string>
+    <string name="toast_cleared">%1$d transfer(s) cleared</string>
+    <string name="toast_prioritized">Moved to the front</string>
+    <string name="version_footer">Version %1$s</string>
+
+    <string name="shortcut_pick_short">Files</string>
+    <string name="shortcut_pick_long">Choose files</string>
+    <string name="shortcut_pwa_short">PWA</string>
+    <string name="shortcut_pwa_long">Open the PWA</string>
+
+    <!-- Bottom navigation (mirrors the PWA panels) -->
+    <string name="title_send">Send</string>
+    <string name="nav_send">Send</string>
+    <string name="nav_send_hint">Prepare and send files to a destination.</string>
+    <string name="nav_images">Images</string>
+    <string name="nav_images_hint">Create, manage and monitor image links.</string>
+    <string name="nav_activity">Activity</string>
+    <string name="nav_activity_hint">Review the local transfer history.</string>
+    <string name="nav_settings">Settings</string>
+    <string name="nav_settings_hint">Configure the companion, security and storage.</string>
+
+    <!-- Header -->
+    <string name="paired_badge">Paired device</string>
+    <string name="network_online">Online</string>
+    <string name="network_offline">Offline</string>
+    <string name="cd_open_admin">Open administration</string>
+
+    <!-- Panels -->
+    <string name="section_files">Files</string>
+    <string name="btn_pick_camera">Photo</string>
+    <string name="btn_pick_image_links">Add images</string>
+    <string name="images_title">Image links</string>
+    <string name="images_hint">Create direct links: each one offers Full, Mini and Micro versions.</string>
+    <string name="images_library">Your links</string>
+    <string name="images_empty">No image links yet.</string>
+    <string name="activity_title">Activity</string>
+    <string name="activity_empty">No completed transfer on this device.</string>
+    <string name="btn_copy_full">🔗 Full</string>
+    <string name="btn_copy_mini">🔗 Mini</string>
+    <string name="btn_copy_micro">🔗 Micro</string>
+    <string name="btn_qr">QR</string>
+    <string name="group_security">Security and device</string>
+    <string name="group_appearance">Appearance and language</string>
+    <string name="group_images">Images</string>
+    <string name="group_network">Network and recovery</string>
+</resources>

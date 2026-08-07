@@ -1,0 +1,25 @@
+<resources>
+    <!-- Dark theme mirroring the Direct-Xfer PWA (bg #0b1020, accent #3b6ef6). -->
+    <style name="Theme.DirectXfer" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:statusBarColor">@color/dx_bg</item>
+        <item name="android:navigationBarColor">@color/dx_bg</item>
+        <item name="android:windowBackground">@color/dx_bg</item>
+        <item name="android:colorAccent">@color/dx_accent</item>
+        <item name="android:colorBackground">@color/dx_bg</item>
+        <item name="android:textColorPrimary">@color/dx_text</item>
+        <item name="android:textColorSecondary">@color/dx_muted</item>
+        <item name="android:textColorHint">@color/dx_faint</item>
+        <item name="android:windowActionModeOverlay">true</item>
+    </style>
+
+    <!-- Dialogs styled to match the dark surface instead of the platform light default. -->
+    <style name="Theme.DirectXfer.Dialog" parent="android:style/Theme.Material.Dialog">
+        <item name="android:colorAccent">@color/dx_accent</item>
+        <item name="android:colorBackground">@color/dx_panel</item>
+        <item name="android:textColorPrimary">@color/dx_text</item>
+        <item name="android:textColorSecondary">@color/dx_muted</item>
+        <item name="android:textColorHint">@color/dx_faint</item>
+    </style>
+</resources>

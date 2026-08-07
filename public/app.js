@@ -179,6 +179,9 @@ const I18N = {
     'login.totpHint': 'Saisissez le code à 6 chiffres de votre application (ou un code de secours).',
     'login.totpInvalid': 'Code 2FA invalide.',
     'login.username': 'Nom d’utilisateur',
+    'login.rememberUsername': 'Se souvenir du nom d’utilisateur',
+    'login.rememberPassword': 'Se souvenir du mot de passe',
+    'login.rememberPasswordHint': 'Le mot de passe est chiffré dans ce navigateur uniquement lorsque cette case est cochée.',
     'pw.envManaged': 'Mot de passe géré par ADMIN_PASSWORD : modifiez-le via la variable d’environnement.',
     'menu.signedInAs': 'Connecté en tant que',
     'menu.accounts': '👥 Comptes admin',
@@ -483,6 +486,7 @@ const I18N = {
     'menu.changePassword': '🔑 Changer le mot de passe',
     'menu.twoFactor': '🛡 Double authentification (2FA)',
     'menu.logout': '⇦ Déconnexion',
+    'menu.backToShares': 'Retour aux partages',
     'tfa.title': 'Double authentification (2FA)',
     'tfa.statusOn': '✅ La 2FA est activée.',
     'tfa.statusOff': 'La 2FA est désactivée.',
@@ -908,6 +912,7 @@ const I18N = {
     'mod.rejectConfirm': 'Rejeter et supprimer définitivement ce fichier ?',
     'mod.fail': 'Échec de la modération',
     'sh.inbox': 'réception',
+    'sh.device': 'Appareil ayant créé ce lien',
     'sh.collab': 'collaboration',
     'sh.canDelete': 'suppression autorisée',
     'sh.activity': 'Activité :',
@@ -1210,6 +1215,11 @@ const I18N = {
     'photo.filterVariants': 'Filtrer par variantes',
     'photo.allVariants': 'Toutes les variantes',
     'photo.variantsReady': 'Mini + Micro prêtes',
+    'photo.resizeMini': 'Redimensionner la Mini',
+    'photo.resizeMiniPrompt': 'Nouvelle taille de la Mini : un nombre de pixels (côté le plus long, ex. 250) OU un pourcentage de la taille totale (ex. 50%). La Micro sera la moitié :',
+    'photo.resizeMiniInvalid': 'Valeur invalide : pixels (16 à 4096) ou pourcentage (1 à 100 %).',
+    'photo.resizeMiniDone': 'Mini redimensionnée en {w}×{h} ✓',
+    'photo.resizeMiniFail': 'Échec du redimensionnement de la Mini',
     'photo.variantsMissing': 'Variante manquante',
     'photo.filterAlbum': 'Filtrer par galerie',
     'photo.allAlbums': 'Toutes les galeries',
@@ -1226,6 +1236,50 @@ const I18N = {
     'photo.copyAll': '🔗 Tout copier',
     'photo.copyAllTitle': 'Copier tous les liens pleine grandeur affichés (un par ligne)',
     'photo.lbOpen': 'Ouvrir ↗',
+    'photo.uploadDevice': 'Appareil : {name}',
+    'photo.metadataRemoved': '🛡 EXIF/GPS supprimés',
+    'photo.metadataRemovedTitle': 'Les données EXIF/GPS ont été supprimées avant le partage.',
+    'photo.exifRemovedNotice': 'Les données EXIF/GPS ont été supprimées avant le partage. Aucune position ni information de prise de vue d’origine n’est conservée.',
+    'photo.exifButton': 'ⓘ EXIF / GPS',
+    'photo.exifTitle': 'Informations EXIF / GPS',
+    'photo.exifLoading': 'Lecture des métadonnées…',
+    'photo.exifNone': 'Aucune métadonnée EXIF/GPS lisible. Elle peut avoir été retirée avant le partage.',
+    'photo.exifError': 'Impossible de lire les métadonnées de cette image.',
+    'photo.exifSource': 'Source',
+    'photo.exifCamera': 'Appareil photo',
+    'photo.exifCapture': 'Prise de vue',
+    'photo.exifGps': 'Position GPS',
+    'photo.exifDevice': 'Appareil d’envoi',
+    'photo.exifFormat': 'Format',
+    'photo.exifMake': 'Fabricant',
+    'photo.exifModel': 'Modèle',
+    'photo.exifLens': 'Objectif',
+    'photo.exifSoftware': 'Logiciel',
+    'photo.exifDate': 'Date originale',
+    'photo.exifDimensions': 'Dimensions EXIF',
+    'photo.exifOrientation': 'Orientation EXIF',
+    'photo.exifExposure': 'Temps d’exposition',
+    'photo.exifAperture': 'Ouverture',
+    'photo.exifIso': 'ISO',
+    'photo.exifFocal': 'Distance focale',
+    'photo.exifFocal35': 'Équivalent 35 mm',
+    'photo.exifBias': 'Correction d’exposition',
+    'photo.exifFlash': 'Flash',
+    'photo.exifWhiteBalance': 'Balance des blancs',
+    'photo.exifExposureMode': 'Mode d’exposition',
+    'photo.exifScene': 'Type de scène',
+    'photo.exifDescription': 'Description',
+    'photo.exifArtist': 'Auteur',
+    'photo.exifCopyright': 'Droits d’auteur',
+    'photo.exifCoordinates': 'Coordonnées',
+    'photo.exifAltitude': 'Altitude',
+    'photo.exifDirection': 'Direction',
+    'photo.exifGpsDate': 'Horodatage GPS',
+    'photo.exifOpenMap': 'Ouvrir dans OpenStreetMap ↗',
+    'photo.exifAutomatic': 'Automatique',
+    'photo.exifManual': 'Manuel',
+    'photo.exifFired': 'Déclenché',
+    'photo.exifNotFired': 'Non déclenché',
     'album.create': '🖼 Créer une galerie',
     'album.title': 'Galeries',
     'album.hint': 'Galeries d\'images publiques créées à partir d\'images sélectionnées. Toute personne disposant du lien peut les voir.',
@@ -1236,6 +1290,11 @@ const I18N = {
     'album.created': 'Galerie créée.',
     'album.createFail': 'Échec de la création de la galerie.',
     'photo.dropHint': 'Glissez des images ici, collez (Ctrl+V) ou cliquez — un lien direct est créé pour chacune.',
+    'photo.stripExif': 'Nettoyer l’EXIF/GPS',
+    'photo.stripExifHelp': 'Réencode les images localement avant le partage afin de retirer les métadonnées privées. Les images animées peuvent devenir statiques.',
+    'photo.cleaningMetadata': 'Nettoyage EXIF/GPS…',
+    'photo.metadataCleaned': '{n} image(s) nettoyée(s)',
+    'photo.metadataCleanFail': 'Impossible de nettoyer les métadonnées de cette image',
     'photo.uploaded': '{n} image(s) ajoutée(s) ✓',
     'photo.uploadProgress': 'Import {done}/{total}',
     'photo.uploadSummary': '{ok} ajoutée(s), {failed} échec(s), {skipped} ignorée(s)',
@@ -1420,6 +1479,9 @@ const I18N = {
     'login.totpHint': 'Enter the 6-digit code from your authenticator app (or a recovery code).',
     'login.totpInvalid': 'Invalid 2FA code.',
     'login.username': 'Username',
+    'login.rememberUsername': 'Remember username',
+    'login.rememberPassword': 'Remember password',
+    'login.rememberPasswordHint': 'The password is encrypted in this browser only when this option is selected.',
     'pw.envManaged': 'Password managed via ADMIN_PASSWORD: change it through the environment variable.',
     'menu.signedInAs': 'Signed in as',
     'menu.accounts': '👥 Admin accounts',
@@ -1724,6 +1786,7 @@ const I18N = {
     'menu.changePassword': '🔑 Change password',
     'menu.twoFactor': '🛡 Two-factor authentication (2FA)',
     'menu.logout': '⇦ Log out',
+    'menu.backToShares': 'Back to shares',
     'tfa.title': 'Two-factor authentication (2FA)',
     'tfa.statusOn': '✅ 2FA is enabled.',
     'tfa.statusOff': '2FA is disabled.',
@@ -2148,6 +2211,7 @@ const I18N = {
     'mod.rejectConfirm': 'Reject and permanently delete this file?',
     'mod.fail': 'Moderation failed',
     'sh.inbox': 'reception',
+    'sh.device': 'Device that created this link',
     'sh.collab': 'collaboration',
     'sh.canDelete': 'deletion allowed',
     'sh.activity': 'Activity:',
@@ -2450,6 +2514,11 @@ const I18N = {
     'photo.filterVariants': 'Filter by variants',
     'photo.allVariants': 'All variants',
     'photo.variantsReady': 'Mini + Micro ready',
+    'photo.resizeMini': 'Resize the Mini',
+    'photo.resizeMiniPrompt': 'New Mini size: a number of pixels (longest side, e.g. 250) OR a percentage of the full size (e.g. 50%). The Micro will be half:',
+    'photo.resizeMiniInvalid': 'Invalid value: pixels (16 to 4096) or percentage (1 to 100%).',
+    'photo.resizeMiniDone': 'Mini resized to {w}×{h} ✓',
+    'photo.resizeMiniFail': 'Could not resize the Mini',
     'photo.variantsMissing': 'Variant missing',
     'photo.filterAlbum': 'Filter by gallery',
     'photo.allAlbums': 'All galleries',
@@ -2466,6 +2535,50 @@ const I18N = {
     'photo.copyAll': '🔗 Copy all',
     'photo.copyAllTitle': 'Copy every visible full-size link (one per line)',
     'photo.lbOpen': 'Open ↗',
+    'photo.uploadDevice': 'Device: {name}',
+    'photo.metadataRemoved': '🛡 EXIF/GPS removed',
+    'photo.metadataRemovedTitle': 'EXIF/GPS data was removed before sharing.',
+    'photo.exifRemovedNotice': 'EXIF/GPS data was removed before sharing. No original location or capture information is retained.',
+    'photo.exifButton': 'ⓘ EXIF / GPS',
+    'photo.exifTitle': 'EXIF / GPS information',
+    'photo.exifLoading': 'Reading metadata…',
+    'photo.exifNone': 'No readable EXIF/GPS metadata. It may have been removed before sharing.',
+    'photo.exifError': 'Could not read this image’s metadata.',
+    'photo.exifSource': 'Source',
+    'photo.exifCamera': 'Camera',
+    'photo.exifCapture': 'Capture',
+    'photo.exifGps': 'GPS location',
+    'photo.exifDevice': 'Upload device',
+    'photo.exifFormat': 'Format',
+    'photo.exifMake': 'Make',
+    'photo.exifModel': 'Model',
+    'photo.exifLens': 'Lens',
+    'photo.exifSoftware': 'Software',
+    'photo.exifDate': 'Original date',
+    'photo.exifDimensions': 'EXIF dimensions',
+    'photo.exifOrientation': 'EXIF orientation',
+    'photo.exifExposure': 'Exposure time',
+    'photo.exifAperture': 'Aperture',
+    'photo.exifIso': 'ISO',
+    'photo.exifFocal': 'Focal length',
+    'photo.exifFocal35': '35 mm equivalent',
+    'photo.exifBias': 'Exposure bias',
+    'photo.exifFlash': 'Flash',
+    'photo.exifWhiteBalance': 'White balance',
+    'photo.exifExposureMode': 'Exposure mode',
+    'photo.exifScene': 'Scene type',
+    'photo.exifDescription': 'Description',
+    'photo.exifArtist': 'Artist',
+    'photo.exifCopyright': 'Copyright',
+    'photo.exifCoordinates': 'Coordinates',
+    'photo.exifAltitude': 'Altitude',
+    'photo.exifDirection': 'Direction',
+    'photo.exifGpsDate': 'GPS timestamp',
+    'photo.exifOpenMap': 'Open in OpenStreetMap ↗',
+    'photo.exifAutomatic': 'Automatic',
+    'photo.exifManual': 'Manual',
+    'photo.exifFired': 'Fired',
+    'photo.exifNotFired': 'Did not fire',
     'album.create': '🖼 Create gallery',
     'album.title': 'Galleries',
     'album.hint': 'Public image galleries created from selected images. Anyone with the link can view them.',
@@ -2476,6 +2589,11 @@ const I18N = {
     'album.created': 'Gallery created.',
     'album.createFail': 'Could not create the gallery.',
     'photo.dropHint': 'Drag & drop images here, paste (Ctrl+V), or click to browse — a direct link is created for each.',
+    'photo.stripExif': 'Clean EXIF/GPS',
+    'photo.stripExifHelp': 'Re-encodes images locally before sharing to remove private metadata. Animated images may become static.',
+    'photo.cleaningMetadata': 'Cleaning EXIF/GPS…',
+    'photo.metadataCleaned': '{n} image(s) cleaned',
+    'photo.metadataCleanFail': 'Could not clean this image’s metadata',
     'photo.uploaded': '{n} image(s) added ✓',
     'photo.uploadProgress': 'Upload {done}/{total}',
     'photo.uploadSummary': '{ok} added, {failed} failed, {skipped} skipped',
@@ -2659,6 +2777,9 @@ const I18N = {
     'login.totpHint': 'Introduce el código de 6 dígitos de tu aplicación (o un código de recuperación).',
     'login.totpInvalid': 'Código 2FA no válido.',
     'login.username': 'Usuario',
+    'login.rememberUsername': 'Recordar el nombre de usuario',
+    'login.rememberPassword': 'Recordar la contraseña',
+    'login.rememberPasswordHint': 'La contraseña se cifra en este navegador solo cuando esta opción está seleccionada.',
     'pw.envManaged': 'Contraseña gestionada por ADMIN_PASSWORD: cámbiala mediante la variable de entorno.',
     'menu.signedInAs': 'Conectado como',
     'menu.accounts': '👥 Cuentas admin',
@@ -2963,6 +3084,7 @@ const I18N = {
     'menu.changePassword': '🔑 Cambiar contraseña',
     'menu.twoFactor': '🛡 Doble factor (2FA)',
     'menu.logout': '⇦ Cerrar sesión',
+    'menu.backToShares': 'Volver a los envíos',
     'tfa.title': 'Autenticación de doble factor (2FA)',
     'tfa.statusOn': '✅ La 2FA está activada.',
     'tfa.statusOff': 'La 2FA está desactivada.',
@@ -3388,6 +3510,7 @@ const I18N = {
     'mod.rejectConfirm': '¿Rechazar y eliminar permanentemente este archivo?',
     'mod.fail': 'Error de moderación',
     'sh.inbox': 'recepción',
+    'sh.device': 'Dispositivo que creó este enlace',
     'sh.collab': 'colaboración',
     'sh.canDelete': 'eliminación permitida',
     'sh.activity': 'Actividad:',
@@ -3690,6 +3813,11 @@ const I18N = {
     'photo.filterVariants': 'Filtrar por variantes',
     'photo.allVariants': 'Todas las variantes',
     'photo.variantsReady': 'Mini + Micro listas',
+    'photo.resizeMini': 'Redimensionar la Mini',
+    'photo.resizeMiniPrompt': 'Nuevo tamaño de la Mini: un número de píxeles (lado más largo, ej. 250) O un porcentaje del tamaño total (ej. 50%). La Micro será la mitad:',
+    'photo.resizeMiniInvalid': 'Valor no válido: píxeles (16 a 4096) o porcentaje (1 a 100%).',
+    'photo.resizeMiniDone': 'Mini redimensionada a {w}×{h} ✓',
+    'photo.resizeMiniFail': 'No se pudo redimensionar la Mini',
     'photo.variantsMissing': 'Falta una variante',
     'photo.filterAlbum': 'Filtrar por galería',
     'photo.allAlbums': 'Todas las galerías',
@@ -3706,6 +3834,50 @@ const I18N = {
     'photo.copyAll': '🔗 Copiar todo',
     'photo.copyAllTitle': 'Copiar todos los enlaces a tamaño completo visibles (uno por línea)',
     'photo.lbOpen': 'Abrir ↗',
+    'photo.uploadDevice': 'Dispositivo: {name}',
+    'photo.metadataRemoved': '🛡 EXIF/GPS eliminados',
+    'photo.metadataRemovedTitle': 'Los datos EXIF/GPS se eliminaron antes de compartir.',
+    'photo.exifRemovedNotice': 'Los datos EXIF/GPS se eliminaron antes de compartir. No se conserva la ubicación ni la información original de captura.',
+    'photo.exifButton': 'ⓘ EXIF / GPS',
+    'photo.exifTitle': 'Información EXIF / GPS',
+    'photo.exifLoading': 'Leyendo metadatos…',
+    'photo.exifNone': 'No hay metadatos EXIF/GPS legibles. Es posible que se hayan eliminado antes de compartir.',
+    'photo.exifError': 'No se pudieron leer los metadatos de esta imagen.',
+    'photo.exifSource': 'Origen',
+    'photo.exifCamera': 'Cámara',
+    'photo.exifCapture': 'Captura',
+    'photo.exifGps': 'Posición GPS',
+    'photo.exifDevice': 'Dispositivo de carga',
+    'photo.exifFormat': 'Formato',
+    'photo.exifMake': 'Fabricante',
+    'photo.exifModel': 'Modelo',
+    'photo.exifLens': 'Objetivo',
+    'photo.exifSoftware': 'Software',
+    'photo.exifDate': 'Fecha original',
+    'photo.exifDimensions': 'Dimensiones EXIF',
+    'photo.exifOrientation': 'Orientación EXIF',
+    'photo.exifExposure': 'Tiempo de exposición',
+    'photo.exifAperture': 'Apertura',
+    'photo.exifIso': 'ISO',
+    'photo.exifFocal': 'Distancia focal',
+    'photo.exifFocal35': 'Equivalente a 35 mm',
+    'photo.exifBias': 'Compensación de exposición',
+    'photo.exifFlash': 'Flash',
+    'photo.exifWhiteBalance': 'Balance de blancos',
+    'photo.exifExposureMode': 'Modo de exposición',
+    'photo.exifScene': 'Tipo de escena',
+    'photo.exifDescription': 'Descripción',
+    'photo.exifArtist': 'Autor',
+    'photo.exifCopyright': 'Derechos de autor',
+    'photo.exifCoordinates': 'Coordenadas',
+    'photo.exifAltitude': 'Altitud',
+    'photo.exifDirection': 'Dirección',
+    'photo.exifGpsDate': 'Marca de tiempo GPS',
+    'photo.exifOpenMap': 'Abrir en OpenStreetMap ↗',
+    'photo.exifAutomatic': 'Automático',
+    'photo.exifManual': 'Manual',
+    'photo.exifFired': 'Disparado',
+    'photo.exifNotFired': 'No disparado',
     'album.create': '🖼 Crear galería',
     'album.title': 'Galerías',
     'album.hint': 'Galerías de imágenes públicas creadas a partir de imágenes seleccionadas. Cualquiera con el enlace puede verlas.',
@@ -3716,6 +3888,11 @@ const I18N = {
     'album.created': 'Galería creada.',
     'album.createFail': 'No se pudo crear la galería.',
     'photo.dropHint': 'Arrastra imágenes aquí, pega (Ctrl+V) o haz clic — se crea un enlace directo para cada una.',
+    'photo.stripExif': 'Limpiar EXIF/GPS',
+    'photo.stripExifHelp': 'Vuelve a codificar las imágenes localmente antes de compartirlas para quitar metadatos privados. Las imágenes animadas pueden volverse estáticas.',
+    'photo.cleaningMetadata': 'Limpiando EXIF/GPS…',
+    'photo.metadataCleaned': '{n} imagen(es) limpiada(s)',
+    'photo.metadataCleanFail': 'No se pudieron limpiar los metadatos de esta imagen',
     'photo.uploaded': '{n} imagen(es) añadida(s) ✓',
     'photo.uploadProgress': 'Carga {done}/{total}',
     'photo.uploadSummary': '{ok} añadida(s), {failed} fallida(s), {skipped} ignorada(s)',
@@ -3822,6 +3999,7 @@ const UI_PREFS_DEFAULTS = Object.freeze({
   photoVariants: '',
   photoAlbum: '',
   photoFavoritesOnly: false,
+  photoStripExif: true,
   photoView: 'grid',
 });
 
@@ -3940,8 +4118,10 @@ const state = {
   photoVariants: uiPrefChoice('photoVariants', ['', 'ready', 'missing'], ''),
   photoAlbum: uiPrefText('photoAlbum'), // album share id | none
   photoFavoritesOnly: uiPrefs.photoFavoritesOnly === true,
+  photoStripExif: uiPrefs.photoStripExif !== false,
   photoView: uiPrefChoice('photoView', ['grid', 'list'], 'grid'),
   photoDimsCache: {},     // token -> { w, h } (lazily fetched)
+  photoExifCache: {},     // share id -> EXIF/GPS payload (loaded only on demand)
   photoSelection: new Set(), // share ids selected for bulk actions
   photoUploadBusy: false,
   albumsData: null,       // last album-share list (feature 18)
@@ -4031,6 +4211,8 @@ function applyUiPreferencesToControls() {
     favorites.classList.toggle('active', state.photoFavoritesOnly);
     favorites.setAttribute('aria-pressed', state.photoFavoritesOnly ? 'true' : 'false');
   }
+  const stripExif = $('photos-strip-exif');
+  if (stripExif) stripExif.checked = state.photoStripExif;
 
   setShareView(state.shareView, false);
   setPhotoView(state.photoView, false);
@@ -4308,6 +4490,81 @@ function countryText(country) {
   return country || t('tr.locating');
 }
 
+// Login-memory preferences are shared by the full and mobile login pages.
+// Direct-Xfer stores only the preference and optional username in localStorage.
+// The password is kept solely in the encrypted IndexedDB vault when selected.
+const LOGIN_MEMORY_KEYS = {
+  rememberUsername: 'dx-login-remember-username',
+  rememberPassword: 'dx-login-remember-password',
+  username: 'dx-login-username',
+};
+function loginStorageGet(key) { try { return localStorage.getItem(key); } catch (_) { return null; } }
+function loginStorageSet(key, value) { try { localStorage.setItem(key, value); } catch (_) {} }
+function loginStorageRemove(key) { try { localStorage.removeItem(key); } catch (_) {} }
+let adminPasswordUnlocked = false;
+function unlockAdminPasswordField() {
+  const field = $('password');
+  if (!field || adminPasswordUnlocked) return;
+  adminPasswordUnlocked = true;
+  field.readOnly = false;
+  field.setAttribute('autocomplete', 'off');
+}
+function lockAdminPasswordField() {
+  const field = $('password');
+  if (!field) return;
+  adminPasswordUnlocked = false;
+  field.value = '';
+  field.readOnly = true;
+  field.setAttribute('autocomplete', 'off');
+}
+async function hydrateRememberedAdminLogin() {
+  const rememberUserEl = $('remember-username');
+  const rememberPassEl = $('remember-password');
+  if (!rememberUserEl || !rememberPassEl) return;
+  const legacy = loginStorageGet('dxuser') || '';
+  const rememberUsername = loginStorageGet(LOGIN_MEMORY_KEYS.rememberUsername) === '1' || (!!legacy && loginStorageGet(LOGIN_MEMORY_KEYS.rememberUsername) == null);
+  const rememberPassword = loginStorageGet(LOGIN_MEMORY_KEYS.rememberPassword) === '1';
+  rememberUserEl.checked = rememberUsername;
+  rememberPassEl.checked = rememberPassword;
+  if (rememberUsername && !$('username').value) $('username').value = loginStorageGet(LOGIN_MEMORY_KEYS.username) || legacy;
+  if (!rememberPassword) {
+    lockAdminPasswordField();
+    if (window.DXLoginVault) { try { await window.DXLoginVault.clear(); } catch (_) {} }
+    return;
+  }
+  unlockAdminPasswordField();
+  if (window.DXLoginVault) {
+    try {
+      const saved = await window.DXLoginVault.load();
+      if (saved) {
+        if (saved.username) $('username').value = saved.username;
+        if (saved.password) $('password').value = saved.password;
+      }
+    } catch (_) {}
+  }
+}
+async function persistRememberedAdminLogin(username, password, allowPasswordStore) {
+  const rememberUserEl = $('remember-username');
+  const rememberPassEl = $('remember-password');
+  const rememberUsername = !!(rememberUserEl && rememberUserEl.checked);
+  const rememberPassword = !!(rememberPassEl && rememberPassEl.checked && allowPasswordStore);
+  loginStorageSet(LOGIN_MEMORY_KEYS.rememberUsername, rememberUsername ? '1' : '0');
+  loginStorageSet(LOGIN_MEMORY_KEYS.rememberPassword, rememberPassword ? '1' : '0');
+  if (rememberUsername || rememberPassword) {
+    loginStorageSet(LOGIN_MEMORY_KEYS.username, username);
+    loginStorageSet('dxuser', username);
+  } else {
+    loginStorageRemove(LOGIN_MEMORY_KEYS.username);
+    loginStorageRemove('dxuser');
+  }
+  if (window.DXLoginVault) {
+    try {
+      if (rememberPassword) await window.DXLoginVault.save(username, password);
+      else await window.DXLoginVault.clear();
+    } catch (_) {}
+  }
+}
+
 // ------------------------------------------------------------------
 // Views
 // ------------------------------------------------------------------
@@ -4324,11 +4581,9 @@ function showLogin() {
   $('login-view').classList.remove('hidden');
   showTotpRow(false);
   $('login-error').classList.add('hidden');
-  // Prefill the last-used username for convenience.
-  let last = '';
-  try { last = localStorage.getItem('dxuser') || ''; } catch (_) {}
-  if (last && !$('username').value) $('username').value = last;
-  ($('username').value ? $('password') : $('username')).focus();
+  hydrateRememberedAdminLogin().finally(() => {
+    (($('remember-password').checked && $('password').value) ? $('password') : $('username')).focus();
+  });
 }
 function showApp() {
   $('login-view').classList.add('hidden');
@@ -4374,11 +4629,40 @@ function showTotpRow(show) {
   if (!show) $('login-totp').value = '';
 }
 
+$('remember-password').addEventListener('change', async () => {
+  const checked = $('remember-password').checked;
+  loginStorageSet(LOGIN_MEMORY_KEYS.rememberPassword, checked ? '1' : '0');
+  if (checked) {
+    $('remember-username').checked = true;
+    loginStorageSet(LOGIN_MEMORY_KEYS.rememberUsername, '1');
+  } else {
+    if (window.DXLoginVault) { try { await window.DXLoginVault.clear(); } catch (_) {} }
+    lockAdminPasswordField();
+  }
+});
+$('remember-username').addEventListener('change', async () => {
+  const checked = $('remember-username').checked;
+  loginStorageSet(LOGIN_MEMORY_KEYS.rememberUsername, checked ? '1' : '0');
+  if (!checked) {
+    $('remember-password').checked = false;
+    loginStorageSet(LOGIN_MEMORY_KEYS.rememberPassword, '0');
+    loginStorageRemove(LOGIN_MEMORY_KEYS.username);
+    loginStorageRemove('dxuser');
+    if (window.DXLoginVault) { try { await window.DXLoginVault.clear(); } catch (_) {} }
+    lockAdminPasswordField();
+  }
+});
+
+['pointerdown', 'touchstart', 'focus', 'keydown'].forEach((eventName) => {
+  $('password').addEventListener(eventName, unlockAdminPasswordField, { passive: eventName !== 'keydown' });
+});
+
 $('login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const errEl = $('login-error');
   errEl.classList.add('hidden');
   const username = $('username').value.trim();
+  unlockAdminPasswordField();
   const password = $('password').value;
   const totp = $('login-totp').value.trim();
   const body = { username, password };
@@ -4395,7 +4679,7 @@ $('login-form').addEventListener('submit', async (e) => {
       state.csrf = data.csrf;
       state.username = data.username;
       state.role = data.role;
-      try { localStorage.setItem('dxuser', username); } catch (_) {} // convenience prefill
+      await persistRememberedAdminLogin(username, password, !data.mustChangePassword);
       $('password').value = '';
       showTotpRow(false);
       enterApp(data.mustChangePassword);
@@ -4732,6 +5016,27 @@ function maybeOpenImagesFromUrl() {
 }
 if ($('images-btn')) $('images-btn').addEventListener('click', (e) => { e.stopPropagation(); openImagesPage(); });
 if ($('images-back')) $('images-back').addEventListener('click', closeImagesPage);
+
+// Clicking the logo or the page title in any top bar jumps straight back to the
+// shares admin page, regardless of how the current sub-page was reached.
+function goToSharesHome() {
+  if (!isLoggedIn()) return;
+  if (dashboardsPageOpen() || imagesPageOpen()) {
+    try {
+      if (location.pathname !== '/') history.pushState({ dxView: 'home' }, '', '/');
+    } catch (_) {}
+    syncAdminRouteFromUrl();
+  } else {
+    // Already on the shares page — jump back to the top of the list.
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}
+document.querySelectorAll('.brand-home').forEach((el) => {
+  el.addEventListener('click', goToSharesHome);
+  el.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goToSharesHome(); }
+  });
+});
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
   // Escape must reach whatever modal is stacked on top of the Images page first
@@ -7523,6 +7828,10 @@ function renderShares(shares) {
     const card = el('div', { class: 'share' + (s.active ? '' : ' inactive') + (isPendingDelete ? ' pending-delete' : '') });
 
     const top = el('div', { class: 'share-top' });
+    // Checkbox + icon + name stay together on one horizontal line (the "headline"),
+    // so the title never gets squeezed into a one-character-per-line column when the
+    // chips are wide on a phone.
+    const headline = el('div', { class: 'share-headline' });
     const sel = el('input', { class: 'sh-sel', attrs: { type: 'checkbox', 'aria-label': 'select' } });
     sel.checked = state.selShares && state.selShares.has(s.id);
     sel.addEventListener('change', () => {
@@ -7530,33 +7839,43 @@ function renderShares(shares) {
       if (sel.checked) state.selShares.add(s.id); else state.selShares.delete(s.id);
       updateBulkBar();
     });
-    top.appendChild(sel);
-    top.appendChild(el('span', { class: 'ico', text: isInbox ? '📥' : isCollab ? '🔁' : s.type === 'folder' ? '📁' : '📄' }));
+    headline.appendChild(sel);
+    headline.appendChild(el('span', { class: 'ico', text: isInbox ? '📥' : isCollab ? '🔁' : s.type === 'folder' ? '📁' : '📄' }));
     const nameEl = el('span', { class: 'name', text: s.name, attrs: { title: t('sh.renameTip') } });
     nameEl.addEventListener('dblclick', () => startInlineRename(s, nameEl));
-    top.appendChild(nameEl);
-    top.appendChild(
+    headline.appendChild(nameEl);
+    top.appendChild(headline);
+    // All status/type/owner chips live in one wrapper so they wrap as a group beside
+    // the name on wide screens and stack one-per-line under it on narrow phones.
+    const badges = el('div', { class: 'share-badges' });
+    badges.appendChild(
       el('span', {
         class: 'badge ' + s.type,
         text: isInbox ? t('sh.inbox') : isCollab ? t('sh.collab') : s.type === 'folder' ? t('sh.folder') : t('sh.file'),
       })
     );
-    if (s.hasPassword) top.appendChild(el('span', { class: 'badge locked', text: t('sh.protected') }));
-    if (isCollab && s.collab && s.collab.allowDelete) top.appendChild(el('span', { class: 'badge burn', text: t('sh.canDelete') }));
+    if (s.hasPassword) badges.appendChild(el('span', { class: 'badge locked', text: t('sh.protected') }));
+    if (isCollab && s.collab && s.collab.allowDelete) badges.appendChild(el('span', { class: 'badge burn', text: t('sh.canDelete') }));
     // Only meaningful where a .zip is actually offered (folders or multi-file collections).
     if (!noSize && s.allowZip === false && (s.type === 'folder' || s.itemCount > 1)) {
-      top.appendChild(el('span', { class: 'badge zipoff', text: t('sh.zipOff') }));
+      badges.appendChild(el('span', { class: 'badge zipoff', text: t('sh.zipOff') }));
     }
-    if (!isInbox && s.burnAfterDownload) top.appendChild(el('span', { class: 'badge burn', text: t('sh.oneTime') }));
-    if (s.burnedAt) top.appendChild(el('span', { class: 'badge expired', text: t('sh.burned') }));
-    if (s.disabled) top.appendChild(el('span', { class: 'badge paused', text: t('sh.paused') }));
-    else if (s.scheduled) top.appendChild(el('span', { class: 'badge scheduled', text: t('sh.scheduled') }));
-    else if (!s.active) top.appendChild(el('span', { class: 'badge expired', text: t('sh.inactive') }));
+    if (!isInbox && s.burnAfterDownload) badges.appendChild(el('span', { class: 'badge burn', text: t('sh.oneTime') }));
+    if (s.burnedAt) badges.appendChild(el('span', { class: 'badge expired', text: t('sh.burned') }));
+    if (s.disabled) badges.appendChild(el('span', { class: 'badge paused', text: t('sh.paused') }));
+    else if (s.scheduled) badges.appendChild(el('span', { class: 'badge scheduled', text: t('sh.scheduled') }));
+    else if (!s.active) badges.appendChild(el('span', { class: 'badge expired', text: t('sh.inactive') }));
     // Owner chip (feature: per-account ownership) — shown to owner/admin only.
     const viewerRole = state.settings && state.settings.role;
     if (s.ownerName && (viewerRole === 'owner' || viewerRole === 'admin')) {
-      top.appendChild(el('span', { class: 'share-owner', text: '👤 ' + s.ownerName }));
+      badges.appendChild(el('span', { class: 'share-owner', text: '👤 ' + s.ownerName }));
     }
+    // Reception link created from a paired mobile companion — show its live device
+    // name (reflects a rename done in the PWA). Owner/admin only, like the owner chip.
+    if (isInbox && s.inbox && s.inbox.deviceName && (viewerRole === 'owner' || viewerRole === 'admin')) {
+      badges.appendChild(el('span', { class: 'share-device', text: '📱 ' + s.inbox.deviceName, attrs: { title: t('sh.device') } }));
+    }
+    top.appendChild(badges);
     card.appendChild(top);
 
     const meta = el('div', { class: 'share-meta' });
@@ -8991,6 +9310,15 @@ function openPhotosPicker() {
 if ($('photos-add-btn')) $('photos-add-btn').addEventListener('click', openPhotosPicker);
 
 async function createPhotos(paths) {
+  // When privacy cleaning is enabled, source images selected from the host picker
+  // are streamed only to this authenticated browser, re-encoded locally, then
+  // uploaded as fresh image bytes. The original file on the host is never changed.
+  const stripMetadata = !!state.photoStripExif;
+  if (stripMetadata) {
+    closePicker();
+    await uploadHostImagePaths(paths, stripMetadata);
+    return;
+  }
   let r;
   try { r = await api('POST', '/api/photos', { paths }); }
   catch (e) {
@@ -9057,7 +9385,10 @@ async function generatePhotoVariants(photo) {
         const [cw, ch] = dimensions[name];
         const cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
         cv.getContext('2d').drawImage(img, 0, 0, cw, ch);
-        cv.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('blob'))), 'image/jpeg', 0.8);
+        // Near-lossless JPEG for Mini/Micro: same resolution as before but ~3× the file
+        // size and visibly cleaner (raised from 0.8). 1.0 is avoided as it disables
+        // chroma subsampling and roughly sextuples the size for no visible gain.
+        cv.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('blob'))), 'image/jpeg', 0.99);
       } catch (e) { reject(e); }
     });
     await Promise.all(variants.map(async (variant) => {
@@ -9072,6 +9403,59 @@ async function generatePhotoVariants(photo) {
   } finally {
     photoVariantJobs.delete(photo.id);
   }
+}
+
+// Regenerate the Mini (and the Micro, kept at half the Mini) at a new size from the
+// FULL image, without changing the public token/URL. The same-origin full source
+// keeps the canvas usable with a custom image domain; resizing is done on-device
+// (no server-side image library). Only the Mini/Micro files are rewritten.
+async function resizePhotoMini(s) {
+  const p = s.photo || {};
+  const curThumb = (state.photoDimsCache[s.token] || {}).thumb || {};
+  const currentLong = Math.max(Number(curThumb.w) || 0, Number(curThumb.h) || 0) || 400;
+  const input = window.prompt(t('photo.resizeMiniPrompt'), String(currentLong));
+  if (input === null) return;
+  // Accept a max longest-side in pixels (e.g. "250") or a percentage of the full
+  // size (e.g. "50%"). A trailing % switches to percentage mode.
+  const raw = String(input).trim();
+  const isPercent = /%\s*$/.test(raw);
+  const num = Number(raw.replace(/%/g, '').trim());
+  if (!isFinite(num) || num <= 0 || (isPercent ? num > 100 : (num < 16 || num > 4096))) { toast(t('photo.resizeMiniInvalid'), 'err'); return; }
+  try {
+    const src = '/i/' + s.token + '.' + (p.ext || 'jpg');
+    const img = await new Promise((resolve, reject) => {
+      const loaded = new Image();
+      loaded.onload = () => resolve(loaded);
+      loaded.onerror = () => reject(new Error('load'));
+      loaded.src = src;
+    });
+    const w = img.naturalWidth, h = img.naturalHeight;
+    if (!w || !h) throw new Error('dim');
+    let tw, th;
+    if (isPercent) { tw = Math.max(1, Math.round(w * num / 100)); th = Math.max(1, Math.round(h * num / 100)); }
+    else { const scale = Math.min(1, num / Math.max(w, h)); tw = Math.max(1, Math.round(w * scale)); th = Math.max(1, Math.round(h * scale)); }
+    const dims = { thumb: [tw, th], micro: [Math.max(1, Math.round(tw / 2)), Math.max(1, Math.round(th / 2))] };
+    const makeBlob = (name) => new Promise((resolve, reject) => {
+      try {
+        const [cw, ch] = dims[name];
+        const cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
+        cv.getContext('2d').drawImage(img, 0, 0, cw, ch);
+        cv.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('blob'))), 'image/jpeg', 0.99);
+      } catch (e) { reject(e); }
+    });
+    for (const variant of ['thumb', 'micro']) {
+      const response = await fetch('/api/photos/' + encodeURIComponent(s.id) + '/' + variant, {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/octet-stream', 'X-CSRF-Token': state.csrf || '' },
+        body: await makeBlob(variant),
+      });
+      if (!response.ok) throw new Error(variant + '-upload');
+    }
+    // Drop the cached dims so the rebuilt card re-fetches and shows the new sizes.
+    delete state.photoDimsCache[s.token];
+    toast(t('photo.resizeMiniDone', { w: tw, h: th }), 'ok');
+    refreshShares();
+  } catch (_) { toast(t('photo.resizeMiniFail'), 'err'); }
 }
 
 // One URL row with copy buttons: raw URL plus ready-to-paste Markdown, HTML and
@@ -9181,6 +9565,9 @@ function renderPhotoHistory(history) {
     }
     card.appendChild(preview);
     card.appendChild(el('div', { class: 'photo-name', text: record.name || '' }));
+    if (record.metadataRemoved) {
+      card.appendChild(el('div', { class: 'photo-metadata-removed sm', text: t('photo.metadataRemoved'), attrs: { title: t('photo.metadataRemovedTitle') } }));
+    }
     const stats = el('div', { class: 'photo-stats muted sm' });
     const fullStat = el('span', { class: 'photo-stat photo-stat-full', text: photoFullStat(record) });
     fullStat.title = t('sh.viewsTip', { views: record.fullViews || 0, visitors: record.fullVisitors || 0 });
@@ -9346,9 +9733,129 @@ function photoCardSig(s) {
   const dimSig = d
     ? [d.w, d.h, d.full && d.full.size, d.thumb && [d.thumb.w, d.thumb.h, d.thumb.size], d.micro && [d.micro.w, d.micro.h, d.micro.size]].join('/')
     : (p.w ? p.w + 'x' + p.h : '');
-  return [s.token, s.name, s.active, !!s.favorite, !!p.hasThumb, !!p.hasMicro, p.ext, s.expiresAt || 0,
+  return [s.token, s.name, s.active, !!s.favorite, !!p.hasThumb, !!p.hasMicro, p.ext, p.uploadDeviceName || '', !!p.metadataRemoved, s.expiresAt || 0,
     dimSig, pendingShareDeletionFor(s.id), (s.tags || []).join('\u0001')];
 }
+
+
+function photoExifHasValue(value) {
+  return value !== null && value !== undefined && value !== '' && !(typeof value === 'number' && !Number.isFinite(value));
+}
+function photoExifRow(label, value, mono) {
+  if (!photoExifHasValue(value)) return null;
+  const row = el('div', { class: 'photo-exif-row' });
+  row.appendChild(el('span', { text: label }));
+  row.appendChild(el('strong', { class: mono ? 'photo-exif-mono' : '', text: String(value) }));
+  return row;
+}
+function photoExifSection(title, rows) {
+  const valid = rows.filter(Boolean);
+  if (!valid.length) return null;
+  const section = el('section', { class: 'photo-exif-section' });
+  section.appendChild(el('h4', { text: title }));
+  const grid = el('div', { class: 'photo-exif-grid' });
+  valid.forEach((row) => grid.appendChild(row));
+  section.appendChild(grid);
+  return section;
+}
+function formatExifExposure(seconds) {
+  const value = Number(seconds);
+  if (!Number.isFinite(value) || value <= 0) return null;
+  if (value < 1) return '1/' + Math.max(1, Math.round(1 / value)) + ' s';
+  return Number(value.toFixed(4)) + ' s';
+}
+function formatExifOrientation(value) {
+  const labels = { 1: '0°', 2: '0° ↔', 3: '180°', 4: '180° ↔', 5: '90° ↔', 6: '90°', 7: '270° ↔', 8: '270°' };
+  return labels[Number(value)] || (photoExifHasValue(value) ? String(value) : null);
+}
+function renderPhotoExif(data, share) {
+  const body = $('photo-exif-body');
+  if (!body) return;
+  body.textContent = '';
+  const p = share.photo || {};
+  const camera = data.camera || {};
+  const capture = data.capture || {};
+  const gps = data.gps || null;
+  const metadataRemoved = !!(data.metadataRemoved || p.metadataRemoved);
+  if (metadataRemoved) body.appendChild(el('div', { class: 'photo-exif-removed', text: t('photo.exifRemovedNotice') }));
+  const source = photoExifSection(t('photo.exifSource'), [
+    photoExifRow(t('photo.exifDevice'), data.deviceName || p.uploadDeviceName || null),
+    photoExifRow(t('photo.exifFormat'), data.format || String(p.ext || '').toUpperCase()),
+  ]);
+  if (source) body.appendChild(source);
+  const cameraSection = photoExifSection(t('photo.exifCamera'), [
+    photoExifRow(t('photo.exifMake'), camera.make),
+    photoExifRow(t('photo.exifModel'), camera.model),
+    photoExifRow(t('photo.exifLens'), [camera.lensMake, camera.lensModel].filter(Boolean).join(' · ')),
+    photoExifRow(t('photo.exifSoftware'), camera.software),
+  ]);
+  if (cameraSection) body.appendChild(cameraSection);
+  const dims = capture.width && capture.height ? capture.width + '×' + capture.height : null;
+  const captureSection = photoExifSection(t('photo.exifCapture'), [
+    photoExifRow(t('photo.exifDate'), capture.dateTimeOriginal, true),
+    photoExifRow(t('photo.exifDimensions'), dims),
+    photoExifRow(t('photo.exifOrientation'), formatExifOrientation(capture.orientation)),
+    photoExifRow(t('photo.exifExposure'), formatExifExposure(capture.exposureTime)),
+    photoExifRow(t('photo.exifAperture'), photoExifHasValue(capture.fNumber) ? 'f/' + Number(capture.fNumber.toFixed(2)) : null),
+    photoExifRow(t('photo.exifIso'), capture.iso),
+    photoExifRow(t('photo.exifFocal'), photoExifHasValue(capture.focalLength) ? Number(capture.focalLength.toFixed(2)) + ' mm' : null),
+    photoExifRow(t('photo.exifFocal35'), photoExifHasValue(capture.focalLength35mm) ? capture.focalLength35mm + ' mm' : null),
+    photoExifRow(t('photo.exifBias'), photoExifHasValue(capture.exposureBias) ? (capture.exposureBias > 0 ? '+' : '') + Number(capture.exposureBias.toFixed(2)) + ' EV' : null),
+    photoExifRow(t('photo.exifFlash'), photoExifHasValue(capture.flash) ? ((Number(capture.flash) & 1) ? t('photo.exifFired') : t('photo.exifNotFired')) : null),
+    photoExifRow(t('photo.exifWhiteBalance'), photoExifHasValue(capture.whiteBalance) ? (Number(capture.whiteBalance) === 0 ? t('photo.exifAutomatic') : t('photo.exifManual')) : null),
+    photoExifRow(t('photo.exifExposureMode'), photoExifHasValue(capture.exposureMode) ? (Number(capture.exposureMode) === 0 ? t('photo.exifAutomatic') : Number(capture.exposureMode) === 1 ? t('photo.exifManual') : capture.exposureMode) : null),
+    photoExifRow(t('photo.exifScene'), capture.sceneType),
+    photoExifRow(t('photo.exifDescription'), capture.description),
+    photoExifRow(t('photo.exifArtist'), capture.artist),
+    photoExifRow(t('photo.exifCopyright'), capture.copyright),
+  ]);
+  if (captureSection) body.appendChild(captureSection);
+  if (gps && photoExifHasValue(gps.latitude) && photoExifHasValue(gps.longitude)) {
+    const coords = Number(gps.latitude).toFixed(7) + ', ' + Number(gps.longitude).toFixed(7);
+    const gpsSection = photoExifSection(t('photo.exifGps'), [
+      photoExifRow(t('photo.exifCoordinates'), coords, true),
+      photoExifRow(t('photo.exifAltitude'), photoExifHasValue(gps.altitude) ? gps.altitude + ' m' : null),
+      photoExifRow(t('photo.exifDirection'), photoExifHasValue(gps.direction) ? Number(gps.direction.toFixed(2)) + '°' + (gps.directionRef ? ' ' + gps.directionRef : '') : null),
+      photoExifRow(t('photo.exifGpsDate'), gps.dateTimeUtc, true),
+    ]);
+    if (gpsSection) {
+      const mapUrl = 'https://www.openstreetmap.org/?mlat=' + encodeURIComponent(gps.latitude) + '&mlon=' + encodeURIComponent(gps.longitude) + '#map=16/' + encodeURIComponent(gps.latitude) + '/' + encodeURIComponent(gps.longitude);
+      const link = el('a', { class: 'btn ghost sm photo-exif-map', text: t('photo.exifOpenMap'), attrs: { href: mapUrl, target: '_blank', rel: 'noopener' } });
+      gpsSection.appendChild(link);
+      body.appendChild(gpsSection);
+    }
+  }
+  if (!data.found && !metadataRemoved) body.appendChild(el('div', { class: 'photo-exif-empty muted', text: t('photo.exifNone') }));
+}
+async function openPhotoExif(share) {
+  const overlay = $('photo-exif-overlay');
+  const body = $('photo-exif-body');
+  if (!overlay || !body) return;
+  $('photo-exif-title').textContent = t('photo.exifTitle');
+  $('photo-exif-subtitle').textContent = share.name || '';
+  body.textContent = t('photo.exifLoading');
+  overlay.classList.remove('hidden');
+  try {
+    let data = state.photoExifCache[share.id];
+    if (!data) {
+      data = await api('GET', '/api/photos/' + encodeURIComponent(share.id) + '/metadata');
+      state.photoExifCache[share.id] = data;
+    }
+    renderPhotoExif(data, share);
+  } catch (_) {
+    body.textContent = t('photo.exifError');
+  }
+}
+function closePhotoExif() {
+  const overlay = $('photo-exif-overlay');
+  if (overlay) overlay.classList.add('hidden');
+}
+if ($('photo-exif-close')) $('photo-exif-close').addEventListener('click', closePhotoExif);
+if ($('photo-exif-overlay')) $('photo-exif-overlay').addEventListener('click', (event) => { if (event.target === $('photo-exif-overlay')) closePhotoExif(); });
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && $('photo-exif-overlay') && !$('photo-exif-overlay').classList.contains('hidden')) closePhotoExif();
+});
+
 
 // Builds a single gallery card element with all listeners wired. Kept separate
 // from renderPhotos so the reconciler can rebuild only the cards that changed.
@@ -9402,6 +9909,12 @@ function buildPhotoCard(s) {
     const nameEl = el('div', { class: 'photo-name', text: s.name, attrs: { title: t('photo.renameHint') } });
     nameEl.addEventListener('dblclick', () => startPhotoRename(s, nameEl));
     card.appendChild(nameEl);
+    if (p.uploadDeviceName) {
+      card.appendChild(el('div', { class: 'photo-device muted sm', text: '📱 ' + t('photo.uploadDevice', { name: p.uploadDeviceName }) }));
+    }
+    if (p.metadataRemoved) {
+      card.appendChild(el('div', { class: 'photo-metadata-removed sm', text: t('photo.metadataRemoved'), attrs: { title: t('photo.metadataRemovedTitle') } }));
+    }
     const urls = el('div', { class: 'photo-urls' });
     const name = s.name || '';
     // Full size → direct embed; Mini/Micro → clickable preview linking to the full image.
@@ -9480,6 +9993,9 @@ function buildPhotoCard(s) {
       cloneBtn.addEventListener('click', () => cloneShare(s, cloneBtn));
       actions.appendChild(cloneBtn);
     }
+    const exifBtn = el('button', { class: 'btn ghost sm photo-exif-btn', text: t('photo.exifButton'), attrs: { title: t('photo.exifTitle') } });
+    exifBtn.addEventListener('click', () => openPhotoExif(s));
+    actions.appendChild(exifBtn);
     const statsBtn = el('button', { class: 'btn ghost sm stats-btn', text: t('stats.button'), attrs: { title: t('stats.title') } });
     statsBtn.addEventListener('click', () => openDetailedStats(s));
     actions.appendChild(statsBtn);
@@ -9490,6 +10006,10 @@ function buildPhotoCard(s) {
     const qrBtn = el('button', { class: 'btn ghost sm', text: t('sh.qr'), attrs: { title: t('sh.qrTitle') } });
     qrBtn.addEventListener('click', () => openQrFor(s.name, p.imgUrl));
     actions.appendChild(qrBtn);
+    // Resize the Mini (and, kept at half, the Micro) from the full image, same URL.
+    const resizeMiniBtn = el('button', { class: 'btn ghost sm', text: t('photo.resizeMini'), attrs: { title: t('photo.resizeMini') } });
+    resizeMiniBtn.addEventListener('click', () => resizePhotoMini(s));
+    actions.appendChild(resizeMiniBtn);
     const rev = el('button', { class: 'btn danger sm', text: t('sh.revoke') });
     rev.addEventListener('click', () => revokeShare(s));
     actions.appendChild(rev);
@@ -9659,7 +10179,7 @@ function exportPhotos(fmt) {
     const p = s.photo || {};
     const d = (p.w && p.h) ? { w: p.w, h: p.h } : (state.photoDimsCache[s.token] || {});
     return {
-      name: s.name, ext: p.ext || '',
+      name: s.name, ext: p.ext || '', device: p.uploadDeviceName || '',
       full: p.imgUrl, mini: p.thumbUrl, micro: p.microUrl,
       width: d.w || '', height: d.h || '', size: s.size || 0,
       fullViews: p.fullViews || 0, fullVisitors: p.fullVisitors || 0,
@@ -9746,53 +10266,189 @@ if ($('photos-copy-all')) $('photos-copy-all').addEventListener('click', () => {
   copy(urls.join('\n'));
 });
 
-// --- Feature 8: drag-drop / paste to create image links (uploads raw bytes) ---
-async function uploadImageFiles(fileList) {
-  if (state.photoUploadBusy) return;
-  const incoming = [...fileList];
-  const allowed = /\.(jpe?g|png|gif|webp|bmp|avif)$/i;
-  const files = incoming.slice(0, 100).filter((f) => f && ((f.type || '').startsWith('image/') || allowed.test(f.name || '')));
-  const skipped = Math.max(0, incoming.length - files.length);
-  if (!files.length) { toast(t('photo.uploadFail'), 'err'); return; }
+// --- Feature 8: drag-drop / paste / host-picker image uploads -----------------
+// The privacy option is snapshotted at the start of each batch so every image in
+// that batch follows the same policy, even if the checkbox changes mid-upload.
+const PHOTO_UPLOAD_ALLOWED = /\.(jpe?g|png|gif|webp|bmp|avif)$/i;
+
+function namedPhotoBlob(blob, name, type, lastModified) {
+  try { return new File([blob], name, { type: type || blob.type || 'application/octet-stream', lastModified: lastModified || Date.now() }); }
+  catch (_) {
+    try { Object.defineProperty(blob, 'name', { value: name, configurable: true }); } catch (_) { blob.name = name; }
+    return blob;
+  }
+}
+
+function loadPhotoImageElement(file) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    const url = URL.createObjectURL(file);
+    image.onload = () => { URL.revokeObjectURL(url); resolve(image); };
+    image.onerror = (error) => { URL.revokeObjectURL(url); reject(error); };
+    image.src = url;
+  });
+}
+
+async function loadPhotoImage(file) {
+  if ('createImageBitmap' in window) {
+    try { return await createImageBitmap(file, { imageOrientation: 'from-image' }); }
+    catch (_) {
+      try { return await createImageBitmap(file); }
+      catch (_) {}
+    }
+  }
+  return loadPhotoImageElement(file);
+}
+
+function photoCanvasBlob(canvas, type, quality) {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('encode-failed')), type, quality);
+  });
+}
+
+async function preparePhotoUpload(file, stripMetadata) {
+  const originalName = file.name || ('image-' + Date.now() + '.jpg');
+  const originalType = file.type || 'application/octet-stream';
+  if (!stripMetadata) {
+    return { blob: file, name: originalName, type: originalType, metadataStripped: false };
+  }
+
+  // A canvas round-trip creates new pixel data with no EXIF, GPS, XMP, comments
+  // or other source metadata. It also applies phone-camera orientation before the
+  // metadata is discarded. Nothing is sent to the server until this succeeds.
+  let image;
+  try { image = await loadPhotoImage(file); }
+  catch (_) { throw new Error('metadata-decode-failed'); }
+  try {
+    const width = image.naturalWidth || image.width;
+    const height = image.naturalHeight || image.height;
+    if (!width || !height) throw new Error('metadata-dimensions-failed');
+
+    const ext = ((originalName.split('.').pop() || '').toLowerCase()).replace('jpeg', 'jpg');
+    const preserveAlpha = ext === 'png' || ext === 'webp';
+    const requestedType = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext('2d', { alpha: preserveAlpha });
+    if (!context) throw new Error('metadata-canvas-failed');
+    if (!preserveAlpha) { context.fillStyle = '#fff'; context.fillRect(0, 0, width, height); }
+    context.drawImage(image, 0, 0, width, height);
+
+    const blob = await photoCanvasBlob(canvas, requestedType,
+      requestedType === 'image/jpeg' || requestedType === 'image/webp' ? 0.94 : undefined);
+    const actualType = blob.type || requestedType;
+    const outExt = actualType === 'image/png' ? '.png' : actualType === 'image/webp' ? '.webp' : '.jpg';
+    const base = originalName.replace(/\.[^.\/]+$/, '') || ('image-' + Date.now());
+    return {
+      blob: namedPhotoBlob(blob, base + outExt, actualType, file.lastModified),
+      name: base + outExt,
+      type: actualType,
+      metadataStripped: true,
+    };
+  } finally {
+    if (image && image.close) image.close();
+  }
+}
+
+async function fetchHostPhotoFile(hostPath) {
+  const response = await fetch('/api/photos/source', {
+    method: 'POST', credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': state.csrf || '' },
+    body: JSON.stringify({ path: hostPath }),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    const error = new Error(data.error || ('http-' + response.status));
+    if (data.error === 'not-image') error.dxSkip = true;
+    throw error;
+  }
+  const blob = await response.blob();
+  let name = response.headers.get('X-Direct-Xfer-Filename') || '';
+  try { name = decodeURIComponent(name); } catch (_) {}
+  if (!name) name = String(hostPath || '').split(/[\\/]/).pop() || ('image-' + Date.now());
+  return namedPhotoBlob(blob, name, blob.type || response.headers.get('Content-Type') || 'application/octet-stream', Date.now());
+}
+
+async function runPhotoUploadBatch(tasks, initialSkipped = 0, stripMetadata = false) {
+  if (state.photoUploadBusy || !tasks.length) return;
   state.photoUploadBusy = true;
-  let ok = 0, failed = 0, done = 0, cursor = 0;
+  let ok = 0, failed = 0, skipped = initialSkipped, cleaned = 0, done = 0, cursor = 0;
   const wrap = $('photos-upload-progress'), meter = $('photos-upload-meter'), status = $('photos-upload-status');
   if (wrap) wrap.classList.remove('hidden');
-  if (meter) { meter.max = files.length; meter.value = 0; }
+  if (meter) { meter.max = tasks.length; meter.value = 0; }
   const updateProgress = () => {
     if (meter) meter.value = done;
-    if (status) status.textContent = t('photo.uploadProgress', { done, total: files.length });
+    if (status) status.textContent = t('photo.uploadProgress', { done, total: tasks.length });
   };
   updateProgress();
+
   const worker = async () => {
-    while (cursor < files.length) {
-      const file = files[cursor++];
+    while (cursor < tasks.length) {
+      const task = tasks[cursor++];
       try {
-        const typeExt = ((file.type || '').split('/')[1] || '').toLowerCase().replace('jpeg', 'jpg');
-        const name = (file.name && /\.[a-z0-9]+$/i.test(file.name))
-          ? file.name : ('image-' + Date.now() + (typeExt ? '.' + typeExt : '.png'));
-        const r = await fetch('/api/photos/upload?name=' + encodeURIComponent(name), {
+        if (stripMetadata && status) status.textContent = t('photo.cleaningMetadata') + ' ' + (done + 1) + '/' + tasks.length;
+        const file = await task();
+        const prepared = await preparePhotoUpload(file, stripMetadata);
+        const typeExt = ((prepared.type || '').split('/')[1] || '').toLowerCase().replace('jpeg', 'jpg');
+        const name = (prepared.name && /\.[a-z0-9]+$/i.test(prepared.name))
+          ? prepared.name : ('image-' + Date.now() + (typeExt ? '.' + typeExt : '.jpg'));
+        let uploadUrl = '/api/photos/upload?name=' + encodeURIComponent(name);
+        if (prepared.metadataStripped) uploadUrl += '&metadataRemoved=1';
+        const response = await fetch(uploadUrl, {
           method: 'POST', credentials: 'same-origin',
-          headers: { 'Content-Type': file.type || 'application/octet-stream', 'X-CSRF-Token': state.csrf || '' },
-          body: file,
+          headers: { 'Content-Type': prepared.type || 'application/octet-stream', 'X-CSRF-Token': state.csrf || '' },
+          body: prepared.blob,
         });
-        if (!r.ok) throw new Error('upload');
-        const data = await r.json();
+        if (!response.ok) throw new Error('upload');
+        const data = await response.json();
         ok += 1;
+        if (prepared.metadataStripped) cleaned += 1;
         if (data && data.share) generatePhotoVariants(data.share).catch(() => {});
-      } catch (_) { failed += 1; }
+      } catch (error) {
+        if (error && error.dxSkip) skipped += 1;
+        else failed += 1;
+      }
       done += 1;
       updateProgress();
     }
   };
-  await Promise.all(Array.from({ length: Math.min(3, files.length) }, () => worker()));
-  state.photoUploadBusy = false;
-  const summary = t('photo.uploadSummary', { ok, failed, skipped });
+
+  try {
+    await Promise.all(Array.from({ length: Math.min(3, tasks.length) }, () => worker()));
+  } finally {
+    state.photoUploadBusy = false;
+  }
+  const parts = [t('photo.uploadSummary', { ok, failed, skipped })];
+  if (cleaned) parts.push(t('photo.metadataCleaned', { n: cleaned }));
+  const summary = parts.join(' · ');
   if (status) status.textContent = summary;
   toast(summary, failed ? (ok ? 'warn' : 'err') : 'ok');
   if (ok) refreshShares();
   setTimeout(() => { if (!state.photoUploadBusy && wrap) wrap.classList.add('hidden'); }, 4000);
 }
+
+async function uploadHostImagePaths(paths, stripMetadata) {
+  const incoming = [...paths];
+  const selected = incoming.slice(0, 100);
+  const tasks = selected.map((hostPath) => () => fetchHostPhotoFile(hostPath));
+  await runPhotoUploadBatch(tasks, Math.max(0, incoming.length - selected.length), !!stripMetadata);
+}
+
+async function uploadImageFiles(fileList) {
+  const incoming = [...fileList];
+  const files = incoming.slice(0, 100).filter((file) => file && ((file.type || '').startsWith('image/') || PHOTO_UPLOAD_ALLOWED.test(file.name || '')));
+  const skipped = Math.max(0, incoming.length - files.length);
+  if (!files.length) { toast(t('photo.uploadFail'), 'err'); return; }
+  const stripMetadata = !!state.photoStripExif;
+  await runPhotoUploadBatch(files.map((file) => async () => file), skipped, stripMetadata);
+}
+const photosStripExif = $('photos-strip-exif');
+if (photosStripExif) photosStripExif.addEventListener('change', () => {
+  state.photoStripExif = !!photosStripExif.checked;
+  updateUiPrefs({ photoStripExif: state.photoStripExif }, true);
+});
+
 const photosDropzone = $('photos-dropzone');
 if (photosDropzone) {
   const fileInput = $('photos-file-input');

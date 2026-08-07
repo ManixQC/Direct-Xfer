@@ -1,0 +1,26 @@
+<resources>
+    <!-- Exact Direct-Xfer PWA dark palette (pwa/app.css :root[data-theme="dark"]) -->
+    <color name="dx_bg">#0b1020</color>
+    <color name="dx_panel">#151a2e</color>
+    <color name="dx_panel_2">#1b2138</color>
+    <color name="dx_border">#2a3050</color>
+    <color name="dx_border_soft">#222844</color>
+    <color name="dx_text">#e7e9f3</color>
+    <color name="dx_muted">#9aa3c7</color>
+    <color name="dx_faint">#6b7398</color>
+    <color name="dx_accent">#3b6ef6</color>
+    <color name="dx_accent_2">#5b8dff</color>
+    <color name="dx_ok">#41d18b</color>
+    <color name="dx_warn">#ffd166</color>
+    <color name="dx_danger">#ff6b81</color>
+    <color name="dx_inset">#0d1226</color>
+    <color name="dx_on_accent">#ffffff</color>
+    <color name="dx_danger_bg">#2a1622</color>
+
+    <!-- Legacy aliases kept so any older reference still resolves -->
+    <color name="dx_blue">#3b6ef6</color>
+    <color name="dx_blue_dark">#0b1020</color>
+    <color name="dx_background">#0b1020</color>
+    <color name="dx_surface">#151a2e</color>
+    <color name="dx_error">#ff6b81</color>
+</resources>

@@ -3,19 +3,20 @@
  * Shell versioning + network-aware updates. Upload/API requests are never cached.
  * Web Share Target batches are isolated so simultaneous shares cannot overwrite one another.
  */
-var VERSION = '2026.08.04-pwa15';
+var VERSION = '2026.08.06-pwa116';
 var SHELL_CACHE = 'dx-pwa-shell-' + VERSION;
 var RUNTIME_CACHE = 'dx-pwa-runtime-' + VERSION;
 var SHARE_CACHE = 'dx-share-v2';
 var SHELL = [
-  '/app/',
+  '/app/launch',
   '/app/index.html',
   '/app/app.css',
   '/app/theme-init.js',
+  '/app/login-vault.js',
   '/app/app.js',
-  '/app/manifest.webmanifest',
-  '/app/manifest-en.webmanifest',
-  '/app/manifest-es.webmanifest',
+  '/direct-xfer-pwa.webmanifest',
+  '/direct-xfer-pwa-en.webmanifest',
+  '/direct-xfer-pwa-es.webmanifest',
   '/app/icon.svg',
   '/app/icon-maskable.svg',
   '/app/icon-192.png',
@@ -31,6 +32,14 @@ function randomId() {
   return Array.prototype.map.call(a, function (n) { return n.toString(16).padStart(2, '0'); }).join('');
 }
 
+// Only static shell assets may be cached. Dynamic /app/ endpoints (device status,
+// image/inbox/share mutations, uploads…) must ALWAYS hit the network: a cached
+// /app/device/status would replay a stale CSRF token and 403 every mutation
+// (e.g. "could not create the link"). Allowlist by shell membership or extension.
+function isStaticAsset(pathname) {
+  return SHELL.indexOf(pathname) !== -1 || /\.(css|js|png|jpe?g|svg|webp|gif|ico|webmanifest|woff2?)$/.test(pathname);
+}
+
 self.addEventListener('install', function (event) {
   event.waitUntil(caches.open(SHELL_CACHE).then(function (cache) { return cache.addAll(SHELL); }).then(function () {
     return self.clients.matchAll({ type: 'window', includeUncontrolled: true });
@@ -44,11 +53,47 @@ self.addEventListener('activate', function (event) {
     return Promise.all(keys.filter(function (key) {
       return key !== SHELL_CACHE && key !== RUNTIME_CACHE && key !== SHARE_CACHE && (key.indexOf('dx-pwa-shell-') === 0 || key.indexOf('dx-pwa-runtime-') === 0);
     }).map(function (key) { return caches.delete(key); }));
-  }).then(function () { return self.clients.claim(); }));
+  }).then(function () { return caches.open(SHARE_CACHE); })
+    .then(function (cache) { return cleanupOldShareBatches(cache); })
+    .then(function () { return self.clients.claim(); }));
 });
 
 self.addEventListener('message', function (event) {
   if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
+  if (event.data && event.data.type === 'PURGE_PRIVATE_DATA') {
+    event.waitUntil(Promise.all([
+      caches.delete(SHARE_CACHE),
+      caches.delete(RUNTIME_CACHE),
+      caches.open(SHELL_CACHE).then(function (cache) { return cache.delete('/app/'); })
+    ]));
+  }
+});
+
+// Web Push: a file landed on an inbox this device owns. Show a notification even
+// when the app is closed. The payload is a small JSON built server-side.
+self.addEventListener('push', function (event) {
+  var data = {};
+  try { data = event.data ? event.data.json() : {}; } catch (_) { data = { body: event.data && event.data.text ? event.data.text() : '' }; }
+  var title = data.title || 'Direct-Xfer';
+  var body = data.body || '';
+  event.waitUntil(self.registration.showNotification(title, {
+    body: body,
+    icon: '/app/icon-192.png',
+    badge: '/app/icon-192.png',
+    tag: data && data.kind === 'image-first-view' ? ('dx-image-first-view-' + (data.token || 'image')) : 'dx-inbox',
+    renotify: true,
+    data: { url: (data && data.url) || '/app/' }
+  }));
+});
+self.addEventListener('notificationclick', function (event) {
+  event.notification.close();
+  var url = (event.notification.data && event.notification.data.url) || '/app/';
+  event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (clients) {
+    for (var i = 0; i < clients.length; i++) {
+      if (clients[i].url.indexOf('/app') !== -1 && 'focus' in clients[i]) return clients[i].focus();
+    }
+    if (self.clients.openWindow) return self.clients.openWindow(url);
+  }));
 });
 
 async function cleanupOldShareBatches(cache) {
@@ -59,7 +104,7 @@ async function cleanupOldShareBatches(cache) {
     try {
       var response = await cache.match(metas[i]);
       var meta = response ? await response.clone().json() : null;
-      if (!meta || !meta.createdAt || now - meta.createdAt > 7 * 86400000) {
+      if (!meta || !meta.createdAt || now - meta.createdAt > 24 * 3600000) {
         var prefix = new URL(metas[i].url).pathname.replace(/\/meta$/, '/');
         var all = await cache.keys();
         await Promise.all(all.filter(function (request) { return new URL(request.url).pathname.indexOf(prefix) === 0; }).map(function (request) { return cache.delete(request); }));
@@ -99,7 +144,7 @@ self.addEventListener('fetch', function (event) {
   var request = event.request;
   var url = new URL(request.url);
 
-  if (request.method === 'POST' && url.origin === self.location.origin && url.pathname === '/app/share') {
+  if (request.method === 'POST' && url.origin === self.location.origin && url.pathname === '/app/share-target') {
     event.respondWith(handleShareTarget(request));
     return;
   }
@@ -108,15 +153,22 @@ self.addEventListener('fetch', function (event) {
 
   if (request.mode === 'navigate') {
     event.respondWith(fetch(request).then(function (response) {
-      if (response && response.ok && response.type === 'basic') {
+      var responsePath = response && response.url ? new URL(response.url).pathname : '';
+      if (response && response.ok && response.type === 'basic' && !response.redirected && responsePath === '/app/') {
         var copy = response.clone(); caches.open(SHELL_CACHE).then(function (cache) { cache.put('/app/', copy); });
       }
       return response;
     }).catch(function () {
+      // Never replace the administrator login with a previously cached app shell.
+      // Authentication requires a live server connection.
+      if (url.pathname === '/app/login') return new Response('Connexion administrateur indisponible hors ligne', { status: 503 });
       return caches.match('/app/').then(function (hit) { return hit || new Response('Offline', { status: 503 }); });
     }));
     return;
   }
+
+  // Never cache dynamic API responses — always go straight to the network.
+  if (!isStaticAsset(url.pathname)) return;
 
   // Stale-while-revalidate for immutable-ish shell assets. The versioned cache
   // prevents old HTML and new JavaScript from being mixed after activation.

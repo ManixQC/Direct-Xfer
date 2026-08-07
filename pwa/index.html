@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="fr" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+  <meta name="theme-color" content="#0b1020">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="DX Envoyer">
+  <link id="app-manifest" rel="manifest" href="/app/manifest.webmanifest">
+  <link rel="icon" href="/app/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" sizes="180x180" href="/app/apple-touch-icon.png">
+  <link rel="stylesheet" href="/app/app.css">
+  <script src="/app/theme-init.js"></script>
+  <script src="/dxcrypto.js" defer></script>
+  <script src="/app/app.js" defer></script>
+  <title>Direct-Xfer — Envoyer</title>
+</head>
+<body>
+  <div id="offbar" class="offbar hidden" role="status" aria-live="polite" data-i18n="offline">Hors ligne — les envois reprendront à la reconnexion.</div>
+  <div id="updatebar" class="updatebar hidden" role="status">
+    <span data-i18n="updateReady">Une nouvelle version est disponible.</span>
+    <button id="update-btn" class="btn ghost sm" type="button" data-i18n="updateNow">Actualiser</button>
+  </div>
+
+  <header class="topbar">
+    <img src="/app/icon.svg" alt="Direct-Xfer" width="34" height="34">
+    <div class="titlebox">
+      <h1 data-i18n="title">Envoyer</h1>
+      <span id="device-badge" class="device-badge hidden" data-i18n="pairedBadge">Appareil associé</span>
+    </div>
+    <select id="lang-select" class="compact-select" aria-label="Langue" data-i18n-aria="language">
+      <option value="fr">FR</option>
+      <option value="en">EN</option>
+      <option value="es">ES</option>
+    </select>
+    <select id="theme-select" class="compact-select" aria-label="Thème" data-i18n-aria="theme">
+      <option value="dark" data-i18n="themeDark">Sombre</option>
+      <option value="light" data-i18n="themeLight">Clair</option>
+      <option value="auto" data-i18n="themeAuto">Auto</option>
+    </select>
+    <button id="install-btn" class="btn ghost sm hidden" type="button" data-i18n="install">Installer</button>
+  </header>
+
+  <main class="wrap">
+    <section class="card" aria-labelledby="dest-heading">
+      <div class="section-head">
+        <div>
+          <p id="dest-heading" class="lbl" data-i18n="destination">Destination</p>
+          <p class="section-sub" data-i18n="destinationHint">Un lien de réception Direct-Xfer de cette instance.</p>
+        </div>
+      </div>
+
+      <div class="row">
+        <label class="sr-only" for="dest-select" data-i18n="destination">Destination</label>
+        <select id="dest-select" aria-label="Lien de réception"></select>
+        <button id="dest-copy-btn" class="btn ghost icon hidden" type="button" title="Copier le lien" aria-label="Copier le lien" data-i18n-title="copyLink" data-i18n-aria="copyLink">🔗</button>
+        <button id="dest-paste-btn" class="btn ghost icon" type="button" title="Coller un lien" aria-label="Coller un lien" data-i18n-title="pasteLink" data-i18n-aria="pasteLink">📋</button>
+        <button id="dest-edit-btn" class="btn ghost icon hidden" type="button" title="Modifier" aria-label="Modifier la destination" data-i18n-title="editDestination" data-i18n-aria="editDestination">✎</button>
+        <button id="dest-add-btn" class="btn ghost icon" type="button" title="Ajouter" aria-label="Ajouter une destination" data-i18n-title="addDestination" data-i18n-aria="addDestination">＋</button>
+        <button id="dest-create-btn" class="btn ghost icon" type="button" title="Créer un lien de réception" aria-label="Créer un lien de réception" data-i18n-title="createLinkTitle" data-i18n-aria="createLinkTitle">🆕</button>
+      </div>
+      <p id="dest-status" class="dest-status muted" role="status" aria-live="polite"></p>
+      <p id="dest-limits" class="dest-status muted hidden"></p>
+
+      <div id="dest-form" class="form-panel hidden">
+        <label class="field" for="dest-url">
+          <span data-i18n="linkOrToken">Lien ou jeton</span>
+          <input id="dest-url" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://…/u/…" data-i18n-placeholder="destinationPlaceholder">
+        </label>
+        <label class="field" for="dest-name">
+          <span data-i18n="displayName">Nom affiché</span>
+          <input id="dest-name" type="text" maxlength="80" autocomplete="off" placeholder="Bureau, Photos, Comptabilité…" data-i18n-placeholder="destinationNamePlaceholder">
+        </label>
+        <label class="checkline" for="dest-remember">
+          <input id="dest-remember" type="checkbox">
+          <span data-i18n="rememberDestination">Mémoriser cette destination sur cet appareil</span>
+        </label>
+        <div class="button-row">
+          <button id="dest-scan-btn" class="btn ghost sm" type="button" data-i18n="scanQr">📷 Scanner un QR</button>
+          <button id="dest-save-btn" class="btn sm push" type="button" data-i18n="saveDestination">Ajouter</button>
+          <button id="dest-remove-btn" class="btn danger sm hidden" type="button" data-i18n="removeDestination">Retirer</button>
+          <button id="dest-cancel-btn" class="btn ghost sm" type="button" data-i18n="cancel">Annuler</button>
+        </div>
+        <p id="scan-note" class="dest-status warn hidden"></p>
+      </div>
+
+      <div id="create-form" class="form-panel hidden">
+        <label class="field" for="create-name">
+          <span data-i18n="createLinkName">Nom du nouveau lien</span>
+          <input id="create-name" type="text" maxlength="80" autocomplete="off" placeholder="Ex. Photos vacances" data-i18n-placeholder="createLinkPlaceholder">
+        </label>
+        <p class="dest-status muted" data-i18n="createLinkHint">Un nouveau lien de réception sera créé et ajouté à vos destinations. Partagez-le pour recevoir des fichiers.</p>
+        <div class="button-row">
+          <button id="create-do-btn" class="btn sm push" type="button" data-i18n="createDo">Créer le lien</button>
+          <button id="create-cancel-btn" class="btn ghost sm" type="button" data-i18n="cancel">Annuler</button>
+        </div>
+        <p id="create-error" class="dest-status err hidden"></p>
+      </div>
+
+      <div id="unlock-form" class="form-panel hidden">
+        <label class="field" for="unlock-pw">
+          <span class="warn" data-i18n="protectedLink">🔒 Lien protégé</span>
+          <input id="unlock-pw" type="password" autocomplete="current-password" placeholder="Mot de passe du lien" data-i18n-placeholder="passwordPlaceholder">
+        </label>
+        <button id="unlock-btn" class="btn sm block" type="button" data-i18n="unlock">Déverrouiller</button>
+      </div>
+
+      <div id="encryption-form" class="form-panel hidden">
+        <p class="enc-title" data-i18n="encryptedLink">🔐 Chiffrement de bout en bout</p>
+        <p id="enc-help" class="muted sm"></p>
+        <label id="enc-key-row" class="field hidden" for="enc-key">
+          <span data-i18n="encryptionKey">Clé du lien</span>
+          <input id="enc-key" type="password" autocomplete="off" spellcheck="false" placeholder="k=…" data-i18n-placeholder="keyPlaceholder">
+        </label>
+        <label id="enc-pass-row" class="field hidden" for="enc-passphrase">
+          <span data-i18n="passphrase">Phrase secrète</span>
+          <input id="enc-passphrase" type="password" autocomplete="off" placeholder="Phrase secrète de chiffrement" data-i18n-placeholder="passphrase">
+        </label>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="files-heading">
+      <div class="section-head">
+        <div>
+          <p id="files-heading" class="lbl" data-i18n="addFiles">Ajouter des fichiers</p>
+          <p class="section-sub" data-i18n="durableQueue">La file est conservée localement et peut reprendre après fermeture.</p>
+        </div>
+      </div>
+
+      <div class="pickgrid">
+        <label class="pick"><span class="ico">📷</span><span data-i18n="takePhoto">Prendre une photo</span>
+          <input id="pick-camera" type="file" accept="image/*" capture="environment" hidden>
+        </label>
+        <label class="pick"><span class="ico">🧾</span><span data-i18n="scanDocument">Scanner un document</span>
+          <input id="pick-scan" type="file" accept="image/*" capture="environment" hidden multiple>
+        </label>
+        <label class="pick"><span class="ico">📄</span><span data-i18n="chooseFiles">Choisir des fichiers</span>
+          <input id="pick-files" type="file" hidden multiple>
+        </label>
+        <label class="pick"><span class="ico">📁</span><span data-i18n="chooseFolder">Choisir un dossier</span>
+          <input id="pick-folder" type="file" webkitdirectory directory hidden multiple>
+        </label>
+      </div>
+
+      <div class="option-grid">
+        <label class="checkline" for="optimize-images">
+          <input id="optimize-images" type="checkbox">
+          <span data-i18n="optimizePhotos">Optimiser les photos avant envoi</span>
+        </label>
+        <label class="field compact" for="concurrency-select">
+          <span data-i18n="parallelUploads">Envois parallèles</span>
+          <select id="concurrency-select">
+            <option value="1">1</option>
+            <option value="2" selected>2</option>
+            <option value="3">3</option>
+          </select>
+        </label>
+      </div>
+
+      <div id="sender-row" class="field hidden">
+        <label for="sender-name" data-i18n="senderName">Votre nom</label>
+        <input id="sender-name" type="text" maxlength="60" autocomplete="name" placeholder="Nom demandé par ce lien" data-i18n-placeholder="senderPlaceholder">
+      </div>
+
+      <div id="up-list" class="up-list" aria-live="polite"></div>
+
+      <div id="queue-summary" class="queue-summary hidden">
+        <span id="queue-text" class="muted sm"></span>
+        <div class="queue-actions">
+          <button id="pause-btn" class="btn ghost sm hidden" type="button" data-i18n="pause">Pause</button>
+          <button id="resume-btn" class="btn ghost sm hidden" type="button" data-i18n="resume">Reprendre</button>
+          <button id="retry-all-btn" class="btn ghost sm hidden" type="button" data-i18n="retryAll">↻ Réessayer</button>
+          <button id="clear-all-btn" class="btn ghost sm hidden" type="button" data-i18n="removePending">Tout retirer</button>
+        </div>
+      </div>
+
+      <div id="global-progress-wrap" class="global-progress hidden">
+        <progress id="global-progress" max="100" value="0" aria-label="Progression globale" data-i18n-aria="globalProgress"></progress>
+        <p id="gprog-text" class="muted sm"></p>
+      </div>
+
+      <button id="send-btn" class="btn block send-button" type="button" disabled data-i18n="send">Envoyer</button>
+      <button id="clear-done-btn" class="btn ghost sm block hidden" type="button" data-i18n="clearCompleted">Effacer les envois terminés</button>
+    </section>
+
+    <section class="card" aria-labelledby="imglink-heading">
+      <div class="section-head">
+        <div>
+          <p id="imglink-heading" class="lbl" data-i18n="imgLinksTitle">Liens d’image</p>
+          <p class="section-sub" data-i18n="imgLinksHint">Créez des liens directs vers vos images : chaque lien offre les versions Pleine, Mini et Micro, sans page relais.</p>
+        </div>
+      </div>
+      <label class="pick pick-wide"><span class="ico">🖼</span><span data-i18n="imgLinksAdd">Ajouter des images</span>
+        <input id="pick-imglink" type="file" accept="image/*" hidden multiple>
+      </label>
+      <div id="imglink-list" class="imglink-list" aria-live="polite"></div>
+    </section>
+
+    <details class="card details-card" id="history-card">
+      <summary data-i18n="history">Historique local</summary>
+      <div id="history-list" class="history-list"></div>
+      <button id="history-clear-btn" class="btn ghost sm" type="button" data-i18n="clearHistory">Effacer l’historique</button>
+    </details>
+
+    <details class="card details-card" id="settings-card">
+      <summary data-i18n="settings">Réglages et sécurité</summary>
+      <div class="settings-grid">
+        <label class="checkline" for="auto-resume">
+          <input id="auto-resume" type="checkbox" checked>
+          <span data-i18n="autoResume">Reprendre automatiquement à la reconnexion</span>
+        </label>
+        <div class="setting-row">
+          <div>
+            <strong data-i18n="storage">Stockage local</strong>
+            <p id="storage-status" class="muted sm"></p>
+          </div>
+          <button id="persist-storage-btn" class="btn ghost sm" type="button" data-i18n="protectStorage">Protéger</button>
+        </div>
+        <div class="setting-row">
+          <div>
+            <strong data-i18n="deviceAccess">Accès de cet appareil</strong>
+            <p id="device-status" class="muted sm"></p>
+          </div>
+          <div class="button-row compact-buttons">
+            <button id="pair-device-btn" class="btn sm hidden" type="button" data-i18n="pairDevice">Associer cet appareil</button>
+            <button id="pair-other-btn" class="btn ghost sm hidden" type="button" data-i18n="pairOther">Associer par QR</button>
+            <button id="revoke-device-btn" class="btn danger sm hidden" type="button" data-i18n="revokeDevice">Révoquer</button>
+          </div>
+        </div>
+        <div id="device-list-wrap" class="hidden">
+          <p class="lbl" data-i18n="pairedDevices">Appareils associés</p>
+          <div id="device-list" class="device-list"></div>
+        </div>
+        <button id="clear-local-btn" class="btn danger sm" type="button" data-i18n="clearLocalData">Effacer toutes les données locales</button>
+      </div>
+    </details>
+
+    <p class="foot">Direct-Xfer · <span data-i18n="companionApp">application compagnon</span></p>
+  </main>
+
+  <div id="pair-overlay" class="pair-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="pair-title">
+    <div class="pair-dialog">
+      <h2 id="pair-title" data-i18n="pairOtherTitle">Associer un autre appareil</h2>
+      <p class="muted sm" data-i18n="pairOtherHelp">Scannez ce QR sur l’autre appareil. Le lien est à usage unique et expire après cinq minutes.</p>
+      <img id="pair-qr" class="pair-qr" alt="QR d’association" data-i18n-aria="pairQrAlt">
+      <p id="pair-expiry" class="muted sm" role="status"></p>
+      <div class="row">
+        <label class="sr-only" for="pair-url" data-i18n="pairLink">Lien d’association</label>
+        <input id="pair-url" type="text" readonly aria-label="Lien d’association" data-i18n-aria="pairLink">
+        <button id="pair-copy-btn" class="btn ghost sm" type="button" data-i18n="copy">Copier</button>
+      </div>
+      <button id="pair-close" class="btn block pair-close" type="button" data-i18n="close">Fermer</button>
+    </div>
+  </div>
+
+  <div id="qr-overlay" class="qr-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="qr-hint">
+    <video id="qr-video" playsinline muted></video>
+    <div class="qr-bar">
+      <span id="qr-hint" class="muted sm" data-i18n="qrHint">Visez un QR code de lien de réception…</span>
+      <button id="qr-close" class="btn ghost sm" type="button" data-i18n="close">Fermer</button>
+    </div>
+  </div>
+
+  <div id="toast" role="status" aria-live="assertive"></div>
+</body>
+</html>

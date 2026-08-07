@@ -1,0 +1,63 @@
+{
+  "name": "Direct-Xfer — Envoyer",
+  "short_name": "DX Envoyer",
+  "description": "Envoyez photos, documents, dossiers et fichiers vers vos liens de réception Direct-Xfer, avec reprise durable et chiffrement de bout en bout.",
+  "lang": "fr",
+  "dir": "ltr",
+  "start_url": "/app/",
+  "scope": "/app/",
+  "id": "/app/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "background_color": "#0b1020",
+  "theme_color": "#0b1020",
+  "orientation": "any",
+  "categories": ["productivity", "utilities"],
+  "launch_handler": { "client_mode": ["navigate-existing", "auto"] },
+  "share_target": {
+    "action": "/app/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [{ "name": "files", "accept": ["image/*", "video/*", "audio/*", "application/*", "text/*", "*/*"] }]
+    }
+  },
+  "shortcuts": [
+    {
+      "name": "Prendre une photo",
+      "short_name": "Photo",
+      "description": "Ouvrir Direct-Xfer pour prendre puis envoyer une photo.",
+      "url": "/app/?action=camera",
+      "icons": [{ "src": "/app/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Choisir des fichiers",
+      "short_name": "Fichiers",
+      "description": "Ouvrir directement le sélecteur de fichiers.",
+      "url": "/app/?action=files",
+      "icons": [{ "src": "/app/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Ajouter une destination",
+      "short_name": "Destination",
+      "description": "Ajouter un lien de réception Direct-Xfer.",
+      "url": "/app/?action=destination",
+      "icons": [{ "src": "/app/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ],
+  "icons": [
+    { "src": "/app/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/app/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/app/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/app/icon-maskable.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" },
+    { "src": "/app/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/app/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "screenshots": [
+    { "src": "/app/screenshot-mobile.png", "sizes": "720x1280", "type": "image/png", "form_factor": "narrow", "label": "File d’envoi mobile Direct-Xfer" },
+    { "src": "/app/screenshot-wide.png", "sizes": "1280x720", "type": "image/png", "form_factor": "wide", "label": "Gestion des destinations et des envois" }
+  ]
+}

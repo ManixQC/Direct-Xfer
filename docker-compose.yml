@@ -1,0 +1,96 @@
+services:
+  direct-xfer:
+    build: .
+    container_name: direct-xfer
+    restart: on-failure
+    # Unraid integration: these labels make the container show its logo and a
+    # clickable "WebUI" entry (Docker tab) when deployed via the Compose Manager
+    # plugin. [IP] and [PORT:55750] are substituted by Unraid at display time.
+    # If you enable native HTTPS (TLS_* below), change http:// to https://.
+    # The icon must be a directly reachable PNG. SVG/WebP icons are unreliable in
+    # current Unraid releases. Recreate the container after changing this label,
+    # because Docker labels cannot be modified on an existing container.
+    labels:
+      net.unraid.docker.managed: "composeman"
+      net.unraid.docker.webui: "http://[IP]:[PORT:55750]/"
+      net.unraid.docker.icon: "https://raw.githubusercontent.com/ManixQC/Direct-Xfer/refs/heads/main/unraid/direct-xfer.png"
+    ports:
+      # Port is customizable via the DX_PORT variable (default 55750).
+      - "${DX_PORT:-55750}:${DX_PORT:-55750}"
+    environment:
+      PORT: "${DX_PORT:-55750}"
+      IMAGES_DIR: "/Images"
+      # Run the container as this user/group so it can write /data, /Images and the
+      # reception folder. Defaults to 1000:1000. On Unraid, set these to the appdata owner
+      # (usually nobody:users) so the admin password & settings persist:
+      # PUID: "99"
+      # PGID: "100"
+      # LAN IP of YOUR server, for the "Local IP" display. Set it: behind Docker's
+      # bridge network the container only sees its internal IP (e.g. 192.168.80.2),
+      # not the host's.
+      # LOCAL_IP: "192.168.50.11"
+      # By default, administration is only reachable from the local network
+      # (auto-detected). Uncomment to open it to any network:
+      # ADMIN_ALLOW_ANY: "true"
+      # Admin IP allowlist (recommended when the admin is exposed via a reverse
+      # proxy): when set, ONLY these IPs/CIDRs can reach the admin page (loopback is
+      # always allowed). Empty = disabled (default local-network restriction).
+      # Behind a reverse proxy, ALSO set TRUST_PROXY so the real visitor IP is used.
+      # ADMIN_ALLOWED_IPS: "203.0.113.5, 198.51.100.0/24"
+      # TRUST_PROXY: "1"
+      # Public resource guards (defaults shown). Set a byte cap to 0 only if a
+      # reverse proxy or another layer already enforces equivalent limits.
+      # MAX_UPLOAD_BYTES: "10737418240"       # 10 GiB per received file
+      # MAX_ZIP_BYTES: "21474836480"          # 20 GiB generated ZIP
+      # MAX_CONCURRENT_UPLOADS: "8"
+      # MAX_CONCURRENT_ZIPS: "2"
+      # UPLOAD_IDLE_TIMEOUT_SECONDS: "120"
+      # Encrypt the metadata store (shares.json: host paths, filenames, password
+      # hashes) at rest with AES-256-GCM. Keep this secret safe and STABLE — if it
+      # is lost or changed, the store can no longer be read and the container
+      # refuses to start (it never overwrites encrypted data with an empty store).
+      # DATA_KEY: "a-long-random-secret"
+      # Native HTTPS (so encrypted shares / secret notes / E2E reception work
+      # without a reverse proxy — WebCrypto needs a secure context). Provide a
+      # cert/key pair, OR set TLS_SELF_SIGNED to auto-generate one (cached in
+      # /data/tls; browsers warn once on the self-signed cert). Serves HTTPS on PORT.
+      # TLS_SELF_SIGNED: "true"
+      # TLS_CERT: "/data/tls/fullchain.pem"
+      # TLS_KEY: "/data/tls/privkey.pem"
+      # E-mail (SMTP) notifications: setting SMTP_URL overrides the in-app SMTP
+      # fields (and disables editing them). EMAIL_FROM / EMAIL_TO set sender /
+      # recipient. Otherwise configure SMTP entirely from Configuration → E-mail.
+      # SMTP_URL: "smtps://user:pass@smtp.example.com:465"
+      # EMAIL_FROM: "direct-xfer@example.com"
+      # EMAIL_TO: "me@example.com"
+      # Antivirus scan of received files via a co-located ClamAV daemon (see the
+      # optional "clamav" service below). Infected uploads are quarantined under
+      # /data/quarantine and never delivered; a security alert is sent.
+      # CLAMAV_HOST: "clamav"
+      # CLAMAV_PORT: "3310"
+    volumes:
+      - /:/host:ro         # your files (the whole server), read-only
+      - ./data:/data       # generated shares + password
+      # ⬇ Self-hosted images: full-size copies plus the generated Mini, Micro and
+      #    history previews. Replace the left path with a folder on your host
+      #    (WRITABLE — no :ro).
+      - /PATH/TO/CONFIGURE:/Images
+      # ⬇ Files RECEIVED via reception links. Replace the left path with a folder
+      #    on your host (WRITABLE — no :ro).
+      - /PATH/TO/CONFIGURE:/Direct-Xfer
+      # Optional: destination for scheduled full backups when using the "Local
+      # folder" backup option (Configuration → Scheduled full backup). Mount a
+      # WRITABLE host folder and set the in-app path to /backups. Keeping it on a
+      # different disk/host than ./data makes it a real disaster-recovery copy.
+      # WebDAV and S3 destinations need no volume — they're configured in the app.
+      # - /PATH/TO/BACKUPS:/backups
+
+  # Optional: on-access antivirus. Uncomment this service AND the CLAMAV_HOST env
+  # above to scan every received file before it lands. First start downloads the
+  # virus database (a few minutes); the container is self-hosted, no third party.
+  # clamav:
+  #   image: clamav/clamav:latest
+  #   container_name: direct-xfer-clamav
+  #   restart: on-failure
+  #   volumes:
+  #     - ./clamav:/var/lib/clamav   # persist the virus database across restarts

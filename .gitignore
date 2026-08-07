@@ -1,0 +1,10 @@
+node_modules/
+data/
+.env
+.env.*
+*.log
+.DS_Store
+Thumbs.db
+.claude/
+direct-xfer.zip
+logo.png

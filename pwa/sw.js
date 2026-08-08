@@ -3,17 +3,20 @@
  * Shell versioning + network-aware updates. Upload/API requests are never cached.
  * Web Share Target batches are isolated so simultaneous shares cannot overwrite one another.
  */
-var VERSION = '2026.08.06-pwa116';
+var VERSION = '2026.08.07-pwa123';
 var SHELL_CACHE = 'dx-pwa-shell-' + VERSION;
 var RUNTIME_CACHE = 'dx-pwa-runtime-' + VERSION;
 var SHARE_CACHE = 'dx-share-v2';
+// The ?v=<build> query on the JS/CSS assets MUST match what index.html requests, so a
+// freshly-served index.html resolves its shell to this version's assets (never a stale
+// cross-version mix). Bump ?v here and in index.html together on every release.
 var SHELL = [
   '/app/launch',
   '/app/index.html',
-  '/app/app.css',
-  '/app/theme-init.js',
-  '/app/login-vault.js',
-  '/app/app.js',
+  '/app/app.css?v=111',
+  '/app/theme-init.js?v=111',
+  '/app/login-vault.js?v=111',
+  '/app/app.js?v=111',
   '/direct-xfer-pwa.webmanifest',
   '/direct-xfer-pwa-en.webmanifest',
   '/direct-xfer-pwa-es.webmanifest',
@@ -24,7 +27,7 @@ var SHELL = [
   '/app/icon-maskable-192.png',
   '/app/icon-maskable-512.png',
   '/app/apple-touch-icon.png',
-  '/dxcrypto.js'
+  '/dxcrypto.js?v=111'
 ];
 
 function randomId() {

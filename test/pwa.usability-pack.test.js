@@ -52,14 +52,16 @@ test('6. touch rows support swipe actions', () => {
   assert.match(css, /\.uprow\.swiping/);
 });
 
-test('7. installed-app shortcuts include files, camera and document scanning', () => {
+test('7. installed-app shortcuts include files and camera but not document scanning', () => {
   manifests.forEach((manifest) => {
     const urls = new Set((manifest.shortcuts || []).map((shortcut) => shortcut.url));
     assert.ok(urls.has('/app/?action=camera'));
     assert.ok(urls.has('/app/?action=files'));
-    assert.ok(urls.has('/app/?action=scan'));
+    // "Scan a document" only reopened the camera with no scanning UI, so it was
+    // removed from the shortcuts and the launch-action handler alike.
+    assert.ok(!urls.has('/app/?action=scan'));
   });
-  assert.match(js, /launchAction === 'scan'/);
+  assert.doesNotMatch(js, /launchAction === 'scan'/);
 });
 
 test('8. app badge reflects queued and failed items even while idle', () => {

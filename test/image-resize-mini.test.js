@@ -56,12 +56,15 @@ test('the PWA bottom navigation lays its five tabs out on a single row', () => {
   assert.equal(navItems, 5, 'the bottom nav must declare five tabs');
   // The grid must have exactly five columns so none wrap to a second row.
   assert.match(css, /\.pwa-bottom-nav\s*\{[^}]*grid-template-columns:\s*repeat\(5,\s*minmax\(0,\s*1fr\)\)/);
-  // The five icons must be uniform monochrome glyphs. A default-presentation color
-  // emoji (e.g. 🔗) renders visibly larger than the geometric symbols, so the SMP
-  // emoji block and the explicit emoji variation selector are both disallowed.
-  const navIcons = [...html.matchAll(/class="pwa-nav-icon"[^>]*>([^<]+)</g)].map((m) => m[1]);
+  // The five icons must render at an identical size. Text glyphs from different Unicode
+  // blocks (and color emoji) vary in size, so each icon must be an inline SVG drawn on
+  // the SAME 24×24 grid — one CSS box size then controls all five uniformly.
+  const navIcons = [...html.matchAll(/<span class="pwa-nav-icon"[^>]*>([\s\S]*?)<\/span>/g)].map((m) => m[1]);
   assert.equal(navIcons.length, 5, 'each nav item must carry one icon span');
-  for (const glyph of navIcons) {
-    assert.doesNotMatch(glyph, /[\u{1F000}-\u{1FAFF}\u{FE0F}]/u, `nav icon "${glyph}" must be a monochrome glyph, not a color emoji`);
+  for (const icon of navIcons) {
+    assert.match(icon, /<svg[^>]*viewBox="0 0 24 24"/, 'nav icon must be a 24×24 inline SVG');
+    assert.doesNotMatch(icon, /[\u{1F000}-\u{1FAFF}\u{FE0F}]/u, 'nav icon must be monochrome, not a color emoji');
   }
+  // A single shared box size drives every icon (no per-item sizing that could diverge).
+  assert.match(css, /\.pwa-nav-item \.pwa-nav-icon svg \{[^}]*width: 22px; height: 22px;/);
 });

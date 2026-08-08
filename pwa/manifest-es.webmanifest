@@ -141,19 +141,6 @@
       ]
     },
     {
-      "name": "Escanear un documento",
-      "short_name": "Escanear",
-      "description": "Abrir directamente la cámara para escanear un documento.",
-      "url": "/app/?action=scan",
-      "icons": [
-        {
-          "src": "/app/icon-192.png",
-          "sizes": "192x192",
-          "type": "image/png"
-        }
-      ]
-    },
-    {
       "name": "Elegir archivos",
       "short_name": "Archivos",
       "description": "Abre directamente el selector de archivos.",

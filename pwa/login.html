@@ -8,11 +8,13 @@
   <title>Direct-Xfer — Connexion mobile</title>
   <link rel="icon" href="/app/icon-192.png">
   <link rel="apple-touch-icon" href="/app/apple-touch-icon.png">
-  <link rel="manifest" href="/direct-xfer-pwa.webmanifest?v=104">
-  <script src="/app/theme-init.js"></script>
-  <link rel="stylesheet" href="/app/login.css">
-  <script src="/app/login-vault.js" defer></script>
-  <script src="/app/login.js" defer></script>
+  <link rel="manifest" href="/direct-xfer-pwa.webmanifest?v=111">
+  <!-- Shell assets carry ?v so a fresh login.html is never paired with a stale cached
+       login.js/login.css from a previous version (bump in lock-step with sw.js VERSION). -->
+  <script src="/app/theme-init.js?v=111"></script>
+  <link rel="stylesheet" href="/app/login.css?v=111">
+  <script src="/app/login-vault.js?v=111" defer></script>
+  <script src="/app/login.js?v=111" defer></script>
 </head>
 <body>
   <div id="mobile-pull-refresh" class="pull-refresh" role="status" aria-live="polite" aria-hidden="true">

@@ -11166,11 +11166,10 @@ function stampPhotoUploadDevice(share, req, source) {
   if (source) share.uploadSource = String(source).slice(0, 32);
   return share;
 }
-// Live name of the paired PWA / Android-companion device that created a share,
-// resolved from its stable ownerDeviceId. Reading the current device.name (not a
-// snapshot) means a rename done in the companion app is reflected everywhere the
-// creator device is shown. Returns null for links created from a browser admin
-// session or that predate device stamping.
+// Live name of the paired PWA device that created a share, resolved from its stable
+// ownerDeviceId. Reading the current device.name (not a snapshot) means a rename done
+// in the companion app is reflected everywhere the creator device is shown. Returns
+// null for links created from a browser admin session or that predate device stamping.
 function shareCreatorDeviceName(share) {
   if (!share || !share.ownerDeviceId) return null;
   const device = pwaDevices().find((d) => d.id === share.ownerDeviceId);
@@ -11201,15 +11200,6 @@ function validatePwaDeviceCredential(raw, touch = true, allowLocked = false) {
 }
 function getPwaDevice(req, touch = true, allowLocked = false) {
   return validatePwaDeviceCredential(parseCookies(req).dxpwa || '', touch, allowLocked);
-}
-// Native Android companion authentication. The credential is deliberately the
-// same revocable device capability as the PWA cookie, transported in an
-// Authorization header so WorkManager can upload without a WebView/session.
-// Format: Authorization: Bearer dxpwa_<device-id>.<secret>
-function getPwaBearerDevice(req, touch = true) {
-  const auth = String(req.headers.authorization || '');
-  const m = /^Bearer\s+dxpwa_([a-f0-9]{24}\.[A-Za-z0-9_-]{32,128})$/i.exec(auth);
-  return m ? validatePwaDeviceCredential(m[1], touch) : null;
 }
 function appendSetCookie(res, value) {
   const current = res.getHeader('Set-Cookie');
@@ -11324,7 +11314,7 @@ function isPublicPwaAssetRequest(req) {
   return (req.method === 'GET' || req.method === 'HEAD') && PWA_PUBLIC_ASSET_PATHS.has(req.path);
 }
 function pwaNetworkGuard(req, res, next) {
-  if (isPublicPwaAssetRequest(req) || getPwaDevice(req, false) || getPwaBearerDevice(req, false)) return next();
+  if (isPublicPwaAssetRequest(req) || getPwaDevice(req, false)) return next();
   return adminGuard(req, res, next);
 }
 
@@ -11395,8 +11385,7 @@ function validAppMutationOrigin(req) {
 function requireAppAuth(req, res, next) {
   if (isPublicPwaAssetRequest(req)) return next();
   const session = getSession(req);
-  const bearerDevice = getPwaBearerDevice(req);
-  let device = bearerDevice || getPwaDevice(req);
+  let device = getPwaDevice(req);
   if (!device && session) {
     const lockedDevice = getPwaDevice(req, false, true);
     if (lockedDevice && lockedDevice.sessionLockedAt) {
@@ -11409,13 +11398,11 @@ function requireAppAuth(req, res, next) {
   if (session || device) {
     req.pwaSession = session;
     req.pwaDevice = device;
-    req.pwaAuthMode = bearerDevice ? 'bearer' : (device ? 'cookie' : 'session');
+    req.pwaAuthMode = device ? 'cookie' : 'session';
     const mutating = !['GET', 'HEAD', 'OPTIONS'].includes(req.method);
     if (mutating) {
-      // Browser cookie/session requests must be exact same-origin. Native bearer
-      // requests have no browser Origin header and instead rely on the unguessable
-      // device credential plus the per-device CSRF secret.
-      if (!bearerDevice && !validAppMutationOrigin(req)) return res.status(403).json({ error: 'invalid-origin' });
+      // Browser cookie/session requests must be exact same-origin.
+      if (!validAppMutationOrigin(req)) return res.status(403).json({ error: 'invalid-origin' });
       const csrf = String(req.headers['x-csrf-token'] || '');
       const deviceCsrfOk = !!(device && csrf && timingSafeEqualStr(csrf, device.csrf));
       const sessionCsrfOk = !!(session && csrf && timingSafeEqualStr(csrf, session.csrf));
@@ -11442,47 +11429,15 @@ function requireAppAuth(req, res, next) {
   }
   return res.status(401).type('text').send('Authentication required');
 }
-// Native Android companion login. The administrator authenticates once; the
-// response contains a revocable, PWA-scoped bearer capability and its CSRF value.
-// The password and 2FA code are never stored by Direct-Xfer or returned to the app.
-const companionLoginParser = express.json({ limit: '8kb' });
-app.post('/app/companion/login', adminGuard, companionLoginParser, (req, res) => {
-  const body = req.body || {};
-  const result = attemptLogin(req, res, body.username || '', body.password || '', body.totp || '');
-  if (!result.ok) {
-    if (result.locked) return res.status(429).json({ error: 'too-many-attempts', retryAfter: result.retryAfter });
-    if (result.totpRequired) return res.status(401).json({ error: 'totp-required' });
-    if (result.totpInvalid) return res.status(401).json({ error: 'invalid-totp' });
-    return res.status(401).json({ error: 'invalid-password', hints: loginHints() });
-  }
-  const acc = result.account;
-  if (!acc || !['owner', 'admin', 'operator'].includes(acc.role) || accountNeedsPwChange(acc)) {
-    if (result.sid) sessions.delete(result.sid);
-    destroySession(req, res);
-    return res.status(403).json({ error: accountNeedsPwChange(acc) ? 'password-change-required' : 'role-forbidden' });
-  }
-  const issued = createPwaDevice(body.deviceName || 'Direct-Xfer Android', acc.username || null);
-  // This endpoint creates a device capability, not a browser admin session. Clear
-  // the temporary session cookie created by attemptLogin before returning JSON.
-  if (result.sid) sessions.delete(result.sid);
-  destroySession(req, res);
-  logAudit('pwa-device-paired', { account: acc, ip: clientIp(req), detail: issued.device.name + ' (Android companion)' });
-  res.setHeader('Cache-Control', 'no-store');
-  res.json({
-    ok: true,
-    server: normalizedOrigin(PUBLIC_URL) || `${externalProto(req)}://${String(req.get('host') || '')}`,
-    deviceToken: `dxpwa_${issued.device.id}.${issued.secret}`,
-    csrf: issued.device.csrf,
-    device: publicPwaDevice(issued.device, issued.device.id),
-  });
-});
-
+// JSON body parser for the /app login route — small, since it only carries
+// credentials, never file data.
+const appLoginParser = express.json({ limit: '8kb' });
 
 // Dedicated browser-PWA login. Besides creating the administrator session, bind
 // the browser to a durable PWA device capability. A normal /api/login could leave
 // the installed app in session-only mode; when Android later discarded that cookie,
 // device-owned images and albums appeared to reset even though the files remained.
-app.post('/app/login', adminGuard, companionLoginParser, (req, res) => {
+app.post('/app/login', adminGuard, appLoginParser, (req, res) => {
   const body = req.body || {};
   const result = attemptLogin(req, res, body.username || '', body.password || '', body.totp || '');
   if (!result.ok) {
@@ -11509,7 +11464,9 @@ app.post('/app/login', adminGuard, companionLoginParser, (req, res) => {
     device.lastUsedAt = Date.now();
     device.createdBy = acc.username || device.createdBy || null;
     device.createdByAccountId = acc.id;
-    if (body.deviceName) device.name = String(body.deviceName).replace(/[\r\n]+/g, ' ').trim().slice(0, 100) || device.name;
+    // Do NOT overwrite the name of an already-paired device on re-login: the login page
+    // always sends a default deviceName, which used to clobber a custom rename on every
+    // sign-in. The name is only set when the device is first issued, or via explicit rename.
     rememberPwaDeviceOwner(device);
     scheduleFlush();
   } else {
@@ -11749,7 +11706,6 @@ app.post('/app/inbox', pwaJsonParser, (req, res) => {
 // share is created so /i/<token> serves it directly. The thumbnail is uploaded
 // separately (generated on the device). URLs use the Images domain when set.
 const PWA_IMG_EXT = /^(jpg|png|gif|webp|bmp|avif)$/;
-const COMPANION_IMAGE_UPLOAD_ID = /^[A-Za-z0-9_-]{16,64}$/;
 function pwaDeviceCreatorAccount(device) {
   if (!device) return null;
   return (device.createdByAccountId && getAccountById(device.createdByAccountId)) || findAccountByName(device.createdBy || '');
@@ -11844,11 +11800,6 @@ function canManagePwaImage(req, share) {
 }
 function pwaImageCreatePayload(req, rec) {
   return pwaPhotoPayload(req, rec);
-}
-function companionImageByUploadId(req, uploadId) {
-  if (!COMPANION_IMAGE_UPLOAD_ID.test(uploadId)) return null;
-  return state.shares.find((share) => share && share.type === 'photo' &&
-    share.companionUploadId === uploadId && isActive(share) && canManagePwaImage(req, share)) || null;
 }
 function pwaPhotoPayload(req, share) {
   const ib = getSettings().imageBase || primaryBase(req) || '';
@@ -12483,30 +12434,7 @@ app.post('/app/image/:token/adaptive/:format', (req, res) => {
   });
 });
 
-app.get('/app/image/upload/:uploadId', (req, res) => {
-  const uploadId = String(req.params.uploadId || '');
-  if (!COMPANION_IMAGE_UPLOAD_ID.test(uploadId)) return res.status(400).json({ error: 'invalid-upload-id' });
-  const existing = companionImageByUploadId(req, uploadId);
-  if (!existing) return res.status(404).json({ error: 'not-found' });
-  res.setHeader('Cache-Control', 'no-store');
-  return res.json(pwaImageCreatePayload(req, existing));
-});
 app.post('/app/image', (req, res) => {
-  const uploadId = String(req.query.uploadId || '');
-  if (uploadId && !COMPANION_IMAGE_UPLOAD_ID.test(uploadId)) return res.status(400).json({ error: 'invalid-upload-id' });
-  const existing = uploadId ? companionImageByUploadId(req, uploadId) : null;
-  if (existing) {
-    // Consume the duplicate request body before replying. This rare path covers a
-    // process death after the server committed the image but before Android saved
-    // the response, without creating a second public link.
-    let received = 0;
-    req.on('data', (chunk) => { received += chunk.length; if (received > IMAGE_MAX_BYTES) req.destroy(); });
-    req.on('end', () => {
-      if (!res.headersSent) res.status(200).json(pwaImageCreatePayload(req, existing));
-    });
-    req.resume();
-    return;
-  }
   let ext = (String(req.query.name || 'image.jpg').split('.').pop() || '').toLowerCase();
   if (ext === 'jpeg') ext = 'jpg';
   if (!PWA_IMG_EXT.test(ext)) return res.status(400).json({ error: 'not-image' });
@@ -12521,7 +12449,6 @@ app.post('/app/image', (req, res) => {
     const share = { type: 'photo', name, imgPath: fname, ext, size };
     if (String(req.query.metadataRemoved || '') === '1') share.metadataRemoved = true;
     stampPhotoUploadDevice(share, req, 'pwa');
-    if (uploadId) share.companionUploadId = uploadId;
     const clientHash = String(req.query.clientHash || '').toLowerCase();
     if (/^[a-f0-9]{64}$/.test(clientHash)) share.clientHash = clientHash;
     if (dims) { share.w = dims.w; share.h = dims.h; }
@@ -12774,7 +12701,7 @@ function publicPwaDevice(d, currentId) {
 }
 app.get('/app/device/status', (req, res) => {
   const session = getSession(req);
-  const device = req.pwaDevice || getPwaBearerDevice(req) || getPwaDevice(req);
+  const device = req.pwaDevice || getPwaDevice(req);
   const devices = session ? pwaDevices().map((d) => publicPwaDevice(d, device && device.id)) : [];
   res.setHeader('Cache-Control', 'no-store');
   res.json({
@@ -12823,7 +12750,7 @@ app.post('/app/device/register', adminGuard, pwaJsonParser, (req, res) => {
 });
 app.post('/app/device/revoke', pwaJsonParser, (req, res) => {
   const session = getSession(req);
-  const current = req.pwaDevice || getPwaBearerDevice(req, false) || getPwaDevice(req, false);
+  const current = req.pwaDevice || getPwaDevice(req, false);
   let id = String((req.body && req.body.id) || '');
   const revokeShares = !!(req.body && req.body.revokeShares);
 
@@ -12876,7 +12803,7 @@ app.post('/app/device/revoke', pwaJsonParser, (req, res) => {
 // action guarded by the admin IP allowlist + session CSRF, mirroring revoke.
 app.post('/app/device/rename', pwaJsonParser, (req, res) => {
   const session = getSession(req);
-  const current = req.pwaDevice || getPwaBearerDevice(req, false) || getPwaDevice(req, false);
+  const current = req.pwaDevice || getPwaDevice(req, false);
   const name = String((req.body && req.body.name) || '').replace(/[\r\n]+/g, ' ').trim().slice(0, 100);
   if (!name) return res.status(400).json({ error: 'invalid-name' });
   let id = String((req.body && req.body.id) || '');
@@ -12911,7 +12838,7 @@ function pwaImageBootstrapMarkup(req) {
   return `<template id="dx-image-bootstrap" data-encoding="base64">${encoded}</template>`;
 }
 function setPwaDocumentHeaders(res) {
-  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=(self)');
+  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(self), camera=(self)');
   res.setHeader('Cache-Control', 'private, no-store');
   res.setHeader('Vary', 'Cookie, Authorization');
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -12937,7 +12864,7 @@ app.use('/app', express.static(path.join(__dirname, 'pwa'), {
   extensions: ['html'],
   dotfiles: 'ignore',
   setHeaders(res, filePath) {
-    res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=(self)');
+    res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(self), camera=(self)');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Content-Security-Policy',
       "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; " +

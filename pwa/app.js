@@ -9,8 +9,8 @@
 (function () {
   // Build tag, shown in the footer so a user can confirm at a glance which version
   // is actually running after an update. Keep it in lock-step with sw.js VERSION.
-  var APP_VERSION = '1.33.2';
-  var APP_BUILD = '2026.08.06-pwa116';
+  var APP_VERSION = '1.33.9';
+  var APP_BUILD = '2026.08.07-pwa123';
   // Upload blocks are deliberately small on mobile. A number of reverse proxies
   // still default to a 1 MiB request-body limit; an 8 MiB first block can therefore
   // be rejected before the browser emits any useful progress event, which looks like
@@ -52,14 +52,14 @@
   var STRINGS = {
     fr: {
       title: 'Envoyer', navMain: 'Navigation principale', navSend: 'Envoyer', navSendHint: 'Préparer et envoyer des fichiers vers une destination.', navImages: 'Images', navImagesHint: 'Créer, gérer et suivre vos liens d’image.', navActivity: 'Activité', navActivityHint: 'Consulter l’historique local des transferts.', navSettings: 'Réglages', navSettingsHint: 'Configurer la PWA, la sécurité et le stockage.', navShares: 'Partages', navSharesHint: 'Créer des liens de partage depuis les fichiers du serveur.', sharesTitle: 'Partager des fichiers du serveur', sharesHint: 'Parcourez les fichiers de votre serveur et créez des liens de partage directs.', sharesAdminRequired: 'Connectez-vous avec un compte administrateur pour parcourir les fichiers du serveur.', sharesSignIn: 'Se connecter en administrateur', sharesBrowse: 'Fichiers du serveur', sharesUp: 'Dossier parent', sharesCreate: 'Créer le partage', sharesNoneSelected: 'Aucun fichier sélectionné.', sharesSelected: '{n} élément(s) sélectionné(s)', sharesExpiry: 'Expiration', sharesExpiryNever: 'Jamais', sharesExpiry1h: '1 heure', sharesExpiry1d: '1 jour', sharesExpiry7d: '7 jours', sharesExpiry30d: '30 jours', sharesMaxDownloads: 'Téléchargements max (0 = illimité)', sharesPassword: 'Mot de passe (facultatif)', sharesPasswordPlaceholder: '—', sharesCreateBtn: 'Créer le lien de partage', sharesCreating: 'Création…', sharesCreated: 'Partage créé ✓', sharesCreateFail: 'Échec de la création du partage', sharesLibrary: 'Vos partages', sharesEmpty: 'Aucun partage pour l’instant.', sharesBrowseFail: 'Impossible de lire ce dossier.', sharesLoginNeeded: 'Connexion administrateur requise.', sharesOpen: 'Ouvrir', sharesCopy: 'Copier', sharesRevoke: 'Révoquer', sharesRevoked: 'Partage révoqué ✓', sharesRevokeFail: 'Échec de la révocation', sharesRevokeConfirm: 'Révoquer ce partage ? Le lien cessera de fonctionner.', sharesItems: '{n} élément(s)', sharesReceptions: 'Liens de réception', sharesReceptionsEmpty: 'Aucun lien de réception.', sharesReceived: '{bytes} reçus', openAdmin: "Ouvrir l'administration", language: 'Langue', theme: 'Thème', copyLink: 'Copier le lien', pasteLink: 'Coller un lien', editDestination: 'Modifier la destination', addDestination: 'Ajouter une destination', passwordPlaceholder: 'Mot de passe du lien', destinationPlaceholder: 'Lien ou jeton de réception', destinationNamePlaceholder: 'Nom facultatif de la destination', senderPlaceholder: 'Nom demandé par ce lien', globalProgress: 'Progression globale', keyPlaceholder: 'Clé de chiffrement du lien', titlePlaceholder: 'Contenu partagé', pairedBadge: 'Appareil associé', themeDark: 'Sombre', themeLight: 'Clair', themeAuto: 'Auto', install: 'Installer', installIosHint: 'Pour installer Direct-Xfer : touchez le bouton Partager du navigateur, puis « Sur l’écran d’accueil ».', installBrowserHint: 'Chrome n’a pas encore validé l’installation complète. Ne choisissez pas un simple raccourci : utilisez une adresse HTTPS avec certificat reconnu, touchez la page et gardez-la ouverte quelques instants.', installHttpsRequired: 'Installation complète impossible depuis cette adresse HTTP ou ce certificat non reconnu. Android ne peut créer qu’un raccourci. Ouvrez Direct-Xfer en HTTPS avec un certificat valide.', installSecurePending: 'Installation en préparation. Dans Chrome, touchez la page et gardez-la ouverte environ 30 secondes. Si le logo n’apparaît pas, vérifiez que le certificat HTTPS est reconnu par Android.', installOpenHttps: 'Ouvrir en HTTPS',
-      offline: 'Hors ligne — les envois reprendront à la reconnexion.', updateReady: 'Une nouvelle version est disponible.', updateNow: 'Actualiser', pullToRefresh: 'Glissez vers le bas pour actualiser', releaseToRefresh: 'Relâchez pour actualiser', refreshing: 'Actualisation…',
+      offline: 'Hors ligne — les envois reprendront à la reconnexion.', updateReady: 'Une nouvelle version est disponible.', updateNow: 'Actualiser', pullToRefresh: 'Glissez vers le bas pour actualiser', releaseToRefresh: 'Relâchez pour actualiser', refreshing: 'Actualisation…', backExit: 'Appuyez à nouveau pour quitter',
       destination: 'Destination', destinationHint: 'Un lien de réception Direct-Xfer de cette instance.', linkOrToken: 'Lien ou jeton', displayName: 'Nom affiché',
-      rememberDestination: 'Mémoriser cette destination sur cet appareil', rememberKey: 'Mémoriser aussi la clé secrète sur cet appareil', scanQr: '📷 Scanner un QR', saveDestination: 'Ajouter', updateDestination: 'Enregistrer', createLinkTitle: 'Créer un lien de réception', createLinkName: 'Nom du nouveau lien', createLinkPlaceholder: 'Ex. Photos vacances', createLinkHint: 'Un nouveau lien de réception sera créé et ajouté à vos destinations. Partagez-le pour recevoir des fichiers.', createDo: 'Créer le lien', creating: 'Création…', createOk: 'Lien créé ✓', createFail: 'Création du lien impossible',
+      rememberDestination: 'Mémoriser cette destination sur cet appareil', rememberKey: 'Mémoriser aussi la clé secrète sur cet appareil', scanQr: '📷 Scanner un QR', saveDestination: 'Ajouter', updateDestination: 'Enregistrer', createLinkTitle: 'Créer un lien de réception', newLink: 'Nouveau', createLinkName: 'Nom du nouveau lien', createLinkPlaceholder: 'Ex. Photos vacances', createLinkHint: 'Un nouveau lien de réception sera créé et ajouté à vos destinations. Partagez-le pour recevoir des fichiers.', createDo: 'Créer le lien', creating: 'Création…', createOk: 'Lien créé ✓', createFail: 'Création du lien impossible',
       imgLinksTitle: 'Liens d’image', imgLinksHint: 'Créez des liens directs vers vos images : chaque lien offre les versions Pleine, Mini et Micro, sans page relais.', imgLinksAdd: 'Ajouter des images', imgCreateTitle: 'Créer des liens', imgCreateHint: 'Choisissez vos images et le format qui sera proposé en priorité.', imgLibraryTitle: 'Vos liens', imgLibraryHint: 'Recherchez, triez et gérez les images déjà partagées.', imgGlobalActions: 'Actions globales', imgCopyActions: 'Copier un format', imgManageActions: 'Gérer le lien', imgStripExif: 'Retirer les données EXIF/GPS avant le partage', imgStripExifHint: 'Le nettoyage est effectué localement sur cet appareil avant le téléversement.', imgStrippingMetadata: 'Suppression des EXIF/GPS…', imgMetadataRemoved: 'EXIF/GPS retirés', imgUploading: 'Téléversement…', imgThumbing: 'Mini et Micro…', imgReady: 'Prêt', imgCopyFull: '🔗 Pleine grandeur', imgCopyThumb: '🔗 Mini', imgCopyMicro: '🔗 Micro', imgCopied: 'Lien copié ✓', imgLinkFail: 'Échec de la création du lien', revokeShare: 'Révoquer', revokeConfirm: 'Révoquer ce partage ? Le lien cessera de fonctionner.', revokeSuccess: 'Révoqué ✓', revokeFail: 'Échec de la révocation', imgVariantFull: 'Pleine', imgVariantMini: 'Mini', imgVariantMicro: 'Micro', imgViews: '{n} vues', imgVisitors: '{n} visiteurs', imgStatsLoading: 'Statistiques…', imgStatsUnavailable: 'Statistiques indisponibles',
       imgSearch: 'Rechercher une image…', imgSortLabel: 'Trier les images', imgSortNewest: 'Plus récentes', imgSortOldest: 'Plus anciennes', imgSortName: 'Nom', imgSortSize: 'Taille', imgSortViews: 'Vues', imgSortVisitors: 'Visiteurs', imgSortExpiry: 'Expiration', imgFilterLabel: 'Filtrer les images', imgFilterAll: 'Toutes', imgFilterActive: 'Actives', imgFilterPopular: 'Populaires', imgFilterLarge: 'Volumineuses', imgFilterExpiring: 'Bientôt expirées', imgFilterFavorite: 'Favorites', imgFilterProtected: 'Protégées', imgDefaultVariantLabel: 'Format d’image favori', imgAdvancedOptions: 'Options des images', imgCompact: 'Affichage compact', imgHideExpired: 'Masquer les images expirées', imgAutoCopy: 'Copier automatiquement après création', imgDefaultExpiry: 'Expiration favorite', imgMaxViews: 'Limite de vues', imgPassword: 'Mot de passe', imgTags: 'Tags', imgPrivateNote: 'Note privée', imgRenameTemplate: 'Modèle de renommage', imgBulkEdit: 'Modifier', imgCreateAlbum: 'Créer un album', imgDashboard: 'Statistiques graphiques', imgAlbums: 'Albums partageables', imgActionHistory: 'Historique des actions d’image', imgSelected: '{n} sélectionnée(s)', imgEditPrompt: 'Modifier les images sélectionnées', imgAlbumName: 'Nom de l’album', imgAlbumCreated: 'Album créé ✓', imgSettingsSaved: 'Réglages enregistrés ✓', imgDuplicateFound: 'Cette image a déjà été partagée. Continuer quand même ?', imgExpirySoon: 'Le lien « {name} » expire bientôt.', imgUndoRevoke: 'Image retirée — Annuler ?', imgRevokePending: 'Révocation dans quelques secondes…', imgQrDownloaded: 'QR téléchargé ✓', imgFavorite: 'Favorite', imgUnfavorite: 'Retirer des favorites', imgExpired: 'Expirée', imgInactive: 'Inactive', imgViewLimitReached: 'Limite de vues atteinte', imgProtected: 'Protégée', imgViewLimit: '{n} vues max', imgNoAlbums: 'Aucun album.', imgVariantAuto: 'Automatique', imgReplace: 'Remplacer sans changer le lien', imgVersions: 'Versions', imgReplaceDone: 'Image remplacée, URL conservée ✓', imgResizeMini: 'Redimensionner la Mini', imgResizeMiniPrompt: 'Nouvelle taille de la Mini : un nombre de pixels (côté le plus long, ex. 250) OU un pourcentage de la taille totale (ex. 50%). La Micro sera la moitié :', imgResizeMiniInvalid: 'Valeur invalide : pixels (16 à 4096) ou pourcentage (1 à 100 %).', imgResizeMiniDone: 'Mini redimensionnée en {w}×{h} ✓', imgRestoreVersion: 'Restaurer une version', imgVersionRestored: 'Version restaurée ✓', imgAdaptiveReady: 'Optimisation adaptative', albumInvites: 'Invitations', albumInviteCreate: 'Créer une invitation', albumInviteRole: 'Rôle (reader, contributor, manager)', albumInviteCopied: 'Lien d’invitation copié ✓', albumInviteRevoke: 'Révoquer une invitation', albumCollabSummary: '{n} invitation(s)', imgAlbumCopied: 'Lien de l’album copié ✓', imgChartSummary: '{images} images · {views} vues · {visitors} visiteurs · {bytes}', imgHotlinkHosts: 'Domaines autorisés pour l’intégration', imgHotlinkPlaceholder: 'forum.exemple.com, *.site.net', imgHotlinkHint: 'Vide = protection désactivée. Les visites directes restent autorisées.', imgHotlinkProtected: 'Anti-hotlink', imgNotifyFirstView: 'Notifier à la première consultation', imgFirstViewArmed: 'Alerte 1re vue', imgFirstViewSent: 'Première vue notifiée', imgFirstViewToast: '👁 Première consultation de « {name} »', imgSmartBlur: 'Floutage intelligent local', imgSmartBlurFaces: 'Visages', imgSmartBlurFacesPlates: 'Visages et plaques', imgSmartBlurHint: 'Analyse locale avec révision avant envoi; aucune image n’est envoyée à un service externe.', imgSmartBlurAnalyzing: 'Analyse locale…', imgSmartBlurReady: '{n} zone(s) masquée(s). Vérifiez puis appliquez.', imgSmartBlurUnsupported: 'Détection des visages non prise en charge par ce navigateur; ajoutez les zones manuellement.', imgSmartBlurSkip: 'Continuer sans flou', imgRetentionRules: 'Règles automatiques de rétention', imgRetentionWarning: 'Ces règles révoquent définitivement les images et suppriment leurs fichiers. Elles sont désactivées par défaut.', imgRetentionAge: 'Âge maximal (jours)', imgRetentionInactive: 'Inactivité maximale (jours)', imgRetentionViews: 'Révoquer après ce nombre de vues', imgRetentionStorage: 'Stockage maximal (Mo)', imgRetentionSave: 'Enregistrer et appliquer', imgRetentionSaved: 'Règles de rétention enregistrées ✓', imgRetentionResult: '{n} image(s) révoquée(s) · {bytes} libérés', imgRetentionSummary: '{n} image(s) · {bytes}', enabled: 'Activé', disabled: 'Désactivé', optional: 'Facultatif', refresh: 'Rafraîchir', themeSchedule: 'Selon l’heure',
       removeDestination: 'Retirer', cancel: 'Annuler', protectedLink: '🔒 Lien protégé', unlock: 'Déverrouiller', encryptedLink: '🔐 Chiffrement de bout en bout',
       encryptionKey: 'Clé du lien', passphrase: 'Phrase secrète', addFiles: 'Ajouter des fichiers', durableQueue: 'Les fichiers sont copiés dans le stockage durable avant l’envoi afin de reprendre après une fermeture de la PWA.',
-      takePhoto: 'Prendre une photo', scanDocument: 'Scanner un document', chooseFiles: 'Choisir des fichiers', chooseFolder: 'Choisir un dossier',
+      takePhoto: 'Prendre une photo', chooseFiles: 'Choisir des fichiers', chooseFolder: 'Choisir un dossier',
       optimizePhotos: 'Optimiser les photos avant envoi', parallelUploads: 'Envois parallèles', senderName: 'Votre nom', pause: 'Pause', resume: 'Reprendre',
       retryAll: '↻ Réessayer', removePending: 'Tout retirer', send: 'Envoyer', clearCompleted: 'Effacer les envois terminés', history: 'Historique local',
       clearHistory: 'Effacer l’historique', settings: 'Réglages et sécurité', autoResume: 'Reprendre automatiquement après fermeture ou reconnexion', storage: 'Stockage local',
@@ -140,7 +140,6 @@
       exportSettings: 'Exporter les réglages', importSettings: 'Importer', settingsImported: 'Réglages importés ✓', settingsImportFail: 'Fichier de réglages invalide',
       accentLabel: 'Couleur d’accent', accentReset: 'Défaut',
       screenCapture: 'Capturer l’écran', captureFailed: 'Capture d’écran impossible', screenshotName: 'capture-ecran',
-      burst: 'Rafale photo', burstOn: 'Mode rafale : prenez des photos; « Annuler » pour arrêter.', burstStopped: 'Rafale terminée',
       undo: 'Annuler', fileRemoved: 'Fichier retiré', fileRestored: 'Fichier restauré ✓', lightboxAlt: 'Aperçu de l’image',
       sortType: 'Type', bulkInvert: '⇄ Inverser', expandAll: 'Tout déplier', collapseAll: 'Tout replier',
       queueSearch: 'Filtrer la file…', estOptim: '≈ {size} après optim.', rotate: 'Pivoter',
@@ -158,13 +157,13 @@
     },
     en: {
       title: 'Send', navMain: 'Main navigation', navSend: 'Send', navSendHint: 'Prepare and send files to a destination.', navImages: 'Images', navImagesHint: 'Create, manage and monitor image links.', navActivity: 'Activity', navActivityHint: 'Review the local transfer history.', navSettings: 'Settings', navSettingsHint: 'Configure the PWA, security and storage.', navShares: 'Shares', navSharesHint: 'Create share links from files on your server.', sharesTitle: 'Share server files', sharesHint: 'Browse the files on your server and create direct share links.', sharesAdminRequired: 'Sign in with an administrator account to browse server files.', sharesSignIn: 'Sign in as administrator', sharesBrowse: 'Server files', sharesUp: 'Parent folder', sharesCreate: 'Create the share', sharesNoneSelected: 'No file selected.', sharesSelected: '{n} item(s) selected', sharesExpiry: 'Expiry', sharesExpiryNever: 'Never', sharesExpiry1h: '1 hour', sharesExpiry1d: '1 day', sharesExpiry7d: '7 days', sharesExpiry30d: '30 days', sharesMaxDownloads: 'Max downloads (0 = unlimited)', sharesPassword: 'Password (optional)', sharesPasswordPlaceholder: '—', sharesCreateBtn: 'Create share link', sharesCreating: 'Creating…', sharesCreated: 'Share created ✓', sharesCreateFail: 'Could not create the share', sharesLibrary: 'Your shares', sharesEmpty: 'No shares yet.', sharesBrowseFail: 'Could not read this folder.', sharesLoginNeeded: 'Administrator login required.', sharesOpen: 'Open', sharesCopy: 'Copy', sharesRevoke: 'Revoke', sharesRevoked: 'Share revoked ✓', sharesRevokeFail: 'Could not revoke', sharesRevokeConfirm: 'Revoke this share? The link will stop working.', sharesItems: '{n} item(s)', sharesReceptions: 'Reception links', sharesReceptionsEmpty: 'No reception links.', sharesReceived: '{bytes} received', openAdmin: 'Open administration', language: 'Language', theme: 'Theme', copyLink: 'Copy link', pasteLink: 'Paste link', editDestination: 'Edit destination', addDestination: 'Add destination', passwordPlaceholder: 'Link password', destinationPlaceholder: 'Reception link or token', destinationNamePlaceholder: 'Optional destination name', senderPlaceholder: 'Name required by this link', globalProgress: 'Overall progress', keyPlaceholder: 'Link encryption key', titlePlaceholder: 'Shared content', pairedBadge: 'Paired device', themeDark: 'Dark', themeLight: 'Light', themeAuto: 'Auto', install: 'Install', installIosHint: 'To install Direct-Xfer, tap the browser Share button, then “Add to Home Screen”.', installBrowserHint: 'Chrome has not validated full installation yet. Do not choose a simple shortcut: use a trusted HTTPS address, interact with the page, and keep it open briefly.', installHttpsRequired: 'Full installation is impossible from this HTTP address or untrusted certificate. Android can only create a shortcut. Open Direct-Xfer over HTTPS with a valid certificate.', installSecurePending: 'Installation is being prepared. In Chrome, interact with the page and keep it open for about 30 seconds. If the logo does not appear, verify that Android trusts the HTTPS certificate.', installOpenHttps: 'Open HTTPS version',
-      offline: 'Offline — uploads will resume when the connection returns.', updateReady: 'A new version is available.', updateNow: 'Update', pullToRefresh: 'Pull down to refresh', releaseToRefresh: 'Release to refresh', refreshing: 'Refreshing…',
+      offline: 'Offline — uploads will resume when the connection returns.', updateReady: 'A new version is available.', updateNow: 'Update', pullToRefresh: 'Pull down to refresh', releaseToRefresh: 'Release to refresh', refreshing: 'Refreshing…', backExit: 'Press back again to exit',
       destination: 'Destination', destinationHint: 'A Direct-Xfer reception link from this instance.', linkOrToken: 'Link or token', displayName: 'Display name',
-      rememberDestination: 'Remember this destination on this device', rememberKey: 'Also remember the secret key on this device', scanQr: '📷 Scan QR', saveDestination: 'Add', updateDestination: 'Save', removeDestination: 'Remove', createLinkTitle: 'Create a reception link', createLinkName: 'New link name', createLinkPlaceholder: 'e.g. Holiday photos', createLinkHint: 'A new reception link will be created and added to your destinations. Share it to receive files.', createDo: 'Create link', creating: 'Creating…', createOk: 'Link created ✓', createFail: 'Could not create the link',
+      rememberDestination: 'Remember this destination on this device', rememberKey: 'Also remember the secret key on this device', scanQr: '📷 Scan QR', saveDestination: 'Add', updateDestination: 'Save', removeDestination: 'Remove', createLinkTitle: 'Create a reception link', newLink: 'New', createLinkName: 'New link name', createLinkPlaceholder: 'e.g. Holiday photos', createLinkHint: 'A new reception link will be created and added to your destinations. Share it to receive files.', createDo: 'Create link', creating: 'Creating…', createOk: 'Link created ✓', createFail: 'Could not create the link',
       imgLinksTitle: 'Image links', imgLinksHint: 'Create direct links to your images: each link offers Full, Mini, and Micro versions, with no relay page.', imgLinksAdd: 'Add images', imgCreateTitle: 'Create links', imgCreateHint: 'Choose your images and the format to feature first.', imgLibraryTitle: 'Your links', imgLibraryHint: 'Search, sort and manage images you already shared.', imgGlobalActions: 'Global actions', imgCopyActions: 'Copy a format', imgManageActions: 'Manage link', imgStripExif: 'Remove EXIF/GPS data before sharing', imgStripExifHint: 'The cleanup is performed locally on this device before upload.', imgStrippingMetadata: 'Removing EXIF/GPS…', imgMetadataRemoved: 'EXIF/GPS removed', imgUploading: 'Uploading…', imgThumbing: 'Mini and Micro…', imgReady: 'Ready', imgCopyFull: '🔗 Full size', imgCopyThumb: '🔗 Mini', imgCopyMicro: '🔗 Micro', imgCopied: 'Link copied ✓', imgLinkFail: 'Could not create the link', revokeShare: 'Revoke', revokeConfirm: 'Revoke this share? The link will stop working.', revokeSuccess: 'Revoked ✓', revokeFail: 'Could not revoke', imgVariantFull: 'Full', imgVariantMini: 'Mini', imgVariantMicro: 'Micro', imgViews: '{n} views', imgVisitors: '{n} visitors', imgStatsLoading: 'Statistics…', imgStatsUnavailable: 'Statistics unavailable',
       imgSearch: 'Search images…', imgSortLabel: 'Sort images', imgSortNewest: 'Newest', imgSortOldest: 'Oldest', imgSortName: 'Name', imgSortSize: 'Size', imgSortViews: 'Views', imgSortVisitors: 'Visitors', imgSortExpiry: 'Expiry', imgFilterLabel: 'Filter images', imgFilterAll: 'All', imgFilterActive: 'Active', imgFilterPopular: 'Popular', imgFilterLarge: 'Large', imgFilterExpiring: 'Expiring soon', imgFilterFavorite: 'Favorites', imgFilterProtected: 'Protected', imgDefaultVariantLabel: 'Favorite image size', imgAdvancedOptions: 'Image options', imgCompact: 'Compact display', imgHideExpired: 'Hide expired images', imgAutoCopy: 'Copy automatically after creation', imgDefaultExpiry: 'Favorite expiry', imgMaxViews: 'View limit', imgPassword: 'Password', imgTags: 'Tags', imgPrivateNote: 'Private note', imgRenameTemplate: 'Rename template', imgBulkEdit: 'Edit', imgCreateAlbum: 'Create album', imgDashboard: 'Statistics chart', imgAlbums: 'Shareable albums', imgActionHistory: 'Image action history', imgSelected: '{n} selected', imgEditPrompt: 'Edit selected images', imgAlbumName: 'Album name', imgAlbumCreated: 'Album created ✓', imgSettingsSaved: 'Settings saved ✓', imgDuplicateFound: 'This image has already been shared. Continue anyway?', imgExpirySoon: 'The link “{name}” expires soon.', imgUndoRevoke: 'Image removed — Undo?', imgRevokePending: 'Revoking in a few seconds…', imgQrDownloaded: 'QR downloaded ✓', imgFavorite: 'Favorite', imgUnfavorite: 'Remove from favorites', imgExpired: 'Expired', imgInactive: 'Inactive', imgViewLimitReached: 'View limit reached', imgProtected: 'Protected', imgViewLimit: '{n} views max', imgNoAlbums: 'No albums.', imgVariantAuto: 'Automatic', imgReplace: 'Replace without changing link', imgVersions: 'Versions', imgReplaceDone: 'Image replaced, URL preserved ✓', imgResizeMini: 'Resize the Mini', imgResizeMiniPrompt: 'New Mini size: a number of pixels (longest side, e.g. 250) OR a percentage of the full size (e.g. 50%). The Micro will be half:', imgResizeMiniInvalid: 'Invalid value: pixels (16 to 4096) or percentage (1 to 100%).', imgResizeMiniDone: 'Mini resized to {w}×{h} ✓', imgRestoreVersion: 'Restore a version', imgVersionRestored: 'Version restored ✓', imgAdaptiveReady: 'Adaptive optimization', albumInvites: 'Invitations', albumInviteCreate: 'Create invitation', albumInviteRole: 'Role (reader, contributor, manager)', albumInviteCopied: 'Invitation link copied ✓', albumInviteRevoke: 'Revoke invitation', albumCollabSummary: '{n} invitation(s)', imgAlbumCopied: 'Album link copied ✓', imgChartSummary: '{images} images · {views} views · {visitors} visitors · {bytes}', imgHotlinkHosts: 'Allowed embedding domains', imgHotlinkPlaceholder: 'forum.example.com, *.site.net', imgHotlinkHint: 'Empty = protection disabled. Direct visits remain allowed.', imgHotlinkProtected: 'Hotlink protection', imgNotifyFirstView: 'Notify on first view', imgFirstViewArmed: 'First-view alert', imgFirstViewSent: 'First view notified', imgFirstViewToast: '👁 First view of “{name}”', imgSmartBlur: 'Local smart blur', imgSmartBlurFaces: 'Faces', imgSmartBlurFacesPlates: 'Faces and plates', imgSmartBlurHint: 'Local analysis with review before upload; no image is sent to an external service.', imgSmartBlurAnalyzing: 'Local analysis…', imgSmartBlurReady: '{n} area(s) hidden. Review and apply.', imgSmartBlurUnsupported: 'Face detection is not supported by this browser; add areas manually.', imgSmartBlurSkip: 'Continue without blur', imgRetentionRules: 'Automatic retention rules', imgRetentionWarning: 'These rules permanently revoke images and delete their files. They are disabled by default.', imgRetentionAge: 'Maximum age (days)', imgRetentionInactive: 'Maximum inactivity (days)', imgRetentionViews: 'Revoke after this many views', imgRetentionStorage: 'Maximum storage (MB)', imgRetentionSave: 'Save and apply', imgRetentionSaved: 'Retention rules saved ✓', imgRetentionResult: '{n} image(s) revoked · {bytes} freed', imgRetentionSummary: '{n} image(s) · {bytes}', enabled: 'Enabled', disabled: 'Disabled', optional: 'Optional', refresh: 'Refresh', themeSchedule: 'By time',
       cancel: 'Cancel', protectedLink: '🔒 Protected link', unlock: 'Unlock', encryptedLink: '🔐 End-to-end encryption', encryptionKey: 'Link key', passphrase: 'Passphrase',
-      addFiles: 'Add files', durableQueue: 'Files are copied to durable storage before upload so they can resume after the PWA is closed.', takePhoto: 'Take a photo', scanDocument: 'Scan a document', chooseFiles: 'Choose files',
+      addFiles: 'Add files', durableQueue: 'Files are copied to durable storage before upload so they can resume after the PWA is closed.', takePhoto: 'Take a photo', chooseFiles: 'Choose files',
       chooseFolder: 'Choose a folder', optimizePhotos: 'Optimize photos before upload', parallelUploads: 'Parallel uploads', senderName: 'Your name', pause: 'Pause', resume: 'Resume',
       retryAll: '↻ Retry', removePending: 'Remove all', send: 'Send', clearCompleted: 'Clear completed uploads', history: 'Local history', clearHistory: 'Clear history',
       settings: 'Settings and security', autoResume: 'Resume automatically after closing or reconnecting', storage: 'Local storage', protectStorage: 'Protect', deviceAccess: 'Device access', deviceChecking: 'Checking device…', deviceStatusUnavailable: 'Device status is unavailable. Tap Pair to try again.',
@@ -239,7 +238,6 @@
       exportSettings: 'Export settings', importSettings: 'Import', settingsImported: 'Settings imported ✓', settingsImportFail: 'Invalid settings file',
       accentLabel: 'Accent colour', accentReset: 'Default',
       screenCapture: 'Capture screen', captureFailed: 'Screen capture failed', screenshotName: 'screen-capture',
-      burst: 'Photo burst', burstOn: 'Burst mode: take photos; “Cancel” to stop.', burstStopped: 'Burst finished',
       undo: 'Undo', fileRemoved: 'File removed', fileRestored: 'File restored ✓', lightboxAlt: 'Image preview',
       sortType: 'Type', bulkInvert: '⇄ Invert', expandAll: 'Expand all', collapseAll: 'Collapse all',
       queueSearch: 'Filter the queue…', estOptim: '≈ {size} after optimizing', rotate: 'Rotate',
@@ -257,13 +255,13 @@
     },
     es: {
       title: 'Enviar', navMain: 'Navegación principal', navSend: 'Enviar', navSendHint: 'Preparar y enviar archivos a un destino.', navImages: 'Imágenes', navImagesHint: 'Crear, gestionar y supervisar enlaces de imagen.', navActivity: 'Actividad', navActivityHint: 'Consultar el historial local de transferencias.', navSettings: 'Ajustes', navSettingsHint: 'Configurar la PWA, la seguridad y el almacenamiento.', navShares: 'Compartir', navSharesHint: 'Crear enlaces para compartir desde archivos de tu servidor.', sharesTitle: 'Compartir archivos del servidor', sharesHint: 'Explora los archivos de tu servidor y crea enlaces directos para compartir.', sharesAdminRequired: 'Inicia sesión con una cuenta de administrador para explorar los archivos del servidor.', sharesSignIn: 'Iniciar sesión como administrador', sharesBrowse: 'Archivos del servidor', sharesUp: 'Carpeta superior', sharesCreate: 'Crear el recurso compartido', sharesNoneSelected: 'Ningún archivo seleccionado.', sharesSelected: '{n} elemento(s) seleccionado(s)', sharesExpiry: 'Caducidad', sharesExpiryNever: 'Nunca', sharesExpiry1h: '1 hora', sharesExpiry1d: '1 día', sharesExpiry7d: '7 días', sharesExpiry30d: '30 días', sharesMaxDownloads: 'Descargas máx. (0 = ilimitado)', sharesPassword: 'Contraseña (opcional)', sharesPasswordPlaceholder: '—', sharesCreateBtn: 'Crear enlace para compartir', sharesCreating: 'Creando…', sharesCreated: 'Recurso creado ✓', sharesCreateFail: 'No se pudo crear el recurso', sharesLibrary: 'Tus recursos compartidos', sharesEmpty: 'Aún no hay recursos compartidos.', sharesBrowseFail: 'No se pudo leer esta carpeta.', sharesLoginNeeded: 'Se requiere inicio de sesión de administrador.', sharesOpen: 'Abrir', sharesCopy: 'Copiar', sharesRevoke: 'Revocar', sharesRevoked: 'Recurso revocado ✓', sharesRevokeFail: 'No se pudo revocar', sharesRevokeConfirm: '¿Revocar este recurso compartido? El enlace dejará de funcionar.', sharesItems: '{n} elemento(s)', sharesReceptions: 'Enlaces de recepción', sharesReceptionsEmpty: 'No hay enlaces de recepción.', sharesReceived: '{bytes} recibidos', openAdmin: 'Abrir la administración', language: 'Idioma', theme: 'Tema', copyLink: 'Copiar enlace', pasteLink: 'Pegar enlace', editDestination: 'Editar destino', addDestination: 'Añadir destino', passwordPlaceholder: 'Contraseña del enlace', destinationPlaceholder: 'Enlace o token de recepción', destinationNamePlaceholder: 'Nombre opcional del destino', senderPlaceholder: 'Nombre solicitado por este enlace', globalProgress: 'Progreso global', keyPlaceholder: 'Clave de cifrado del enlace', titlePlaceholder: 'Contenido compartido', pairedBadge: 'Dispositivo vinculado', themeDark: 'Oscuro', themeLight: 'Claro', themeAuto: 'Auto', install: 'Instalar', installIosHint: 'Para instalar Direct-Xfer, toca el botón Compartir del navegador y luego «Añadir a pantalla de inicio».', installBrowserHint: 'Chrome todavía no ha validado la instalación completa. No elijas un simple acceso directo: usa una dirección HTTPS de confianza, interactúa con la página y mantenla abierta unos instantes.', installHttpsRequired: 'La instalación completa no es posible desde esta dirección HTTP o certificado no confiable. Android solo puede crear un acceso directo. Abre Direct-Xfer mediante HTTPS con un certificado válido.', installSecurePending: 'La instalación se está preparando. En Chrome, interactúa con la página y mantenla abierta unos 30 segundos. Si el logotipo no aparece, verifica que Android confíe en el certificado HTTPS.', installOpenHttps: 'Abrir en HTTPS',
-      offline: 'Sin conexión — los envíos continuarán al reconectarse.', updateReady: 'Hay una nueva versión disponible.', updateNow: 'Actualizar', pullToRefresh: 'Desliza hacia abajo para actualizar', releaseToRefresh: 'Suelta para actualizar', refreshing: 'Actualizando…', destination: 'Destino',
+      offline: 'Sin conexión — los envíos continuarán al reconectarse.', updateReady: 'Hay una nueva versión disponible.', updateNow: 'Actualizar', pullToRefresh: 'Desliza hacia abajo para actualizar', releaseToRefresh: 'Suelta para actualizar', refreshing: 'Actualizando…', backExit: 'Pulsa de nuevo para salir', destination: 'Destino',
       destinationHint: 'Un enlace de recepción Direct-Xfer de esta instancia.', linkOrToken: 'Enlace o token', displayName: 'Nombre visible', rememberDestination: 'Recordar este destino en el dispositivo', rememberKey: 'Recordar también la clave secreta en este dispositivo',
-      scanQr: '📷 Escanear QR', saveDestination: 'Añadir', updateDestination: 'Guardar', removeDestination: 'Quitar', cancel: 'Cancelar', createLinkTitle: 'Crear un enlace de recepción', createLinkName: 'Nombre del nuevo enlace', createLinkPlaceholder: 'ej. Fotos vacaciones', createLinkHint: 'Se creará un nuevo enlace de recepción y se añadirá a tus destinos. Compártelo para recibir archivos.', createDo: 'Crear enlace', creating: 'Creando…', createOk: 'Enlace creado ✓', createFail: 'No se pudo crear el enlace',
+      scanQr: '📷 Escanear QR', saveDestination: 'Añadir', updateDestination: 'Guardar', removeDestination: 'Quitar', cancel: 'Cancelar', createLinkTitle: 'Crear un enlace de recepción', newLink: 'Nuevo', createLinkName: 'Nombre del nuevo enlace', createLinkPlaceholder: 'ej. Fotos vacaciones', createLinkHint: 'Se creará un nuevo enlace de recepción y se añadirá a tus destinos. Compártelo para recibir archivos.', createDo: 'Crear enlace', creating: 'Creando…', createOk: 'Enlace creado ✓', createFail: 'No se pudo crear el enlace',
       imgLinksTitle: 'Enlaces de imagen', imgLinksHint: 'Crea enlaces directos a tus imágenes: cada enlace ofrece las versiones Completa, Mini y Micro, sin página intermedia.', imgLinksAdd: 'Añadir imágenes', imgCreateTitle: 'Crear enlaces', imgCreateHint: 'Elige tus imágenes y el formato que se mostrará primero.', imgLibraryTitle: 'Tus enlaces', imgLibraryHint: 'Busca, ordena y administra las imágenes ya compartidas.', imgGlobalActions: 'Acciones globales', imgCopyActions: 'Copiar un formato', imgManageActions: 'Administrar enlace', imgStripExif: 'Quitar datos EXIF/GPS antes de compartir', imgStripExifHint: 'La limpieza se realiza localmente en este dispositivo antes de subir la imagen.', imgStrippingMetadata: 'Quitando EXIF/GPS…', imgMetadataRemoved: 'EXIF/GPS eliminados', imgUploading: 'Subiendo…', imgThumbing: 'Mini y Micro…', imgReady: 'Listo', imgCopyFull: '🔗 Tamaño completo', imgCopyThumb: '🔗 Mini', imgCopyMicro: '🔗 Micro', imgCopied: 'Enlace copiado ✓', imgLinkFail: 'No se pudo crear el enlace', revokeShare: 'Revocar', revokeConfirm: '¿Revocar este recurso compartido? El enlace dejará de funcionar.', revokeSuccess: 'Revocado ✓', revokeFail: 'No se pudo revocar', imgVariantFull: 'Completa', imgVariantMini: 'Mini', imgVariantMicro: 'Micro', imgViews: '{n} vistas', imgVisitors: '{n} visitantes', imgStatsLoading: 'Estadísticas…', imgStatsUnavailable: 'Estadísticas no disponibles',
       imgSearch: 'Buscar imágenes…', imgSortLabel: 'Ordenar imágenes', imgSortNewest: 'Más recientes', imgSortOldest: 'Más antiguas', imgSortName: 'Nombre', imgSortSize: 'Tamaño', imgSortViews: 'Vistas', imgSortVisitors: 'Visitantes', imgSortExpiry: 'Caducidad', imgFilterLabel: 'Filtrar imágenes', imgFilterAll: 'Todas', imgFilterActive: 'Activas', imgFilterPopular: 'Populares', imgFilterLarge: 'Grandes', imgFilterExpiring: 'Próximas a caducar', imgFilterFavorite: 'Favoritas', imgFilterProtected: 'Protegidas', imgDefaultVariantLabel: 'Tamaño de imagen favorito', imgAdvancedOptions: 'Opciones de imágenes', imgCompact: 'Vista compacta', imgHideExpired: 'Ocultar imágenes caducadas', imgAutoCopy: 'Copiar automáticamente al crear', imgDefaultExpiry: 'Caducidad favorita', imgMaxViews: 'Límite de vistas', imgPassword: 'Contraseña', imgTags: 'Etiquetas', imgPrivateNote: 'Nota privada', imgRenameTemplate: 'Plantilla de nombre', imgBulkEdit: 'Editar', imgCreateAlbum: 'Crear álbum', imgDashboard: 'Gráfico de estadísticas', imgAlbums: 'Álbumes compartibles', imgActionHistory: 'Historial de acciones de imagen', imgSelected: '{n} seleccionada(s)', imgEditPrompt: 'Editar imágenes seleccionadas', imgAlbumName: 'Nombre del álbum', imgAlbumCreated: 'Álbum creado ✓', imgSettingsSaved: 'Ajustes guardados ✓', imgDuplicateFound: 'Esta imagen ya fue compartida. ¿Continuar?', imgExpirySoon: 'El enlace «{name}» caduca pronto.', imgUndoRevoke: 'Imagen retirada — ¿Deshacer?', imgRevokePending: 'Revocación en unos segundos…', imgQrDownloaded: 'QR descargado ✓', imgFavorite: 'Favorita', imgUnfavorite: 'Quitar de favoritas', imgExpired: 'Caducada', imgInactive: 'Inactiva', imgViewLimitReached: 'Límite de vistas alcanzado', imgProtected: 'Protegida', imgViewLimit: '{n} vistas máx.', imgNoAlbums: 'No hay álbumes.', imgVariantAuto: 'Automático', imgReplace: 'Reemplazar sin cambiar el enlace', imgVersions: 'Versiones', imgReplaceDone: 'Imagen reemplazada, URL conservada ✓', imgResizeMini: 'Redimensionar la Mini', imgResizeMiniPrompt: 'Nuevo tamaño de la Mini: un número de píxeles (lado más largo, ej. 250) O un porcentaje del tamaño total (ej. 50%). La Micro será la mitad:', imgResizeMiniInvalid: 'Valor no válido: píxeles (16 a 4096) o porcentaje (1 a 100%).', imgResizeMiniDone: 'Mini redimensionada a {w}×{h} ✓', imgRestoreVersion: 'Restaurar una versión', imgVersionRestored: 'Versión restaurada ✓', imgAdaptiveReady: 'Optimización adaptativa', albumInvites: 'Invitaciones', albumInviteCreate: 'Crear invitación', albumInviteRole: 'Rol (reader, contributor, manager)', albumInviteCopied: 'Enlace de invitación copiado ✓', albumInviteRevoke: 'Revocar invitación', albumCollabSummary: '{n} invitación(es)', imgAlbumCopied: 'Enlace del álbum copiado ✓', imgChartSummary: '{images} imágenes · {views} vistas · {visitors} visitantes · {bytes}', imgHotlinkHosts: 'Dominios autorizados para integrar', imgHotlinkPlaceholder: 'foro.ejemplo.com, *.sitio.net', imgHotlinkHint: 'Vacío = protección desactivada. Las visitas directas siguen permitidas.', imgHotlinkProtected: 'Protección hotlink', imgNotifyFirstView: 'Notificar en la primera visita', imgFirstViewArmed: 'Alerta de primera visita', imgFirstViewSent: 'Primera visita notificada', imgFirstViewToast: '👁 Primera visita de «{name}»', imgSmartBlur: 'Desenfoque inteligente local', imgSmartBlurFaces: 'Rostros', imgSmartBlurFacesPlates: 'Rostros y matrículas', imgSmartBlurHint: 'Análisis local con revisión antes del envío; ninguna imagen se envía a un servicio externo.', imgSmartBlurAnalyzing: 'Análisis local…', imgSmartBlurReady: '{n} zona(s) ocultada(s). Revísalas y aplica.', imgSmartBlurUnsupported: 'Este navegador no admite la detección de rostros; añade las zonas manualmente.', imgSmartBlurSkip: 'Continuar sin desenfoque', imgRetentionRules: 'Reglas automáticas de retención', imgRetentionWarning: 'Estas reglas revocan definitivamente las imágenes y borran sus archivos. Están desactivadas por defecto.', imgRetentionAge: 'Edad máxima (días)', imgRetentionInactive: 'Inactividad máxima (días)', imgRetentionViews: 'Revocar tras este número de vistas', imgRetentionStorage: 'Almacenamiento máximo (MB)', imgRetentionSave: 'Guardar y aplicar', imgRetentionSaved: 'Reglas de retención guardadas ✓', imgRetentionResult: '{n} imagen(es) revocada(s) · {bytes} liberados', imgRetentionSummary: '{n} imagen(es) · {bytes}', enabled: 'Activado', disabled: 'Desactivado', optional: 'Opcional', refresh: 'Actualizar', themeSchedule: 'Según la hora', protectedLink: '🔒 Enlace protegido', unlock: 'Desbloquear',
       encryptedLink: '🔐 Cifrado de extremo a extremo', encryptionKey: 'Clave del enlace', passphrase: 'Frase secreta', addFiles: 'Añadir archivos',
-      durableQueue: 'Los archivos se copian al almacenamiento duradero antes del envío para poder reanudarlos tras cerrar la PWA.', takePhoto: 'Tomar una foto', scanDocument: 'Escanear documento', chooseFiles: 'Elegir archivos',
+      durableQueue: 'Los archivos se copian al almacenamiento duradero antes del envío para poder reanudarlos tras cerrar la PWA.', takePhoto: 'Tomar una foto', chooseFiles: 'Elegir archivos',
       chooseFolder: 'Elegir carpeta', optimizePhotos: 'Optimizar fotos antes de enviar', parallelUploads: 'Envíos paralelos', senderName: 'Tu nombre', pause: 'Pausa', resume: 'Continuar',
       retryAll: '↻ Reintentar', removePending: 'Quitar todo', send: 'Enviar', clearCompleted: 'Borrar envíos terminados', history: 'Historial local', clearHistory: 'Borrar historial',
       settings: 'Ajustes y seguridad', autoResume: 'Continuar automáticamente tras cerrar o reconectar', storage: 'Almacenamiento local', protectStorage: 'Proteger', deviceAccess: 'Acceso del dispositivo', deviceChecking: 'Comprobando el dispositivo…', deviceStatusUnavailable: 'El estado del dispositivo no está disponible. Toca Vincular para volver a intentarlo.',
@@ -339,7 +337,6 @@
       exportSettings: 'Exportar ajustes', importSettings: 'Importar', settingsImported: 'Ajustes importados ✓', settingsImportFail: 'Archivo de ajustes no válido',
       accentLabel: 'Color de acento', accentReset: 'Predeterminado',
       screenCapture: 'Capturar pantalla', captureFailed: 'No se pudo capturar la pantalla', screenshotName: 'captura-pantalla',
-      burst: 'Ráfaga de fotos', burstOn: 'Modo ráfaga: toma fotos; «Cancelar» para detener.', burstStopped: 'Ráfaga terminada',
       undo: 'Deshacer', fileRemoved: 'Archivo retirado', fileRestored: 'Archivo restaurado ✓', lightboxAlt: 'Vista previa de la imagen',
       sortType: 'Tipo', bulkInvert: '⇄ Invertir', expandAll: 'Desplegar todo', collapseAll: 'Plegar todo',
       queueSearch: 'Filtrar la cola…', estOptim: '≈ {size} tras optimizar', rotate: 'Girar',
@@ -382,7 +379,7 @@
       });
     });
     var manifest = document.getElementById('app-manifest');
-    if (manifest) manifest.href = (lang === 'fr' ? '/direct-xfer-pwa.webmanifest' : '/direct-xfer-pwa-' + lang + '.webmanifest') + '?v=104';
+    if (manifest) manifest.href = (lang === 'fr' ? '/direct-xfer-pwa.webmanifest' : '/direct-xfer-pwa-' + lang + '.webmanifest') + '?v=111';
     $('lang-select').value = lang;
     $('dest-save-btn').textContent = editingToken ? t('updateDestination') : t('saveDestination');
     renderDests(); renderQueue(); renderHistory(); renderDeviceStatus();
@@ -408,6 +405,7 @@
     [
       ['nav-send-badge', sendCount],
       ['nav-images-badge', imageCount],
+      ['nav-shares-badge', activeShareCount],
       ['nav-activity-badge', historyCount]
     ].forEach(function (entry) {
       var badge = $(entry[0]);
@@ -422,6 +420,9 @@
     options = options || {};
     if (!PWA_PANEL_KEYS[panel]) panel = 'send';
     activePwaPanel = panel;
+    // Remember the open tab so a pull-to-refresh (location.reload) restores it instead of
+    // always snapping back to Send. Session-scoped: a fresh app launch still starts on Send.
+    try { sessionStorage.setItem('dx-pwa-active-panel', panel); } catch (_) {}
     document.body.setAttribute('data-pwa-active-panel', panel);
     document.querySelectorAll('[data-pwa-panel]').forEach(function (node) {
       node.classList.toggle('pwa-panel-hidden', node.getAttribute('data-pwa-panel') !== panel);
@@ -459,7 +460,10 @@
         new MutationObserver(updatePwaNavBadges).observe(target, { childList: true, subtree: true });
       }
     });
-    activatePwaPanel('send', { keepScroll: true, instant: true });
+    // Restore the tab that was open before a refresh; default to Send on a fresh session.
+    var savedPanel = '';
+    try { savedPanel = sessionStorage.getItem('dx-pwa-active-panel') || ''; } catch (_) {}
+    activatePwaPanel(PWA_PANEL_KEYS[savedPanel] ? savedPanel : 'send', { keepScroll: true, instant: true });
   }
 
   function prefBool(key, fallback) {
@@ -948,6 +952,12 @@
   // Destinations -------------------------------------------------------------
   var persistentDests = [];
   var sessionDests = [];
+  // Reception links the server reports for this device/account — INCLUDING ones created
+  // outside the PWA (e.g. the admin web UI). They are surfaced as selectable destinations
+  // so every reception link is reachable from the first page, not only PWA-created ones.
+  // Kept separate (never persisted) since the server is their source of truth; local
+  // records win on token collisions so a user's custom name/key/pin is preserved.
+  var serverReceptions = [];
   var editingToken = '';
   var currentDest = null;
   var currentConfig = null;
@@ -1002,7 +1012,9 @@
   }
   function allDests() {
     var map = Object.create(null), out = [];
-    persistentDests.concat(sessionDests).forEach(function (d) {
+    // Local records (persistent, then session) are listed first so they win on token
+    // collisions; server-reported reception links follow, adding any not saved locally.
+    persistentDests.concat(sessionDests).concat(serverReceptions).forEach(function (d) {
       if (!d || !d.token || map[d.token]) return;
       map[d.token] = true; out.push(d);
     });
@@ -1076,9 +1088,6 @@
       sel.value = chosen; setActiveToken(chosen);
     }
     $('dest-copy-btn').classList.toggle('hidden', !sel.value);
-    if ($('dest-token-btn')) $('dest-token-btn').classList.toggle('hidden', !sel.value);
-    $('dest-edit-btn').classList.toggle('hidden', !sel.value);
-    if ($('dest-share-btn')) $('dest-share-btn').classList.toggle('hidden', !(sel.value && navigator.share));
     if ($('dest-qr-btn')) $('dest-qr-btn').classList.toggle('hidden', !sel.value);
     var chosenDest = sel.value ? findDest(sel.value) : null;
     $('dest-revoke-btn').classList.toggle('hidden', !(chosenDest && chosenDest.owned));
@@ -1108,6 +1117,9 @@
   function removeDestinationRecord(token) {
     sessionDests = sessionDests.filter(function (d) { return d.token !== token; }); persistSessionDests();
     persistentDests = persistentDests.filter(function (d) { return d.token !== token; });
+    // Drop the server-reported copy too so a just-revoked link vanishes immediately
+    // instead of lingering until the next /app/receptions refresh.
+    serverReceptions = serverReceptions.filter(function (d) { return d.token !== token; });
     saveDestsBackup();
     return idbDelete(DEST_STORE, token).catch(function () {});
   }
@@ -1926,15 +1938,17 @@
   var shareSelected = Object.create(null); // hostPath -> { name, size }
   var sharesInitialised = false;
   var sharesWired = false;
+  var activeShareCount = 0; // active file/folder share links, shown as the Partages nav badge
 
   function onSharesPanelShown() {
     initShares();
-    if (!sharesInitialised) {
-      sharesInitialised = true;
-      sharesBrowse('/');
-      loadHostShares();
-      loadReceptions();
-    }
+    // Re-run on every open (not only the first) so the admin-required note re-evaluates
+    // whenever the session state changed since last time — it must appear immediately,
+    // not only after the user pokes a button.
+    sharesBrowse(sharesInitialised ? shareCwd : '/');
+    loadHostShares();
+    loadReceptions();
+    sharesInitialised = true;
   }
 
   function initShares() {
@@ -1957,7 +1971,10 @@
     listEl.textContent = '…';
     try {
       var r = await fetch('/app/host/browse?path=' + encodeURIComponent(path || '/'), { credentials: 'same-origin', cache: 'no-store' });
-      if (r.status === 403) { showSharesAuthNote(true); listEl.textContent = ''; return; }
+      // Any "not an admin session" response drives the sign-in note: 403 when the device
+      // is paired but has no live admin session (the reported case), 401 once the session
+      // was explicitly ended/locked. Either way the browse cannot proceed, so warn.
+      if (r.status === 403 || r.status === 401) { showSharesAuthNote(true); listEl.textContent = ''; return; }
       if (!r.ok) throw new Error('browse');
       showSharesAuthNote(false);
       var data = await r.json();
@@ -1973,7 +1990,12 @@
     entries.forEach(function (e) {
       var rowEl = document.createElement('div'); rowEl.className = 'share-row' + (e.isDir ? ' is-dir' : '');
       if (e.isDir) {
-        var btn = document.createElement('button'); btn.type = 'button'; btn.className = 'share-entry';
+        // A folder can be BOTH selected (its own checkbox → a folder share) and opened
+        // (the name/chevron navigates in), mirroring the standard admin multi-select.
+        var dcb = document.createElement('input'); dcb.type = 'checkbox'; dcb.className = 'share-check'; dcb.checked = !!shareSelected[e.path];
+        dcb.addEventListener('change', function () { toggleShareItem(e, dcb.checked); });
+        rowEl.appendChild(dcb);
+        var btn = document.createElement('button'); btn.type = 'button'; btn.className = 'share-entry share-nav';
         var ico = document.createElement('span'); ico.className = 'share-ico'; ico.textContent = '📁'; btn.appendChild(ico);
         var nm = document.createElement('span'); nm.className = 'share-name'; nm.textContent = e.name; btn.appendChild(nm);
         var chev = document.createElement('span'); chev.className = 'share-chevron'; chev.textContent = '›'; btn.appendChild(chev);
@@ -2039,14 +2061,18 @@
   }
 
   async function loadHostShares() {
-    var listEl = $('share-list'); if (!listEl) return;
     try {
       var r = await fetch('/app/host/shares', { credentials: 'same-origin', cache: 'no-store' });
-      if (r.status === 403) { showSharesAuthNote(true); return; }
+      // The admin-required note is driven solely by the FS-browse endpoint (session-only);
+      // this list works for admin devices too, so it must not toggle that note.
+      if (r.status === 403) { activeShareCount = 0; updatePwaNavBadges(); return; }
       if (!r.ok) throw new Error('list');
-      showSharesAuthNote(false);
       var data = await r.json();
-      renderHostShares(data.shares || []);
+      var shares = data.shares || [];
+      // Badge count = active share links only (an expired / disabled link is not "active").
+      activeShareCount = shares.filter(function (s) { return s && s.active !== false; }).length;
+      updatePwaNavBadges();
+      if ($('share-list')) renderHostShares(shares);
     } catch (_) {}
   }
 
@@ -2088,14 +2114,28 @@
   }
 
   // Reception links (type inbox) — including ones created on the standard web version.
+  // Map a server reception record onto the destination shape. No key/passphrase is known
+  // (a plain reception link carries none), and it is never marked "remembered" so it is
+  // not written to local storage — it re-derives from the server on every load.
+  function receptionAsDest(s) {
+    return {
+      token: s.token, name: s.name || '', key: '', rememberKey: false,
+      sourceOrigin: location.origin, remembered: false, owned: s.owned !== false,
+      createdAt: s.createdAt || 0, fromServer: true
+    };
+  }
   async function loadReceptions() {
-    var listEl = $('reception-list'); if (!listEl) return;
     try {
       var r = await fetch('/app/receptions', { credentials: 'same-origin', cache: 'no-store' });
-      if (r.status === 403) { showSharesAuthNote(true); return; }
+      if (r.status === 403) return; // note is driven by the FS-browse endpoint only
       if (!r.ok) throw new Error('receptions');
       var data = await r.json();
-      renderReceptions(data.receptions || []);
+      var list = data.receptions || [];
+      // Feed the first-page Destination picker so every reception link (any origin) is
+      // selectable there, then keep the Partages panel's detailed list in sync.
+      serverReceptions = list.map(receptionAsDest);
+      renderDests();
+      if ($('reception-list')) renderReceptions(list);
     } catch (_) {}
   }
 
@@ -2590,6 +2630,24 @@
     if (changed) try { localStorage.setItem('dx-pwa-image-expiry-warned', JSON.stringify(Array.from(warnedImageExpiries).slice(-500))); } catch (_) {}
   }
 
+  // Inline SVG icons for the icon-only buttons (Feather-style, 24×24, stroke=currentColor
+   // so they inherit the button colour and adapt to light/dark; self-contained = CSP-safe).
+  // Matches the bottom-nav icon style. Sized via CSS (.btn svg / .iv-open svg).
+  function dxIcon(inner) {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + inner + '</svg>';
+  }
+  var ICONS = {
+    eye: dxIcon('<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/>'),
+    star: dxIcon('<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>'),
+    edit: dxIcon('<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>'),
+    grid: dxIcon('<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>'),
+    refresh: dxIcon('<polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>'),
+    clock: dxIcon('<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>'),
+    maximize: dxIcon('<polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>'),
+    more: dxIcon('<circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none"/>'),
+    x: dxIcon('<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>')
+  };
+
   function imgLinkRow(name, previewUrl, previewIsObjectUrl) {
     var row = document.createElement('div'); row.className = 'imglink-row';
     row.innerHTML =
@@ -2599,12 +2657,12 @@
       '<div class="imglink-main"><div class="imglink-name"></div>' +
       '<div class="imglink-st muted sm"></div>' +
       '<div class="imglink-meta"></div><div class="imglink-note hidden"></div></div>' +
-      '<button class="il-revoke hidden" type="button">✕</button></div>' +
+      '<button class="il-revoke hidden" type="button">' + ICONS.x + '</button></div>' +
       '<div class="imglink-summary-row"><div class="imglink-total muted sm hidden" aria-label="Statistiques totales"><span class="img-total-metric it-views"><span class="img-total-icon" aria-hidden="true">👁</span><span class="img-total-text">—</span></span><span class="img-total-metric it-visitors"><span class="img-total-icon" aria-hidden="true">👤</span><span class="img-total-text">—</span></span></div></div>' +
       '<div class="imglink-variants hidden" role="list">' +
-      '<div class="imgvariant" data-kind="full" role="listitem"><span class="iv-name"></span><span class="iv-dims">—</span><span class="iv-size">—</span><span class="iv-metrics"><span class="iv-metric iv-views"><span class="iv-metric-icon" aria-hidden="true">👁</span><span class="iv-metric-text">—</span></span><span class="iv-metric iv-visitors"><span class="iv-metric-icon" aria-hidden="true">👤</span><span class="iv-metric-text">—</span></span></span><button class="iv-open" type="button">👁</button></div>' +
-      '<div class="imgvariant" data-kind="thumb" role="listitem"><span class="iv-name"></span><span class="iv-dims">—</span><span class="iv-size">—</span><span class="iv-metrics"><span class="iv-metric iv-views"><span class="iv-metric-icon" aria-hidden="true">👁</span><span class="iv-metric-text">—</span></span><span class="iv-metric iv-visitors"><span class="iv-metric-icon" aria-hidden="true">👤</span><span class="iv-metric-text">—</span></span></span><button class="iv-open" type="button">👁</button></div>' +
-      '<div class="imgvariant" data-kind="micro" role="listitem"><span class="iv-name"></span><span class="iv-dims">—</span><span class="iv-size">—</span><span class="iv-metrics"><span class="iv-metric iv-views"><span class="iv-metric-icon" aria-hidden="true">👁</span><span class="iv-metric-text">—</span></span><span class="iv-metric iv-visitors"><span class="iv-metric-icon" aria-hidden="true">👤</span><span class="iv-metric-text">—</span></span></span><button class="iv-open" type="button">👁</button></div>' +
+      '<div class="imgvariant" data-kind="full" role="listitem"><span class="iv-name"></span><span class="iv-dims">—</span><span class="iv-size">—</span><span class="iv-metrics"><span class="iv-metric iv-views"><span class="iv-metric-icon" aria-hidden="true">👁</span><span class="iv-metric-text">—</span></span><span class="iv-metric iv-visitors"><span class="iv-metric-icon" aria-hidden="true">👤</span><span class="iv-metric-text">—</span></span></span><button class="iv-open" type="button">' + ICONS.eye + '</button></div>' +
+      '<div class="imgvariant" data-kind="thumb" role="listitem"><span class="iv-name"></span><span class="iv-dims">—</span><span class="iv-size">—</span><span class="iv-metrics"><span class="iv-metric iv-views"><span class="iv-metric-icon" aria-hidden="true">👁</span><span class="iv-metric-text">—</span></span><span class="iv-metric iv-visitors"><span class="iv-metric-icon" aria-hidden="true">👤</span><span class="iv-metric-text">—</span></span></span><button class="iv-open" type="button">' + ICONS.eye + '</button></div>' +
+      '<div class="imgvariant" data-kind="micro" role="listitem"><span class="iv-name"></span><span class="iv-dims">—</span><span class="iv-size">—</span><span class="iv-metrics"><span class="iv-metric iv-views"><span class="iv-metric-icon" aria-hidden="true">👁</span><span class="iv-metric-text">—</span></span><span class="iv-metric iv-visitors"><span class="iv-metric-icon" aria-hidden="true">👤</span><span class="iv-metric-text">—</span></span></span><button class="iv-open" type="button">' + ICONS.eye + '</button></div>' +
       '</div>' +
       '<div class="imglink-actions hidden">' +
       '<div class="imglink-action-group imglink-copy-group"><span class="imglink-action-label imglink-copy-label"></span><div class="imglink-action-buttons">' +
@@ -2614,11 +2672,11 @@
       '<button class="btn ghost sm il-micro" type="button"></button></div></div>' +
       '<div class="imglink-action-group imglink-manage-group"><span class="imglink-action-label imglink-manage-label"></span><div class="imglink-action-buttons">' +
       '<button class="btn ghost sm il-open" type="button"></button>' +
-      '<button class="btn ghost sm il-favorite" type="button">📌</button>' +
-      '<button class="btn ghost sm il-edit" type="button">✎</button>' +
-      '<button class="btn ghost sm il-qr" type="button">▦</button>' +
+      '<button class="btn ghost sm il-favorite" type="button">' + ICONS.star + '</button>' +
+      '<button class="btn ghost sm il-edit" type="button">' + ICONS.edit + '</button>' +
+      '<button class="btn ghost sm il-qr" type="button">' + ICONS.grid + '</button>' +
       '<button class="btn ghost sm il-qrdl" type="button">⇩QR</button>' +
-      '<button class="btn ghost sm il-replace" type="button">↻</button><button class="btn ghost sm il-versions" type="button">⏱</button><button class="btn ghost sm il-resize-mini" type="button">⤢</button><button class="btn ghost sm il-more" type="button" aria-label="Plus d’actions">⋯</button></div></div></div>';
+      '<button class="btn ghost sm il-replace" type="button">' + ICONS.refresh + '</button><button class="btn ghost sm il-versions" type="button">' + ICONS.clock + '</button><button class="btn ghost sm il-resize-mini" type="button">' + ICONS.maximize + '</button><button class="btn ghost sm il-more" type="button" aria-label="Plus d’actions">' + ICONS.more + '</button></div></div></div>';
     row.querySelector('.imglink-name').textContent = name;
     if (previewUrl) {
       var im = row.querySelector('.imglink-thumb'); im.src = previewUrl;
@@ -2995,7 +3053,7 @@
     var copyLabel = row.querySelector('.imglink-copy-label'), manageLabel = row.querySelector('.imglink-manage-label');
     if (copyLabel) copyLabel.textContent = t('imgCopyActions');
     if (manageLabel) manageLabel.textContent = t('imgManageActions');
-    bo.textContent = '👁'; bo.title = t('imgOpen') + ' — ' + t('imgVariantAuto'); bo.setAttribute('aria-label', bo.title);
+    bo.innerHTML = ICONS.eye; bo.title = t('imgOpen') + ' — ' + t('imgVariantAuto'); bo.setAttribute('aria-label', bo.title);
     bq.title = t('qrForLink'); bq.setAttribute('aria-label', t('qrForLink'));
     qrdl.title = t('imgQrDownloaded'); qrdl.setAttribute('aria-label', t('imgQrDownloaded'));
     replaceBtn.title = t('imgReplace'); replaceBtn.setAttribute('aria-label', t('imgReplace'));
@@ -3015,10 +3073,10 @@
         var url = imagePreviewUrl(photo, kind);
         if (!url || photo.active === false) return;
         recordImageAction('opened', photo, kind);
-        window.open(url, '_blank', 'noopener');
+        openImageUrlPreview(url, photo.name);
       });
     });
-    bo.addEventListener('click', function () { var photo = imageRecordsByToken.get(data.token) || data; var url = imagePreviewUrl(photo, 'auto'); recordImageAction('opened', photo, 'auto'); window.open(url, '_blank', 'noopener'); });
+    bo.addEventListener('click', function () { var photo = imageRecordsByToken.get(data.token) || data; var url = imagePreviewUrl(photo, 'auto'); if (!url) return; recordImageAction('opened', photo, 'auto'); openImageUrlPreview(url, photo.name); });
     fav.addEventListener('click', async function () {
       var photo = imageRecordsByToken.get(data.token) || data; var enabled = !photo.favorite;
       var r = await imageJsonMutation('/app/image/' + encodeURIComponent(photo.token) + '/settings', { favorite: enabled });
@@ -3684,7 +3742,7 @@
   }
   function setDestinationLocked(locked) {
     destinationLocked = locked;
-    ['dest-select', 'dest-add-btn', 'dest-create-btn', 'dest-edit-btn', 'dest-revoke-btn', 'dest-paste-btn', 'dest-copy-btn', 'sender-name', 'enc-key', 'enc-passphrase'].forEach(function (id) {
+    ['dest-select', 'dest-add-btn', 'dest-create-btn', 'dest-revoke-btn', 'dest-copy-btn', 'sender-name', 'enc-key', 'enc-passphrase'].forEach(function (id) {
       if ($(id)) $(id).disabled = locked;
     });
     renderDests();
@@ -4161,7 +4219,13 @@
       unpairButton.classList.toggle('hidden', !paired);
       unpairButton.disabled = false;
     }
-    $('device-status').textContent = deviceInfo.unavailable ? t('deviceStatusUnavailable') : paired ? t('devicePaired') : deviceInfo.adminSession ? t('deviceAdmin') : t('deviceUnpaired');
+    // Show the CURRENT device's name whenever it is paired — including device-only mode
+    // (no live admin session), where the admin-gated device list below is hidden and the
+    // name would otherwise never appear. The server returns deviceInfo.device regardless.
+    var currentName = deviceInfo.device && deviceInfo.device.name;
+    $('device-status').textContent = deviceInfo.unavailable ? t('deviceStatusUnavailable')
+      : paired ? (currentName ? currentName + ' · ' + t('devicePaired') : t('devicePaired'))
+      : deviceInfo.adminSession ? t('deviceAdmin') : t('deviceUnpaired');
     var devices = Array.isArray(deviceInfo.devices) ? deviceInfo.devices : [];
     $('device-list-wrap').classList.toggle('hidden', !deviceInfo.adminSession || !devices.length);
     var list = $('device-list'); list.innerHTML = '';
@@ -4309,9 +4373,11 @@
     if (!currentDest) return '';
     return location.origin + '/u/' + currentDest.token + (currentDest.key ? '#k=' + currentDest.key : '');
   }
-  async function shareDestination() {
-    var url = currentDestUrl(); if (!url || !navigator.share) return;
-    try { await navigator.share({ title: 'Direct-Xfer', text: currentDest.name || '', url: url }); } catch (_) {}
+  // Paste a link/token from the clipboard into a fresh destination form. Kept reachable
+  // from the command palette after the toolbar's 📋 button was removed to declutter.
+  async function pasteDestination() {
+    try { var text = await navigator.clipboard.readText(); openDestForm(); $('dest-url').value = text; updateRememberKeyControl(); }
+    catch (_) { toast(t('pasteFailed'), 'warn'); }
   }
   var destQrObjectUrl = '', destQrPrevFocus = null;
   // Fetch a server-rendered QR (the `qrcode` package — no third-party service, no
@@ -4812,7 +4878,8 @@
       { ico: '🗜', label: t('zipBundle').replace(/^🗜\s*/, ''), run: zipSelected },
       { ico: '📢', label: t('multiSend').replace(/^📢\s*/, ''), run: openMultiSend },
       { ico: '🆕', label: t('createLinkTitle'), run: function () { if (!destinationLocked) openCreateForm(); } },
-      { ico: '📋', label: t('pasteLink'), run: function () { $('dest-paste-btn').click(); } },
+      { ico: '📋', label: t('pasteLink'), run: pasteDestination },
+      { ico: '✎', label: t('editDestination'), run: function () { if (!destinationLocked && $('dest-select').value) openDestForm($('dest-select').value); } },
       { ico: '📷', label: t('scanQr').replace(/^📷\s*/, ''), run: startScan },
       { ico: '⚙️', label: t('cmdOpenSettings'), run: function () { var s = $('settings-card'); if (s) { s.open = true; s.scrollIntoView({ block: 'start' }); } } },
       { ico: '🕘', label: t('cmdOpenHistory'), run: function () { var s = $('history-card'); if (s) { s.open = true; s.scrollIntoView({ block: 'start' }); } } },
@@ -4894,7 +4961,7 @@
     sending = false; paused = false;
     var resume = resumeWaiters.splice(0); resume.forEach(function (resolve) { resolve(); });
     await Promise.all([idbClear(QUEUE_STORE), idbClear(DEST_STORE), idbClear(META_STORE), idbClear(HISTORY_STORE), idbClear(IMAGE_STORE), purgeDirectXferCaches(), purgeOpfsQueue()]).catch(function () {});
-    persistentDests = []; sessionDests = []; persistSessionDests(); items = []; historyEntries = [];
+    persistentDests = []; sessionDests = []; serverReceptions = []; persistSessionDests(); items = []; historyEntries = [];
     sessionFiles = 0; sessionBytes = 0; lifetimeFiles = 0; lifetimeBytes = 0; imageLinkUrls = []; imageRowsByToken.clear(); imageRecordsByToken.clear(); selectedImageTokens.clear(); imageActionHistory = []; tagColorMap = {}; pinnedAlbumTokens.clear(); lastDiag = null; avgRate = 0; historyFilter = '';
     lastBatchRecord = null; lastBatchSummary = null; privacyNames = false; document.body.classList.remove('privacy-names');
     destStatusCache = Object.create(null); selectedIds.clear();
@@ -5142,7 +5209,7 @@
   function registerServiceWorker() {
     if (!navigator.serviceWorker || typeof navigator.serviceWorker.register !== 'function') return;
     navigator.serviceWorker.addEventListener('controllerchange', refreshToNewVersion);
-    var registrationPromise = navigator.serviceWorker.register('/direct-xfer-pwa-sw.js?v=104', { scope: '/app/' }).then(function (reg) {
+    var registrationPromise = navigator.serviceWorker.register('/direct-xfer-pwa-sw.js?v=111', { scope: '/app/' }).then(function (reg) {
       swReg = reg;
       navigator.serviceWorker.ready.then(function () {
         swReadyForInstall = true;
@@ -5194,11 +5261,6 @@
   }
 
   // Copy just the raw token, not the whole URL (feature 2).
-  function copyDestToken() {
-    if (!currentDest) return;
-    copyText(currentDest.token).then(function () { toast(t('tokenCopied'), 'ok'); }, function () { toast(t('copyFailed'), 'err'); });
-  }
-
   // Pin / unpin a destination as a favourite (feature 12).
   function togglePin(token) {
     var d = findDest(token); if (!d) return;
@@ -5343,6 +5405,20 @@
     if (!file) return;
     openPreview({ file: file, name: file.name || 'image', type: file.type || 'image/*' });
   }
+  // View a shared image (by remote URL) inside the PWA's own overlay instead of opening a
+  // new browser tab — so the top-right ✕ (or the back button) returns to the app rather
+  // than forcing the user to leave it. No object URL is created, so nothing to revoke.
+  function openImageUrlPreview(url, name) {
+    if (!url) return;
+    closeLightbox(false);
+    resetPreviewElements();
+    lightboxPrevFocus = document.activeElement;
+    $('preview-name').textContent = name || '';
+    var img = $('lightbox-img');
+    img.src = url; img.classList.remove('hidden');
+    $('lightbox-overlay').classList.remove('hidden');
+    $('lightbox-close').focus();
+  }
   function closeLightbox(restoreFocus) {
     $('lightbox-overlay').classList.add('hidden'); resetPreviewElements();
     if (lightboxUrl) { URL.revokeObjectURL(lightboxUrl); lightboxUrl = ''; }
@@ -5425,10 +5501,6 @@
     } catch (_) { toast(t('captureFailed'), 'err'); }
     finally { try { stream.getTracks().forEach(function (tr) { tr.stop(); }); } catch (_) {} }
   }
-
-  // Multi-photo burst: chain the camera capture back-to-back into the queue (feature 20).
-  var burstMode = false;
-  function startBurst() { burstMode = true; toast(t('burstOn')); $('pick-camera').click(); }
 
   // Undo the last single file removed from the queue (feature 10).
   var lastRemoved = null, undoTimer = null, undoAction = null;
@@ -5645,7 +5717,6 @@
     $('theme-select').addEventListener('change', function () { setTheme(this.value); });
     setInterval(function () { if (($('theme-select') && $('theme-select').value) === 'schedule') setTheme('schedule'); }, 60000);
     $('dest-add-btn').addEventListener('click', function () { if (!destinationLocked) openDestForm(); });
-    $('dest-edit-btn').addEventListener('click', function () { if (!destinationLocked) openDestForm($('dest-select').value); });
     $('dest-cancel-btn').addEventListener('click', closeDestForm);
     if ($('dest-create-btn')) $('dest-create-btn').addEventListener('click', function () { if (!destinationLocked) openCreateForm(); });
     if ($('create-cancel-btn')) $('create-cancel-btn').addEventListener('click', closeCreateForm);
@@ -5688,12 +5759,7 @@
       if (!currentDest) return; var url = location.origin + '/u/' + currentDest.token + (currentDest.key ? '#k=' + currentDest.key : '');
       copyText(url).then(function () { toast(t('copied'), 'ok'); }, function () { toast(t('copyFailed'), 'err'); });
     });
-    if ($('dest-token-btn')) $('dest-token-btn').addEventListener('click', copyDestToken);
     if ($('dest-pin-btn')) $('dest-pin-btn').addEventListener('click', function () { if (editingToken) togglePin(editingToken); });
-    $('dest-paste-btn').addEventListener('click', async function () {
-      try { var text = await navigator.clipboard.readText(); openDestForm(); $('dest-url').value = text; updateRememberKeyControl(); }
-      catch (_) { toast(t('pasteFailed'), 'warn'); }
-    });
     $('unlock-btn').addEventListener('click', function () {
       if (!currentDest || !$('unlock-pw').value) return;
       fetch('/u/' + encodeURIComponent(currentDest.token) + '/unlock', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'password=' + encodeURIComponent($('unlock-pw').value) })
@@ -5702,19 +5768,8 @@
     $('enc-key').addEventListener('input', function () { updateEncryptionPanel(); updateSendBtn(); });
     $('enc-passphrase').addEventListener('input', updateSendBtn);
     $('sender-name').addEventListener('input', function () { saveSenderForCurrent(); updateSendBtn(); });
-    ['pick-scan', 'pick-files', 'pick-folder'].forEach(function (id) {
-      $(id).addEventListener('change', function (e) { addFiles(e.target.files); e.target.value = ''; });
-    });
-    // Camera picker, with burst re-triggering (feature 20): after each shot, reopen
-    // the camera until the user cancels (an empty pick ends the burst).
-    $('pick-camera').addEventListener('change', function (e) {
-      var had = !!(e.target.files && e.target.files.length);
-      if (had) addFiles(e.target.files);
-      e.target.value = '';
-      if (burstMode) {
-        if (had) setTimeout(function () { if (burstMode) $('pick-camera').click(); }, 500);
-        else { burstMode = false; toast(t('burstStopped')); }
-      }
+    ['pick-camera', 'pick-files', 'pick-folder'].forEach(function (id) {
+      var el = $(id); if (el) el.addEventListener('change', function (e) { addFiles(e.target.files); e.target.value = ''; });
     });
     if ($('pick-imglink')) $('pick-imglink').addEventListener('change', function (e) { createImageLinks(e.target.files); e.target.value = ''; });
     $('send-btn').addEventListener('click', function () { startBatch(); });
@@ -5753,7 +5808,6 @@
     if ($('dest-name')) $('dest-name').addEventListener('input', function () { updateCharCount(this, $('dest-name-count'), 80); });
     if ($('sender-name')) $('sender-name').addEventListener('change', function () { rememberSender(this.value); });
     if ($('imglink-copyall-btn')) $('imglink-copyall-btn').addEventListener('click', copyAllImageLinks);
-    if ($('dest-share-btn')) $('dest-share-btn').addEventListener('click', shareDestination);
     if ($('dest-qr-btn')) $('dest-qr-btn').addEventListener('click', showDestQr);
     if ($('destqr-close')) $('destqr-close').addEventListener('click', closeDestQr);
     if ($('dest-received-btn')) $('dest-received-btn').addEventListener('click', openReceivedDialog);
@@ -5828,7 +5882,6 @@
     });
     if ($('strip-exif')) $('strip-exif').addEventListener('change', function () { try { localStorage.setItem('dx-pwa-stripexif', this.checked ? '1' : '0'); } catch (_) {} });
     if ($('pick-voice')) $('pick-voice').addEventListener('click', openVoice);
-    if ($('pick-burst')) $('pick-burst').addEventListener('click', startBurst);
     if ($('pick-text')) $('pick-text').addEventListener('click', pasteTextFile);
     if ($('pick-url')) $('pick-url').addEventListener('click', addFromUrl);
     if ($('pick-screen')) $('pick-screen').addEventListener('click', captureScreen);
@@ -5840,6 +5893,7 @@
     if ($('bulk-rename-btn')) $('bulk-rename-btn').addEventListener('click', bulkRename);
     if ($('undo-btn')) $('undo-btn').addEventListener('click', undoRemove);
     if ($('lightbox-close')) $('lightbox-close').addEventListener('click', closeLightbox);
+    if ($('lightbox-x')) $('lightbox-x').addEventListener('click', closeLightbox);
     if ($('lightbox-overlay')) $('lightbox-overlay').addEventListener('click', function (e) { if (e.target === this) closeLightbox(); });
     if ($('export-settings-btn')) $('export-settings-btn').addEventListener('click', exportSettings);
     if ($('import-settings-btn')) $('import-settings-btn').addEventListener('click', function () { $('import-settings-input').click(); });
@@ -5905,6 +5959,51 @@
       e.preventDefault(); e.returnValue = '';
       return '';
     });
+    // Android back button: a single press dismisses whatever dialog/overlay is open;
+    // on the bare app view it shows a warning and only a SECOND press within a short
+    // window actually leaves the app (the classic "press back again to exit"). We keep
+    // one throwaway history entry on top as a guard — each back press pops it and fires
+    // popstate, where we decide whether to restore the guard or let the app close. A PWA
+    // cannot close itself programmatically (history.back() at the root entry is a no-op),
+    // so the exit works by leaving the guard OFF, letting the next back reach the root
+    // where Android closes the window. Only wired for the installed / standalone PWA — a
+    // normal browser tab keeps its native back button untouched.
+    if (isStandaloneApp()) {
+      var pwaExitTimer = null;
+      var pushBackGuard = function () { try { history.pushState({ dxBack: true }, ''); } catch (_) {} };
+      // Dismiss the topmost open overlay, mirroring the Escape-key priority above.
+      var dismissTopOverlay = function () {
+        if (scanning || !$('qr-overlay').classList.contains('hidden')) { stopScan(); return true; }
+        var closers = [
+          ['lightbox-overlay', closeLightbox], ['cmd-overlay', closeCmd], ['annotate-overlay', closeAnnotate],
+          ['voice-overlay', closeVoice], ['multisend-overlay', closeMultiSend], ['destqr-overlay', closeDestQr],
+          ['help-overlay', closeHelp], ['pair-overlay', closePairingDialog], ['received-overlay', closeReceivedDialog],
+          ['dest-form', closeDestForm], ['create-form', closeCreateForm]
+        ];
+        for (var i = 0; i < closers.length; i++) {
+          var el = $(closers[i][0]);
+          if (el && !el.classList.contains('hidden')) { closers[i][1](); return true; }
+        }
+        return false;
+      };
+      if (!(history.state && history.state.dxBack)) pushBackGuard();
+      window.addEventListener('popstate', function () {
+        // Landing back ON the guard entry means we RETURNED from a forward navigation —
+        // e.g. an image opened in the same window via "view", then dismissed with back.
+        // The guard is still in place and we are safely back in the app, so this is NOT
+        // an exit attempt. (Treating it as one made the first back-from-image warn and
+        // disarm the guard, so the next back closed the PWA instead of returning to it.)
+        if (history.state && history.state.dxBack) return;
+        // A back press consumed our guard and moved us to the app's base entry.
+        if (dismissTopOverlay()) { if (pwaExitTimer) { clearTimeout(pwaExitTimer); pwaExitTimer = null; } pushBackGuard(); return; }
+        // Bare app view: warn now. The guard is already popped, so a prompt second back
+        // reaches the root entry and Android closes the PWA. If no second press arrives,
+        // re-arm the guard so a later back warns again instead of exiting silently.
+        toast(t('backExit'), 'warn');
+        if (pwaExitTimer) clearTimeout(pwaExitTimer);
+        pwaExitTimer = setTimeout(function () { pwaExitTimer = null; pushBackGuard(); }, 2500);
+      });
+    }
     document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible' && (sending || ($('keep-awake') && $('keep-awake').checked))) acquireWake(); });
     document.addEventListener('keydown', function (e) {
       var tag = (e.target && e.target.tagName || '').toLowerCase();
@@ -6090,13 +6189,14 @@
       refreshImageStats(true),
       refreshAlbums(),
       refreshImageDashboard(),
-      loadImageRetentionRules()
+      loadImageRetentionRules(),
+      loadHostShares(), // populate the Partages nav badge without waiting for a tab visit
+      loadReceptions()  // list ALL reception links (incl. non-PWA) in the Destination picker
     ]);
     maybeAutoResume(); startImageStatsPolling();
     connectLive(); // live inbox receptions (SSE) when enabled
     if (launchAction === 'destination') { activatePwaPanel('send', { instant: true }); openDestForm(); }
     else if (launchAction === 'camera') { activatePwaPanel('send', { instant: true }); setTimeout(function () { $('pick-camera').click(); }, 150); }
-    else if (launchAction === 'scan') { activatePwaPanel('send', { instant: true }); setTimeout(function () { $('pick-scan').click(); }, 150); }
     else if (launchAction === 'files') { activatePwaPanel('send', { instant: true }); setTimeout(function () { $('pick-files').click(); }, 150); }
     else if (launchAction === 'shares') { activatePwaPanel('shares', { instant: true }); }
     // OS "Open with Direct-Xfer" (manifest file_handlers): receive the launched files.

@@ -63,12 +63,6 @@ link domain is set in the UI.
   sheet** (Web Share Target), add reception links by **QR scan**, unlock password links,
   upload chunked+resumable, works offline. Needs an **admin login** and a **secure
   context** (HTTPS or `localhost`) for the camera.
-- **Native Android companion** (`android-companion/`) — optional Android Studio
-  project with a real system share target, a persistent WorkManager upload queue,
-  resumable checkpoints across process death/device reboot/app updates, foreground
-  progress notifications, local EXIF/GPS cleanup, Android Keystore storage
-  and biometric/device-credential locking. It pairs once through an administrator login
-  and receives a revocable device token limited to the mobile `/app` capability.
 - **Manage & find** — live **usage bar** per card, **sort/filters**, **keyboard
   shortcuts** (`N`/`R`/`C` new, `/` filter, `?` help), a **shares summary** (count /
   active / size), a **private admin note** per link, bounded **full-text content
@@ -185,11 +179,6 @@ compagnon installable est à `…/app`. Le domaine des liens se règle dans l'in
   liens par **scan de QR**, déverrouillez les liens protégés, téléversez par morceaux avec
   reprise, hors ligne. Exige une **connexion admin** et un **contexte sécurisé** (HTTPS
   ou `localhost`) pour la caméra.
-- **Compagnon Android natif** (`android-companion/`) — projet Android Studio
-  facultatif avec une véritable cible de partage système, une file WorkManager
-  persistante, des notifications de progression au premier plan, le nettoyage EXIF/GPS
-  local, le stockage Android Keystore et un verrou biométrique/code de l’appareil. Une
-  connexion administrateur initiale crée un jeton révocable limité aux fonctions `/app`.
 - **Gérer & trouver** — **barre d'utilisation** par carte, **tri/filtres**, **raccourcis
   clavier** (`N`/`R`/`C`, `/` filtre, `?` aide), un **résumé** (nombre / actifs / taille),
   une **note privée admin** par lien, une **recherche plein-texte** bornée, un **journal
@@ -302,11 +291,6 @@ está en `…/app`. El dominio de los enlaces se ajusta en la interfaz.
   **hoja de compartir** del sistema (Web Share Target), añade enlaces por **escaneo de
   QR**, desbloquea enlaces protegidos, sube por fragmentos y reanudable, sin conexión.
   Requiere **inicio de sesión admin** y un **contexto seguro** (HTTPS o `localhost`) para la cámara.
-- **Compañero Android nativo** (`android-companion/`) — proyecto opcional de Android
-  Studio con destino de compartir del sistema, cola persistente WorkManager,
-  notificaciones de progreso, limpieza EXIF/GPS local, almacenamiento Android Keystore
-  y bloqueo biométrico o por credencial del dispositivo. El inicio de sesión inicial de
-  administrador crea un token revocable limitado a las funciones móviles `/app`.
 
 - **Gestionar y buscar** — **barra de uso** por tarjeta, **orden/filtros**, **atajos de
   teclado** (`N`/`R`/`C`, `/` filtro, `?` ayuda), un **resumen** (número / activos /
@@ -515,7 +499,7 @@ Les secrets des invitations ne sont jamais stockés en clair : seul leur hachage
 - Les transferts actifs sont enregistrés lors de `pagehide` et lorsque l’application passe en arrière-plan.
 - La suppression d’un transfert, sa réussite ou l’effacement des données locales supprime également ses fichiers OPFS.
 
-Une PWA ne peut pas garantir que le réseau continue à travailler après sa fermeture complète par Android. Cette fonction garantit la **conservation et la reprise automatique à la réouverture**. Pour un envoi qui continue réellement écran éteint ou application fermée, utilisez le compagnon Android natif inclus.
+Une PWA ne peut pas garantir que le réseau continue à travailler après sa fermeture complète par Android. Cette fonction garantit la **conservation et la reprise automatique à la réouverture**.
 
 
 ## 1.29.0 — interface « Liens d’image » réorganisée (build pwa85)
@@ -534,7 +518,7 @@ Une PWA ne peut pas garantir que le réseau continue à travailler après sa fer
 ## 1.30.0 — appareil d’origine, EXIF/GPS et indicateurs de confidentialité (build pwa87)
 
 - La page Images standard affiche le nom de l’appareil ayant téléversé chaque nouvelle image.
-- Les images envoyées par la PWA ou le compagnon Android conservent le nom de l’appareil jumelé; les ajouts Web, les fichiers choisis sur l’hôte et les contributions d’album reçoivent aussi une origine lisible.
+- Les images envoyées par la PWA conservent le nom de l’appareil jumelé; les ajouts Web, les fichiers choisis sur l’hôte et les contributions d’album reçoivent aussi une origine lisible.
 - Un bouton **EXIF / GPS** ouvre une fenêtre d’information à la demande avec l’appareil photo, l’objectif, la date, l’exposition, les dimensions et les coordonnées disponibles.
 - Les coordonnées GPS ne sont jamais ajoutées aux réponses périodiques de la galerie : elles sont lues uniquement après un clic, via une route administrateur authentifiée.
 - La lecture prend en charge les blocs TIFF/EXIF intégrés aux fichiers JPEG, PNG et WebP, sans nouvelle dépendance serveur.

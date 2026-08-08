@@ -8,12 +8,3 @@ Thumbs.db
 .claude/
 direct-xfer.zip
 logo.png
-
-# Android companion build/local files
-android-companion/.gradle/
-android-companion/.idea/
-android-companion/local.properties
-android-companion/app/build/
-android-companion/build/
-android-companion/*.jks
-android-companion/*.keystore

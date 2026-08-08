@@ -50,7 +50,10 @@ feature(6, 'each image exposes a direct public-link action', () => {
   assert.match(js, /class="btn ghost sm il-open"/);
   // Opening goes through the authenticated owner preview (auto variant) so an owner's
   // own views never inflate the public counters; the public link stays available via copy.
-  assert.match(js, /var url = imagePreviewUrl\(photo, 'auto'\);[\s\S]*?window\.open\(url, '_blank', 'noopener'\)/);
+  // The preview shows INSIDE the PWA (top-right ✕ to close) rather than a new browser tab,
+  // so viewing an image no longer forces the user to leave the app.
+  assert.match(js, /var url = imagePreviewUrl\(photo, 'auto'\);[\s\S]*?openImageUrlPreview\(url, photo\.name\)/);
+  assert.match(js, /function openImageUrlPreview\(url, name\)/);
 });
 
 feature(7, 'instant search includes names, tokens, tags and private notes', () => {

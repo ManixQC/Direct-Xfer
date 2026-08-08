@@ -9,13 +9,17 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="DX Envoyer">
-  <link id="app-manifest" rel="manifest" href="/direct-xfer-pwa.webmanifest?v=104">
+  <link id="app-manifest" rel="manifest" href="/direct-xfer-pwa.webmanifest?v=111">
   <link rel="icon" href="/app/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" sizes="180x180" href="/app/apple-touch-icon.png">
-  <link rel="stylesheet" href="/app/app.css">
-  <script src="/app/theme-init.js"></script>
-  <script src="/dxcrypto.js" defer></script>
-  <script src="/app/app.js" defer></script>
+  <!-- Shell assets carry the ?v build query so a freshly-served index.html can never be
+       paired with a stale app.js/app.css from a previous version's service-worker cache
+       (that mix threw on removed elements and broke the icon styling). Bump ?v in
+       lock-step with sw.js VERSION on every release. -->
+  <link rel="stylesheet" href="/app/app.css?v=111">
+  <script src="/app/theme-init.js?v=111"></script>
+  <script src="/dxcrypto.js?v=111" defer></script>
+  <script src="/app/app.js?v=111" defer></script>
   <title>Direct-Xfer — Envoyer</title>
 </head>
 <body>
@@ -67,7 +71,7 @@
       </span>
       <span class="sr-only" data-i18n="install">Installer</span>
     </button>
-    <button id="help-btn" class="btn ghost icon" type="button" title="Aide" aria-label="Raccourcis et aide" data-i18n-title="help" data-i18n-aria="shortcutsTitle">?</button>
+    <button id="help-btn" class="btn ghost icon" type="button" title="Aide" aria-label="Raccourcis et aide" data-i18n-title="help" data-i18n-aria="shortcutsTitle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button>
   </header>
 
   <main class="wrap">
@@ -86,16 +90,12 @@
       <div class="row destination-toolbar">
         <label class="sr-only" for="dest-select" data-i18n="destination">Destination</label>
         <select id="dest-select" aria-label="Lien de réception"></select>
-        <button id="dest-copy-btn" class="btn ghost icon hidden" type="button" title="Copier le lien" aria-label="Copier le lien" data-i18n-title="copyLink" data-i18n-aria="copyLink">🔗</button>
-        <button id="dest-token-btn" class="btn ghost icon hidden" type="button" title="Copier le jeton" aria-label="Copier le jeton" data-i18n-title="copyToken" data-i18n-aria="copyToken">＃</button>
-        <button id="dest-share-btn" class="btn ghost icon hidden" type="button" title="Partager le lien" aria-label="Partager le lien" data-i18n-title="shareLink" data-i18n-aria="shareLink">📤</button>
-        <button id="dest-qr-btn" class="btn ghost icon hidden" type="button" title="QR du lien" aria-label="Afficher le QR du lien" data-i18n-title="qrForLink" data-i18n-aria="qrForLink">▦</button>
-        <button id="dest-received-btn" class="btn ghost icon hidden" type="button" title="Contenu reçu" aria-label="Voir le contenu reçu sur ce lien" data-i18n-title="receivedTitle" data-i18n-aria="receivedTitle">📥</button>
-        <button id="dest-paste-btn" class="btn ghost icon" type="button" title="Coller un lien" aria-label="Coller un lien" data-i18n-title="pasteLink" data-i18n-aria="pasteLink">📋</button>
-        <button id="dest-edit-btn" class="btn ghost icon hidden" type="button" title="Modifier" aria-label="Modifier la destination" data-i18n-title="editDestination" data-i18n-aria="editDestination">✎</button>
-        <button id="dest-revoke-btn" class="btn ghost icon danger hidden" type="button" title="Révoquer" aria-label="Révoquer ce lien de réception" data-i18n-title="revokeShare" data-i18n-aria="revokeShare">✕</button>
-        <button id="dest-add-btn" class="btn ghost icon" type="button" title="Ajouter" aria-label="Ajouter une destination" data-i18n-title="addDestination" data-i18n-aria="addDestination">＋</button>
-        <button id="dest-create-btn" class="btn ghost icon" type="button" title="Créer un lien de réception" aria-label="Créer un lien de réception" data-i18n-title="createLinkTitle" data-i18n-aria="createLinkTitle">🆕</button>
+        <button id="dest-copy-btn" class="btn ghost icon hidden" type="button" title="Copier le lien" aria-label="Copier le lien" data-i18n-title="copyLink" data-i18n-aria="copyLink"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>
+        <button id="dest-qr-btn" class="btn ghost icon hidden" type="button" title="QR du lien" aria-label="Afficher le QR du lien" data-i18n-title="qrForLink" data-i18n-aria="qrForLink"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></button>
+        <button id="dest-received-btn" class="btn ghost icon hidden" type="button" title="Contenu reçu" aria-label="Voir le contenu reçu sur ce lien" data-i18n-title="receivedTitle" data-i18n-aria="receivedTitle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></button>
+        <button id="dest-revoke-btn" class="btn ghost icon danger hidden" type="button" title="Révoquer" aria-label="Révoquer ce lien de réception" data-i18n-title="revokeShare" data-i18n-aria="revokeShare"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        <button id="dest-add-btn" class="btn ghost icon" type="button" title="Ajouter" aria-label="Ajouter une destination" data-i18n-title="addDestination" data-i18n-aria="addDestination"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+        <button id="dest-create-btn" class="btn ghost dest-new" type="button" title="Créer un lien de réception" aria-label="Créer un lien de réception" data-i18n-title="createLinkTitle" data-i18n-aria="createLinkTitle" data-i18n="newLink">Nouveau</button>
       </div>
       <p id="dest-status" class="dest-status muted" role="status" aria-live="polite"></p>
       <p id="dest-limits" class="dest-status muted hidden"></p>
@@ -178,9 +178,6 @@
         <label class="pick"><span class="ico">📷</span><span data-i18n="takePhoto">Prendre une photo</span>
           <input id="pick-camera" type="file" accept="image/*" capture="environment" hidden>
         </label>
-        <label class="pick"><span class="ico">🧾</span><span data-i18n="scanDocument">Scanner un document</span>
-          <input id="pick-scan" type="file" accept="image/*" capture="environment" hidden multiple>
-        </label>
         <label class="pick"><span class="ico">📄</span><span data-i18n="chooseFiles">Choisir des fichiers</span>
           <input id="pick-files" type="file" hidden multiple>
         </label>
@@ -188,7 +185,6 @@
           <input id="pick-folder" type="file" webkitdirectory directory hidden multiple>
         </label>
         <button type="button" id="pick-voice" class="pick"><span class="ico">🎙</span><span data-i18n="voiceNote">Note vocale</span></button>
-        <button type="button" id="pick-burst" class="pick"><span class="ico">📸</span><span data-i18n="burst">Rafale photo</span></button>
         <button type="button" id="pick-text" class="pick"><span class="ico">📋</span><span data-i18n="pasteText">Coller du texte</span></button>
         <button type="button" id="pick-url" class="pick"><span class="ico">🌐</span><span data-i18n="addFromUrl">Depuis une URL</span></button>
         <button type="button" id="pick-screen" class="pick hidden"><span class="ico">🖥</span><span data-i18n="screenCapture">Capturer l’écran</span></button>
@@ -505,9 +501,9 @@
       <section class="share-browser" aria-labelledby="share-browser-heading">
         <p id="share-browser-heading" class="lbl" data-i18n="sharesBrowse">Fichiers du serveur</p>
         <div class="row share-path-row">
-          <button id="share-up" class="btn ghost icon" type="button" title="Dossier parent" aria-label="Dossier parent" data-i18n-title="sharesUp" data-i18n-aria="sharesUp">↑</button>
+          <button id="share-up" class="btn ghost icon" type="button" title="Dossier parent" aria-label="Dossier parent" data-i18n-title="sharesUp" data-i18n-aria="sharesUp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg></button>
           <input id="share-path" type="text" readonly aria-label="Chemin courant" value="/">
-          <button id="share-refresh" class="btn ghost icon" type="button" title="Rafraîchir" aria-label="Rafraîchir" data-i18n-title="refresh" data-i18n-aria="refresh">↻</button>
+          <button id="share-refresh" class="btn ghost icon" type="button" title="Rafraîchir" aria-label="Rafraîchir" data-i18n-title="refresh" data-i18n-aria="refresh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>
         </div>
         <div id="share-browser-list" class="share-browser-list" aria-live="polite"></div>
       </section>
@@ -702,32 +698,32 @@
       </div>
     </details>
 
-    <p class="foot">Direct-Xfer · <span data-i18n="companionApp">application compagnon</span> · <span id="build-tag" class="muted">v1.33.2 · pwa116</span></p>
+    <p class="foot">Direct-Xfer · <span data-i18n="companionApp">application compagnon</span> · <span id="build-tag" class="muted">v1.33.9 · pwa123</span></p>
   </main>
 
   <nav id="pwa-bottom-nav" class="pwa-bottom-nav" aria-label="Navigation principale" data-i18n-aria="navMain">
     <button class="pwa-nav-item active" type="button" data-pwa-nav="send" aria-current="page">
-      <span class="pwa-nav-icon" aria-hidden="true">⇈</span>
+      <span class="pwa-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></span>
       <span data-i18n="navSend">Envoyer</span>
       <span id="nav-send-badge" class="pwa-nav-badge hidden" aria-hidden="true"></span>
     </button>
     <button class="pwa-nav-item" type="button" data-pwa-nav="images">
-      <span class="pwa-nav-icon" aria-hidden="true">▧</span>
+      <span class="pwa-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></span>
       <span data-i18n="navImages">Images</span>
       <span id="nav-images-badge" class="pwa-nav-badge hidden" aria-hidden="true"></span>
     </button>
     <button class="pwa-nav-item" type="button" data-pwa-nav="shares">
-      <span class="pwa-nav-icon" aria-hidden="true">⇄</span>
+      <span class="pwa-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></span>
       <span data-i18n="navShares">Partages</span>
       <span id="nav-shares-badge" class="pwa-nav-badge hidden" aria-hidden="true"></span>
     </button>
     <button class="pwa-nav-item" type="button" data-pwa-nav="activity">
-      <span class="pwa-nav-icon" aria-hidden="true">◷</span>
+      <span class="pwa-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
       <span data-i18n="navActivity">Activité</span>
       <span id="nav-activity-badge" class="pwa-nav-badge hidden" aria-hidden="true"></span>
     </button>
     <button class="pwa-nav-item" type="button" data-pwa-nav="settings">
-      <span class="pwa-nav-icon" aria-hidden="true">⚙</span>
+      <span class="pwa-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
       <span data-i18n="navSettings">Réglages</span>
     </button>
   </nav>
@@ -846,6 +842,7 @@
   </div>
 
   <div id="lightbox-overlay" class="lightbox-overlay hidden" role="dialog" aria-modal="true" aria-label="Aperçu du fichier" data-i18n-aria="preview">
+    <button id="lightbox-x" class="lightbox-x" type="button" title="Fermer" aria-label="Fermer" data-i18n-title="close" data-i18n-aria="close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     <div id="preview-stage" class="preview-stage">
       <img id="lightbox-img" class="lightbox-img hidden" alt="" data-i18n-aria="preview">
       <video id="preview-video" class="preview-media hidden" controls playsinline></video>

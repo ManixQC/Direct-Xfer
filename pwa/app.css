@@ -182,10 +182,16 @@ input[type="text"], input[type="url"], input[type="password"], select {
 input:disabled, select:disabled { opacity: .62; cursor: not-allowed; }
 .field { display: grid; gap: 6px; margin-top: 10px; color: var(--muted); font-size: .82rem; }
 .field.compact { margin: 0; }
-.field.compact select { width: 90px; }
+/* Fill the grid cell instead of a fixed 90px, which clipped longer options
+   ("Visages et plaques", "Télécharger QR"…) on phones wider than 560px. */
+.field.compact select { width: 100%; min-width: 0; }
 .form-panel { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-soft); }
 .checkline { display: flex; gap: 9px; align-items: flex-start; color: var(--text); font-size: .88rem; margin-top: 12px; }
-.checkline input { flex: 0 0 auto; width: 18px; height: 18px; accent-color: var(--accent); }
+/* Keep the box aligned to the FIRST text line (labels can wrap to two lines, so a plain
+   align-items:center would float the box into the gap). flex-start alone top-aligns the
+   18px box against the taller/shorter line box, leaving it visibly off the text's optical
+   centre; the calc recentres it on that single line whatever the line-height resolves to. */
+.checkline input { flex: 0 0 auto; width: 18px; height: 18px; margin-top: calc((1lh - 18px) / 2); accent-color: var(--accent); }
 .dest-status { font-size: .82rem; margin: 8px 0 0; }
 .enc-title { margin: 0 0 6px; font-weight: 700; color: var(--accent-2); }
 
@@ -209,6 +215,11 @@ input:disabled, select:disabled { opacity: .62; cursor: not-allowed; }
 .btn.ghost { background: transparent; color: var(--accent-2); border-color: var(--border); }
 .btn.danger { background: transparent; color: var(--danger); border-color: color-mix(in srgb, var(--danger) 50%, var(--border)); }
 .btn.sm { padding: 9px 12px; font-size: .88rem; }
+/* Inline-SVG icons inside buttons inherit the button colour (stroke=currentColor) and are
+   sized here so every icon-only button renders at a consistent, legible size. */
+.btn svg { width: 20px; height: 20px; display: block; flex: 0 0 auto; }
+.btn.sm svg { width: 18px; height: 18px; }
+.iv-open svg { width: 18px; height: 18px; display: block; }
 
 .install-diagnostic {
   margin: 10px auto 0;
@@ -305,6 +316,9 @@ html.pwa-standalone #install-btn { display: none !important; }
   pointer-events: none;
 }
 .btn.icon { width: 43px; min-width: 43px; padding: 10px; }
+/* The "Nouveau" create action is a text button sized ~twice the 43px icon buttons so it
+   reads as the primary way to make a new reception link. */
+.destination-toolbar .btn.dest-new { min-width: 86px; padding-inline: 14px; }
 .btn.block { width: 100%; }
 .send-button { margin-top: 14px; }
 
@@ -582,7 +596,6 @@ body.dragging::after {
     animation: install-attention 2.2s ease-in-out 4;
   }
   .option-grid { grid-template-columns: 1fr; }
-  .field.compact select { width: 100%; }
   .queue-actions { width: 100%; margin-left: 0; }
   .queue-actions .btn { flex: 1; }
   .button-row { flex-wrap: wrap; }
@@ -933,6 +946,16 @@ body > *,
 .lightbox-overlay { position: fixed; inset: 0; z-index: 95; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 16px; background: rgba(3, 8, 20, .92); }
 .lightbox-img { max-width: 96vw; max-height: 82dvh; object-fit: contain; border-radius: 10px; background: #000; }
 .lightbox-close { flex: 0 0 auto; }
+/* Explicit top-right close so viewing an image can be dismissed back into the PWA
+   (no need to leave the app). Sits above the stage, safe-area aware. */
+.lightbox-x {
+  position: absolute; top: calc(env(safe-area-inset-top) + 10px); right: calc(env(safe-area-inset-right) + 12px);
+  width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center;
+  padding: 0; font-size: 1.2rem; line-height: 1; color: #fff; cursor: pointer;
+  background: rgba(20, 26, 44, .72); border: 1px solid rgba(255, 255, 255, .28); border-radius: 50%;
+}
+.lightbox-x:active { transform: translateY(1px); }
+.lightbox-x svg { width: 22px; height: 22px; display: block; }
 
 /* Character counters, queue filter, expand-all, drag-to-reorder. */
 .field-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
@@ -1032,7 +1055,7 @@ body.privacy-names .preview-name { letter-spacing: .04em; }
 .image-template { grid-column:1 / -1; }
 .image-bulk-bar { position:sticky; top:0; z-index:8; display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin:10px 0; padding:8px 10px; border:1px solid color-mix(in srgb,var(--accent) 45%,var(--border)); border-radius:12px; background:color-mix(in srgb,var(--accent) 10%,var(--panel)); box-shadow:0 6px 18px rgba(0,0,0,.16); }
 .image-bulk-bar .checkline { margin:0; }
-.imglink-row .img-select { flex:0 0 auto; width:19px; height:19px; accent-color:var(--accent); }
+.imglink-row .img-select { flex:0 0 auto; width:26px; height:26px; accent-color:var(--accent); }
 .imglink-row.selected { border-color:var(--accent); box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 20%,transparent); }
 .imglink-row.expired { opacity:.72; }
 .imglink-row.pending-revoke { opacity:.35; transform:scale(.985); transition:opacity .18s ease,transform .18s ease; }
@@ -1080,6 +1103,9 @@ body.privacy-names .preview-name { letter-spacing: .04em; }
 .imglink-row.show-all-actions .imglink-actions .action-secondary { display: inline-flex; }
 .imglink-actions .il-more { min-width: 38px; font-weight: 800; }
 .imglink-actions .il-more.hidden { display: none !important; }
+/* Resize action: give its SVG a touch more size than the sibling action icons so the
+   maximize glyph reads clearly, matching the earlier "enlarge the resize drawing" intent. */
+.imglink-actions .il-resize-mini svg { width: 21px; height: 21px; }
 .imglink-actions .il-favorite.active,
 .album-row .btn.active { background: color-mix(in srgb, var(--accent) 22%, transparent); border-color: var(--accent); }
 .tag-color-settings { margin-top: .75rem; border-top: 1px solid var(--border); padding-top: .55rem; }
@@ -1171,7 +1197,10 @@ body.privacy-names .preview-name { letter-spacing: .04em; }
   line-height: 1.1;
   cursor: pointer;
 }
-.pwa-nav-item .pwa-nav-icon { font-size: 1.22rem; line-height: 1; }
+.pwa-nav-item .pwa-nav-icon { display: inline-flex; align-items: center; justify-content: center; line-height: 0; }
+/* Inline SVG icons on a shared 24×24 grid render at an identical size (unlike text
+   glyphs from different Unicode blocks, which varied). One box size controls all five. */
+.pwa-nav-item .pwa-nav-icon svg { width: 22px; height: 22px; display: block; }
 .pwa-nav-item.active {
   color: var(--accent-2);
   border-color: color-mix(in srgb, var(--accent) 34%, var(--border));
@@ -1206,10 +1235,12 @@ body.privacy-names .preview-name { letter-spacing: .04em; }
   }
   .destination-toolbar #dest-select { grid-column: 1 / -1; width: 100%; }
   .destination-toolbar .btn.icon { width: 100%; min-width: 0; }
+  /* Twice the width of a single icon column so "Nouveau" stands out on the phone grid. */
+  .destination-toolbar .btn.dest-new { grid-column: span 2; width: 100%; min-width: 0; }
   .panel-heading { display: grid; gap: 2px; margin-top: 1px; }
   .panel-summary { font-size: .76rem; }
   .pwa-nav-item { min-height: 57px; font-size: .66rem; padding-inline: 1px; }
-  .pwa-nav-item .pwa-nav-icon { font-size: 1.16rem; }
+  .pwa-nav-item .pwa-nav-icon svg { width: 20px; height: 20px; }
   .pwa-bottom-nav { gap: 3px; padding-inline: 4px; }
   .details-card[data-pwa-panel] > summary { display: none; }
   .details-card[data-pwa-panel] { padding-top: 14px; }
@@ -1237,8 +1268,11 @@ body.privacy-names .preview-name { letter-spacing: .04em; }
 .image-default-field,
 .image-control-field { display: grid; gap: 6px; min-width: 0; color: var(--muted); font-size: .72rem; font-weight: 750; }
 .image-default-field { align-content: center; padding: 10px 11px; border: 1px solid var(--border-soft); border-radius: 12px; background: var(--panel); }
+/* max-width:none lifts the ≤560px .compact-select cap (88px, meant for the header's
+   FR/theme selects) so the image menus can actually fill their full-width container —
+   otherwise the favourite-format, sort and filter menus stayed 88px and clipped words. */
 .image-default-field .compact-select,
-.image-control-field .compact-select { width: 100%; min-width: 0; }
+.image-control-field .compact-select { width: 100%; min-width: 0; max-width: none; }
 .image-create-panel .imglink-privacy { margin: 0; padding: 9px 10px; background: var(--panel); }
 .image-create-panel .imglink-privacy .section-sub { margin-left: 27px; margin-bottom: 0; }
 .image-library-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
@@ -1249,7 +1283,8 @@ body.privacy-names .preview-name { letter-spacing: .04em; }
 .image-batch-actions[open] > summary::after { content: '  ▴'; }
 .image-batch-actions .imglink-tools { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; margin-top: 8px; padding: 9px; border: 1px solid var(--border-soft); border-radius: 11px; background: var(--panel); }
 .image-batch-actions .imglink-tools > * { width: 100%; min-width: 0; }
-.image-manager-bar { display: grid; grid-template-columns: minmax(0, 1fr) minmax(130px, .45fr) minmax(130px, .45fr); gap: 8px; margin: 0; align-items: end; }
+/* Sort/filter columns wide enough for the longest options ("Bientôt expirées", etc.). */
+.image-manager-bar { display: grid; grid-template-columns: minmax(0, 1fr) minmax(168px, .5fr) minmax(168px, .5fr); gap: 8px; margin: 0; align-items: end; }
 .image-search-field { display: grid; min-width: 0; }
 .image-search-field input { width: 100%; min-width: 0; height: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--panel); color: var(--text); }
 .image-options { margin: 0; background: var(--panel-2); }
@@ -1285,8 +1320,10 @@ body.privacy-names .preview-name { letter-spacing: .04em; }
 
 @media (max-width: 720px) {
   .image-create-main { grid-template-columns: minmax(0, 1fr); }
-  .image-default-field { grid-template-columns: minmax(0, 1fr) minmax(130px, .55fr); align-items: center; }
-  .image-manager-bar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* On phones the three image menus (favourite format, sort, filter) each take the full
+     width so their longest options ("Automatique", "Bientôt expirées"…) are never clipped. */
+  .image-default-field { grid-template-columns: minmax(0, 1fr); }
+  .image-manager-bar { grid-template-columns: minmax(0, 1fr); }
   .image-search-field { grid-column: 1 / -1; }
   .imglink-variants { grid-template-columns: minmax(0, 1fr); }
   .imgvariant {
@@ -1339,6 +1376,10 @@ body.privacy-names .preview-name { letter-spacing: .04em; }
 }
 .share-row { border-bottom: 1px solid var(--border-soft); }
 .share-row:last-child { border-bottom: 0; }
+/* Folder rows carry a standalone select checkbox next to a navigate button. */
+.share-row.is-dir { display: flex; align-items: center; }
+.share-row.is-dir .share-entry { flex: 1; min-width: 0; }
+.share-check { width: 18px; height: 18px; flex: 0 0 auto; margin-left: 12px; accent-color: var(--accent); }
 .share-entry {
   display: flex; align-items: center; gap: 10px; width: 100%;
   padding: 11px 12px; background: none; border: 0; color: var(--text);

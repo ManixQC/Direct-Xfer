@@ -27,7 +27,7 @@ test('standard and mobile admin logins expose separate username/password memory 
 
 test('password remembering uses the encrypted vault only when explicitly selected', () => {
   assert.match(adminHtml, /src="\/login-vault\.js"/);
-  assert.match(mobileHtml, /src="\/app\/login-vault\.js"/);
+  assert.match(mobileHtml, /src="\/app\/login-vault\.js(\?v=\d+)?"/);
   assert.match(server, /'\/login-vault\.js'/);
   assert.match(loginVault, /direct-xfer-login-vault/);
   assert.match(loginVault, /AES-GCM/);

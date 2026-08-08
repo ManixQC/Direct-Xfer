@@ -1,2 +1,0 @@
--keep class ca.manix123.directxfer.** { *; }
--dontwarn org.conscrypt.**

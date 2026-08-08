@@ -141,19 +141,6 @@
       ]
     },
     {
-      "name": "Scanner un document",
-      "short_name": "Scanner",
-      "description": "Ouvrir directement l’appareil photo pour numériser un document.",
-      "url": "/app/?action=scan",
-      "icons": [
-        {
-          "src": "/app/icon-192.png",
-          "sizes": "192x192",
-          "type": "image/png"
-        }
-      ]
-    },
-    {
       "name": "Choisir des fichiers",
       "short_name": "Fichiers",
       "description": "Ouvrir directement le sélecteur de fichiers.",

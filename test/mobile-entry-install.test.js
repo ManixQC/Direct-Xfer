@@ -57,13 +57,15 @@ test('/app uses a dedicated mobile administrator login before opening the PWA sh
   assert.match(loginHtml, /id="mobile-login-form"/);
   assert.match(loginHtml, /data-i18n="title">Connexion administrateur/);
   assert.match(loginCss, /\.mobile-login-card/);
-  assert.match(loginJs, /fetch\('\/app\/login'/);
+  assert.match(loginJs, /fetchWithTimeout\('\/app\/login'/);
   assert.match(loginJs, /location\.replace\(safeNext\(\)\)/);
 });
 
 test('service worker does not cache a redirected login page as the authenticated PWA shell', () => {
   const build = pwaJs.match(/APP_BUILD = '([^']+)'/)[1];
   assert.match(swSource, new RegExp("var VERSION = '" + build.replace(/\./g, '\\.') + "';"));
-  assert.match(swSource, /!response\.redirected && responsePath === '\/app\/'/);
+  assert.match(swSource, /Never cache authenticated \/app\/ HTML/);
+  assert.match(swSource, /caches\.match\('\/direct-xfer-pwa-shell\.html'\)/);
+  assert.doesNotMatch(swSource, /cache\.put\(request,[^)]*\/app\//);
   assert.match(swSource, /url\.pathname === '\/app\/login'[\s\S]*Connexion administrateur indisponible hors ligne/);
 });

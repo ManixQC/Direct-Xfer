@@ -34,14 +34,31 @@
   function openDb() {
     if (!available()) return Promise.reject(new Error('Secure browser storage unavailable'));
     return new Promise(function (resolve, reject) {
-      var request = indexedDB.open(DB_NAME, DB_VERSION);
+      var settled = false;
+      var timer = setTimeout(function () {
+        if (settled) return;
+        settled = true;
+        reject(new Error('Login vault open timed out'));
+      }, 3000);
+      var request;
+      try { request = indexedDB.open(DB_NAME, DB_VERSION); }
+      catch (error) { clearTimeout(timer); settled = true; reject(error); return; }
       request.onupgradeneeded = function () {
         var db = request.result;
         if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE, { keyPath: 'id' });
       };
-      request.onsuccess = function () { resolve(request.result); };
-      request.onerror = function () { reject(request.error || new Error('Could not open login vault')); };
-      request.onblocked = function () { reject(new Error('Login vault upgrade blocked')); };
+      request.onsuccess = function () {
+        if (settled) { try { request.result.close(); } catch (_) {} return; }
+        settled = true; clearTimeout(timer); resolve(request.result);
+      };
+      request.onerror = function () {
+        if (settled) return;
+        settled = true; clearTimeout(timer); reject(request.error || new Error('Could not open login vault'));
+      };
+      request.onblocked = function () {
+        if (settled) return;
+        settled = true; clearTimeout(timer); reject(new Error('Login vault upgrade blocked'));
+      };
     });
   }
 
@@ -51,9 +68,19 @@
       var tx = db.transaction(STORE, mode);
       var store = tx.objectStore(STORE);
       var completion = new Promise(function (resolve, reject) {
-        tx.oncomplete = resolve;
-        tx.onerror = function () { reject(tx.error || new Error('Login vault transaction failed')); };
-        tx.onabort = function () { reject(tx.error || new Error('Login vault transaction aborted')); };
+        var settled = false;
+        var timer = setTimeout(function () {
+          if (settled) return; settled = true;
+          try { tx.abort(); } catch (_) {}
+          reject(new Error('Login vault transaction timed out'));
+        }, 4000);
+        function finish(error) {
+          if (settled) return; settled = true; clearTimeout(timer);
+          error ? reject(error) : resolve();
+        }
+        tx.oncomplete = function () { finish(null); };
+        tx.onerror = function () { finish(tx.error || new Error('Login vault transaction failed')); };
+        tx.onabort = function () { finish(tx.error || new Error('Login vault transaction aborted')); };
       });
       var result = await callback(store);
       await completion;

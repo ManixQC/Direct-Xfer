@@ -28,7 +28,7 @@ test('loadReceptions feeds the Destination picker from /app/receptions', () => {
 });
 
 test('reception links are loaded at startup without visiting the Partages tab', () => {
-  assert.match(app, /loadReceptions\(\)\s*\/\/ list ALL reception links/);
+  assert.match(app, /settleWithin\(loadReceptions\(\), 12000, null\)\s*\/\/ list ALL reception links/);
 });
 
 test('removing or clearing a destination also drops the server-reported copy', () => {

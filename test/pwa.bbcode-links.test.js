@@ -13,11 +13,13 @@ const lock = JSON.parse(fs.readFileSync(path.join(root, 'package-lock.json'), 'u
 
 test('PWA image copy format includes BBCode for every image variant and bulk copy', () => {
   assert.match(html, /<option value="bb">BBCode<\/option>/);
-  assert.match(js, /if \(fmt === 'bb'\) return '\[img\]' \+ url \+ '\[\/img\]';/);
-  assert.match(js, /copyOne\('full'\)/);
-  assert.match(js, /copyOne\('thumb'\)/);
-  assert.match(js, /copyOne\('micro'\)/);
-  assert.match(js, /var kind = imageDefaultVariant\(\);/);
+  assert.match(js, /if \(fmt === 'bb'\) return imageVariantBBCode\(photo, kind, url\);/);
+  assert.match(js, /if \(\(kind === 'thumb' \|\| kind === 'micro'\) && fullUrl && variantUrl\)/);
+  assert.match(js, /return '\[url=' \+ fullUrl \+ '\]\[img\]' \+ variantUrl \+ '\[\/img\]\[\/url\]';/);
+  assert.match(js, /return '\[img\]' \+ variantUrl \+ '\[\/img\]';/);
+  assert.match(js, /row\.querySelectorAll\('\.imgvariant'\)\.forEach/);
+  assert.match(js, /copyVariant\.addEventListener\('click', copyOne\(kind\)\)/);
+  assert.match(js, /var kind = IMAGE_PRIMARY_VARIANT;/);
   assert.match(js, /return formatLink\(imageVariantUrl\(photo, kind\), photo\.name/);
 });
 

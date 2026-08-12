@@ -10,10 +10,14 @@
       resuming: 'reprise…', msgSent: 'Message envoyé ✓', s: 's', min: 'min',
       tooBig: 'trop volumineux', notAllowed: 'type non autorisé', quotaFull: 'quota atteint',
       infected: 'bloqué (virus détecté) ✗',
-      maxFiles: 'nombre max atteint', skipped: 'ignoré', remove: 'Retirer', filemsgPh: 'Message pour ce fichier (facultatif)',
+      blockedExec: 'bloqué (exécutable) ✗', storageCap: 'stockage serveur plein', senderReq: 'nom requis',
+      maxFiles: 'nombre max atteint', maxPerUpload: 'max par envoi atteint', skipped: 'ignoré', remove: 'Retirer', filemsgPh: 'Message pour ce fichier (facultatif)',
       clearAll: 'Tout supprimer', clearConfirm: 'Retirer les {n} fichiers de la liste ?', queued: '{n} fichier(s)',
       encrypting: 'chiffrement…', encPassRequired: 'Saisissez la phrase secrète de chiffrement.',
       encKeyMissing: 'Lien incomplet : clé de chiffrement manquante.', encNoCrypto: 'Chiffrement non pris en charge par ce navigateur.',
+      threadTitle: '💬 Discussion', threadHint: 'Échangez avec le destinataire de ce lien.', threadEmpty: 'Aucun message pour l’instant.',
+      threadYou: 'Vous', threadOwner: 'Destinataire', threadName: 'Votre nom (facultatif)', threadPlaceholder: 'Écrire un message…',
+      threadSend: 'Envoyer', threadSending: 'Envoi…', threadError: 'Envoi impossible, réessayez.', threadRate: 'Trop de messages, patientez un instant.',
       proxyWarn: '⚠ L’envoi a échoué après plusieurs tentatives. Si le serveur est derrière un reverse proxy (Nginx, Traefik, Apache…), vérifiez sa configuration : mise en tampon des requêtes désactivée et limites de taille/délai suffisantes pour les gros fichiers.',
     },
     en: {
@@ -21,10 +25,14 @@
       resuming: 'resuming…', msgSent: 'Message sent ✓', s: 's', min: 'min',
       tooBig: 'too large', notAllowed: 'type not allowed', quotaFull: 'quota reached',
       infected: 'blocked (virus found) ✗',
-      maxFiles: 'file limit reached', skipped: 'skipped', remove: 'Remove', filemsgPh: 'Message for this file (optional)',
+      blockedExec: 'blocked (executable) ✗', storageCap: 'server storage full', senderReq: 'name required',
+      maxFiles: 'file limit reached', maxPerUpload: 'per-upload limit reached', skipped: 'skipped', remove: 'Remove', filemsgPh: 'Message for this file (optional)',
       clearAll: 'Remove all', clearConfirm: 'Remove all {n} files from the list?', queued: '{n} file(s)',
       encrypting: 'encrypting…', encPassRequired: 'Enter the encryption passphrase.',
       encKeyMissing: 'Incomplete link: missing encryption key.', encNoCrypto: 'Encryption not supported by this browser.',
+      threadTitle: '💬 Conversation', threadHint: 'Chat with the owner of this link.', threadEmpty: 'No messages yet.',
+      threadYou: 'You', threadOwner: 'Recipient', threadName: 'Your name (optional)', threadPlaceholder: 'Write a message…',
+      threadSend: 'Send', threadSending: 'Sending…', threadError: 'Could not send, try again.', threadRate: 'Too many messages, please wait a moment.',
       proxyWarn: '⚠ The upload failed after several attempts. If the server is behind a reverse proxy (Nginx, Traefik, Apache…), check its configuration: disable request buffering and allow large enough body-size / timeout limits for big files.',
     },
     es: {
@@ -32,10 +40,14 @@
       resuming: 'reanudando…', msgSent: 'Mensaje enviado ✓', s: 's', min: 'min',
       tooBig: 'demasiado grande', notAllowed: 'tipo no permitido', quotaFull: 'cuota alcanzada',
       infected: 'bloqueado (virus detectado) ✗',
-      maxFiles: 'límite de archivos', skipped: 'omitido', remove: 'Quitar', filemsgPh: 'Mensaje para este archivo (opcional)',
+      blockedExec: 'bloqueado (ejecutable) ✗', storageCap: 'almacenamiento lleno', senderReq: 'nombre requerido',
+      maxFiles: 'límite de archivos', maxPerUpload: 'límite por envío', skipped: 'omitido', remove: 'Quitar', filemsgPh: 'Mensaje para este archivo (opcional)',
       clearAll: 'Quitar todo', clearConfirm: '¿Quitar los {n} archivos de la lista?', queued: '{n} archivo(s)',
       encrypting: 'cifrando…', encPassRequired: 'Introduce la frase de cifrado.',
       encKeyMissing: 'Enlace incompleto: falta la clave de cifrado.', encNoCrypto: 'Cifrado no compatible con este navegador.',
+      threadTitle: '💬 Conversación', threadHint: 'Chatea con el destinatario de este enlace.', threadEmpty: 'Aún no hay mensajes.',
+      threadYou: 'Tú', threadOwner: 'Destinatario', threadName: 'Tu nombre (opcional)', threadPlaceholder: 'Escribe un mensaje…',
+      threadSend: 'Enviar', threadSending: 'Enviando…', threadError: 'No se pudo enviar, inténtalo de nuevo.', threadRate: 'Demasiados mensajes, espera un momento.',
       proxyWarn: '⚠ El envío falló tras varios intentos. Si el servidor está detrás de un proxy inverso (Nginx, Traefik, Apache…), revisa su configuración: desactiva el almacenamiento en búfer de las peticiones y permite límites de tamaño/tiempo suficientes para archivos grandes.',
     },
   };
@@ -200,6 +212,11 @@
     if (cfg.maxFileBytes > 0 && file.size > cfg.maxFileBytes) return 'tooBig';
     var acc = acceptedSoFar();
     if (cfg.maxFiles > 0 && (cfg.filesReceived || 0) + acc.count >= cfg.maxFiles) return 'maxFiles';
+    // Feature 13 — cap the number of files a visitor may queue in one deposit. This
+    // counts only files added in this page session (not the link's cumulative total),
+    // guiding the visitor before they send; maxFiles / maxFilesPerSender stay the
+    // server-authoritative hard caps.
+    if (cfg.maxFilesPerUpload > 0 && acc.count >= cfg.maxFilesPerUpload) return 'maxPerUpload';
     if (cfg.maxTotalBytes > 0 &&
         (cfg.bytesReceived || 0) + acc.bytes + (file.size || 0) > cfg.maxTotalBytes) return 'quotaFull';
     return null;
@@ -209,9 +226,16 @@
   // the deposit under a per-sender subfolder (only when the link enables it).
   var senderEl = document.getElementById('up-sender');
   function senderParam() {
-    if (!cfg.groupBySender) return '';
+    // Feature 9 — send the visitor's name whenever the link groups by sender OR
+    // requires a name (the server rejects a required-name upload without it).
+    if (!cfg.groupBySender && !cfg.requireSenderName) return '';
     var v = senderEl ? String(senderEl.value || '').trim() : '';
     return v ? '&sender=' + encodeURIComponent(v) : '';
+  }
+  // Feature 9 — block sending until a required name is provided.
+  function senderNameMissing() {
+    if (!cfg.requireSenderName) return false;
+    return !(senderEl && String(senderEl.value || '').trim());
   }
 
   function folderErrorText(code) {
@@ -454,8 +478,11 @@
     if (code === 'ext-blocked' || code === 'ext-not-allowed') return t('notAllowed');
     if (code === 'file-too-large' || code === 'too-large') return t('tooBig');
     if (code === 'quota-full') return t('quotaFull');
+    if (code === 'storage-cap') return t('storageCap');
     if (code === 'max-files') return t('maxFiles');
     if (code === 'infected') return t('infected');
+    if (code === 'content-blocked') return t('blockedExec');
+    if (code === 'sender-required') return t('senderReq');
     if (code === 'revoked' || code === 'locked' || code === 'stopped') return t('blocked');
     return t('error');
   }
@@ -510,7 +537,8 @@
   // Fatal (non-resumable) server rejections: stop retrying and show the reason.
   function isFatalCode(code) {
     return code === 'ext-blocked' || code === 'ext-not-allowed' || code === 'file-too-large' ||
-      code === 'too-large' || code === 'quota-full' || code === 'max-files' || code === 'infected' ||
+      code === 'too-large' || code === 'quota-full' || code === 'storage-cap' || code === 'max-files' ||
+      code === 'infected' || code === 'content-blocked' || code === 'sender-required' ||
       code === 'revoked' || code === 'locked' || code === 'stopped';
   }
 
@@ -769,6 +797,12 @@
   }
 
   sendBtn.addEventListener('click', function () {
+    // Feature 9 — a required visitor name must be filled before anything is sent.
+    if (senderNameMissing()) {
+      window.alert(cfg.senderRequiredMsg || 'Please enter your name before sending.');
+      if (senderEl) { try { senderEl.focus(); } catch (_) {} }
+      return;
+    }
     // For encrypted links, validate the key/passphrase up front so we don't fail
     // file-by-file. sendMessageIfAny() is not encrypted (it's a plain note).
     if (ENC && items.some(function (it) { return it.state === 'waiting'; })) {
@@ -778,4 +812,83 @@
       startSend();
     }
   });
+
+  // Feature 27 — two-way reception thread. The visitor reads the running
+  // conversation with the link owner and posts replies. Rendered only when the
+  // link enables it. Every message is inserted via textContent (never innerHTML),
+  // so a message can never inject markup.
+  (function initThread() {
+    if (!cfg.threadEnabled) return;
+    var box = document.getElementById('up-thread');
+    if (!box) return;
+    var tk = cfg.token || token;
+    var head = document.createElement('div'); head.className = 'up-thread-head';
+    var h = document.createElement('h2'); h.textContent = t('threadTitle'); head.appendChild(h);
+    var hint = document.createElement('p'); hint.className = 'muted sm'; hint.textContent = t('threadHint'); head.appendChild(hint);
+    box.appendChild(head);
+    var listEl = document.createElement('div'); listEl.className = 'up-thread-list'; box.appendChild(listEl);
+    var form = document.createElement('div'); form.className = 'up-thread-form';
+    var nameEl = document.createElement('input');
+    nameEl.type = 'text'; nameEl.className = 'up-msg'; nameEl.maxLength = 80; nameEl.placeholder = t('threadName');
+    if (senderEl && senderEl.value) nameEl.value = senderEl.value; // reuse the sender name if asked
+    var textEl = document.createElement('textarea');
+    textEl.className = 'up-msg'; textEl.rows = 2; textEl.maxLength = 2000; textEl.placeholder = t('threadPlaceholder');
+    var sendEl = document.createElement('button');
+    sendEl.type = 'button'; sendEl.className = 'btn sm up-thread-send'; sendEl.textContent = t('threadSend');
+    form.appendChild(nameEl); form.appendChild(textEl); form.appendChild(sendEl);
+    box.appendChild(form);
+    box.hidden = false;
+
+    var lastRenderKey = '';
+    function pad(n) { return n < 10 ? '0' + n : '' + n; }
+    function fmt(at) { try { var d = new Date(at); return pad(d.getHours()) + ':' + pad(d.getMinutes()); } catch (_) { return ''; } }
+    function render(messages) {
+      var key = messages.map(function (m) { return m.id; }).join(',');
+      if (key === lastRenderKey) return;
+      lastRenderKey = key;
+      listEl.textContent = '';
+      if (!messages.length) {
+        var em = document.createElement('p'); em.className = 'muted sm up-thread-empty'; em.textContent = t('threadEmpty'); listEl.appendChild(em); return;
+      }
+      messages.forEach(function (m) {
+        var row = document.createElement('div'); row.className = 'up-thread-msg ' + (m.from === 'owner' ? 'from-owner' : 'from-visitor');
+        var meta = document.createElement('div'); meta.className = 'up-thread-meta';
+        meta.textContent = (m.from === 'owner' ? t('threadOwner') : (m.name || t('threadYou'))) + ' · ' + fmt(m.at);
+        var bodyEl = document.createElement('div'); bodyEl.className = 'up-thread-text'; bodyEl.textContent = m.text;
+        row.appendChild(meta); row.appendChild(bodyEl); listEl.appendChild(row);
+      });
+      listEl.scrollTop = listEl.scrollHeight;
+    }
+    function load() {
+      fetch('/u/' + encodeURIComponent(tk) + '/thread', { credentials: 'same-origin', cache: 'no-store' })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) { if (d && Array.isArray(d.messages)) render(d.messages); })
+        .catch(function () {});
+    }
+    var sending = false;
+    function done(label) { sending = false; sendEl.disabled = false; sendEl.textContent = label; }
+    function post() {
+      if (sending) return;
+      var text = String(textEl.value || '').trim();
+      if (!text) return;
+      sending = true; sendEl.disabled = true;
+      var label = t('threadSend'); sendEl.textContent = t('threadSending');
+      fetch('/u/' + encodeURIComponent(tk) + '/thread', {
+        method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: String(nameEl.value || '').trim(), text: text })
+      }).then(function (r) {
+        if (r.status === 429) { window.alert(t('threadRate')); done(label); return; }
+        if (!r.ok) throw new Error('post');
+        return r.json().then(function (d) {
+          if (d && Array.isArray(d.messages)) { textEl.value = ''; lastRenderKey = ''; render(d.messages); }
+          done(label);
+        });
+      }).catch(function () { window.alert(t('threadError')); done(label); });
+    }
+    sendEl.addEventListener('click', post);
+    textEl.addEventListener('keydown', function (e) { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); post(); } });
+    load();
+    // Poll while the tab is visible so an owner reply appears without a manual refresh.
+    setInterval(function () { if (document.visibilityState !== 'hidden') load(); }, 12000);
+  })();
 })();

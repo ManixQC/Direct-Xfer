@@ -40,8 +40,10 @@ test('password remembering uses the encrypted vault only when explicitly selecte
   assert.match(mobileJs, /DXLoginVault\.load\(\)/);
   assert.match(adminJs, /DXLoginVault\.clear\(\)/);
   assert.match(mobileJs, /DXLoginVault\.clear\(\)/);
-  assert.doesNotMatch(adminJs, /navigator\.credentials\.(?:store|get)\(/);
-  assert.doesNotMatch(mobileJs, /navigator\.credentials\.(?:store|get)\(/);
+  // Password memory must not use the browser password-credential store. A
+  // WebAuthn passkey login legitimately uses navigator.credentials.get().
+  assert.doesNotMatch(adminJs, /navigator\.credentials\.store\(|new PasswordCredential\(/);
+  assert.doesNotMatch(mobileJs, /navigator\.credentials\.store\(|new PasswordCredential\(/);
   assert.match(adminHtml, /id="password"[\s\S]*?autocomplete="off"[\s\S]*?readonly/);
   assert.match(mobileHtml, /id="mobile-password"[^>]*autocomplete="off"[^>]*readonly/);
   assert.match(adminJs, /if \(!rememberPassword\) \{[\s\S]*DXLoginVault\.clear\(\)/);

@@ -8,13 +8,13 @@
   <title>Direct-Xfer — Connexion mobile</title>
   <link rel="icon" href="/app/icon-192.png">
   <link rel="apple-touch-icon" href="/app/apple-touch-icon.png">
-  <link rel="manifest" href="/direct-xfer-pwa.webmanifest?v=111">
+  <link rel="manifest" href="/direct-xfer-pwa.webmanifest?v=228">
   <!-- Shell assets carry ?v so a fresh login.html is never paired with a stale cached
        login.js/login.css from a previous version (bump in lock-step with sw.js VERSION). -->
-  <script src="/app/theme-init.js?v=111"></script>
-  <link rel="stylesheet" href="/app/login.css?v=111">
-  <script src="/app/login-vault.js?v=111" defer></script>
-  <script src="/app/login.js?v=111" defer></script>
+  <script src="/app/theme-init.js?v=228"></script>
+  <link rel="stylesheet" href="/app/login.css?v=228">
+  <script src="/app/login-vault.js?v=228" defer></script>
+  <script src="/app/login.js?v=228" defer></script>
 </head>
 <body>
   <div id="mobile-pull-refresh" class="pull-refresh" role="status" aria-live="polite" aria-hidden="true">
@@ -75,6 +75,8 @@
       </label>
 
       <button id="mobile-login-submit" class="mobile-login-submit" type="submit" data-i18n="submit">Se connecter</button>
+      <button id="mobile-passkey-btn" class="mobile-login-passkey" type="button" disabled aria-describedby="mobile-biometric-hint" data-i18n="passkeySignIn">👆 Identification biométrique</button>
+      <p id="mobile-biometric-hint" class="mobile-biometric-hint hidden" role="status" aria-live="polite"></p>
       <p id="mobile-login-error" class="mobile-login-error hidden" role="alert" aria-live="assertive"></p>
 
       <div class="mobile-login-footer">

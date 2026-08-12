@@ -121,6 +121,46 @@
               </svg>
             </button>
           </div>
+          <div class="notifications-menu">
+            <button id="notifications-btn" class="icon-btn user-btn notifications-btn" aria-label="Notifications" data-i18n-aria="notifications.title" data-i18n-title="notifications.title" title="Notifications" aria-haspopup="true" aria-expanded="false">
+              <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+              <span id="notifications-badge" class="notification-badge hidden">0</span>
+            </button>
+            <div id="notifications-dropdown" class="dropdown notification-dropdown hidden" role="menu">
+              <div class="notification-head"><strong data-i18n="notifications.title">Notifications</strong><span id="notifications-count" class="muted sm"></span><span class="notification-head-actions"><button id="notifications-sound" class="btn ghost sm notification-head-btn" type="button" aria-pressed="false">🔕</button><button id="notifications-prefs-btn" class="btn ghost sm notification-head-btn" type="button" aria-expanded="false" title="Préférences" data-i18n-title="notifications.prefs">⚙️</button></span></div>
+              <div id="notifications-prefs" class="notification-prefs hidden"></div>
+              <div class="notification-filters" aria-label="Filtres de notifications" data-i18n-aria="notifications.filters">
+                <select id="notifications-category-filter" class="notification-filter-select" aria-label="Filtrer par catégorie" data-i18n-aria="notifications.categoryFilter">
+                  <option value="" data-i18n="notifications.allCategories">Toutes les catégories</option>
+                  <option value="visitors" data-i18n="notifications.category.visitors">Visiteurs</option>
+                  <option value="thresholds" data-i18n="notifications.category.thresholds">Seuils</option>
+                  <option value="traffic" data-i18n="notifications.category.traffic">Trafic</option>
+                  <option value="images" data-i18n="notifications.category.images">Images</option>
+                  <option value="pwa" data-i18n="notifications.category.pwa">PWA</option>
+                  <option value="receptions" data-i18n="notifications.category.receptions">Réceptions</option>
+                  <option value="search" data-i18n="notifications.category.search">Recherche / OCR</option>
+                  <option value="security" data-i18n="notifications.category.security">Sécurité</option>
+                  <option value="shares" data-i18n="notifications.category.shares">Partages</option>
+                  <option value="maintenance" data-i18n="notifications.category.maintenance">Maintenance</option>
+                  <option value="network" data-i18n="notifications.category.network">Réseau</option>
+                  <option value="restarts" data-i18n="notifications.category.restarts">Redémarrages</option>
+                  <option value="updates" data-i18n="notifications.category.updates">Mises à jour</option>
+                  <option value="system_health" data-i18n="notifications.category.system_health">Santé système</option>
+                  <option value="transfers" data-i18n="notifications.category.transfers">Transferts</option>
+                </select>
+                <select id="notifications-severity-filter" class="notification-filter-select" aria-label="Filtrer par gravité" data-i18n-aria="notifications.severityFilter">
+                  <option value="" data-i18n="notifications.allSeverities">Toutes les gravités</option>
+                  <option value="info" data-i18n="notifications.severity.info">Information</option>
+                  <option value="success" data-i18n="notifications.severity.success">Succès</option>
+                  <option value="warning" data-i18n="notifications.severity.warning">Avertissement</option>
+                  <option value="critical" data-i18n="notifications.severity.critical">Critique</option>
+                </select>
+                <input id="notifications-search" class="notification-search" type="search" autocomplete="off" spellcheck="false" placeholder="Rechercher…" data-i18n-ph="notifications.search" aria-label="Rechercher dans les notifications" data-i18n-aria="notifications.searchAria">
+              </div>
+              <div id="notifications-list" class="notification-list"><div class="muted sm" data-i18n="notifications.loading">Chargement…</div></div>
+              <button id="notifications-clear" class="btn ghost sm notification-clear hidden" type="button" data-i18n="notifications.clearAll">Tout supprimer</button>
+            </div>
+          </div>
           <div class="user-menu">
             <button id="user-btn" class="icon-btn user-btn" aria-label="Account" aria-haspopup="true">
               <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true">
@@ -212,6 +252,7 @@
       <section class="card">
         <div class="card-head">
           <h2><span data-i18n="tr.title">Active transfers</span> <span id="transfer-count" class="count">0</span></h2>
+          <div class="card-head-actions"><button id="live-activity-btn" type="button" class="btn ghost sm" data-i18n="activity.open">◉ Live activity</button></div>
         </div>
         <div id="transfers-list" class="transfers-list"></div>
       </section>
@@ -222,6 +263,7 @@
           <h2 class="shares-title"><span data-i18n="sh.title">Active shares</span> <span id="share-count" class="count">0</span></h2>
           <div class="head-actions">
             <button id="search-toggle-btn" class="btn ghost sm" data-i18n="search.btn" title="Search file contents">🔎 Search contents</button>
+            <button id="trash-btn" class="btn ghost sm" type="button" data-i18n="trash.open">🗑 Trash</button>
             <button id="links-export-csv" class="btn ghost sm" data-i18n="sh.exportCsv" title="Export the links list as CSV">⬇ Links CSV</button>
             <button id="links-export-json" class="btn ghost sm" data-i18n="sh.exportJson" title="Export the links list as JSON">⬇ Links JSON</button>
             <button id="new-enc-btn" class="btn ghost sm" data-i18n="enc.newShare">🔒 Encrypted share</button>
@@ -247,8 +289,13 @@
         <p id="shares-summary" class="shares-summary muted sm hidden"></p>
         <div id="search-panel" class="search-panel hidden">
           <div class="search-row">
-            <input id="search-input" type="search" class="search-input" autocomplete="off" spellcheck="false" data-i18n-ph="search.ph" placeholder="🔎 Search inside shared & received text files…" />
+            <input id="search-input" type="search" class="search-input" autocomplete="off" spellcheck="false" data-i18n-ph="search.ph" placeholder="🔎 Search names, PDF, Office, OCR text and archives…" />
+            <label class="search-semantic-toggle"><input id="search-semantic" type="checkbox" checked /> <span data-i18n="search.semantic">Semantic</span></label>
             <button id="search-run" class="btn sm" data-i18n="search.run">Search</button>
+          </div>
+          <div class="search-index-bar">
+            <span id="search-index-status" class="muted sm" data-i18n="search.indexLoading">Loading index…</span>
+            <button id="search-reindex" type="button" class="btn ghost xs" data-i18n="search.reindex">Rebuild index</button>
           </div>
           <p id="search-status" class="muted sm"></p>
           <div id="search-results" class="search-results"></div>
@@ -268,25 +315,64 @@
             <option value="active" data-i18n="sh.fActive">Active</option>
             <option value="inactive" data-i18n="sh.fInactive">Inactive</option>
           </select>
+          <select id="shares-size" class="shares-select" aria-label="size">
+            <option value="" data-i18n="sh.sizeAll">All sizes</option>
+            <option value="small" data-i18n="sh.sizeSmall">&lt; 100 MB</option>
+            <option value="medium" data-i18n="sh.sizeMedium">100 MB – 1 GB</option>
+            <option value="large" data-i18n="sh.sizeLarge">&gt; 1 GB</option>
+          </select>
+          <select id="shares-date" class="shares-select" aria-label="date">
+            <option value="" data-i18n="sh.dateAll">All dates</option>
+            <option value="today" data-i18n="sh.dateToday">Today</option>
+            <option value="7" data-i18n="sh.date7">Last 7 days</option>
+            <option value="30" data-i18n="sh.date30">Last 30 days</option>
+            <option value="custom" data-i18n="sh.dateCustom">Custom…</option>
+          </select>
+          <span id="shares-date-custom" class="shares-date-custom hidden">
+            <input id="shares-date-from" type="date" class="shares-date-input" data-i18n-title="sh.dateFrom" title="From" />
+            <input id="shares-date-to" type="date" class="shares-date-input" data-i18n-title="sh.dateTo" title="To" />
+          </span>
           <select id="shares-sort" class="shares-select" aria-label="sort">
             <option value="new" data-i18n="sh.sortNew">Newest</option>
             <option value="old" data-i18n="sh.sortOld">Oldest</option>
             <option value="name" data-i18n="sh.sortName">Name A→Z</option>
             <option value="downloads" data-i18n="sh.sortDl">Most active</option>
+            <option value="activity" data-i18n="sh.sortActivity">Recent activity</option>
             <option value="expiry" data-i18n="sh.sortExpiry">Expiring soon</option>
           </select>
+          <select id="shares-page-size" class="shares-select" aria-label="items per page" data-i18n-title="sh.pageSizeTitle" title="Items per page">
+            <option value="10" data-i18n="sh.page10">10 / page</option>
+            <option value="25" data-i18n="sh.page25">25 / page</option>
+            <option value="50" data-i18n="sh.page50">50 / page</option>
+            <option value="100" data-i18n="sh.page100">100 / page</option>
+          </select>
+          <button id="shares-archived-toggle" type="button" class="btn ghost sm" aria-pressed="false" data-i18n="sh.showArchived">🗄 Archives</button>
           <div class="ui-view-toggle" role="group" aria-label="Display mode">
             <button id="shares-view-list" class="btn ghost sm view-mode-btn active" type="button" aria-pressed="true" data-i18n-title="view.list" title="List view">☷</button>
             <button id="shares-view-grid" class="btn ghost sm view-mode-btn" type="button" aria-pressed="false" data-i18n-title="view.grid" title="Grid view">▦</button>
           </div>
+          <button id="shares-density-toggle" class="btn ghost sm density-toggle" type="button" aria-pressed="false" data-i18n-title="sh.densityTip" title="Density: compact / comfortable">↕</button>
+          <button type="button" id="bulk-select-page" class="btn ghost sm" data-i18n="sh.bulkSelectPage">☑ Select page</button>
           <div id="shares-bulk" class="shares-bulk hidden">
             <span id="bulk-count" class="muted sm">0</span>
+            <button type="button" id="bulk-copy" class="btn ghost sm" data-i18n="sh.bulkCopy">🔗 Copy links</button>
+            <button type="button" id="bulk-pin" class="btn ghost sm" data-i18n="sh.bulkPin">★ Pin</button>
+            <button type="button" id="bulk-archive" class="btn ghost sm" data-i18n="sh.bulkArchive">🗄 Archive</button>
             <button type="button" id="bulk-tag" class="btn ghost sm" data-i18n="sh.bulkTag">🏷 Tag</button>
             <button type="button" id="bulk-extend" class="btn ghost sm" data-i18n="sh.bulkExtend">⏱ Extend</button>
+            <select id="bulk-expiry-preset" class="shares-select bulk-expiry-preset" aria-label="quick expiry">
+              <option value="" data-i18n="sh.quickExpiry">Expiry…</option>
+              <option value="3600">1 h</option><option value="86400">24 h</option><option value="604800">7 d</option><option value="2592000">30 d</option><option value="0" data-i18n="sh.never">Never</option>
+            </select>
             <button type="button" id="bulk-revoke" class="btn danger sm" data-i18n="sh.bulkRevoke">Revoke</button>
           </div>
         </div>
         <div id="shares-list" class="shares-list view-list" data-view="list"></div>
+        <div id="shares-pagination" class="shares-pagination hidden" aria-live="polite">
+          <button id="shares-page-prev" type="button" class="btn ghost sm" data-i18n="sh.pagePrev">← Previous</button>
+          <span id="shares-page-label" class="muted sm"></span>
+          <button id="shares-page-next" type="button" class="btn ghost sm" data-i18n="sh.pageNext">Next →</button>
+        </div>
       </section>
 
 
@@ -442,6 +528,19 @@
               <div id="dash-activity" class="chart-body"></div>
             </div>
             <div class="chart-panel dash-wide">
+              <div class="chart-title" data-i18n="dash.dailyTrends">Daily trends</div>
+              <div class="dash-mini-row">
+                <div class="dash-mini">
+                  <div class="dash-mini-title"><span class="lg lg-dl"></span><span data-i18n="dash.downloadsPerDay">Downloads / day</span></div>
+                  <div id="dash-mini-downloads" class="dash-mini-body"></div>
+                </div>
+                <div class="dash-mini">
+                  <div class="dash-mini-title"><span class="lg lg-ul"></span><span data-i18n="dash.depositsPerDay">Deposits / day</span></div>
+                  <div id="dash-mini-uploads" class="dash-mini-body"></div>
+                </div>
+              </div>
+            </div>
+            <div class="chart-panel dash-wide">
               <div class="chart-title" data-i18n="dash.volumeTrend">Transferred volume over time</div>
               <div id="dash-volume-trend" class="chart-body"></div>
             </div>
@@ -528,6 +627,18 @@
             <div class="chart-panel">
               <div class="chart-title" data-i18n="dash.storageLargest">Largest received files</div>
               <div id="dash-storage-largest" class="chart-body"></div>
+            </div>
+            <div class="chart-panel dash-wide">
+              <div class="chart-title" data-i18n="dash.fileTypeStats">File-type storage &amp; traffic</div>
+              <div id="dash-file-type-stats" class="chart-body"></div>
+            </div>
+            <div class="chart-panel dash-wide">
+              <div class="chart-title" data-i18n="dash.storageReport">Direct-Xfer storage report</div>
+              <div id="dash-storage-report" class="chart-body"></div>
+            </div>
+            <div class="chart-panel dash-wide">
+              <div class="chart-title dashboard-title-actions"><span data-i18n="diag.title">Direct-Xfer diagnostics</span><button id="dash-diagnostics-run" class="btn ghost sm" type="button" data-i18n="diag.run">Run diagnostics</button></div>
+              <div id="dash-diagnostics" class="chart-body"><div class="empty sm" data-i18n="diag.notRun">Diagnostics have not been run yet.</div></div>
             </div>
             <div class="chart-panel">
               <div class="chart-title" data-i18n="dash.proxy">Reverse proxy status</div>
@@ -874,6 +985,10 @@
             </select>
           </label>
           <label>
+            <span data-i18n="pk.expireAt">Exact expiry date (optional)</span>
+            <input id="opt-expireat" type="datetime-local" />
+          </label>
+          <label>
             <span data-i18n="pk.startsAt">Active from (optional)</span>
             <input id="opt-startsat" type="datetime-local" />
           </label>
@@ -881,13 +996,34 @@
             <span data-i18n="pk.maxDl">Max downloads</span>
             <input id="opt-maxdl" type="number" min="0" data-i18n-ph="pk.unlimited" placeholder="unlimited" />
           </label>
+          <p class="muted sm smart-expiry-hint" data-i18n="sh.smartExpiryHint">Smart expiry: when several limits are enabled, the link expires as soon as the first one is reached (date, downloads, first use or inactivity).</p>
           <label>
             <span data-i18n="pk.maxVisitors">Max unique visitors</span>
             <input id="opt-maxvisitors" type="number" min="0" data-i18n-ph="pk.unlimited" placeholder="unlimited" />
           </label>
           <label>
+            <span data-i18n="pk.dlThreshold">Notify at N downloads</span>
+            <input id="opt-dlthreshold" type="number" min="0" data-i18n-ph="pk.off" placeholder="off" />
+          </label>
+          <label>
+            <span data-i18n="pk.maxDlPerIp">Max downloads / IP</span>
+            <input id="opt-maxdlperip" type="number" min="0" data-i18n-ph="pk.unlimited" placeholder="unlimited" />
+          </label>
+          <label>
+            <span data-i18n="pk.maxBandwidth">Total bandwidth cap (GB)</span>
+            <input id="opt-maxbytesserved" type="number" min="0" step="0.1" data-i18n-ph="pk.unlimited" placeholder="unlimited" />
+          </label>
+          <label>
+            <span data-i18n="pk.emoji">Emoji marker (optional)</span>
+            <input id="opt-emoji" type="text" maxlength="8" autocomplete="off" placeholder="📁" />
+          </label>
+          <label>
             <span data-i18n="pk.password">Password (optional)</span>
             <input id="opt-password" type="text" autocomplete="off" spellcheck="false" data-i18n-ph="pk.passwordPh" placeholder="none" />
+          </label>
+          <label>
+            <span data-i18n="pk.pwHint">Password hint (optional)</span>
+            <input id="opt-pwhint" type="text" maxlength="200" autocomplete="off" data-i18n-ph="pk.pwHintPh" placeholder="e.g. our home town" />
           </label>
           <label>
             <span data-i18n="pk.rate">Max speed (KB/s)</span>
@@ -904,6 +1040,40 @@
           <label class="opt-check">
             <input id="opt-burn" type="checkbox" />
             <span data-i18n="pk.burn">One-time link (revoke after first download)</span>
+          </label>
+          <label class="opt-check">
+            <input id="opt-requestaccess" type="checkbox" />
+            <span data-i18n="pk.requestAccess">Require access approval (visitor requests, you approve)</span>
+          </label>
+          <label class="opt-check">
+            <input id="opt-feedback" type="checkbox" />
+            <span data-i18n="pk.allowFeedback">Allow moderated visitor comments</span>
+          </label>
+          <div class="fld-grid share-extra-grid">
+            <label class="fld">
+              <span data-i18n="sh.color">Card color</span>
+              <input id="opt-color" type="text" maxlength="7" autocomplete="off" spellcheck="false" placeholder="#3b82f6" />
+            </label>
+            <label class="fld">
+              <span data-i18n="sh.tagsField">Labels</span>
+              <input id="opt-tags" type="text" maxlength="300" autocomplete="off" data-i18n-ph="sh.tagsPh" placeholder="Client, Urgent" />
+            </label>
+            <label class="fld">
+              <span data-i18n="sh.reminderHours">Expiry reminder (hours, blank = global)</span>
+              <input id="opt-reminder" type="number" min="0" max="8760" step="1" placeholder="global" />
+            </label>
+            <label class="fld">
+              <span data-i18n="sh.firstUseHours">Expire after first use (hours)</span>
+              <input id="opt-firstuse" type="number" min="0" max="87600" step="1" placeholder="0" />
+            </label>
+            <label class="fld">
+              <span data-i18n="sh.inactiveDays">Expire after inactivity (days)</span>
+              <input id="opt-inactive" type="number" min="0" max="3650" step="1" placeholder="0" />
+            </label>
+          </div>
+          <label class="pk-note-field">
+            <span data-i18n="sh.descriptionMd">Markdown description shown to the visitor (optional)</span>
+            <textarea id="opt-description" rows="4" maxlength="8000" data-i18n-ph="sh.descriptionPh" placeholder="## Information"></textarea>
           </label>
           <label class="pk-note-field">
             <span data-i18n="pk.note">Message shown to the visitor (optional)</span>
@@ -946,6 +1116,10 @@
             </select>
           </label>
           <label>
+            <span data-i18n="pk.expireAt">Exact expiry date (optional)</span>
+            <input id="edit-expireat" type="datetime-local" />
+          </label>
+          <label>
             <span data-i18n="pk.startsAt">Active from (optional)</span>
             <input id="edit-startsat" type="datetime-local" />
           </label>
@@ -958,8 +1132,28 @@
             <input id="edit-maxvisitors" type="number" min="0" data-i18n-ph="pk.unlimited" placeholder="unlimited" />
           </label>
           <label>
+            <span data-i18n="pk.dlThreshold">Notify at N downloads</span>
+            <input id="edit-dlthreshold" type="number" min="0" data-i18n-ph="pk.off" placeholder="off" />
+          </label>
+          <label>
+            <span data-i18n="pk.maxDlPerIp">Max downloads / IP</span>
+            <input id="edit-maxdlperip" type="number" min="0" data-i18n-ph="pk.unlimited" placeholder="unlimited" />
+          </label>
+          <label>
+            <span data-i18n="pk.maxBandwidth">Total bandwidth cap (GB)</span>
+            <input id="edit-maxbytesserved" type="number" min="0" step="0.1" data-i18n-ph="pk.unlimited" placeholder="unlimited" />
+          </label>
+          <label>
+            <span data-i18n="pk.emoji">Emoji marker (optional)</span>
+            <input id="edit-emoji" type="text" maxlength="8" autocomplete="off" placeholder="📁" />
+          </label>
+          <label>
             <span data-i18n="ed.password">Password</span>
             <input id="edit-password" type="text" autocomplete="off" spellcheck="false" data-i18n-ph="ed.pwPh" placeholder="leave blank to keep" />
+          </label>
+          <label>
+            <span data-i18n="pk.pwHint">Password hint (optional)</span>
+            <input id="edit-pwhint" type="text" maxlength="200" autocomplete="off" data-i18n-ph="pk.pwHintPh" placeholder="e.g. our home town" />
           </label>
           <label class="opt-check">
             <input id="edit-clearpw" type="checkbox" />
@@ -980,6 +1174,14 @@
           <label class="opt-check">
             <input id="edit-burn" type="checkbox" />
             <span data-i18n="pk.burn">One-time link (revoke after first download)</span>
+          </label>
+          <label class="opt-check">
+            <input id="edit-requestaccess" type="checkbox" />
+            <span data-i18n="pk.requestAccess">Require access approval (visitor requests, you approve)</span>
+          </label>
+          <label class="opt-check">
+            <input id="edit-feedback" type="checkbox" />
+            <span data-i18n="pk.allowFeedback">Allow moderated visitor comments</span>
           </label>
           <div class="access-rules">
             <div class="cfg-section" data-i18n="acc.title">Access rules (geo / IP)</div>
@@ -1013,6 +1215,14 @@
             </div>
             <p class="muted sm" data-i18n="acc.hint">Loopback is always allowed. Country rules need IP geolocation on; visitors whose country can't be determined are allowed (IP rules are the hard boundary).</p>
           </div>
+          <div class="fld-grid share-extra-grid">
+            <label class="fld"><span data-i18n="sh.color">Card color</span><input id="edit-color" type="text" maxlength="7" autocomplete="off" spellcheck="false" placeholder="#3b82f6" /></label>
+            <label class="fld"><span data-i18n="sh.tagsField">Labels</span><input id="edit-tags" type="text" maxlength="300" autocomplete="off" data-i18n-ph="sh.tagsPh" placeholder="Client, Urgent" /></label>
+            <label class="fld"><span data-i18n="sh.reminderHours">Expiry reminder (hours, blank = global)</span><input id="edit-reminder" type="number" min="0" max="8760" step="1" /></label>
+            <label class="fld"><span data-i18n="sh.firstUseHours">Expire after first use (hours)</span><input id="edit-firstuse" type="number" min="0" max="87600" step="1" /></label>
+            <label class="fld"><span data-i18n="sh.inactiveDays">Expire after inactivity (days)</span><input id="edit-inactive" type="number" min="0" max="3650" step="1" /></label>
+          </div>
+          <label class="pk-note-field"><span data-i18n="sh.descriptionMd">Markdown description shown to the visitor (optional)</span><textarea id="edit-description" rows="4" maxlength="8000" data-i18n-ph="sh.descriptionPh" placeholder="## Information"></textarea></label>
           <label class="pk-note-field">
             <span data-i18n="pk.note">Message shown to the visitor (optional)</span>
             <textarea id="edit-note" rows="2" maxlength="2000" data-i18n-ph="pk.notePh" placeholder="e.g. Here is the file you asked for."></textarea>
@@ -1173,6 +1383,13 @@
           <button id="inbox-close" class="icon-btn" aria-label="Close">✕</button>
         </div>
         <form id="inbox-form" autocomplete="off">
+          <div class="preset-bar">
+            <select id="ib-preset-select" class="preset-select" aria-label="Preset">
+              <option value="" data-i18n="preset.apply">Apply a preset…</option>
+            </select>
+            <button type="button" id="ib-preset-save" class="btn ghost sm" data-i18n="preset.save">💾 Save preset</button>
+            <button type="button" id="ib-preset-del" class="btn ghost sm hidden" title="Delete this preset" aria-label="Delete preset">✕</button>
+          </div>
           <label class="fld">
             <span data-i18n="inbox.name">Name</span>
             <input id="ib-name" type="text" autocomplete="off" spellcheck="false" data-i18n-ph="inbox.namePh" placeholder="e.g. Client documents" />
@@ -1196,11 +1413,19 @@
               <span data-i18n="pk.startsAt">Active from (optional)</span>
               <input id="ib-startsat" type="datetime-local" />
             </label>
+            <label class="fld">
+              <span data-i18n="pk.expireAt">Exact expiry date (optional)</span>
+              <input id="ib-expireat" type="datetime-local" />
+            </label>
           </div>
           <div class="fld-grid">
             <label class="fld">
               <span data-i18n="inbox.maxFiles">Max files</span>
               <input id="ib-maxfiles" type="number" min="0" data-i18n-ph="pk.unlimited" placeholder="unlimited" />
+            </label>
+            <label class="fld">
+              <span data-i18n="inbox.maxFilesPerUpload">Max files / upload</span>
+              <input id="ib-maxfiles-upload" type="number" min="0" data-i18n-ph="pk.unlimited" placeholder="unlimited" />
             </label>
             <label class="fld">
               <span data-i18n="inbox.maxFileSize">Max size / file (MB)</span>
@@ -1209,6 +1434,14 @@
             <label class="fld">
               <span data-i18n="inbox.maxTotalSize">Total quota (MB)</span>
               <input id="ib-maxtotal" type="number" min="0" step="1" data-i18n-ph="pk.unlimited" placeholder="unlimited" />
+            </label>
+            <label class="fld">
+              <span data-i18n="inbox.maxFilesPerSender">Max files / sender</span>
+              <input id="ib-maxfiles-sender" type="number" min="0" data-i18n-ph="pk.unlimited" placeholder="unlimited" />
+            </label>
+            <label class="fld">
+              <span data-i18n="inbox.maxBytesPerSender">Quota / sender (MB)</span>
+              <input id="ib-maxbytes-sender" type="number" min="0" step="1" data-i18n-ph="pk.unlimited" placeholder="unlimited" />
             </label>
           </div>
           <label class="fld">
@@ -1245,6 +1478,22 @@
           <label class="fld opt-check">
             <input id="ib-group-sender" type="checkbox" />
             <span data-i18n="inbox.groupSender">Sort uploads into per-sender subfolders</span>
+          </label>
+          <label class="fld opt-check">
+            <input id="ib-tag-sender" type="checkbox" />
+            <span data-i18n="inbox.tagSender">Prefix received filenames with the sender name</span>
+          </label>
+          <label class="fld opt-check">
+            <input id="ib-reject-dup" type="checkbox" />
+            <span data-i18n="inbox.rejectDup">Refuse a file that already arrived (same content)</span>
+          </label>
+          <label class="fld opt-check">
+            <input id="ib-require-sender" type="checkbox" />
+            <span data-i18n="inbox.requireSender">Require the visitor to enter a name</span>
+          </label>
+          <label class="fld opt-check">
+            <input id="ib-block-exec" type="checkbox" />
+            <span data-i18n="inbox.blockExec">Reject executables (magic-byte check)</span>
           </label>
           <label class="fld opt-check">
             <input id="ib-moderated" type="checkbox" />
@@ -1305,6 +1554,10 @@
               <span data-i18n="pk.startsAt">Active from (optional)</span>
               <input id="cl-startsat" type="datetime-local" />
             </label>
+            <label class="fld">
+              <span data-i18n="pk.expireAt">Exact expiry date (optional)</span>
+              <input id="cl-expireat" type="datetime-local" />
+            </label>
           </div>
           <label id="cl-allow-delete-row" class="fld opt-check">
             <input id="cl-allow-delete" type="checkbox" />
@@ -1314,6 +1567,10 @@
           <label class="fld opt-check">
             <input id="cl-allow-zip" type="checkbox" checked />
             <span data-i18n="pk.allowZip">Allow "download all (.zip)"</span>
+          </label>
+          <label class="fld opt-check">
+            <input id="cl-block-exec" type="checkbox" />
+            <span data-i18n="inbox.blockExec">Reject executables (magic-byte check)</span>
           </label>
           <label class="fld opt-check">
             <input id="cl-moderated" type="checkbox" />
@@ -1327,6 +1584,10 @@
             <label class="fld">
               <span data-i18n="inbox.maxTotalSize">Total quota (MB)</span>
               <input id="cl-maxtotal" type="number" min="0" step="1" data-i18n-ph="pk.unlimited" placeholder="unlimited" />
+            </label>
+            <label class="fld">
+              <span data-i18n="inbox.maxFilesPerUpload">Max files / upload</span>
+              <input id="cl-maxfiles-upload" type="number" min="0" data-i18n-ph="pk.unlimited" placeholder="unlimited" />
             </label>
           </div>
           <label class="fld">
@@ -1551,6 +1812,7 @@
         <p class="muted sm" id="qr-name"></p>
         <div class="qr-box"><img id="qr-img" alt="QR code" /></div>
         <div class="qr-url"><code id="qr-url"></code></div>
+        <div id="qr-actions" class="share-via"></div>
       </div>
     </div>
 
@@ -1649,6 +1911,10 @@
           <button id="audit-close" class="icon-btn" aria-label="Close">✕</button>
         </div>
         <p class="muted sm" data-i18n="audit.subtitle">Recent admin actions (most recent first).</p>
+        <div class="audit-integrity-bar">
+          <span id="audit-integrity" class="muted sm" data-i18n="audit.verifying">Verifying cryptographic chain…</span>
+          <button id="audit-verify" type="button" class="btn ghost xs" data-i18n="audit.verify">Verify</button>
+        </div>
         <div id="audit-list" class="audit-list"></div>
       </div>
     </div>
@@ -1706,6 +1972,46 @@
           <p id="cfg-allowlist-env" class="muted sm hidden" data-i18n="cfg.allowlistEnv">Managed by the ADMIN_ALLOWED_IPS environment variable.</p>
           <p class="muted sm" data-i18n="cfg.allowlistHint">Leave empty to keep the default (local network). Loopback is always allowed. A wrong entry can lock you out.</p>
 
+          <label class="fld opt-check">
+            <input id="cfg-ransom-enable" type="checkbox" />
+            <span data-i18n="cfg.ransomEnable">Ransomware / destructive anomaly protection</span>
+          </label>
+          <p class="muted sm" data-i18n="cfg.ransomHint">Blocks a public upload/delete client temporarily after mass deletion or a ransomware-like upload burst. It never deletes files automatically.</p>
+          <div class="fld-grid" id="cfg-ransom-fields">
+            <label class="fld"><span data-i18n="cfg.ransomDelete">Mass-delete threshold / 60 s</span><input id="cfg-ransom-delete" type="number" min="5" max="1000" step="1" /></label>
+            <label class="fld"><span data-i18n="cfg.ransomUpload">Suspicious uploads / 120 s</span><input id="cfg-ransom-upload" type="number" min="20" max="5000" step="1" /></label>
+            <label class="fld"><span data-i18n="cfg.ransomBlock">Block duration (minutes)</span><input id="cfg-ransom-block" type="number" min="1" max="1440" step="1" /></label>
+          </div>
+          <div class="cfg-test-row"><button type="button" id="cfg-ransom-refresh" class="btn ghost sm" data-i18n="cfg.ransomRefresh">Active blocks</button><span id="cfg-ransom-status" class="muted sm"></span></div>
+          <div id="cfg-ransom-blocks" class="ransom-blocks"></div>
+
+          <div class="cfg-section" data-i18n="cfg.dlpTitle">Data Loss Prevention (DLP)</div>
+          <label class="fld opt-check"><input id="cfg-dlp-enable" type="checkbox" /><span data-i18n="cfg.dlpEnable">Scan outgoing shares for sensitive data</span></label>
+          <p class="muted sm" data-i18n="cfg.dlpHint">Local scan before publishing a share. Detected secrets are redacted in logs and the interface.</p>
+          <div class="fld-grid" id="cfg-dlp-fields">
+            <label class="fld"><span data-i18n="cfg.dlpMode">Policy</span><select id="cfg-dlp-mode"><option value="warn" data-i18n="cfg.dlpWarn">Warn + confirm</option><option value="block" data-i18n="cfg.dlpBlock">Block</option><option value="log" data-i18n="cfg.dlpLog">Log only</option></select></label>
+            <label class="fld"><span data-i18n="cfg.dlpMaxFiles">Max files per scan</span><input id="cfg-dlp-maxfiles" type="number" min="1" max="1000" step="1" /></label>
+            <label class="fld"><span data-i18n="cfg.dlpMaxMb">Max size per file (MB)</span><input id="cfg-dlp-maxmb" type="number" min="1" max="250" step="1" /></label>
+          </div>
+          <label class="fld opt-check"><input id="cfg-dlp-ocr" type="checkbox" /><span data-i18n="cfg.dlpOcr">Use server OCR for images/scanned PDFs</span></label>
+
+          <div class="cfg-section" data-i18n="notifications.settingsTitle">Centre de notifications</div>
+          <p class="muted sm" data-i18n="notifications.settingsHint">Choisissez les catégories de notifications à recevoir dans le centre de notifications pour ce compte.</p>
+          <div id="cfg-notification-center-prefs" class="notification-settings-grid" role="group" aria-label="Préférences du centre de notifications" data-i18n-aria="notifications.settingsTitle"></div>
+          <p id="cfg-notification-center-status" class="muted sm notification-settings-status" role="status" aria-live="polite"></p>
+          <div class="notification-rule-builder">
+            <strong data-i18n="notifications.rulesTitle">Alertes personnalisées</strong>
+            <p class="muted sm" data-i18n="notifications.rulesHint">Créez une alerte lorsqu’un de vos liens atteint un seuil précis.</p>
+            <div class="notification-rule-fields">
+              <label class="fld"><span data-i18n="notifications.ruleMetric">Mesure</span><select id="cfg-notification-rule-metric"></select></label>
+              <label class="fld"><span data-i18n="notifications.ruleTarget">Lien</span><select id="cfg-notification-rule-target"></select></label>
+              <label class="fld"><span data-i18n="notifications.ruleThreshold">Seuil</span><input id="cfg-notification-rule-threshold" type="number" min="1" step="1" /></label>
+              <label class="fld"><span data-i18n="notifications.ruleLabel">Nom (facultatif)</span><input id="cfg-notification-rule-label" type="text" maxlength="100" /></label>
+            </div>
+            <div class="row"><button type="button" id="cfg-notification-rule-add" class="btn ghost sm" data-i18n="notifications.ruleAdd">Ajouter la règle</button><span id="cfg-notification-rule-status" class="muted sm" role="status" aria-live="polite"></span></div>
+            <div id="cfg-notification-rule-list" class="notification-rule-list"></div>
+          </div>
+
           <div class="cfg-section" data-i18n="cfg.notif">Notifications (webhook)</div>
           <p id="cfg-webhook-env" class="muted sm hidden" data-i18n="cfg.webhookEnv">Managed by the WEBHOOK_URL environment variable.</p>
           <label class="fld">
@@ -1727,6 +2033,11 @@
             <label class="opt-check"><input id="cfg-notify-uploads" type="checkbox" /> <span data-i18n="cfg.notifyUploads">Uploads</span></label>
             <label class="opt-check"><input id="cfg-notify-messages" type="checkbox" /> <span data-i18n="cfg.notifyMessages">Messages</span></label>
           </div>
+          <label class="fld">
+            <span data-i18n="cfg.notifyAggregate">Group repeated link alerts into one (seconds, 0 = off)</span>
+            <input id="cfg-notify-aggregate" type="number" min="0" max="3600" step="5" />
+            <small class="muted" data-i18n="cfg.notifyAggregateHint">Received/downloaded alerts for the same link within this window are merged into a single digest. Applies to webhook, e-mail and push.</small>
+          </label>
           <div class="cfg-test-row">
             <button type="button" id="cfg-webhook-test" class="btn ghost sm" data-i18n="cfg.webhookTest">Test</button>
             <span id="cfg-webhook-result" class="muted sm"></span>
@@ -1862,6 +2173,14 @@
             <input id="cfg-def-qr" type="checkbox" />
             <span data-i18n="cfg.qrDefault">Show the QR code right after creating a link</span>
           </label>
+          <div class="fld-grid">
+            <label class="fld"><span data-i18n="sh.color">Card color</span><input id="cfg-def-color" type="text" maxlength="7" autocomplete="off" placeholder="#3b82f6" /></label>
+            <label class="fld"><span data-i18n="sh.tagsField">Labels</span><input id="cfg-def-tags" type="text" maxlength="300" autocomplete="off" data-i18n-ph="sh.tagsPh" /></label>
+            <label class="fld"><span data-i18n="sh.reminderHours">Expiry reminder (hours, blank = global)</span><input id="cfg-def-reminder" type="number" min="-1" max="8760" step="1" placeholder="-1" /></label>
+            <label class="fld"><span data-i18n="sh.firstUseHours">Expire after first use (hours)</span><input id="cfg-def-firstuse" type="number" min="0" max="87600" step="1" placeholder="0" /></label>
+            <label class="fld"><span data-i18n="sh.inactiveDays">Expire after inactivity (days)</span><input id="cfg-def-inactive" type="number" min="0" max="3650" step="1" placeholder="0" /></label>
+          </div>
+          <label class="fld"><span data-i18n="sh.descriptionMd">Markdown description shown to the visitor (optional)</span><textarea id="cfg-def-description" rows="3" maxlength="8000" data-i18n-ph="sh.descriptionPh"></textarea></label>
           <label class="fld">
             <span data-i18n="cfg.startDelay">Deferred start (hours, 0 = immediate)</span>
             <input id="cfg-def-startdelay" type="number" min="0" max="17520" step="1" placeholder="0" />
@@ -1909,6 +2228,10 @@
             <label class="fld">
               <span data-i18n="cfg.maxZip">Max folder .zip size (MB)</span>
               <input id="cfg-max-zip" type="number" min="0" step="1" data-i18n-ph="pk.unlimited" placeholder="unlimited" />
+            </label>
+            <label class="fld">
+              <span data-i18n="cfg.receptionCap">Reception storage cap (GB, 0 = unlimited)</span>
+              <input id="cfg-reception-cap" type="number" min="0" step="any" data-i18n-ph="pk.unlimited" placeholder="unlimited" />
             </label>
           </div>
           <label class="fld opt-check">
@@ -1996,6 +2319,20 @@
             <input id="cfg-inbox-retention" type="number" min="0" max="3650" step="1" placeholder="0" />
           </label>
           <p class="sm cfg-danger-hint" data-i18n="cfg.inboxRetentionHint">⚠ Destructive: permanently deletes reception &amp; collaboration files older than this — lost files cannot be recovered. Off by default.</p>
+          <label class="fld">
+            <span data-i18n="cfg.trashRetention">Trash retention (days, 0 = keep forever)</span>
+            <input id="cfg-trash-retention" type="number" min="0" max="3650" step="1" placeholder="30" />
+          </label>
+          <label class="fld">
+            <span data-i18n="cfg.autoArchiveExpired">Auto-archive expired links after (days, 0 = off)</span>
+            <input id="cfg-auto-archive-expired" type="number" min="0" max="3650" step="1" placeholder="0" />
+          </label>
+          <p class="muted sm" data-i18n="cfg.autoArchiveExpiredHint">Keeps old links out of the main list without changing or deleting their managed files.</p>
+          <label class="fld cfg-danger">
+            <span class="cfg-danger-label">⚠ <span data-i18n="cfg.expiredDataRetention">Permanently delete expired managed data after (days, 0 = off)</span></span>
+            <input id="cfg-expired-data-retention" type="number" min="0" max="3650" step="1" placeholder="0" />
+          </label>
+          <p class="sm cfg-danger-hint" data-i18n="cfg.expiredDataRetentionHint">⚠ Destructive: removes Direct-Xfer-managed copies for expired links (received files, images, encrypted blobs). Host source files are never deleted.</p>
           <label class="fld opt-check">
             <input id="cfg-anon-ip" type="checkbox" />
             <span data-i18n="cfg.anonIps">Anonymize visitor IPs (mask the last part)</span>
@@ -2077,6 +2414,10 @@
             <span data-i18n="cfg.legal">Confidentiality notice</span>
             <input id="cfg-legal" type="text" maxlength="500" data-i18n-ph="cfg.legalPh" placeholder="e.g. Confidential — do not redistribute" />
           </label>
+          <label class="fld">
+            <span data-i18n="cfg.announcement">Announcement banner (all public pages)</span>
+            <input id="cfg-announcement" type="text" maxlength="500" data-i18n-ph="cfg.announcementPh" placeholder="e.g. Maintenance on Sunday 9pm" />
+          </label>
           <p class="muted sm" data-i18n="cfg.legalHint">Shown as a banner on every public download / reception page.</p>
           <label class="fld opt-check">
             <input id="cfg-watermark" type="checkbox" />
@@ -2090,6 +2431,14 @@
             <span data-i18n="cfg.updateCheck">Check for updates at startup</span>
           </label>
           <p class="muted sm" data-i18n="cfg.updateCheckHint">Compares the running version against the latest published image tag. No data is sent beyond the version query.</p>
+
+          <div class="cfg-section" data-i18n="cfg.panicTitle">Emergency stop</div>
+          <p class="muted sm" data-i18n="cfg.panicDesc">Immediately pause every active link (reversible). Files are left untouched.</p>
+          <div class="cfg-panic-row">
+            <button type="button" id="cfg-pause-all" class="btn danger sm" data-i18n="cfg.panicPause">Pause all links</button>
+            <button type="button" id="cfg-resume-all" class="btn ghost sm" data-i18n="cfg.panicResume">Resume all links</button>
+            <span id="cfg-panic-result" class="muted sm"></span>
+          </div>
 
           <div class="cfg-section" data-i18n="cfg.backup">Backup &amp; restore</div>
           <div class="cfg-test-row">
@@ -2289,6 +2638,53 @@
           <button id="log-close" class="icon-btn" aria-label="Close">✕</button>
         </div>
         <div id="log-body" class="log-body"></div>
+      </div>
+    </div>
+
+    <!-- Per-share configuration change history -->
+    <div id="share-history-overlay" class="overlay hidden">
+      <div class="modal share-history-modal" role="dialog" aria-modal="true" aria-labelledby="share-history-title">
+        <div class="modal-head">
+          <div><h3 id="share-history-title" data-i18n="sh.changeHistory">Change history</h3><p id="share-history-subtitle" class="muted sm"></p></div>
+          <button id="share-history-close" class="icon-btn" aria-label="Close">✕</button>
+        </div>
+        <div id="share-history-body" class="share-history-body" aria-live="polite"></div>
+      </div>
+    </div>
+
+    <!-- Recoverable trash -->
+    <div id="trash-overlay" class="overlay hidden">
+      <div class="modal trash-modal" role="dialog" aria-modal="true" aria-labelledby="trash-title">
+        <div class="modal-head">
+          <div><h3 id="trash-title" data-i18n="trash.title">Trash</h3><p id="trash-subtitle" class="muted sm"></p></div>
+          <div class="modal-head-actions"><button id="trash-purge-all" class="btn danger sm" type="button" data-i18n="trash.purgeAll">Purge all</button><button id="trash-close" class="icon-btn" aria-label="Close">✕</button></div>
+        </div>
+        <div id="trash-body" class="trash-body" aria-live="polite"></div>
+      </div>
+    </div>
+
+    <!-- Per-file download history -->
+    <div id="file-history-overlay" class="overlay hidden">
+      <div class="modal file-history-modal" role="dialog" aria-modal="true" aria-labelledby="file-history-title">
+        <div class="modal-head"><div><h3 id="file-history-title" data-i18n="filehist.title">File download history</h3><p id="file-history-subtitle" class="muted sm"></p></div><button id="file-history-close" class="icon-btn" aria-label="Close">✕</button></div>
+        <div id="file-history-body" class="file-history-body" aria-live="polite"></div>
+      </div>
+    </div>
+
+    <!-- Feature 15 — received-file browser with thumbnails (reception / collab) -->
+    <div id="received-overlay" class="overlay hidden">
+      <div class="modal received-modal" role="dialog" aria-modal="true" aria-labelledby="received-title">
+        <div class="modal-head"><div><h3 id="received-title" data-i18n="recv.title">Received files</h3><p id="received-subtitle" class="muted sm"></p></div><button id="received-close" class="icon-btn" aria-label="Close">✕</button></div>
+        <div id="received-body" class="received-body" aria-live="polite"></div>
+      </div>
+    </div>
+
+    <!-- Live activity stream -->
+    <div id="activity-overlay" class="overlay hidden">
+      <div class="modal activity-modal" role="dialog" aria-modal="true" aria-labelledby="activity-title">
+        <div class="modal-head"><div><h3 id="activity-title" data-i18n="activity.title">Live activity</h3><p id="activity-status" class="muted sm"></p></div><button id="activity-close" class="icon-btn" aria-label="Close">✕</button></div>
+        <div class="activity-tools"><button id="activity-clear" type="button" class="btn ghost sm" data-i18n="activity.clear">Clear view</button><span class="muted sm" data-i18n="activity.hint">Uploads, downloads, OCR, antivirus, errors and audited link actions appear here in real time.</span></div>
+        <div id="activity-body" class="activity-body" aria-live="polite"></div>
       </div>
     </div>
 

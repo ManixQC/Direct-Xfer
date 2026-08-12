@@ -234,6 +234,22 @@ h1 { margin: 0; font-size: clamp(1.55rem, 7vw, 2rem); line-height: 1.12; }
 }
 .mobile-login-submit:active { transform: translateY(1px); }
 .mobile-login-submit:disabled { opacity: .64; cursor: wait; }
+/* Biometric/passkey sign-in (secondary action under the password submit). */
+.mobile-login-passkey {
+  min-height: 50px; margin-top: -4px;
+  border: 1px solid var(--border); border-radius: 15px; padding: 12px 18px;
+  color: var(--text); background: color-mix(in srgb, var(--accent) 8%, transparent);
+  font-weight: 800; cursor: pointer;
+}
+.mobile-login-passkey:active { transform: translateY(1px); }
+.mobile-login-passkey:disabled { opacity: .64; cursor: wait; }
+.mobile-biometric-hint {
+  margin: -5px 3px 0;
+  color: var(--muted);
+  font-size: .8rem;
+  line-height: 1.4;
+  text-align: center;
+}
 .mobile-login-error {
   margin: -4px 0 0;
   padding: 11px 13px;

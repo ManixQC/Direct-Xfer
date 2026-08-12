@@ -20,7 +20,7 @@ test('image-link metadata removal re-encodes locally before upload', () => {
   assert.match(js, /ctx\.drawImage\(image/);
   assert.match(js, /metadataStripped: true/);
   const prepareIndex = js.indexOf('var prepared = await prepareImageForLink(workingFile, stripMetadata)');
-  const uploadIndex = js.indexOf('var r = await appMutate(uploadUrl');
+  const uploadIndex = js.indexOf('var r = await imageDlpMutate(uploadUrl');
   assert.ok(prepareIndex >= 0 && uploadIndex > prepareIndex, 'cleaning must happen before upload');
 });
 

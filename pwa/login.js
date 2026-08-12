@@ -12,6 +12,7 @@
       totpHint: 'Entrez le code à 6 chiffres ou un code de récupération.',
       submit: 'Se connecter', signingIn: 'Connexion…', language: 'Langue',
       fullAdmin: 'Version administrateur complète', invalid: 'Identifiants incorrects.',
+      passkeySignIn: '👆 Identification biométrique', passkeyChecking: 'Vérification biométrique…', passkeyFailed: 'Identification biométrique impossible.', passkeyNone: 'L’identification biométrique n’est pas activée pour ce compte.', biometricUnsupported: 'La biométrie sécurisée n’est pas disponible sur cet appareil ou ce navigateur.', biometricHttpsRequired: 'Utilisez une adresse HTTPS reconnue pour activer la biométrie.',
       totpRequired: 'Entrez votre code de double authentification.',
       totpInvalid: 'Le code de double authentification est invalide.',
       locked: 'Trop de tentatives. Réessayez dans {seconds} secondes.',
@@ -27,6 +28,7 @@
       totp: 'Two-factor authentication code',
       totpHint: 'Enter the 6-digit code or a recovery code.', submit: 'Sign in', signingIn: 'Signing in…',
       language: 'Language', fullAdmin: 'Full administrator version', invalid: 'Incorrect credentials.',
+      passkeySignIn: '👆 Biometric identification', passkeyChecking: 'Checking biometrics…', passkeyFailed: 'Biometric identification failed.', passkeyNone: 'Biometric identification is not enabled for this account.', biometricUnsupported: 'Secure biometrics are not available on this device or browser.', biometricHttpsRequired: 'Use a trusted HTTPS address to enable biometrics.',
       totpRequired: 'Enter your two-factor authentication code.', totpInvalid: 'The two-factor authentication code is invalid.',
       locked: 'Too many attempts. Try again in {seconds} seconds.', network: 'Unable to reach Direct-Xfer.',
       denied: 'Administrator access is not allowed from this network.', installWarningTitle: 'Full installation unavailable', installHttpsRequired: 'Android can install Direct-Xfer as an app only from an HTTPS address with a trusted certificate. HTTP creates only a shortcut.', installOpenHttps: 'Open HTTPS address', install: 'Install', installPending: 'Installation is being prepared. Interact with the page, keep it open briefly, then try again.', installBrowserHint: 'Chrome is still preparing full installation. Keep this page open briefly, then tap the Install logo again.', installIosHint: 'Tap Share, then “Add to Home Screen”.'
@@ -41,6 +43,7 @@
       totp: 'Código de autenticación de dos factores',
       totpHint: 'Introduce el código de 6 dígitos o un código de recuperación.', submit: 'Iniciar sesión', signingIn: 'Iniciando…',
       language: 'Idioma', fullAdmin: 'Versión completa de administración', invalid: 'Credenciales incorrectas.',
+      passkeySignIn: '👆 Identificación biométrica', passkeyChecking: 'Verificando biometría…', passkeyFailed: 'No se pudo realizar la identificación biométrica.', passkeyNone: 'La identificación biométrica no está activada para esta cuenta.', biometricUnsupported: 'La biometría segura no está disponible en este dispositivo o navegador.', biometricHttpsRequired: 'Usa una dirección HTTPS de confianza para activar la biometría.',
       totpRequired: 'Introduce el código de autenticación de dos factores.', totpInvalid: 'El código de autenticación de dos factores no es válido.',
       locked: 'Demasiados intentos. Vuelve a intentarlo en {seconds} segundos.', network: 'No se puede conectar con Direct-Xfer.',
       denied: 'El acceso de administración no está permitido desde esta red.', installWarningTitle: 'Instalación completa no disponible', installHttpsRequired: 'Android solo puede instalar Direct-Xfer como aplicación desde una dirección HTTPS con un certificado confiable. HTTP crea únicamente un acceso directo.', installOpenHttps: 'Abrir dirección HTTPS', install: 'Instalar', installPending: 'La instalación se está preparando. Interactúa con la página, mantenla abierta unos instantes y vuelve a intentarlo.', installBrowserHint: 'Chrome todavía está preparando la instalación completa. Mantén la página abierta unos instantes y vuelve a tocar el logotipo Instalar.', installIosHint: 'Toca Compartir y luego «Añadir a pantalla de inicio».'
@@ -110,6 +113,24 @@
   function storageGet(key) { try { return localStorage.getItem(key); } catch (_) { return null; } }
   function storageSet(key, value) { try { localStorage.setItem(key, value); } catch (_) {} }
   function storageRemove(key) { try { localStorage.removeItem(key); } catch (_) {} }
+  function settleWithin(promise, timeoutMs) {
+    var timer = null;
+    return Promise.race([
+      Promise.resolve(promise).catch(function () { return null; }),
+      new Promise(function (resolve) { timer = setTimeout(function () { resolve(null); }, timeoutMs); })
+    ]).finally(function () { if (timer) clearTimeout(timer); });
+  }
+  function fetchWithTimeout(url, options, timeoutMs) {
+    options = options || {}; timeoutMs = timeoutMs || 15000;
+    if (!window.AbortController) {
+      var fallbackTimer = null;
+      return Promise.race([fetch(url, options), new Promise(function (_, reject) { fallbackTimer = setTimeout(function () { reject(new Error('fetch-timeout')); }, timeoutMs); })])
+        .finally(function () { if (fallbackTimer) clearTimeout(fallbackTimer); });
+    }
+    var controller = new AbortController();
+    var timer = setTimeout(function () { controller.abort(); }, timeoutMs);
+    return fetch(url, Object.assign({}, options, { signal: controller.signal })).finally(function () { clearTimeout(timer); });
+  }
   var mobilePasswordUnlocked = false;
   function unlockMobilePasswordField() {
     if (mobilePasswordUnlocked) return;
@@ -247,7 +268,7 @@
     try {
       var platform = navigator.userAgentData && navigator.userAgentData.platform
         ? navigator.userAgentData.platform : (navigator.platform || 'Appareil mobile');
-      var response = await fetch('/app/login', {
+      var response = await fetchWithTimeout('/app/login', {
         method: 'POST',
         credentials: 'same-origin',
         cache: 'no-store',
@@ -256,10 +277,10 @@
           username: user.value.trim(), password: password.value, totp: totp.value.trim(),
           deviceName: 'Direct-Xfer PWA · ' + String(platform).slice(0, 60)
         })
-      });
+      }, 15000);
       var data = await response.json().catch(function () { return {}; });
       if (response.ok && data.ok) {
-        await persistRememberedLogin(user.value.trim(), password.value, !data.mustChangePassword);
+        await settleWithin(persistRememberedLogin(user.value.trim(), password.value, !data.mustChangePassword), 1800);
         if (data.mustChangePassword) {
           location.replace('/?next=' + encodeURIComponent(safeNext()));
         } else {
@@ -278,6 +299,109 @@
       setBusy(false);
     }
   });
+
+  // --- Passkey (WebAuthn) sign-in (feature 8) --------------------------------
+  var passkeyBtn = document.getElementById('mobile-passkey-btn');
+  var biometricHint = document.getElementById('mobile-biometric-hint');
+  function bufToB64u(buf) {
+    var bytes = new Uint8Array(buf), str = '';
+    for (var i = 0; i < bytes.length; i++) str += String.fromCharCode(bytes[i]);
+    return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  function b64uToBuf(value) {
+    var s = String(value || '').replace(/-/g, '+').replace(/_/g, '/');
+    while (s.length % 4) s += '=';
+    var bin = atob(s), bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return bytes.buffer;
+  }
+  function passkeySupported() {
+    return !!(window.PublicKeyCredential && navigator.credentials && navigator.credentials.get);
+  }
+  function biometricSecureContext() {
+    var host = String(location.hostname || '').toLowerCase();
+    return !!window.isSecureContext && (location.protocol === 'https:' || host === 'localhost' || host === '127.0.0.1' || host === '::1' || host === '[::1]');
+  }
+  function setBiometricHint(key) {
+    if (!biometricHint) return;
+    biometricHint.textContent = key ? message(key) : '';
+    biometricHint.classList.toggle('hidden', !key);
+  }
+  async function updatePasskeyButton() {
+    if (!passkeyBtn) return;
+    passkeyBtn.classList.remove('hidden');
+    passkeyBtn.disabled = true;
+    if (!biometricSecureContext()) { setBiometricHint('biometricHttpsRequired'); return; }
+    if (!passkeySupported()) { setBiometricHint('biometricUnsupported'); return; }
+    if (typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === 'function') {
+      try {
+        if (!(await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable())) { setBiometricHint('biometricUnsupported'); return; }
+      } catch (_) { setBiometricHint('biometricUnsupported'); return; }
+    }
+    setBiometricHint('');
+    passkeyBtn.disabled = false;
+  }
+  async function passkeyLogin() {
+    if (!passkeySupported()) return;
+    showError('');
+    passkeyBtn.disabled = true; var label = passkeyBtn.textContent; passkeyBtn.textContent = message('passkeyChecking');
+    try {
+      var optResp = await fetchWithTimeout('/app/webauthn/login/options', {
+        method: 'POST', credentials: 'same-origin', cache: 'no-store',
+        headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: user.value.trim() })
+      }, 15000);
+      if (!optResp.ok) {
+        var optError = await optResp.clone().json().catch(function () { return {}; });
+        if (optError.error === 'passkey-unavailable') { showError(message('passkeyNone')); return; }
+        throw new Error('options');
+      }
+      var opt = await optResp.json();
+      var pk = opt.publicKey || {};
+      var publicKey = {
+        challenge: b64uToBuf(pk.challenge),
+        rpId: pk.rpId,
+        // Direct-Xfer passkeys are an explicit biometric/device-PIN unlock, never
+        // a presence-only assertion. The server independently enforces the UV bit.
+        userVerification: 'required',
+        timeout: pk.timeout || 60000,
+        allowCredentials: (pk.allowCredentials || []).map(function (c) { return { type: 'public-key', id: b64uToBuf(c.id), transports: c.transports }; })
+      };
+      var assertion = await navigator.credentials.get({ publicKey: publicKey });
+      if (!assertion) throw new Error('cancelled');
+      var r = assertion.response;
+      var platform = navigator.userAgentData && navigator.userAgentData.platform ? navigator.userAgentData.platform : (navigator.platform || 'Appareil mobile');
+      var verifyResp = await fetchWithTimeout('/app/webauthn/login/verify', {
+        method: 'POST', credentials: 'same-origin', cache: 'no-store',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: opt.token,
+          deviceName: 'Direct-Xfer PWA · ' + String(platform).slice(0, 60),
+          credential: {
+            id: assertion.id, rawId: bufToB64u(assertion.rawId), type: assertion.type,
+            response: {
+              clientDataJSON: bufToB64u(r.clientDataJSON),
+              authenticatorData: bufToB64u(r.authenticatorData),
+              signature: bufToB64u(r.signature),
+              userHandle: r.userHandle ? bufToB64u(r.userHandle) : null
+            }
+          }
+        })
+      }, 15000);
+      var data = await verifyResp.json().catch(function () { return {}; });
+      if (verifyResp.ok && data.ok) {
+        if (user.value.trim() && rememberUsername.checked) { storageSet(LOGIN_KEYS.username, user.value.trim()); storageSet('dxuser', user.value.trim()); }
+        location.replace(data.mustChangePassword ? ('/?next=' + encodeURIComponent(safeNext())) : safeNext());
+        return;
+      }
+      showError(message('passkeyFailed'));
+    } catch (err) {
+      // A user cancelling the OS prompt (NotAllowedError/AbortError) is silent.
+      if (!err || (err.name !== 'NotAllowedError' && err.name !== 'AbortError')) showError(message('passkeyFailed'));
+    } finally {
+      passkeyBtn.disabled = false; passkeyBtn.textContent = label;
+    }
+  }
+  if (passkeyBtn) passkeyBtn.addEventListener('click', passkeyLogin);
 
   function isStandaloneApp() {
     try {
@@ -345,6 +469,7 @@
     saved = STRINGS[browser] ? browser : 'fr';
   }
   applyLanguage(saved);
+  updatePasskeyButton();
   installPullToRefresh();
   if (!isInstallSecureOrigin()) showInstallabilityWarning('installHttpsRequired');
   updateMobileInstallButton();
@@ -364,7 +489,7 @@
   // from creating a simple home-screen shortcut with no WebAPK/share-target
   // integration when the user installs before signing in.
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/direct-xfer-pwa-sw.js?v=111', { scope: '/app/' }).catch(function () {});
+    navigator.serviceWorker.register('/direct-xfer-pwa-sw.js?v=228', { scope: '/app/' }).catch(function () {});
   }
   hydrateRememberedLogin().finally(function () { ((rememberPassword.checked && password.value) ? password : user).focus(); });
 })();

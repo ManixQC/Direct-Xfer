@@ -286,6 +286,13 @@
 
   function addFiles(fileList, withPaths) {
     var arr = Array.prototype.slice.call(fileList || []);
+    // Feature 13 — cap the number of files accepted in one deposit (a single drop or
+    // picker selection). The server's maxFiles / quota remain the hard limits.
+    var perUpload = Math.max(0, Number(cfg.maxFilesPerUpload) || 0);
+    if (perUpload > 0 && arr.length > perUpload) {
+      arr = arr.slice(0, perUpload);
+      try { window.alert((S.perUploadLimit || 'Max {v} files per upload').replace('{v}', perUpload)); } catch (_) {}
+    }
     var base = curSub;
     arr.forEach(function (f) {
       var localRel = withPaths && f.webkitRelativePath ? f.webkitRelativePath : f.name;

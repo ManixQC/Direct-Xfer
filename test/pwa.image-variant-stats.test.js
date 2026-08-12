@@ -32,7 +32,7 @@ test('each PWA image card renders Full, Mini and Micro dimensions and audience c
 test('PWA restores manageable images and refreshes their statistics periodically', () => {
   assert.match(js, /fetch\('\/app\/images\?limit=500&includeInactive=1'/);
   assert.match(js, /refreshImageStats\(true\)/);
-  assert.match(js, /setInterval\(function \(\) \{ if \(!document\.hidden\) refreshImageStats\(true\); \}, 3000\)/);
+  assert.match(js, /setInterval\(function \(\) \{ if \(!document\.hidden\) refreshImageStats\(false\); \}, 3000\)/);
   assert.match(js, /imageRowsByToken = new Map\(\)/);
 });
 
@@ -48,4 +48,12 @@ test('server returns dimensions and views\/visitors for all three variants', () 
   assert.match(server, /s\.thumbW = dims\.w; s\.thumbH = dims\.h/);
   assert.match(server, /s\.microSize = size/);
   assert.match(server, /s\.microW = dims\.w; s\.microH = dims\.h/);
+});
+
+test('standard-admin Mini/Micro rewrites refresh the metadata consumed by PWA cards', () => {
+  assert.match(server, /adminRouter\.post\('\/photos\/:id\/thumb'[\s\S]*?s\.thumbSize = size;[\s\S]*?s\.thumbW = dims\.w; s\.thumbH = dims\.h;[\s\S]*?s\.thumbMetaMtimeMs = Math\.floor\(fs\.statSync\(dest\)\.mtimeMs \|\| 0\)/);
+  assert.match(server, /adminRouter\.post\('\/photos\/:id\/micro'[\s\S]*?s\.microSize = size;[\s\S]*?s\.microW = dims\.w; s\.microH = dims\.h;[\s\S]*?s\.microMetaMtimeMs = Math\.floor\(fs\.statSync\(dest\)\.mtimeMs \|\| 0\)/);
+  assert.match(server, /const stale = !w \|\| !h \|\| !knownMtime \|\| \(diskMtime && knownMtime !== diskMtime\) \|\| \(diskBytes && bytes !== diskBytes\)/);
+  assert.match(server, /readVariantMeta\('thumb', 'thumbW', 'thumbH', 'thumbSize', 'thumbMetaMtimeMs'/);
+  assert.match(server, /readVariantMeta\('micro', 'microW', 'microH', 'microSize', 'microMetaMtimeMs'/);
 });

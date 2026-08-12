@@ -48,3 +48,16 @@ test('the share card name breaks at sensible points, not mid-word', () => {
   assert.doesNotMatch(block, /word-break:\s*break-all/);
   assert.match(block, /overflow-wrap:\s*anywhere/);
 });
+
+test('tablet admin topbar keeps the brand and right-side controls on the same centered row', () => {
+  assert.match(css, /@media\s*\(min-width:\s*641px\)\s*and\s*\(max-width:\s*900px\)/);
+  assert.match(css, /#app-view\s+\.topbar\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+repeat\(5,\s*max-content\)[^}]*align-items:\s*center/);
+  assert.match(css, /#app-view\s+\.admin-brand\s*\{[^}]*grid-column:\s*1[^}]*grid-row:\s*1[^}]*align-self:\s*center/);
+  assert.match(css, /#app-view\s+\.topbar-menus\s*\{[^}]*display:\s*contents/);
+  assert.match(css, /#app-view\s+\.dash-menu\s*\{\s*grid-column:\s*2;\s*grid-row:\s*1;\s*\}/);
+  assert.match(css, /#app-view\s+\.images-menu\s*\{\s*grid-column:\s*3;\s*grid-row:\s*1;\s*\}/);
+  assert.match(css, /#app-view\s+\.config-menu\s*\{\s*grid-column:\s*4;\s*grid-row:\s*1;\s*\}/);
+  assert.match(css, /#app-view\s+\.notifications-menu\s*\{\s*grid-column:\s*5;\s*grid-row:\s*1;\s*\}/);
+  assert.match(css, /#app-view\s+\.user-menu\s*\{\s*grid-column:\s*6;\s*grid-row:\s*1;\s*\}/);
+  assert.match(css, /#app-view\s+\.topbar-menus\s+\.pwa-cta\s*\{[^}]*grid-column:\s*1\s*\/\s*-1[^}]*grid-row:\s*2/);
+});

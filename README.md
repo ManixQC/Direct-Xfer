@@ -415,7 +415,14 @@ window. (Shared reference — variable names are identical in every language.)
 | `ADMIN_ALLOWED_IPS` | *(empty)* | Allowlist of IPs/CIDRs that may reach the admin (loopback always allowed). |
 | `TRUST_PROXY` | `false` | Trust `X-Forwarded-For` (set behind a reverse proxy for the real visitor IP). |
 | `PUBLIC_URL` / `PUBLIC_HOST` | *(auto)* | Base URL/host used to build share links. |
-| `DATA_KEY` | *(empty)* | Encrypt the metadata store (`shares.json`) at rest (AES-256-GCM). Keep it **safe & stable** — if lost/changed the store can't be read and the container won't start. |
+| `DATA_KEY` | *(empty)* | Encrypt sensitive persistent metadata at rest (AES-256-GCM): `shares.json`, the universal search index and the OCR cache. Keep it **safe & stable** — if lost/changed the main store can't be read and the container won't start. It is also used to derive the audit-chain HMAC key unless `AUDIT_HMAC_KEY` is set. |
+| `AUDIT_HMAC_KEY` | *(empty)* | Optional dedicated secret for the tamper-evident audit chain. Prefer a long stable secret supplied outside `/data`; if omitted, `DATA_KEY` is used, then a local 0600 key file as fallback. **Safe automatic migration:** when an existing installation still uses `/data/audit-chain.key`, adding `AUDIT_HMAC_KEY` causes Direct-Xfer to verify the complete old chain first, transactionally re-sign it with the external key, verify it again, record `audit-key-migrated`, then retire the local key. A damaged chain is never migrated. Keep the new secret stable after migration. |
+| `SEARCH_INDEX_MAX_DOCS` | `250000` | Maximum number of files kept in the persistent universal-search index. Raise carefully because postings and metadata are also held in memory. |
+| `SEARCH_OCR_ENABLED` | `true` | Enable server-side OCR in the full Direct-Xfer universal index for supported images and scanned PDFs. Docker includes Tesseract + Poppler; native installs need those binaries available in `PATH`. |
+| `SEARCH_OCR_LANGS` | `fra+eng` | Tesseract language set used by the server OCR (`fra`, `eng`, `spa` are bundled in the Docker image). |
+| `SEARCH_OCR_BATCH` | `100` | Maximum number of previously uncached OCR files processed in one index rebuild. Cached files do not count; deferred files are picked up by later rebuilds. |
+| `SEARCH_OCR_PDF_MAX_PAGES` | `12` | Maximum PDF pages rasterized for OCR when no usable text layer exists. |
+| `SEARCH_OCR_IMAGE_MAX_MB` / `SEARCH_OCR_PDF_MAX_MB` | `50` / `100` | Safety caps for files sent to the server OCR pipeline. |
 | `TLS_SELF_SIGNED` | `false` | Serve HTTPS on `PORT` with an auto self-signed cert (cached in `/data/tls`). An untrusted self-signed certificate does **not** qualify for Android WebAPK installation. |
 | `TLS_CERT` / `TLS_KEY` | *(empty)* | Paths to a PEM cert + key to serve HTTPS (takes precedence over `TLS_SELF_SIGNED`). |
 | `SMTP_URL` | *(empty)* | SMTP transport for e-mail notifications (e.g. `smtps://user:pass@host:465`). Overrides the in-app fields. |
@@ -428,6 +435,9 @@ window. (Shared reference — variable names are identical in every language.)
 | `UPLOAD_IDLE_TIMEOUT_SECONDS` | `120` | Abort an upload request that stops sending data for this many seconds (minimum 15). |
 | `MAX_LOG_BYTES` | `8 MB` | Soft cap on the transfer journal; trimmed to the tail on startup. |
 | `UPDATE_CHECK` | `true` | Check for a newer image version at startup (also toggleable in-app). |
+
+> **Migrating the audit key:** on an installation that currently shows an `Audit log key` warning, add a stable `AUDIT_HMAC_KEY` environment variable and recreate/restart the container. No manual copy of `audit-chain.key` is required. Direct-Xfer keeps temporary pre-migration backups only during the transaction, validates both the old and new chains, and removes the local key only after success. If integrity is already broken, migration is refused and the local key is preserved for investigation.
+
 
 ### Volumes
 
@@ -472,6 +482,689 @@ If an old missing icon remains cached, use the supplied XML template or remove a
 re-add the container from its saved template. Application data remains in the mapped
 `/data` and `/Direct-Xfer` host folders.
 
+
+## 1.48.4 — correctif d’affichage biométrique (build pwa240)
+
+- Le correctif de mise en page de la section **Identification biométrique** est maintenant publié dans une version applicative distincte.
+- Les explications, les actions et la liste des identifications enregistrées conservent une disposition lisible sur mobile et tablette.
+- Version portée à **1.48.4**, PWA **pwa240**, ressources **v228**.
+
+
+## 1.48.3 — désactivation et audit biométriques (build pwa239)
+
+- Les paramètres PWA offrent un bouton explicite pour désactiver toutes les identifications biométriques du compte, sur tous les appareils, avec confirmation et état d’exécution.
+- La désactivation reste accessible depuis un navigateur sans biométrie ou lorsque l’activation WebAuthn est bloquée par HTTPS; ces contraintes ne bloquent plus les opérations de révocation côté serveur.
+- La liste des identifications biométriques se rend correctement, affiche le nombre d’appareils associés et avertit avant de supprimer une passkey partagée par plusieurs appareils.
+- Les activations et suppressions biométriques sont sérialisées pour empêcher les doubles actions, les réponses asynchrones obsolètes et les états d’interface contradictoires.
+- Une désactivation globale invalide aussi les défis WebAuthn en attente afin qu’un onglet ou une invite plus ancienne ne puisse pas réactiver la fonction.
+- Les cérémonies WebAuthn lient désormais le domaine et l’origine au défi émis, vérifient la cohérence `id`/`rawId`, l’état de sauvegarde, le `userHandle` des connexions sans nom et la compatibilité entre algorithme et clé publique.
+- Version portée à **1.48.3**, PWA **pwa239**, ressources **v227**.
+
+### Correctif d’affichage biométrique (build pwa239)
+
+- La section biométrique des paramètres place désormais ses explications et ses actions sur des rangées distinctes; les longs textes ne sont plus comprimés à côté des boutons sur les téléphones de 400 à 560 px.
+- Les boutons d’activation, de désactivation et de réauthentification occupent une grille fluide, avec retour à la ligne lisible quelle que soit la langue.
+- Chaque identification enregistrée empile son bouton de désactivation sous ses métadonnées sur petit écran; les noms, dates et nombres d’appareils restent lisibles sans débordement.
+- Version applicative maintenue à **1.48.3**, PWA **pwa239**, ressources **v227**.
+
+
+## 1.48.2 — identification biométrique multi-appareils (build pwa237)
+
+- L’enregistrement sur un deuxième appareil n’est plus bloqué par les passkeys déjà créées ou synchronisées sur le compte; seules les identifications déjà associées à l’appareil courant sont exclues.
+- Une même passkey synchronisée peut être associée à plusieurs appareils Direct-Xfer après une authentification réussie, tout en conservant l’affichage fiable de l’appareil courant.
+- Les compteurs WebAuthn des passkeys multi-appareils sont traités selon leur indicateur de sauvegarde, sans faux rejet lorsque deux appareils synchronisés utilisent des compteurs indépendants; les passkeys mono-appareil conservent la détection stricte de clonage.
+- Les défis d’enregistrement sont liés à l’appareil qui les a demandés et les collisions de clés entre comptes sont refusées.
+- La PWA distingue désormais une identification déjà synchronisée, un appareil non associé, une incohérence de domaine HTTPS et un refus serveur au lieu d’afficher une erreur générique.
+- Version portée à **1.48.2**, PWA **pwa237**, ressources **v225**.
+
+## 1.48.1 — identification biométrique explicite dans la PWA (build pwa236)
+
+- Les paramètres PWA proposent désormais une section **Identification biométrique** toujours visible, avec activation sur l’appareil et liste des identifications enregistrées.
+- L’interface explique clairement lorsqu’une connexion HTTPS reconnue, un appareil compatible ou une nouvelle authentification par mot de passe est nécessaire; la réauthentification ramène ensuite aux paramètres.
+- L’activation utilise WebAuthn avec l’authentificateur intégré de l’appareil, vérification utilisateur obligatoire et conservation sécurisée des transports compatibles.
+- La page de connexion PWA affiche un bouton **Identification biométrique** dédié en français, anglais et espagnol; il reste désactivé avec une explication précise si le contexte n’est pas compatible.
+- Les identifications nouvellement créées sont associées à l’appareil PWA courant pour afficher un état fiable et permettre leur désactivation individuelle sans toucher aux autres appareils.
+- Version portée à **1.48.1**, PWA **pwa236**, ressources **v224**.
+
+## 1.48.0 — audit approfondi de l’éditeur photo PWA (build pwa235)
+
+- Les analyses asynchrones (visages, plaques et OCR sensible) sont isolées par session : une analyse fermée ne peut plus modifier l’image ouverte ensuite ni laisser l’éditeur bloqué.
+- L’application d’une édition est atomique et à déclenchement unique; une erreur d’encodage ou de persistance conserve le travail dans l’éditeur.
+- Le type réel produit par le navigateur est utilisé à l’export, ce qui évite les fichiers PNG incorrectement nommés WebP lorsqu’un encodeur n’est pas disponible.
+- Le canevas et l’historique libèrent leur mémoire à la fermeture; la profondeur d’annulation s’adapte à la résolution pour éviter les pannes sur les très grandes photos.
+- Les annulations tactiles réinitialisent aussi le déplacement et le pincement, le zoom continu reste synchronisé, et les clics secondaires ne dessinent plus.
+- La taille initiale du pinceau tient compte du côté le plus long, les contrôles sont réinitialisés entre les images et les réglages disposent d’un repli pixel par pixel sans filtre Canvas.
+- Version portée à **1.48.0**, PWA **pwa235**, ressources **v223**.
+
+## 1.47.4 — conservation des tailles Mini et Micro après édition (build pwa234)
+
+- L’éditeur et le remplacement d’une image conservent la résolution personnalisée actuelle des variantes Mini et Micro lors de leur régénération.
+- Le ratio est recalculé après une rotation ou un recadrage; les dimensions par défaut ne servent que lorsque la taille existante est absente ou invalide.
+- Version portée à **1.47.4**, PWA **pwa234**, ressources **v222**.
+
+## 1.47.3 — retrait du format d’image favori dans la PWA (build pwa232)
+
+- Le sélecteur « Format d’image favori » a été retiré de la page Images avec ses traductions, styles et branchements devenus inutiles.
+- Les copies automatiques, les QR et les copies groupées utilisent désormais systématiquement la variante automatique, qui était déjà le choix initial.
+- L’ancienne préférence enregistrée localement est supprimée au prochain démarrage de la PWA.
+- Version portée à **1.47.3**, PWA **pwa232**, ressources **v220**.
+
+## 1.47.2 — qualité d’export de l’éditeur photo PWA (build pwa231)
+
+- La qualité d’export par défaut de l’éditeur photo est maintenant réglée à **99 %**.
+- La valeur initiale de l’interface, la réinitialisation à chaque ouverture et la valeur de secours à l’export utilisent toutes le même réglage.
+- Version portée à **1.47.2**, PWA **pwa231**, ressources **v219**.
+
+## 1.47.1 — correctifs du pinceau et de l’éditeur photo PWA (build pwa230)
+
+- La grosseur du pinceau agit maintenant réellement sur les trois outils manuels : **Stylo**, **Flou** et **Caviarder**, y compris pendant les traits continus.
+- Un simple toucher/clic produit maintenant un point avec la grosseur choisie; les gestes annulés ou interrompus ne laissent plus de modification partielle.
+- Flou et Caviarder fonctionnent comme de vrais pinceaux continus plutôt que comme des sélections rectangulaires ignorant la réglette.
+- Défaire restaure aussi correctement les dimensions après une rotation, un recadrage ou un redimensionnement; « Tout effacer » revient à l’image originale.
+- Les commandes qui mutent l’image sont verrouillées pendant une détection locale, et un échec d’export conserve désormais l’éditeur et les modifications à l’écran.
+- Version portée à **1.47.1**, PWA **pwa230**, ressources **v218**.
+
+## 1.47.0 — zoom, déplacement et pinceau réglable dans l’éditeur photo PWA (build pwa229)
+
+- Le zoom de l’éditeur est réglable de **25 % à 400 %** avec une réglette, des boutons +/− et une commande d’ajustement à l’espace disponible.
+- Le pincement à deux doigts et `Ctrl`/`Cmd` + molette permettent de zoomer autour du point visé sans modifier la résolution de l’image exportée.
+- Un outil **Déplacer** permet de parcourir précisément une image agrandie sur écran tactile ou à la souris.
+- La grosseur du pinceau est maintenant réglable de **2 à 200 px** et appliquée directement aux traits du stylo.
+- L’interface reste adaptative sur téléphone, tablette et grand écran, avec commandes traduites en français, anglais et espagnol.
+- Version portée à **1.47.0**, PWA **pwa229**, ressources **v217**.
+
+## 1.46.4 — éditeur photo PWA agrandi et édition après téléversement (build pwa228)
+
+- L’image utilise maintenant toute la zone utile de l’éditeur sans être rognée; les outils défilent séparément et l’affichage s’adapte aux téléphones, tablettes et grands écrans.
+- Chaque image déjà téléversée propose « Modifier avec l’éditeur photo » : la version Pleine est chargée par l’aperçu privé, modifiée localement, puis remplacée sur le même lien.
+- Annuler ne modifie rien. Appliquer archive la version précédente, conserve le jeton public, les statistiques et les réglages, puis régénère Mini/Micro et les variantes adaptatives.
+- Les Mini/Micro JPEG des images transparentes sont désormais aplaties sur blanc plutôt que sur noir.
+- Version portée à **1.46.4**, PWA **pwa228**, ressources **v216**.
+
+## 1.46.3 — accès explicite à l’éditeur photo PWA (build pwa227)
+
+- La section Images propose maintenant « Modifier avant partage » pour ouvrir l’éditeur avant de créer un lien.
+- Chaque image de la file d’envoi affiche un bouton explicite « Éditeur photo », y compris sur mobile grâce au retour à la ligne des actions.
+- Annuler l’éditeur ne crée aucun lien; appliquer une modification partage uniquement la version modifiée.
+- Version portée à **1.46.3**, PWA **pwa227**, ressources **v215**.
+
+## 1.46.2 — révocation successive des images PWA (build pwa226)
+
+- Une seule révocation d’image reste annulable à la fois : révoquer une seconde image valide immédiatement la première, puis accorde à la seconde un nouveau délai complet de 5 secondes.
+- Les protections contre les doubles requêtes et les minuteries orphelines restent actives pendant les rafraîchissements de la galerie.
+- Version portée à **1.46.2**, PWA **pwa226**, ressources **v214**.
+
+## 1.46.1 — correctif de révocation PWA (build pwa224)
+
+- La révocation des liens de partage, collaborations et images envoie maintenant un corps JSON valide, y compris derrière les reverse proxies stricts.
+- Une nouvelle tentative après une réponse réseau perdue reconnaît une révocation déjà appliquée au lieu d’afficher un faux échec.
+- Le délai d’annulation de 5 secondes pour les images reste disponible.
+- Les éléments révoqués demeurent récupérables depuis la corbeille.
+- Version portée à **1.46.1**, PWA **pwa224**, ressources **v212**.
+
+## 1.46.0 — transferts en arrière-plan, passkeys, caviardage et présence SSE (build pwa222)
+
+- La PWA peut maintenant terminer en arrière-plan les transferts durables déjà validés, transformés et chiffrés, y compris après fermeture; la reprise gère les fichiers vides, les fenêtres suspendues, les réponses finales perdues et les résultats mixtes sans doubler un téléversement.
+- La connexion **Passkey/WebAuthn** et le déverrouillage biométrique exigent la vérification utilisateur; la gestion des passkeys requiert une authentification administrateur récente et les compteurs d’authentificateur sont protégés contre les retours en arrière.
+- L’éditeur photo permet de flouter ou caviarder des zones sensibles avant envoi en conservant la résolution originale par défaut, la transparence PNG/WebP et des sélections strictement limitées au canevas.
+- L’indicateur SSE « téléchargement en cours » est disponible par lien dans les interfaces standard et PWA, avec contrôle continu des sessions et appareils révoqués.
+- La révocation PWA des partages, collaborations et images traverse correctement les reverse proxies, reste récupérable dans la corbeille et reconnaît sans faux échec une nouvelle tentative après une réponse réseau perdue.
+- Version portée à **1.46.0**, PWA **pwa222**, ressources **v210**.
+
+## 1.45.5 — correctifs d’audit : historique, taille des dossiers et notifications (build pwa219)
+
+- L’**historique des modifications** d’un lien ne commence plus par une entrée « créé » superflue : un lien neuf démarre avec un historique vide, sa première vraie modification devient l’entrée n°1 (le clone/import conservent leur entrée de création explicite).
+- Les **liens de dossier** affichent désormais leur taille réelle dès le premier listing au lieu de `0 octet` : le cache de taille logique est préchauffé une fois à la création, sans jamais bloquer le polling haute fréquence.
+- **Fuite de notifications corrigée** : sur `/app/notifications`, un navigateur portant à la fois une session admin et un appareil PWA appairé d’un *autre* compte recevait les notifications du propriétaire dans la PWA de l’enfant ; l’appareil appairé est maintenant le principal résolu directement depuis son cookie.
+- Correctifs partagés par la version standard **et** la PWA (endpoints serveur communs). Audit PWA vérifié en direct : aucune erreur console sur la connexion, les cinq panneaux et le centre de notifications.
+- Version portée à **1.45.5**, PWA **pwa219**, ressources **v207**.
+
+## 1.45.4 — audit ultra-approfondi de la version standard (build pwa218)
+
+- Le client standard possède maintenant des **timeouts réseau**, un coffre de mot de passe IndexedDB borné et une protection contre les réponses arrivant après un changement de compte; logout/expiration de session purge aussi modales, SSE et données authentifiées du DOM.
+- Le polling des liens, tableaux de bord et notifications est dédupliqué/ordonné; le démarrage n’attend plus le diagnostic réseau et le calcul récursif des gros dossiers s’effectue en arrière-plan.
+- Les opérations critiques du dashboard (liens, corbeille, comptes/2FA, préférences, historique, Images, modération et réceptions) ne répondent plus succès avant une **persistance durable**, avec rollback ou staging de fichiers en cas d’erreur.
+- Les remplacements Images et variantes Mini/Micro sont sérialisés pour éviter les courses; l’export CSV Images protège désormais aussi contre l’**injection de formules tableur**.
+- Les uploads de réception standard et la validation manuelle partagent une comptabilité durable et l’expiration individuelle; les rejets/approbations sont retentables sans perdre les fichiers ou métadonnées.
+- Les demandes d’accès publiques réessayées après perte de réponse réutilisent la demande existante au lieu de créer un doublon.
+- Les réglages de sécurité sont plus stricts : allowlist IP invalide refusée, limites négatives/non numériques refusées au lieu de devenir `0 = illimité`, et les Opérateurs ne peuvent plus lire les réglages d’infrastructure globaux.
+- Le centre de notifications standard n’offre plus de copie d’un lien historique après sa révocation/expiration et ignore les réponses `stale-auth` comme erreurs de connexion.
+- Version portée à **1.45.4**, PWA **pwa218**, ressources **v206**.
+
+## 1.45.3 — audit ultra-approfondi PWA, reprise mobile et cache (build pwa217)
+
+- IndexedDB et OPFS récupèrent automatiquement après une panne/lock temporaire au lieu de mémoriser une promesse rejetée jusqu’au prochain rechargement; les transactions IndexedDB sont désormais bornées dans le temps.
+- Une seule implémentation `fetchWithTimeout()` est utilisée dans la PWA; elle conserve les signaux d’annulation existants et possède aussi un fallback de timeout sans `AbortController`.
+- Le démarrage PWA ne lance plus deux `/app/device/status` en parallèle et ne peut plus rester bloqué indéfiniment sur les chargements réseau initiaux.
+- Le coffre du mot de passe et le formulaire de connexion mobile possèdent des timeouts; une panne IndexedDB ne peut plus empêcher la redirection après une connexion serveur réussie.
+- Web Share Target rendu crash-safe : métadonnée `complete`, reprise via identifiant local persistant, identité stable du texte partagé, purge des lots incomplets/corrompus et nettoyage des anciens caches `dx-share-*`.
+- Le service worker ne met plus en cache le document HTML authentifié `/app/`; le mode hors ligne utilise un shell public sans bootstrap privé.
+- Les métadonnées Push `openCenter` / `panel` / `destinationUrl` sont conservées jusqu’au service worker et le clic sur une notification peut réellement ouvrir le panneau attendu.
+- Les bibliothèques Images de plus de 500 éléments sont chargées par pages; le polling léger ne considère plus les pages non chargées comme supprimées et ne peut plus interrompre un inventaire complet en cours.
+- Les requêtes d’inventaire/statistiques Images, la validation des destinations et la connexion mobile sont bornées afin d’éviter les états « chargement infini » sur Android/réseaux instables.
+- Une exception synchrone de `XMLHttpRequest.send()` passe maintenant par le chemin de retry/nettoyage normal et ne laisse plus un transfert fantôme dans `activeXhrs`.
+- La première installation du service worker n’affiche plus à tort « nouvelle version disponible »; les mises à jour réelles conservent le mécanisme d’adoption explicite.
+- Version portée à **1.45.3**, PWA **pwa217**, ressources **v205**.
+
+## 1.45.2 — audit ultra-approfondi fiabilité, sécurité et atomicité (build pwa216)
+
+- Durcissement de la **rétention Réceptions** : les zones techniques `.dxparts` / `.dxpending` sont exclues, les octets supprimés libèrent réellement les quotas, et les suppressions ratées sont retentées sans perdre leur suivi.
+- Isolation **PWA multi-compte** renforcée : session et appareil doivent appartenir au même compte; supprimer un compte révoque appareils, Push, SSE et tickets d'appairage; un ancien `accountId` ne peut pas être réadopté par un compte recréé avec le même nom.
+- **Web Push** cloisonné par propriétaire/compte pour empêcher l'envoi d'événements privés aux souscriptions d'autres comptes.
+- Sauvegarde/restauration **v2** : chaîne d'audit complète incluse, re-signée avec la clé active; secrets et journal sont préparés avant bascule; rollback des artefacts externes et invalidation des sessions/caches après restauration.
+- Les sauvegardes échouent explicitement si un secret référencé est illisible au lieu de produire silencieusement une archive incomplète.
+- Le démarrage refuse désormais un `shares.json` existant mais corrompu/invalide, évitant son écrasement par un état vide.
+- Les notes **burn-after-read** ne sont remises qu'après suppression physique réussie du ciphertext; création et expiration sont transactionnelles et retentables en cas d'erreur disque.
+- Contrôles anti-symlink renforcés pour manifeste SHA-256, navigation/réception et chemins de fichiers gérés.
+- Les purges de corbeille/images, suppressions d'album et opérations de rétention n'annoncent plus un faux succès lorsque l'état durable ne peut pas être écrit.
+- Les mutations critiques (**mot de passe, 2FA, comptes, paramètres, préférences de notifications, règles personnalisées, rétention Images, import de configuration, appairage PWA et invitations d'album**) utilisent rollback ou refus explicite si la persistance échoue.
+- L'import de configuration ne peut plus injecter de chemins `encPath`/`containerPath` arbitraires; le mode remplacement conserve les anciens liens dans la corbeille récupérable.
+- Les remplacements et **restaurations de versions d'images** valident la nouvelle métadonnée sur disque avant de supprimer l'ancienne image; rollback complet en cas d'échec.
+- Les fichiers de modération refusés ne perdent plus leur métadonnée si la suppression physique échoue, ce qui évite les `.dxpending` orphelins et les quotas incohérents.
+- Les suppressions définitives nettoient aussi les références d'albums, états de règles d'alertes et données gérées uniquement après destruction physique réussie.
+- Version portée à **1.45.2**, PWA **pwa216**, ressources **v204**.
+
+## 1.45.1 — audit fiabilité transferts, alertes et rétention (build pwa215)
+
+- Correction du coordinateur de débit partagé : une limite lente par lien ne réserve plus abusivement le budget global des autres liens.
+- Les changements de limite par lien/globale et les fenêtres planifiées s’appliquent maintenant aux téléchargements déjà en cours, sans conserver de réservation calculée avec un ancien débit.
+- Les alertes personnalisées refusent les nouvelles cibles expirées/inactives et affichent clairement une cible devenue indisponible au lieu de la présenter comme « tous les liens ».
+- Les purges définitives nettoient les règles d’alerte ciblées, leurs états de déclenchement et les références d’albums devenues orphelines.
+- Les révocations groupées d’images et celles liées à la révocation d’un appareil passent par la corbeille récupérable.
+- La rétention automatique des images supprime désormais réellement les fichiers gérés avant de comptabiliser l’espace libéré.
+- Suppression d’une image contribuée à un album : les fichiers gérés sont maintenant purgés avec le lien.
+- Version portée à **1.45.1**, PWA **pwa215**, ressources **v203**.
+
+## 1.45.0 — fiabilité des alertes personnalisées et limites de débit (build pwa214)
+
+- Les règles d’alertes personnalisées sont désormais strictement **une fois par lien et par révision de règle** : une baisse ultérieure de la métrique (par exemple après rejet/rétention de fichiers reçus) ne les réarme plus silencieusement.
+- Les règles « tous les liens » et les sélecteurs de cible ignorent les liens historiques déjà inactifs/expirés lors des balayages périodiques.
+- La création d’une règle identique est idempotente afin d’éviter les doublons lors d’un double clic ou d’une reprise réseau; un ID explicite déjà supprimé retourne 404 au lieu de recréer une règle.
+- L’historique de déclenchement par règle est porté à 5000 liens afin d’éviter les ré-alertes artificielles sur les grandes bibliothèques.
+- Les limites de débit par lien sont maintenant **agrégées entre toutes les connexions parallèles** du même lien. Les plafonds global et planifié utilisent également des budgets partagés à l’échelle du serveur.
+- Les valeurs de débit invalides/négatives ne sont plus converties silencieusement en « illimité »; le dashboard standard et la PWA appliquent la même validation stricte.
+- Le streaming à très faible débit utilise des blocs plus petits pour éviter des pauses inutilement longues.
+- Version portée à **1.45.0**, PWA **pwa214**, ressources **v202**.
+
+## 1.44.5 — productivité des liens et pagination (build pwa211)
+
+- Ajout d’une **pagination configurable des liens actifs** (10 / 25 / 50 / 100 par page), avec préférence mémorisée et navigation précédent/suivant.
+- Ajout d’un **badge visible « Expire bientôt »** et d’un compte à rebours directement sur les liens arrivant à échéance; la PWA affiche aussi ce badge sur les images.
+- Les outils déjà présents (tri mémorisé, copie multi-sélection, actions groupées, duplication, épinglage et historique) sont consolidés avec sélection de page et historique de cycle de vie **créé → modifié → révoqué → restauré** consultable depuis la corbeille.
+- Cache PWA courant incrémenté à **pwa211** et ressources versionnées **v199**.
+- Correctifs de robustesse du pack : historique de création attribué au bon compte/appareil, duplication sans état de notifications hérité, déduplication et verrouillage des actions groupées, contrôles de sélection masqués aux auditeurs et expiration effective correctement affichée dans la PWA.
+
+### Historique du bump 1.44.5 précédent
+
+- Version du projet portée à **1.44.5**.
+- Le bloc **Test notifications push** est placé immédiatement au-dessus de **Centre de notifications** dans les réglages de la PWA.
+- Le fonctionnement du test Push et des préférences de notifications reste inchangé.
+- Cache PWA incrémenté à **pwa208** et ressources versionnées **v196**.
+
+### Cycle de vie, usage unique, modération et comparatifs
+
+- Corbeille récupérable harmonisée : les révocations depuis la PWA passent maintenant par la même corbeille que le dashboard standard.
+- Archivage automatique optionnel des liens expirés après un délai configurable (`autoArchiveExpiredDays`).
+- Nettoyage définitif optionnel après expiration (`expiredDataRetentionDays`), incluant les données Direct-Xfer gérées et les fichiers en attente de modération.
+- Règles d’expiration combinables : date, nombre maximal de téléchargements, première utilisation et inactivité; la première limite atteinte désactive le lien.
+- PWA : expiration après première utilisation et mode usage unique renforcé disponibles à la création des partages serveur.
+- Usage unique renforcé par un verrou serveur : une deuxième récupération complète concurrente est refusée et un transfert interrompu libère le verrou pour permettre une reprise.
+- PWA : création de liens de réception avec validation manuelle, puis approbation/rejet des fichiers en attente depuis le contenu reçu.
+- Statistiques comparatives : le dashboard standard conserve ses périodes comparées et la PWA Images propose désormais 7 ou 30 jours comparés à la période précédente.
+
+## 1.44.4 — correctifs des préférences et catégories de notifications (build pwa207)
+
+- Version du projet portée à **1.44.4**.
+- PWA : les notifications **Santé système**, **Maintenance**, **Réseau**, **Redémarrages**, **Mises à jour** et **PWA** ouvrent désormais directement les **Réglages** au lieu du panneau Activité; le dashboard standard ouvre la **Configuration** pour ces mêmes catégories.
+- Redémarrages : un arrêt propre ne crée plus une seconde notification distincte avant la notification de redémarrage; un cycle arrêt/démarrage produit une seule alerte utile avec la durée d’indisponibilité lorsqu’elle est connue.
+- Préférences : les anciennes valeurs devenues invalides (dont `maintenance` lorsqu’elle avait été désactivable) sont maintenant nettoyées et persistées dans le compte, au lieu d’être seulement ignorées en mémoire.
+- Migration : les anciennes notifications `activity` / `system` sont renormalisées même si une sauvegarde les réintroduit après le passage du marqueur de schéma.
+- Interface : dans les préférences du centre de notifications, **Maintenance** est déplacée au bas de la liste, immédiatement au-dessus de **Sécurité**, dans le dashboard standard et la PWA.
+- PWA : le **Test notifications push** est déplacé juste au-dessus de la section **Centre de notifications** dans les réglages.
+- Cache PWA incrémenté à **pwa207** et ressources versionnées **v195**.
+
+## 1.44.3 — sous-catégories des notifications système (build pwa204)
+
+- Version du projet portée à **1.44.3**.
+- La catégorie **Système** du centre de notifications est séparée en **Santé système**, **Maintenance**, **Réseau**, **Redémarrages** et **Mises à jour**.
+- **Redémarrages** et **Mises à jour** sont désormais optionnels et peuvent être désactivés indépendamment dans les paramètres standard et PWA.
+- **Santé système** reste toujours activée afin de conserver les alertes importantes (pannes de service, erreurs de configuration et reprise après crash).
+- **Maintenance** est désormais toujours activée afin que les nettoyages automatiques et suppressions par rétention restent visibles.
+- Les anciennes notifications stockées sous **Système** sont automatiquement reclassées vers la nouvelle sous-catégorie appropriée.
+- Cache PWA incrémenté à **pwa204** et ressources versionnées **v192**.
+
+## 1.44.2 — descriptifs des catégories de notifications (build pwa202)
+
+- Version du projet portée à **1.44.2**.
+- Ajout de descriptifs sous chaque catégorie de notifications dans la configuration standard et la PWA.
+- Conservation de la séparation **Visiteurs / Seuils / Trafic** introduite en 1.44.1.
+- Cache PWA incrémenté à **pwa202** et ressources versionnées **v190**.
+
+## 1.44.1 — catégories d’activité détaillées et simplification PWA (build pwa201)
+
+- Version du projet portée à **1.44.1**.
+- PWA : retrait du bouton global **« Tout déplier »** au-dessus des réglages; les sections avancées restent contrôlées individuellement et par l’option d’accordéon.
+- Centre de notifications : la préférence générale **Activité** est remplacée par **Visiteurs**, **Seuils** et **Trafic** pour un contrôle plus précis.
+- Les événements « nouveau pays / nouvel appareil visiteur » sont classés dans **Visiteurs**; les seuils de vues/téléchargements dans **Seuils**; le volume élevé et les liens viraux dans **Trafic**.
+- Migration automatique : une ancienne préférence **Activité désactivée** désactive les trois nouvelles catégories, et les notifications historiques `activity` sont reclassées selon leur type.
+- Paramètres de notifications : chaque catégorie affiche maintenant un descriptif de ses événements dans le dashboard standard et la PWA, avec traductions français/anglais/espagnol.
+- Cache PWA incrémenté à **pwa201** et ressources versionnées **v189**.
+
+## 1.44.0 — préférences du centre de notifications (build pwa199)
+
+- Version du projet portée à **1.44.0**.
+- Ajoute une section **Centre de notifications** à la configuration standard et aux réglages de la PWA.
+- Permet à chaque compte de choisir les catégories de notifications reçues : Partages, Réceptions, Images, Transferts, Activité, Recherche/OCR et PWA.
+- Les catégories **Sécurité** et **Système** restent toujours actives afin de préserver les alertes essentielles.
+- Les préférences sont partagées et synchronisées entre le dashboard standard, la PWA et le panneau ⚙️ du centre de notifications.
+- Cache PWA incrémenté à **pwa199** et ressources versionnées **v187** pour forcer le déploiement de cette interface sur les installations existantes.
+
+## 1.43.5 — sélection des liens de réception sans fausser les vues (build pwa197)
+
+- Version du projet portée à **1.43.5**.
+- La sélection d’un lien de réception dans la PWA n’ouvre plus silencieusement sa page publique `/u/<token>` et n’incrémente donc plus son compteur de vues.
+- La PWA récupère maintenant la configuration nécessaire via la sonde `upload-status?config=1`, sans effet sur les statistiques, tout en conservant quotas, extensions, chiffrement et contraintes de destination.
+- Une ouverture réelle de la page publique continue de compter normalement comme une vue.
+- Cache PWA incrémenté à **pwa197** et ressources versionnées **v185** afin de forcer le déploiement du correctif sur les installations existantes.
+
+## 1.43.4 — correctifs du centre de notification (build pwa196)
+
+- Corrige la gestion lecture/non-lu pour ne marquer comme lues que les notifications réellement visibles, y compris après filtrage et « Afficher plus ».
+- Autorise les comptes Auditeur à gérer leur propre état de notification sans élargir leurs autres permissions.
+- Corrige les catégories Réceptions/Images, l’ouverture du bon panneau PWA et la copie fiable des liens publics actifs.
+- Sérialise la sauvegarde des préférences de notification et permet leur rechargement après une erreur réseau.
+- Corrige la PWA : sélectionner un lien de réception ne charge plus sa page publique et ne gonfle donc plus son compteur de vues/visiteurs.
+- Version applicative et PWA : **1.43.4**.
+- Cache PWA : **pwa196 / v184**.
+
+## 1.43.3 — nettoyage des liens de réception PWA (build pwa193)
+
+- Les liens de réception révoqués ou expirés ne sont plus proposés dans les sélecteurs de destination de la PWA.
+- Le nettoyage couvre aussi les copies de destinations persistées localement, tout en préservant les destinations manuelles ou externes.
+- Version applicative et PWA : **1.43.3**.
+- Cache PWA : **pwa193 / v181**.
+
+## 1.43.2 — consolidation de l’identification des visiteurs (build pwa191)
+
+- Consolide le correctif qui distingue clairement le nom du lien du nom du visiteur dans le centre de notifications.
+- Les visites effectuées depuis un appareil PWA appairé au compte propriétaire ne génèrent plus de fausses alertes « nouveau visiteur », « nouveau pays » ou « nouveau navigateur/appareil ».
+- Le cookie d’authentification PWA secret reste limité à `/app`; seul un identifiant d’appareil sans privilège est utilisable sur les routes publiques pour cette reconnaissance.
+- Version applicative et PWA : **1.43.2**.
+- Cache PWA : **pwa191 / v179**.
+- Validation complète : **481/481 tests réussis sur 95 fichiers de tests**.
+
+## 1.43.1 — annulation différée de la révocation d’image PWA (build pwa190)
+
+
+### Correctif Notifications — identification des visites de l’appareil propriétaire
+- Le nom affiché dans « Nouveau visiteur » est explicitement présenté comme le **nom du lien**, et non comme le nom du visiteur/appareil.
+- Un appareil PWA appairé possède maintenant un marqueur d’identité public **sans privilège d’authentification** (`dxpwaid`) distinct du cookie secret `dxpwa`, qui reste limité à `/app`.
+- Une visite d’un lien appartenant au même compte depuis cet appareil appairé (ou une session administrateur du propriétaire) ne génère plus de fausse alerte « nouveau visiteur », « nouveau pays » ou « nouveau navigateur/appareil visiteur ».
+- Les visiteurs externes continuent d’être signalés et reçoivent un libellé navigateur/plateforme générique dans les métadonnées.
+- Cache PWA : **pwa190 / v178**.
+
+- Consolide le délai d’annulation de 5 secondes lors de la révocation individuelle d’une image depuis la PWA.
+- Après confirmation, la carte affiche un compte à rebours et le bouton « Annuler révocation » avant toute mutation serveur.
+- Le rafraîchissement périodique des statistiques ne peut pas écraser l’état d’annulation pendant le délai.
+- Version applicative et PWA : **1.43.1**.
+- Cache PWA : **pwa190 / v178**.
+- Validation complète : **481/481 tests réussis sur 95 fichiers de tests**.
+
+## 1.43.0 — consolidation de l’interface PWA (build pwa188)
+
+- Consolide les derniers ajustements d’interface PWA issus de la série 1.42.x.
+- La topbar PWA est simplifiée : suppression de la bulle Informations, des sélecteurs Langue/Thème et des mentions secondaires sous le logo.
+- Les réglages Langue et Thème restent disponibles en tête de la page Configuration/Réglages.
+- Les correctifs tablette récents pour la PWA et l’interface standard sont conservés.
+- La révocation individuelle d’une image dans la PWA attend désormais exactement 5 secondes après confirmation et affiche un bouton visible « Annuler révocation » directement dans la carte pendant ce délai.
+- Version applicative et PWA : **1.43.0**.
+- Cache PWA : **pwa188 / v176**.
+- Validation complète : **479/479 tests réussis sur 94 fichiers de tests**.
+
+## 1.42.3 — consolidation de la topbar PWA tablette/large (build pwa186)
+
+- Consolide le correctif de topbar PWA pour tablette et écrans larges : la cloche Notifications reste alignée avec les autres options.
+- Le bouton/bulle Informations (?) a été retiré de la topbar PWA sur toutes les tailles d’écran ; l’aide reste accessible au clavier avec `?` et via la palette de commandes.
+- Langue et Thème ont été retirés de la topbar et déplacés tout en haut de la page Réglages/Configuration de la PWA.
+- Le texte « Envoyer » sous le logo et la mention « Appareil associé » ont été retirés de la topbar PWA.
+- Version applicative et PWA : **1.42.3**.
+- Cache PWA : **pwa186 / v174**.
+- Validation complète : **475/475 tests réussis sur 93 fichiers de tests**.
+
+## 1.42.2 — consolidation des correctifs tablette (build pwa183)
+
+- Consolide les derniers correctifs d’interface tablette de Direct-Xfer 1.42.1.
+- PWA : boutons des cartes Images adaptés aux largeurs tablette sans chevaucher la résolution.
+- Interface standard : logo et contrôles de la topbar alignés verticalement sur tablette.
+- Version applicative et PWA : **1.42.2**.
+- Cache PWA : **pwa183 / v171**.
+- PWA tablette/écrans larges : la cloche Notifications est maintenant sur la même ligne que Langue, Thème et Informations ; la disposition téléphone reste inchangée.
+- Validation complète : **470/470 tests réussis sur 91 fichiers de tests**.
+
+## 1.42.1 — consolidation de la topbar PWA (build pwa181)
+
+- Publication stable du réalignement de la topbar PWA mobile : **Langue**, **Thème** et **Informations** restent ensemble sur la ligne 2, tandis que **Notifications** reste sur la ligne 1.
+- Le bouton **Installer**, lorsqu’il apparaît, utilise une ligne dédiée afin de ne plus déplacer les contrôles de la topbar.
+- Version applicative et PWA : **1.42.1**.
+- Cache PWA : **pwa181 / v169**.
+- PWA : suppression du deuxième bouton « Renommer » pour l’appareil courant; les autres appareils restent renommables avec une session administrateur.
+- PWA tablette : les quatre actions des variantes d’image utilisent un bloc 2×2 réservé afin de ne plus chevaucher la résolution dans les cartes Pleine/Mini/Micro.
+- Interface standard sur tablette : le logo/nom Direct-Xfer et les contrôles de droite restent sur la même rangée et sont centrés verticalement; le raccourci PWA conserve une rangée dédiée en dessous.
+- Validation : **468/468 tests réussis sur 90 fichiers de tests**.
+
+## 1.42.0 — centre de notifications actionnable (build pwa177)
+
+- PWA : topbar mobile réalignée — Langue, Thème et Informations partagent désormais la ligne 2; Notifications reste en ligne 1 et le bouton Installer temporaire ne peut plus déplacer ces contrôles.
+- Cache PWA : pwa178 / v166.
+- Sept ajouts au centre de notifications, dans les interfaces standard et PWA :
+  - **Lignes cliquables** : chaque notification renvoie vers sa section (Images, Partages, Réceptions, Activité…).
+  - **Horodatage relatif** (« il y a 5 min ») avec la date absolue en infobulle au survol.
+  - **Alerte à l’arrivée** quand le panneau est fermé : notification éphémère, cloche qui pulse et **son optionnel** (mémorisé localement, désactivé par défaut).
+  - **Préférences par catégorie** propres à chaque compte : couper certaines catégories (Sécurité et Système restent toujours actives). La coupe est appliquée côté serveur avant création.
+  - **Actions contextuelles** par notification : copier le lien public, et révoquer un lien devenu viral/abusé (interface standard).
+  - **Pagination** « Afficher plus » (20 par page) au lieu de rendre les 500 entrées d’un coup.
+  - **Push → centre** : toucher une notification Push ouvre l’application sur le bon panneau avec le centre déployé; les Push répétées se regroupent (`tag`/`renotify`).
+- Correction (audit préalable) : la boucle de « marquage lu » ne s’emballe plus en cas d’échec réseau persistant du panneau ouvert.
+- Cache PWA `pwa177` / assets `v165`.
+- Validation : **462/464 tests réussis** (les 2 seuls échecs sont les tests OCR nécessitant tesseract, dépendants de l’environnement).
+
+## 1.41.2 — filtres et recherche du centre de notifications (build pwa176)
+- Publication stable des filtres par catégorie et gravité ainsi que de la recherche plein texte du centre de notifications dans les interfaces standard et PWA.
+- Le système Lu / Non-lu reste synchronisé côté serveur; les filtres et la recherche sont purement visuels et ne modifient pas le compteur de notifications non lues.
+- Le panneau conserve son compteur contextuel affiché/total et son état dédié lorsqu’aucune notification ne correspond.
+- Audit post-release du centre : correction d’une course GET↔Lu qui pouvait réinjecter un ancien état non-lu et provoquer des tentatives répétées de marquage; la réponse de lecture fournit désormais les IDs lus et existants autoritaires et invalide tout GET plus ancien.
+- La fin d’un marquage Lu reste appliquée même si le panneau a été refermé entre-temps, afin que le badge ne reste pas temporairement faux.
+- Recherche améliorée : les libellés traduits de catégories et gravités sont indexés (ex. « Sécurité », « Avertissement », « Crítica »), pas seulement leurs codes internes anglais.
+- Isolation d’interface standard : filtres et texte de recherche sont remis à zéro à la déconnexion/session expirée afin qu’un autre compte dans le même onglet n’hérite pas des critères du précédent.
+- PWA : le nom de l’appareil est désormais affiché dans les métadonnées des alertes Push lorsqu’il n’est pas déjà présent dans le titre; le libellé générique espagnol utilise « Enlace » au lieu de « Link ».
+- Cache PWA `pwa176` / assets `v164`.
+- Validation : **459/459 tests réussis sur 87 fichiers de tests** après audit correctif de la version 1.41.2.
+
+## 1.41.1 — centre de notifications étendu et audit approfondi (build pwa174)
+- Audit correctif des ajouts récents : les alertes de téléchargements simultanés ignorent désormais prévisualisations/Range, et les transferts interrompus utilisent une seule alerte « abandonné » au lieu de doubler « échoué » + « abandonné » ou de qualifier à tort un rejet DLP/antivirus.
+- Réceptions modérées : « Fichier reçu disponible » n’est plus créé pendant l’attente de modération; il apparaît seulement après approbation effective du fichier.
+- Push : « abonnement réparé » est limité au même appareil (un deuxième appareil du même compte n’est plus un faux repair), les anciens endpoints du même appareil sont purgés, et « permission Notifications retirée » n’est émise que lors de la transition accordée→refusée.
+- Mot de passe : la récupération après plusieurs échecs reste détectée même après déclenchement du verrou anti-bruteforce.
+- Liens inutilisés : une même période d’inactivité ne recrée plus l’alerte chaque semaine après suppression; une nouvelle alerte nécessite une nouvelle période d’activité puis d’inactivité.
+- Remplacement de fichier partagé : comparaison légère du contenu (début/fin + taille) pour ne plus confondre un simple changement de mtime avec un remplacement réel.
+- Cycle serveur/réseau : une reprise après crash n’affiche plus l’ancienne durée d’uptime comme durée d’indisponibilité, et la détection d’IP publique accepte maintenant IPv4 et IPv6.
+- Isolation multi-compte renforcée dans la PWA : lorsqu’un navigateur possède à la fois une session web et un appareil PWA appairé, le centre Notifications suit désormais exclusivement le principal PWA actif; lecture, suppression et alertes DLP ne peuvent plus viser le compte de la session web par erreur.
+- Les détecteurs « activité inhabituelle » et « téléchargements répétés » utilisent l’IP exacte lorsque l’anonymisation est désactivée, et la forme masquée uniquement lorsque l’anonymisation est active; cela évite les faux regroupements de plusieurs appareils d’un même /24.
+- Les notifications de connexion administrateur sont enrichies en arrière-plan avec pays/drapeau lorsque le cache GeoIP était froid au moment de la connexion, sans recréer une notification supprimée entre-temps.
+- Le nettoyage d’un registre Notifications restauré/invalide ou supérieur à 500 entrées par compte est désormais persisté, empêchant les anciennes entrées supprimées par normalisation de revenir après redémarrage.
+- Polling standard optimisé : pause dans les onglets masqués, rafraîchissement immédiat au retour, annulation du GET Notifications lors d’un logout et suppression du délai possible lors d’un logout→relogin rapide.
+- Les alertes « lien désactivé automatiquement » distinguent maintenant les nouveaux cycles de limite (ex. 10 puis 20 téléchargements) afin qu’une seconde désactivation légitime ne soit pas silencieusement dédupliquée.
+- Centre étendu : fichier reçu disponible, téléchargements/uploads abandonnés, reprise impossible, premier accès protégé, récupération après échecs de mot de passe, nouvel appareil visiteur, téléchargements simultanés, volume élevé et lien viral.
+- Images/stockage : fichier source remplacé, image pleine remplacée, Mini/Micro régénérée, suppression automatique par rétention et résumé de nettoyage.
+- Supervision : services Push/reverse proxy/GeoIP/OCR/DLP indisponibles ou rétablis, échec de sauvegarde de configuration, redémarrage/arrêt propre/reprise après crash, changement d’IP publique.
+- PWA Push : abonnement expiré, réparation automatique et permission Notifications retirée.
+- **Lu / Non-lu persistant et synchronisé** : le badge compte seulement les non-lues; ouvrir le panneau les marque immédiatement lues côté serveur dans l’interface standard et la PWA.
+- Migration sûre : les notifications créées avant l’ajout Lu/Non-lu sont considérées déjà lues afin de ne pas gonfler artificiellement le badge après mise à jour.
+- Filtres du centre de notifications : filtrage local par catégorie et gravité dans les interfaces standard et PWA, sans modifier le badge Lu/Non-lu.
+- Recherche plein texte dans le centre : titres, métadonnées, type, catégorie, gravité, nom, détail, raison, appareil, utilisateur et source; recherche insensible à la casse et aux accents.
+- Le compteur du panneau indique le nombre affiché par rapport au total lorsqu’un filtre ou une recherche est actif, et affiche un état dédié lorsqu’aucune notification ne correspond.
+- Cache PWA `pwa174` / assets `v162`.
+- Robustesse : les trackers de volume/viral sont bornés en mémoire, GeoIP ne signale plus une panne pour une IP simplement non géolocalisable, et le rétablissement Push est confirmé par un envoi fournisseur réellement réussi après erreur.
+- Validation après ajout Lu/Non-lu : **450/450 tests réussis sur 85 fichiers de tests**.
+- Validation après filtres/recherche Notifications : **453/453 tests réussis sur 86 fichiers de tests**.
+
+## 1.41.0 — consolidation du centre de notifications (build pwa170)
+- Correctif interface standard : le badge Notifications charge désormais son compteur dès toute entrée authentifiée (session restaurée ou connexion manuelle), sans nécessiter un premier clic sur la cloche. Le polling Notifications est aussi arrêté proprement à la déconnexion.
+
+- Publication de la série de correctifs du centre de notifications sous une nouvelle version stable.
+- La clé d’audit locale par défaut est considérée comme valide et ne génère plus l’avertissement `AUDIT_HMAC_KEY recommandé`.
+- Centre de notifications renforcé : synchronisation standard/PWA, déduplication persistante, isolation par compte, protection contre les réponses réseau obsolètes et corrections de routage DLP.
+- Bouton Notifications PWA repositionné au-dessus du bouton Informations et agrandi d’environ 40 %.
+- Cache PWA forcé en `pwa170` / `v158`.
+- Validation : 418/418 tests réussis après le bump 1.41.0.
+
+## 1.40.3 — correctifs Notifications et interface PWA (build pwa169)
+- La clé d’audit locale `/data/audit-chain.key` est désormais considérée comme une configuration normale : plus d’avertissement `AUDIT_HMAC_KEY recommandé` dans le diagnostic ou le centre, et les anciennes alertes sont purgées automatiquement.
+- Dans la PWA, le bouton Notifications est placé au-dessus du bouton Aide/Informations et agrandi d’environ 40 % (60 px hors mobile, 41 px sur mobile).
+
+- Audits successifs du centre : limite de 500 notifications par compte, anonymisation IP appliquée à la lecture, alerte d’expiration indépendante des canaux externes, saturation du registre visiteurs corrigée et protection contre les réponses de polling arrivant dans le désordre.
+- Déduplication séparée de la liste visible : supprimer une alerte persistante ne la fait plus réapparaître immédiatement au contrôle suivant; le registre est borné par compte et survit aux redémarrages.
+- Correction « Nouveau pays » et première vue : GeoIP résolu en arrière-plan lorsque nécessaire, faux pays/réseaux locaux exclus et notification de première vue enrichie après résolution tardive du pays/drapeau.
+- Polling standard/PWA non empilable et non mis en cache, purge de la liste après perte de session, et invalidation des réponses GET antérieures lors d’une suppression individuelle ou d’un « Tout supprimer ».
+- Les événements DLP liés à une requête ne retombent plus sur tous les administrateurs lorsqu’aucun propriétaire n’est résolu; les clés internes DLP respectent aussi l’anonymisation IP.
+- Nettoyage des notifications et de leur déduplication à la suppression d’un compte; trackers d’activité/téléchargements répétés bornés et purgés périodiquement pour éviter une croissance mémoire continue.
+- Les liens déjà révoqués n’émettent plus ensuite d’alertes d’expiration; les quotas de réception ne sont signalés « atteints » que lorsque le quota du lien est réellement plein, et les quotas en octets sont formatés correctement.
+- Une requête Range/prévisualisation interrompue n’est plus prise pour un vrai « transfert échoué »; seuls les téléchargements complets et les uploads de réception alimentent cette alerte.
+- Restauration de `notificationsForAccount(accountId)` et validation runtime des routes `/api/notifications` et `/app/notifications` depuis la version standard et une PWA appairée.
+- Version du projet conservée à `1.40.3`; cache PWA `pwa169` et ressources `v=157`. Validation : **418/418 tests automatisés réussis**.
+
+## 1.40.2 — liste complète des appareils appairés dans la PWA (build pwa165)
+
+- Les paramètres de la PWA affichent désormais tous les appareils appairés au même compte, même lorsque la session administrateur web n’est plus ouverte sur l’appareil courant.
+- L’appareil actuellement utilisé reste clairement identifié comme « cet appareil » et peut toujours se renommer ou se désappairer lui-même.
+- Les autres appareils sont visibles en lecture seule depuis une PWA appairée; les actions de gestion sur un autre appareil restent réservées à une session administrateur afin de conserver la séparation de privilèges.
+- L’API `/app/device/status` filtre maintenant explicitement la liste par compte propriétaire afin qu’aucun appareil d’un autre compte ne puisse être exposé.
+- Version du projet portée à `1.40.2`; cache PWA `pwa165` et ressources `v=153`. Validation : **394/394 tests automatisés réussis**.
+
+## 1.40.1 — stabilisation du centre de notifications (build pwa164)
+
+- Version du projet portée à `1.40.1`.
+- Publication de l’extension du centre de notifications synchronisé comme release de maintenance distincte après les ajouts de 1.40.0.
+- Aucun changement fonctionnel supplémentaire : conservation du stockage partagé standard/PWA, des suppressions synchronisées, des catégories, gravités, seuils et mécanismes de déduplication.
+- Cache PWA incrémenté à `pwa164` et ressources versionnées `v=152` afin de forcer le chargement uniforme de cette révision sur les installations existantes.
+- Validation : **390/390 tests automatisés réussis**.
+
+## 1.40.0 — centre de notifications synchronisé
+
+- Ajout d’un menu **Notifications** dans l’interface standard, immédiatement à gauche du menu utilisateur.
+- Ajout du même centre de notifications dans l’en-tête de la PWA.
+- Les premières vues d’images créent désormais une notification persistante liée au compte propriétaire.
+- La version standard et la PWA lisent la même liste côté serveur : suppression individuelle et **Tout supprimer** sont synchronisés entre les deux interfaces.
+- Ajout d’un badge de nombre de notifications et d’un rafraîchissement périodique / temps réel côté PWA.
+- Extension du centre aux événements de transferts, quotas, visiteurs/pays, seuils, sécurité, DLP, OCR/indexation, appareils PWA, connexions admin, diagnostic système et mises à jour.
+- Les notifications structurées portent maintenant une catégorie et une gravité, affichées de façon cohérente dans la version standard et la PWA.
+- Déduplication/cooldown des alertes répétitives (activité inhabituelle, téléchargements répétés, problèmes système, erreurs OCR/indexation).
+- Version maintenue à `1.40.0` ; cache PWA `pwa163` / assets `v151`.
+- Validation : **390/390 tests automatisés réussis**.
+
+## 1.39.10 — langue des notifications Push PWA (build pwa160)
+- PWA Images : les BBCode Mini/Micro utilisent désormais la petite image comme miniature cliquable avec redirection vers la version Pleine.
+
+- Version du projet portée à `1.39.10`.
+- Ajout dans les paramètres PWA d’un choix **Français / English / Español** indépendant de la langue de l’interface pour les notifications Push.
+- La langue choisie est enregistrée avec l’abonnement Push de chaque appareil afin que le serveur puisse localiser les notifications même lorsque la PWA est complètement fermée.
+- Les notifications **première vue**, **réception** et **test Push** utilisent désormais la langue propre à chaque abonnement.
+- Un changement de langue resynchronise immédiatement l’abonnement actif côté serveur.
+- Cache PWA incrémenté à `pwa160` et ressources versionnées `v=148`.
+
+## 1.39.9 — fiabilisation des notifications première vue Images (build pwa159)
+
+- Version du projet portée à `1.39.9`.
+- Correction des notifications **première vue** pour les anciennes images standard : les enregistrements hérités qui ne possèdent que `ownerName` retrouvent automatiquement leur compte propriétaire et les appareils PWA appairés correspondants.
+- Les alertes première vue ne sont plus considérées comme envoyées au simple fait de trouver un abonnement : elles restent en attente jusqu’à ce qu’au moins un service Push accepte explicitement le message, via le même transport vérifié que le bouton de test.
+- Un abonnement absent, expiré ou rejeté ne consomme donc plus définitivement l’alerte unique ; celle-ci reste récupérable lors d’une réinscription Push.
+- Cache PWA incrémenté à `pwa159` et ressources versionnées `v=147` afin de forcer le renouvellement du shell/service worker Android après la mise à jour.
+- Validation : **380/380 tests automatisés réussis**.
+
+## 1.39.8 — diagnostic de livraison Push Android (build pwa158)
+
+- Version du projet portée à `1.39.8`.
+- Le test Push mesure désormais la livraison Android à partir de l’envoi réel au service Push, et non depuis le clic utilisateur ou la préparation de l’abonnement.
+- L’horodatage d’envoi serveur est propagé dans le payload jusqu’au service worker afin de calculer la latence réelle **service Push → Android**.
+- La fenêtre de diagnostic passe à 30 s sans inclure le temps de vérification, réparation ou recréation de l’abonnement.
+- Une réception tardive peut encore mettre à jour le diagnostic afin d’éviter les faux négatifs liés à un démarrage lent de la chaîne Push.
+- Cache PWA incrémenté à `pwa158` et ressources versionnées `v=146` afin de déployer le diagnostic corrigé sur les installations existantes.
+- Validation : **377/377 tests automatisés réussis**.
+
+## 1.39.7 — fiabilisation de la réactivation Push Android (build pwa156)
+
+- Version du projet portée à `1.39.7`.
+- La réactivation **OFF → ON** des notifications Push recrée explicitement un abonnement Android neuf et resynchronise son endpoint côté serveur.
+- Les alertes **première vue** déclenchées alors qu’aucun abonnement Push utilisable n’est disponible sont conservées en attente puis envoyées dès qu’un appareil se réabonne.
+- Le bouton **« Test notifications push »** distingue désormais l’acceptation par le service Push de la réception effective par le service worker et affiche la latence réellement observée sur l’appareil.
+- Le nettoyage côté serveur retire les anciens endpoints même si le désabonnement navigateur échoue ou répond tardivement.
+- Cache PWA incrémenté à `pwa156` et ressources versionnées `v=144` pour forcer le déploiement du correctif sur les installations existantes.
+- Validation : **374/374 tests automatisés réussis**.
+
+## 1.39.6 — fiabilisation du Push Android et test de notifications (build pwa155)
+
+- Version du projet portée à `1.39.6`.
+- Réparation automatique des abonnements Android conservés avec une ancienne clé VAPID : la PWA compare désormais l’`applicationServerKey` de l’abonnement à la clé courante et recrée l’abonnement si nécessaire.
+- Resynchronisation renforcée de l’abonnement Push courant avec le serveur.
+- Les Web Push temps réel utilisent l’urgence `high` et un timeout réseau explicite afin de limiter les envois différés ou pendants sur mobile.
+- Ajout du bouton **« Test notifications push »** dans les paramètres PWA : il effectue un vrai aller-retour serveur → service Push → appareil, cible uniquement l’abonnement courant et tente une réinscription automatique si l’abonnement est expiré ou rejeté.
+- Réactivation Push renforcée : un OFF → ON recrée désormais explicitement un abonnement Android neuf et réenregistre son endpoint côté serveur.
+- Les alertes de première vue survenues sans abonnement Push actif sont conservées puis expédiées automatiquement lors de la prochaine réactivation.
+- Le test Push distingue maintenant une acceptation par le service Push d’une réception réelle par le service worker et affiche la latence observée sur l’appareil.
+- Cache PWA incrémenté à `pwa155` et ressources versionnées `v=143` afin de forcer le déploiement du correctif sur les installations existantes.
+- Validation : **370/370 tests automatisés réussis**.
+
+## 1.39.5 — fiabilisation des notifications première vue Images (build pwa152)
+
+- Version du projet portée à `1.39.5`.
+- Correction du ciblage Web Push pour les alertes **première vue** des Images : les appareils PWA appairés au même compte sont maintenant associés aux images créées depuis l’interface standard.
+- Resynchronisation automatique de l’abonnement Push PWA au démarrage lorsqu’une autorisation existe déjà côté navigateur mais que l’abonnement n’est plus enregistré côté serveur.
+- L’activation de « Notifier à la première consultation » tente désormais d’activer ou de restaurer le Web Push si nécessaire.
+- Les appareils verrouillés ou révoqués restent exclus des destinataires.
+- Cache PWA incrémenté à `pwa152` et ressources versionnées `v=140` afin de forcer le déploiement du correctif sur les installations existantes.
+- Validation : **366/366 tests automatisés réussis**.
+
+## 1.39.4 — correctifs PWA T/OCR et notifications (build pwa151)
+
+- Version du projet portée à `1.39.4`.
+- Correction du chargement du moteur T/OCR dans la PWA : prise en charge explicite du WebAssembly dans la CSP, chemins Tesseract worker/core épinglés et gestion robuste des erreurs d'initialisation.
+- Ajout de délais d'échec contrôlés pour empêcher l'interface de rester bloquée indéfiniment sur « Chargement du moteur OCR… ».
+- Cache PWA incrémenté à `pwa151` et ressources versionnées `v=139` pour forcer le déploiement des correctifs sur les installations existantes.
+- Correction des alertes **première vue** Images dans la PWA : les images créées depuis l’admin standard notifient désormais aussi les appareils PWA appairés au même compte.
+- L’abonnement Web Push de la PWA est resynchronisé silencieusement au démarrage lorsqu’il était déjà autorisé, afin de réparer un abonnement navigateur encore valide mais absent de l’état serveur après une restauration/migration.
+- Activer « Notifier à la première consultation » tente maintenant d’activer le Web Push si celui-ci n’est pas encore configuré sur l’appareil.
+
+## 1.39.3 — synchronisation des variantes Images, nettoyage PWA et correctif OCR (build pwa149)
+
+- Version du projet portée à `1.39.3`.
+- Synchronisation fiable des dimensions et tailles **Mini/Micro** après redimensionnement dans l’interface standard, avec réparation automatique des métadonnées déjà obsolètes.
+- Suppression du groupe redondant **« Copier un format »** dans les cartes Images de la PWA : la copie reste disponible directement à côté de Pleine/Mini/Micro.
+- Les actions favorites ne proposent plus l’ancien bouton de copie dupliqué ; les préférences héritées sont remappées vers des actions valides.
+- Correction du bouton **T/OCR** de la PWA qui pouvait rester bloqué sur « Chargement du moteur OCR… » : autorisation CSP WebAssembly, worker/cœur Tesseract 7 épinglés, remontée des erreurs du worker et délais de sécurité sur le chargement/initialisation.
+- Cache PWA incrémenté à `pwa149` et ressources versionnées `v=137` afin de forcer le déploiement des correctifs sur les installations existantes.
+- Validation : **364/364 tests automatisés réussis**.
+
+## 1.39.2 — statistiques Images dans la PWA (build pwa146)
+
+- Version du projet portée à `1.39.2`.
+- Ajout du bouton **Stats** sur chaque carte de la section **Images** de la PWA, à l’instar de l’interface standard.
+- La modale mobile affiche le résumé des vues/visiteurs, les variantes Pleine/Mini/Micro et les accès récents avec drapeau, IP et pays selon le réglage d’anonymisation.
+- La consultation des statistiques passe par une route de gestion authentifiée et n’ajoute aucune vue artificielle à l’image.
+- Cache PWA incrémenté à `pwa146` et ressources versionnées `v=134` afin de déployer la nouvelle interface sur les installations existantes.
+- Validation : **359/359 tests automatisés réussis**.
+
+## 1.39.1 — correctifs admin Images/Partages et PWA (build pwa144)
+
+- Version du projet portée à `1.39.1`.
+- Correctifs de robustesse de la page admin **Partages** : le rafraîchissement périodique ne reste plus suspendu après interaction avec une case à cocher ou un sélecteur.
+- Correctifs de la page admin **Images** : la sélection multiple est resynchronisée après filtrage et les exports Markdown/HTML échappent correctement les noms contenant des caractères spéciaux.
+- Correctifs PWA : les sélections invisibles après filtrage sont retirées des actions de masse, les erreurs HTTP de génération Mini/Micro ne sont plus considérées comme des succès, et la copie Markdown est correctement échappée.
+- Affichage des statistiques Images conservé avec IP complète + drapeau + pays lorsque l’anonymisation des IP est désactivée.
+- La version affichée par la PWA est réalignée sur la version du projet (`1.39.1`). Cache PWA incrémenté à `pwa144` et ressources versionnées `v=132` afin de déployer les correctifs PWA sur les installations existantes.
+- Validation : **355/355 tests automatisés réussis** après le bump et le renouvellement du cache PWA.
+
+## 1.39.0 — demande d'accès (28) + retour visiteur modéré (38) (interface admin/serveur, PWA inchangée pwa143)
+
+- Version du projet portée à `1.39.0`.
+- **Fonctionnalité 28 — flux « demander l'accès »** : un lien peut être verrouillé
+  en mode « approbation requise ». Le visiteur voit un formulaire (nom, e-mail
+  facultatif, message) au lieu du contenu ; sa demande est liée à son navigateur
+  par un cookie `dxreq_<token>`. L'admin approuve/refuse depuis la carte du lien
+  (bouton **Modération**) ; à l'approbation, ce navigateur est débloqué
+  automatiquement (la page « en attente » se rafraîchit). Par visiteur (pas
+  d'ouverture globale), évalué avant le plafond de visiteurs. E-mail de courtoisie
+  au demandeur si SMTP est configuré. Agrégation admin via `GET /api/access-requests`.
+- **Fonctionnalité 38 — commentaires/retour visiteur modérés** : formulaire de
+  commentaire sur la page d'un fichier partagé (activable par lien). Les retours
+  sont **privés à l'admin** (jamais affichés aux autres visiteurs), consultables,
+  marquables lus et supprimables depuis **Modération**, avec compteur de non-lus.
+  POST sans JavaScript (formulaire + redirection). Anti-spam via le limiteur de
+  messages publics existant.
+- UI admin : deux cases à cocher (création + édition), badge de file d'attente sur
+  les cartes, une modale de modération par lien (demandes d'accès + commentaires),
+  i18n fr/en/es et styles dédiés. Correction au passage : collision de clé i18n
+  `mod.approve` (feature 8) — la clé « approuver l'accès » est renommée `mod.grant`.
+- Tests d'intégration ajoutés : formulaire → cookie → approbation → déblocage auto
+  (et isolation par visiteur) ; refus ; retour visiteur privé ; refus si désactivé.
+- Aucun changement d'actifs PWA : cache `pwa143` / ressources `v=131` inchangés.
+
+## 1.38.1 — correctifs de la revue (interface admin/serveur, PWA inchangée pwa143)
+
+- Version du projet portée à `1.38.1`.
+- **Plafond de bande passante contournable en ZIP** : les téléchargements ZIP
+  (dossier `/s/:token/zip`, collection `/all.zip`, sélection `/zip-select`,
+  sous-dossier `/item/:idx/zip`) ne comptaient pas les octets servis — la limite ne
+  s'appliquait donc jamais à un partage téléchargé en ZIP. Chaque octet ZIP est
+  désormais comptabilisé et déclenche l'auto-révocation, et `zip-select` /
+  `item/:idx/zip` appliquent aussi le quota de téléchargement par IP.
+- **Emoji de lien** multi-points-de-code (ZWJ, drapeaux, teintes de peau) tronqué en
+  glyphe cassé → conservation par *graphème* (2 max).
+- Info-bulle d'expiration affichant « expiré » pour un lien déjà échu.
+- Test d'intégration ajouté pour le plafond de bande passante servi en ZIP.
+
+## 1.38.0 — finition du lot « liens admin » (interface admin, PWA inchangée pwa143)
+
+- Version du projet portée à `1.38.0`.
+- **Emoji/icône par lien enfin affiché** : l'emoji défini par lien (déjà saisi,
+  stocké et renvoyé par le serveur) remplace désormais réellement le glyphe de
+  type dans la liste admin — le type reste indiqué par le badge coloré. Survolable
+  (« Emoji du lien »).
+- **Info-bulles de temps relatif** dans la liste admin : « Créé il y a X » et
+  « expire dans X » au survol des champs *Créé* / *Expire* (calcul jour/heure
+  correct, indépendant de l'ancien `formatDuration` limité aux minutes).
+- **Bascule de densité** (compact / confortable) de la table des liens admin :
+  bouton dédié, préférence mémorisée comme la vue liste/grille et restaurée au
+  rechargement.
+- **Extension d'expiration en 1 clic** complétée : bouton **« +30 j »** ajouté à
+  côté de « +1 j » / « +7 j ».
+- Revue de validation des fonctionnalités récentes : déduplication de réception par
+  empreinte, notification à *chaque* téléchargement, alerte de connexion depuis un
+  nouvel appareil, et bandeau d'annonce global (échappement anti-XSS vérifié).
+- Aucun changement d'actifs PWA : cache `pwa143` / ressources `v=131` inchangés.
+
+## 1.37.0 — ajouts pratiques liens / réception / sécurité (build pwa143)
+
+- Version du projet portée à `1.37.0`.
+- **Expiration à date/heure exacte** : en plus des durées prédéfinies, chaque
+  partage/réception/collaboration accepte une date d'expiration absolue
+  (`expiresAt`), y compris à l'édition (elle a priorité sur le préréglage).
+- **Générateur de mot de passe fort** (dans le navigateur, RNG cryptographique,
+  sans glyphes ambigus) et **indicateur de robustesse** sur les champs mot de
+  passe des liens et du compte admin.
+- **Modale QR enrichie** : bouton **« Copier lien + mot de passe »** (uniquement
+  quand le mot de passe vient d'être défini dans la session) et **partage rapide**
+  vers e-mail / WhatsApp / Telegram / SMS (liens profonds, 100 % côté client).
+- **Réception — nom d'expéditeur requis** : option par lien qui impose au visiteur
+  de saisir un nom ; celui-ci est enregistré avec le dépôt (journal des transferts,
+  activité en direct, notifications).
+- **Réception — refus des exécutables** : option par lien qui inspecte les
+  premiers octets (PE Windows, ELF, Mach-O/Java, shebang) et rejette un binaire
+  déguisé même si l'extension est autorisée (ex. malware renommé `.jpg`).
+- **Plafond de stockage de réception global** : nouvelle limite serveur (en Go,
+  fractions acceptées) sur le total reçu par l'ensemble des liens de réception et
+  de collaboration, en complément des quotas par lien existants.
+- **Sonde `/healthz`** : endpoint public minimal (200 + version + uptime, sans
+  secret) pour le `HEALTHCHECK` Docker et les moniteurs d'uptime.
+- **Arrêt d'urgence** (owner/admin) : « Suspendre tous les liens » coupe
+  immédiatement tout accès public (réversible, sans toucher aux fichiers) et
+  « Réactiver tous les liens » lève la suspension. Chaque action est auditée.
+
+Note : le **partage de texte/URL vers la PWA** (Web Share Target « text ») était
+déjà pris en charge — un texte ou une URL partagé devient une note `.txt` ajoutée
+à la file d'envoi.
+
+Correctifs livrés avec ces ajouts :
+
+- Édition d'un lien : une durée ou « Jamais » choisie dans le menu n'est plus
+  neutralisée par la date exacte (le champ date démarre vide ; seule une date
+  réellement saisie a priorité).
+- Le **nom d'expéditeur** requis apparaît désormais réellement dans les
+  notifications de réception (webhook / e-mail / push), pas seulement dans le
+  journal.
+- **« Réactiver tous les liens »** ne relève que les liens suspendus par l'arrêt
+  d'urgence : un lien mis en pause manuellement auparavant le reste.
+- Cache PWA incrémenté à `pwa143` et ressources versionnées `v=131`.
+
 ## PWA — fonctions avancées ajoutées (build pwa80)
 
 - **Remplacement d’image sans changer le lien** : la nouvelle image conserve le même jeton public. Les dix versions précédentes peuvent être restaurées depuis la carte de l’image.
@@ -480,6 +1173,83 @@ re-add the container from its saved template. Application data remains in the ma
 - **Optimisation adaptative** : l’URL `/i/<token>/auto` choisit Micro, Mini ou Pleine selon la largeur demandée et l’économie de données, puis privilégie AVIF ou WebP lorsque le navigateur les accepte et que la PWA a pu les générer.
 
 Les secrets des invitations ne sont jamais stockés en clair : seul leur hachage SHA-256 est conservé dans les métadonnées du serveur.
+
+## 1.36.1 — durcissement DLP PWA et serveur (build pwa142)
+
+- Version du projet portée à `1.36.1`.
+- Les analyses DLP incomplètes sont maintenant traitées de façon sûre : en mode `Bloquer` elles arrêtent le transfert, et en mode `Avertir` elles exigent une confirmation explicite.
+- La PWA ne considère plus comme sûrs les fichiers trop volumineux, les fichiers au-delà de `dlpMaxFiles`, les ZIP tronqués/chiffrés ou utilisant une compression non inspectable.
+- Les PDF mixtes sont OCRisés page par page pour la DLP locale, même lorsqu'une couche texte incorporée est déjà présente.
+- Les résultats DLP persistés sont invalidés par une version du moteur afin qu'une mise à jour ne réutilise jamais un ancien `DLP ✓`.
+- Le worker OCR est réutilisé pendant tout un lot DLP puis libéré, ce qui réduit fortement les rechargements Tesseract sur mobile.
+- Si la PWA ne peut pas récupérer la politique DLP authentifiée du serveur, un nouvel upload est refusé jusqu'au retour du statut au lieu de retomber sur une politique potentiellement moins stricte.
+- Côté serveur, une analyse partielle (taille, OCR, erreur de lecture ou ZIP borné) participe maintenant elle aussi aux décisions `Avertir/Bloquer`; les résumés exposent les causes d'incomplétude sans exposer de donnée sensible.
+- Correction d'un cas où un lot PWA dépassant `dlpMaxFiles` pouvait continuer en mode `Avertir` sans confirmation lorsque tous les fichiers effectivement inspectés étaient sûrs. Les fichiers omis sont désormais marqués individuellement `DLP ?`.
+- Cache PWA incrémenté à `pwa142` et ressources versionnées `v=130`.
+
+## 1.36.0 — audit DLP et recherche sémantique (build pwa141)
+
+- Version du projet portée à `1.36.0`.
+- La DLP inspecte maintenant les fichiers texte courants auparavant invisibles (`.env`, `.pem`, `.key`, `Dockerfile`, fichiers sans extension) grâce à une détection de contenu texte bornée.
+- Les archives ZIP sont inspectées de façon bornée : les petits membres textuels sont extraits pour la DLP et deviennent aussi indexables par la recherche globale/sémantique.
+- Les PDF mixtes ne peuvent plus contourner la DLP OCR : si l'OCR DLP est activé, les pages rasterisées sont vérifiées même lorsqu'une couche texte est déjà présente ailleurs dans le PDF.
+- Lors d'une création Images par lot, chaque image conserve uniquement son propre résumé DLP; une image sûre n'hérite plus du badge d'une autre image sensible du lot.
+- La recherche sémantique recanonicalise les synonymes après stemming (`factures`, `contrats`, etc.), ce qui rétablit les correspondances multilingues sur les formes infléchies.
+- Les extraits de résultats sémantiques privilégient désormais le passage de contenu qui a réellement déclenché le concept, plutôt que le début du document ou une correspondance de nom de fichier.
+- La file principale de la PWA exécute maintenant un test DLP local avant tout upload vers un lien de réception, avec boutons de test par fichier, sélection ou lot complet, et indicateur par fichier.
+- La PWA reprend la politique DLP du serveur (`Avertir`, `Bloquer`, `Journaliser`), analyse localement texte/configuration/ZIP et réutilise l’OCR local pour les images/PDF. En mode Bloquer, aucun octet n’est envoyé si une détection est trouvée; en mode Avertir, l’accord est mémorisé uniquement pour l’empreinte courante du fichier.
+- Les résultats DLP locaux persistés ne contiennent que des échantillons masqués. Un OCR impossible est affiché comme analyse incomplète et ne peut pas apparaître comme un faux succès vert.
+- Cache PWA incrémenté à `pwa141` et ressources versionnées `v=129`.
+
+## 1.35.5 — sécurité DLP, recherche sémantique et correctifs (build pwa139)
+
+- Version du projet portée à `1.35.5`.
+- Correction du ZIP sélectif des liens de collaboration stockés hors de `/host`, avec conservation des chemins relatifs imbriqués.
+- La purge de la corbeille ne supprime plus un dossier de réception/collaboration encore référencé par un autre lien actif ou restaurable.
+- L’historique par fichier continue d’agréger au-delà des 1 000 événements détaillés affichés et signale lorsqu’une fenêtre de journal ou une liste de membres ZIP est tronquée.
+- Correction des liens Télécharger/Afficher du lecteur PDF lorsque d’autres paramètres de requête sont présents.
+- Correction du flux SSE « Activité en direct » : connexion maintenue après le snapshot, puis révoquée si la session admin expire ou se déconnecte.
+- **DLP avancé avant publication** : analyse locale des fichiers et images avant création/extension d’un partage, avec politiques `Avertir + confirmer`, `Bloquer` ou `Journaliser`. Détection notamment des cartes Luhn, NAS/SIN canadien, IBAN, clés privées, clés AWS, jetons GitHub/Slack/JWT, secrets API/mots de passe, pièces d’identité contextualisées et marqueurs confidentiels. Les échantillons exposés au navigateur et à l’audit sont masqués.
+- La DLP peut utiliser l’OCR serveur sur images/PDF scannés, avec limites configurables de fichiers et de taille. Elle couvre aussi la création et le remplacement d’images depuis la PWA; un refus n’écrase jamais l’image publique existante.
+- **Recherche sémantique globale locale** : mode hybride au-dessus de l’index persistant (texte, OCR, PDF, Office, ZIP, Images), avec expansion multilingue français/anglais/espagnol, normalisation/stemming léger, pondération par rareté et classement par pertinence. Aucun contenu n’est envoyé à un service d’embeddings externe.
+- Cache PWA incrémenté à `pwa139` et ressources versionnées `v=127`.
+
+## 1.35.4 — correctifs des règles de partage et maintenance (build pwa137)
+
+- Version du projet portée à `1.35.4`.
+- Séparation de l'expiration fixe et de l'expiration après première utilisation : modifier/désactiver cette règle ne laisse plus une ancienne échéance bloquée dans `expiresAt`.
+- Migration automatique et conservative des échéances « première utilisation » créées par les versions 1.35.3 et antérieures.
+- Le dashboard expose et utilise maintenant l'**échéance effective** (date fixe, première utilisation ou inactivité) pour le tri, les cartes, la barre de progression et les statistiques détaillées.
+- Les rappels d'expiration sont correctement réarmés après changement de configuration, y compris pour les règles première utilisation et inactivité.
+- Les liens sans aucune échéance n'affichent plus un trompeur « rappel global ».
+- Les valeurs par défaut d'expiration/rappel invalides sont refusées au lieu d'être silencieusement converties en zéro.
+- Le résumé de stockage des partages utilise `logicalBytes`, ce qui inclut correctement les dossiers.
+- Cache PWA incrémenté à `pwa137` et ressources versionnées `v=125` afin de forcer le renouvellement des installations existantes.
+- **Corbeille restaurable** : les suppressions manuelles et les liens expirés après leur délai de grâce restent récupérables pendant la durée configurée (30 jours par défaut, 0 = conservation illimitée). Les sauvegardes Direct-Xfer conservent aussi la corbeille.
+- **ZIP sélectif renforcé** : Tout/Aucun, sélection bornée à 2 000 entrées, chemins/indices strictement validés et dédupliqués, avec journalisation des membres téléchargés.
+- **Prévisualisation PDF intégrée** : les PDF s'ouvrent dans le shell Direct-Xfer au lieu d'un onglet brut, avec affichage same-origin compatible avec le lecteur PDF du navigateur.
+- **Historique des téléchargements par fichier** : vue groupée par fichier avec réussites/interruption, volume, date, IP/pays/destinataire et prise en compte des fichiers inclus dans les ZIP (jusqu'à 500 membres journalisés par ZIP).
+- **Activité en direct** : flux SSE authentifié du dashboard pour uploads, téléchargements, OCR, antivirus, erreurs, corbeille et actions auditées, avec heartbeat compatible reverse proxy.
+
+## 1.35.3 — maintenance
+
+- Version du projet portée à `1.35.3`.
+- Cache PWA incrémenté à `pwa136` et ressources versionnées `v=124` afin de forcer le renouvellement des installations existantes.
+- Conserve les correctifs et fonctionnalités de la branche 1.35.2.
+- Migration automatique et sûre de la clé locale du journal d’audit vers `AUDIT_HMAC_KEY` : vérification préalable, sauvegardes transactionnelles temporaires, re-signature complète, vérification finale, trace `audit-key-migrated`, reprise après interruption et refus de migrer une chaîne altérée.
+
+- Pack de gestion des partages : QR directement dépliable sur chaque carte, ouverture dans un nouvel onglet, couleur et étiquettes personnalisées, description Markdown publique et commentaires administrateur privés datés.
+- Valeurs par défaut configurables pour couleur, étiquettes, description Markdown, rappel d'expiration, expiration après première utilisation et expiration après inactivité.
+- Réinitialisation des statistiques visibles sans remettre à zéro les compteurs servant aux quotas; la modale de statistiques détaillées respecte la même ligne de base.
+- Les cartes affichent le dernier téléchargement et le dernier envoi réussis, ainsi qu'une barre de progression vers la prochaine expiration (date fixe ou inactivité).
+- Rappels d'expiration configurables par partage, y compris pour une échéance d'inactivité; une nouvelle activité repousse l'échéance et réarme proprement le rappel.
+- Expiration optionnelle après la première utilisation complète et expiration après une période d'inactivité, avec conservation de l'activité historique lors de l'activation sur un ancien partage.
+
+## 1.35.2 — maintenance
+
+- Version du projet portée à `1.35.2`.
+- Cache PWA incrémenté à `pwa135` et ressources versionnées `v=123` afin de forcer le renouvellement des installations existantes.
+- Inclut l’ensemble des ajouts et correctifs livrés dans la série 1.35.1.
 
 ## 1.28.0 — correctifs de connexion et installation mobile
 
@@ -609,3 +1379,48 @@ Une PWA ne peut pas garantir que le réseau continue à travailler après sa fer
 - Les cookies d’authentification `sid` (session admin) et `dxpwa` (appareil PWA) passent de `SameSite=Strict` à `SameSite=Lax`. Un cookie `Strict` n’est pas transmis lors d’une navigation de haut niveau *cross-site* — c’est précisément le cas d’une PWA installée lancée depuis l’écran d’accueil (WebAPK) et d’un partage système (Web Share Target). L’application arrivait alors non authentifiée et l’espace de travail paraissait réinitialisé après une déconnexion/reconnexion ou un relancement.
 - Le correctif ne réduit pas la protection CSRF : chaque mutation exige toujours un jeton `X-CSRF-Token` (`requireAuth` / `requireAppAuth`) et, sous `/app`, un contrôle d’origine exacte même sur les sous-domaines frères.
 - Version du projet portée à `1.31.1`, cache PWA incrémenté à `pwa100` et manifeste versionné `v=88` afin de forcer le renouvellement des ressources sur les installations existantes.
+
+
+## 1.35.0 — audit, protection et recherche universelle (build pwa132)
+
+- Version du projet portée à `1.35.0`.
+- Inclut le journal d’audit cryptographiquement vérifiable, la protection contre les comportements de type ransomware et la recherche serveur universelle persistante.
+- La recherche universelle de la version complète indexe maintenant aussi l’OCR serveur des images et PDF scannés. Les résultats OCR sont mis en cache dans `/data/search-ocr-cache.json`; les PDF ayant déjà une couche texte ne sont pas rasterisés inutilement.
+- Correctifs de robustesse de l’index/audit : l’index OCR et son cache suivent désormais `DATA_KEY` au repos, les packs de langues Tesseract sont vérifiés avant d’annoncer l’OCR disponible, les couches texte PDF ne sont plus dupliquées, les purges déclenchent une réindexation, et l’audit détecte une tête manquante ainsi que les rollbacks/troncatures par rapport à l’ancre mémorisée.
+- Cache PWA incrémenté à `pwa132` et ressources versionnées `v=120` pour forcer le renouvellement des installations existantes.
+
+
+## 1.35.0 — OCR de la section Images (build pwa133)
+
+- La recherche de la section Images de la version complète interroge aussi l’index OCR serveur persistant.
+- Les photos gérées par Images sont indexées comme documents OCR de premier niveau et les anciens liens host-backed restent indexables si leur copie Full manque.
+- La PWA recherche également le texte OCR serveur dans ses images et permet de lancer un OCR local directement depuis une carte Images; le résultat est ajouté à l’index OCR IndexedDB avec le token de l’image.
+- Cache PWA `pwa133`, ressources `v=121`.
+
+
+## 1.35.1 — maintenance OCR Images (build pwa134)
+
+- Version du projet portée à `1.35.1`.
+- Conserve les correctifs d’indexation OCR de la section Images sur la version complète et la PWA.
+- Cache PWA incrémenté à `pwa134` et ressources versionnées `v=122` afin de forcer le renouvellement des installations existantes.
+
+## 1.35.1 — statistiques stockage et diagnostic intégré
+
+- Le tableau de bord regroupe maintenant le **stockage et le trafic par grande catégorie de fichier** (images, vidéo, audio, documents, archives, code, autres), avec volume stocké, nombre de fichiers, trafic et nombre de transferts.
+- Nouveau **rapport de stockage Direct-Xfer** : réception, originaux Images, Mini/Micro, historique/versions/adaptatif, partages E2E, secrets, quarantaine, index/OCR, journaux, métadonnées et fichiers temporaires/partiels récupérables.
+- Nouvel **assistant de diagnostic intégré** (owner/admin) : tests réels d’écriture des volumes, espace disque, persistance Docker, intégrité de l’audit, index de recherche, OCR/Tesseract/Poppler, ClamAV, chiffrement, notifications, ressources PWA, port public et reverse proxy.
+- Ces ajouts concernent l’interface complète et ne nécessitent pas de changement du shell PWA; le build reste `pwa134` / ressources `v=122`.
+
+## 1.35.1 — Productivité des partages (ajouts 1 à 15)
+
+- Duplication d’un partage existant avec remise à zéro de son état d’utilisation.
+- Renommage direct depuis la liste et notes privées d’administration.
+- Épinglage/favoris et archivage manuel sans désactiver le lien public.
+- Filtres avancés par taille et date, avec période personnalisée, et tri par activité récente.
+- Sélection multiple enrichie : copie des liens, épinglage, archivage, tags, expiration et révocation.
+- Expiration rapide par partage : 1 h, 24 h, 7 j, 30 j ou jamais.
+- Prolongation réelle d’un partage existant (+1 j / +7 j ou action en masse), calculée à partir de son expiration actuelle lorsqu’elle est encore future.
+- Badges « Jamais utilisé » et « Très actif » fondés sur l’activité réelle du partage.
+- Historique borné des changements administratifs (100 entrées par partage) avec acteur, date et champs modifiés. Les mots de passe ne sont jamais inscrits dans cet historique ; seule leur présence peut être enregistrée.
+- Les volumes des liens de réception/collaboration utilisent les octets réellement reçus pour les filtres par taille.
+- Validation : 234/234 tests automatisés réussis pour cette livraison.

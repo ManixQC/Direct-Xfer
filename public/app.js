@@ -69,6 +69,65 @@
 // ==================================================================
 const I18N = {
   fr: {
+    'notifications.title': 'Notifications',
+    'notifications.loading': 'Chargement…',
+    'notifications.empty': 'Aucune notification.',
+    'notifications.firstView': 'Première vue de « {name} »',
+    'notifications.delete': 'Supprimer cette notification',
+    'notifications.clearAll': 'Tout supprimer',
+    'notifications.clearConfirm': 'Supprimer toutes les notifications ?',
+    'notifications.loadMore': 'Afficher plus ({n})',
+    'notifications.action.open': 'Ouvrir',
+    'notifications.action.copyLink': 'Copier le lien',
+    'notifications.action.revoke': 'Révoquer le lien',
+    'notifications.linkCopied': 'Lien copié ✓',
+    'notifications.noLink': 'Lien indisponible',
+    'notifications.sound': 'Son à la réception',
+    'notifications.soundOn': 'Son activé',
+    'notifications.soundOff': 'Son désactivé',
+    'notifications.prefs': 'Préférences',
+    'notifications.prefsTitle': 'Catégories reçues sur ce compte',
+    'notifications.prefsHint': 'Décochez une catégorie pour ne plus créer ses notifications.',
+    'notifications.prefsSaved': 'Préférences enregistrées ✓',
+    'notifications.settingsTitle': 'Centre de notifications',
+    'notifications.settingsHint': 'Choisissez les catégories de notifications à recevoir dans le centre de notifications pour ce compte.',
+    'notifications.settingsRequired': 'Toujours activée',
+    'notifications.settingsRequiredHint': 'Les notifications Sécurité, Maintenance et Santé système restent toujours activées.',
+    'notifications.settingsSaving': 'Enregistrement…',
+    'notifications.settingsError': 'Impossible d’enregistrer les préférences.',
+    'notifications.rulesTitle': 'Alertes personnalisées', 'notifications.rulesHint': 'Créez jusqu’à 50 règles qui déclenchent une notification lorsqu’un seuil est atteint.',
+    'notifications.ruleMetric': 'Mesure', 'notifications.ruleTarget': 'Lien', 'notifications.ruleThreshold': 'Seuil', 'notifications.ruleLabel': 'Nom (facultatif)', 'notifications.ruleAdd': 'Ajouter la règle',
+    'notifications.ruleAllTargets': 'Tous mes liens compatibles', 'notifications.ruleTargetUnavailable': 'Lien indisponible ou supprimé', 'notifications.ruleEmpty': 'Aucune règle personnalisée.', 'notifications.ruleSaved': 'Règle enregistrée ✓', 'notifications.ruleDeleted': 'Règle supprimée', 'notifications.ruleError': 'Impossible d’enregistrer la règle.',
+    'notifications.ruleEnable': 'Activer', 'notifications.ruleDisable': 'Désactiver', 'notifications.ruleDelete': 'Supprimer', 'notifications.ruleMetricViews': 'Vues', 'notifications.ruleMetricDownloads': 'Téléchargements', 'notifications.ruleMetricBytesServed': 'Données servies (Go)', 'notifications.ruleMetricReceivedBytes': 'Données reçues (Go)', 'notifications.ruleCustomTitle': 'Alerte personnalisée : {name}',
+    'notifications.count': '{n} notification(s)',
+    'notifications.filteredCount': '{shown} / {total} notification(s)',
+    'notifications.noMatch': 'Aucune notification ne correspond aux filtres.',
+    'notifications.filters': 'Filtres de notifications',
+    'notifications.categoryFilter': 'Filtrer par catégorie',
+    'notifications.severityFilter': 'Filtrer par gravité',
+    'notifications.allCategories': 'Toutes les catégories',
+    'notifications.allSeverities': 'Toutes les gravités',
+    'notifications.search': 'Rechercher…',
+    'notifications.searchAria': 'Rechercher dans les notifications',
+    'notifications.category.activity': 'Activité', 'notifications.category.visitors': 'Visiteurs', 'notifications.category.thresholds': 'Seuils', 'notifications.category.traffic': 'Trafic', 'notifications.category.images': 'Images', 'notifications.category.pwa': 'PWA',
+    'notifications.category.receptions': 'Réceptions', 'notifications.category.search': 'Recherche / OCR', 'notifications.category.security': 'Sécurité',
+    'notifications.category.shares': 'Partages', 'notifications.category.system_health': 'Santé système', 'notifications.category.maintenance': 'Maintenance', 'notifications.category.network': 'Réseau', 'notifications.category.restarts': 'Redémarrages', 'notifications.category.updates': 'Mises à jour', 'notifications.category.transfers': 'Transferts',
+    'notifications.categoryDesc.shares': 'Téléchargements, expiration, limites et changements concernant les liens de partage.',
+    'notifications.categoryDesc.receptions': 'Dépôts reçus, fichiers disponibles et quotas des liens de réception.',
+    'notifications.categoryDesc.images': 'Premières vues, remplacements d’images et régénération des variantes.',
+    'notifications.categoryDesc.transfers': 'Transferts terminés ou échoués, abandons et reprises impossibles.',
+    'notifications.categoryDesc.visitors': 'Nouveaux pays et nouveaux navigateurs ou appareils visiteurs.',
+    'notifications.categoryDesc.thresholds': 'Seuils de vues et de téléchargements atteints sur vos liens.',
+    'notifications.categoryDesc.traffic': 'Volume de téléchargement inhabituel et liens devenant viraux.',
+    'notifications.categoryDesc.search': 'Échecs OCR et problèmes d’indexation pour la recherche.',
+    'notifications.categoryDesc.pwa': 'Appareils PWA, abonnements Push et permissions de notifications.',
+    'notifications.categoryDesc.security': 'Connexions inhabituelles, mots de passe, DLP et autres alertes de sécurité.',
+    'notifications.categoryDesc.system_health': 'Pannes de service, erreurs de configuration et problèmes système importants.',
+    'notifications.categoryDesc.maintenance': 'Nettoyages automatiques et suppressions de fichiers selon les règles de rétention.',
+    'notifications.categoryDesc.network': 'Changements d’adresse IP publique et événements réseau du service.',
+    'notifications.categoryDesc.restarts': 'Redémarrages détectés de Direct-Xfer, avec durée d’indisponibilité lorsque disponible.',
+    'notifications.categoryDesc.updates': 'Mises à jour disponibles et confirmation après installation.',
+    'notifications.severity.info': 'Information', 'notifications.severity.success': 'Succès', 'notifications.severity.warning': 'Avertissement', 'notifications.severity.critical': 'Critique',
     // --- Client nicknames by IP (added) ---
     'ipn.prompt': 'Surnom pour {ip} :',
     'ipn.clickHint': 'Cliquer pour renommer ce client',
@@ -204,6 +263,8 @@ const I18N = {
     'cfg.notifyDownloads': 'Téléchargements',
     'cfg.notifyUploads': 'Réceptions',
     'cfg.notifyMessages': 'Messages',
+    'cfg.notifyAggregate': 'Regrouper les alertes répétées d’un lien (secondes, 0 = désactivé)',
+    'cfg.notifyAggregateHint': 'Les alertes de réception/téléchargement d’un même lien dans cette fenêtre sont fusionnées en une seule. S’applique au webhook, à l’e-mail et au push.',
     'cfg.webhookTest': 'Tester',
     'cfg.webpush': 'Notifications navigateur (Web Push)',
     'cfg.webpushHint': 'Recevez des notifications push dans ce navigateur pour les événements cochés ci-dessus — même quand la page d’administration est fermée. Chaque navigateur/appareil s’abonne séparément.',
@@ -335,6 +396,21 @@ const I18N = {
     'cfg.adminAllowlist': 'Liste blanche d’IP admin (IP/CIDR, séparés par des virgules)',
     'cfg.allowlistEnv': 'Géré par la variable d’environnement ADMIN_ALLOWED_IPS.',
     'cfg.allowlistHint': 'Vide = comportement par défaut (réseau local). Le loopback est toujours autorisé. Une mauvaise entrée peut vous verrouiller dehors.',
+    'cfg.ransomEnable': 'Protection ransomware / anomalies destructrices',
+    'cfg.ransomHint': 'Bloque temporairement un client public après des suppressions massives ou une rafale d’uploads aux noms typiques de ransomware. Aucun fichier n’est supprimé automatiquement.',
+    'cfg.ransomDelete': 'Seuil suppressions / 60 s',
+    'cfg.ransomUpload': 'Uploads suspects / 120 s',
+    'cfg.ransomBlock': 'Durée du blocage (minutes)',
+    'cfg.ransomRefresh': 'Blocages actifs',
+    'cfg.ransomNone': 'Aucun client bloqué.',
+    'cfg.ransomBlocked': '{n} client(s) bloqué(s)',
+    'cfg.ransomUnblock': 'Débloquer',
+    'cfg.dlpTitle': 'Data Loss Prevention (DLP)', 'cfg.dlpEnable': 'Analyser les partages sortants pour détecter les données sensibles',
+    'cfg.dlpHint': 'Analyse locale avant publication. Les secrets détectés sont toujours masqués dans les journaux et l’interface.',
+    'cfg.dlpMode': 'Politique', 'cfg.dlpWarn': 'Avertir + confirmer', 'cfg.dlpBlock': 'Bloquer', 'cfg.dlpLog': 'Journaliser seulement',
+    'cfg.dlpMaxFiles': 'Fichiers max par analyse', 'cfg.dlpMaxMb': 'Taille max par fichier (Mo)', 'cfg.dlpOcr': 'Utiliser l’OCR serveur pour les images/PDF scannés',
+    'dlp.warningTitle': 'DLP : contenu sensible détecté', 'dlp.warningConfirm': '{n} détection(s) sensible(s) ({level}) dans {files} fichier(s). Continuer et publier quand même ?', 'dlp.incompleteConfirm': 'L’analyse DLP est incomplète ({skipped} ignoré(s), {ocr} erreur(s) OCR, {scan} erreur(s) de lecture, {archive} élément(s) d’archive non inspecté(s)). Publier quand même ?', 'dlp.ocrUnavailableConfirm': 'Analyse DLP du texte (OCR) indisponible sur le serveur : les images/PDF n’ont pas été inspectés pour du contenu sensible. Publier quand même ?',
+    'dlp.blocked': 'Publication bloquée par la politique DLP.', 'dlp.badge': 'DLP {n}',
     'cfg.allowlistConfirm': 'Restreindre l’accès admin à ces IP ? Une erreur peut vous empêcher d’accéder à l’administration (seul le loopback restera autorisé).',
     'cfg.qrDefault': 'Afficher le QR code juste après la création d’un lien',
     'cfg.maxUpload': 'Taille max / fichier reçu (Mo)',
@@ -459,6 +535,13 @@ const I18N = {
     'audit.subtitle': 'Actions admin récentes (les plus récentes en premier).',
     'audit.none': 'Aucune entrée pour l’instant.',
     'audit.loadFail': 'Chargement du journal impossible.',
+    'audit.verifying': 'Vérification de la chaîne cryptographique…',
+    'audit.verify': 'Vérifier',
+    'audit.integrityOk': 'Chaîne vérifiée · {n} entrée(s) · tête #{seq}',
+    'audit.integrityBad': 'ALERTE intégrité : {reason}',
+    'auditA.ransomware-blocked': 'Client bloqué (anomalie)',
+    'auditA.ransomware-unblocked': 'Client débloqué',
+    'auditA.search-reindex': 'Réindexation recherche',
     'auditA.login': 'Connexion',
     'auditA.login-fail': 'Échec de connexion',
     'auditA.login-2fa-fail': 'Échec 2FA',
@@ -539,6 +622,22 @@ const I18N = {
     'dash.stalePartialN': '{n} partiel(s) de plus de 24 h',
     'dash.scanTruncated': 'Analyse limitée aux {n} premières entrées.',
     'dash.filesN': '{n} fichier(s)',
+    'dash.fileTypeStats': 'Stockage et trafic par type de fichier',
+    'dash.storageReport': 'Rapport de stockage Direct-Xfer',
+    'dash.storageReportTotal': 'Données gérées',
+    'dash.storageReportFiles': 'Fichiers comptabilisés',
+    'dash.storageReportReclaimable': 'Récupérable maintenant',
+    'dash.storageReportDisk': 'Disque utilisé',
+    'dash.typeStorage': 'Stockage : {v}',
+    'dash.typeTraffic': 'Trafic : {v}',
+    'dash.typeTransfers': '{n} transfert(s)',
+    'filecat.image': 'Images', 'filecat.video': 'Vidéos', 'filecat.audio': 'Audio', 'filecat.document': 'Documents', 'filecat.archive': 'Archives', 'filecat.code': 'Code', 'filecat.other': 'Autres',
+    'storagepart.reception': 'Fichiers reçus', 'storagepart.imagesFull': 'Images originales', 'storagepart.imagePreviews': 'Miniatures Mini / Micro', 'storagepart.imageHistory': 'Historique, versions et images adaptatives', 'storagepart.encrypted': 'Partages E2E chiffrés', 'storagepart.secrets': 'Notes secrètes', 'storagepart.quarantine': 'Quarantaine antivirus', 'storagepart.searchOcr': 'Index de recherche et cache OCR', 'storagepart.logs': 'Journaux transferts / audit', 'storagepart.metadata': 'Métadonnées et configuration', 'storagepart.temporary': 'Fichiers temporaires / partiels',
+    'diag.title': 'Diagnostic Direct-Xfer', 'diag.run': 'Lancer le diagnostic', 'diag.running': 'Diagnostic en cours…', 'diag.notRun': 'Le diagnostic n’a pas encore été lancé.', 'diag.adminOnly': 'Le diagnostic actif est réservé aux administrateurs.', 'diag.failed': 'Impossible de terminer le diagnostic.',
+    'diag.summary': '{ok} OK · {warn} avertissement(s) · {bad} erreur(s)',
+    'diag.group.storage': 'Stockage', 'diag.group.security': 'Sécurité', 'diag.group.search': 'Recherche / OCR', 'diag.group.notifications': 'Notifications', 'diag.group.pwa': 'PWA', 'diag.group.network': 'Réseau',
+    'diag.status.ok': 'OK', 'diag.status.warn': 'Attention', 'diag.status.bad': 'Erreur', 'diag.status.info': 'Info',
+    'diag.check.data-writable': 'Volume /data inscriptible', 'diag.check.reception-writable': 'Dossier de réception inscriptible', 'diag.check.images-writable': 'Dossier Images inscriptible', 'diag.check.disk-space': 'Espace disque', 'diag.check.storage-mounts': 'Persistance des volumes Docker', 'diag.check.audit-chain': 'Intégrité du journal d’audit', 'diag.check.search-index': 'Index de recherche universel', 'diag.check.ocr': 'Moteur OCR serveur', 'diag.check.clamav': 'Antivirus ClamAV', 'diag.check.audit-key': 'Clé du journal d’audit', 'diag.check.data-encryption': 'Chiffrement DATA_KEY', 'diag.check.webhook': 'Webhook', 'diag.check.email': 'Notifications courriel', 'diag.check.web-push': 'Notifications Web Push', 'diag.check.pwa-assets': 'Ressources PWA', 'diag.check.pwa-install': 'Installation PWA', 'diag.check.public-port': 'Port public', 'diag.check.reverse-proxy': 'Reverse proxy',
     'idash.filterStatus': 'Statut des images',
     'idash.filterFormat': 'Format',
     'idash.filterAllStatuses': 'Tous les statuts',
@@ -762,6 +861,10 @@ const I18N = {
     'dash.empty': 'Aucune donnée pour l’instant.',
     'dash.dl': 'téléch.',
     'dash.ul': 'récept.',
+    'dash.total': 'total',
+    'dash.dailyTrends': 'Tendances quotidiennes',
+    'dash.downloadsPerDay': 'Téléchargements / jour',
+    'dash.depositsPerDay': 'Dépôts / jour',
     'dash.transfersN': '{n} transferts',
     'update.available': '⬆ Nouvelle version disponible : {v}',
     'menu.shutdown': '⏻ Éteindre le serveur',
@@ -921,6 +1024,16 @@ const I18N = {
     'sh.received': 'Reçus :',
     'inbox.namePrompt': 'Nom du lien de réception (facultatif) :',
     'inbox.created': 'Lien de réception créé ✓',
+    'preset.apply': 'Appliquer un modèle…',
+    'preset.save': '💾 Enregistrer comme modèle',
+    'preset.delete': 'Supprimer le modèle',
+    'preset.namePrompt': 'Nom du modèle :',
+    'preset.saved': 'Modèle enregistré ✓',
+    'preset.saveFail': 'Échec de l’enregistrement du modèle',
+    'preset.tooMany': 'Trop de modèles enregistrés (50 max). Supprimez-en un.',
+    'preset.deleteConfirm': 'Supprimer le modèle « {name} » ?',
+    'preset.deleted': 'Modèle supprimé ✓',
+    'preset.deleteFail': 'Échec de la suppression du modèle',
     'inbox.createFail': 'Création du lien impossible',
     'collab.title': 'Nouveau lien de collaboration',
     'collab.intro': 'Un dossier partagé bidirectionnel : les visiteurs peuvent télécharger et déposer. Les fichiers sont stockés dans un nouveau dossier de votre espace de réception.',
@@ -937,6 +1050,7 @@ const I18N = {
     'inbox.expiry': 'Expiration',
     'inbox.password': 'Mot de passe (facultatif)',
     'inbox.maxFiles': 'Fichiers max',
+    'inbox.maxFilesPerUpload': 'Fichiers max / envoi',
     'inbox.maxFileSize': 'Taille max / fichier (Mo)',
     'inbox.maxTotalSize': 'Quota total (Mo)',
     'inbox.allowExt': 'Types autorisés (séparés par des virgules, facultatif)',
@@ -944,6 +1058,7 @@ const I18N = {
     'inbox.extPh': 'ex. pdf, jpg, png',
     'inbox.note': 'Message affiché aux expéditeurs (facultatif)',
     'inbox.groupSender': 'Ranger les envois dans des sous-dossiers par expéditeur',
+    'inbox.tagSender': 'Préfixer le nom des fichiers reçus avec le nom de l’expéditeur', 'inbox.maxFilesPerSender': 'Fichiers max / expéditeur', 'inbox.maxBytesPerSender': 'Quota / expéditeur (Mo)',
     'inbox.notePh': 'ex. Merci d’envoyer le contrat signé en PDF.',
     'inbox.create': 'Créer le lien',
     'sh.noteLabel': 'Consigne :',
@@ -960,6 +1075,7 @@ const I18N = {
     'sh.filtersLabel': 'Filtres / quotas :',
     'sh.limPerFile': 'max {v}/fichier',
     'sh.limFiles': 'max {v} fichiers',
+    'sh.limFilesPerUpload': 'max {v}/envoi',
     'sh.limQuota': 'quota {v}',
     'sh.limAllow': 'autorisés : {v}',
     'sh.limBlock': 'bloqués : {v}',
@@ -1036,7 +1152,9 @@ const I18N = {
     'sh.sizeLabel': 'Taille :',
     'sh.created': 'Créé :',
     'sh.downloads': 'Téléch. :',
+    'sh.downloadingNow': '{n} téléchargement(s) en cours',
     'sh.visitors': 'Visiteurs :',
+    'sh.dlThresholdTip': 'Alerte lorsque ce lien atteint {n} téléchargement(s)',
     'sh.viewsTip': '{views} vue(s) · {visitors} visiteur(s) unique(s)',
     'sh.expires': 'Expire :',
     'sh.scheduled': '🕒 programmé',
@@ -1049,8 +1167,8 @@ const I18N = {
     'sh.copy': 'Copier',
     'sh.copied': 'Lien copié ✓',
     'sh.copyFail': 'Copie impossible, sélectionnez le lien manuellement',
-    'sh.revokeConfirm': 'Révoquer le partage « {name} » ?\nVous pourrez le récupérer pendant 5 secondes.',
-    'sh.revoked': 'Partage révoqué',
+    'sh.revokeConfirm': 'Déplacer le partage « {name} » dans la corbeille ?\nVous pourrez l’annuler pendant 5 secondes, puis le restaurer depuis la corbeille.',
+    'sh.revoked': 'Partage déplacé dans la corbeille',
     'sh.revokeFail': 'Révocation impossible',
     'sh.revokePending': 'Suppression dans 5 s…',
     'sh.undoRevoke': 'Récupérer',
@@ -1089,15 +1207,53 @@ const I18N = {
     'pk.location': 'Emplacement :',
     'pk.expiration': 'Expiration',
     'pk.never': 'Jamais',
+    'pk.expireAt': 'Date d’expiration exacte (facultatif)',
+    'pk.genPw': 'Générer',
+    'pk.genPwTip': 'Générer un mot de passe fort',
+    'inbox.requireSender': 'Exiger que le visiteur saisisse un nom',
+    'inbox.blockExec': 'Refuser les exécutables (analyse magic-bytes)',
+    'sh.copyLinkPw': 'Copier lien + mot de passe',
+    'sh.copyLinkPwDone': 'Lien et mot de passe copiés',
+    'sh.shareVia': 'Partager via',
+    'cfg.receptionCap': 'Plafond de stockage réception (Go, 0 = illimité)',
+    'cfg.panicTitle': 'Arrêt d’urgence',
+    'cfg.panicDesc': 'Suspend immédiatement tous les liens actifs (réversible). Les fichiers ne sont pas touchés.',
+    'cfg.panicPause': 'Suspendre tous les liens',
+    'cfg.panicResume': 'Réactiver tous les liens',
+    'cfg.panicConfirm': 'Suspendre TOUS les liens publics actifs maintenant ?',
+    'cfg.panicPaused': '{n} lien(s) suspendu(s)',
+    'cfg.panicResumed': '{n} lien(s) réactivé(s)',
+    'cfg.panicFail': 'Action impossible',
     'pk.h1': '1 heure',
     'pk.d1': '1 jour',
     'pk.d7': '7 jours',
     'pk.d30': '30 jours',
     'pk.maxDl': 'Téléchargements max',
     'pk.maxVisitors': 'Visiteurs uniques max',
+    'pk.dlThreshold': 'Alerter à N téléchargements', 'pk.off': 'désactivé',
+    'pk.maxDlPerIp': 'Téléchargements max / IP', 'pk.pwHint': 'Indice de mot de passe (optionnel)', 'pk.pwHintPh': 'ex. notre ville de naissance',
     'pk.rate': 'Débit max (Ko/s)',
     'pk.allowZip': 'Autoriser « Tout télécharger (.zip) »',
     'pk.burn': 'Lien à usage unique (révoqué après le 1er téléchargement)',
+    'pk.requestAccess': "Exiger une approbation d'accès (le visiteur demande, vous approuvez)",
+    'pk.allowFeedback': 'Autoriser les commentaires visiteurs (modérés)',
+    'sh.moderation': 'Modération',
+    'mod.title': 'Modération du lien',
+    'mod.accessTitle': "Demandes d'accès",
+    'mod.accessEmpty': "Aucune demande d'accès.",
+    'mod.grant': 'Approuver',
+    'mod.deny': 'Refuser',
+    'mod.delete': 'Supprimer',
+    'mod.fbTitle': 'Commentaires visiteurs',
+    'mod.fbEmpty': 'Aucun commentaire.',
+    'mod.markRead': 'Marquer lu',
+    'mod.unread': 'Marquer non lu',
+    'mod.anon': 'Anonyme',
+    'mod.loadFail': 'Action impossible.',
+    'mod.none': 'Rien à modérer.',
+    'mod.status.pending': 'en attente',
+    'mod.status.approved': 'approuvé',
+    'mod.status.denied': 'refusé',
     'pk.note': 'Message affiché au visiteur (facultatif)',
     'pk.notePh': 'ex. Voici le fichier demandé.',
     'sh.speed': 'Débit : {v} Ko/s',
@@ -1138,8 +1294,42 @@ const I18N = {
     'sh.notePh2': 'Note privée pour l’admin…',
     'sh.noteSaved': 'Note enregistrée',
     'sh.noteFail': 'Échec de l’enregistrement de la note',
+    'sh.color': 'Couleur de la carte', 'sh.tagsField': 'Étiquettes', 'sh.tagsPh': 'Client, Urgent',
+    'sh.descriptionMd': 'Description Markdown affichée au visiteur (facultatif)', 'sh.descriptionPh': '## Informations\nTexte, **gras**, liens…',
+    'sh.comments': '💬 Commentaires', 'sh.commentsTitle': 'Commentaires administrateur', 'sh.commentAdd': 'Ajouter', 'sh.commentPh': 'Ajouter une note datée…', 'sh.commentsEmpty': 'Aucun commentaire.', 'sh.commentFail': 'Impossible de charger les commentaires', 'sh.commentDelete': 'Supprimer ce commentaire',
+    'sh.resetStats': '↺ Réinitialiser stats', 'sh.resetStatsConfirm': 'Réinitialiser les statistiques visibles de « {name} » ? Les quotas de sécurité ne seront pas remis à zéro.', 'sh.statsReset': 'Statistiques réinitialisées', 'sh.statsResetFail': 'Échec de la réinitialisation',
+    'sh.lastDownload': 'Dernier téléchargement', 'sh.lastUpload': 'Dernier envoi', 'sh.noTransfer': 'aucun',
+    'sh.expiryProgress': 'Expiration', 'sh.expiresIn': 'expire dans {v}', 'sh.expired': 'expiré', 'sh.expiringSoon': 'Expire bientôt',
+    'sh.reminderHours': 'Rappel avant expiration (heures, vide = global)', 'sh.reminderGlobal': 'rappel global', 'sh.reminderOff': 'rappel désactivé',
+    'sh.firstUseHours': 'Expirer après la première utilisation (heures)', 'sh.firstUseRule': 'Après première utilisation : {v}',
+    'sh.inactiveDays': 'Expirer après inactivité (jours)', 'sh.inactiveRule': 'Inactivité : {v}',
+    'sh.inlineQr': 'QR sur la carte', 'sh.hideQr': 'Masquer le QR',
+    'sh.pin': '☆ Épingler', 'sh.unpin': '★ Désépingler', 'sh.pinned': '★ Épinglé',
+    'sh.archive': '🗄 Archiver', 'sh.unarchive': '↩ Désarchiver', 'sh.archived': '🗄 Archivé', 'sh.showArchived': '🗄 Archives',
+    'sh.sizeAll': 'Toutes tailles', 'sh.sizeSmall': '< 100 Mo', 'sh.sizeMedium': '100 Mo – 1 Go', 'sh.sizeLarge': '> 1 Go',
+    'sh.dateAll': 'Toutes dates', 'sh.dateToday': 'Aujourd’hui', 'sh.date7': '7 derniers jours', 'sh.date30': '30 derniers jours', 'sh.dateCustom': 'Personnalisé…', 'sh.dateFrom': 'Du', 'sh.dateTo': 'Au',
+    'sh.sortActivity': 'Activité récente', 'sh.bulkCopy': '🔗 Copier les liens', 'sh.bulkPin': '★ Épingler', 'sh.bulkUnpin': '☆ Désépingler',
+    'sh.bulkArchive': '🗄 Archiver', 'sh.bulkUnarchive': '↩ Désarchiver', 'sh.quickExpiry': 'Expiration…', 'sh.never': 'Jamais',
+    'sh.expirySet': 'Expiration mise à jour', 'sh.expiryFail': 'Échec de la mise à jour de l’expiration',
+    'sh.extend1d': '+1 j', 'sh.extend7d': '+7 j', 'sh.extend30d': '+30 j', 'sh.extended': 'Expiration prolongée', 'sh.extendFail': 'Échec de la prolongation',
+    'sh.createdTip': 'Créé {v}', 'sh.emojiTip': 'Emoji du lien', 'sh.densityTip': 'Densité : compacte / confortable',
+    'sh.neverUsed': 'Jamais utilisé', 'sh.veryActive': 'Très actif', 'sh.changeHistory': 'Historique des changements', 'sh.historyBtn': '🕘 Historique',
+    'sh.historyLoading': 'Chargement…', 'sh.historyEmpty': 'Aucun changement enregistré.', 'sh.historyFail': 'Impossible de charger l’historique', 'sh.historyAction.created': 'Créé', 'sh.historyAction.revoked': 'Révoqué', 'sh.historyAction.restored': 'Restauré', 'sh.historyAction.created-from-duplicate': 'Créé par duplication',
+    'sh.changedFields': 'Champs : {fields}', 'sh.copiedLinks': '{n} lien(s) copié(s)', 'sh.copyNoUrl': 'Aucun lien copiable dans la sélection', 'sh.pageSizeTitle': 'Nombre de liens par page', 'sh.page10': '10 / page', 'sh.page25': '25 / page', 'sh.page50': '50 / page', 'sh.page100': '100 / page', 'sh.pagePrev': '← Précédent', 'sh.pageNext': 'Suivant →', 'sh.pageLabel': '{from}–{to} sur {total}', 'sh.bulkSelectPage': '☑ Sélectionner la page', 'sh.bulkClearPage': '☐ Désélectionner la page',
+    'sh.renameAction': '✎',
     'sh.log': '🧾 Journal',
     'sh.logTitle': 'Journal d’accès de ce lien',
+    'filehist.button': '📥 Par fichier', 'filehist.title': 'Historique des téléchargements par fichier', 'filehist.loading': 'Chargement…', 'filehist.empty': 'Aucun téléchargement de fichier enregistré.', 'filehist.fail': 'Impossible de charger l’historique par fichier', 'filehist.transfers': '{n} transfert(s)', 'filehist.completed': '{n} réussi(s)', 'filehist.last': 'Dernier : {v}', 'filehist.truncated': 'Historique partiel : le journal dépasse la fenêtre lue ou un ZIP contenait plus de 500 éléments.',
+    'recv.button': '📥 Fichiers reçus', 'recv.title': 'Fichiers reçus', 'recv.loading': 'Chargement…', 'recv.empty': 'Aucun fichier reçu pour l’instant.', 'recv.count': '{n} fichier(s)', 'recv.download': 'Télécharger', 'recv.fail': 'Impossible de charger les fichiers reçus.',
+    'trash.open': '🗑 Corbeille', 'trash.title': 'Corbeille', 'trash.empty': 'La corbeille est vide.', 'trash.restore': '↩ Restaurer', 'trash.purge': 'Supprimer définitivement', 'trash.purgeAll': 'Purger tout', 'trash.restoreOk': 'Partage restauré', 'trash.restoreFail': 'Restauration impossible', 'trash.purgeOk': 'Élément supprimé définitivement', 'trash.purgeFail': 'Suppression définitive impossible', 'trash.purgeConfirm': 'Supprimer définitivement « {name} » ? Cette action est irréversible.', 'trash.purgeAllConfirm': 'Purger définitivement toute la corbeille ?', 'trash.retention': 'Conservation : {n} jour(s)',
+    'activity.open': '◉ Activité en direct', 'activity.title': 'Activité en direct', 'activity.clear': 'Effacer la vue', 'activity.hint': 'Envois, téléchargements, OCR, antivirus, erreurs et actions auditées apparaissent ici en temps réel.', 'activity.connected': 'Connecté · événements en temps réel', 'activity.reconnecting': 'Reconnexion…', 'activity.empty': 'Aucune activité récente.',
+    'cfg.trashRetention': 'Conservation de la corbeille (jours, 0 = garder indéfiniment)',
+    'cfg.autoArchiveExpired': 'Archiver automatiquement les liens expirés après (jours, 0 = désactivé)',
+    'cfg.autoArchiveExpiredHint': 'Masque les anciens liens de la liste principale sans supprimer leurs fichiers gérés.',
+    'cfg.expiredDataRetention': 'Supprimer définitivement les données expirées après (jours, 0 = désactivé)',
+    'cfg.expiredDataRetentionHint': '⚠ Destructif : supprime les copies gérées par Direct-Xfer liées aux liens expirés (réceptions, images, blobs chiffrés). Les fichiers sources du volume hôte ne sont jamais supprimés.',
+    'cfg.expiredDataRetentionConfirm': '⚠ Les données gérées par Direct-Xfer pour les liens expirés depuis plus de {n} jour(s) seront supprimées DÉFINITIVEMENT. Confirmer ?',
+    'sh.smartExpiryHint': 'Expiration intelligente : si plusieurs limites sont actives, le lien expire dès que la première est atteinte (date, téléchargements, première utilisation ou inactivité).',
     'sh.exportCsv': '⬇ Liste CSV',
     'sh.exportJson': '⬇ Liste JSON',
     'sh.dupWarn': 'Ce chemin est déjà partagé par : {names}. Créer quand même un autre lien ?',
@@ -1155,8 +1345,20 @@ const I18N = {
     'pk.unitMo': 'mois',
     'cfg.expiryPresets': 'Préréglages d’expiration rapides',
     'cfg.expiryPresetsHint': 'Durées séparées par des virgules proposées dans les fenêtres de lien — ex. 6h, 3d, 2w, 1mo. « Jamais » est toujours disponible.',
-    'search.btn': '🔎 Recherche contenu',
-    'search.ph': '🔎 Chercher dans les fichiers texte partagés & reçus…',
+    'search.btn': '🔎 Recherche universelle',
+    'search.ph': '🔎 Noms, PDF/OCR, Office, texte et archives…',
+    'search.semantic': 'Sémantique', 'search.semanticBadge': 'Sémantique',
+    'search.indexLoading': 'Chargement de l’index…',
+    'search.indexReady': 'Index : {n} fichier(s) · {when}',
+    'search.indexBuilding': 'Indexation en cours · {n} fichier(s) disponibles',
+    'search.ocrReady': 'OCR serveur : {done} nouveau(x) · {cached} en cache · {langs}',
+    'search.ocrBuilding': 'OCR : {done} nouveau(x) · {cached} en cache · {current}',
+    'search.ocrDeferred': '{n} fichier(s) OCR reporté(s) au prochain passage',
+    'search.ocrUnavailable': 'OCR serveur indisponible (Tesseract ou dépendance manquante)',
+    'search.ocrMissingLangs': 'langue(s) manquante(s) : {langs}',
+    'search.ocrBadge': 'OCR',
+    'search.reindex': 'Reconstruire l’index',
+    'search.reindexStarted': 'Réindexation lancée',
     'search.run': 'Chercher',
     'search.searching': 'Recherche…',
     'search.tooShort': 'Saisissez au moins 2 caractères.',
@@ -1196,7 +1398,7 @@ const I18N = {
     'photo.noExpiry': 'Sans expiration',
     'photo.expiryUpdated': 'Expiration mise à jour ✓',
     'photo.expiryFail': 'Échec de la mise à jour de l’expiration',
-    'photo.searchPh': 'Rechercher une image…',
+    'photo.searchPh': 'Rechercher nom, tag ou texte OCR…',
     'photo.sortTitle': 'Trier',
     'photo.sortNew': 'Plus récentes',
     'photo.sortOld': 'Plus anciennes',
@@ -1229,6 +1431,25 @@ const I18N = {
     'photo.favorite': 'Ajouter aux favoris',
     'photo.unfavorite': 'Retirer des favoris',
     'photo.rename': '✎ Renommer',
+    'photo.edit': '✎ Modifier',
+    'photo.editTitle': 'Éditeur d’image (rotation / recadrage)',
+    'photo.copyImage': '📋 Copier l’image',
+    'photo.copyImageTitle': 'Copier l’image dans le presse-papiers',
+    'photo.copyImageOk': 'Image copiée dans le presse-papiers ✓',
+    'photo.copyImageFail': 'Impossible de copier l’image dans le presse-papiers',
+    'photo.editorTitle': 'Modifier l’image',
+    'photo.editRotateLeft': '⟲ Gauche',
+    'photo.editRotateRight': '⟳ Droite',
+    'photo.editFlipH': '⇋ Miroir',
+    'photo.editCropFree': 'Libre',
+    'photo.editReset': 'Réinitialiser',
+    'photo.editCancel': 'Annuler',
+    'photo.editSave': 'Enregistrer',
+    'photo.editSaving': 'Enregistrement…',
+    'photo.editSaved': 'Image mise à jour ✓',
+    'photo.editFail': 'Échec de l’enregistrement de l’image',
+    'photo.editLoadFail': 'Impossible de charger l’image à modifier',
+    'photo.editCropHint': 'Glissez sur l’image pour recadrer. Choisissez un ratio pour le verrouiller.',
     'photo.createdAt': 'Ajoutée le {date}',
     'photo.ratio': 'ratio {ratio}',
     'photo.exportCsv': '⇩ CSV',
@@ -1369,6 +1590,65 @@ const I18N = {
   },
 
   en: {
+    'notifications.title': 'Notifications',
+    'notifications.loading': 'Loading…',
+    'notifications.empty': 'No notifications.',
+    'notifications.firstView': 'First view of “{name}”',
+    'notifications.delete': 'Delete this notification',
+    'notifications.clearAll': 'Delete all',
+    'notifications.clearConfirm': 'Delete all notifications?',
+    'notifications.loadMore': 'Show more ({n})',
+    'notifications.action.open': 'Open',
+    'notifications.action.copyLink': 'Copy link',
+    'notifications.action.revoke': 'Revoke link',
+    'notifications.linkCopied': 'Link copied ✓',
+    'notifications.noLink': 'Link unavailable',
+    'notifications.sound': 'Sound on arrival',
+    'notifications.soundOn': 'Sound on',
+    'notifications.soundOff': 'Sound off',
+    'notifications.prefs': 'Preferences',
+    'notifications.prefsTitle': 'Categories received on this account',
+    'notifications.prefsHint': 'Uncheck a category to stop creating its notifications.',
+    'notifications.prefsSaved': 'Preferences saved ✓',
+    'notifications.settingsTitle': 'Notification center',
+    'notifications.settingsHint': 'Choose which notification categories this account receives in the notification center.',
+    'notifications.settingsRequired': 'Always on',
+    'notifications.settingsRequiredHint': 'Security, Maintenance and System health notifications always remain enabled.',
+    'notifications.settingsSaving': 'Saving…',
+    'notifications.settingsError': 'Could not save notification preferences.',
+    'notifications.rulesTitle': 'Custom alerts', 'notifications.rulesHint': 'Create up to 50 rules that trigger a notification when a threshold is reached.',
+    'notifications.ruleMetric': 'Metric', 'notifications.ruleTarget': 'Link', 'notifications.ruleThreshold': 'Threshold', 'notifications.ruleLabel': 'Name (optional)', 'notifications.ruleAdd': 'Add rule',
+    'notifications.ruleAllTargets': 'All my compatible links', 'notifications.ruleTargetUnavailable': 'Link unavailable or deleted', 'notifications.ruleEmpty': 'No custom rules.', 'notifications.ruleSaved': 'Rule saved ✓', 'notifications.ruleDeleted': 'Rule deleted', 'notifications.ruleError': 'Could not save the rule.',
+    'notifications.ruleEnable': 'Enable', 'notifications.ruleDisable': 'Disable', 'notifications.ruleDelete': 'Delete', 'notifications.ruleMetricViews': 'Views', 'notifications.ruleMetricDownloads': 'Downloads', 'notifications.ruleMetricBytesServed': 'Data served (GB)', 'notifications.ruleMetricReceivedBytes': 'Data received (GB)', 'notifications.ruleCustomTitle': 'Custom alert: {name}',
+    'notifications.count': '{n} notification(s)',
+    'notifications.filteredCount': '{shown} / {total} notification(s)',
+    'notifications.noMatch': 'No notifications match the filters.',
+    'notifications.filters': 'Notification filters',
+    'notifications.categoryFilter': 'Filter by category',
+    'notifications.severityFilter': 'Filter by severity',
+    'notifications.allCategories': 'All categories',
+    'notifications.allSeverities': 'All severities',
+    'notifications.search': 'Search…',
+    'notifications.searchAria': 'Search notifications',
+    'notifications.category.activity': 'Activity', 'notifications.category.visitors': 'Visitors', 'notifications.category.thresholds': 'Thresholds', 'notifications.category.traffic': 'Traffic', 'notifications.category.images': 'Images', 'notifications.category.pwa': 'PWA',
+    'notifications.category.receptions': 'Receptions', 'notifications.category.search': 'Search / OCR', 'notifications.category.security': 'Security',
+    'notifications.category.shares': 'Shares', 'notifications.category.system_health': 'System health', 'notifications.category.maintenance': 'Maintenance', 'notifications.category.network': 'Network', 'notifications.category.restarts': 'Restarts', 'notifications.category.updates': 'Updates', 'notifications.category.transfers': 'Transfers',
+    'notifications.categoryDesc.shares': 'Downloads, expiry, limits and changes affecting shared links.',
+    'notifications.categoryDesc.receptions': 'Received deposits, available files and reception-link quotas.',
+    'notifications.categoryDesc.images': 'First views, image replacements and variant regeneration.',
+    'notifications.categoryDesc.transfers': 'Completed or failed transfers, abandoned transfers and impossible resumes.',
+    'notifications.categoryDesc.visitors': 'New countries and new visitor browsers or devices.',
+    'notifications.categoryDesc.thresholds': 'View and download thresholds reached on your links.',
+    'notifications.categoryDesc.traffic': 'Unusually high download volume and links becoming viral.',
+    'notifications.categoryDesc.search': 'OCR failures and search-indexing problems.',
+    'notifications.categoryDesc.pwa': 'PWA devices, Push subscriptions and notification permissions.',
+    'notifications.categoryDesc.security': 'Unusual logins, password events, DLP and other security alerts.',
+    'notifications.categoryDesc.system_health': 'Service outages, configuration errors and important system problems.',
+    'notifications.categoryDesc.maintenance': 'Automatic cleanups and file removals performed by retention rules.',
+    'notifications.categoryDesc.network': 'Public IP address changes and service network events.',
+    'notifications.categoryDesc.restarts': 'Detected Direct-Xfer restarts, including downtime when available.',
+    'notifications.categoryDesc.updates': 'Available updates and confirmation after installation.',
+    'notifications.severity.info': 'Information', 'notifications.severity.success': 'Success', 'notifications.severity.warning': 'Warning', 'notifications.severity.critical': 'Critical',
     // --- Client nicknames by IP (added) ---
     'ipn.prompt': 'Nickname for {ip}:',
     'ipn.clickHint': 'Click to rename this client',
@@ -1504,6 +1784,8 @@ const I18N = {
     'cfg.notifyDownloads': 'Downloads',
     'cfg.notifyUploads': 'Uploads',
     'cfg.notifyMessages': 'Messages',
+    'cfg.notifyAggregate': 'Group repeated link alerts into one (seconds, 0 = off)',
+    'cfg.notifyAggregateHint': 'Received/downloaded alerts for the same link within this window are merged into a single digest. Applies to webhook, e-mail and push.',
     'cfg.webhookTest': 'Test',
     'cfg.webpush': 'Browser notifications (Web Push)',
     'cfg.webpushHint': 'Receive push notifications in this browser for the events ticked above — even when the admin page is closed. Each browser/device subscribes separately.',
@@ -1635,6 +1917,21 @@ const I18N = {
     'cfg.adminAllowlist': 'Admin IP allowlist (IP/CIDR, comma-separated)',
     'cfg.allowlistEnv': 'Managed by the ADMIN_ALLOWED_IPS environment variable.',
     'cfg.allowlistHint': 'Empty = default (local network). Loopback is always allowed. A wrong entry can lock you out.',
+    'cfg.ransomEnable': 'Ransomware / destructive anomaly protection',
+    'cfg.ransomHint': 'Temporarily blocks a public client after mass deletion or a ransomware-like upload burst. It never deletes files automatically.',
+    'cfg.ransomDelete': 'Delete threshold / 60 s',
+    'cfg.ransomUpload': 'Suspicious uploads / 120 s',
+    'cfg.ransomBlock': 'Block duration (minutes)',
+    'cfg.ransomRefresh': 'Active blocks',
+    'cfg.ransomNone': 'No blocked clients.',
+    'cfg.ransomBlocked': '{n} blocked client(s)',
+    'cfg.ransomUnblock': 'Unblock',
+    'cfg.dlpTitle': 'Data Loss Prevention (DLP)', 'cfg.dlpEnable': 'Scan outgoing shares for sensitive data',
+    'cfg.dlpHint': 'Local scan before publishing. Detected secrets are always redacted in logs and the interface.',
+    'cfg.dlpMode': 'Policy', 'cfg.dlpWarn': 'Warn + confirm', 'cfg.dlpBlock': 'Block', 'cfg.dlpLog': 'Log only',
+    'cfg.dlpMaxFiles': 'Max files per scan', 'cfg.dlpMaxMb': 'Max size per file (MB)', 'cfg.dlpOcr': 'Use server OCR for images/scanned PDFs',
+    'dlp.warningTitle': 'DLP: sensitive content detected', 'dlp.warningConfirm': '{n} sensitive finding(s) ({level}) in {files} file(s). Publish anyway?', 'dlp.incompleteConfirm': 'The DLP scan is incomplete ({skipped} skipped, {ocr} OCR error(s), {scan} read error(s), {archive} archive item(s) not inspected). Publish anyway?', 'dlp.ocrUnavailableConfirm': 'Server-side text scanning (OCR) is unavailable, so images/PDFs weren’t inspected for sensitive text. Publish anyway?',
+    'dlp.blocked': 'Publishing blocked by the DLP policy.', 'dlp.badge': 'DLP {n}',
     'cfg.allowlistConfirm': 'Restrict admin access to these IPs? A mistake can lock you out of the admin (only loopback will remain allowed).',
     'cfg.qrDefault': 'Show the QR code right after creating a link',
     'cfg.maxUpload': 'Max size / received file (MB)',
@@ -1759,6 +2056,13 @@ const I18N = {
     'audit.subtitle': 'Recent admin actions (most recent first).',
     'audit.none': 'No entries yet.',
     'audit.loadFail': 'Could not load the log.',
+    'audit.verifying': 'Verifying cryptographic chain…',
+    'audit.verify': 'Verify',
+    'audit.integrityOk': 'Chain verified · {n} entrie(s) · head #{seq}',
+    'audit.integrityBad': 'INTEGRITY ALERT: {reason}',
+    'auditA.ransomware-blocked': 'Client blocked (anomaly)',
+    'auditA.ransomware-unblocked': 'Client unblocked',
+    'auditA.search-reindex': 'Search reindex',
     'auditA.login': 'Login',
     'auditA.login-fail': 'Login failed',
     'auditA.login-2fa-fail': '2FA failed',
@@ -1839,6 +2143,22 @@ const I18N = {
     'dash.stalePartialN': '{n} partial file(s) older than 24 h',
     'dash.scanTruncated': 'Analysis limited to the first {n} entries.',
     'dash.filesN': '{n} file(s)',
+    'dash.fileTypeStats': 'Storage & traffic by file type',
+    'dash.storageReport': 'Direct-Xfer storage report',
+    'dash.storageReportTotal': 'Managed data',
+    'dash.storageReportFiles': 'Counted files',
+    'dash.storageReportReclaimable': 'Reclaimable now',
+    'dash.storageReportDisk': 'Disk used',
+    'dash.typeStorage': 'Storage: {v}',
+    'dash.typeTraffic': 'Traffic: {v}',
+    'dash.typeTransfers': '{n} transfer(s)',
+    'filecat.image': 'Images', 'filecat.video': 'Video', 'filecat.audio': 'Audio', 'filecat.document': 'Documents', 'filecat.archive': 'Archives', 'filecat.code': 'Code', 'filecat.other': 'Other',
+    'storagepart.reception': 'Received files', 'storagepart.imagesFull': 'Original images', 'storagepart.imagePreviews': 'Mini / Micro thumbnails', 'storagepart.imageHistory': 'History, versions & adaptive images', 'storagepart.encrypted': 'E2E encrypted shares', 'storagepart.secrets': 'Secret notes', 'storagepart.quarantine': 'Antivirus quarantine', 'storagepart.searchOcr': 'Search index & OCR cache', 'storagepart.logs': 'Transfer / audit logs', 'storagepart.metadata': 'Metadata & configuration', 'storagepart.temporary': 'Temporary / partial files',
+    'diag.title': 'Direct-Xfer diagnostics', 'diag.run': 'Run diagnostics', 'diag.running': 'Running diagnostics…', 'diag.notRun': 'Diagnostics have not been run yet.', 'diag.adminOnly': 'Active diagnostics are restricted to administrators.', 'diag.failed': 'Diagnostics could not be completed.',
+    'diag.summary': '{ok} OK · {warn} warning(s) · {bad} error(s)',
+    'diag.group.storage': 'Storage', 'diag.group.security': 'Security', 'diag.group.search': 'Search / OCR', 'diag.group.notifications': 'Notifications', 'diag.group.pwa': 'PWA', 'diag.group.network': 'Network',
+    'diag.status.ok': 'OK', 'diag.status.warn': 'Warning', 'diag.status.bad': 'Error', 'diag.status.info': 'Info',
+    'diag.check.data-writable': '/data volume writable', 'diag.check.reception-writable': 'Reception folder writable', 'diag.check.images-writable': 'Images folder writable', 'diag.check.disk-space': 'Disk space', 'diag.check.storage-mounts': 'Docker volume persistence', 'diag.check.audit-chain': 'Audit log integrity', 'diag.check.search-index': 'Universal search index', 'diag.check.ocr': 'Server OCR engine', 'diag.check.clamav': 'ClamAV antivirus', 'diag.check.audit-key': 'Audit log key', 'diag.check.data-encryption': 'DATA_KEY encryption', 'diag.check.webhook': 'Webhook', 'diag.check.email': 'Email notifications', 'diag.check.web-push': 'Web Push notifications', 'diag.check.pwa-assets': 'PWA assets', 'diag.check.pwa-install': 'PWA installation', 'diag.check.public-port': 'Public port', 'diag.check.reverse-proxy': 'Reverse proxy',
     'idash.filterStatus': 'Image status',
     'idash.filterFormat': 'Format',
     'idash.filterAllStatuses': 'All statuses',
@@ -2062,6 +2382,10 @@ const I18N = {
     'dash.empty': 'No data yet.',
     'dash.dl': 'down',
     'dash.ul': 'up',
+    'dash.total': 'total',
+    'dash.dailyTrends': 'Daily trends',
+    'dash.downloadsPerDay': 'Downloads / day',
+    'dash.depositsPerDay': 'Deposits / day',
     'dash.transfersN': '{n} transfers',
     'update.available': '⬆ New version available: {v}',
     'menu.shutdown': '⏻ Shut down server',
@@ -2220,6 +2544,16 @@ const I18N = {
     'sh.received': 'Received:',
     'inbox.namePrompt': 'Reception link name (optional):',
     'inbox.created': 'Reception link created ✓',
+    'preset.apply': 'Apply a preset…',
+    'preset.save': '💾 Save as preset',
+    'preset.delete': 'Delete preset',
+    'preset.namePrompt': 'Preset name:',
+    'preset.saved': 'Preset saved ✓',
+    'preset.saveFail': 'Could not save the preset',
+    'preset.tooMany': 'Too many saved presets (50 max). Delete one first.',
+    'preset.deleteConfirm': 'Delete the preset “{name}”?',
+    'preset.deleted': 'Preset deleted ✓',
+    'preset.deleteFail': 'Could not delete the preset',
     'inbox.createFail': 'Could not create the link',
     'collab.title': 'New collaboration link',
     'collab.intro': 'A two-way shared folder: visitors can download and upload. Files are stored in a new folder in your reception area.',
@@ -2236,6 +2570,7 @@ const I18N = {
     'inbox.expiry': 'Expiration',
     'inbox.password': 'Password (optional)',
     'inbox.maxFiles': 'Max files',
+    'inbox.maxFilesPerUpload': 'Max files / upload',
     'inbox.maxFileSize': 'Max size / file (MB)',
     'inbox.maxTotalSize': 'Total quota (MB)',
     'inbox.allowExt': 'Allowed types (comma-separated, optional)',
@@ -2243,6 +2578,7 @@ const I18N = {
     'inbox.extPh': 'e.g. pdf, jpg, png',
     'inbox.note': 'Message shown to senders (optional)',
     'inbox.groupSender': 'Sort uploads into per-sender subfolders',
+    'inbox.tagSender': 'Prefix received filenames with the sender name', 'inbox.maxFilesPerSender': 'Max files / sender', 'inbox.maxBytesPerSender': 'Quota / sender (MB)',
     'inbox.notePh': 'e.g. Please send the signed contract as a PDF.',
     'inbox.create': 'Create link',
     'sh.noteLabel': 'Note:',
@@ -2259,6 +2595,7 @@ const I18N = {
     'sh.filtersLabel': 'Filters / quotas:',
     'sh.limPerFile': 'max {v}/file',
     'sh.limFiles': 'max {v} files',
+    'sh.limFilesPerUpload': 'max {v}/upload',
     'sh.limQuota': 'quota {v}',
     'sh.limAllow': 'allowed: {v}',
     'sh.limBlock': 'blocked: {v}',
@@ -2335,7 +2672,9 @@ const I18N = {
     'sh.sizeLabel': 'Size:',
     'sh.created': 'Created:',
     'sh.downloads': 'Downloads:',
+    'sh.downloadingNow': '{n} download(s) in progress',
     'sh.visitors': 'Visitors:',
+    'sh.dlThresholdTip': 'Alert when this link reaches {n} download(s)',
     'sh.viewsTip': '{views} view(s) · {visitors} unique visitor(s)',
     'sh.expires': 'Expires:',
     'sh.scheduled': '🕒 scheduled',
@@ -2348,8 +2687,8 @@ const I18N = {
     'sh.copy': 'Copy',
     'sh.copied': 'Link copied ✓',
     'sh.copyFail': 'Copy failed, select the link manually',
-    'sh.revokeConfirm': 'Revoke the share "{name}"?\nYou can restore it for 5 seconds.',
-    'sh.revoked': 'Share revoked',
+    'sh.revokeConfirm': 'Move the share "{name}" to Trash?\nYou can undo for 5 seconds, then restore it from Trash.',
+    'sh.revoked': 'Share moved to Trash',
     'sh.revokeFail': 'Could not revoke',
     'sh.revokePending': 'Deleting in 5 seconds…',
     'sh.undoRevoke': 'Restore',
@@ -2388,15 +2727,53 @@ const I18N = {
     'pk.location': 'Location:',
     'pk.expiration': 'Expiration',
     'pk.never': 'Never',
+    'pk.expireAt': 'Exact expiry date (optional)',
+    'pk.genPw': 'Generate',
+    'pk.genPwTip': 'Generate a strong password',
+    'inbox.requireSender': 'Require the visitor to enter a name',
+    'inbox.blockExec': 'Reject executables (magic-byte check)',
+    'sh.copyLinkPw': 'Copy link + password',
+    'sh.copyLinkPwDone': 'Link and password copied',
+    'sh.shareVia': 'Share via',
+    'cfg.receptionCap': 'Reception storage cap (GB, 0 = unlimited)',
+    'cfg.panicTitle': 'Emergency stop',
+    'cfg.panicDesc': 'Immediately pause every active link (reversible). Files are left untouched.',
+    'cfg.panicPause': 'Pause all links',
+    'cfg.panicResume': 'Resume all links',
+    'cfg.panicConfirm': 'Pause ALL active public links now?',
+    'cfg.panicPaused': '{n} link(s) paused',
+    'cfg.panicResumed': '{n} link(s) resumed',
+    'cfg.panicFail': 'Action failed',
     'pk.h1': '1 hour',
     'pk.d1': '1 day',
     'pk.d7': '7 days',
     'pk.d30': '30 days',
     'pk.maxDl': 'Max downloads',
     'pk.maxVisitors': 'Max unique visitors',
+    'pk.dlThreshold': 'Notify at N downloads', 'pk.off': 'off',
+    'pk.maxDlPerIp': 'Max downloads / IP', 'pk.pwHint': 'Password hint (optional)', 'pk.pwHintPh': 'e.g. our home town',
     'pk.rate': 'Max speed (KB/s)',
     'pk.allowZip': 'Allow "Download all (.zip)"',
     'pk.burn': 'One-time link (revoke after first download)',
+    'pk.requestAccess': 'Require access approval (visitor requests, you approve)',
+    'pk.allowFeedback': 'Allow moderated visitor comments',
+    'sh.moderation': 'Moderation',
+    'mod.title': 'Link moderation',
+    'mod.accessTitle': 'Access requests',
+    'mod.accessEmpty': 'No access requests.',
+    'mod.grant': 'Approve',
+    'mod.deny': 'Deny',
+    'mod.delete': 'Delete',
+    'mod.fbTitle': 'Visitor comments',
+    'mod.fbEmpty': 'No comments.',
+    'mod.markRead': 'Mark read',
+    'mod.unread': 'Mark unread',
+    'mod.anon': 'Anonymous',
+    'mod.loadFail': 'Action failed.',
+    'mod.none': 'Nothing to moderate.',
+    'mod.status.pending': 'pending',
+    'mod.status.approved': 'approved',
+    'mod.status.denied': 'denied',
     'pk.note': 'Message shown to the visitor (optional)',
     'pk.notePh': 'e.g. Here is the file you asked for.',
     'sh.speed': 'Speed: {v} KB/s',
@@ -2437,8 +2814,42 @@ const I18N = {
     'sh.notePh2': 'Private note for the admin…',
     'sh.noteSaved': 'Note saved',
     'sh.noteFail': 'Could not save the note',
+    'sh.color': 'Card color', 'sh.tagsField': 'Labels', 'sh.tagsPh': 'Client, Urgent',
+    'sh.descriptionMd': 'Markdown description shown to the visitor (optional)', 'sh.descriptionPh': '## Information\nText, **bold**, links…',
+    'sh.comments': '💬 Comments', 'sh.commentsTitle': 'Administrator comments', 'sh.commentAdd': 'Add', 'sh.commentPh': 'Add a dated note…', 'sh.commentsEmpty': 'No comments.', 'sh.commentFail': 'Could not load comments', 'sh.commentDelete': 'Delete this comment',
+    'sh.resetStats': '↺ Reset stats', 'sh.resetStatsConfirm': 'Reset visible statistics for “{name}”? Security/quota counters will not be reset.', 'sh.statsReset': 'Statistics reset', 'sh.statsResetFail': 'Could not reset statistics',
+    'sh.lastDownload': 'Last download', 'sh.lastUpload': 'Last upload', 'sh.noTransfer': 'none',
+    'sh.expiryProgress': 'Expiry', 'sh.expiresIn': 'expires in {v}', 'sh.expired': 'expired', 'sh.expiringSoon': 'Expiring soon',
+    'sh.reminderHours': 'Expiry reminder (hours, blank = global)', 'sh.reminderGlobal': 'global reminder', 'sh.reminderOff': 'reminder disabled',
+    'sh.firstUseHours': 'Expire after first use (hours)', 'sh.firstUseRule': 'After first use: {v}',
+    'sh.inactiveDays': 'Expire after inactivity (days)', 'sh.inactiveRule': 'Inactivity: {v}',
+    'sh.inlineQr': 'QR on card', 'sh.hideQr': 'Hide QR',
+    'sh.pin': '☆ Pin', 'sh.unpin': '★ Unpin', 'sh.pinned': '★ Pinned',
+    'sh.archive': '🗄 Archive', 'sh.unarchive': '↩ Unarchive', 'sh.archived': '🗄 Archived', 'sh.showArchived': '🗄 Archives',
+    'sh.sizeAll': 'All sizes', 'sh.sizeSmall': '< 100 MB', 'sh.sizeMedium': '100 MB – 1 GB', 'sh.sizeLarge': '> 1 GB',
+    'sh.dateAll': 'All dates', 'sh.dateToday': 'Today', 'sh.date7': 'Last 7 days', 'sh.date30': 'Last 30 days', 'sh.dateCustom': 'Custom…', 'sh.dateFrom': 'From', 'sh.dateTo': 'To',
+    'sh.sortActivity': 'Recent activity', 'sh.bulkCopy': '🔗 Copy links', 'sh.bulkPin': '★ Pin', 'sh.bulkUnpin': '☆ Unpin',
+    'sh.bulkArchive': '🗄 Archive', 'sh.bulkUnarchive': '↩ Unarchive', 'sh.quickExpiry': 'Expiry…', 'sh.never': 'Never',
+    'sh.expirySet': 'Expiry updated', 'sh.expiryFail': 'Could not update expiry',
+    'sh.extend1d': '+1 d', 'sh.extend7d': '+7 d', 'sh.extend30d': '+30 d', 'sh.extended': 'Expiry extended', 'sh.extendFail': 'Could not extend expiry',
+    'sh.createdTip': 'Created {v}', 'sh.emojiTip': 'Link emoji', 'sh.densityTip': 'Density: compact / comfortable',
+    'sh.neverUsed': 'Never used', 'sh.veryActive': 'Very active', 'sh.changeHistory': 'Change history', 'sh.historyBtn': '🕘 History',
+    'sh.historyLoading': 'Loading…', 'sh.historyEmpty': 'No recorded changes.', 'sh.historyFail': 'Could not load change history', 'sh.historyAction.created': 'Created', 'sh.historyAction.revoked': 'Revoked', 'sh.historyAction.restored': 'Restored', 'sh.historyAction.created-from-duplicate': 'Created from duplicate',
+    'sh.changedFields': 'Fields: {fields}', 'sh.copiedLinks': '{n} link(s) copied', 'sh.copyNoUrl': 'No copyable link in the selection', 'sh.pageSizeTitle': 'Links per page', 'sh.page10': '10 / page', 'sh.page25': '25 / page', 'sh.page50': '50 / page', 'sh.page100': '100 / page', 'sh.pagePrev': '← Previous', 'sh.pageNext': 'Next →', 'sh.pageLabel': '{from}–{to} of {total}', 'sh.bulkSelectPage': '☑ Select page', 'sh.bulkClearPage': '☐ Clear page selection',
+    'sh.renameAction': '✎',
     'sh.log': '🧾 Log',
     'sh.logTitle': 'This link’s access log',
+    'filehist.button': '📥 Per file', 'filehist.title': 'Download history by file', 'filehist.loading': 'Loading…', 'filehist.empty': 'No file downloads recorded.', 'filehist.fail': 'Could not load per-file history', 'filehist.transfers': '{n} transfer(s)', 'filehist.completed': '{n} completed', 'filehist.last': 'Last: {v}', 'filehist.truncated': 'Partial history: the journal exceeds the read window or a ZIP contained more than 500 items.',
+    'recv.button': '📥 Received files', 'recv.title': 'Received files', 'recv.loading': 'Loading…', 'recv.empty': 'No files received yet.', 'recv.count': '{n} file(s)', 'recv.download': 'Download', 'recv.fail': 'Could not load received files.',
+    'trash.open': '🗑 Trash', 'trash.title': 'Trash', 'trash.empty': 'Trash is empty.', 'trash.restore': '↩ Restore', 'trash.purge': 'Delete permanently', 'trash.purgeAll': 'Purge all', 'trash.restoreOk': 'Share restored', 'trash.restoreFail': 'Could not restore share', 'trash.purgeOk': 'Item permanently deleted', 'trash.purgeFail': 'Permanent deletion failed', 'trash.purgeConfirm': 'Permanently delete “{name}”? This cannot be undone.', 'trash.purgeAllConfirm': 'Permanently purge the entire trash?', 'trash.retention': 'Retention: {n} day(s)',
+    'activity.open': '◉ Live activity', 'activity.title': 'Live activity', 'activity.clear': 'Clear view', 'activity.hint': 'Uploads, downloads, OCR, antivirus, errors and audited link actions appear here in real time.', 'activity.connected': 'Connected · real-time events', 'activity.reconnecting': 'Reconnecting…', 'activity.empty': 'No recent activity.',
+    'cfg.trashRetention': 'Trash retention (days, 0 = keep forever)',
+    'cfg.autoArchiveExpired': 'Auto-archive expired links after (days, 0 = off)',
+    'cfg.autoArchiveExpiredHint': 'Keeps old links out of the main list without deleting their managed files.',
+    'cfg.expiredDataRetention': 'Permanently delete expired managed data after (days, 0 = off)',
+    'cfg.expiredDataRetentionHint': '⚠ Destructive: removes Direct-Xfer-managed copies for expired links (receptions, images, encrypted blobs). Host source files are never deleted.',
+    'cfg.expiredDataRetentionConfirm': '⚠ Direct-Xfer-managed data for links expired more than {n} day(s) ago will be PERMANENTLY deleted. Continue?',
+    'sh.smartExpiryHint': 'Smart expiry: if several limits are enabled, the link expires as soon as the first one is reached (date, downloads, first use or inactivity).',
     'sh.exportCsv': '⬇ List CSV',
     'sh.exportJson': '⬇ List JSON',
     'sh.dupWarn': 'This path is already shared by: {names}. Create another link anyway?',
@@ -2454,8 +2865,20 @@ const I18N = {
     'pk.unitMo': 'mo',
     'cfg.expiryPresets': 'Quick expiry presets',
     'cfg.expiryPresetsHint': 'Comma-separated durations offered in the link modals — e.g. 6h, 3d, 2w, 1mo. “Never” is always available.',
-    'search.btn': '🔎 Search contents',
-    'search.ph': '🔎 Search inside shared & received text files…',
+    'search.btn': '🔎 Universal search',
+    'search.ph': '🔎 Names, PDF/OCR, Office, text and archives…',
+    'search.semantic': 'Semantic', 'search.semanticBadge': 'Semantic',
+    'search.indexLoading': 'Loading index…',
+    'search.indexReady': 'Index: {n} file(s) · {when}',
+    'search.indexBuilding': 'Indexing · {n} file(s) currently available',
+    'search.ocrReady': 'Server OCR: {done} new · {cached} cached · {langs}',
+    'search.ocrBuilding': 'OCR: {done} new · {cached} cached · {current}',
+    'search.ocrDeferred': '{n} OCR file(s) deferred to the next pass',
+    'search.ocrUnavailable': 'Server OCR unavailable (Tesseract or dependency missing)',
+    'search.ocrMissingLangs': 'missing language pack(s): {langs}',
+    'search.ocrBadge': 'OCR',
+    'search.reindex': 'Rebuild index',
+    'search.reindexStarted': 'Reindex started',
     'search.run': 'Search',
     'search.searching': 'Searching…',
     'search.tooShort': 'Enter at least 2 characters.',
@@ -2495,7 +2918,7 @@ const I18N = {
     'photo.noExpiry': 'No expiry',
     'photo.expiryUpdated': 'Expiry updated ✓',
     'photo.expiryFail': 'Could not update the expiry',
-    'photo.searchPh': 'Search images…',
+    'photo.searchPh': 'Search name, tag or OCR text…',
     'photo.sortTitle': 'Sort',
     'photo.sortNew': 'Newest',
     'photo.sortOld': 'Oldest',
@@ -2528,6 +2951,25 @@ const I18N = {
     'photo.favorite': 'Add to favorites',
     'photo.unfavorite': 'Remove from favorites',
     'photo.rename': '✎ Rename',
+    'photo.edit': '✎ Edit',
+    'photo.editTitle': 'Image editor (rotate / crop)',
+    'photo.copyImage': '📋 Copy image',
+    'photo.copyImageTitle': 'Copy the image to the clipboard',
+    'photo.copyImageOk': 'Image copied to the clipboard ✓',
+    'photo.copyImageFail': 'Could not copy the image to the clipboard',
+    'photo.editorTitle': 'Edit image',
+    'photo.editRotateLeft': '⟲ Left',
+    'photo.editRotateRight': '⟳ Right',
+    'photo.editFlipH': '⇋ Flip',
+    'photo.editCropFree': 'Free',
+    'photo.editReset': 'Reset',
+    'photo.editCancel': 'Cancel',
+    'photo.editSave': 'Save',
+    'photo.editSaving': 'Saving…',
+    'photo.editSaved': 'Image updated ✓',
+    'photo.editFail': 'Could not save the image',
+    'photo.editLoadFail': 'Could not load the image to edit',
+    'photo.editCropHint': 'Drag on the image to crop. Pick a ratio to lock it.',
     'photo.createdAt': 'Added on {date}',
     'photo.ratio': 'ratio {ratio}',
     'photo.exportCsv': '⇩ CSV',
@@ -2667,6 +3109,65 @@ const I18N = {
   },
 
   es: {
+    'notifications.title': 'Notificaciones',
+    'notifications.loading': 'Cargando…',
+    'notifications.empty': 'No hay notificaciones.',
+    'notifications.firstView': 'Primera vista de «{name}»',
+    'notifications.delete': 'Eliminar esta notificación',
+    'notifications.clearAll': 'Eliminar todas',
+    'notifications.clearConfirm': '¿Eliminar todas las notificaciones?',
+    'notifications.loadMore': 'Mostrar más ({n})',
+    'notifications.action.open': 'Abrir',
+    'notifications.action.copyLink': 'Copiar enlace',
+    'notifications.action.revoke': 'Revocar enlace',
+    'notifications.linkCopied': 'Enlace copiado ✓',
+    'notifications.noLink': 'Enlace no disponible',
+    'notifications.sound': 'Sonido al recibir',
+    'notifications.soundOn': 'Sonido activado',
+    'notifications.soundOff': 'Sonido desactivado',
+    'notifications.prefs': 'Preferencias',
+    'notifications.prefsTitle': 'Categorías recibidas en esta cuenta',
+    'notifications.prefsHint': 'Desmarca una categoría para dejar de crear sus notificaciones.',
+    'notifications.prefsSaved': 'Preferencias guardadas ✓',
+    'notifications.settingsTitle': 'Centro de notificaciones',
+    'notifications.settingsHint': 'Elige qué categorías de notificaciones recibirá esta cuenta en el centro de notificaciones.',
+    'notifications.settingsRequired': 'Siempre activada',
+    'notifications.settingsRequiredHint': 'Las notificaciones de Seguridad, Mantenimiento y Salud del sistema permanecen siempre activadas.',
+    'notifications.settingsSaving': 'Guardando…',
+    'notifications.settingsError': 'No se pudieron guardar las preferencias de notificación.',
+    'notifications.rulesTitle': 'Alertas personalizadas', 'notifications.rulesHint': 'Crea hasta 50 reglas que generan una notificación al alcanzar un umbral.',
+    'notifications.ruleMetric': 'Métrica', 'notifications.ruleTarget': 'Enlace', 'notifications.ruleThreshold': 'Umbral', 'notifications.ruleLabel': 'Nombre (opcional)', 'notifications.ruleAdd': 'Añadir regla',
+    'notifications.ruleAllTargets': 'Todos mis enlaces compatibles', 'notifications.ruleTargetUnavailable': 'Enlace no disponible o eliminado', 'notifications.ruleEmpty': 'No hay reglas personalizadas.', 'notifications.ruleSaved': 'Regla guardada ✓', 'notifications.ruleDeleted': 'Regla eliminada', 'notifications.ruleError': 'No se pudo guardar la regla.',
+    'notifications.ruleEnable': 'Activar', 'notifications.ruleDisable': 'Desactivar', 'notifications.ruleDelete': 'Eliminar', 'notifications.ruleMetricViews': 'Vistas', 'notifications.ruleMetricDownloads': 'Descargas', 'notifications.ruleMetricBytesServed': 'Datos servidos (GB)', 'notifications.ruleMetricReceivedBytes': 'Datos recibidos (GB)', 'notifications.ruleCustomTitle': 'Alerta personalizada: {name}',
+    'notifications.count': '{n} notificación(es)',
+    'notifications.filteredCount': '{shown} / {total} notificación(es)',
+    'notifications.noMatch': 'Ninguna notificación coincide con los filtros.',
+    'notifications.filters': 'Filtros de notificaciones',
+    'notifications.categoryFilter': 'Filtrar por categoría',
+    'notifications.severityFilter': 'Filtrar por gravedad',
+    'notifications.allCategories': 'Todas las categorías',
+    'notifications.allSeverities': 'Todas las gravedades',
+    'notifications.search': 'Buscar…',
+    'notifications.searchAria': 'Buscar en las notificaciones',
+    'notifications.category.activity': 'Actividad', 'notifications.category.visitors': 'Visitantes', 'notifications.category.thresholds': 'Umbrales', 'notifications.category.traffic': 'Tráfico', 'notifications.category.images': 'Imágenes', 'notifications.category.pwa': 'PWA',
+    'notifications.category.receptions': 'Recepciones', 'notifications.category.search': 'Búsqueda / OCR', 'notifications.category.security': 'Seguridad',
+    'notifications.category.shares': 'Compartidos', 'notifications.category.system_health': 'Salud del sistema', 'notifications.category.maintenance': 'Mantenimiento', 'notifications.category.network': 'Red', 'notifications.category.restarts': 'Reinicios', 'notifications.category.updates': 'Actualizaciones', 'notifications.category.transfers': 'Transferencias',
+    'notifications.categoryDesc.shares': 'Descargas, caducidad, límites y cambios relacionados con los enlaces compartidos.',
+    'notifications.categoryDesc.receptions': 'Depósitos recibidos, archivos disponibles y cuotas de los enlaces de recepción.',
+    'notifications.categoryDesc.images': 'Primeras vistas, reemplazos de imágenes y regeneración de variantes.',
+    'notifications.categoryDesc.transfers': 'Transferencias completadas o fallidas, abandonos y reanudaciones imposibles.',
+    'notifications.categoryDesc.visitors': 'Nuevos países y nuevos navegadores o dispositivos visitantes.',
+    'notifications.categoryDesc.thresholds': 'Umbrales de vistas y descargas alcanzados en tus enlaces.',
+    'notifications.categoryDesc.traffic': 'Volumen de descarga inusualmente alto y enlaces que se vuelven virales.',
+    'notifications.categoryDesc.search': 'Fallos de OCR y problemas de indexación para la búsqueda.',
+    'notifications.categoryDesc.pwa': 'Dispositivos PWA, suscripciones Push y permisos de notificaciones.',
+    'notifications.categoryDesc.security': 'Inicios de sesión inusuales, contraseñas, DLP y otras alertas de seguridad.',
+    'notifications.categoryDesc.system_health': 'Caídas de servicio, errores de configuración y problemas importantes del sistema.',
+    'notifications.categoryDesc.maintenance': 'Limpiezas automáticas y eliminaciones de archivos según las reglas de retención.',
+    'notifications.categoryDesc.network': 'Cambios de la dirección IP pública y eventos de red del servicio.',
+    'notifications.categoryDesc.restarts': 'Reinicios detectados de Direct-Xfer, incluida la indisponibilidad cuando está disponible.',
+    'notifications.categoryDesc.updates': 'Actualizaciones disponibles y confirmación después de la instalación.',
+    'notifications.severity.info': 'Información', 'notifications.severity.success': 'Éxito', 'notifications.severity.warning': 'Advertencia', 'notifications.severity.critical': 'Crítica',
     // --- Client nicknames by IP (added) ---
     'ipn.prompt': 'Apodo para {ip}:',
     'ipn.clickHint': 'Clic para renombrar este cliente',
@@ -2802,6 +3303,8 @@ const I18N = {
     'cfg.notifyDownloads': 'Descargas',
     'cfg.notifyUploads': 'Recepciones',
     'cfg.notifyMessages': 'Mensajes',
+    'cfg.notifyAggregate': 'Agrupar alertas repetidas de un enlace (segundos, 0 = desactivado)',
+    'cfg.notifyAggregateHint': 'Las alertas de recepción/descarga del mismo enlace dentro de esta ventana se combinan en una sola. Se aplica al webhook, al correo y al push.',
     'cfg.webhookTest': 'Probar',
     'cfg.webpush': 'Notificaciones del navegador (Web Push)',
     'cfg.webpushHint': 'Recibe notificaciones push en este navegador para los eventos marcados arriba, incluso con la página de administración cerrada. Cada navegador/dispositivo se suscribe por separado.',
@@ -2933,6 +3436,21 @@ const I18N = {
     'cfg.adminAllowlist': 'Lista blanca de IP admin (IP/CIDR, separadas por comas)',
     'cfg.allowlistEnv': 'Gestionado por la variable de entorno ADMIN_ALLOWED_IPS.',
     'cfg.allowlistHint': 'Vacío = por defecto (red local). El loopback siempre está permitido. Una entrada incorrecta puede dejarte fuera.',
+    'cfg.ransomEnable': 'Protección ransomware / anomalías destructivas',
+    'cfg.ransomHint': 'Bloquea temporalmente a un cliente público tras borrados masivos o una ráfaga de subidas con nombres típicos de ransomware. Nunca borra archivos automáticamente.',
+    'cfg.ransomDelete': 'Umbral de borrados / 60 s',
+    'cfg.ransomUpload': 'Subidas sospechosas / 120 s',
+    'cfg.ransomBlock': 'Duración del bloqueo (minutos)',
+    'cfg.ransomRefresh': 'Bloqueos activos',
+    'cfg.ransomNone': 'No hay clientes bloqueados.',
+    'cfg.ransomBlocked': '{n} cliente(s) bloqueado(s)',
+    'cfg.ransomUnblock': 'Desbloquear',
+    'cfg.dlpTitle': 'Prevención de pérdida de datos (DLP)', 'cfg.dlpEnable': 'Analizar recursos salientes para detectar datos sensibles',
+    'cfg.dlpHint': 'Análisis local antes de publicar. Los secretos detectados se ocultan siempre en registros e interfaz.',
+    'cfg.dlpMode': 'Política', 'cfg.dlpWarn': 'Avisar + confirmar', 'cfg.dlpBlock': 'Bloquear', 'cfg.dlpLog': 'Solo registrar',
+    'cfg.dlpMaxFiles': 'Archivos máx. por análisis', 'cfg.dlpMaxMb': 'Tamaño máx. por archivo (MB)', 'cfg.dlpOcr': 'Usar OCR del servidor para imágenes/PDF escaneados',
+    'dlp.warningTitle': 'DLP: contenido sensible detectado', 'dlp.warningConfirm': '{n} detección(es) sensible(s) ({level}) en {files} archivo(s). ¿Publicar de todos modos?', 'dlp.incompleteConfirm': 'El análisis DLP está incompleto ({skipped} omitido(s), {ocr} error(es) OCR, {scan} error(es) de lectura, {archive} elemento(s) de archivo no inspeccionado(s)). ¿Publicar de todos modos?', 'dlp.ocrUnavailableConfirm': 'El análisis de texto (OCR) no está disponible en el servidor: las imágenes/PDF no se inspeccionaron en busca de texto sensible. ¿Publicar de todos modos?',
+    'dlp.blocked': 'Publicación bloqueada por la política DLP.', 'dlp.badge': 'DLP {n}',
     'cfg.allowlistConfirm': '¿Restringir el acceso admin a estas IP? Un error puede impedirte acceder a la administración (solo el loopback seguirá permitido).',
     'cfg.qrDefault': 'Mostrar el código QR justo después de crear un enlace',
     'cfg.maxUpload': 'Tamaño máx. / archivo recibido (MB)',
@@ -3057,6 +3575,13 @@ const I18N = {
     'audit.subtitle': 'Acciones admin recientes (las más recientes primero).',
     'audit.none': 'Aún no hay entradas.',
     'audit.loadFail': 'No se pudo cargar el registro.',
+    'audit.verifying': 'Verificando la cadena criptográfica…',
+    'audit.verify': 'Verificar',
+    'audit.integrityOk': 'Cadena verificada · {n} entrada(s) · cabeza #{seq}',
+    'audit.integrityBad': 'ALERTA de integridad: {reason}',
+    'auditA.ransomware-blocked': 'Cliente bloqueado (anomalía)',
+    'auditA.ransomware-unblocked': 'Cliente desbloqueado',
+    'auditA.search-reindex': 'Reindexación de búsqueda',
     'auditA.login': 'Inicio de sesión',
     'auditA.login-fail': 'Inicio fallido',
     'auditA.login-2fa-fail': '2FA fallido',
@@ -3137,6 +3662,22 @@ const I18N = {
     'dash.stalePartialN': '{n} parcial(es) de más de 24 h',
     'dash.scanTruncated': 'Análisis limitado a las primeras {n} entradas.',
     'dash.filesN': '{n} archivo(s)',
+    'dash.fileTypeStats': 'Almacenamiento y tráfico por tipo de archivo',
+    'dash.storageReport': 'Informe de almacenamiento Direct-Xfer',
+    'dash.storageReportTotal': 'Datos gestionados',
+    'dash.storageReportFiles': 'Archivos contabilizados',
+    'dash.storageReportReclaimable': 'Recuperable ahora',
+    'dash.storageReportDisk': 'Disco utilizado',
+    'dash.typeStorage': 'Almacenamiento: {v}',
+    'dash.typeTraffic': 'Tráfico: {v}',
+    'dash.typeTransfers': '{n} transferencia(s)',
+    'filecat.image': 'Imágenes', 'filecat.video': 'Vídeo', 'filecat.audio': 'Audio', 'filecat.document': 'Documentos', 'filecat.archive': 'Archivos comprimidos', 'filecat.code': 'Código', 'filecat.other': 'Otros',
+    'storagepart.reception': 'Archivos recibidos', 'storagepart.imagesFull': 'Imágenes originales', 'storagepart.imagePreviews': 'Miniaturas Mini / Micro', 'storagepart.imageHistory': 'Historial, versiones e imágenes adaptativas', 'storagepart.encrypted': 'Compartidos E2E cifrados', 'storagepart.secrets': 'Notas secretas', 'storagepart.quarantine': 'Cuarentena antivirus', 'storagepart.searchOcr': 'Índice de búsqueda y caché OCR', 'storagepart.logs': 'Registros de transferencias / auditoría', 'storagepart.metadata': 'Metadatos y configuración', 'storagepart.temporary': 'Archivos temporales / parciales',
+    'diag.title': 'Diagnóstico Direct-Xfer', 'diag.run': 'Ejecutar diagnóstico', 'diag.running': 'Ejecutando diagnóstico…', 'diag.notRun': 'El diagnóstico aún no se ha ejecutado.', 'diag.adminOnly': 'El diagnóstico activo está reservado a administradores.', 'diag.failed': 'No se pudo completar el diagnóstico.',
+    'diag.summary': '{ok} OK · {warn} advertencia(s) · {bad} error(es)',
+    'diag.group.storage': 'Almacenamiento', 'diag.group.security': 'Seguridad', 'diag.group.search': 'Búsqueda / OCR', 'diag.group.notifications': 'Notificaciones', 'diag.group.pwa': 'PWA', 'diag.group.network': 'Red',
+    'diag.status.ok': 'OK', 'diag.status.warn': 'Atención', 'diag.status.bad': 'Error', 'diag.status.info': 'Info',
+    'diag.check.data-writable': 'Volumen /data escribible', 'diag.check.reception-writable': 'Carpeta de recepción escribible', 'diag.check.images-writable': 'Carpeta Images escribible', 'diag.check.disk-space': 'Espacio en disco', 'diag.check.storage-mounts': 'Persistencia de volúmenes Docker', 'diag.check.audit-chain': 'Integridad del registro de auditoría', 'diag.check.search-index': 'Índice de búsqueda universal', 'diag.check.ocr': 'Motor OCR del servidor', 'diag.check.clamav': 'Antivirus ClamAV', 'diag.check.audit-key': 'Clave del registro de auditoría', 'diag.check.data-encryption': 'Cifrado DATA_KEY', 'diag.check.webhook': 'Webhook', 'diag.check.email': 'Notificaciones por correo', 'diag.check.web-push': 'Notificaciones Web Push', 'diag.check.pwa-assets': 'Recursos PWA', 'diag.check.pwa-install': 'Instalación PWA', 'diag.check.public-port': 'Puerto público', 'diag.check.reverse-proxy': 'Reverse proxy',
     'idash.filterStatus': 'Estado de imágenes',
     'idash.filterFormat': 'Formato',
     'idash.filterAllStatuses': 'Todos los estados',
@@ -3360,6 +3901,10 @@ const I18N = {
     'dash.empty': 'Aún no hay datos.',
     'dash.dl': 'desc.',
     'dash.ul': 'recep.',
+    'dash.total': 'total',
+    'dash.dailyTrends': 'Tendencias diarias',
+    'dash.downloadsPerDay': 'Descargas / día',
+    'dash.depositsPerDay': 'Depósitos / día',
     'dash.transfersN': '{n} transferencias',
     'update.available': '⬆ Nueva versión disponible: {v}',
     'menu.shutdown': '⏻ Apagar el servidor',
@@ -3519,6 +4064,16 @@ const I18N = {
     'sh.received': 'Recibidos:',
     'inbox.namePrompt': 'Nombre del enlace de recepción (opcional):',
     'inbox.created': 'Enlace de recepción creado ✓',
+    'preset.apply': 'Aplicar una plantilla…',
+    'preset.save': '💾 Guardar como plantilla',
+    'preset.delete': 'Eliminar plantilla',
+    'preset.namePrompt': 'Nombre de la plantilla:',
+    'preset.saved': 'Plantilla guardada ✓',
+    'preset.saveFail': 'No se pudo guardar la plantilla',
+    'preset.tooMany': 'Demasiadas plantillas guardadas (máx. 50). Elimina una.',
+    'preset.deleteConfirm': '¿Eliminar la plantilla «{name}»?',
+    'preset.deleted': 'Plantilla eliminada ✓',
+    'preset.deleteFail': 'No se pudo eliminar la plantilla',
     'inbox.createFail': 'No se pudo crear el enlace',
     'collab.title': 'Nuevo enlace de colaboración',
     'collab.intro': 'Una carpeta compartida bidireccional: los visitantes pueden descargar y subir. Los archivos se guardan en una nueva carpeta de tu área de recepción.',
@@ -3535,6 +4090,7 @@ const I18N = {
     'inbox.expiry': 'Expiración',
     'inbox.password': 'Contraseña (opcional)',
     'inbox.maxFiles': 'Máx. archivos',
+    'inbox.maxFilesPerUpload': 'Máx. archivos / envío',
     'inbox.maxFileSize': 'Tamaño máx. / archivo (MB)',
     'inbox.maxTotalSize': 'Cuota total (MB)',
     'inbox.allowExt': 'Tipos permitidos (separados por comas, opcional)',
@@ -3542,6 +4098,7 @@ const I18N = {
     'inbox.extPh': 'ej. pdf, jpg, png',
     'inbox.note': 'Mensaje mostrado a los remitentes (opcional)',
     'inbox.groupSender': 'Ordenar los envíos en subcarpetas por remitente',
+    'inbox.tagSender': 'Anteponer el nombre del remitente al archivo recibido', 'inbox.maxFilesPerSender': 'Archivos máx. / remitente', 'inbox.maxBytesPerSender': 'Cuota / remitente (MB)',
     'inbox.notePh': 'ej. Envíe el contrato firmado en PDF.',
     'inbox.create': 'Crear enlace',
     'sh.noteLabel': 'Instrucción:',
@@ -3558,6 +4115,7 @@ const I18N = {
     'sh.filtersLabel': 'Filtros / cuotas:',
     'sh.limPerFile': 'máx {v}/archivo',
     'sh.limFiles': 'máx {v} archivos',
+    'sh.limFilesPerUpload': 'máx {v}/envío',
     'sh.limQuota': 'cuota {v}',
     'sh.limAllow': 'permitidos: {v}',
     'sh.limBlock': 'bloqueados: {v}',
@@ -3634,7 +4192,9 @@ const I18N = {
     'sh.sizeLabel': 'Tamaño:',
     'sh.created': 'Creado:',
     'sh.downloads': 'Descargas:',
+    'sh.downloadingNow': '{n} descarga(s) en curso',
     'sh.visitors': 'Visitantes:',
+    'sh.dlThresholdTip': 'Alerta cuando este enlace llega a {n} descarga(s)',
     'sh.viewsTip': '{views} vista(s) · {visitors} visitante(s) único(s)',
     'sh.expires': 'Caduca:',
     'sh.scheduled': '🕒 programado',
@@ -3647,8 +4207,8 @@ const I18N = {
     'sh.copy': 'Copiar',
     'sh.copied': 'Enlace copiado ✓',
     'sh.copyFail': 'No se pudo copiar, selecciona el enlace manualmente',
-    'sh.revokeConfirm': '¿Revocar la compartición «{name}»?\nPodrás recuperarla durante 5 segundos.',
-    'sh.revoked': 'Compartición revocada',
+    'sh.revokeConfirm': '¿Mover la compartición «{name}» a la papelera?\nPodrás deshacerlo durante 5 segundos y luego restaurarla desde la papelera.',
+    'sh.revoked': 'Compartición movida a la papelera',
     'sh.revokeFail': 'No se pudo revocar',
     'sh.revokePending': 'Se eliminará en 5 segundos…',
     'sh.undoRevoke': 'Recuperar',
@@ -3687,15 +4247,53 @@ const I18N = {
     'pk.location': 'Ubicación:',
     'pk.expiration': 'Caducidad',
     'pk.never': 'Nunca',
+    'pk.expireAt': 'Fecha de caducidad exacta (opcional)',
+    'pk.genPw': 'Generar',
+    'pk.genPwTip': 'Generar una contraseña fuerte',
+    'inbox.requireSender': 'Exigir que el visitante escriba un nombre',
+    'inbox.blockExec': 'Rechazar ejecutables (comprobación de magic-bytes)',
+    'sh.copyLinkPw': 'Copiar enlace + contraseña',
+    'sh.copyLinkPwDone': 'Enlace y contraseña copiados',
+    'sh.shareVia': 'Compartir vía',
+    'cfg.receptionCap': 'Límite de almacenamiento de recepción (GB, 0 = ilimitado)',
+    'cfg.panicTitle': 'Parada de emergencia',
+    'cfg.panicDesc': 'Pausa de inmediato todos los enlaces activos (reversible). Los archivos no se tocan.',
+    'cfg.panicPause': 'Pausar todos los enlaces',
+    'cfg.panicResume': 'Reanudar todos los enlaces',
+    'cfg.panicConfirm': '¿Pausar TODOS los enlaces públicos activos ahora?',
+    'cfg.panicPaused': '{n} enlace(s) pausado(s)',
+    'cfg.panicResumed': '{n} enlace(s) reanudado(s)',
+    'cfg.panicFail': 'Acción fallida',
     'pk.h1': '1 hora',
     'pk.d1': '1 día',
     'pk.d7': '7 días',
     'pk.d30': '30 días',
     'pk.maxDl': 'Descargas máx.',
     'pk.maxVisitors': 'Visitantes únicos máx.',
+    'pk.dlThreshold': 'Avisar a las N descargas', 'pk.off': 'desactivado',
+    'pk.maxDlPerIp': 'Descargas máx. / IP', 'pk.pwHint': 'Pista de contraseña (opcional)', 'pk.pwHintPh': 'ej. nuestra ciudad natal',
     'pk.rate': 'Velocidad máx. (KB/s)',
     'pk.allowZip': 'Permitir «Descargar todo (.zip)»',
     'pk.burn': 'Enlace de un solo uso (revocado tras la 1.ª descarga)',
+    'pk.requestAccess': 'Requerir aprobación de acceso (el visitante solicita, tú apruebas)',
+    'pk.allowFeedback': 'Permitir comentarios de visitantes (moderados)',
+    'sh.moderation': 'Moderación',
+    'mod.title': 'Moderación del enlace',
+    'mod.accessTitle': 'Solicitudes de acceso',
+    'mod.accessEmpty': 'Sin solicitudes de acceso.',
+    'mod.grant': 'Aprobar',
+    'mod.deny': 'Rechazar',
+    'mod.delete': 'Eliminar',
+    'mod.fbTitle': 'Comentarios de visitantes',
+    'mod.fbEmpty': 'Sin comentarios.',
+    'mod.markRead': 'Marcar leído',
+    'mod.unread': 'Marcar no leído',
+    'mod.anon': 'Anónimo',
+    'mod.loadFail': 'Acción fallida.',
+    'mod.none': 'Nada que moderar.',
+    'mod.status.pending': 'pendiente',
+    'mod.status.approved': 'aprobado',
+    'mod.status.denied': 'rechazado',
     'pk.note': 'Mensaje mostrado al visitante (opcional)',
     'pk.notePh': 'ej. Aquí tienes el archivo solicitado.',
     'sh.speed': 'Velocidad: {v} KB/s',
@@ -3736,8 +4334,42 @@ const I18N = {
     'sh.notePh2': 'Nota privada para el admin…',
     'sh.noteSaved': 'Nota guardada',
     'sh.noteFail': 'No se pudo guardar la nota',
+    'sh.color': 'Color de la tarjeta', 'sh.tagsField': 'Etiquetas', 'sh.tagsPh': 'Cliente, Urgente',
+    'sh.descriptionMd': 'Descripción Markdown mostrada al visitante (opcional)', 'sh.descriptionPh': '## Información\nTexto, **negrita**, enlaces…',
+    'sh.comments': '💬 Comentarios', 'sh.commentsTitle': 'Comentarios del administrador', 'sh.commentAdd': 'Añadir', 'sh.commentPh': 'Añadir una nota con fecha…', 'sh.commentsEmpty': 'Sin comentarios.', 'sh.commentFail': 'No se pudieron cargar los comentarios', 'sh.commentDelete': 'Eliminar este comentario',
+    'sh.resetStats': '↺ Reiniciar estadísticas', 'sh.resetStatsConfirm': '¿Reiniciar las estadísticas visibles de «{name}»? Los contadores de cuota/seguridad no se reiniciarán.', 'sh.statsReset': 'Estadísticas reiniciadas', 'sh.statsResetFail': 'No se pudieron reiniciar las estadísticas',
+    'sh.lastDownload': 'Última descarga', 'sh.lastUpload': 'Último envío', 'sh.noTransfer': 'ninguno',
+    'sh.expiryProgress': 'Caducidad', 'sh.expiresIn': 'caduca en {v}', 'sh.expired': 'caducado', 'sh.expiringSoon': 'Caduca pronto',
+    'sh.reminderHours': 'Aviso antes de caducar (horas, vacío = global)', 'sh.reminderGlobal': 'aviso global', 'sh.reminderOff': 'aviso desactivado',
+    'sh.firstUseHours': 'Caducar tras el primer uso (horas)', 'sh.firstUseRule': 'Tras primer uso: {v}',
+    'sh.inactiveDays': 'Caducar tras inactividad (días)', 'sh.inactiveRule': 'Inactividad: {v}',
+    'sh.inlineQr': 'QR en la tarjeta', 'sh.hideQr': 'Ocultar QR',
+    'sh.pin': '☆ Fijar', 'sh.unpin': '★ Desfijar', 'sh.pinned': '★ Fijado',
+    'sh.archive': '🗄 Archivar', 'sh.unarchive': '↩ Desarchivar', 'sh.archived': '🗄 Archivado', 'sh.showArchived': '🗄 Archivados',
+    'sh.sizeAll': 'Todos los tamaños', 'sh.sizeSmall': '< 100 MB', 'sh.sizeMedium': '100 MB – 1 GB', 'sh.sizeLarge': '> 1 GB',
+    'sh.dateAll': 'Todas las fechas', 'sh.dateToday': 'Hoy', 'sh.date7': 'Últimos 7 días', 'sh.date30': 'Últimos 30 días', 'sh.dateCustom': 'Personalizado…', 'sh.dateFrom': 'Desde', 'sh.dateTo': 'Hasta',
+    'sh.sortActivity': 'Actividad reciente', 'sh.bulkCopy': '🔗 Copiar enlaces', 'sh.bulkPin': '★ Fijar', 'sh.bulkUnpin': '☆ Desfijar',
+    'sh.bulkArchive': '🗄 Archivar', 'sh.bulkUnarchive': '↩ Desarchivar', 'sh.quickExpiry': 'Caducidad…', 'sh.never': 'Nunca',
+    'sh.expirySet': 'Caducidad actualizada', 'sh.expiryFail': 'No se pudo actualizar la caducidad',
+    'sh.extend1d': '+1 d', 'sh.extend7d': '+7 d', 'sh.extend30d': '+30 d', 'sh.extended': 'Caducidad prolongada', 'sh.extendFail': 'No se pudo prolongar',
+    'sh.createdTip': 'Creado {v}', 'sh.emojiTip': 'Emoji del enlace', 'sh.densityTip': 'Densidad: compacta / cómoda',
+    'sh.neverUsed': 'Nunca usado', 'sh.veryActive': 'Muy activo', 'sh.changeHistory': 'Historial de cambios', 'sh.historyBtn': '🕘 Historial',
+    'sh.historyLoading': 'Cargando…', 'sh.historyEmpty': 'No hay cambios registrados.', 'sh.historyFail': 'No se pudo cargar el historial', 'sh.historyAction.created': 'Creado', 'sh.historyAction.revoked': 'Revocado', 'sh.historyAction.restored': 'Restaurado', 'sh.historyAction.created-from-duplicate': 'Creado por duplicación',
+    'sh.changedFields': 'Campos: {fields}', 'sh.copiedLinks': '{n} enlace(s) copiado(s)', 'sh.copyNoUrl': 'No hay enlaces copiables en la selección', 'sh.pageSizeTitle': 'Enlaces por página', 'sh.page10': '10 / página', 'sh.page25': '25 / página', 'sh.page50': '50 / página', 'sh.page100': '100 / página', 'sh.pagePrev': '← Anterior', 'sh.pageNext': 'Siguiente →', 'sh.pageLabel': '{from}–{to} de {total}', 'sh.bulkSelectPage': '☑ Seleccionar página', 'sh.bulkClearPage': '☐ Deseleccionar página',
+    'sh.renameAction': '✎',
     'sh.log': '🧾 Registro',
     'sh.logTitle': 'Registro de accesos de este enlace',
+    'filehist.button': '📥 Por archivo', 'filehist.title': 'Historial de descargas por archivo', 'filehist.loading': 'Cargando…', 'filehist.empty': 'No hay descargas de archivos registradas.', 'filehist.fail': 'No se pudo cargar el historial por archivo', 'filehist.transfers': '{n} transferencia(s)', 'filehist.completed': '{n} completada(s)', 'filehist.last': 'Última: {v}', 'filehist.truncated': 'Historial parcial: el registro supera la ventana leída o un ZIP contenía más de 500 elementos.',
+    'recv.button': '📥 Archivos recibidos', 'recv.title': 'Archivos recibidos', 'recv.loading': 'Cargando…', 'recv.empty': 'Aún no se han recibido archivos.', 'recv.count': '{n} archivo(s)', 'recv.download': 'Descargar', 'recv.fail': 'No se pudieron cargar los archivos recibidos.',
+    'trash.open': '🗑 Papelera', 'trash.title': 'Papelera', 'trash.empty': 'La papelera está vacía.', 'trash.restore': '↩ Restaurar', 'trash.purge': 'Eliminar definitivamente', 'trash.purgeAll': 'Vaciar todo', 'trash.restoreOk': 'Compartición restaurada', 'trash.restoreFail': 'No se pudo restaurar', 'trash.purgeOk': 'Elemento eliminado definitivamente', 'trash.purgeFail': 'No se pudo eliminar definitivamente', 'trash.purgeConfirm': '¿Eliminar definitivamente «{name}»? Esta acción no se puede deshacer.', 'trash.purgeAllConfirm': '¿Vaciar definitivamente toda la papelera?', 'trash.retention': 'Retención: {n} día(s)',
+    'activity.open': '◉ Actividad en vivo', 'activity.title': 'Actividad en vivo', 'activity.clear': 'Limpiar vista', 'activity.hint': 'Envíos, descargas, OCR, antivirus, errores y acciones auditadas aparecen aquí en tiempo real.', 'activity.connected': 'Conectado · eventos en tiempo real', 'activity.reconnecting': 'Reconectando…', 'activity.empty': 'Sin actividad reciente.',
+    'cfg.trashRetention': 'Retención de la papelera (días, 0 = conservar siempre)',
+    'cfg.autoArchiveExpired': 'Archivar automáticamente enlaces caducados después de (días, 0 = desactivado)',
+    'cfg.autoArchiveExpiredHint': 'Oculta los enlaces antiguos de la lista principal sin eliminar sus archivos gestionados.',
+    'cfg.expiredDataRetention': 'Eliminar permanentemente datos caducados después de (días, 0 = desactivado)',
+    'cfg.expiredDataRetentionHint': '⚠ Destructivo: elimina copias gestionadas por Direct-Xfer de enlaces caducados (recepciones, imágenes y blobs cifrados). Nunca elimina los archivos fuente del volumen host.',
+    'cfg.expiredDataRetentionConfirm': '⚠ Los datos gestionados por Direct-Xfer de enlaces caducados hace más de {n} día(s) se eliminarán PERMANENTEMENTE. ¿Continuar?',
+    'sh.smartExpiryHint': 'Caducidad inteligente: si hay varios límites activos, el enlace caduca cuando se alcanza el primero (fecha, descargas, primer uso o inactividad).',
     'sh.exportCsv': '⬇ Lista CSV',
     'sh.exportJson': '⬇ Lista JSON',
     'sh.dupWarn': 'Esta ruta ya está compartida por: {names}. ¿Crear otro enlace igualmente?',
@@ -3753,8 +4385,20 @@ const I18N = {
     'pk.unitMo': 'mes',
     'cfg.expiryPresets': 'Preajustes rápidos de caducidad',
     'cfg.expiryPresetsHint': 'Duraciones separadas por comas ofrecidas en las ventanas de enlace — p. ej. 6h, 3d, 2w, 1mo. «Nunca» siempre está disponible.',
-    'search.btn': '🔎 Buscar contenido',
-    'search.ph': '🔎 Buscar dentro de los archivos de texto compartidos y recibidos…',
+    'search.btn': '🔎 Búsqueda universal',
+    'search.ph': '🔎 Nombres, PDF/OCR, Office, texto y archivos…',
+    'search.semantic': 'Semántica', 'search.semanticBadge': 'Semántica',
+    'search.indexLoading': 'Cargando índice…',
+    'search.indexReady': 'Índice: {n} archivo(s) · {when}',
+    'search.indexBuilding': 'Indexando · {n} archivo(s) disponibles',
+    'search.ocrReady': 'OCR del servidor: {done} nuevo(s) · {cached} en caché · {langs}',
+    'search.ocrBuilding': 'OCR: {done} nuevo(s) · {cached} en caché · {current}',
+    'search.ocrDeferred': '{n} archivo(s) OCR aplazado(s) al próximo pase',
+    'search.ocrUnavailable': 'OCR del servidor no disponible (falta Tesseract o una dependencia)',
+    'search.ocrMissingLangs': 'idioma(s) faltante(s): {langs}',
+    'search.ocrBadge': 'OCR',
+    'search.reindex': 'Reconstruir índice',
+    'search.reindexStarted': 'Reindexación iniciada',
     'search.run': 'Buscar',
     'search.searching': 'Buscando…',
     'search.tooShort': 'Introduce al menos 2 caracteres.',
@@ -3794,7 +4438,7 @@ const I18N = {
     'photo.noExpiry': 'Sin expiración',
     'photo.expiryUpdated': 'Expiración actualizada ✓',
     'photo.expiryFail': 'No se pudo actualizar la expiración',
-    'photo.searchPh': 'Buscar una imagen…',
+    'photo.searchPh': 'Buscar nombre, etiqueta o texto OCR…',
     'photo.sortTitle': 'Ordenar',
     'photo.sortNew': 'Más recientes',
     'photo.sortOld': 'Más antiguas',
@@ -3827,6 +4471,25 @@ const I18N = {
     'photo.favorite': 'Añadir a favoritas',
     'photo.unfavorite': 'Quitar de favoritas',
     'photo.rename': '✎ Renombrar',
+    'photo.edit': '✎ Editar',
+    'photo.editTitle': 'Editor de imagen (rotar / recortar)',
+    'photo.copyImage': '📋 Copiar imagen',
+    'photo.copyImageTitle': 'Copiar la imagen al portapapeles',
+    'photo.copyImageOk': 'Imagen copiada al portapapeles ✓',
+    'photo.copyImageFail': 'No se pudo copiar la imagen al portapapeles',
+    'photo.editorTitle': 'Editar imagen',
+    'photo.editRotateLeft': '⟲ Izquierda',
+    'photo.editRotateRight': '⟳ Derecha',
+    'photo.editFlipH': '⇋ Espejo',
+    'photo.editCropFree': 'Libre',
+    'photo.editReset': 'Restablecer',
+    'photo.editCancel': 'Cancelar',
+    'photo.editSave': 'Guardar',
+    'photo.editSaving': 'Guardando…',
+    'photo.editSaved': 'Imagen actualizada ✓',
+    'photo.editFail': 'No se pudo guardar la imagen',
+    'photo.editLoadFail': 'No se pudo cargar la imagen para editar',
+    'photo.editCropHint': 'Arrastra sobre la imagen para recortar. Elige una proporción para fijarla.',
     'photo.createdAt': 'Añadida el {date}',
     'photo.ratio': 'proporción {ratio}',
     'photo.exportCsv': '⇩ CSV',
@@ -3990,7 +4653,13 @@ const UI_PREFS_DEFAULTS = Object.freeze({
   shareFilter: '',
   shareType: '',
   shareStatus: '',
+  shareSize: '',
+  shareDate: '',
+  shareDateFrom: '',
+  shareDateTo: '',
+  shareShowArchived: false,
   shareSort: 'new',
+  sharePageSize: '25',
   shareView: 'list',
   photoSearch: '',
   photoSort: 'new',
@@ -4001,6 +4670,7 @@ const UI_PREFS_DEFAULTS = Object.freeze({
   photoFavoritesOnly: false,
   photoStripExif: true,
   photoView: 'grid',
+  shareDensity: 'comfortable',
 });
 
 function readUiPrefs() {
@@ -4060,6 +4730,7 @@ function detectLang() {
 // ------------------------------------------------------------------
 const state = {
   csrf: null,
+  authEpoch: 0, // invalidates responses started under a previous authenticated principal
   lang: detectLang(),
   cwd: '/', // current folder in the picker (absolute host path)
   pickerMode: 'create', // 'create' | 'addTo' | 'configDir'
@@ -4068,6 +4739,7 @@ const state = {
   port: 55750,
   pollTimer: null,
   lastSharesJson: '',
+  sharesLoaded: false, // true after the current principal has received an authoritative /api/shares inventory
   lastPhotosSig: '', // structural signature of the Images grid (excludes live view counts)
   lastSettingsJson: '', // poll no-op guards: skip re-applying unchanged settings…
   lastTransfersJson: '', // …transfers…
@@ -4078,11 +4750,23 @@ const state = {
   photoHistoryLoadPromise: null,
   historyRenderTimer: null,
   allShares: [], // last-rendered shares, for client-side filtering (feature 9)
+  sharePresenceCounts: Object.create(null),
+  sharePresenceSource: null,
   shareFilter: uiPrefText('shareFilter'), // name/tag filter text
   shareType: uiPrefChoice('shareType', ['', 'file', 'folder', 'inbox', 'collab', 'secret'], ''), // type filter
   shareStatus: uiPrefChoice('shareStatus', ['', 'active', 'inactive'], ''), // status filter
-  shareSort: uiPrefChoice('shareSort', ['new', 'old', 'name', 'downloads', 'expiry'], 'new'), // sort order
+  shareSize: uiPrefChoice('shareSize', ['', 'small', 'medium', 'large'], ''),
+  shareDate: uiPrefChoice('shareDate', ['', 'today', '7', '30', 'custom'], ''),
+  shareDateFrom: uiPrefText('shareDateFrom'),
+  shareDateTo: uiPrefText('shareDateTo'),
+  shareShowArchived: uiPrefs.shareShowArchived === true,
+  shareSort: uiPrefChoice('shareSort', ['new', 'old', 'name', 'downloads', 'activity', 'expiry'], 'new'), // sort order
+  sharePageSize: Number(uiPrefChoice('sharePageSize', ['10','25','50','100'], '25')),
+  sharePage: 0,
+  sharePageIds: [],
+  bulkShareBusy: false,
   shareView: uiPrefChoice('shareView', ['list', 'grid'], 'list'),
+  shareDensity: uiPrefChoice('shareDensity', ['comfortable', 'compact'], 'comfortable'), // feature: admin-table density toggle
   selShares: new Set(), // selected share ids for bulk actions
   pendingShareDeletion: null, // one recoverable deletion: { id, timer, committing, promise }
   historyPage: 0,
@@ -4095,6 +4779,8 @@ const state = {
   settingsEpoch: 0,
   connLost: false,
   dashboardData: null,
+  diagnosticsData: null,
+  diagnosticsRunning: false,
   dashboardLiveData: null,
   dashTimer: null,
   dashLiveTimer: null,
@@ -4112,6 +4798,10 @@ const state = {
   imagesDashQuery: uiPrefText('imagesDashQuery'),
   imagesDashFilterTimer: null,  photosData: null,       // last photo-share list (for search/sort re-render + export)
   photoSearch: uiPrefText('photoSearch'), // gallery search query
+  photoOcrMatches: new Set(), // tokens matched by the persistent server OCR index
+  photoOcrQuery: '',
+  photoOcrTimer: null,
+  photoOcrRequestId: 0,
   photoSort: uiPrefChoice('photoSort', ['new', 'old', 'name', 'views', 'size', 'dimensions'], 'new'),
   photoFormat: uiPrefChoice('photoFormat', ['', 'jpg', 'png', 'gif', 'webp', 'avif', 'bmp'], ''),
   photoOrientation: uiPrefChoice('photoOrientation', ['', 'landscape', 'portrait', 'square'], ''),
@@ -4135,6 +4825,7 @@ const state = {
   idleActivityBound: false,
   idleLastReset: 0,
   settings: {}, // last settings snapshot (for the Configuration window)
+  activitySource: null, activityEvents: [],
 };
 
 const $ = (id) => document.getElementById(id);
@@ -4168,6 +4859,22 @@ function setShareView(view, persist = true) {
   if (persist) updateUiPrefs({ shareView: state.shareView });
 }
 
+// Feature — admin-table density toggle (compact / comfortable). The class lives on
+// the persistent #shares-list container (children are replaced on each render, the
+// element is not), so it survives re-renders like the view-list/view-grid class.
+function setShareDensity(density, persist = true) {
+  state.shareDensity = density === 'compact' ? 'compact' : 'comfortable';
+  const list = $('shares-list');
+  if (list) list.classList.toggle('density-compact', state.shareDensity === 'compact');
+  const btn = $('shares-density-toggle');
+  if (btn) {
+    const compact = state.shareDensity === 'compact';
+    btn.classList.toggle('active', compact);
+    btn.setAttribute('aria-pressed', compact ? 'true' : 'false');
+  }
+  if (persist) updateUiPrefs({ shareDensity: state.shareDensity });
+}
+
 function setPhotoView(view, persist = true) {
   state.photoView = view === 'list' ? 'list' : 'grid';
   const list = $('photos-list');
@@ -4184,7 +4891,16 @@ function applyUiPreferencesToControls() {
   setControlValue('shares-filter', state.shareFilter);
   setControlValue('shares-type', state.shareType);
   setControlValue('shares-status', state.shareStatus);
+  setControlValue('shares-size', state.shareSize);
+  setControlValue('shares-date', state.shareDate);
+  setControlValue('shares-date-from', state.shareDateFrom);
+  setControlValue('shares-date-to', state.shareDateTo);
   setControlValue('shares-sort', state.shareSort);
+  setControlValue('shares-page-size', String(state.sharePageSize || 25));
+  const customDates = $('shares-date-custom');
+  if (customDates) customDates.classList.toggle('hidden', state.shareDate !== 'custom');
+  const archivedToggle = $('shares-archived-toggle');
+  if (archivedToggle) { archivedToggle.classList.toggle('active', state.shareShowArchived); archivedToggle.setAttribute('aria-pressed', state.shareShowArchived ? 'true' : 'false'); }
 
   setControlValue('dash-direction-filter', state.dashDirection);
   setControlValue('dash-status-filter', state.dashStatus);
@@ -4215,6 +4931,7 @@ function applyUiPreferencesToControls() {
   if (stripExif) stripExif.checked = state.photoStripExif;
 
   setShareView(state.shareView, false);
+  setShareDensity(state.shareDensity, false);
   setPhotoView(state.photoView, false);
 }
 // Extensions the browser can play inline (mirrors the server's previewInfo()).
@@ -4345,6 +5062,7 @@ function setLang(lang) {
       ? (t('app.name') + ' — ' + t('photo.title'))
       : t('app.docTitle');
   applyTranslations();
+  renderNotifications();
   updateLiveDot();
   document.querySelectorAll('.lang-select').forEach((s) => {
     s.value = lang;
@@ -4365,7 +5083,46 @@ function setLang(lang) {
 // ------------------------------------------------------------------
 // API client (CSRF + session handling)
 // ------------------------------------------------------------------
-async function api(method, url, body) {
+function settleWithin(promise, timeoutMs) {
+  let timer = null;
+  return Promise.race([
+    Promise.resolve(promise).catch(() => null),
+    new Promise((resolve) => { timer = setTimeout(() => resolve(null), Math.max(1, Number(timeoutMs) || 1)); }),
+  ]).finally(() => { if (timer) clearTimeout(timer); });
+}
+function fetchWithTimeout(url, options = {}, timeoutMs = 20000) {
+  const ms = Math.max(1000, Number(timeoutMs) || 20000);
+  const upstreamSignal = options && options.signal;
+  if (!window.AbortController) {
+    let timer = null;
+    return Promise.race([
+      fetch(url, options),
+      new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('fetch-timeout')), ms); }),
+    ]).finally(() => { if (timer) clearTimeout(timer); });
+  }
+  const controller = new AbortController();
+  let onAbort = null;
+  if (upstreamSignal) {
+    if (upstreamSignal.aborted) controller.abort();
+    else {
+      onAbort = () => controller.abort();
+      upstreamSignal.addEventListener('abort', onAbort, { once: true });
+    }
+  }
+  const timer = setTimeout(() => controller.abort(), ms);
+  const next = { ...options, signal: controller.signal };
+  return fetch(url, next).catch((error) => {
+    if (controller.signal.aborted && !(upstreamSignal && upstreamSignal.aborted)) {
+      const timeoutError = new Error('fetch-timeout'); timeoutError.cause = error; throw timeoutError;
+    }
+    throw error;
+  }).finally(() => {
+    clearTimeout(timer);
+    if (upstreamSignal && onAbort) upstreamSignal.removeEventListener('abort', onAbort);
+  });
+}
+async function api(method, url, body, timeoutMs) {
+  const requestAuthEpoch = state.authEpoch;
   const opts = { method, headers: {}, credentials: 'same-origin' };
   if (body !== undefined) {
     opts.headers['Content-Type'] = 'application/json';
@@ -4374,9 +5131,11 @@ async function api(method, url, body) {
   if (!['GET', 'HEAD'].includes(method) && state.csrf) {
     opts.headers['X-CSRF-Token'] = state.csrf;
   }
-  const res = await fetch(url, opts);
+  const defaultTimeout = ['GET', 'HEAD'].includes(method) ? 20000 : 120000;
+  const res = await fetchWithTimeout(url, opts, timeoutMs === undefined ? defaultTimeout : timeoutMs);
+  if (requestAuthEpoch !== state.authEpoch) throw new Error('stale-auth');
   if (res.status === 401) {
-    showLogin();
+    if (requestAuthEpoch === state.authEpoch) showLogin();
     throw new Error('not-authenticated');
   }
   let data = null;
@@ -4462,6 +5221,19 @@ function timeAgo(ts) {
   return t('time.ago', { v });
 }
 
+// Feature 7 — localized "time remaining" for the "expire dans X" hover tooltip.
+// Mirrors timeAgo()'s day/hour/minute/second tiers but forward-looking, so a
+// multi-day expiry reads "6 j" instead of formatDuration()'s minute count.
+function timeUntil(ts) {
+  const sec = Math.max(0, Math.floor(((Number(ts) || 0) - Date.now()) / 1000));
+  if (sec < 60) return sec + ' ' + t('time.s');
+  const m = Math.floor(sec / 60);
+  if (m < 60) return m + ' ' + t('time.min');
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + ' ' + t('time.h');
+  return Math.floor(h / 24) + ' ' + t('time.d');
+}
+
 function formatDate(ts) {
   if (!ts) return '—';
   return new Date(ts).toLocaleString(LOCALES[state.lang] || 'en-US', {
@@ -4534,11 +5306,17 @@ async function hydrateRememberedAdminLogin() {
   }
   unlockAdminPasswordField();
   if (window.DXLoginVault) {
+    const hydrateAuthEpoch = state.authEpoch;
+    const usernameBeforeVault = $('username').value;
+    const passwordBeforeVault = $('password').value;
     try {
       const saved = await window.DXLoginVault.load();
-      if (saved) {
-        if (saved.username) $('username').value = saved.username;
-        if (saved.password) $('password').value = saved.password;
+      // IndexedDB may resolve seconds later on a busy mobile/desktop profile. Do
+      // not overwrite credentials the user typed while the vault was loading, nor
+      // refill after the screen/account lifecycle has already changed.
+      if (saved && hydrateAuthEpoch === state.authEpoch && rememberPassEl.checked) {
+        if (saved.username && $('username').value === usernameBeforeVault) $('username').value = saved.username;
+        if (saved.password && $('password').value === passwordBeforeVault) $('password').value = saved.password;
       }
     } catch (_) {}
   }
@@ -4568,10 +5346,66 @@ async function persistRememberedAdminLogin(username, password, allowPasswordStor
 // ------------------------------------------------------------------
 // Views
 // ------------------------------------------------------------------
+function clearAuthenticatedClientState() {
+  // Close every authenticated overlay immediately. A session can expire while a
+  // modal is open; hiding only the page underneath would leave the old account's
+  // data visible above the login form.
+  document.querySelectorAll('.overlay').forEach((node) => node.classList.add('hidden'));
+  if (state.activitySource) { try { state.activitySource.close(); } catch (_) {} state.activitySource = null; }
+  state.activityEvents = [];
+  state.allShares = [];
+  state.photosData = [];
+  state.albumsData = [];
+  state.historyData = [];
+  state.dashboardData = null;
+  state.dashboardLiveData = null;
+  state.imagesDashData = null;
+  state.diagnosticsData = null;
+  state.meta = null;
+  state.settings = {};
+  state.photoDimsCache = {};
+  state.photoExifCache = {};
+  state.photoOcrMatches = new Set();
+  state.selShares.clear();
+  state.photoSelection.clear();
+  state.lastSharesJson = '';
+  state.sharesLoaded = false;
+  state.lastPhotosSig = '';
+  state.lastSettingsJson = '';
+  state.lastTransfersJson = '';
+  state.lastHistoryMetaSig = '';
+  state.lastPhotoHistoryMetaSig = '';
+  // Clear password/sensitive editable fields retained by hidden modals. They are
+  // rehydrated from the new principal's server state when opened again.
+  document.querySelectorAll('.overlay input[type="password"], .overlay input[type="file"], .overlay textarea').forEach((node) => { try { node.value = ''; } catch (_) {} });
+  try { renderTransfers([]); } catch (_) {}
+  try { renderHistory([]); } catch (_) {}
+  try { renderShares([]); } catch (_) {}
+  try { renderActivity(); } catch (_) {}
+  // Dashboard pages are hidden on logout but their generated charts/lists are not
+  // rebuilt until the next network response. Clear output-only containers so a
+  // newly signed-in account can never reveal the previous account while offline.
+  document.querySelectorAll('#dashboards-page .chart-body, #dashboards-page .dash-kpis, #dashboards-page .dashboard-alerts, #dashboards-page .dashboard-comparison, #dashboards-page .dashboard-users, #dashboards-page .dashboard-duplicates, #dashboards-page .dashboard-optimization, #dashboards-page .dash-live-list, #dashboards-page .dash-stalled-list, #dashboards-page .dash-summary-grid, #dashboards-page .dash-errors, #dashboards-page .dash-mini-body, #dashboards-page .imgdash-list').forEach((node) => { node.textContent = ''; });
+  ['dash-updated','dash-live-updated','dash-filter-summary','dash-alert-count','dash-stalled-count','idash-updated','idash-filter-summary','idash-alert-count'].forEach((id) => { const node = $(id); if (node) node.textContent = ''; });
+}
 function showLogin() {
+  state.authEpoch += 1;
+  state.csrf = null;
+  state.username = null;
+  state.role = null;
   stopPolling();
+  stopNotificationsPolling();
   stopDashboardAutoRefresh();
   closeUserMenu();
+  clearAuthenticatedClientState();
+  try {
+    accountNotifications = [];
+    const categoryFilter = $('notifications-category-filter'), severityFilter = $('notifications-severity-filter'), searchFilter = $('notifications-search');
+    if (categoryFilter) categoryFilter.value = '';
+    if (severityFilter) severityFilter.value = '';
+    if (searchFilter) searchFilter.value = '';
+    renderNotifications(); closeNotificationsMenu();
+  } catch (_) {}
   placeUserMenu('admin');
   ['images-page', 'dashboards-page'].forEach((id) => {
     const page = $(id);
@@ -4668,18 +5502,19 @@ $('login-form').addEventListener('submit', async (e) => {
   const body = { username, password };
   if (totp) body.totp = totp;
   try {
-    const res = await fetch('/api/login', {
+    const res = await fetchWithTimeout('/api/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'same-origin',
       body: JSON.stringify(body),
-    });
+    }, 15000);
     const data = await res.json().catch(() => ({}));
     if (res.ok && data.csrf) {
+      state.authEpoch += 1;
       state.csrf = data.csrf;
       state.username = data.username;
       state.role = data.role;
-      await persistRememberedAdminLogin(username, password, !data.mustChangePassword);
+      await settleWithin(persistRememberedAdminLogin(username, password, !data.mustChangePassword), 1800);
       $('password').value = '';
       showTotpRow(false);
       enterApp(data.mustChangePassword);
@@ -4720,10 +5555,14 @@ $('login-form').addEventListener('submit', async (e) => {
 });
 
 $('logout-btn').addEventListener('click', async () => {
+  // Invalidate all older dashboard/API responses before the logout request starts.
+  state.authEpoch += 1;
   try {
     await api('POST', '/api/logout');
   } catch (_) {}
   state.csrf = null;
+  accountNotifications = [];
+  renderNotifications();
   showLogin();
 });
 
@@ -4743,6 +5582,556 @@ $('shutdown-server-btn').addEventListener('click', async () => {
   }
 });
 
+// --- Synced first-view notification center ---
+let accountNotifications = [];
+let notificationsRefreshTimer = null;
+let notificationsRequestSeq = 0;
+let notificationsRequestInFlight = false;
+let notificationsRequestController = null;
+function notificationVariantLabel(v) {
+  if (v === 'thumb') return state.lang === 'en' ? 'Mini' : 'Mini';
+  if (v === 'micro') return 'Micro';
+  return state.lang === 'fr' ? 'Pleine' : state.lang === 'es' ? 'Completa' : 'Full';
+}
+function notificationTypeIcon(n) {
+  if (n.severity === 'critical') return '🚨'; if (n.severity === 'warning') return '⚠️'; if (n.severity === 'success') return '✅';
+  const icons={images:'👁️',shares:'🔗',receptions:'📥',transfers:'↕️',security:'🔐',search:'🔎',pwa:'📱',system_health:'🩺',maintenance:'🧹',network:'🌐',restarts:'🔄',updates:'⬆️',visitors:'👥',thresholds:'🎯',traffic:'📈',activity:'📊',system:'⚙️'};
+  return icons[n.category] || '🔔';
+}
+function notificationTitleText(n) {
+  const name=n.name || (state.lang==='fr'?'Lien':state.lang==='es'?'Enlace':'Link'), count=Number(n.count)||0, threshold=Number(n.threshold)||Number(n.limit)||count;
+  const maps={
+    fr:{'image-first-view':`Première vue de « ${name} »`,'share-first-download':`Premier téléchargement de « ${name} »`,'inbox-first-deposit':`Premier dépôt sur « ${name} »`,'transfer-complete':`Transfert terminé : ${name}`,'transfer-failed':`Transfert échoué : ${name}`,'link-expired':`Lien expiré : ${name}`,'link-expiring-soon':`Lien bientôt expiré : ${name}`,'download-limit-reached':`Limite de téléchargements atteinte : ${name}`,'reception-quota-reached':`Quota de réception atteint : ${name}`,'link-new-visitor':`Nouveau visiteur sur « ${name} »`,'new-country':`Nouveau pays pour ${name}`,'view-threshold':`${threshold} vues atteintes : ${name}`,'download-threshold':`${threshold} téléchargements atteints : ${name}`,'unusual-activity':`Activité inhabituelle : ${name}`,'repeated-downloads':`Téléchargements répétés : ${name}`,'password-failures':`Échecs de mot de passe répétés : ${name}`,'link-auto-disabled':`Lien désactivé automatiquement : ${name}`,'dlp-detected':'DLP : contenu sensible détecté','dlp-blocked':'DLP : publication bloquée','ocr-failed':`Échec OCR${n.name?' : '+n.name:''}`,'index-failed':'Échec de l’indexation','pwa-device-paired':`Nouvel appareil PWA : ${n.device||''}`,'pwa-device-revoked':`Appareil PWA révoqué : ${n.device||''}`,'admin-login':`Connexion administrateur : ${n.username||''}`,'admin-login-unusual':`Connexion administrateur inhabituelle : ${n.username||''}`,'system-problem':'Problème système détecté','update-available':`Mise à jour disponible : ${n.latest||''}`,'update-installed':`Mise à jour installée : ${n.version||''}`},
+    en:{'image-first-view':`First view of “${name}”`,'share-first-download':`First download of “${name}”`,'inbox-first-deposit':`First deposit on “${name}”`,'transfer-complete':`Transfer completed: ${name}`,'transfer-failed':`Transfer failed: ${name}`,'link-expired':`Link expired: ${name}`,'link-expiring-soon':`Link expiring soon: ${name}`,'download-limit-reached':`Download limit reached: ${name}`,'reception-quota-reached':`Reception quota reached: ${name}`,'link-new-visitor':`New visitor on “${name}”`,'new-country':`New country for ${name}`,'view-threshold':`${threshold} views reached: ${name}`,'download-threshold':`${threshold} downloads reached: ${name}`,'unusual-activity':`Unusual activity: ${name}`,'repeated-downloads':`Repeated downloads: ${name}`,'password-failures':`Repeated password failures: ${name}`,'link-auto-disabled':`Link automatically disabled: ${name}`,'dlp-detected':'DLP: sensitive content detected','dlp-blocked':'DLP: publication blocked','ocr-failed':`OCR failed${n.name?' : '+n.name:''}`,'index-failed':'Indexing failed','pwa-device-paired':`New PWA device: ${n.device||''}`,'pwa-device-revoked':`PWA device revoked: ${n.device||''}`,'admin-login':`Administrator login: ${n.username||''}`,'admin-login-unusual':`Unusual administrator login: ${n.username||''}`,'system-problem':'System problem detected','update-available':`Update available: ${n.latest||''}`,'update-installed':`Update installed: ${n.version||''}`},
+    es:{'image-first-view':`Primera vista de «${name}»`,'share-first-download':`Primera descarga de «${name}»`,'inbox-first-deposit':`Primer depósito en «${name}»`,'transfer-complete':`Transferencia completada: ${name}`,'transfer-failed':`Transferencia fallida: ${name}`,'link-expired':`Enlace caducado: ${name}`,'link-expiring-soon':`Enlace próximo a caducar: ${name}`,'download-limit-reached':`Límite de descargas alcanzado: ${name}`,'reception-quota-reached':`Cuota de recepción alcanzada: ${name}`,'link-new-visitor':`Nuevo visitante en «${name}»`,'new-country':`Nuevo país para ${name}`,'view-threshold':`${threshold} vistas alcanzadas: ${name}`,'download-threshold':`${threshold} descargas alcanzadas: ${name}`,'unusual-activity':`Actividad inusual: ${name}`,'repeated-downloads':`Descargas repetidas: ${name}`,'password-failures':`Fallos de contraseña repetidos: ${name}`,'link-auto-disabled':`Enlace desactivado automáticamente: ${name}`,'dlp-detected':'DLP: contenido sensible detectado','dlp-blocked':'DLP: publicación bloqueada','ocr-failed':`Error OCR${n.name?' : '+n.name:''}`,'index-failed':'Error de indexación','pwa-device-paired':`Nuevo dispositivo PWA: ${n.device||''}`,'pwa-device-revoked':`Dispositivo PWA revocado: ${n.device||''}`,'admin-login':`Inicio de sesión administrador: ${n.username||''}`,'admin-login-unusual':`Inicio de sesión administrador inusual: ${n.username||''}`,'system-problem':'Problema del sistema detectado','update-available':`Actualización disponible: ${n.latest||''}`,'update-installed':`Actualización instalada: ${n.version||''}`}
+  };
+  const extra={
+    fr:{'received-file-ready':`Fichier reçu disponible : ${name}`,'download-abandoned':`Téléchargement abandonné : ${name}`,'upload-abandoned':`Upload abandonné : ${name}`,'resume-impossible':`Reprise impossible : ${name}`,'protected-link-first-access':`Premier accès au lien protégé : ${name}`,'password-recovered':`Mot de passe accepté après des échecs : ${name}`,'visitor-device-new':`Nouveau navigateur/appareil visiteur sur « ${name} »`,'simultaneous-downloads':`Téléchargements simultanés inhabituels : ${name}`,'high-download-volume':`Volume téléchargé inhabituellement élevé : ${name}`,'link-viral':`Lien devenu viral : ${name}`,'link-unused':`Lien inutilisé depuis longtemps : ${name}`,'shared-file-replaced':`Fichier source remplacé : ${name}`,'image-full-replaced':`Image pleine remplacée : ${name}`,'image-variant-regenerated':`${notificationVariantLabel(n.variant)} régénérée : ${name}`,'retention-file-deleted':`Fichier supprimé par rétention : ${name}`,'cleanup-complete':'Nettoyage automatique terminé','service-unavailable':`Service indisponible : ${n.source||''}`,'service-restored':`Service rétabli : ${n.source||''}`,'config-save-failed':'Échec de sauvegarde de la configuration','server-restarted':`Direct-Xfer redémarré : v${n.version||''}`,'server-clean-shutdown':'Arrêt propre de Direct-Xfer','server-crash-recovered':'Reprise après arrêt non propre','public-ip-changed':'Adresse IP publique modifiée','push-subscription-expired':'Abonnement Push expiré','push-subscription-repaired':'Abonnement Push réparé automatiquement','push-permission-revoked':'Permission Notifications retirée','custom-alert-rule':t('notifications.ruleCustomTitle',{name})},
+    en:{'received-file-ready':`Received file available: ${name}`,'download-abandoned':`Download abandoned: ${name}`,'upload-abandoned':`Upload abandoned: ${name}`,'resume-impossible':`Resume impossible: ${name}`,'protected-link-first-access':`First access to protected link: ${name}`,'password-recovered':`Password accepted after failures: ${name}`,'visitor-device-new':`New visitor browser/device on “${name}”`,'simultaneous-downloads':`Unusual simultaneous downloads: ${name}`,'high-download-volume':`Unusually high download volume: ${name}`,'link-viral':`Link is going viral: ${name}`,'link-unused':`Link unused for a long time: ${name}`,'shared-file-replaced':`Shared source file replaced: ${name}`,'image-full-replaced':`Full image replaced: ${name}`,'image-variant-regenerated':`${notificationVariantLabel(n.variant)} regenerated: ${name}`,'retention-file-deleted':`File deleted by retention: ${name}`,'cleanup-complete':'Automatic cleanup completed','service-unavailable':`Service unavailable: ${n.source||''}`,'service-restored':`Service restored: ${n.source||''}`,'config-save-failed':'Configuration save failed','server-restarted':`Direct-Xfer restarted: v${n.version||''}`,'server-clean-shutdown':'Direct-Xfer shut down cleanly','server-crash-recovered':'Recovered after unclean shutdown','public-ip-changed':'Public IP address changed','push-subscription-expired':'Push subscription expired','push-subscription-repaired':'Push subscription repaired automatically','push-permission-revoked':'Notification permission removed','custom-alert-rule':t('notifications.ruleCustomTitle',{name})},
+    es:{'received-file-ready':`Archivo recibido disponible: ${name}`,'download-abandoned':`Descarga abandonada: ${name}`,'upload-abandoned':`Carga abandonada: ${name}`,'resume-impossible':`Reanudación imposible: ${name}`,'protected-link-first-access':`Primer acceso al enlace protegido: ${name}`,'password-recovered':`Contraseña aceptada tras fallos: ${name}`,'visitor-device-new':`Nuevo navegador/dispositivo visitante en «${name}»`,'simultaneous-downloads':`Descargas simultáneas inusuales: ${name}`,'high-download-volume':`Volumen de descarga inusualmente alto: ${name}`,'link-viral':`Enlace viral: ${name}`,'link-unused':`Enlace sin uso desde hace mucho: ${name}`,'shared-file-replaced':`Archivo fuente reemplazado: ${name}`,'image-full-replaced':`Imagen completa reemplazada: ${name}`,'image-variant-regenerated':`${notificationVariantLabel(n.variant)} regenerada: ${name}`,'retention-file-deleted':`Archivo eliminado por retención: ${name}`,'cleanup-complete':'Limpieza automática terminada','service-unavailable':`Servicio no disponible: ${n.source||''}`,'service-restored':`Servicio restablecido: ${n.source||''}`,'config-save-failed':'Error al guardar la configuración','server-restarted':`Direct-Xfer reiniciado: v${n.version||''}`,'server-clean-shutdown':'Direct-Xfer se apagó correctamente','server-crash-recovered':'Recuperado tras un cierre incorrecto','public-ip-changed':'La IP pública cambió','push-subscription-expired':'Suscripción Push caducada','push-subscription-repaired':'Suscripción Push reparada automáticamente','push-permission-revoked':'Permiso de notificaciones retirado','custom-alert-rule':t('notifications.ruleCustomTitle',{name})}
+  };
+  return ((extra[state.lang]||extra.fr)[n.type]) || ((maps[state.lang]||maps.fr)[n.type]) || n.detail || n.type || t('notifications.title');
+}
+function notificationMetaText(n) {
+  const parts=[];
+  if (n.type==='image-first-view') parts.push(notificationVariantLabel(n.variant));
+  if (n.flag && n.flag!=='🌐') parts.push(n.flag);
+  if (n.ip) parts.push(n.ip); if (n.country) parts.push(n.country);
+  const byteQuota = n.type==='reception-quota-reached' && n.reason==='bytes';
+  if (n.type === 'custom-alert-rule') {
+    const metricKey={views:'notifications.ruleMetricViews',downloads:'notifications.ruleMetricDownloads',bytes_served:'notifications.ruleMetricBytesServed',received_bytes:'notifications.ruleMetricReceivedBytes'}[n.reason];
+    if (metricKey) parts.push(t(metricKey));
+    if (n.reason === 'bytes_served' || n.reason === 'received_bytes') parts.push(`${formatBytes(n.bytes || 0)} / ${formatBytes(n.limit || 0)}`);
+    else if (n.threshold) parts.push(`${Number(n.count)||0} / ${Number(n.threshold)||0}`);
+    if (n.source) parts.push(n.source);
+  } else if (byteQuota && n.limit) parts.push(`${formatBytes(n.bytes || n.count || 0)} / ${formatBytes(n.limit)}`);
+  else {
+    if (n.bytes) parts.push(formatBytes(n.bytes));
+    if (n.count && !['view-threshold','download-threshold'].includes(n.type)) parts.push(String(n.count));
+    if (n.limit) parts.push((state.lang==='fr'?'limite ':state.lang==='es'?'límite ':'limit ')+n.limit);
+  }
+  if (n.expiresAt) parts.push(formatDate(n.expiresAt));
+  if (n.reason && n.type !== 'custom-alert-rule') parts.push(String(n.reason).replace(/-/g,' '));
+  if (n.sender) parts.push(n.sender); if (n.device && !String(notificationTitleText(n)).includes(n.device)) parts.push(n.device);
+  if (n.version && n.latest) parts.push(`${n.version} → ${n.latest}`);
+  if (n.previous && n.current) parts.push(`${n.previous} → ${n.current}`);
+  if (n.durationMs) parts.push(`${Math.round(n.durationMs/1000)} s`);
+  if (n.detail && !['system-problem','index-failed','ocr-failed'].includes(n.type)) parts.push(n.detail);
+  if (n.detail && ['system-problem','index-failed','ocr-failed'].includes(n.type)) parts.push(n.detail);
+  // Relative timestamp ("il y a 5 min"); the absolute date is exposed as the row's
+  // hover tooltip in renderNotifications().
+  if (n.at) parts.push(timeAgo(n.at));
+  return parts.filter(Boolean).join(' · ');
+}
+function normalizeNotificationSearch(value) {
+  let text = String(value == null ? '' : value).toLocaleLowerCase();
+  try { text = text.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (_) {}
+  return text.trim();
+}
+function notificationCategorySearchLabel(category) {
+  const key = String(category || 'system_health');
+  const translated = t('notifications.category.' + key);
+  return translated === 'notifications.category.' + key ? key : translated;
+}
+function notificationSeveritySearchLabel(severity) {
+  const key = String(severity || 'info');
+  const translated = t('notifications.severity.' + key);
+  return translated === 'notifications.severity.' + key ? key : translated;
+}
+function notificationMatchesFilters(n) {
+  const category = ($('notifications-category-filter') && $('notifications-category-filter').value) || '';
+  const severity = ($('notifications-severity-filter') && $('notifications-severity-filter').value) || '';
+  const query = normalizeNotificationSearch(($('notifications-search') && $('notifications-search').value) || '');
+  if (category && String(n && n.category || 'system_health') !== category) return false;
+  if (severity && String(n && n.severity || 'info') !== severity) return false;
+  if (!query) return true;
+  const haystack = normalizeNotificationSearch([
+    n && n.type, n && n.category, n && n.severity,
+    notificationCategorySearchLabel(n && n.category), notificationSeveritySearchLabel(n && n.severity),
+    notificationTitleText(n || {}), notificationMetaText(n || {}),
+    n && n.name, n && n.detail, n && n.reason, n && n.sender, n && n.device, n && n.username, n && n.source
+  ].filter(Boolean).join(' '));
+  return haystack.includes(query);
+}
+// Feature 6 — surface arrivals while the panel is closed. `seenIds` stays null
+// until the first successful load so the initial backlog never toasts on login.
+let notificationsSeenIds = null;
+let notificationsSoundOn = false;
+try { notificationsSoundOn = localStorage.getItem('dx-notif-sound') === '1'; } catch (_) {}
+function playNotificationSound() {
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+    const ctx = playNotificationSound._ctx || (playNotificationSound._ctx = new AC());
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+    const now = ctx.currentTime, o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(880, now); o.frequency.setValueAtTime(1245, now + 0.09);
+    g.gain.setValueAtTime(0.0001, now); g.gain.exponentialRampToValueAtTime(0.14, now + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, now + 0.3);
+    o.connect(g).connect(ctx.destination); o.start(now); o.stop(now + 0.32);
+  } catch (_) {}
+}
+function pulseNotificationsBell() {
+  const btn = $('notifications-btn'); if (!btn) return;
+  btn.classList.remove('notif-pulse'); void btn.offsetWidth; btn.classList.add('notif-pulse');
+  setTimeout(() => btn.classList.remove('notif-pulse'), 2600);
+}
+function announceNewNotifications(fresh) {
+  if (!fresh || !fresh.length) return;
+  pulseNotificationsBell();
+  const newest = fresh.slice().sort((a, b) => Number(b.at || 0) - Number(a.at || 0))[0];
+  if (newest) toast('🔔 ' + notificationTitleText(newest), (newest.severity === 'critical' || newest.severity === 'warning') ? 'warn' : '');
+  if (notificationsSoundOn) playNotificationSound();
+}
+// Feature 12 — the panel renders a bounded page and grows on demand rather than
+// building up to NOTIFICATION_CENTER_MAX_PER_ACCOUNT (500) rows in one pass.
+const NOTIFICATIONS_PAGE_SIZE = 20;
+let notificationsShown = NOTIFICATIONS_PAGE_SIZE;
+// Feature 1 — the share/link/image a notification refers to, resolved from the
+// account's currently-loaded shares so link actions never target a stale id.
+function notificationShare(n) {
+  if (!n || !n.token) return null;
+  return (state.allShares || []).find((s) => s && s.token === n.token) || null;
+}
+// Feature 1 — take the operator to the section a notification is about.
+function openNotificationTarget(n) {
+  closeNotificationsMenu();
+  const cat = String((n && n.category) || ''), type = String((n && n.type) || '');
+  if (cat === 'images' || type.indexOf('image') === 0 || type === 'ocr-failed') { openImagesPage(); return; }
+  if (['system','system_health','maintenance','network','restarts','updates','pwa'].includes(cat)) { void openConfigModal(); return; }
+  // Everything else is acted on from the main admin view (shares, receptions,
+  // transfers, security, activity). Close any sub-page so it becomes visible.
+  if (typeof closeImagesPage === 'function') closeImagesPage();
+  if (typeof hideDashboardsView === 'function' && typeof dashboardsPageOpen === 'function' && dashboardsPageOpen()) hideDashboardsView(true);
+  try { window.scrollTo(0, 0); } catch (_) {}
+}
+// Feature 9 — contextual quick actions per notification, wired to existing safe
+// client capabilities (copy the public link, revoke an abused link). Returns [].
+const NOTIFICATION_REVOKE_TYPES = ['link-viral','high-download-volume','simultaneous-downloads','repeated-downloads','unusual-activity','password-failures','link-new-visitor','new-country','download-limit-reached'];
+function notificationActions(n) {
+  const out = [];
+  if (!n) return out;
+  const share = notificationShare(n);
+  // Once /api/shares has loaded for the current account, its active inventory is
+  // authoritative. Do not fall back to the historical URL embedded in an old
+  // notification when the share has since expired/revoked/been purged.
+  const linkUrl = (share && share.active !== false && share.url) || (!state.sharesLoaded && n && n.linkUrl) || null;
+  if (linkUrl) {
+    out.push({ label: t('notifications.action.copyLink'), run: () => { copy(linkUrl, t('notifications.linkCopied')); } });
+  }
+  if (share && !share.revoked && NOTIFICATION_REVOKE_TYPES.includes(String(n.type)) && typeof revokeShare === 'function') {
+    out.push({ label: t('notifications.action.revoke'), cls: 'danger', run: () => { closeNotificationsMenu(); revokeShare(share); } });
+  }
+  return out;
+}
+// Feature 4/1 helper — persist a single row as read without waiting for the
+// panel-open bulk mark, so a clicked/opened notification loses its unread dot.
+function markOneNotificationRead(n) {
+  if (!n || !(n.unread === true || !(Number(n.readAt) > 0))) return;
+  const at = Date.now();
+  accountNotifications = accountNotifications.map((x) => x && x.id === n.id ? { ...x, readAt: at, unread: false } : x);
+  renderNotifications();
+  api('POST', '/api/notifications/read', { ids:[String(n.id)] }).catch(() => {});
+}
+function renderNotifications() {
+  const list = $('notifications-list'), badge = $('notifications-badge'), count = $('notifications-count'), clear = $('notifications-clear');
+  if (!list) return;
+  const rows = Array.isArray(accountNotifications) ? accountNotifications : [];
+  const visibleRows = rows.filter(notificationMatchesFilters);
+  const filtersActive = !!(($('notifications-category-filter')&&$('notifications-category-filter').value)||($('notifications-severity-filter')&&$('notifications-severity-filter').value)||normalizeNotificationSearch(($('notifications-search')&&$('notifications-search').value)||''));
+  const unreadCount = rows.reduce((n, row) => n + ((row && (row.unread === true || !(Number(row.readAt)>0))) ? 1 : 0), 0);
+  if (badge) { badge.textContent = unreadCount > 99 ? '99+' : String(unreadCount); badge.classList.toggle('hidden', !unreadCount); }
+  if (count) count.textContent = rows.length ? (filtersActive ? t('notifications.filteredCount', { shown:visibleRows.length, total:rows.length }) : t('notifications.count', { n: rows.length })) : '';
+  if (clear) clear.classList.toggle('hidden', !rows.length);
+  list.textContent = '';
+  if (!rows.length) { list.appendChild(el('div', { class:'muted sm', text:t('notifications.empty') })); return; }
+  if (!visibleRows.length) { list.appendChild(el('div', { class:'muted sm', text:t('notifications.noMatch') })); return; }
+  const shown = Math.min(visibleRows.length, Math.max(NOTIFICATIONS_PAGE_SIZE, notificationsShown));
+  visibleRows.slice(0, shown).forEach((n) => {
+    const isUnread = n && (n.unread === true || !(Number(n.readAt)>0));
+    const row = el('div', { class:'notification-item notification-'+(n.severity||'info')+(isUnread?' notification-unread':'') });
+    const main = el('div', { class:'notification-item-main' });
+    main.appendChild(el('div', { class:'notification-item-title', text:notificationTypeIcon(n)+' '+notificationTitleText(n) }));
+    const metaEl = el('div', { class:'notification-item-meta', text:notificationMetaText(n) });
+    if (n.at) metaEl.setAttribute('title', formatDate(n.at)); // absolute date on hover (feature 2)
+    main.appendChild(metaEl);
+    // Feature 1 — the notification body deep-links to its section.
+    main.classList.add('notification-clickable');
+    main.setAttribute('role', 'button');
+    main.setAttribute('tabindex', '0');
+    const go = () => { markOneNotificationRead(n); openNotificationTarget(n); };
+    main.addEventListener('click', go);
+    main.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); go(); } });
+    // Feature 9 — contextual quick actions.
+    const actions = notificationActions(n);
+    if (actions.length) {
+      const actionsWrap = el('div', { class:'notification-item-actions' });
+      actions.forEach((a) => {
+        const b = el('button', { class:'btn ghost sm notification-action'+(a.cls?(' '+a.cls):''), text:a.label, attrs:{ type:'button' } });
+        b.addEventListener('click', (ev) => { ev.stopPropagation(); markOneNotificationRead(n); a.run(); });
+        actionsWrap.appendChild(b);
+      });
+      main.appendChild(actionsWrap);
+    }
+    const del = el('button', { class:'btn ghost sm notification-delete', text:'×', attrs:{ type:'button', title:t('notifications.delete'), 'aria-label':t('notifications.delete') } });
+    del.addEventListener('click', async (ev) => { ev.stopPropagation(); del.disabled = true; try {
+      await api('DELETE','/api/notifications/'+encodeURIComponent(n.id));
+      // Invalidate any GET that started before the DELETE. Without this, a slow
+      // pre-delete response could put the just-deleted row back on screen.
+      notificationsRequestSeq += 1;
+      accountNotifications = accountNotifications.filter((x) => x && x.id !== n.id);
+      renderNotifications();
+      if (!notificationsRequestInFlight) await refreshNotifications(true);
+    } catch (_) { del.disabled = false; } });
+    row.append(main, del); list.appendChild(row);
+  });
+  // Feature 12 — reveal the next page of matches on demand.
+  if (visibleRows.length > shown) {
+    const more = el('button', { class:'btn ghost sm notification-loadmore', text:t('notifications.loadMore', { n: visibleRows.length - shown }), attrs:{ type:'button' } });
+    more.addEventListener('click', (ev) => { ev.stopPropagation(); notificationsShown = shown + NOTIFICATIONS_PAGE_SIZE; renderNotifications(); if (notificationsMenuIsOpen()) void markVisibleNotificationsRead(); });
+    list.appendChild(more);
+  }
+}
+let notificationsReadInFlight = false;
+let notificationsReadSeq = 0;
+function notificationsMenuIsOpen() {
+  const d = $('notifications-dropdown');
+  return !!(d && !d.classList.contains('hidden'));
+}
+function visibleNotificationReadIds() {
+  const visible = accountNotifications.filter(notificationMatchesFilters);
+  const shown = Math.min(visible.length, Math.max(NOTIFICATIONS_PAGE_SIZE, notificationsShown));
+  return visible.slice(0, shown).filter((n) => n && (n.unread === true || !(Number(n.readAt)>0))).map((n) => String(n.id));
+}
+async function markVisibleNotificationsRead() {
+  if (notificationsReadInFlight || !notificationsMenuIsOpen()) return;
+  const readIds = visibleNotificationReadIds();
+  if (!readIds.length) return;
+  notificationsReadInFlight = true;
+  const readSeq = ++notificationsReadSeq;
+  let succeeded = false;
+  try {
+    const result = await api('POST','/api/notifications/read', { ids:readIds });
+    if (readSeq !== notificationsReadSeq) return;
+    // The read response confirms both read ids and ids that still exist. Invalidate
+    // any GET that captured the pre-read state, then reconcile without re-adding a
+    // notification that this client may have deleted while the POST was in flight.
+    invalidateNotificationsFetch();
+    const at = Math.max(1, Number(result && result.readAt) || Date.now());
+    const markedIds = new Set(Array.isArray(result && result.ids) ? result.ids.map(String) : []);
+    const existingIds = Array.isArray(result && result.existingIds) ? new Set(result.existingIds.map(String)) : null;
+    if (existingIds) accountNotifications = accountNotifications.filter((n) => n && existingIds.has(String(n.id)));
+    accountNotifications = accountNotifications.map((n) => n && markedIds.has(String(n.id)) ? { ...n, readAt:at, unread:false } : n);
+    renderNotifications();
+    succeeded = true;
+  } catch (_) {
+    // Keep the badge unread if persistence failed; the next poll/open retries.
+  } finally {
+    if (readSeq === notificationsReadSeq) {
+      notificationsReadInFlight = false;
+      // Only chase a residual unread row after a SUCCESSFUL read (a notification
+      // that arrived while the POST was in flight). Re-scheduling on failure would
+      // busy-loop POSTs at request latency while the panel stays open — the next
+      // 4 s poll (or a reopen) is the intended retry path when persistence fails.
+      if (succeeded && notificationsMenuIsOpen() && accountNotifications.some((n) => n && (n.unread === true || !(Number(n.readAt)>0)))) setTimeout(() => void markVisibleNotificationsRead(), 0);
+    }
+  }
+}
+function invalidateNotificationsFetch() {
+  notificationsRequestSeq += 1;
+  if (notificationsRequestController) {
+    try { notificationsRequestController.abort(); } catch (_) {}
+  }
+}
+
+async function refreshNotifications(silent) {
+  // Never stack the 4-second polls on a slow/offline connection. An overlapping
+  // request used to accumulate until the network recovered, hammering the server
+  // and making stale responses much more likely.
+  if (notificationsRequestInFlight) return;
+  notificationsRequestInFlight = true;
+  const seq = ++notificationsRequestSeq;
+  const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  notificationsRequestController = ctrl;
+  try {
+    const res = await fetchWithTimeout('/api/notifications', { credentials:'same-origin', cache:'no-store', signal:ctrl ? ctrl.signal : undefined }, 15000);
+    if (seq !== notificationsRequestSeq) return;
+    if (res.status === 401 || res.status === 403) {
+      accountNotifications = [];
+      renderNotifications();
+      if (res.status === 401) showLogin();
+      return;
+    }
+    if (!res.ok) throw new Error('notifications-' + res.status);
+    const data = await res.json();
+    if (seq !== notificationsRequestSeq) return; // ignore an older poll that arrived late
+    const incoming = (data && data.notifications) || [];
+    // Feature 6 — announce genuinely new, still-unread rows when the panel is closed.
+    if (notificationsSeenIds) {
+      const fresh = incoming.filter((n) => n && !notificationsSeenIds.has(String(n.id)) && (n.unread === true || !(Number(n.readAt) > 0)));
+      if (fresh.length && !notificationsMenuIsOpen()) announceNewNotifications(fresh);
+    }
+    notificationsSeenIds = new Set(incoming.map((n) => String(n && n.id)));
+    accountNotifications = incoming;
+    renderNotifications();
+    if (notificationsMenuIsOpen()) void markVisibleNotificationsRead();
+  } catch (e) {
+    if (seq !== notificationsRequestSeq) return;
+    if (!silent && $('notifications-list') && (!e || e.name !== 'AbortError')) $('notifications-list').textContent = t('notifications.empty');
+  } finally {
+    if (notificationsRequestController === ctrl) notificationsRequestController = null;
+    // There is only one poll at a time. A delete/clear may intentionally advance
+    // the sequence while this request is in flight, so always release the lock.
+    notificationsRequestInFlight = false;
+  }
+}
+function closeNotificationsMenu() { const d=$('notifications-dropdown'), b=$('notifications-btn'); if(d)d.classList.add('hidden'); if(b)b.setAttribute('aria-expanded','false'); }
+function stopNotificationsPolling() {
+  if (notificationsRefreshTimer) {
+    clearInterval(notificationsRefreshTimer);
+    notificationsRefreshTimer = null;
+  }
+  // Abort the previous session's GET as well as invalidating it. Without this,
+  // a very quick logout→login could inherit `notificationsRequestInFlight=true`
+  // until the old 15 s timeout and delay the new account's initial badge load.
+  invalidateNotificationsFetch();
+  notificationsRequestController = null;
+  notificationsRequestInFlight = false;
+  // A read POST cannot be aborted through api(), so invalidate its completion
+  // when the authenticated principal changes (logout/session expiry).
+  notificationsReadSeq += 1;
+  notificationsReadInFlight = false;
+  // Re-prime arrival detection so the next account's backlog does not toast, and
+  // collapse the panel back to its first page.
+  notificationsSeenIds = null;
+  notificationsShown = NOTIFICATIONS_PAGE_SIZE;
+}
+function startNotificationsPolling() {
+  // Always perform one immediate refresh when the authenticated UI is entered.
+  // Previously this happened only from the bootstrap/session-restore path, so a
+  // fresh manual login showed no badge until the notification menu was opened.
+  if (!notificationsRefreshTimer) {
+    refreshNotifications(true);
+    notificationsRefreshTimer=setInterval(()=>{ if(isLoggedIn() && !document.hidden) refreshNotifications(true); },4000);
+  } else if (!notificationsRequestInFlight) {
+    refreshNotifications(true);
+  }
+}
+// A filter/search change restarts paging so the first matches are always shown.
+function onNotificationFilterChanged() { notificationsShown = NOTIFICATIONS_PAGE_SIZE; renderNotifications(); if (notificationsMenuIsOpen()) void markVisibleNotificationsRead(); }
+['notifications-category-filter','notifications-severity-filter'].forEach((id)=>{ const node=$(id); if(node) node.addEventListener('change', onNotificationFilterChanged); });
+if ($('notifications-search')) $('notifications-search').addEventListener('input', onNotificationFilterChanged);
+if ($('notifications-btn')) $('notifications-btn').addEventListener('click', (e)=>{ e.stopPropagation(); closeUserMenu(); closeDashMenu(); const d=$('notifications-dropdown'); if(!d)return; const opening=d.classList.contains('hidden'); d.classList.toggle('hidden'); $('notifications-btn').setAttribute('aria-expanded', opening?'true':'false'); if(opening){ notificationsShown = NOTIFICATIONS_PAGE_SIZE; renderNotifications(); void markVisibleNotificationsRead(); refreshNotifications(true); } });
+if ($('notifications-clear')) $('notifications-clear').addEventListener('click', async (e)=>{ e.stopPropagation(); if(!accountNotifications.length || !confirm(t('notifications.clearConfirm')))return; await api('DELETE','/api/notifications'); notificationsRequestSeq += 1; accountNotifications=[]; renderNotifications(); if(!notificationsRequestInFlight) await refreshNotifications(true); });
+
+// Feature 6 — optional arrival sound, remembered locally (default off).
+function updateNotificationsSoundBtn() {
+  const b = $('notifications-sound'); if (!b) return;
+  b.textContent = notificationsSoundOn ? '🔔' : '🔕';
+  b.setAttribute('aria-pressed', notificationsSoundOn ? 'true' : 'false');
+  const label = t('notifications.sound') + ' — ' + (notificationsSoundOn ? t('notifications.soundOn') : t('notifications.soundOff'));
+  b.title = label; b.setAttribute('aria-label', label);
+}
+if ($('notifications-sound')) {
+  updateNotificationsSoundBtn();
+  $('notifications-sound').addEventListener('click', (e) => {
+    e.stopPropagation();
+    notificationsSoundOn = !notificationsSoundOn;
+    try { localStorage.setItem('dx-notif-sound', notificationsSoundOn ? '1' : '0'); } catch (_) {}
+    updateNotificationsSoundBtn();
+    if (notificationsSoundOn) playNotificationSound(); // confirm + unlock the audio context on this gesture
+  });
+}
+
+// Feature 7 — per-account category preferences. Security, Maintenance and System health stay always-on.
+// The same account-scoped preferences are rendered both in the notification dropdown
+// and in the main Configuration window so both surfaces can never drift apart.
+const NOTIFICATION_MUTABLE_CATEGORIES = ['images','shares','receptions','transfers','search','pwa','visitors','thresholds','traffic','network','restarts','updates'];
+const NOTIFICATION_REQUIRED_CATEGORIES = ['security','maintenance','system_health'];
+const NOTIFICATION_SETTINGS_CATEGORIES = ['shares','receptions','images','transfers','visitors','thresholds','traffic','search','pwa','network','restarts','updates','maintenance','security','system_health'];
+let notificationMutedCategories = [];
+let notificationPrefsLoaded = false;
+let notificationPrefsSaving = false;
+let notificationPrefsSaveQueued = false;
+function setNotificationPrefsStatus(key, kind) {
+  const node = $('cfg-notification-center-status');
+  if (!node) return;
+  node.textContent = key ? t(key) : '';
+  node.className = 'muted sm notification-settings-status' + (kind ? ' ' + kind : '');
+}
+function setNotificationCategoryPreference(category, enabled) {
+  category = String(category || '');
+  if (!NOTIFICATION_MUTABLE_CATEGORIES.includes(category)) return;
+  const next = new Set(notificationMutedCategories);
+  if (enabled) next.delete(category); else next.add(category);
+  notificationMutedCategories = NOTIFICATION_MUTABLE_CATEGORIES.filter((cat) => next.has(cat));
+  renderNotificationPrefs();
+  setNotificationPrefsStatus('notifications.settingsSaving');
+  void saveNotificationPrefs();
+}
+function appendNotificationPrefRow(box, cat, required, showDescription = false) {
+  const lab = el('label', { class:'notification-pref-row' + (required ? ' notification-pref-required' : '') });
+  const cb = el('input', { attrs:{ type:'checkbox' } });
+  cb.checked = required || !notificationMutedCategories.includes(cat);
+  cb.dataset.cat = cat;
+  if (required) {
+    cb.disabled = true;
+    cb.setAttribute('aria-label', t('notifications.category.' + cat) + ' — ' + t('notifications.settingsRequired'));
+  } else {
+    cb.addEventListener('change', () => setNotificationCategoryPreference(cat, cb.checked));
+  }
+  lab.appendChild(cb);
+  if (showDescription) {
+    const copy = el('span', { class:'notification-pref-copy' });
+    copy.appendChild(el('span', { class:'notification-pref-title', text:t('notifications.category.' + cat) }));
+    copy.appendChild(el('small', { class:'muted notification-pref-description', text:t('notifications.categoryDesc.' + cat) }));
+    lab.appendChild(copy);
+  } else {
+    lab.appendChild(el('span', { text:t('notifications.category.' + cat) }));
+  }
+  if (required) lab.appendChild(el('small', { class:'muted notification-pref-required-label', text:t('notifications.settingsRequired') }));
+  box.appendChild(lab);
+}
+function renderNotificationPrefs() {
+  const popup = $('notifications-prefs');
+  if (popup) {
+    popup.textContent = '';
+    popup.appendChild(el('div', { class:'muted sm notification-prefs-hint', text:t('notifications.prefsHint') }));
+    NOTIFICATION_MUTABLE_CATEGORIES.forEach((cat) => appendNotificationPrefRow(popup, cat, false));
+  }
+  const settings = $('cfg-notification-center-prefs');
+  if (settings) {
+    settings.textContent = '';
+    NOTIFICATION_SETTINGS_CATEGORIES.forEach((cat) => appendNotificationPrefRow(settings, cat, NOTIFICATION_REQUIRED_CATEGORIES.includes(cat), true));
+    settings.appendChild(el('div', { class:'muted sm notification-settings-required-hint', text:t('notifications.settingsRequiredHint') }));
+  }
+  if (notificationRulesLoaded) renderNotificationRules();
+}
+async function loadNotificationPrefs(preserveStatus = false) {
+  let loaded = false;
+  try {
+    const d = await api('GET','/api/notifications/prefs');
+    notificationMutedCategories = Array.isArray(d && d.mutedCategories) ? d.mutedCategories.map(String).filter((cat) => NOTIFICATION_MUTABLE_CATEGORIES.includes(cat)) : [];
+    loaded = true;
+    if (!preserveStatus) setNotificationPrefsStatus('');
+  } catch (_) {
+    if ($('config-overlay') && !$('config-overlay').classList.contains('hidden')) setNotificationPrefsStatus('notifications.settingsError', 'cfg-bad');
+  }
+  // Keep this false on network/server failure so reopening Preferences retries
+  // instead of pinning optimistic defaults for the rest of the session.
+  notificationPrefsLoaded = loaded;
+  renderNotificationPrefs();
+}
+async function saveNotificationPrefs() {
+  if (notificationPrefsSaving) { notificationPrefsSaveQueued = true; return; }
+  notificationPrefsSaving = true;
+  try {
+    do {
+      notificationPrefsSaveQueued = false;
+      const desired = notificationMutedCategories.slice();
+      const result = await api('POST','/api/notifications/prefs', { mutedCategories: desired });
+      if (!notificationPrefsSaveQueued) {
+        notificationMutedCategories = Array.isArray(result && result.mutedCategories) ? result.mutedCategories.map(String).filter((cat) => NOTIFICATION_MUTABLE_CATEGORIES.includes(cat)) : desired;
+        notificationPrefsLoaded = true;
+        renderNotificationPrefs();
+        setNotificationPrefsStatus('notifications.prefsSaved', 'cfg-ok');
+        toast(t('notifications.prefsSaved'), 'ok');
+      }
+    } while (notificationPrefsSaveQueued);
+  } catch (_) {
+    notificationPrefsLoaded = false;
+    setNotificationPrefsStatus('notifications.settingsError', 'cfg-bad');
+    await loadNotificationPrefs(true);
+  } finally {
+    notificationPrefsSaving = false;
+    if (notificationPrefsSaveQueued) { notificationPrefsSaveQueued = false; void saveNotificationPrefs(); }
+  }
+}
+// Feature 31 — custom account notification rules.
+let notificationRules = [], notificationRuleTargets = [], notificationRulesLoaded = false;
+function notificationRuleMetricLabel(metric) {
+  const key={views:'notifications.ruleMetricViews',downloads:'notifications.ruleMetricDownloads',bytes_served:'notifications.ruleMetricBytesServed',received_bytes:'notifications.ruleMetricReceivedBytes'}[metric];
+  return key ? t(key) : metric;
+}
+function notificationRuleIsBytes(metric) { return metric === 'bytes_served' || metric === 'received_bytes'; }
+function notificationRuleThresholdForInput(metric, threshold) { return notificationRuleIsBytes(metric) ? Math.round((Number(threshold)||0)/1073741824*100)/100 : Math.max(0,Number(threshold)||0); }
+function notificationRuleThresholdFromInput(metric, value) { const n=Math.max(0,Number(value)||0); return notificationRuleIsBytes(metric) ? Math.round(n*1073741824) : Math.floor(n); }
+function notificationRuleTargetName(id) { const row=notificationRuleTargets.find((x)=>String(x.id)===String(id)); return row ? row.name : t('notifications.ruleTargetUnavailable'); }
+function updateNotificationRuleTargetOptions() {
+  const metric=$('cfg-notification-rule-metric') ? $('cfg-notification-rule-metric').value : 'views';
+  const target=$('cfg-notification-rule-target'); if(!target)return;
+  const previous=target.value; target.textContent=''; target.appendChild(el('option',{text:t('notifications.ruleAllTargets'),attrs:{value:''}}));
+  notificationRuleTargets.filter((x)=>Array.isArray(x.metrics)&&x.metrics.includes(metric)).forEach((x)=>target.appendChild(el('option',{text:x.name,attrs:{value:x.id}})));
+  if ([...target.options].some((o)=>o.value===previous)) target.value=previous;
+  const input=$('cfg-notification-rule-threshold'); if(input){input.step=notificationRuleIsBytes(metric)?'0.1':'1';input.min=notificationRuleIsBytes(metric)?'0.01':'1';}
+}
+function renderNotificationRules() {
+  const metric=$('cfg-notification-rule-metric');
+  if(metric){const prev=metric.value;metric.textContent='';['views','downloads','bytes_served','received_bytes'].forEach((m)=>metric.appendChild(el('option',{text:notificationRuleMetricLabel(m),attrs:{value:m}})));if(prev)metric.value=prev;}
+  updateNotificationRuleTargetOptions();
+  const box=$('cfg-notification-rule-list'); if(!box)return; box.textContent='';
+  if(!notificationRules.length){box.appendChild(el('p',{class:'muted sm',text:t('notifications.ruleEmpty')}));return;}
+  notificationRules.forEach((rule)=>{
+    const row=el('div',{class:'notification-rule-row'}), main=el('div',{class:'notification-rule-row-main'});
+    const target=rule.shareId ? notificationRuleTargetName(rule.shareId) : t('notifications.ruleAllTargets');
+    const threshold=notificationRuleThresholdForInput(rule.metric,rule.threshold);
+    main.appendChild(el('strong',{text:(rule.label ? rule.label+' — ' : '')+notificationRuleMetricLabel(rule.metric)+' ≥ '+threshold}));
+    main.appendChild(el('small',{class:'muted',text:target})); row.appendChild(main);
+    const actions=el('div',{class:'notification-rule-row-actions'});
+    const toggle=el('button',{class:'btn ghost sm',text:rule.enabled!==false?t('notifications.ruleDisable'):t('notifications.ruleEnable'),attrs:{type:'button'}});
+    toggle.addEventListener('click',async()=>{try{await api('POST','/api/notification-rules',{...rule,enabled:rule.enabled===false});await loadNotificationRules();}catch(_){$('cfg-notification-rule-status').textContent=t('notifications.ruleError');}});
+    const del=el('button',{class:'btn danger sm',text:t('notifications.ruleDelete'),attrs:{type:'button'}});
+    del.addEventListener('click',async()=>{try{await api('DELETE','/api/notification-rules/'+encodeURIComponent(rule.id));await loadNotificationRules();$('cfg-notification-rule-status').textContent=t('notifications.ruleDeleted');}catch(_){$('cfg-notification-rule-status').textContent=t('notifications.ruleError');}});
+    actions.append(toggle,del); row.appendChild(actions); if(rule.enabled===false) row.classList.add('muted'); box.appendChild(row);
+  });
+}
+async function loadNotificationRules() {
+  try { const data=await api('GET','/api/notification-rules'); notificationRules=Array.isArray(data.rules)?data.rules:[]; notificationRuleTargets=Array.isArray(data.targets)?data.targets:[]; notificationRulesLoaded=true; renderNotificationRules(); }
+  catch(_){ notificationRulesLoaded=false; const st=$('cfg-notification-rule-status'); if(st)st.textContent=t('notifications.ruleError'); }
+}
+async function addNotificationRule() {
+  const metric=$('cfg-notification-rule-metric')?.value||'views'; const threshold=notificationRuleThresholdFromInput(metric,$('cfg-notification-rule-threshold')?.value);
+  const st=$('cfg-notification-rule-status'); if(!threshold){if(st)st.textContent=t('notifications.ruleError');return;}
+  try { await api('POST','/api/notification-rules',{metric,threshold,shareId:$('cfg-notification-rule-target')?.value||null,label:$('cfg-notification-rule-label')?.value||'',enabled:true}); if($('cfg-notification-rule-threshold'))$('cfg-notification-rule-threshold').value=''; if($('cfg-notification-rule-label'))$('cfg-notification-rule-label').value=''; if(st)st.textContent=t('notifications.ruleSaved'); await loadNotificationRules(); }
+  catch(_){if(st)st.textContent=t('notifications.ruleError');}
+}
+if($('cfg-notification-rule-metric'))$('cfg-notification-rule-metric').addEventListener('change',updateNotificationRuleTargetOptions);
+if($('cfg-notification-rule-add'))$('cfg-notification-rule-add').addEventListener('click',addNotificationRule);
+
+if ($('notifications-prefs-btn')) {
+  $('notifications-prefs-btn').textContent = '⚙️';
+  $('notifications-prefs-btn').title = t('notifications.prefs');
+  $('notifications-prefs-btn').setAttribute('aria-label', t('notifications.prefs'));
+  $('notifications-prefs-btn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    const box = $('notifications-prefs'); if (!box) return;
+    const opening = box.classList.contains('hidden');
+    box.classList.toggle('hidden');
+    $('notifications-prefs-btn').setAttribute('aria-expanded', opening ? 'true' : 'false');
+    if (opening && !notificationPrefsLoaded) loadNotificationPrefs();
+  });
+}
+document.addEventListener('click',(e)=>{ if(e.target.closest&&e.target.closest('.notifications-menu'))return; closeNotificationsMenu(); });
+document.addEventListener('keydown',(e)=>{ if(e.key==='Escape')closeNotificationsMenu(); });
+
 // --- User menu (account icon) ---
 // Reuse the exact same menu on all full-page views. Moving the existing node
 // keeps one set of IDs/listeners and avoids account menus drifting apart.
@@ -4750,12 +6139,14 @@ function placeUserMenu(view) {
   if (view === true) view = 'images'; // compatibility with the previous boolean API
   if (!view || view === false) view = 'admin';
   const menu = document.querySelector('.user-menu');
+  const notifications = document.querySelector('.notifications-menu');
   const targets = {
     admin: '#app-view .topbar-menus',
     images: '#images-page .topbar-menus',
     dashboards: '#dashboards-page .topbar-menus',
   };
   const target = document.querySelector(targets[view] || targets.admin);
+  if (notifications && target && notifications.parentElement !== target) target.appendChild(notifications);
   if (menu && target && menu.parentElement !== target) target.appendChild(menu);
   applySessionIdentity();
 }
@@ -4765,6 +6156,7 @@ function closeUserMenu() {
 $('user-btn').addEventListener('click', (e) => {
   e.stopPropagation();
   closeDashMenu();
+  closeNotificationsMenu();
   $('user-dropdown').classList.toggle('hidden');
 });
 // Close on outside clicks only — a click inside the menu (e.g. the language
@@ -5379,27 +6771,56 @@ function imagesDashboardQuery() {
 }
 
 async function loadDashboard() {
-  try {
-    const [data, proxy] = await Promise.all([
-      api('GET', '/api/dashboard?' + transferDashboardQuery()),
-      api('GET', '/api/network/proxy-check').catch(() => null),
-    ]);
-    data.proxy = proxy;
-    state.dashboardData = data;
-    renderDashboard();
-  } catch (e) {
-    // A transient failure keeps the previous render rather than blanking it.
-    if (e.message === 'not-authenticated') return;
+  if (state.dashboardLoadPromise) { state.dashboardReloadPending = true; return state.dashboardLoadPromise; }
+  const query = transferDashboardQuery();
+  const request = (async () => {
+    try {
+      const [data, proxy] = await Promise.all([
+        api('GET', '/api/dashboard?' + query),
+        api('GET', '/api/network/proxy-check').catch(() => null),
+      ]);
+      // A filter may have changed while the request was in flight. Never let the
+      // older response paint over the new selection; the finally block queues one
+      // coalesced refresh for the latest query.
+      if (query !== transferDashboardQuery()) { state.dashboardReloadPending = true; return; }
+      data.proxy = proxy;
+      state.dashboardData = data;
+      renderDashboard();
+    } catch (e) {
+      // A transient failure keeps the previous render rather than blanking it.
+      if (e.message === 'not-authenticated') return;
+    }
+  })();
+  state.dashboardLoadPromise = request;
+  try { return await request; }
+  finally {
+    if (state.dashboardLoadPromise === request) state.dashboardLoadPromise = null;
+    if (state.dashboardReloadPending && dashboardsPageOpen() && activeDashboardTab() === 'transfers') {
+      state.dashboardReloadPending = false; setTimeout(() => loadDashboard(), 0);
+    }
   }
 }
 
 async function loadDashboardLive() {
   if (!dashboardsPageOpen() || activeDashboardTab() !== 'transfers') return;
-  try {
-    state.dashboardLiveData = await api('GET', '/api/dashboard/live');
-    renderDashboardLive();
-  } catch (e) {
-    if (e.message === 'not-authenticated') return;
+  if (state.dashboardLiveLoadPromise) { state.dashboardLiveReloadPending = true; return state.dashboardLiveLoadPromise; }
+  const request = (async () => {
+    try {
+      const data = await api('GET', '/api/dashboard/live');
+      if (!dashboardsPageOpen() || activeDashboardTab() !== 'transfers') return;
+      state.dashboardLiveData = data;
+      renderDashboardLive();
+    } catch (e) {
+      if (e.message === 'not-authenticated') return;
+    }
+  })();
+  state.dashboardLiveLoadPromise = request;
+  try { return await request; }
+  finally {
+    if (state.dashboardLiveLoadPromise === request) state.dashboardLiveLoadPromise = null;
+    if (state.dashboardLiveReloadPending && dashboardsPageOpen() && activeDashboardTab() === 'transfers') {
+      state.dashboardLiveReloadPending = false; setTimeout(() => loadDashboardLive(), 0);
+    }
   }
 }
 
@@ -5540,6 +6961,9 @@ function renderDashboard() {
   renderDashboardProxy(d.proxy, 'dash-proxy');
   renderDashboardLive();
   $('dash-activity').innerHTML = svgActivity(d.daily || []);
+  // Feature 35 — compact per-metric daily sparklines (downloads/day, deposits/day).
+  if ($('dash-mini-downloads')) $('dash-mini-downloads').innerHTML = svgMiniTrend(d.daily || [], 'down', 'var(--accent)', t('dash.dl'));
+  if ($('dash-mini-uploads')) $('dash-mini-uploads').innerHTML = svgMiniTrend(d.daily || [], 'up', 'var(--ok)', t('dash.ul'));
   $('dash-volume-trend').innerHTML = svgVolumeTrend(d.daily || []);
   $('dash-success-trend').innerHTML = svgSuccessTrend(d.daily || []);
 
@@ -5645,6 +7069,9 @@ function renderDashboard() {
   // ---- Storage & notifications ----
   renderStorage(d.storage);
   renderReceptionStorageAnalysis(d.storageAnalysis);
+  renderFileTypeStats(d.fileTypeStats || []);
+  renderStorageReport(d.storageReport);
+  renderDiagnostics(state.diagnosticsData);
   renderWebhook(d.webhook);
   const summary = $('dash-filter-summary');
   if (summary) summary.textContent = t('dash.filteredN', { n: (tot.transfers || 0).toLocaleString() });
@@ -5865,6 +7292,72 @@ function renderReceptionStorageAnalysis(a) {
   renderBarList('dash-storage-largest', (a.largestFiles || []).map((r) => ({ icon: '📄', label: r.name, value: r.bytes, valueText: formatBytes(r.bytes), sub: r.modifiedAt ? formatDate(r.modifiedAt) : '' })));
 }
 
+function fileCategoryIcon(category) {
+  return ({ image:'🖼️', video:'🎬', audio:'🎵', document:'📄', archive:'🗜️', code:'💻', other:'📦' })[category] || '📦';
+}
+function renderFileTypeStats(rows) {
+  const box = $('dash-file-type-stats');
+  if (!box) return;
+  rows = Array.isArray(rows) ? rows : [];
+  if (!rows.length) { box.innerHTML = `<div class="empty sm">${dashEsc(t('dash.empty'))}</div>`; return; }
+  const max = Math.max(1, ...rows.map((r) => Math.max(Number(r.storageBytes) || 0, Number(r.trafficBytes) || 0)));
+  box.innerHTML = `<div class="file-type-stats">${rows.map((r) => {
+    const storagePct = Math.max(1, Math.round(((Number(r.storageBytes) || 0) / max) * 100));
+    const trafficPct = Math.max(1, Math.round(((Number(r.trafficBytes) || 0) / max) * 100));
+    return `<div class="file-type-row"><div class="file-type-head"><span>${fileCategoryIcon(r.category)}</span><strong>${dashEsc(t('filecat.' + r.category))}</strong><span>${dashEsc(t('dash.filesN', { n:r.files || 0 }))}</span></div><div class="file-type-meta"><span>${dashEsc(t('dash.typeStorage', { v:formatBytes(r.storageBytes || 0) }))}</span><span>${dashEsc(t('dash.typeTraffic', { v:formatBytes(r.trafficBytes || 0) }))} · ${dashEsc(t('dash.typeTransfers', { n:r.transfers || 0 }))}</span></div><div class="file-type-bars"><i class="storage" style="width:${storagePct}%"></i><i class="traffic" style="width:${trafficPct}%"></i></div></div>`;
+  }).join('')}</div>`;
+}
+function renderStorageReport(report) {
+  const box = $('dash-storage-report');
+  if (!box) return;
+  if (!report) { box.innerHTML = `<div class="empty sm">${dashEsc(t('dash.storageNA'))}</div>`; return; }
+  const disk = report.disk || {};
+  const pct = disk.total ? Math.round(((disk.used || 0) / disk.total) * 100) : 0;
+  const summary = `<div class="dash-summary-grid"><div class="dash-mini-stat"><span class="dash-mini-ico">💾</span><div><strong>${dashEsc(formatBytes(report.managedBytes || 0))}</strong><span>${dashEsc(t('dash.storageReportTotal'))}</span></div></div><div class="dash-mini-stat"><span class="dash-mini-ico">📄</span><div><strong>${dashEsc((report.managedFiles || 0).toLocaleString())}</strong><span>${dashEsc(t('dash.storageReportFiles'))}</span></div></div><div class="dash-mini-stat"><span class="dash-mini-ico">🧹</span><div><strong>${dashEsc(formatBytes(report.reclaimableBytes || 0))}</strong><span>${dashEsc(t('dash.storageReportReclaimable'))}</span></div></div><div class="dash-mini-stat"><span class="dash-mini-ico">🗄️</span><div><strong>${disk.total ? pct + '%' : '—'}</strong><span>${dashEsc(t('dash.storageReportDisk'))}</span></div></div></div>`;
+  const rows = (report.components || []).filter((r) => (r.bytes || r.files)).sort((a,b) => (b.bytes || 0) - (a.bytes || 0));
+  const max = Math.max(1, ...rows.map((r) => Number(r.bytes) || 0));
+  const body = rows.map((r) => `<div class="storage-report-row"><div><strong>${dashEsc(t('storagepart.' + r.key))}</strong><span>${dashEsc(t('dash.filesN', { n:r.files || 0 }))}${r.reclaimableBytes ? ' · ' + dashEsc(t('dash.storageReportReclaimable')) + ': ' + dashEsc(formatBytes(r.reclaimableBytes)) : ''}</span></div><div class="storage-report-value"><strong>${dashEsc(formatBytes(r.bytes || 0))}</strong><div class="storage-report-bar"><i style="width:${Math.max(1, Math.round(((r.bytes || 0) / max) * 100))}%"></i></div></div></div>`).join('');
+  box.innerHTML = summary + `<div class="storage-report-list">${body}</div>` + (report.truncated ? `<p class="muted sm dashboard-scan-note">${dashEsc(t('dash.scanTruncated', { n:'25 000+' }))}</p>` : '');
+}
+function diagnosticDetail(c) {
+  if (!c) return '';
+  if (c.id === 'disk-space' && c.total) return `${c.pct || 0}% · ${formatBytes(c.free || 0)} free`;
+  if (c.id === 'search-index') return `${(c.indexed || 0).toLocaleString()} indexed${c.building ? ' · building' : ''}${c.error ? ' · ' + c.error : ''}`;
+  if (c.id === 'ocr') return `${c.enabled ? c.langs || '' : 'disabled'}${c.missingLanguages && c.missingLanguages.length ? ' · missing: ' + c.missingLanguages.join(', ') : ''}`;
+  if (c.id === 'clamav') return c.configured ? `${c.host || ''}:${c.port || ''}${c.error ? ' · ' + c.error : ''}` : 'not configured';
+  if (c.id === 'web-push') return `${c.subscriptions || 0} subscription(s)`;
+  if (c.id === 'pwa-assets') return c.missing && c.missing.length ? `missing: ${c.missing.join(', ')}` : `${c.pairedDevices || 0} paired device(s)`;
+  if (c.id === 'public-port') return `${c.target || '—'}${c.result && c.result.error ? ' · ' + c.result.error : ''}`;
+  if (c.id === 'reverse-proxy') return `${c.detected ? 'proxy detected' : 'direct'} · ${c.secure ? 'HTTPS' : 'HTTP'}`;
+  if (c.path) return c.path + (c.error ? ' · ' + c.error : '');
+  if (c.error) return String(c.error);
+  return '';
+}
+function renderDiagnostics(data) {
+  const box = $('dash-diagnostics'), btn = $('dash-diagnostics-run');
+  if (!box) return;
+  const role = state.settings && state.settings.role;
+  const fullAdmin = role === 'owner' || role === 'admin';
+  if (btn) { btn.classList.toggle('hidden', !fullAdmin); btn.disabled = !!state.diagnosticsRunning; btn.textContent = t(state.diagnosticsRunning ? 'diag.running' : 'diag.run'); }
+  if (!fullAdmin) { box.innerHTML = `<div class="empty sm">${dashEsc(t('diag.adminOnly'))}</div>`; return; }
+  if (state.diagnosticsRunning) { box.innerHTML = `<div class="empty sm">${dashEsc(t('diag.running'))}</div>`; return; }
+  if (!data) { box.innerHTML = `<div class="empty sm">${dashEsc(t('diag.notRun'))}</div>`; return; }
+  const sum = data.summary || {};
+  const order = ['storage','security','search','notifications','pwa','network'];
+  const groups = order.map((group) => ({ group, rows:(data.checks || []).filter((c) => c.group === group) })).filter((g) => g.rows.length);
+  box.innerHTML = `<div class="diag-summary"><strong>${dashEsc(t('diag.summary', { ok:sum.ok || 0, warn:sum.warn || 0, bad:sum.bad || 0 }))}</strong><span>${data.finishedAt ? dashEsc(formatDate(data.finishedAt)) : ''}</span></div>` + groups.map((g) => `<section class="diag-group"><h4>${dashEsc(t('diag.group.' + g.group))}</h4>${g.rows.map((c) => `<div class="diag-row diag-${dashEsc(c.status || 'info')}"><span class="diag-dot"></span><div><strong>${dashEsc(t('diag.check.' + c.id))}</strong><span>${dashEsc(diagnosticDetail(c))}</span></div><b>${dashEsc(t('diag.status.' + (c.status || 'info')))}</b></div>`).join('')}</section>`).join('');
+}
+async function runDiagnostics() {
+  if (state.diagnosticsRunning) return;
+  state.diagnosticsRunning = true; renderDiagnostics(state.diagnosticsData);
+  try { state.diagnosticsData = await api('POST', '/api/diagnostics/run', {}); }
+  catch (e) { toast(t('diag.failed'), 'err'); }
+  finally { state.diagnosticsRunning = false; renderDiagnostics(state.diagnosticsData); }
+}
+
+const diagnosticsRunButton = $('dash-diagnostics-run');
+if (diagnosticsRunButton) diagnosticsRunButton.addEventListener('click', runDiagnostics);
+
 function renderWebhook(w) {
   const box = $('dash-webhook');
   if (!box) return;
@@ -5936,6 +7429,32 @@ function svgActivity(daily) {
   return `<svg viewBox="0 0 ${W} ${H}" class="barchart" preserveAspectRatio="xMidYMid meet">` +
     `<line x1="${padL}" y1="${base}" x2="${W - padR}" y2="${base}" class="axis"/>` +
     `<text x="${padL}" y="${padT + 2}" class="ax">${max}</text>${bars}${labels}</svg>`;
+}
+
+// Feature 35 — a compact single-series sparkline (area + line + peak marker) for one
+// per-day metric ("down" = downloads/day, "up" = deposits/day). The daily buckets
+// already carry up/down counts, so this is a pure read-side visualization.
+function svgMiniTrend(daily, field, color, label) {
+  const vals = (daily || []).map((d) => Math.max(0, Number(d && d[field]) || 0));
+  const total = vals.reduce((a, b) => a + b, 0);
+  if (!vals.length || total === 0) return `<div class="empty sm">${dashEsc(t('dash.empty'))}</div>`;
+  const W = 320, H = 54, padX = 3, padY = 6;
+  const n = vals.length, iw = W - padX * 2, ih = H - padY * 2;
+  const max = Math.max(1, ...vals);
+  const xAt = (i) => padX + (n === 1 ? iw / 2 : (i * iw) / (n - 1));
+  const yAt = (v) => padY + ih - (v / max) * ih;
+  const pts = vals.map((v, i) => `${xAt(i).toFixed(1)},${yAt(v).toFixed(1)}`);
+  const line = pts.join(' ');
+  const area = `${padX},${(padY + ih).toFixed(1)} ${line} ${(padX + iw).toFixed(1)},${(padY + ih).toFixed(1)}`;
+  let peakIdx = 0; vals.forEach((v, i) => { if (v > vals[peakIdx]) peakIdx = i; });
+  const lastVal = vals[n - 1];
+  const title = `${label || field} · ${t('dash.total')}: ${total} · max ${vals[peakIdx]} (${daily[peakIdx].day})`;
+  return `<svg viewBox="0 0 ${W} ${H}" class="sparkline" preserveAspectRatio="none" role="img">` +
+    `<title>${dashEsc(title)}</title>` +
+    `<polygon points="${area}" fill="${color}" opacity="0.14"/>` +
+    `<polyline points="${line}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>` +
+    `<circle cx="${xAt(peakIdx).toFixed(1)}" cy="${yAt(vals[peakIdx]).toFixed(1)}" r="2.4" fill="${color}"/>` +
+    `<text x="${(padX + iw).toFixed(1)}" y="10" text-anchor="end" class="ax">${lastVal}</text></svg>`;
 }
 
 function svgVolumeTrend(daily) {
@@ -6073,17 +7592,30 @@ if (dashFilterReset) dashFilterReset.addEventListener('click', () => {
 // Images dashboard (mirrors the main dashboard, scoped to image links)
 // ------------------------------------------------------------------
 async function loadImagesDashboard() {
-  try {
-    const imageBase = state.settings && state.settings.imageBase ? state.settings.imageBase : '';
-    const [data, proxy] = await Promise.all([
-      api('GET', '/api/photos/dashboard?' + imagesDashboardQuery()),
-      api('GET', '/api/network/proxy-check?base=' + encodeURIComponent(imageBase)).catch(() => null),
-    ]);
-    data.proxy = proxy;
-    state.imagesDashData = data;
-    renderImagesDashboard();
-  } catch (e) {
-    if (e.message === 'not-authenticated') return; // keep the previous render
+  if (state.imagesDashboardLoadPromise) { state.imagesDashboardReloadPending = true; return state.imagesDashboardLoadPromise; }
+  const query = imagesDashboardQuery();
+  const imageBase = state.settings && state.settings.imageBase ? state.settings.imageBase : '';
+  const request = (async () => {
+    try {
+      const [data, proxy] = await Promise.all([
+        api('GET', '/api/photos/dashboard?' + query),
+        api('GET', '/api/network/proxy-check?base=' + encodeURIComponent(imageBase)).catch(() => null),
+      ]);
+      if (query !== imagesDashboardQuery()) { state.imagesDashboardReloadPending = true; return; }
+      data.proxy = proxy;
+      state.imagesDashData = data;
+      renderImagesDashboard();
+    } catch (e) {
+      if (e.message === 'not-authenticated') return; // keep the previous render
+    }
+  })();
+  state.imagesDashboardLoadPromise = request;
+  try { return await request; }
+  finally {
+    if (state.imagesDashboardLoadPromise === request) state.imagesDashboardLoadPromise = null;
+    if (state.imagesDashboardReloadPending && dashboardsPageOpen() && activeDashboardTab() === 'images') {
+      state.imagesDashboardReloadPending = false; setTimeout(() => loadImagesDashboard(), 0);
+    }
   }
 }
 
@@ -6562,7 +8094,15 @@ async function openConfigModal() {
   $('cfg-notify-downloads').checked = s.notifyDownloads !== false;
   $('cfg-notify-uploads').checked = s.notifyUploads !== false;
   $('cfg-notify-messages').checked = s.notifyMessages !== false;
+  if ($('cfg-notify-aggregate')) $('cfg-notify-aggregate').value = Math.max(0, Number(s.notifyAggregateSeconds) || 0);
   $('cfg-webhook-result').textContent = '';
+  // Account-scoped notification-center choices are independent from the server-wide
+  // webhook/e-mail settings. Refresh them whenever Configuration is opened so a
+  // change made from the PWA or another tab is reflected here.
+  setNotificationPrefsStatus('');
+  renderNotificationPrefs();
+  void loadNotificationPrefs();
+  void loadNotificationRules();
   refreshWebPushUI(); // browser push notifications (async, updates the button/status)
   // Notifications — expiry alert (feature 5) + periodic digest (feature 9)
   $('cfg-notify-expiring').checked = !!s.notifyExpiring;
@@ -6573,6 +8113,18 @@ async function openConfigModal() {
   $('cfg-digest-days').disabled = !s.digestEnabled;
   $('cfg-digest-result').textContent = '';
   if ($('cfg-notify-security')) $('cfg-notify-security').checked = !!s.notifySecurity;
+  if ($('cfg-ransom-enable')) $('cfg-ransom-enable').checked = s.ransomwareProtection !== false;
+  if ($('cfg-ransom-delete')) $('cfg-ransom-delete').value = s.ransomwareDeleteThreshold || 25;
+  if ($('cfg-ransom-upload')) $('cfg-ransom-upload').value = s.ransomwareUploadThreshold || 120;
+  if ($('cfg-ransom-block')) $('cfg-ransom-block').value = s.ransomwareBlockMinutes || 30;
+  ['cfg-ransom-delete','cfg-ransom-upload','cfg-ransom-block'].forEach((id) => { if ($(id)) $(id).disabled = s.ransomwareProtection === false; });
+  refreshRansomwareStatus();
+  if ($('cfg-dlp-enable')) $('cfg-dlp-enable').checked = s.dlpEnabled !== false;
+  if ($('cfg-dlp-mode')) $('cfg-dlp-mode').value = s.dlpMode || 'warn';
+  if ($('cfg-dlp-maxfiles')) $('cfg-dlp-maxfiles').value = s.dlpMaxFiles || 100;
+  if ($('cfg-dlp-maxmb')) $('cfg-dlp-maxmb').value = s.dlpMaxFileMB || 25;
+  if ($('cfg-dlp-ocr')) $('cfg-dlp-ocr').checked = s.dlpScanOcr !== false;
+  ['cfg-dlp-mode','cfg-dlp-maxfiles','cfg-dlp-maxmb','cfg-dlp-ocr'].forEach((id) => { if ($(id)) $(id).disabled = s.dlpEnabled === false; });
   // Notifications — e-mail / SMTP (feature 2)
   const envMail = !!s.emailFromEnv;
   const mailAvail = s.emailAvailable !== false;
@@ -6613,6 +8165,12 @@ async function openConfigModal() {
   $('cfg-def-reqpw').checked = !!s.defaultRequirePassword;
   $('cfg-def-burn').checked = !!s.defaultBurnAfterDownload;
   $('cfg-def-qr').checked = !!s.defaultShowQr;
+  if ($('cfg-def-color')) $('cfg-def-color').value = s.defaultShareColor || '';
+  if ($('cfg-def-tags')) $('cfg-def-tags').value = s.defaultShareTags || '';
+  if ($('cfg-def-description')) $('cfg-def-description').value = s.defaultDescriptionMd || '';
+  if ($('cfg-def-reminder')) $('cfg-def-reminder').value = s.defaultExpiryReminderHours == null ? '-1' : String(s.defaultExpiryReminderHours);
+  if ($('cfg-def-firstuse')) $('cfg-def-firstuse').value = s.defaultFirstUseExpiryHours ? String(s.defaultFirstUseExpiryHours) : '';
+  if ($('cfg-def-inactive')) $('cfg-def-inactive').value = s.defaultInactiveExpiryDays ? String(s.defaultInactiveExpiryDays) : '';
   $('cfg-def-startdelay').value = s.defaultStartDelayHours ? String(s.defaultStartDelayHours) : '';
   $('cfg-default-dir').value = s.defaultShareDir || '';
   // Reception-link defaults
@@ -6626,6 +8184,7 @@ async function openConfigModal() {
   $('cfg-global-rate').value = s.globalRateKBps ? String(s.globalRateKBps) : '';
   $('cfg-max-upload').value = s.maxUploadBytes ? String(Math.round(s.maxUploadBytes / (1024 * 1024))) : '';
   $('cfg-max-zip').value = s.maxZipBytes ? String(Math.round(s.maxZipBytes / (1024 * 1024))) : '';
+  if ($('cfg-reception-cap')) $('cfg-reception-cap').value = s.receptionStorageCapGB ? String(s.receptionStorageCapGB) : ''; // feature 10
   // Maintenance
   $('cfg-update-check').checked = s.updateCheck !== false;
   $('cfg-update-check').disabled = !!s.updateCheckEnv;
@@ -6653,6 +8212,9 @@ async function openConfigModal() {
   $('cfg-retention').value = s.historyRetentionDays ? String(s.historyRetentionDays) : '';
   $('cfg-log-retention').value = s.logRetentionDays ? String(s.logRetentionDays) : '';
   $('cfg-inbox-retention').value = s.inboxRetentionDays ? String(s.inboxRetentionDays) : '';
+  if ($('cfg-trash-retention')) $('cfg-trash-retention').value = s.trashRetentionDays == null ? '30' : String(s.trashRetentionDays);
+  if ($('cfg-auto-archive-expired')) $('cfg-auto-archive-expired').value = s.autoArchiveExpiredDays ? String(s.autoArchiveExpiredDays) : '';
+  if ($('cfg-expired-data-retention')) $('cfg-expired-data-retention').value = s.expiredDataRetentionDays ? String(s.expiredDataRetentionDays) : '';
   $('cfg-anon-ip').checked = !!s.anonymizeIps;
   $('cfg-keep-names').checked = s.keepIpNames !== false;
   $('cfg-clear-names-result').textContent = '';
@@ -6677,6 +8239,7 @@ async function openConfigModal() {
   renderLogoPreview();
   $('cfg-logo-result').textContent = '';
   $('cfg-legal').value = s.legalNotice || '';
+  if ($('cfg-announcement')) $('cfg-announcement').value = s.announcement || ''; // feature 11
   $('cfg-watermark').checked = !!s.watermarkPreviews;
   $('cfg-import-result').textContent = '';
   $('cfg-shares-import-result').textContent = '';
@@ -6725,6 +8288,30 @@ async function openConfigModal() {
     } catch (_) { /* leave the placeholder; the field is refetched on the next open */ }
   }
 }
+async function refreshRansomwareStatus() {
+  const out = $('cfg-ransom-status'), list = $('cfg-ransom-blocks');
+  if (!out || !list) return;
+  list.textContent = '';
+  try {
+    const r = await api('GET', '/api/security/anomalies');
+    const blocks = (r && r.blocks) || [];
+    out.textContent = blocks.length ? t('cfg.ransomBlocked', { n: blocks.length }) : t('cfg.ransomNone');
+    out.className = 'sm' + (blocks.length ? ' cfg-bad' : ' cfg-ok');
+    blocks.forEach((rec) => {
+      const row = el('div', { class: 'ransom-block-row' });
+      row.appendChild(el('span', { text: (rec.ip || '?') + ' · ' + (rec.reason || '') + ' · ' + new Date(rec.until).toLocaleString() }));
+      const b = el('button', { class: 'btn ghost xs', text: t('cfg.ransomUnblock') });
+      b.addEventListener('click', async () => {
+        b.disabled = true;
+        try { await api('POST', '/api/security/anomalies/unblock', { ip: rec.ip }); await refreshRansomwareStatus(); }
+        catch (_) { b.disabled = false; }
+      });
+      row.appendChild(b); list.appendChild(row);
+    });
+  } catch (_) { out.textContent = t('cfg.ransomNone'); out.className = 'muted sm'; }
+}
+if ($('cfg-ransom-refresh')) $('cfg-ransom-refresh').addEventListener('click', refreshRansomwareStatus);
+
 function closeConfigModal() { $('config-overlay').classList.add('hidden'); }
 if ($('config-btn')) $('config-btn').addEventListener('click', (e) => {
   e.stopPropagation();
@@ -6763,9 +8350,29 @@ bindToggle('cfg-sched-enable', ['cfg-sched-rate', 'cfg-sched-start', 'cfg-sched-
 bindToggle('cfg-prl-enable', ['cfg-prl-max', 'cfg-prl-window']);
 bindToggle('cfg-chal-enable', ['cfg-chal-min', 'cfg-chal-bits']);
 bindToggle('cfg-leak-enable', ['cfg-leak-countries', 'cfg-leak-window']);
+bindToggle('cfg-ransom-enable', ['cfg-ransom-delete', 'cfg-ransom-upload', 'cfg-ransom-block']);
+bindToggle('cfg-dlp-enable', ['cfg-dlp-mode', 'cfg-dlp-maxfiles', 'cfg-dlp-maxmb', 'cfg-dlp-ocr']);
 // Feature 4 — download the admin audit log.
 if ($('cfg-audit-json')) $('cfg-audit-json').addEventListener('click', () => window.open('/api/audit/export?format=json', '_blank'));
 if ($('cfg-audit-csv')) $('cfg-audit-csv').addEventListener('click', () => window.open('/api/audit/export?format=csv', '_blank'));
+
+// Feature 18 — emergency stop: pause / resume every active link at once.
+async function panicAction(path, key) {
+  const out = $('cfg-panic-result');
+  try {
+    const r = await api('POST', path, {});
+    const n = r && (r.paused != null ? r.paused : r.resumed) || 0;
+    if (out) out.textContent = t(key, { n });
+    refreshShares();
+  } catch (e) {
+    if (out) out.textContent = t('cfg.panicFail');
+  }
+}
+if ($('cfg-pause-all')) $('cfg-pause-all').addEventListener('click', () => {
+  if (!window.confirm(t('cfg.panicConfirm'))) return;
+  panicAction('/api/shares/pause-all', 'cfg.panicPaused');
+});
+if ($('cfg-resume-all')) $('cfg-resume-all').addEventListener('click', () => panicAction('/api/shares/resume-all', 'cfg.panicResumed'));
 
 // --- Scheduled backup + restore ---
 function updateBackupDestFields() {
@@ -6790,7 +8397,7 @@ if ($('cfg-bk-interval')) $('cfg-bk-interval').addEventListener('change', update
 if ($('cfg-bk-now')) $('cfg-bk-now').addEventListener('click', async () => {
   const out = $('cfg-bk-result'); out.textContent = t('cfg.bkRunning'); out.className = 'muted sm';
   try {
-    const r = await api('POST', '/api/backup-now', {});
+    const r = await api('POST', '/api/backup-now', {}, 10 * 60 * 1000);
     if (r && r.result && r.result.ok) { out.textContent = t('cfg.bkDone'); out.className = 'sm cfg-ok'; }
     else { out.textContent = t('cfg.bkFail') + (r && r.error ? ' (' + r.error + ')' : ''); out.className = 'sm cfg-bad'; }
     if (r && r.lastBackup) { state.settings.lastBackup = r.lastBackup; renderBackupStatus(r.lastBackup); }
@@ -6799,7 +8406,7 @@ if ($('cfg-bk-now')) $('cfg-bk-now').addEventListener('click', async () => {
 if ($('cfg-bk-test')) $('cfg-bk-test').addEventListener('click', async () => {
   const out = $('cfg-bk-result'); out.textContent = t('cfg.bkTesting'); out.className = 'muted sm';
   try {
-    const r = await api('POST', '/api/backup-test', {});
+    const r = await api('POST', '/api/backup-test', {}, 90 * 1000);
     if (r && r.ok) { out.textContent = t('cfg.bkTestOk'); out.className = 'sm cfg-ok'; }
     else { out.textContent = t('cfg.bkTestFail') + (r && r.error ? ' (' + r.error + ')' : ''); out.className = 'sm cfg-bad'; }
   } catch (e) { out.textContent = t('cfg.bkTestFail') + (e.data && e.data.error ? ' (' + e.data.error + ')' : ''); out.className = 'sm cfg-bad'; }
@@ -7089,10 +8696,20 @@ if ($('config-form')) $('config-form').addEventListener('submit', async (e) => {
     notifyDownloads: $('cfg-notify-downloads').checked,
     notifyUploads: $('cfg-notify-uploads').checked,
     notifyMessages: $('cfg-notify-messages').checked,
+    notifyAggregateSeconds: $('cfg-notify-aggregate') ? Math.max(0, Math.min(3600, parseInt($('cfg-notify-aggregate').value, 10) || 0)) : undefined,
     notifyExpiring: $('cfg-notify-expiring').checked,
     expiryWarnHours: parseInt($('cfg-expiry-hours').value, 10) || 24,
     digestEnabled: $('cfg-digest-enable').checked,
     notifySecurity: $('cfg-notify-security').checked,
+    ransomwareProtection: $('cfg-ransom-enable').checked,
+    ransomwareDeleteThreshold: parseInt($('cfg-ransom-delete').value, 10) || 25,
+    ransomwareUploadThreshold: parseInt($('cfg-ransom-upload').value, 10) || 120,
+    ransomwareBlockMinutes: parseInt($('cfg-ransom-block').value, 10) || 30,
+    dlpEnabled: $('cfg-dlp-enable') ? $('cfg-dlp-enable').checked : true,
+    dlpMode: $('cfg-dlp-mode') ? $('cfg-dlp-mode').value : 'warn',
+    dlpMaxFiles: $('cfg-dlp-maxfiles') ? (parseInt($('cfg-dlp-maxfiles').value, 10) || 100) : 100,
+    dlpMaxFileMB: $('cfg-dlp-maxmb') ? (parseInt($('cfg-dlp-maxmb').value, 10) || 25) : 25,
+    dlpScanOcr: $('cfg-dlp-ocr') ? $('cfg-dlp-ocr').checked : true,
     digestDays: parseInt($('cfg-digest-days').value, 10) || 7,
     defaultExpiry: parseInt($('cfg-def-expiry').value, 10) || 0,
     defaultMaxDownloads: parseInt($('cfg-def-maxdl').value, 10) || 0,
@@ -7102,6 +8719,12 @@ if ($('config-form')) $('config-form').addEventListener('submit', async (e) => {
     defaultRequirePassword: $('cfg-def-reqpw').checked,
     defaultBurnAfterDownload: $('cfg-def-burn').checked,
     defaultShowQr: $('cfg-def-qr').checked,
+    defaultShareColor: $('cfg-def-color') ? $('cfg-def-color').value.trim() : '',
+    defaultShareTags: $('cfg-def-tags') ? $('cfg-def-tags').value : '',
+    defaultDescriptionMd: $('cfg-def-description') ? $('cfg-def-description').value : '',
+    defaultExpiryReminderHours: $('cfg-def-reminder') && $('cfg-def-reminder').value !== '' ? Number($('cfg-def-reminder').value) : -1,
+    defaultFirstUseExpiryHours: $('cfg-def-firstuse') ? (parseFloat($('cfg-def-firstuse').value) || 0) : 0,
+    defaultInactiveExpiryDays: $('cfg-def-inactive') ? (parseFloat($('cfg-def-inactive').value) || 0) : 0,
     defaultStartDelayHours: parseInt($('cfg-def-startdelay').value, 10) || 0,
     defaultShareDir: $('cfg-default-dir').value.trim(),
     defaultMaxFiles: parseInt($('cfg-def-maxfiles').value, 10) || 0,
@@ -7119,6 +8742,7 @@ if ($('config-form')) $('config-form').addEventListener('submit', async (e) => {
     globalRateKBps: parseInt($('cfg-global-rate').value, 10) || 0,
     maxUploadBytes: mb('cfg-max-upload'),
     maxZipBytes: mb('cfg-max-zip'),
+    receptionStorageCapGB: $('cfg-reception-cap') ? (parseFloat($('cfg-reception-cap').value) || 0) : 0, // feature 10
     updateCheck: $('cfg-update-check').checked,
     scheduleRateEnabled: $('cfg-sched-enable').checked,
     scheduleRateKBps: parseInt($('cfg-sched-rate').value, 10) || 0,
@@ -7135,10 +8759,14 @@ if ($('config-form')) $('config-form').addEventListener('submit', async (e) => {
     leakAlertWindowHours: parseInt($('cfg-leak-window').value, 10) || 24,
     publicLogo: cfgLogoData || '',
     legalNotice: $('cfg-legal').value.trim(),
+    announcement: $('cfg-announcement') ? $('cfg-announcement').value.trim() : '', // feature 11
     watermarkPreviews: $('cfg-watermark').checked,
     historyRetentionDays: parseInt($('cfg-retention').value, 10) || 0,
     logRetentionDays: parseInt($('cfg-log-retention').value, 10) || 0,
     inboxRetentionDays: parseInt($('cfg-inbox-retention').value, 10) || 0,
+    trashRetentionDays: $('cfg-trash-retention') ? Math.max(0, parseInt($('cfg-trash-retention').value, 10) || 0) : 30,
+    autoArchiveExpiredDays: $('cfg-auto-archive-expired') ? Math.max(0, parseInt($('cfg-auto-archive-expired').value, 10) || 0) : 0,
+    expiredDataRetentionDays: $('cfg-expired-data-retention') ? Math.max(0, parseInt($('cfg-expired-data-retention').value, 10) || 0) : 0,
     anonymizeIps: $('cfg-anon-ip').checked,
     keepIpNames: $('cfg-keep-names').checked,
     brandName: $('cfg-brand').value.trim(),
@@ -7198,6 +8826,10 @@ if ($('config-form')) $('config-form').addEventListener('submit', async (e) => {
   if (payload.inboxRetentionDays > 0 && payload.inboxRetentionDays !== prevInboxRet) {
     if (!confirm(t('cfg.inboxRetentionConfirm', { n: payload.inboxRetentionDays }))) return;
   }
+  const prevExpiredRet = (state.settings && parseInt(state.settings.expiredDataRetentionDays, 10)) || 0;
+  if (payload.expiredDataRetentionDays > 0 && payload.expiredDataRetentionDays !== prevExpiredRet) {
+    if (!confirm(t('cfg.expiredDataRetentionConfirm', { n: payload.expiredDataRetentionDays }))) return;
+  }
   try {
     const r = await api('POST', '/api/settings', payload);
     if (r) { state.settings = r; applyBranding(r); }
@@ -7228,6 +8860,7 @@ function applyRole(role) {
   const isFull = role === 'owner' || role === 'admin' || !role;
   const canCreate = isFull || role === 'operator'; // operators create their own links
   show('config-btn', isFull);         // global settings: owner/admin only
+  show('search-reindex', isFull);
   show('new-share-btn', canCreate);
   show('new-inbox-btn', canCreate);
   show('new-collab-btn', canCreate);
@@ -7236,6 +8869,8 @@ function applyRole(role) {
   show('export-csv-btn', isFull);
   show('export-json-btn', isFull);
   show('history-clear-btn', isFull);
+  show('live-activity-btn', isFull || role === 'auditor');
+  show('trash-purge-all', isFull);
   show('photos-history-purge', canCreate);
   // Auditors are read-only: CSS (body[data-role="auditor"]) hides the remaining
   // mutating controls (shutdown toggle, per-link actions, tags, bulk bar).
@@ -7413,6 +9048,7 @@ function startPolling() {
     state.pollTimer = setInterval(refreshShares, REFRESH_MS);
     state.historyRenderTimer = setInterval(renderHistoryPage, 60000);
   }
+  startSharePresence();
   if (dashboardsPageOpen()) startDashboardAutoRefresh(activeDashboardTab());
 }
 function stopPolling() {
@@ -7432,12 +9068,59 @@ function stopPolling() {
     clearInterval(state.historyRenderTimer);
     state.historyRenderTimer = null;
   }
+  stopSharePresence();
+}
+
+// Feature 20 — authoritative per-link download presence. SSE updates only the
+// affected badges, avoiding a full list re-render that could destroy inline edits.
+function applySharePresence() {
+  document.querySelectorAll('[data-share-id]').forEach((node) => {
+    const id = node.getAttribute('data-share-id');
+    const n = Math.max(0, Number(state.sharePresenceCounts[id]) || 0);
+    let badge = node.querySelector('.download-presence-badge');
+    if (!badge && n > 0) {
+      badge = el('span', { class: 'badge download-presence-badge', attrs: { role: 'status', 'aria-live': 'polite' } });
+      const badges = node.querySelector('.share-badges');
+      (badges || node).appendChild(badge);
+    }
+    if (!badge) return;
+    badge.textContent = n > 0 ? '⬇ ' + t('sh.downloadingNow', { n }) : '';
+    badge.title = n > 0 ? t('sh.downloadingNow', { n }) : '';
+    badge.classList.toggle('hidden', n < 1);
+  });
+}
+function startSharePresence() {
+  if (state.sharePresenceSource || typeof EventSource !== 'function' || !isLoggedIn()) return;
+  try { state.sharePresenceSource = new EventSource('/api/shares/presence/stream', { withCredentials: true }); }
+  catch (_) { state.sharePresenceSource = null; return; }
+  state.sharePresenceSource.addEventListener('presence', (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      state.sharePresenceCounts = data && data.counts && typeof data.counts === 'object' ? data.counts : Object.create(null);
+    } catch (_) { state.sharePresenceCounts = Object.create(null); }
+    applySharePresence();
+  });
+  state.sharePresenceSource.addEventListener('error', () => {
+    if (state.sharePresenceSource && state.sharePresenceSource.readyState === 2) stopSharePresence();
+  });
+}
+function stopSharePresence() {
+  if (state.sharePresenceSource) { try { state.sharePresenceSource.close(); } catch (_) {} }
+  state.sharePresenceSource = null;
+  state.sharePresenceCounts = Object.create(null);
+  applySharePresence();
 }
 
 async function refreshShares() {
+  if (state.sharesRefreshPromise) {
+    state.sharesRefreshPending = true;
+    return state.sharesRefreshPromise;
+  }
+  const request = (async () => {
   const epoch = state.settingsEpoch;
   try {
     const data = await api('GET', '/api/shares');
+    state.sharesLoaded = true;
     if (state.connLost) {
       state.connLost = false;
       hideBanner();
@@ -7472,7 +9155,14 @@ async function refreshShares() {
     // leave lastSharesJson stale so the render happens on the next poll after editing.
     const listEl = $('shares-list');
     const a = document.activeElement;
-    const editingInList = a && listEl && listEl.contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName);
+    // Only pause polling for controls where a re-render could destroy text being
+    // actively edited. Checkboxes, radios and selects can keep focus after a click;
+    // treating them as "editing" froze live counters/statuses until focus moved.
+    const editingInList = a && listEl && listEl.contains(a) && (
+      a.tagName === 'TEXTAREA'
+      || (a.tagName === 'INPUT' && !['checkbox', 'radio', 'button', 'submit', 'reset', 'range', 'color', 'file'].includes(String(a.type || '').toLowerCase()))
+      || a.isContentEditable
+    );
     const json = JSON.stringify(data.shares);
     if (json !== state.lastSharesJson && !editingInList) {
       state.lastSharesJson = json;
@@ -7483,8 +9173,24 @@ async function refreshShares() {
       stopPolling();
       return;
     }
+    // A response started under the previous account is intentionally discarded.
+    // It is not a connectivity failure and must not paint an offline banner over
+    // the freshly authenticated principal.
+    if (e.message === 'stale-auth') return;
     state.connLost = true;
     showBanner(t('sh.connLost'));
+  }
+
+  })();
+  state.sharesRefreshPromise = request;
+  try {
+    return await request;
+  } finally {
+    if (state.sharesRefreshPromise === request) state.sharesRefreshPromise = null;
+    if (state.sharesRefreshPending && isLoggedIn() && !document.hidden) {
+      state.sharesRefreshPending = false;
+      setTimeout(() => refreshShares(), 0);
+    }
   }
 }
 
@@ -7735,13 +9441,13 @@ function quotaBar(s) {
   let used = 0, max = 0, label = '';
   if (s.type === 'inbox' && s.inbox) {
     if (s.inbox.maxTotalBytes) { used = s.inbox.bytesReceived || 0; max = s.inbox.maxTotalBytes; label = formatBytes(used) + ' / ' + formatBytes(max); }
-    else if (s.inbox.maxFiles) { used = s.downloads || 0; max = s.inbox.maxFiles; label = used + ' / ' + max + ' 📄'; }
+    else if (s.inbox.maxFiles) { used = s.downloadsUsed || s.downloads || 0; max = s.inbox.maxFiles; label = used + ' / ' + max + ' 📄'; }
   } else if (s.type === 'collab' && s.collab && s.collab.maxTotalBytes) {
     used = s.collab.bytesReceived || 0; max = s.collab.maxTotalBytes; label = formatBytes(used) + ' / ' + formatBytes(max);
   } else if (s.maxDownloads) {
-    used = s.downloads || 0; max = s.maxDownloads; label = used + ' / ' + max + ' ⬇';
+    used = s.downloadsUsed || s.downloads || 0; max = s.maxDownloads; label = used + ' / ' + max + ' ⬇';
   } else if (s.maxVisitors) {
-    used = s.uniqueVisitors || 0; max = s.maxVisitors; label = used + ' / ' + max + ' 👤';
+    used = s.uniqueVisitorsUsed || s.uniqueVisitors || 0; max = s.maxVisitors; label = used + ' / ' + max + ' 👤';
   }
   if (!max) return null;
   const pct = Math.max(0, Math.min(100, Math.round((used / max) * 100)));
@@ -7752,6 +9458,195 @@ function quotaBar(s) {
   wrap.appendChild(bar);
   wrap.appendChild(el('span', { class: 'quota-label', text: label + ' · ' + pct + '%' }));
   return wrap;
+}
+
+function expiryProgressCard(s) {
+  if (!s) return null;
+  const now = Date.now();
+  const fixed = Number(s.expiresAt) || 0;
+  const firstUse = Number(s.firstUseExpiresAt) || 0;
+  const inactive = Number(s.inactiveExpiresAt) || 0;
+  const deadlines = [fixed, firstUse, inactive].filter((v) => v > 0);
+  const deadline = deadlines.length ? Math.min(...deadlines) : 0;
+  if (!deadline) return null;
+  const inactivityWins = inactive && deadline === inactive;
+  const firstUseWins = firstUse && deadline === firstUse;
+  const start = inactivityWins
+    ? Math.min(Number(s.lastUseAt) || Number(s.createdAt) || now, deadline)
+    : firstUseWins
+      ? Math.min(Number(s.firstUsedAt) || Number(s.createdAt) || now, deadline)
+      : Math.min(Number(s.expirySetAt) || Number(s.createdAt) || now, deadline);
+  const total = Math.max(1, deadline - start);
+  const remaining = deadline - now;
+  const pct = Math.max(0, Math.min(100, Math.round(((now - start) / total) * 100)));
+  const box = el('div', { class: 'share-expiry-progress' + (remaining <= 0 ? ' expired' : remaining < 86400000 ? ' urgent' : '') });
+  const head = el('div', { class: 'share-expiry-head' });
+  head.appendChild(el('span', { text: '⏳ ' + t('sh.expiryProgress') }));
+  head.appendChild(el('span', { text: remaining <= 0 ? t('sh.expired') : t('sh.expiresIn', { v: formatDuration(remaining) }) }));
+  box.appendChild(head);
+  const track = el('div', { class: 'share-expiry-track' });
+  const fill = el('i'); fill.style.width = pct + '%'; track.appendChild(fill); box.appendChild(track);
+  return box;
+}
+function transferSummaryLine(label, summary, direction) {
+  if (!summary || !summary.at) return null;
+  const bits = [timeAgo(summary.at), summary.name || '', summary.bytes ? formatBytes(summary.bytes) : '', summary.ip || '', summary.country || ''].filter(Boolean);
+  const row = el('div', { class: 'share-sub share-last-transfer' });
+  row.appendChild(el('span', { class: 'sl-label', text: (direction === 'up' ? '⬆ ' : '⬇ ') + label }));
+  row.appendChild(el('span', { text: bits.join(' · ') }));
+  return row;
+}
+function automationRulesLine(s) {
+  const bits = [];
+  const hasExpiryRule = !!(s.expiresAt || s.firstUseExpirySeconds || s.inactiveExpirySeconds);
+  if (s.firstUseExpirySeconds) bits.push(t('sh.firstUseRule', { v: formatDuration(s.firstUseExpirySeconds * 1000) }));
+  if (s.inactiveExpirySeconds) bits.push(t('sh.inactiveRule', { v: formatDuration(s.inactiveExpirySeconds * 1000) }));
+  // A reminder has no effect on a link that can never expire; do not show a
+  // misleading "global reminder" row on unlimited links.
+  if (hasExpiryRule) {
+    if (s.expiryReminderHours === 0) bits.push('🔕 ' + t('sh.reminderOff'));
+    else if (s.expiryReminderHours != null) bits.push('🔔 ' + formatDuration(s.expiryReminderHours * 3600000));
+    else bits.push('🔔 ' + t('sh.reminderGlobal'));
+  }
+  if (!bits.length) return null;
+  const row = el('div', { class: 'share-sub share-rules' });
+  row.appendChild(el('span', { class: 'sl-label', text: '⚙' }));
+  row.appendChild(el('span', { text: bits.join(' · ') }));
+  return row;
+}
+function toggleInlineQr(s, card, button) {
+  let box = card.querySelector('.share-inline-qr');
+  if (box) {
+    const hidden = box.classList.toggle('hidden');
+    button.textContent = hidden ? t('sh.qr') : t('sh.hideQr');
+    return;
+  }
+  box = el('div', { class: 'share-inline-qr' });
+  const img = el('img', { attrs: { alt: 'QR ' + (s.name || '') } });
+  img.src = '/api/qr?data=' + encodeURIComponent(s.url || '');
+  box.appendChild(img);
+  box.appendChild(el('div', { class: 'share-inline-qr-url', text: s.url || s.path || '' }));
+  const actions = card.querySelector('.share-actions');
+  if (actions) card.insertBefore(box, actions); else card.appendChild(box);
+  button.textContent = t('sh.hideQr');
+}
+async function resetShareStats(s) {
+  if (!confirm(t('sh.resetStatsConfirm', { name: s.name || '' }))) return;
+  try { await api('POST', '/api/shares/' + encodeURIComponent(s.id) + '/reset-stats', {}); toast(t('sh.statsReset'), 'ok'); refreshShares(); }
+  catch (_) { toast(t('sh.statsResetFail'), 'err'); }
+}
+let commentShare = null;
+function ensureShareCommentsModal() {
+  let overlay = $('share-comments-overlay');
+  if (overlay) return overlay;
+  overlay = el('div', { class: 'overlay hidden', attrs: { id: 'share-comments-overlay' } });
+  const modal = el('div', { class: 'modal share-comments-modal', attrs: { role: 'dialog', 'aria-modal': 'true' } });
+  const head = el('div', { class: 'modal-head' });
+  head.appendChild(el('h3', { text: t('sh.commentsTitle') }));
+  const close = el('button', { class: 'icon-btn', text: '✕', attrs: { type: 'button', 'aria-label': 'Close' } });
+  close.addEventListener('click', () => overlay.classList.add('hidden')); head.appendChild(close); modal.appendChild(head);
+  modal.appendChild(el('p', { class: 'muted sm', attrs: { id: 'share-comments-name' } }));
+  modal.appendChild(el('div', { class: 'share-comments-list', attrs: { id: 'share-comments-list' } }));
+  const textarea = el('textarea', { class: 'share-comments-input', attrs: { id: 'share-comments-input', rows: '3', maxlength: '2000', placeholder: t('sh.commentPh') } }); modal.appendChild(textarea);
+  const foot = el('div', { class: 'modal-foot' }); foot.appendChild(el('div'));
+  const add = el('button', { class: 'btn sm', text: t('sh.commentAdd'), attrs: { type: 'button' } });
+  add.addEventListener('click', async () => {
+    if (!commentShare) return; const text = textarea.value.trim(); if (!text) return;
+    try { await api('POST', '/api/shares/' + encodeURIComponent(commentShare.id) + '/comments', { text }); textarea.value = ''; await loadShareComments(commentShare); refreshShares(); }
+    catch (_) { toast(t('sh.commentFail'), 'err'); }
+  });
+  foot.appendChild(add); modal.appendChild(foot); overlay.appendChild(modal);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.classList.add('hidden'); });
+  document.body.appendChild(overlay); return overlay;
+}
+async function loadShareComments(s) {
+  const list = $('share-comments-list'); if (!list) return;
+  list.textContent = '';
+  try {
+    const r = await api('GET', '/api/shares/' + encodeURIComponent(s.id) + '/comments');
+    const comments = (r && r.comments) || [];
+    if (!comments.length) { list.appendChild(el('div', { class: 'empty sm', text: t('sh.commentsEmpty') })); return; }
+    comments.forEach((c) => {
+      const row = el('div', { class: 'share-comment-row' });
+      row.appendChild(el('div', { class: 'share-comment-meta', text: (c.actor || 'admin') + ' · ' + formatDate(c.at) }));
+      row.appendChild(el('div', { class: 'share-comment-text', text: c.text || '' }));
+      const del = el('button', { class: 'btn ghost xs', text: '✕', attrs: { type: 'button', title: t('sh.commentDelete') } });
+      del.addEventListener('click', async () => { try { await api('DELETE', '/api/shares/' + encodeURIComponent(s.id) + '/comments/' + encodeURIComponent(c.id)); await loadShareComments(s); refreshShares(); } catch (_) {} });
+      row.appendChild(del); list.appendChild(row);
+    });
+  } catch (_) { list.appendChild(el('div', { class: 'empty sm', text: t('sh.commentFail') })); }
+}
+async function openShareComments(s) {
+  commentShare = s; const overlay = ensureShareCommentsModal(); $('share-comments-name').textContent = s.name || ''; overlay.classList.remove('hidden'); await loadShareComments(s); setTimeout(() => { const x = $('share-comments-input'); if (x) x.focus(); }, 0);
+}
+
+// Features 28 + 38 — one per-link modal that moderates access requests (approve /
+// deny / delete) and visitor feedback (mark read / delete). Mirrors the comments modal.
+let moderationShare = null;
+function ensureModerationModal() {
+  let overlay = $('share-moderation-overlay');
+  if (overlay) return overlay;
+  overlay = el('div', { class: 'overlay hidden', attrs: { id: 'share-moderation-overlay' } });
+  const modal = el('div', { class: 'modal share-comments-modal', attrs: { role: 'dialog', 'aria-modal': 'true' } });
+  const head = el('div', { class: 'modal-head' });
+  head.appendChild(el('h3', { text: t('mod.title') }));
+  const close = el('button', { class: 'icon-btn', text: '✕', attrs: { type: 'button', 'aria-label': 'Close' } });
+  close.addEventListener('click', () => overlay.classList.add('hidden')); head.appendChild(close); modal.appendChild(head);
+  modal.appendChild(el('p', { class: 'muted sm', attrs: { id: 'share-moderation-name' } }));
+  modal.appendChild(el('div', { attrs: { id: 'share-moderation-body' } }));
+  overlay.appendChild(modal);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.classList.add('hidden'); });
+  document.body.appendChild(overlay); return overlay;
+}
+async function loadModeration(s) {
+  const body = $('share-moderation-body'); if (!body) return;
+  body.textContent = '';
+  // --- Feature 28: access requests -----------------------------------------
+  if (s.requestAccess || s.accessRequestsCount) {
+    const sec = el('div', { class: 'mod-section' });
+    sec.appendChild(el('h4', { text: t('mod.accessTitle') }));
+    const list = el('div', { class: 'share-comments-list' }); sec.appendChild(list); body.appendChild(sec);
+    try {
+      const r = await api('GET', '/api/access-requests');
+      const reqs = ((r && r.requests) || []).filter((x) => x.shareId === s.id);
+      if (!reqs.length) list.appendChild(el('div', { class: 'empty sm', text: t('mod.accessEmpty') }));
+      reqs.forEach((req) => {
+        const row = el('div', { class: 'share-comment-row' });
+        const meta = (req.flag || '') + ' ' + (req.name || '?') + (req.email ? ' · ' + req.email : '') + ' · ' + formatDate(req.at) + ' · ' + t('mod.status.' + req.status);
+        row.appendChild(el('div', { class: 'share-comment-meta', text: meta }));
+        if (req.message) row.appendChild(el('div', { class: 'share-comment-text', text: req.message }));
+        const acts = el('div', { class: 'mod-acts' });
+        if (req.status !== 'approved') { const ap = el('button', { class: 'btn sm', text: t('mod.grant') }); ap.addEventListener('click', async () => { try { await api('POST', '/api/shares/' + encodeURIComponent(s.id) + '/access-requests/' + encodeURIComponent(req.id) + '/approve', {}); await loadModeration(s); refreshShares(); } catch (_) { toast(t('mod.loadFail'), 'err'); } }); acts.appendChild(ap); }
+        if (req.status !== 'denied') { const dn = el('button', { class: 'btn ghost sm', text: t('mod.deny') }); dn.addEventListener('click', async () => { try { await api('POST', '/api/shares/' + encodeURIComponent(s.id) + '/access-requests/' + encodeURIComponent(req.id) + '/deny', {}); await loadModeration(s); refreshShares(); } catch (_) { toast(t('mod.loadFail'), 'err'); } }); acts.appendChild(dn); }
+        const del = el('button', { class: 'btn ghost xs', text: '✕', attrs: { title: t('mod.delete') } }); del.addEventListener('click', async () => { try { await api('DELETE', '/api/shares/' + encodeURIComponent(s.id) + '/access-requests/' + encodeURIComponent(req.id)); await loadModeration(s); refreshShares(); } catch (_) {} }); acts.appendChild(del);
+        row.appendChild(acts); list.appendChild(row);
+      });
+    } catch (_) { list.appendChild(el('div', { class: 'empty sm', text: t('mod.loadFail') })); }
+  }
+  // --- Feature 38: visitor feedback ----------------------------------------
+  if (s.allowFeedback || s.feedbackCount) {
+    const sec = el('div', { class: 'mod-section' });
+    sec.appendChild(el('h4', { text: t('mod.fbTitle') }));
+    const list = el('div', { class: 'share-comments-list' }); sec.appendChild(list); body.appendChild(sec);
+    try {
+      const r = await api('GET', '/api/shares/' + encodeURIComponent(s.id) + '/feedback');
+      const fb = (r && r.feedback) || [];
+      if (!fb.length) list.appendChild(el('div', { class: 'empty sm', text: t('mod.fbEmpty') }));
+      fb.forEach((f) => {
+        const row = el('div', { class: 'share-comment-row' + (f.read ? '' : ' mod-unread') });
+        row.appendChild(el('div', { class: 'share-comment-meta', text: (f.flag || '') + ' ' + (f.name || t('mod.anon')) + ' · ' + formatDate(f.at) }));
+        row.appendChild(el('div', { class: 'share-comment-text', text: f.body || '' }));
+        const acts = el('div', { class: 'mod-acts' });
+        const rd = el('button', { class: 'btn ghost sm', text: f.read ? t('mod.unread') : t('mod.markRead') }); rd.addEventListener('click', async () => { try { await api('POST', '/api/shares/' + encodeURIComponent(s.id) + '/feedback/' + encodeURIComponent(f.id) + '/read', { read: !f.read }); await loadModeration(s); refreshShares(); } catch (_) {} }); acts.appendChild(rd);
+        const del = el('button', { class: 'btn ghost xs', text: '✕', attrs: { title: t('mod.delete') } }); del.addEventListener('click', async () => { try { await api('DELETE', '/api/shares/' + encodeURIComponent(s.id) + '/feedback/' + encodeURIComponent(f.id)); await loadModeration(s); refreshShares(); } catch (_) {} }); acts.appendChild(del);
+        row.appendChild(acts); list.appendChild(row);
+      });
+    } catch (_) { list.appendChild(el('div', { class: 'empty sm', text: t('mod.loadFail') })); }
+  }
+  if (!body.children.length) body.appendChild(el('div', { class: 'empty sm', text: t('mod.none') }));
+}
+async function openShareModeration(s) {
+  moderationShare = s; const overlay = ensureModerationModal(); $('share-moderation-name').textContent = s.name || ''; overlay.classList.remove('hidden'); await loadModeration(s);
 }
 
 function renderShares(shares) {
@@ -7769,10 +9664,7 @@ function renderShares(shares) {
   const sm = $('shares-summary');
   if (sm) {
     let bytes = 0;
-    shares.forEach((s) => {
-      if (s.items && s.items.length) s.items.forEach((it) => { if (typeof it.size === 'number') bytes += it.size; });
-      else if (typeof s.size === 'number') bytes += s.size;
-    });
+    shares.forEach((s) => { bytes += Math.max(0, Number(s.logicalBytes) || 0); });
     const active = shares.filter((s) => s.active).length;
     sm.textContent = t('sh.summary', { n: shares.length, active, size: formatBytes(bytes) });
     sm.classList.toggle('hidden', !shares.length);
@@ -7787,6 +9679,9 @@ function renderShares(shares) {
   }
 
   if (!shares.length) {
+    state.sharePage = 0; state.sharePageIds = [];
+    const pager = $('shares-pagination'); if (pager) pager.classList.add('hidden');
+    const selectPage = $('bulk-select-page'); if (selectPage) selectPage.classList.add('hidden');
     list.appendChild(el('div', { class: 'empty', text: t('sh.none') }));
     updateBulkBar();
     return;
@@ -7797,35 +9692,88 @@ function renderShares(shares) {
   const q = (state.shareFilter || '').trim().toLowerCase();
   const typeF = state.shareType || '';
   const statusF = state.shareStatus || '';
+  const sizeF = state.shareSize || '';
+  const dateF = state.shareDate || '';
+  const now = Date.now();
+  const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
+  const customFrom = state.shareDateFrom ? new Date(state.shareDateFrom + 'T00:00:00').getTime() : 0;
+  const customTo = state.shareDateTo ? new Date(state.shareDateTo + 'T23:59:59.999').getTime() : Infinity;
   let shown = shares.filter((s) => {
+    if (!!s.archived !== !!state.shareShowArchived) return false;
     if (q && !((s.name || '').toLowerCase().includes(q)
+        || (s.adminNote || '').toLowerCase().includes(q)
+        || (s.descriptionMd || '').toLowerCase().includes(q)
         || (Array.isArray(s.tags) && s.tags.some((tg) => tg.toLowerCase().includes(q))))) return false;
     if (typeF && s.type !== typeF) return false;
     if (statusF === 'active' && !s.active) return false;
     if (statusF === 'inactive' && s.active) return false;
+    const bytes = Math.max(0, Number(s.logicalBytes) || 0);
+    if (sizeF === 'small' && bytes >= 100 * 1024 * 1024) return false;
+    if (sizeF === 'medium' && (bytes < 100 * 1024 * 1024 || bytes > 1024 * 1024 * 1024)) return false;
+    if (sizeF === 'large' && bytes <= 1024 * 1024 * 1024) return false;
+    const created = Number(s.createdAt) || 0;
+    if (dateF === 'today' && created < startOfToday.getTime()) return false;
+    if (dateF === '7' && created < now - 7 * 86400000) return false;
+    if (dateF === '30' && created < now - 30 * 86400000) return false;
+    if (dateF === 'custom' && (created < customFrom || created > customTo)) return false;
     return true;
   });
   const sort = state.shareSort || 'new';
-  const cmp = {
+  const baseCmp = {
     new: (a, b) => (b.createdAt || 0) - (a.createdAt || 0),
     old: (a, b) => (a.createdAt || 0) - (b.createdAt || 0),
     name: (a, b) => String(a.name || '').localeCompare(String(b.name || '')),
     downloads: (a, b) => (b.downloads || 0) - (a.downloads || 0),
-    expiry: (a, b) => (a.expiresAt || Infinity) - (b.expiresAt || Infinity),
+    activity: (a, b) => (b.lastActivityAt || 0) - (a.lastActivityAt || 0),
+    expiry: (a, b) => (a.effectiveExpiresAt || Infinity) - (b.effectiveExpiresAt || Infinity),
   }[sort];
-  if (cmp) shown = shown.slice().sort(cmp);
-  if (!shown.length) {
+  if (baseCmp) shown = shown.slice().sort((a, b) => (!!b.pinned - !!a.pinned) || baseCmp(a, b));
+  // Never leave selected shares hidden behind a filter: a later bulk action could
+  // otherwise modify/revoke links the administrator can no longer see. Pagination
+  // itself does not clear selection, so multi-page bulk work remains possible.
+  if (state.selShares) {
+    const visibleIds = new Set(shown.map((s) => s.id));
+    for (const id of [...state.selShares]) if (!visibleIds.has(id)) state.selShares.delete(id);
+  }
+  const filteredTotal = shown.length;
+  $('share-count').textContent = filteredTotal;
+  if (!filteredTotal) {
+    state.sharePage = 0; state.sharePageIds = [];
+    const pager = $('shares-pagination'); if (pager) pager.classList.add('hidden');
+    const selectPage = $('bulk-select-page'); if (selectPage) selectPage.classList.add('hidden');
     list.appendChild(el('div', { class: 'empty', text: t('sh.noneFilter') }));
     updateBulkBar();
     return;
   }
+  const pageSize = [10,25,50,100].includes(Number(state.sharePageSize)) ? Number(state.sharePageSize) : 25;
+  const maxPage = Math.max(0, Math.ceil(filteredTotal / pageSize) - 1);
+  state.sharePage = Math.min(Math.max(0, Number(state.sharePage) || 0), maxPage);
+  const pageStart = state.sharePage * pageSize;
+  const pageShares = shown.slice(pageStart, pageStart + pageSize);
+  state.sharePageIds = pageShares.map((s) => s.id);
+  const selectPage = $('bulk-select-page');
+  if (selectPage) {
+    selectPage.classList.toggle('hidden', pageShares.length === 0 || state.role === 'auditor');
+    selectPage.disabled = state.role === 'auditor' || !!state.bulkShareBusy;
+    const allPageSelected = pageShares.length > 0 && pageShares.every((sh) => state.selShares && state.selShares.has(sh.id));
+    selectPage.textContent = t(allPageSelected ? 'sh.bulkClearPage' : 'sh.bulkSelectPage');
+  }
+  const pager = $('shares-pagination');
+  if (pager) {
+    pager.classList.toggle('hidden', filteredTotal <= pageSize);
+    const prev = $('shares-page-prev'), next = $('shares-page-next'), label = $('shares-page-label');
+    if (prev) prev.disabled = state.sharePage <= 0;
+    if (next) next.disabled = state.sharePage >= maxPage;
+    if (label) label.textContent = t('sh.pageLabel', { from: pageStart + 1, to: Math.min(filteredTotal, pageStart + pageSize), total: filteredTotal });
+  }
 
-  shown.forEach((s) => {
+  pageShares.forEach((s) => {
     const isInbox = s.type === 'inbox';
     const isCollab = s.type === 'collab';
     const noSize = isInbox || isCollab; // types without a single "size"
     const isPendingDelete = pendingShareDeletionFor(s.id);
-    const card = el('div', { class: 'share' + (s.active ? '' : ' inactive') + (isPendingDelete ? ' pending-delete' : '') });
+    const card = el('div', { class: 'share' + (s.active ? '' : ' inactive') + (s.pinned ? ' pinned' : '') + (s.archived ? ' archived' : '') + (s.color ? ' share-colored' : '') + (isPendingDelete ? ' pending-delete' : ''), attrs: { 'data-share-id': s.id } });
+    if (s.color) card.style.setProperty('--share-color', s.color);
 
     const top = el('div', { class: 'share-top' });
     // Checkbox + icon + name stay together on one horizontal line (the "headline"),
@@ -7834,16 +9782,28 @@ function renderShares(shares) {
     const headline = el('div', { class: 'share-headline' });
     const sel = el('input', { class: 'sh-sel', attrs: { type: 'checkbox', 'aria-label': 'select' } });
     sel.checked = state.selShares && state.selShares.has(s.id);
+    sel.disabled = state.role === 'auditor' || !!state.bulkShareBusy;
     sel.addEventListener('change', () => {
       if (!state.selShares) state.selShares = new Set();
       if (sel.checked) state.selShares.add(s.id); else state.selShares.delete(s.id);
       updateBulkBar();
     });
     headline.appendChild(sel);
-    headline.appendChild(el('span', { class: 'ico', text: isInbox ? '📥' : isCollab ? '🔁' : s.type === 'folder' ? '📁' : '📄' }));
+    // Feature 6 — a custom per-link emoji marker replaces the generic type glyph
+    // when set (the type is still conveyed by the coloured badge below); empty → default.
+    const typeIco = isInbox ? '📥' : isCollab ? '🔁' : s.type === 'folder' ? '📁' : '📄';
+    const icoSpan = el('span', { class: 'ico', text: s.emoji || typeIco });
+    if (s.emoji) icoSpan.setAttribute('title', t('sh.emojiTip'));
+    headline.appendChild(icoSpan);
     const nameEl = el('span', { class: 'name', text: s.name, attrs: { title: t('sh.renameTip') } });
     nameEl.addEventListener('dblclick', () => startInlineRename(s, nameEl));
     headline.appendChild(nameEl);
+    const renameBtn = el('button', { class: 'share-head-action', text: t('sh.renameAction'), attrs: { type: 'button', title: t('sh.renameTip') } });
+    renameBtn.addEventListener('click', () => startInlineRename(s, nameEl));
+    headline.appendChild(renameBtn);
+    const pinBtn = el('button', { class: 'share-head-action pin-toggle' + (s.pinned ? ' active' : ''), text: s.pinned ? '★' : '☆', attrs: { type: 'button', title: t(s.pinned ? 'sh.unpin' : 'sh.pin'), 'aria-pressed': s.pinned ? 'true' : 'false' } });
+    pinBtn.addEventListener('click', () => toggleShareFlag(s, 'pinned'));
+    headline.appendChild(pinBtn);
     top.appendChild(headline);
     // All status/type/owner chips live in one wrapper so they wrap as a group beside
     // the name on wide screens and stack one-per-line under it on narrow phones.
@@ -7854,6 +9814,12 @@ function renderShares(shares) {
         text: isInbox ? t('sh.inbox') : isCollab ? t('sh.collab') : s.type === 'folder' ? t('sh.folder') : t('sh.file'),
       })
     );
+    if (s.pinned) badges.appendChild(el('span', { class: 'badge pinned-badge', text: t('sh.pinned') }));
+    if (s.archived) badges.appendChild(el('span', { class: 'badge archived-badge', text: t('sh.archived') }));
+    if (s.dlp && (s.dlp.count || s.dlp.incomplete)) badges.appendChild(el('span', { class: 'badge dlp-badge', text:s.dlp.incomplete && !s.dlp.count ? 'DLP ?' : t('dlp.badge', { n:s.dlp.count }), attrs:{ title:s.dlp.incomplete ? t('dlp.incompleteConfirm', { skipped:s.dlp.filesSkipped || 0, ocr:s.dlp.ocrErrors || 0, scan:s.dlp.scanErrors || 0 }) : (s.dlp.types || []).join(', ') } }));
+    const totalUsage = Math.max(Number(s.views) || 0, Number(s.downloads) || 0, Number(s.stats && s.stats.count) || 0);
+    if (totalUsage === 0) badges.appendChild(el('span', { class: 'badge never-used', text: t('sh.neverUsed') }));
+    else if ((Number(s.views) || 0) >= 100 || (Number(s.downloads) || 0) >= 25 || (Number(s.stats && s.stats.count) || 0) >= 50) badges.appendChild(el('span', { class: 'badge very-active', text: t('sh.veryActive') }));
     if (s.hasPassword) badges.appendChild(el('span', { class: 'badge locked', text: t('sh.protected') }));
     if (isCollab && s.collab && s.collab.allowDelete) badges.appendChild(el('span', { class: 'badge burn', text: t('sh.canDelete') }));
     // Only meaningful where a .zip is actually offered (folders or multi-file collections).
@@ -7862,6 +9828,9 @@ function renderShares(shares) {
     }
     if (!isInbox && s.burnAfterDownload) badges.appendChild(el('span', { class: 'badge burn', text: t('sh.oneTime') }));
     if (s.burnedAt) badges.appendChild(el('span', { class: 'badge expired', text: t('sh.burned') }));
+    const expiryDeadline = Number(s.effectiveExpiresAt) || 0;
+    const expiryRemaining = expiryDeadline ? expiryDeadline - Date.now() : 0;
+    if (s.active && expiryRemaining > 0 && expiryRemaining <= 86400000) badges.appendChild(el('span', { class: 'badge expiring-soon', text: '⏳ ' + t('sh.expiringSoon'), attrs: { title: t('sh.expiresIn', { v: timeUntil(expiryDeadline) }) } }));
     if (s.disabled) badges.appendChild(el('span', { class: 'badge paused', text: t('sh.paused') }));
     else if (s.scheduled) badges.appendChild(el('span', { class: 'badge scheduled', text: t('sh.scheduled') }));
     else if (!s.active) badges.appendChild(el('span', { class: 'badge expired', text: t('sh.inactive') }));
@@ -7886,7 +9855,8 @@ function renderShares(shares) {
         })
       );
     }
-    meta.appendChild(el('span', { text: t('sh.created') + ' ' + formatDate(s.createdAt) }));
+    meta.appendChild(el('span', { text: t('sh.created') + ' ' + formatDate(s.createdAt), attrs: { title: t('sh.createdTip', { v: timeAgo(s.createdAt) }) } })); // feature 7 — "créé il y a X" on hover
+    if (s.lastActivityAt && s.lastActivityAt > s.createdAt) meta.appendChild(el('span', { text: '🕒 ' + timeAgo(s.lastActivityAt) }));
     meta.appendChild(
       el('span', {
         text:
@@ -7904,10 +9874,20 @@ function renderShares(shares) {
       title: t('sh.viewsTip', { views: s.views || 0, visitors: s.uniqueVisitors || 0 }),
     }));
     if (!isInbox && s.maxVisitors > 0) meta.appendChild(el('span', { text: t('sh.visitors') + ' ' + (s.uniqueVisitors || 0) + ' / ' + s.maxVisitors }));
+    // Download-goal alert marker (download shares only): shows the target and a ✓ once fired.
+    if (!isInbox && !isCollab && s.notifyDownloadThreshold > 0) meta.appendChild(el('span', { text: '🎯 ' + s.notifyDownloadThreshold + (s.downloadThresholdReached ? ' ✓' : ''), attrs: { title: t('sh.dlThresholdTip', { n: s.notifyDownloadThreshold }) } }));
     if (!isInbox && s.rateKBps > 0) meta.appendChild(el('span', { text: t('sh.speed', { v: s.rateKBps }) }));
     if (s.startsAt && s.scheduled) meta.appendChild(el('span', { text: t('sh.startsAt') + ' ' + formatDate(s.startsAt) }));
-    if (s.expiresAt) meta.appendChild(el('span', { text: t('sh.expires') + ' ' + formatDate(s.expiresAt) }));
+    if (s.effectiveExpiresAt) {
+      const expiryText = s.effectiveExpiresAt <= Date.now() ? t('sh.expired') : t('sh.expiresIn', { v: timeUntil(s.effectiveExpiresAt) });
+      meta.appendChild(el('span', { text: t('sh.expires') + ' ' + formatDate(s.effectiveExpiresAt), attrs: { title: expiryText } }));
+      meta.appendChild(el('span', { class: s.effectiveExpiresAt > Date.now() && s.effectiveExpiresAt - Date.now() <= 86400000 ? 'share-expiry-remaining' : '', text: '⏳ ' + expiryText }));
+    }
     card.appendChild(meta);
+    const expiryProgress = expiryProgressCard(s); if (expiryProgress) card.appendChild(expiryProgress);
+    const ruleLine = automationRulesLine(s); if (ruleLine) card.appendChild(ruleLine);
+    const lastDown = transferSummaryLine(t('sh.lastDownload'), s.lastDownload, 'down'); if (lastDown) card.appendChild(lastDown);
+    const lastUp = transferSummaryLine(t('sh.lastUpload'), s.lastUpload, 'up'); if (lastUp) card.appendChild(lastUp);
 
     const qb = quotaBar(s); // progress bar for downloads / visitors / reception quota
     if (qb) card.appendChild(qb);
@@ -7921,6 +9901,7 @@ function renderShares(shares) {
         parts.push(t('sh.limQuota', { v: formatBytes(cb.maxTotalBytes) }) +
           ' (' + t('sh.usage', { v: formatBytes(cb.bytesReceived) }) + ')');
       }
+      if (cb.maxFilesPerUpload) parts.push(t('sh.limFilesPerUpload', { v: cb.maxFilesPerUpload })); // feature 13
       if (cb.allowExt && cb.allowExt.length) parts.push(t('sh.limAllow', { v: cb.allowExt.join(', ') }));
       if (cb.blockExt && cb.blockExt.length) parts.push(t('sh.limBlock', { v: cb.blockExt.join(', ') }));
       const line = el('div', { class: 'share-sub' });
@@ -7947,6 +9928,7 @@ function renderShares(shares) {
         );
       }
       if (ib.maxFiles) parts.push(t('sh.limFiles', { v: ib.maxFiles }));
+      if (ib.maxFilesPerUpload) parts.push(t('sh.limFilesPerUpload', { v: ib.maxFilesPerUpload })); // feature 13
       if (ib.allowExt && ib.allowExt.length) parts.push(t('sh.limAllow', { v: ib.allowExt.join(', ') }));
       if (ib.blockExt && ib.blockExt.length) parts.push(t('sh.limBlock', { v: ib.blockExt.join(', ') }));
       if (parts.length) {
@@ -8065,6 +10047,8 @@ function renderShares(shares) {
       an.addEventListener('click', () => openAdminNoteEditor(s, card));
       card.appendChild(an);
     }
+    if (s.descriptionMd) card.appendChild(el('div', { class: 'share-description-preview', text: '📖 ' + s.descriptionMd.slice(0, 280) }));
+    if (s.lastComment) card.appendChild(el('div', { class: 'share-last-comment', text: '💬 ' + (s.lastComment.actor || 'admin') + ' · ' + timeAgo(s.lastComment.at) + ' — ' + String(s.lastComment.text || '').slice(0, 180) }));
 
     const actions = el('div', { class: 'share-actions' });
     actions.appendChild(
@@ -8076,7 +10060,7 @@ function renderShares(shares) {
     );
     if (s.url) {
       const qrBtn = el('button', { class: 'btn ghost sm', text: t('sh.qr'), attrs: { title: t('sh.qrTitle') } });
-      qrBtn.addEventListener('click', () => openQr(s));
+      qrBtn.addEventListener('click', () => toggleInlineQr(s, card, qrBtn));
       actions.appendChild(qrBtn);
     }
     if (s.type === 'file') {
@@ -8084,9 +10068,9 @@ function renderShares(shares) {
       addBtn.addEventListener('click', () => openPickerForAdd(s));
       actions.appendChild(addBtn);
     }
-    // The edit modal targets download shares (file/folder); inbox/collab links are
-    // configured at creation time and edited by revoking + recreating.
-    if (!isInbox && !isCollab) {
+    // Generic share settings (name, color, tags, description and lifecycle rules)
+    // can be edited for download, reception and collaboration links alike.
+    {
       const editBtn = el('button', { class: 'btn ghost sm', text: t('sh.edit') });
       editBtn.addEventListener('click', () => openEditModal(s));
       actions.appendChild(editBtn);
@@ -8107,10 +10091,28 @@ function renderShares(shares) {
     const statsBtn = el('button', { class: 'btn ghost sm stats-btn', text: t('stats.button'), attrs: { title: t('stats.title') } });
     statsBtn.addEventListener('click', () => openDetailedStats(s));
     actions.appendChild(statsBtn);
+    const commentsBtn = el('button', { class: 'btn ghost sm', text: t('sh.comments') + (s.commentCount ? ' (' + s.commentCount + ')' : '') });
+    commentsBtn.addEventListener('click', () => openShareComments(s)); actions.appendChild(commentsBtn);
+    // Features 28/38 — moderate access requests + visitor feedback for this link.
+    if (s.requestAccess || s.allowFeedback || s.accessRequestsCount || s.feedbackCount) {
+      const pend = (s.accessPending || 0) + (s.feedbackUnread || 0);
+      const modBtn = el('button', { class: 'btn ghost sm' + (pend ? ' has-pending' : ''), text: t('sh.moderation') + (pend ? ' (' + pend + ')' : '') });
+      modBtn.addEventListener('click', () => openShareModeration(s)); actions.appendChild(modBtn);
+    }
+    const resetStatsBtn = el('button', { class: 'btn ghost sm', text: t('sh.resetStats') });
+    resetStatsBtn.addEventListener('click', () => resetShareStats(s)); actions.appendChild(resetStatsBtn);
     // Access log (feature 14): who / when / from where, from the transfer journal.
     const logBtn = el('button', { class: 'btn ghost sm', text: t('sh.log'), attrs: { title: t('sh.logTitle') } });
     logBtn.addEventListener('click', () => openAccessLog(s));
     actions.appendChild(logBtn);
+    // Feature 15 — browse the files received on a reception/collaboration link, with
+    // thumbnails for images.
+    if (s.type === 'inbox' || s.type === 'collab') {
+      const rcvBtn = el('button', { class: 'btn ghost sm', text: t('recv.button'), attrs: { title: t('recv.title') } });
+      rcvBtn.addEventListener('click', () => openReceivedFiles(s));
+      actions.appendChild(rcvBtn);
+    }
+    if (['file','folder','collab'].includes(s.type)) { const fhBtn=el('button',{class:'btn ghost sm',text:t('filehist.button'),attrs:{title:t('filehist.title')}}); fhBtn.addEventListener('click',()=>openFileHistory(s)); actions.appendChild(fhBtn); }
     // Private admin note (feature 2).
     const noteBtn = el('button', { class: 'btn ghost sm', text: t('sh.noteBtn'), attrs: { title: t('sh.noteTitle') } });
     noteBtn.addEventListener('click', () => openAdminNoteEditor(s, card));
@@ -8119,6 +10121,20 @@ function renderShares(shares) {
     const pauseBtn = el('button', { class: 'btn ghost sm', text: s.disabled ? t('sh.resume') : t('sh.pause'), attrs: { title: s.disabled ? t('sh.resumeTitle') : t('sh.pauseTitle') } });
     pauseBtn.addEventListener('click', () => togglePause(s));
     actions.appendChild(pauseBtn);
+    const archiveBtn = el('button', { class: 'btn ghost sm', text: t(s.archived ? 'sh.unarchive' : 'sh.archive') });
+    archiveBtn.addEventListener('click', () => toggleShareFlag(s, 'archived'));
+    actions.appendChild(archiveBtn);
+    const expiryQuick = el('span', { class: 'quick-expiry-group', attrs: { 'aria-label': t('sh.quickExpiry') } });
+    [['1 ' + t('time.h'),3600],['24 ' + t('time.h'),86400],['7 ' + t('time.d'),604800],['30 ' + t('time.d'),2592000],['∞',0]].forEach(([label,seconds]) => {
+      const b=el('button',{class:'btn ghost xs quick-expiry-btn',text:label,attrs:{type:'button',title:t('sh.quickExpiry')}});
+      b.addEventListener('click',()=>setQuickExpiry(s,seconds,b)); expiryQuick.appendChild(b);
+    });
+    actions.appendChild(expiryQuick);
+    const ex1 = el('button', { class: 'btn ghost sm', text: t('sh.extend1d') }); ex1.addEventListener('click', () => extendShare(s, 86400)); actions.appendChild(ex1);
+    const ex7 = el('button', { class: 'btn ghost sm', text: t('sh.extend7d') }); ex7.addEventListener('click', () => extendShare(s, 604800)); actions.appendChild(ex7);
+    const ex30 = el('button', { class: 'btn ghost sm', text: t('sh.extend30d') }); ex30.addEventListener('click', () => extendShare(s, 2592000)); actions.appendChild(ex30); // feature 14 — +30 d one-click extension
+    const histBtn = el('button', { class: 'btn ghost sm', text: t('sh.historyBtn') + (s.changeCount ? ' (' + s.changeCount + ')' : '') });
+    histBtn.addEventListener('click', () => openShareChangeHistory(s)); actions.appendChild(histBtn);
     const revokeBtn = el('button', { class: 'btn danger sm', text: t('sh.revoke') });
     revokeBtn.addEventListener('click', () => revokeShare(s));
     actions.appendChild(revokeBtn);
@@ -8128,6 +10144,7 @@ function renderShares(shares) {
 
     list.appendChild(card);
   });
+  applySharePresence();
   updateBulkBar();
 }
 
@@ -8188,14 +10205,32 @@ async function setShareTags(s, tags) {
 function updateBulkBar() {
   const bulk = $('shares-bulk');
   if (!bulk) return;
-  const n = state.selShares ? state.selShares.size : 0;
+  const ids = state.selShares ? [...state.selShares] : [];
+  const n = ids.length;
   bulk.classList.toggle('hidden', n === 0);
   const c = $('bulk-count');
   if (c) c.textContent = t('sh.bulkCount', { n });
+  const selectPage = $('bulk-select-page');
+  if (selectPage && Array.isArray(state.sharePageIds) && state.sharePageIds.length) {
+    const allPageSelected = state.sharePageIds.every((id) => state.selShares && state.selShares.has(id));
+    selectPage.textContent = t(allPageSelected ? 'sh.bulkClearPage' : 'sh.bulkSelectPage');
+  }
+  const selected = (state.allShares || []).filter((sh) => ids.includes(sh.id));
+  const allPinned = selected.length > 0 && selected.every((sh) => !!sh.pinned);
+  const allArchived = selected.length > 0 && selected.every((sh) => !!sh.archived);
+  const pin = $('bulk-pin'); if (pin) { pin.dataset.action = allPinned ? 'unpin' : 'pin'; pin.textContent = t(allPinned ? 'sh.bulkUnpin' : 'sh.bulkPin'); }
+  const arch = $('bulk-archive'); if (arch) { arch.dataset.action = allArchived ? 'unarchive' : 'archive'; arch.textContent = t(allArchived ? 'sh.bulkUnarchive' : 'sh.bulkArchive'); }
+}
+function setShareBulkBusy(busy) {
+  state.bulkShareBusy = !!busy;
+  ['bulk-pin','bulk-archive','bulk-tag','bulk-extend','bulk-expiry-preset','bulk-revoke','bulk-select-page'].forEach((id) => { const node=$(id); if(node) node.disabled=!!busy; });
+  document.querySelectorAll('#shares-list .sh-sel').forEach((node) => { node.disabled = !!busy || state.role === 'auditor'; });
 }
 async function bulkAction(action, extra) {
+  if (state.bulkShareBusy) return;
   const ids = state.selShares ? [...state.selShares] : [];
   if (!ids.length) return;
+  setShareBulkBusy(true);
   try {
     // A second deletion closes the recovery window of the previous one.
     if (action === 'revoke' && state.pendingShareDeletion) {
@@ -8204,31 +10239,87 @@ async function bulkAction(action, extra) {
     const r = await api('POST', '/api/shares/bulk', Object.assign({ ids, action }, extra || {}));
     toast(t('sh.bulkDone', { n: (r && r.count) || 0 }), 'ok');
     state.selShares = new Set();
-    refreshShares();
+    await refreshShares();
   } catch (e) { toast(t('sh.bulkFail'), 'err'); }
+  finally { setShareBulkBusy(false); updateBulkBar(); }
 }
 if ($('shares-filter')) $('shares-filter').addEventListener('input', (e) => {
   state.shareFilter = e.target.value;
+  state.sharePage = 0;
   updateUiPrefs({ shareFilter: state.shareFilter });
   if (state.allShares) renderShares(state.allShares);
 });
-[['shares-type', 'shareType'], ['shares-status', 'shareStatus'], ['shares-sort', 'shareSort']].forEach(([id, key]) => {
+[['shares-type', 'shareType'], ['shares-status', 'shareStatus'], ['shares-size', 'shareSize'], ['shares-date', 'shareDate'], ['shares-sort', 'shareSort']].forEach(([id, key]) => {
   const elx = $(id);
   if (elx) elx.addEventListener('change', () => {
     state[key] = elx.value;
+    state.sharePage = 0;
     updateUiPrefs({ [key]: state[key] });
+    if (id === 'shares-date') { const c = $('shares-date-custom'); if (c) c.classList.toggle('hidden', state.shareDate !== 'custom'); }
     if (state.allShares) renderShares(state.allShares);
   });
+});
+[['shares-date-from','shareDateFrom'],['shares-date-to','shareDateTo']].forEach(([id,key]) => {
+  const node=$(id); if (node) node.addEventListener('change',()=>{ state[key]=node.value; state.sharePage=0; updateUiPrefs({[key]:state[key]}); if(state.allShares) renderShares(state.allShares); });
+});
+if ($('shares-page-size')) $('shares-page-size').addEventListener('change', (e) => {
+  const n = Number(e.target.value); state.sharePageSize = [10,25,50,100].includes(n) ? n : 25; state.sharePage = 0;
+  updateUiPrefs({ sharePageSize: String(state.sharePageSize) }); if (state.allShares) renderShares(state.allShares);
+});
+if ($('shares-page-prev')) $('shares-page-prev').addEventListener('click', () => { if (state.sharePage > 0) { state.sharePage -= 1; if (state.allShares) renderShares(state.allShares); } });
+if ($('shares-page-next')) $('shares-page-next').addEventListener('click', () => { state.sharePage += 1; if (state.allShares) renderShares(state.allShares); });
+if ($('bulk-select-page')) $('bulk-select-page').addEventListener('click', () => {
+  if (state.role === 'auditor' || state.bulkShareBusy) return;
+  if (!state.selShares) state.selShares = new Set();
+  const ids = Array.isArray(state.sharePageIds) ? state.sharePageIds : [];
+  const all = ids.length > 0 && ids.every((id) => state.selShares.has(id));
+  ids.forEach((id) => all ? state.selShares.delete(id) : state.selShares.add(id));
+  if (state.allShares) renderShares(state.allShares); else updateBulkBar();
+});
+if ($('shares-archived-toggle')) $('shares-archived-toggle').addEventListener('click', () => {
+  state.shareShowArchived = !state.shareShowArchived; updateUiPrefs({ shareShowArchived: state.shareShowArchived });
+  const b=$('shares-archived-toggle'); b.classList.toggle('active',state.shareShowArchived); b.setAttribute('aria-pressed',state.shareShowArchived?'true':'false');
+  state.selShares = new Set(); if (state.allShares) renderShares(state.allShares);
 });
 [['shares-view-list', 'list'], ['shares-view-grid', 'grid']].forEach(([id, mode]) => {
   if ($(id)) $(id).addEventListener('click', () => setShareView(mode));
 });
+// Feature — density toggle for the admin links table (compact / comfortable).
+if ($('shares-density-toggle')) $('shares-density-toggle').addEventListener('click', () => setShareDensity(state.shareDensity === 'compact' ? 'comfortable' : 'compact'));
 
 // --- Feature 18: full-text content search ---
 if ($('search-toggle-btn')) $('search-toggle-btn').addEventListener('click', () => {
   const p = $('search-panel');
   const nowHidden = p.classList.toggle('hidden');
-  if (!nowHidden) $('search-input').focus();
+  if (!nowHidden) { $('search-input').focus(); refreshSearchIndexStatus(); }
+});
+let searchIndexStatusTimer = null;
+async function refreshSearchIndexStatus() {
+  const out = $('search-index-status'); if (!out) return;
+  if (searchIndexStatusTimer) { clearTimeout(searchIndexStatusTimer); searchIndexStatusTimer = null; }
+  try {
+    const r = await api('GET', '/api/search/status');
+    const when = r.builtAt ? new Date(r.builtAt).toLocaleString() : '—';
+    let text = r.building ? t('search.indexBuilding', { n: r.indexed || 0 }) : t('search.indexReady', { n: r.indexed || 0, when });
+    if (r.ocr && r.ocr.enabled) {
+      if (!r.ocr.available) {
+        text += ' · ' + t('search.ocrUnavailable');
+        if (Array.isArray(r.ocr.missingLanguages) && r.ocr.missingLanguages.length) text += ' · ' + t('search.ocrMissingLangs', { langs:r.ocr.missingLanguages.join('+') });
+      }
+      else if (r.building) text += ' · ' + t('search.ocrBuilding', { done:r.ocr.processed || 0, cached:r.ocr.cached || 0, current:r.ocr.current || '…' });
+      else text += ' · ' + t('search.ocrReady', { done:r.ocr.processed || 0, cached:r.ocr.cached || 0, langs:r.ocr.langs || 'fra+eng' });
+      if (r.ocr.deferred) text += ' · ' + t('search.ocrDeferred', { n:r.ocr.deferred });
+    }
+    out.textContent = text;
+    out.className = 'muted sm' + (r.error ? ' cfg-bad' : '');
+    if (r.building && $('search-panel') && !$('search-panel').classList.contains('hidden')) searchIndexStatusTimer = setTimeout(refreshSearchIndexStatus, 1200);
+  } catch (_) { out.textContent = t('search.fail'); out.className = 'sm cfg-bad'; }
+}
+if ($('search-reindex')) $('search-reindex').addEventListener('click', async () => {
+  const b = $('search-reindex'); b.disabled = true;
+  try { await api('POST', '/api/search/reindex', {}); toast(t('search.reindexStarted'), 'ok'); refreshSearchIndexStatus(); }
+  catch (_) { toast(t('search.fail'), 'warn'); }
+  finally { b.disabled = false; }
 });
 async function runContentSearch() {
   const q = $('search-input').value.trim();
@@ -8237,7 +10328,8 @@ async function runContentSearch() {
   if (q.length < 2) { st.textContent = t('search.tooShort'); return; }
   st.textContent = t('search.searching');
   try {
-    const r = await api('GET', '/api/search?q=' + encodeURIComponent(q));
+    const semantic = !!($('search-semantic') && $('search-semantic').checked);
+    const r = await api('GET', '/api/search?q=' + encodeURIComponent(q) + (semantic ? '&semantic=1' : ''));
     renderSearchResults(r);
   } catch (e) {
     st.textContent = (e.data && e.data.error === 'query-too-short') ? t('search.tooShort') : t('search.fail');
@@ -8247,16 +10339,20 @@ function renderSearchResults(r) {
   const out = $('search-results'), st = $('search-status');
   out.textContent = '';
   const list = (r && r.results) || [];
-  st.textContent = t('search.count', { n: list.length, scanned: (r && r.scanned) || 0 }) + (r && r.truncated ? ' · ' + t('search.truncated') : '');
+  st.textContent = t('search.count', { n: list.length, scanned: (r && (r.indexed != null ? r.indexed : r.scanned)) || 0 }) + (r && r.truncated ? ' · ' + t('search.truncated') : '');
+  if (r && r.building) refreshSearchIndexStatus();
   if (!list.length) { out.appendChild(el('div', { class: 'empty', text: t('search.none') })); return; }
   const prefix = { inbox: '/u/', collab: '/c/' };
   list.forEach((m) => {
     const row = el('div', { class: 'search-hit' });
     const head = el('div', { class: 'sh-hit-head' });
     head.appendChild(el('span', { class: 'sh-hit-share', text: m.shareName }));
-    head.appendChild(el('span', { class: 'sh-hit-file', text: m.file + ' :' + m.line }));
+    head.appendChild(el('span', { class: 'sh-hit-file', text: m.file + (m.line ? ' :' + m.line : '') }));
+    if (m.kind) head.appendChild(el('span', { class: 'badge', text: String(m.kind).toUpperCase() + (m.size ? ' · ' + fmtBytes(m.size) : '') }));
+    if (m.ocr) head.appendChild(el('span', { class: 'badge search-ocr-badge', text: 'T/' + t('search.ocrBadge'), attrs: { title: m.ocrSource || 'OCR' } }));
+    if (m.semantic) head.appendChild(el('span', { class: 'badge semantic-badge', text: '≈ ' + t('search.semanticBadge'), attrs: { title: m.semanticScore != null ? String(m.semanticScore) : '' } }));
     if (m.matches > 1) head.appendChild(el('span', { class: 'badge', text: '×' + m.matches }));
-    const link = (prefix[m.type] || '/s/') + m.token;
+    const link = m.type === 'photo' ? ('/images?image=' + encodeURIComponent(m.token)) : ((prefix[m.type] || '/s/') + m.token);
     head.appendChild(el('a', { class: 'btn ghost xs sh-hit-open', text: t('sh.open'), attrs: { href: link, target: '_blank', rel: 'noopener' } }));
     row.appendChild(head);
     row.appendChild(el('div', { class: 'sh-hit-snip', text: m.snippet }));
@@ -8280,6 +10376,7 @@ if ($('log-close')) $('log-close').addEventListener('click', closeAccessLog);
 if ($('log-overlay')) $('log-overlay').addEventListener('click', (e) => { if (e.target === $('log-overlay')) closeAccessLog(); });
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && $('log-overlay') && !$('log-overlay').classList.contains('hidden')) { closeAccessLog(); return; }
+  if (e.key === 'Escape' && $('share-history-overlay') && !$('share-history-overlay').classList.contains('hidden')) { closeShareChangeHistory(); return; }
   if (e.key === 'Escape' && $('keys-overlay') && !$('keys-overlay').classList.contains('hidden')) { closeKeysHelp(); return; }
   if (e.ctrlKey || e.metaKey || e.altKey) return; // leave browser/OS combos alone
   const a = document.activeElement;
@@ -8296,16 +10393,76 @@ if ($('bulk-revoke')) $('bulk-revoke').addEventListener('click', () => {
   const n = state.selShares ? state.selShares.size : 0;
   if (n && confirm(t('sh.bulkRevokeConfirm', { n }))) bulkAction('revoke');
 });
+if ($('bulk-copy')) $('bulk-copy').addEventListener('click', copySelectedLinks);
+if ($('bulk-pin')) $('bulk-pin').addEventListener('click', (e) => bulkAction(e.currentTarget.dataset.action || 'pin'));
+if ($('bulk-archive')) $('bulk-archive').addEventListener('click', (e) => bulkAction(e.currentTarget.dataset.action || 'archive'));
+if ($('bulk-expiry-preset')) $('bulk-expiry-preset').addEventListener('change', (e) => {
+  if (e.target.value === '') return;
+  bulkAction('extend', { expiresInSeconds: Number(e.target.value) }); e.target.value = '';
+});
 if ($('bulk-extend')) $('bulk-extend').addEventListener('click', () => {
   const days = prompt(t('sh.bulkExtendPrompt'), '7');
   if (days === null) return;
   const d = parseInt(days, 10);
-  bulkAction('extend', { expiresInSeconds: Number.isFinite(d) && d > 0 ? d * 86400 : 0 });
+  if (Number.isFinite(d) && d > 0) bulkAction('extend-by', { seconds: d * 86400 });
 });
 if ($('bulk-tag')) $('bulk-tag').addEventListener('click', () => {
   const tag = prompt(t('sh.bulkTagPrompt'));
   if (tag && tag.trim()) bulkAction('tag-add', { tag: tag.trim() });
 });
+
+async function toggleShareFlag(s, field) {
+  try {
+    await api('PATCH', '/api/shares/' + encodeURIComponent(s.id), { [field]: !s[field] });
+    refreshShares();
+  } catch (_) { toast(t('sh.bulkFail'), 'err'); }
+}
+async function setQuickExpiry(s, seconds, control) {
+  if (control) control.disabled = true;
+  try { await api('PATCH', '/api/shares/' + encodeURIComponent(s.id), { expiresInSeconds: seconds }); toast(t('sh.expirySet'), 'ok'); refreshShares(); }
+  catch (_) { toast(t('sh.expiryFail'), 'err'); }
+  finally { if (control) { control.disabled = false; if (control.tagName === 'SELECT') control.value = ''; } }
+}
+async function extendShare(s, seconds) {
+  try { await api('POST', '/api/shares/' + encodeURIComponent(s.id) + '/extend', { seconds }); toast(t('sh.extended'), 'ok'); refreshShares(); }
+  catch (_) { toast(t('sh.extendFail'), 'err'); }
+}
+async function copySelectedLinks() {
+  const ids = state.selShares ? state.selShares : new Set();
+  const urls = (state.allShares || []).filter((s) => ids.has(s.id) && s.url).map((s) => s.url);
+  if (!urls.length) { toast(t('sh.copyNoUrl'), 'warn'); return; }
+  await copy(urls.join('\n'), t('sh.copiedLinks', { n: urls.length }));
+}
+function closeShareChangeHistory() { const o=$('share-history-overlay'); if(o) o.classList.add('hidden'); }
+function formatChangeValue(v) {
+  if (v == null || v === '') return '—';
+  if (Array.isArray(v)) return v.length ? v.join(', ') : '—';
+  if (typeof v === 'boolean') return v ? '✓' : '✕';
+  if (typeof v === 'number' && v > 1000000000000) return formatDate(v);
+  return String(v);
+}
+async function openShareChangeHistory(s) {
+  const overlay=$('share-history-overlay'), body=$('share-history-body'), sub=$('share-history-subtitle');
+  if (!overlay || !body) return;
+  overlay.classList.remove('hidden'); body.textContent=t('sh.historyLoading'); if(sub) sub.textContent=s.name || '';
+  try {
+    const historyPath = s && s.trashId ? '/api/trash/' + encodeURIComponent(s.trashId) + '/change-history' : '/api/shares/' + encodeURIComponent(s.id) + '/change-history';
+    const r=await api('GET',historyPath);
+    body.textContent=''; const entries=(r&&r.entries)||[];
+    if(!entries.length){ body.appendChild(el('div',{class:'empty',text:t('sh.historyEmpty')})); return; }
+    entries.forEach((entry)=>{
+      const row=el('div',{class:'share-change-row'});
+      const top=el('div',{class:'share-change-head'}); top.appendChild(el('strong',{text:formatDate(entry.at)}));
+      const actionKey='sh.historyAction.'+(entry.action||'edited'), actionLabel=t(actionKey); top.appendChild(el('span',{class:'badge',text:actionLabel===actionKey?(entry.action||'edited'):actionLabel}));
+      if(entry.actor) top.appendChild(el('span',{class:'muted sm',text:'👤 '+entry.actor})); row.appendChild(top);
+      if(entry.fields&&entry.fields.length) row.appendChild(el('div',{class:'muted sm',text:t('sh.changedFields',{fields:entry.fields.join(', ')})}));
+      const diff=entry.diff||{}; Object.keys(diff).forEach((key)=>{ const d=diff[key]||{}; row.appendChild(el('div',{class:'share-change-diff',text:key+': '+formatChangeValue(d.before)+' → '+formatChangeValue(d.after)})); });
+      body.appendChild(row);
+    });
+  } catch (_) { body.textContent=t('sh.historyFail'); }
+}
+if ($('share-history-close')) $('share-history-close').addEventListener('click', closeShareChangeHistory);
+if ($('share-history-overlay')) $('share-history-overlay').addEventListener('click',(e)=>{ if(e.target===$('share-history-overlay')) closeShareChangeHistory(); });
 
 function linkRow(label, url) {
   const row = el('div', { class: 'link-row' });
@@ -8317,10 +10474,12 @@ function linkRow(label, url) {
   return row;
 }
 
-async function copy(text) {
+async function copy(text, successMessage) {
+  const okMessage = successMessage || t('sh.copied');
   try {
     await navigator.clipboard.writeText(text);
-    toast(t('sh.copied'), 'ok');
+    toast(okMessage, 'ok');
+    return true;
   } catch (_) {
     const ta = document.createElement('textarea');
     ta.value = text;
@@ -8328,14 +10487,208 @@ async function copy(text) {
     ta.style.opacity = '0';
     document.body.appendChild(ta);
     ta.select();
+    let copied = false;
     try {
-      document.execCommand('copy');
-      toast(t('sh.copied'), 'ok');
+      // execCommand() may return false without throwing when the browser refuses
+      // clipboard access, so only report success on an explicit true result.
+      copied = document.execCommand('copy') === true;
+      toast(copied ? okMessage : t('sh.copyFail'), copied ? 'ok' : 'err');
     } catch (_) {
       toast(t('sh.copyFail'), 'err');
     }
     document.body.removeChild(ta);
+    return copied;
   }
+}
+
+// Feature 25 — copy an image's actual pixels to the clipboard (paste into a chat,
+// doc or editor), mirroring the PWA. The Clipboard API only reliably accepts
+// image/png, so a non-PNG source is re-encoded through a canvas first.
+function imageBlobToPng(blob) {
+  if (blob.type === 'image/png') return Promise.resolve(blob);
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(blob), img = new Image();
+    img.onload = () => {
+      try {
+        const c = document.createElement('canvas');
+        c.width = img.naturalWidth; c.height = img.naturalHeight;
+        c.getContext('2d').drawImage(img, 0, 0);
+        c.toBlob((out) => { URL.revokeObjectURL(url); out ? resolve(out) : reject(new Error('encode')); }, 'image/png');
+      } catch (e) { URL.revokeObjectURL(url); reject(e); }
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('load')); };
+    img.src = url;
+  });
+}
+function clipboardImageSupported() {
+  return !!(navigator.clipboard && window.ClipboardItem);
+}
+async function copyPhotoImage(s, btn) {
+  if (!clipboardImageSupported()) { toast(t('photo.copyImageFail'), 'err'); return; }
+  const p = s.photo || {};
+  const url = '/i/' + s.token + '.' + (p.ext || 'jpg'); // same-origin: the CDN/imageBase host may be unreachable
+  if (btn) btn.disabled = true;
+  try {
+    const resp = await fetch(url, { credentials: 'same-origin', cache: 'no-store' });
+    if (!resp.ok) throw new Error('fetch');
+    const png = await imageBlobToPng(await resp.blob());
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]);
+    toast(t('photo.copyImageOk'), 'ok');
+  } catch (_) {
+    toast(t('photo.copyImageFail'), 'err');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+// Feature 20 — basic in-browser image editor: rotate in 90° steps, flip, and crop
+// (free or a locked ratio). Saving re-encodes on-device and replaces the full image
+// via /api/photos/:id/replace (the old version is archived server-side and the
+// gallery regenerates Mini/Micro from the new pixels). Same-origin /i/ source keeps
+// the canvas untainted, so toBlob() works even with a custom image domain.
+function sendEditedPhoto(url, blob) {
+  return fetch(url, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/octet-stream', 'X-CSRF-Token': state.csrf || '' }, body: blob });
+}
+function openPhotoEditor(s) {
+  const p = s.photo || {};
+  const overlay = el('div', { class: 'overlay hidden photo-editor-overlay', attrs: { role: 'dialog', 'aria-modal': 'true' } });
+  const modal = el('div', { class: 'modal photo-editor-modal' });
+  const head = el('div', { class: 'modal-head' });
+  head.appendChild(el('h3', { text: t('photo.editorTitle') }));
+  const closeBtn = el('button', { class: 'icon-btn', text: '✕', attrs: { type: 'button', 'aria-label': 'Close' } });
+  head.appendChild(closeBtn); modal.appendChild(head);
+  modal.appendChild(el('div', { class: 'muted sm', text: s.name || '' }));
+  const stage = el('div', { class: 'photo-editor-stage' });
+  const canvas = el('canvas', { class: 'photo-editor-canvas' });
+  stage.appendChild(canvas); modal.appendChild(stage);
+  const tools = el('div', { class: 'photo-editor-tools' });
+  const mkBtn = (label, title) => el('button', { class: 'btn ghost sm', text: label, attrs: { type: 'button', title: title || label } });
+  const rotL = mkBtn(t('photo.editRotateLeft')), rotR = mkBtn(t('photo.editRotateRight')), flip = mkBtn(t('photo.editFlipH'));
+  tools.appendChild(rotL); tools.appendChild(rotR); tools.appendChild(flip);
+  const ratioBtns = {};
+  [['free', t('photo.editCropFree')], ['1', '1:1'], ['1.3333', '4:3'], ['1.7778', '16:9']].forEach(([key, lbl]) => {
+    const b = mkBtn(lbl); ratioBtns[key] = b; b.addEventListener('click', () => setRatio(key)); tools.appendChild(b);
+  });
+  const resetBtn = mkBtn(t('photo.editReset')); tools.appendChild(resetBtn);
+  modal.appendChild(tools);
+  modal.appendChild(el('div', { class: 'muted sm photo-editor-hint', text: t('photo.editCropHint') }));
+  const foot = el('div', { class: 'modal-foot' });
+  const cancel = el('button', { class: 'btn ghost', text: t('photo.editCancel'), attrs: { type: 'button' } });
+  const save = el('button', { class: 'btn', text: t('photo.editSave'), attrs: { type: 'button' } });
+  foot.appendChild(cancel); foot.appendChild(save); modal.appendChild(foot);
+  overlay.appendChild(modal); document.body.appendChild(overlay);
+
+  const ed = { img: null, angle: 0, flipH: false, ratio: 'free', crop: null, scale: 1, dispW: 0, dispH: 0, baked: null, drag: null };
+  const ctx = canvas.getContext('2d');
+  const MAXW = 560, MAXH = 430;
+  function rebake() {
+    const im = ed.img; if (!im) return;
+    const swap = ed.angle === 90 || ed.angle === 270;
+    const nat = document.createElement('canvas');
+    nat.width = swap ? im.naturalHeight : im.naturalWidth;
+    nat.height = swap ? im.naturalWidth : im.naturalHeight;
+    const c = nat.getContext('2d');
+    c.save(); c.translate(nat.width / 2, nat.height / 2); c.rotate(ed.angle * Math.PI / 180);
+    if (ed.flipH) c.scale(-1, 1);
+    c.drawImage(im, -im.naturalWidth / 2, -im.naturalHeight / 2); c.restore();
+    ed.baked = nat;
+    ed.scale = Math.min(1, MAXW / nat.width, MAXH / nat.height);
+    ed.dispW = Math.max(1, Math.round(nat.width * ed.scale));
+    ed.dispH = Math.max(1, Math.round(nat.height * ed.scale));
+    canvas.width = ed.dispW; canvas.height = ed.dispH;
+    ed.crop = null; // rotation/flip invalidates any prior selection
+    redraw();
+  }
+  function redraw() {
+    if (!ed.baked) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(ed.baked, 0, 0, ed.dispW, ed.dispH);
+    if (ed.crop) {
+      ctx.save(); ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.beginPath(); ctx.rect(0, 0, ed.dispW, ed.dispH); ctx.rect(ed.crop.x, ed.crop.y, ed.crop.w, ed.crop.h); ctx.fill('evenodd');
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.strokeRect(ed.crop.x + 0.5, ed.crop.y + 0.5, ed.crop.w, ed.crop.h); ctx.restore();
+    }
+  }
+  function ratioValue() { return ed.ratio === 'free' ? 0 : parseFloat(ed.ratio); }
+  function setRatio(key) {
+    ed.ratio = key;
+    Object.keys(ratioBtns).forEach((k) => ratioBtns[k].classList.toggle('active', k === key));
+    const r = ratioValue();
+    if (r && ed.crop) { // re-fit the current selection to the new ratio
+      let w = ed.crop.w, h = w / r;
+      if (h > ed.crop.h) { h = ed.crop.h; w = h * r; }
+      ed.crop.w = w; ed.crop.h = h;
+      ed.crop.x = Math.max(0, Math.min(ed.crop.x, ed.dispW - w));
+      ed.crop.y = Math.max(0, Math.min(ed.crop.y, ed.dispH - h));
+    }
+    redraw();
+  }
+  function ptFromEvent(e) {
+    const rect = canvas.getBoundingClientRect();
+    const cx = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+    const cy = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+    const sx = canvas.width / rect.width, sy = canvas.height / rect.height;
+    return { x: Math.max(0, Math.min(ed.dispW, cx * sx)), y: Math.max(0, Math.min(ed.dispH, cy * sy)) };
+  }
+  function onDown(e) { if (!ed.baked) return; e.preventDefault(); const pt = ptFromEvent(e); ed.drag = { sx: pt.x, sy: pt.y }; }
+  function onMove(e) {
+    if (!ed.drag) return; e.preventDefault();
+    const pt = ptFromEvent(e);
+    let x = Math.min(ed.drag.sx, pt.x), y = Math.min(ed.drag.sy, pt.y), w = Math.abs(pt.x - ed.drag.sx), h = Math.abs(pt.y - ed.drag.sy);
+    const r = ratioValue();
+    if (r) { h = w / r; if (y + h > ed.dispH) { h = ed.dispH - y; w = h * r; } if (x + w > ed.dispW) { w = ed.dispW - x; h = w / r; } }
+    ed.crop = { x, y, w, h }; redraw();
+  }
+  function onUp() { if (ed.drag && ed.crop && (ed.crop.w < 6 || ed.crop.h < 6)) ed.crop = null; ed.drag = null; redraw(); }
+  canvas.addEventListener('mousedown', onDown); window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);
+  canvas.addEventListener('touchstart', onDown, { passive: false }); canvas.addEventListener('touchmove', onMove, { passive: false }); canvas.addEventListener('touchend', onUp);
+  rotL.addEventListener('click', () => { ed.angle = (ed.angle + 270) % 360; rebake(); });
+  rotR.addEventListener('click', () => { ed.angle = (ed.angle + 90) % 360; rebake(); });
+  flip.addEventListener('click', () => { ed.flipH = !ed.flipH; rebake(); });
+  resetBtn.addEventListener('click', () => { ed.angle = 0; ed.flipH = false; ed.crop = null; setRatio('free'); rebake(); });
+  function onKey(e) { if (e.key === 'Escape') close(); }
+  function close() {
+    window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); document.removeEventListener('keydown', onKey);
+    overlay.remove();
+  }
+  document.addEventListener('keydown', onKey);
+  closeBtn.addEventListener('click', close); cancel.addEventListener('click', close);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  save.addEventListener('click', async () => {
+    if (!ed.baked) return;
+    const prev = save.textContent; save.disabled = true; cancel.disabled = true; save.textContent = t('photo.editSaving');
+    try {
+      let sx = 0, sy = 0, sw = ed.baked.width, sh = ed.baked.height;
+      if (ed.crop && ed.crop.w > 4 && ed.crop.h > 4) {
+        sx = Math.round(ed.crop.x / ed.scale); sy = Math.round(ed.crop.y / ed.scale);
+        sw = Math.max(1, Math.min(Math.round(ed.crop.w / ed.scale), ed.baked.width - sx));
+        sh = Math.max(1, Math.min(Math.round(ed.crop.h / ed.scale), ed.baked.height - sy));
+      }
+      const out = document.createElement('canvas'); out.width = sw; out.height = sh;
+      out.getContext('2d').drawImage(ed.baked, sx, sy, sw, sh, 0, 0, sw, sh);
+      const isPng = String(p.ext || 'jpg').toLowerCase() === 'png';
+      const mime = isPng ? 'image/png' : 'image/jpeg', ext = isPng ? 'png' : 'jpg';
+      const blob = await new Promise((resolve, reject) => out.toBlob((b) => (b ? resolve(b) : reject(new Error('encode'))), mime, isPng ? undefined : 0.92));
+      const uploadName = String(s.name || 'image').replace(/\.[^.]+$/, '') + '.' + ext;
+      const base = '/api/photos/' + encodeURIComponent(s.id) + '/replace?name=' + encodeURIComponent(uploadName);
+      let resp = await sendEditedPhoto(base, blob);
+      if (resp.status === 409) {
+        let warn = null; try { warn = await resp.clone().json(); } catch (_) {}
+        if (!(warn && warn.error === 'dlp-warning')) throw new Error('save');
+        if (!confirmDlpWarning(warn)) { save.disabled = false; cancel.disabled = false; save.textContent = prev; return; }
+        resp = await sendEditedPhoto(base + '&dlpOverride=1', blob);
+      }
+      if (!resp.ok) throw new Error('save');
+      toast(t('photo.editSaved'), 'ok'); close(); refreshShares();
+    } catch (_) {
+      toast(t('photo.editFail'), 'err'); save.disabled = false; cancel.disabled = false; save.textContent = prev;
+    }
+  });
+  overlay.classList.remove('hidden');
+  ed.img = new Image();
+  ed.img.onload = () => { setRatio('free'); rebake(); };
+  ed.img.onerror = () => { toast(t('photo.editLoadFail'), 'err'); close(); };
+  ed.img.src = '/i/' + s.token + '.' + (p.ext || 'jpg');
 }
 
 function pendingShareDeletionFor(id) {
@@ -8608,7 +10961,7 @@ function renderDetailedStats(data) {
     [t('stats.type'), statsTypeLabel(sh.type)],
     [t('stats.owner'), sh.ownerName || '—'],
     [t('stats.created'), sh.createdAt ? formatDate(sh.createdAt) : '—'],
-    [t('stats.expiry'), sh.expiresAt ? formatDate(sh.expiresAt) : '—'],
+    [t('stats.expiry'), sh.effectiveExpiresAt ? formatDate(sh.effectiveExpiresAt) : '—'],
     [t('stats.items'), (sh.itemCount || 0).toLocaleString()],
     [t('stats.storage'), formatBytes((image && image.totalStorageBytes) || sh.logicalBytes || 0)],
     [t('stats.lastActivity'), ag.lastAt ? formatDate(ag.lastAt) : '—'],
@@ -8716,7 +11069,8 @@ function renderDetailedStats(data) {
         row.appendChild(el('span', { class: 'stats-event-icon', text: event.kind === 'full' ? '🖼' : event.kind === 'thumb' ? '▣' : '▫' }));
         const main = el('div', { class: 'stats-event-main' });
         main.appendChild(el('strong', { text: t('stats.' + event.kind) }));
-        main.appendChild(el('span', { text: [event.flag, event.ip, event.country].filter(Boolean).join(' · ') || '—' }));
+        const visitorCountry = event.country ? countryText(event.country) : t('stats.unknown');
+        main.appendChild(el('span', { text: [event.flag || '🌐', event.ip || '—', visitorCountry].join(' · ') }));
         row.appendChild(main);
         row.appendChild(el('time', { text: event.at ? timeAgo(event.at) : '—' }));
         list.appendChild(row);
@@ -8769,11 +11123,78 @@ async function openAccessLog(s) {
 }
 function closeAccessLog() { $('log-overlay').classList.add('hidden'); }
 
+// Feature 15 — received-file browser with thumbnails for reception/collab links.
+// Images render a real (CSS-scaled) thumbnail via the authenticated inline route;
+// every file offers a download. The thumbnail count is capped so a folder with
+// thousands of images can't fire thousands of requests at once.
+const RECEIVED_THUMB_CAP = 300;
+async function openReceivedFiles(s) {
+  if ($('received-subtitle')) $('received-subtitle').textContent = s.name || '';
+  const body = $('received-body');
+  if (!body) return;
+  body.textContent = t('recv.loading');
+  $('received-overlay').classList.remove('hidden');
+  try {
+    const r = await api('GET', '/api/shares/' + encodeURIComponent(s.id) + '/received');
+    body.textContent = '';
+    const files = (r && r.files) || [];
+    if ($('received-subtitle')) $('received-subtitle').textContent = (s.name || '') + ' · ' + t('recv.count', { n: files.length });
+    if (!files.length) { body.appendChild(el('div', { class: 'empty', text: t('recv.empty') })); return; }
+    const grid = el('div', { class: 'received-grid' });
+    let thumbs = 0;
+    files.forEach((f) => {
+      const card = el('div', { class: 'received-card' });
+      const dlUrl = '/api/shares/' + encodeURIComponent(s.id) + '/received-file?path=' + encodeURIComponent(f.path);
+      const media = el('div', { class: 'received-thumb' });
+      if (f.image && thumbs < RECEIVED_THUMB_CAP) {
+        thumbs += 1;
+        const img = el('img', { attrs: { loading: 'lazy', alt: f.name } });
+        img.src = dlUrl + '&inline=1';
+        img.addEventListener('error', () => { media.textContent = ''; media.appendChild(el('span', { class: 'received-ico', text: '🖼' })); }, { once: true });
+        media.appendChild(img);
+      } else {
+        media.appendChild(el('span', { class: 'received-ico', text: f.image ? '🖼' : '📄' }));
+      }
+      card.appendChild(media);
+      const meta = el('div', { class: 'received-meta' });
+      meta.appendChild(el('div', { class: 'received-name', text: f.name, attrs: { title: f.path } }));
+      meta.appendChild(el('div', { class: 'received-sub muted sm', text: formatBytes(f.size || 0) + (f.mtime ? ' · ' + timeAgo(f.mtime) : '') }));
+      const dl = el('a', { class: 'btn ghost xs', text: t('recv.download'), attrs: { href: dlUrl, download: f.name || '', rel: 'noopener' } });
+      meta.appendChild(dl);
+      card.appendChild(meta);
+      grid.appendChild(card);
+    });
+    body.appendChild(grid);
+  } catch (e) { body.textContent = t('recv.fail'); }
+}
+function closeReceivedFiles() { if ($('received-overlay')) $('received-overlay').classList.add('hidden'); }
+if ($('received-close')) $('received-close').addEventListener('click', closeReceivedFiles);
+if ($('received-overlay')) $('received-overlay').addEventListener('click', (e) => { if (e.target === $('received-overlay')) closeReceivedFiles(); });
+
 if ($('stats-close')) $('stats-close').addEventListener('click', closeDetailedStats);
 if ($('stats-overlay')) $('stats-overlay').addEventListener('click', (e) => { if (e.target === $('stats-overlay')) closeDetailedStats(); });
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && $('stats-overlay') && !$('stats-overlay').classList.contains('hidden')) closeDetailedStats();
 });
+
+
+// Recoverable trash UI.
+async function loadTrash(){const body=$('trash-body');if(!body)return;body.textContent=t('filehist.loading');try{const data=await api('GET','/api/trash');body.textContent='';if($('trash-subtitle'))$('trash-subtitle').textContent=t('trash.retention',{n:data.retentionDays||0});const items=(data&&data.items)||[];if(!items.length){body.appendChild(el('div',{class:'empty',text:t('trash.empty')}));return;}items.forEach((r)=>{const row=el('div',{class:'trash-row'}),main=el('div',{class:'trash-main'});main.appendChild(el('strong',{text:r.name||'—'}));main.appendChild(el('span',{class:'muted sm',text:[r.type||'',formatBytes(r.logicalBytes||0),r.deletedAt?timeAgo(r.deletedAt):''].filter(Boolean).join(' · ')}));if(r.deletedBy)main.appendChild(el('span',{class:'muted xs',text:r.deletedBy}));const acts=el('div',{class:'trash-actions'});const historyBtn=el('button',{class:'btn ghost sm',text:t('sh.historyBtn')});historyBtn.addEventListener('click',()=>openShareChangeHistory({id:r.shareId,name:r.name,trashId:r.id}));acts.appendChild(historyBtn);if(state.role!=='auditor'){const restore=el('button',{class:'btn sm',text:t('trash.restore')});restore.addEventListener('click',async()=>{try{await api('POST','/api/trash/'+encodeURIComponent(r.id)+'/restore',{});toast(t('trash.restoreOk'),'ok');await loadTrash();refreshShares();}catch(_){toast(t('trash.restoreFail'),'err');}});acts.appendChild(restore);}if(state.role==='owner'||state.role==='admin'){const purge=el('button',{class:'btn danger sm',text:t('trash.purge')});purge.addEventListener('click',async()=>{if(!confirm(t('trash.purgeConfirm',{name:r.name||''})))return;try{await api('DELETE','/api/trash/'+encodeURIComponent(r.id));toast(t('trash.purgeOk'),'ok');loadTrash();}catch(_){toast(t('trash.purgeFail'),'err');}});acts.appendChild(purge);}row.append(main,acts);body.appendChild(row);});}catch(_){body.textContent=t('sh.loadFail');}}
+function openTrash(){$('trash-overlay').classList.remove('hidden');loadTrash();}function closeTrash(){$('trash-overlay').classList.add('hidden');}
+if($('trash-btn'))$('trash-btn').addEventListener('click',openTrash);if($('trash-close'))$('trash-close').addEventListener('click',closeTrash);if($('trash-overlay'))$('trash-overlay').addEventListener('click',(e)=>{if(e.target===$('trash-overlay'))closeTrash();});if($('trash-purge-all'))$('trash-purge-all').addEventListener('click',async()=>{if(!confirm(t('trash.purgeAllConfirm')))return;try{await api('DELETE','/api/trash');toast(t('trash.purgeOk'),'ok');loadTrash();}catch(_){toast(t('trash.purgeFail'),'err');}});
+
+// Detailed per-file download history.
+async function openFileHistory(sh){$('file-history-subtitle').textContent=sh.name||'';const body=$('file-history-body');body.textContent=t('filehist.loading');$('file-history-overlay').classList.remove('hidden');try{const data=await api('GET','/api/shares/'+encodeURIComponent(sh.id)+'/file-history');body.textContent='';if(data&&(data.historyTruncated||data.zipMembersTruncated))body.appendChild(el('div',{class:'notice warn',text:t('filehist.truncated')}));const files=(data&&data.files)||[];if(!files.length){body.appendChild(el('div',{class:'empty',text:t('filehist.empty')}));return;}files.forEach((f)=>{const box=el('div',{class:'filehist-file'}),head=el('div',{class:'filehist-head'});head.appendChild(el('strong',{text:f.name||'—'}));head.appendChild(el('span',{text:t('filehist.transfers',{n:f.transfers||0})+' · '+formatBytes(f.bytes||0)}));box.appendChild(head);box.appendChild(el('div',{class:'muted sm',text:t('filehist.completed',{n:f.completed||0})+' · '+(f.lastAt?t('filehist.last',{v:timeAgo(f.lastAt)}):'—')+(f.lastIp?' · '+f.lastIp:'')+(f.lastCountry?' · '+f.lastCountry:'')}));((data&&data.events)||[]).filter((e)=>e.name===f.name).slice(0,20).forEach((e)=>{const row=el('div',{class:'filehist-event '+(e.completed?'ok':'fail')});row.appendChild(el('span',{text:e.completed?'✓':'⚠'}));row.appendChild(el('span',{text:[e.at?formatDate(e.at):'—',e.viaZip?'📦 ZIP':'',formatBytes(e.bytes||0),e.ipName||e.ip||'—',e.country||'',e.recipient?'👤 '+e.recipient:'',e.completed?'':(e.reason||'')].filter(Boolean).join(' · ')}));box.appendChild(row);});body.appendChild(box);});}catch(_){body.textContent=t('filehist.fail');}}
+function closeFileHistory(){$('file-history-overlay').classList.add('hidden');}if($('file-history-close'))$('file-history-close').addEventListener('click',closeFileHistory);if($('file-history-overlay'))$('file-history-overlay').addEventListener('click',(e)=>{if(e.target===$('file-history-overlay'))closeFileHistory();});
+
+// Real-time activity stream over SSE.
+function activityIcon(kind,status){if(kind==='transfer-start')return'⇄';if(kind==='transfer-complete')return'✓';if(kind==='transfer-error')return'⚠';if(kind==='ocr-start'||kind==='ocr-complete')return'T';if(kind==='ocr-error')return'⚠';if(kind==='antivirus')return status==='infected'?'🦠':'🛡';if(kind==='trash')return'🗑';return'•';}
+function renderActivity(){const body=$('activity-body');if(!body)return;body.textContent='';const list=state.activityEvents||[];if(!list.length){body.appendChild(el('div',{class:'empty',text:t('activity.empty')}));return;}list.slice(0,200).forEach((e)=>{const row=el('div',{class:'activity-row '+String(e.kind||'')});row.appendChild(el('span',{class:'activity-icon',text:activityIcon(e.kind,e.status)}));const main=el('div',{class:'activity-main'});main.appendChild(el('strong',{text:e.name||e.kind||'event'}));main.appendChild(el('span',{class:'muted sm',text:[e.direction==='up'?'⬆':e.direction==='down'?'⬇':'',e.bytes?formatBytes(e.bytes):'',e.status||'',e.ip||'',e.detail||''].filter(Boolean).join(' · ')}));row.append(main,el('time',{text:e.at?timeAgo(e.at):'—'}));body.appendChild(row);});}
+function addActivityEvent(e){if(!e||!e.id)return;state.activityEvents=(state.activityEvents||[]).filter((x)=>x.id!==e.id);state.activityEvents.unshift(e);if(state.activityEvents.length>300)state.activityEvents.length=300;renderActivity();}
+function openLiveActivity(){$('activity-overlay').classList.remove('hidden');if(state.activitySource){try{state.activitySource.close();}catch(_){}}$('activity-status').textContent=t('activity.reconnecting');renderActivity();const src=new EventSource('/api/activity/stream');state.activitySource=src;src.addEventListener('snapshot',(ev)=>{try{const arr=JSON.parse(ev.data);state.activityEvents=Array.isArray(arr)?arr.slice().reverse():[];renderActivity();}catch(_){}});src.addEventListener('activity',(ev)=>{try{addActivityEvent(JSON.parse(ev.data));}catch(_){}});src.onopen=()=>{$('activity-status').textContent=t('activity.connected');};src.onerror=()=>{$('activity-status').textContent=t('activity.reconnecting');};}
+function closeLiveActivity(){if(state.activitySource){try{state.activitySource.close();}catch(_){}state.activitySource=null;}$('activity-overlay').classList.add('hidden');}
+if($('live-activity-btn'))$('live-activity-btn').addEventListener('click',openLiveActivity);if($('activity-close'))$('activity-close').addEventListener('click',closeLiveActivity);if($('activity-overlay'))$('activity-overlay').addEventListener('click',(e)=>{if(e.target===$('activity-overlay'))closeLiveActivity();});if($('activity-clear'))$('activity-clear').addEventListener('click',()=>{state.activityEvents=[];renderActivity();});
+document.addEventListener('keydown',(e)=>{if(e.key!=='Escape')return;if($('trash-overlay')&&!$('trash-overlay').classList.contains('hidden'))closeTrash();if($('file-history-overlay')&&!$('file-history-overlay').classList.contains('hidden'))closeFileHistory();if($('activity-overlay')&&!$('activity-overlay').classList.contains('hidden'))closeLiveActivity();if($('received-overlay')&&!$('received-overlay').classList.contains('hidden'))closeReceivedFiles();});
 
 // Feature 3 — pause / resume a link (reversible deactivation, unlike revoke).
 async function togglePause(s) {
@@ -8865,11 +11286,48 @@ async function commitItemOrder(s, il) {
   }
 }
 
+// Feature 5 — plaintext passwords set during THIS session (create/edit), kept only
+// in memory so "Copy link + password" can work. The server only stores a hash and
+// never returns the password, so this is intentionally lost on reload.
+const linkPwCache = new Map(); // url -> plaintext password
+function rememberLinkPassword(url, pw) { if (url && pw) linkPwCache.set(url, pw); }
+
+// Builds the "copy link + password" and quick-share deep links under the QR image.
+function buildQrActions(name, url) {
+  const wrap = $('qr-actions');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  const pw = linkPwCache.get(url);
+  if (pw) {
+    const combo = document.createElement('button');
+    combo.type = 'button'; combo.className = 'btn sm';
+    combo.textContent = t('sh.copyLinkPw');
+    combo.addEventListener('click', () => copy(url + '\n🔑 ' + pw, t('sh.copyLinkPwDone')));
+    wrap.appendChild(combo);
+  }
+  // Feature 6 — client-only deep links; each opens the user's own mail/chat app.
+  const subject = name || 'Direct-Xfer';
+  const body = (name ? name + '\n' : '') + url;
+  const via = [
+    { label: '✉︎ Email', href: 'mailto:?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body) },
+    { label: 'WhatsApp', href: 'https://wa.me/?text=' + encodeURIComponent(body) },
+    { label: 'Telegram', href: 'https://t.me/share/url?url=' + encodeURIComponent(url) + '&text=' + encodeURIComponent(name || '') },
+    { label: 'SMS', href: 'sms:?&body=' + encodeURIComponent(body) },
+  ];
+  via.forEach((l) => {
+    const a = document.createElement('a');
+    a.className = 'btn ghost sm'; a.href = l.href; a.textContent = l.label;
+    a.title = t('sh.shareVia'); a.target = '_blank'; a.rel = 'noopener';
+    wrap.appendChild(a);
+  });
+}
+
 // --- QR code for a link (image generated by the server, locally) ---
 function openQrFor(name, url) {
   $('qr-name').textContent = name || '';
   $('qr-url').textContent = url;
   $('qr-img').src = '/api/qr?data=' + encodeURIComponent(url);
+  buildQrActions(name, url);
   $('qr-overlay').classList.remove('hidden');
 }
 function openQr(s) { openQrFor(s.name, s.url); }
@@ -8961,7 +11419,18 @@ function openInboxModal() {
   $('ib-block').value = s.defaultBlockExt || '';
   $('ib-note').value = s.receptionBanner || '';
   if ($('ib-moderated')) $('ib-moderated').checked = false;
+  if ($('ib-expireat')) $('ib-expireat').value = '';
+  if ($('ib-require-sender')) $('ib-require-sender').checked = false;
+  if ($('ib-block-exec')) $('ib-block-exec').checked = false;
+  if ($('ib-tag-sender')) $('ib-tag-sender').checked = false; // feature 11
+  if ($('ib-reject-dup')) $('ib-reject-dup').checked = false; // feature 15
+  if ($('ib-maxfiles-sender')) $('ib-maxfiles-sender').value = ''; // feature 12
+  if ($('ib-maxbytes-sender')) $('ib-maxbytes-sender').value = ''; // feature 12
   $('inbox-error').classList.add('hidden');
+  // Feature 36 — reset then load this account's reception-link presets.
+  if ($('ib-preset-select')) $('ib-preset-select').value = '';
+  if ($('ib-preset-del')) $('ib-preset-del').classList.add('hidden');
+  loadInboxPresets();
   $('inbox-overlay').classList.remove('hidden');
   if (window.DXInboxEnc) window.DXInboxEnc.reset();
   // Default end-to-end encryption (applied after reset(), which clears it).
@@ -8982,6 +11451,71 @@ $('inbox-overlay').addEventListener('click', (e) => {
   if (e.target === $('inbox-overlay')) closeInboxModal();
 });
 
+// Feature 36 — reusable reception-link presets. A preset stores the settings fields
+// (never the name or password); applying one prefills the form, saving snapshots it.
+const INBOX_PRESET_FIELDS = [
+  ['ib-expiry', 'val'], ['ib-maxfiles', 'val'], ['ib-maxfiles-upload', 'val'], ['ib-maxfile', 'val'], ['ib-maxtotal', 'val'],
+  ['ib-allow', 'val'], ['ib-block', 'val'], ['ib-note', 'val'],
+  ['ib-group-sender', 'chk'], ['ib-tag-sender', 'chk'], ['ib-reject-dup', 'chk'], ['ib-require-sender', 'chk'], ['ib-block-exec', 'chk'], ['ib-moderated', 'chk'],
+  ['ib-maxfiles-sender', 'val'], ['ib-maxbytes-sender', 'val'],
+  ['ib-geomode', 'val'], ['ib-geocountries', 'val'], ['ib-ipmode', 'val'], ['ib-iplist', 'val'],
+];
+let inboxPresets = [];
+function inboxPresetKey(id) { return id.replace(/^ib-/, ''); }
+function readInboxPresetConfig() {
+  const cfg = {};
+  INBOX_PRESET_FIELDS.forEach(([id, kind]) => { const x = $(id); if (!x) return; cfg[inboxPresetKey(id)] = kind === 'chk' ? !!x.checked : String(x.value || ''); });
+  return cfg;
+}
+function applyInboxPresetConfig(cfg) {
+  if (!cfg || typeof cfg !== 'object') return;
+  INBOX_PRESET_FIELDS.forEach(([id, kind]) => {
+    const key = inboxPresetKey(id), x = $(id);
+    if (!x || !(key in cfg)) return;
+    if (kind === 'chk') x.checked = !!cfg[key]; else x.value = cfg[key];
+    x.dispatchEvent(new Event('change')); // keep dependent UI (geo/IP companions, etc.) in sync
+  });
+}
+function renderInboxPresetOptions() {
+  const sel = $('ib-preset-select'); if (!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = '';
+  sel.appendChild(el('option', { attrs: { value: '' }, text: t('preset.apply') }));
+  inboxPresets.forEach((p) => sel.appendChild(el('option', { attrs: { value: p.id }, text: p.name })));
+  if (inboxPresets.some((p) => p.id === cur)) sel.value = cur;
+  else { sel.value = ''; if ($('ib-preset-del')) $('ib-preset-del').classList.add('hidden'); }
+}
+async function loadInboxPresets() {
+  try { const r = await api('GET', '/api/presets?type=inbox'); inboxPresets = (r && r.presets) || []; }
+  catch (_) { inboxPresets = []; }
+  renderInboxPresetOptions();
+}
+if ($('ib-preset-select')) $('ib-preset-select').addEventListener('change', () => {
+  const p = inboxPresets.find((x) => x.id === $('ib-preset-select').value);
+  if ($('ib-preset-del')) $('ib-preset-del').classList.toggle('hidden', !p);
+  if (p) applyInboxPresetConfig(p.config);
+});
+if ($('ib-preset-save')) $('ib-preset-save').addEventListener('click', async () => {
+  const name = window.prompt(t('preset.namePrompt'));
+  if (name === null) return;
+  const trimmed = name.trim(); if (!trimmed) return;
+  try {
+    const r = await api('POST', '/api/presets', { type: 'inbox', name: trimmed, config: readInboxPresetConfig() });
+    await loadInboxPresets();
+    if (r && r.preset && $('ib-preset-select')) { $('ib-preset-select').value = r.preset.id; if ($('ib-preset-del')) $('ib-preset-del').classList.remove('hidden'); }
+    toast(t('preset.saved'), 'ok');
+  } catch (err) {
+    toast(err && err.data && err.data.error === 'too-many-presets' ? t('preset.tooMany') : t('preset.saveFail'), 'err');
+  }
+});
+if ($('ib-preset-del')) $('ib-preset-del').addEventListener('click', async () => {
+  const id = $('ib-preset-select') ? $('ib-preset-select').value : '';
+  const p = inboxPresets.find((x) => x.id === id);
+  if (!p || !window.confirm(t('preset.deleteConfirm', { name: p.name }))) return;
+  try { await api('DELETE', '/api/presets/' + encodeURIComponent(id)); await loadInboxPresets(); toast(t('preset.deleted'), 'ok'); }
+  catch (_) { toast(t('preset.deleteFail'), 'err'); }
+});
+
 $('inbox-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const encPlan = (window.DXInboxEnc && window.DXInboxEnc.plan) ? window.DXInboxEnc.plan() : null;
@@ -8991,19 +11525,28 @@ $('inbox-form').addEventListener('submit', async (e) => {
     startsAt: startsAtMs('ib-startsat'),
     password: $('ib-password').value,
     maxFiles: parseInt($('ib-maxfiles').value, 10) || 0,
+    maxFilesPerUpload: parseInt($('ib-maxfiles-upload') && $('ib-maxfiles-upload').value, 10) || 0, // feature 13
     maxFileBytes: mbToBytes($('ib-maxfile').value),
     maxTotalBytes: mbToBytes($('ib-maxtotal').value),
     allowExt: $('ib-allow').value,
     blockExt: $('ib-block').value,
     note: $('ib-note').value,
     groupBySender: $('ib-group-sender') ? $('ib-group-sender').checked : false,
+    tagBySender: $('ib-tag-sender') ? $('ib-tag-sender').checked : false, // feature 11
+    rejectDuplicates: $('ib-reject-dup') ? $('ib-reject-dup').checked : false, // feature 15
+    requireSenderName: $('ib-require-sender') ? $('ib-require-sender').checked : false,
+    blockExecutables: $('ib-block-exec') ? $('ib-block-exec').checked : false,
+    maxFilesPerSender: parseInt($('ib-maxfiles-sender') && $('ib-maxfiles-sender').value, 10) || 0, // feature 12
+    maxBytesPerSender: $('ib-maxbytes-sender') ? mbToBytes($('ib-maxbytes-sender').value) : 0, // feature 12
     moderated: $('ib-moderated') ? $('ib-moderated').checked : false,
+    expiresAt: expireAtMs('ib-expireat') || undefined,
     geoMode: $('ib-geomode').value, geoCountries: $('ib-geocountries').value,
     ipMode: $('ib-ipmode').value, ipList: $('ib-iplist').value,
   };
   try {
     if (encPlan) Object.assign(payload, encPlan.payloadExtra);
     const resp = await api('POST', '/api/inbox', payload);
+    if (payload.password && resp && resp.share) rememberLinkPassword(resp.share.url, payload.password); // feature 5
     toast(t('inbox.created'), 'ok');
     closeInboxModal();
     refreshShares();
@@ -9032,6 +11575,8 @@ function openCollabModal() {
   $('cl-allow').value = s.defaultAllowExt || '';
   $('cl-block').value = s.defaultBlockExt || '';
   $('cl-note').value = s.receptionBanner || '';
+  if ($('cl-expireat')) $('cl-expireat').value = '';
+  if ($('cl-block-exec')) $('cl-block-exec').checked = false;
   $('collab-error').classList.add('hidden');
   $('collab-overlay').classList.remove('hidden');
   $('cl-name').focus();
@@ -9068,15 +11613,19 @@ $('collab-form').addEventListener('submit', async (e) => {
     allowZip: $('cl-allow-zip').checked,
     maxFileBytes: mbToBytes($('cl-maxfile').value),
     maxTotalBytes: mbToBytes($('cl-maxtotal').value),
+    maxFilesPerUpload: parseInt($('cl-maxfiles-upload') && $('cl-maxfiles-upload').value, 10) || 0, // feature 13
     allowExt: $('cl-allow').value,
     blockExt: $('cl-block').value,
     note: $('cl-note').value,
     moderated: $('cl-moderated') ? $('cl-moderated').checked : false,
+    blockExecutables: $('cl-block-exec') ? $('cl-block-exec').checked : false,
+    expiresAt: expireAtMs('cl-expireat') || undefined,
     geoMode: $('cl-geomode').value, geoCountries: $('cl-geocountries').value,
     ipMode: $('cl-ipmode').value, ipList: $('cl-iplist').value,
   };
   try {
-    await api('POST', '/api/collab', payload);
+    const resp = await api('POST', '/api/collab', payload);
+    if (payload.password && resp && resp.share) rememberLinkPassword(resp.share.url, payload.password); // feature 5
     toast(t('collab.created'), 'ok');
     closeCollabModal();
     refreshShares();
@@ -9217,6 +11766,66 @@ function startsAtMs(id) {
   const ms = new Date(v).getTime();
   return Number.isFinite(ms) ? ms : 0;
 }
+// Feature 2 — absolute expiry date from a <input type="datetime-local">. Returns
+// 0 when empty so callers can omit `expiresAt` and fall back to the duration.
+function expireAtMs(id) {
+  const el = $(id);
+  if (!el || !el.value) return 0;
+  const ms = new Date(el.value).getTime();
+  return Number.isFinite(ms) && ms > Date.now() ? ms : 0;
+}
+// Feature 20 — coarse password-strength estimate (0=empty … 4=strong), driving a
+// four-segment bar. Length dominates; character-class variety refines it.
+function pwStrength(v) {
+  v = String(v || '');
+  if (!v) return 0;
+  let score = 0;
+  if (v.length >= 8) score += 1;
+  if (v.length >= 12) score += 1;
+  if (v.length >= 16) score += 1;
+  const classes = (/[a-z]/.test(v) ? 1 : 0) + (/[A-Z]/.test(v) ? 1 : 0) + (/[0-9]/.test(v) ? 1 : 0) + (/[^A-Za-z0-9]/.test(v) ? 1 : 0);
+  score += Math.max(0, classes - 1);
+  return Math.max(1, Math.min(4, score));
+}
+// Feature 3 — a strong random password generated in the browser (crypto RNG),
+// omitting ambiguous glyphs (0/O, 1/l/I) so it stays easy to read aloud.
+function genPassword(len) {
+  len = len || 20;
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%&*?-_';
+  const rng = (window.crypto || window.msCrypto);
+  const arr = new Uint32Array(len);
+  rng.getRandomValues(arr);
+  let out = '';
+  for (let i = 0; i < len; i++) out += alphabet[arr[i] % alphabet.length];
+  return out;
+}
+// Injects a "Generate" button + strength meter beside a password field once.
+function attachPwTools(id) {
+  const input = $(id);
+  if (!input || input.dataset.pwTools) return;
+  input.dataset.pwTools = '1';
+  const wrap = document.createElement('div');
+  wrap.className = 'pw-tools';
+  const gen = document.createElement('button');
+  gen.type = 'button'; gen.className = 'btn ghost sm'; gen.textContent = t('pk.genPw'); gen.title = t('pk.genPwTip');
+  const meter = document.createElement('span');
+  meter.className = 'pw-strength empty';
+  meter.appendChild(document.createElement('i'));
+  wrap.appendChild(gen); wrap.appendChild(meter);
+  (input.parentElement || input).appendChild(wrap);
+  const update = () => { meter.dataset.level = String(pwStrength(input.value)); meter.classList.toggle('empty', !input.value); };
+  gen.addEventListener('click', () => {
+    input.value = genPassword(20);
+    if (input.type === 'password') input.type = 'text'; // reveal a value the admin never typed
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    try { input.focus(); input.select(); } catch (_) {}
+  });
+  input.addEventListener('input', update);
+  update();
+}
+function initPasswordTools() {
+  ['opt-password', 'edit-password', 'ib-password', 'cl-password', 'acc-password'].forEach(attachPwTools);
+}
 // Date -> "YYYY-MM-DDTHH:MM" in local time, for <input type="datetime-local">.
 function toLocalDatetime(d) {
   const p = (n) => String(n).padStart(2, '0');
@@ -9235,13 +11844,24 @@ function openPicker() {
   $('opt-allowzip').checked = s.defaultAllowZip !== false;
   $('opt-preview').checked = s.defaultAllowPreview !== false;
   $('opt-burn').checked = !!s.defaultBurnAfterDownload;
+  if ($('opt-color')) $('opt-color').value = s.defaultShareColor || '';
+  if ($('opt-tags')) $('opt-tags').value = s.defaultShareTags || '';
+  if ($('opt-description')) $('opt-description').value = s.defaultDescriptionMd || '';
+  if ($('opt-reminder')) $('opt-reminder').value = s.defaultExpiryReminderHours == null || Number(s.defaultExpiryReminderHours) < 0 ? '' : String(s.defaultExpiryReminderHours);
+  if ($('opt-firstuse')) $('opt-firstuse').value = s.defaultFirstUseExpiryHours ? String(s.defaultFirstUseExpiryHours) : '';
+  if ($('opt-inactive')) $('opt-inactive').value = s.defaultInactiveExpiryDays ? String(s.defaultInactiveExpiryDays) : '';
   if ($('opt-note')) $('opt-note').value = '';
+  if ($('opt-maxdlperip')) $('opt-maxdlperip').value = '';
+  if ($('opt-pwhint')) $('opt-pwhint').value = '';
+  if ($('opt-maxbytesserved')) $('opt-maxbytesserved').value = '';
+  if ($('opt-emoji')) $('opt-emoji').value = '';
   $('opt-password').value = '';
   $('opt-password').required = !!s.defaultRequirePassword;
   // Deferred-start default: pre-fill "active from" with now + N hours.
   $('opt-startsat').value = s.defaultStartDelayHours > 0
     ? toLocalDatetime(new Date(Date.now() + s.defaultStartDelayHours * 3600000))
     : '';
+  if ($('opt-expireat')) $('opt-expireat').value = ''; // feature 2 — start with no absolute date
   $('share-options').classList.remove('hidden');
   if ($('pk-multi-hint')) $('pk-multi-hint').classList.remove('hidden');
   $('picker-title').textContent = t('pk.title');
@@ -9320,7 +11940,7 @@ async function createPhotos(paths) {
     return;
   }
   let r;
-  try { r = await api('POST', '/api/photos', { paths }); }
+  try { r = await apiWithDlpOverride('POST', '/api/photos', { paths }); }
   catch (e) {
     const errors = (e.data && Array.isArray(e.data.errors)) ? e.data.errors : [];
     const copyFailed = errors.filter((item) => item && item.error === 'image-copy-failed').length;
@@ -9443,16 +12063,26 @@ async function resizePhotoMini(s) {
         cv.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('blob'))), 'image/jpeg', 0.99);
       } catch (e) { reject(e); }
     });
+    const blobs = {};
     for (const variant of ['thumb', 'micro']) {
+      blobs[variant] = await makeBlob(variant);
       const response = await fetch('/api/photos/' + encodeURIComponent(s.id) + '/' + variant, {
         method: 'POST', credentials: 'same-origin',
         headers: { 'Content-Type': 'application/octet-stream', 'X-CSRF-Token': state.csrf || '' },
-        body: await makeBlob(variant),
+        body: blobs[variant],
       });
       if (!response.ok) throw new Error(variant + '-upload');
     }
-    // Drop the cached dims so the rebuilt card re-fetches and shows the new sizes.
-    delete state.photoDimsCache[s.token];
+    // Patch the cached per-copy metadata with the exact dimensions and byte sizes we
+    // just generated, then re-render at once so the card shows the new Mini/Micro
+    // resolutions immediately — no flicker to "…" and no extra /dims round-trip. The
+    // Full entry (and top-level dims) are preserved. Same {w,h,size} shape as /dims.
+    const prevDims = state.photoDimsCache[s.token] || {};
+    state.photoDimsCache[s.token] = Object.assign({}, prevDims, {
+      thumb: { w: dims.thumb[0], h: dims.thumb[1], size: blobs.thumb.size },
+      micro: { w: dims.micro[0], h: dims.micro[1], size: blobs.micro.size },
+    });
+    if (state.photosData) renderPhotos(state.photosData);
     toast(t('photo.resizeMiniDone', { w: tw, h: th }), 'ok');
     refreshShares();
   } catch (_) { toast(t('photo.resizeMiniFail'), 'err'); }
@@ -9630,9 +12260,13 @@ function visiblePhotos(photos) {
   const q = (state.photoSearch || '').trim().toLowerCase();
   const totalViews = (s) => { const p = s.photo || {}; return (p.fullViews || 0) + (p.thumbViews || 0) + (p.microViews || 0); };
   let arr = photos.slice();
-  if (q) arr = arr.filter((s) => [s.name, s.token, s.photo && s.photo.ext]
-    .some((v) => String(v || '').toLowerCase().includes(q))
-    || (Array.isArray(s.tags) && s.tags.some((tg) => (tg || '').toLowerCase().includes(q))));
+  if (q) arr = arr.filter((s) => {
+    const local = [s.name, s.token, s.photo && s.photo.ext, s.adminNote || '']
+      .some((v) => String(v || '').toLowerCase().includes(q))
+      || (Array.isArray(s.tags) && s.tags.some((tg) => (tg || '').toLowerCase().includes(q)));
+    const ocr = state.photoOcrQuery === q && state.photoOcrMatches.has(s.token);
+    return local || ocr;
+  });
   if (state.photoFormat) arr = arr.filter((s) => {
     let ext = String((s.photo && s.photo.ext) || '').toLowerCase();
     if (ext === 'jpeg') ext = 'jpg';
@@ -9666,6 +12300,33 @@ function visiblePhotos(photos) {
   return arr;
 }
 
+async function refreshPhotoOcrMatches(query) {
+  const q = String(query || '').trim().toLowerCase();
+  const requestId = ++state.photoOcrRequestId;
+  if (q.length < 2) {
+    state.photoOcrQuery = q; state.photoOcrMatches = new Set();
+    if (state.photosData) renderPhotos(state.photosData);
+    return;
+  }
+  try {
+    const r = await api('GET', '/api/search?q=' + encodeURIComponent(q) + '&type=photo&limit=200');
+    if (requestId !== state.photoOcrRequestId || q !== String(state.photoSearch || '').trim().toLowerCase()) return;
+    state.photoOcrQuery = q;
+    state.photoOcrMatches = new Set(((r && r.results) || []).filter((hit) => hit && hit.type === 'photo').map((hit) => hit.token).filter(Boolean));
+  } catch (_) {
+    if (requestId !== state.photoOcrRequestId) return;
+    state.photoOcrQuery = q; state.photoOcrMatches = new Set();
+  }
+  if (state.photosData) renderPhotos(state.photosData);
+}
+function schedulePhotoOcrSearch(query) {
+  if (state.photoOcrTimer) clearTimeout(state.photoOcrTimer);
+  const q = String(query || '').trim().toLowerCase();
+  // Clear stale OCR matches immediately while the new query is being resolved.
+  if (state.photoOcrQuery !== q) state.photoOcrMatches = new Set();
+  state.photoOcrTimer = setTimeout(() => { state.photoOcrTimer = null; refreshPhotoOcrMatches(q); }, q.length >= 2 ? 180 : 0);
+}
+
 function renderPhotos(photos) {
   const list = $('photos-list');
   if (!list) return;
@@ -9677,7 +12338,18 @@ function renderPhotos(photos) {
   // The contextual favorite action also depends on the current favorite state,
   // so refresh it even when the set of selected ids itself did not change.
   updatePhotoBulkBar();
+  const qNow = String(state.photoSearch || '').trim().toLowerCase();
+  if (qNow && state.photoOcrQuery !== qNow && !state.photoOcrTimer) schedulePhotoOcrSearch(qNow);
   const ordered = visiblePhotos(photos);
+  // Bulk actions must never keep acting on cards hidden by a search/filter. This
+  // mirrors the main Shares page: once a card leaves the visible result set, its
+  // selection is cleared so revoke/expiry/album actions cannot hit unseen images.
+  const visibleIds = new Set(ordered.map((s) => s.id));
+  let prunedHiddenSelection = false;
+  for (const id of [...state.photoSelection]) {
+    if (!visibleIds.has(id)) { state.photoSelection.delete(id); prunedHiddenSelection = true; }
+  }
+  if (prunedHiddenSelection) updatePhotoBulkBar();
   if ($('photos-count')) $('photos-count').textContent = ordered.length;
   // Fast no-op path: the full structural signature (order + per-card sigs +
   // search/sort) is unchanged, so only the live counters may have moved.
@@ -9685,10 +12357,10 @@ function renderPhotos(photos) {
     state.photoSearch || '', state.photoSort || 'new', state.photoFormat || '', state.photoOrientation || '',
     state.photoVariants || '', state.photoAlbum || '', !!state.photoFavoritesOnly,
   ]));
-  if (sig === state.lastPhotosSig) { updatePhotoStats(ordered); return; }
+  if (sig === state.lastPhotosSig) { updatePhotoStats(ordered); applySharePresence(); return; }
   state.lastPhotosSig = sig;
   const cardMap = state.photoCards || (state.photoCards = new Map());
-  if (!ordered.length) { list.textContent = ''; cardMap.clear(); list.appendChild(el('div', { class: 'empty', text: t('photo.none') })); return; }
+  if (!ordered.length) { list.textContent = ''; cardMap.clear(); list.appendChild(el('div', { class: 'empty', text: t('photo.none') })); applySharePresence(); return; }
   // Rebuild only the cards whose own signature changed; reuse the rest as-is so
   // their <img> previews stay decoded and in place (no flicker on rename / expiry
   // change / variant arrival / poll). Then reorder the DOM to match the sort.
@@ -9710,6 +12382,18 @@ function renderPhotos(photos) {
   for (const tok of [...cardMap.keys()]) if (!seen.has(tok)) cardMap.delete(tok);
   reconcileChildren(list, desired);
   updatePhotoStats(ordered);
+  // The SSE snapshot may have arrived before this tab built its cards. Re-apply the
+  // cached authoritative state after every gallery reconciliation so an already
+  // active image download is visible immediately, without waiting for another event.
+  applySharePresence();
+  const requestedToken = location.pathname === IMAGES_PATH ? new URLSearchParams(location.search).get('image') : '';
+  if (requestedToken) {
+    const requested = [...list.querySelectorAll('.photo-card')].find((card) => card.dataset.token === requestedToken);
+    if (requested && !requested.dataset.urlFocused) {
+      requested.dataset.urlFocused = '1'; requested.classList.add('url-focused');
+      setTimeout(() => { try { requested.scrollIntoView({ block:'center', behavior:'smooth' }); } catch (_) { try { requested.scrollIntoView(); } catch (_) {} } }, 0);
+    }
+  }
 }
 
 // Reorders `parent`'s children to match `desired` (ordered nodes) and drops the
@@ -9734,7 +12418,7 @@ function photoCardSig(s) {
     ? [d.w, d.h, d.full && d.full.size, d.thumb && [d.thumb.w, d.thumb.h, d.thumb.size], d.micro && [d.micro.w, d.micro.h, d.micro.size]].join('/')
     : (p.w ? p.w + 'x' + p.h : '');
   return [s.token, s.name, s.active, !!s.favorite, !!p.hasThumb, !!p.hasMicro, p.ext, p.uploadDeviceName || '', !!p.metadataRemoved, s.expiresAt || 0,
-    dimSig, pendingShareDeletionFor(s.id), (s.tags || []).join('\u0001')];
+    dimSig, pendingShareDeletionFor(s.id), (s.tags || []).join('\u0001'), state.photoOcrQuery === String(state.photoSearch || '').trim().toLowerCase() && state.photoOcrMatches.has(s.token)];
 }
 
 
@@ -9857,13 +12541,47 @@ document.addEventListener('keydown', (event) => {
 });
 
 
+// Feature 18 — lazy LQIP upgrade: replace a card's micro placeholder with its
+// sharper thumb once it scrolls into view (never eagerly, so a large gallery
+// doesn't fetch every thumbnail up front). A single shared observer unobserves
+// each card as soon as it upgrades, so the watched set only ever shrinks.
+let lqipObserver = null;
+function lqipUpgrade(img, thumbUrl) {
+  const swap = () => {
+    const hi = new Image();
+    hi.onload = () => { img.src = thumbUrl; img.classList.add('lqip-loaded'); };
+    hi.onerror = () => img.classList.add('lqip-loaded');
+    hi.src = thumbUrl;
+  };
+  if (typeof IntersectionObserver !== 'function') { swap(); return; }
+  if (!lqipObserver) {
+    lqipObserver = new IntersectionObserver((entries, obs) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        obs.unobserve(entry.target);
+        const fn = entry.target._lqip; delete entry.target._lqip;
+        if (fn) fn();
+      });
+    }, { rootMargin: '300px' });
+  }
+  img._lqip = swap;
+  lqipObserver.observe(img);
+}
 // Builds a single gallery card element with all listeners wired. Kept separate
 // from renderPhotos so the reconciler can rebuild only the cards that changed.
+function escapePhotoHtmlAttr(value) {
+  return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function escapePhotoMarkdownAlt(value) {
+  return String(value || '').replace(/\\/g, '\\\\').replace(/\]/g, '\\]');
+}
+
 function buildPhotoCard(s) {
     const p = s.photo || {};
     if (!p.hasThumb || !p.hasMicro) generatePhotoVariants(s).catch(() => {});
     const isPendingDelete = pendingShareDeletionFor(s.id);
-    const card = el('div', { class: 'photo-card' + (s.active ? '' : ' inactive') + (isPendingDelete ? ' pending-delete' : ''), attrs: { 'data-token': s.token } });
+    const ocrMatch = state.photoOcrQuery === String(state.photoSearch || '').trim().toLowerCase() && state.photoOcrMatches.has(s.token);
+    const card = el('div', { class: 'photo-card' + (s.active ? '' : ' inactive') + (isPendingDelete ? ' pending-delete' : '') + (ocrMatch ? ' ocr-search-match' : ''), attrs: { 'data-token': s.token, 'data-share-id': s.id } });
     // The gallery preview must load SAME-ORIGIN: the configured image domain
     // (imageBase) may be an external/CDN host that the admin browser can't reach.
     // The imageBase URLs are used only for the copy / embed buttons below.
@@ -9872,7 +12590,16 @@ function buildPhotoCard(s) {
     const localMicro = '/i/' + s.token + '/micro';
     const link = el('a', { class: 'photo-thumb', attrs: { href: localFull, target: '_blank', rel: 'noopener', title: s.name } });
     const img = el('img', { attrs: { loading: 'lazy', alt: s.name } });
-    img.src = p.hasMicro ? localMicro : (p.hasThumb ? localThumb : localFull);
+    // Feature 18 — LQIP blur-up: show the tiny micro instantly (blurred), then
+    // upgrade to the sharper thumb only once the card scrolls into view. Loading
+    // every thumb eagerly here would fetch the whole library on render.
+    if (p.hasMicro && p.hasThumb) {
+      img.classList.add('lqip');
+      img.src = localMicro;
+      lqipUpgrade(img, localThumb);
+    } else {
+      img.src = p.hasMicro ? localMicro : (p.hasThumb ? localThumb : localFull);
+    }
     link.appendChild(img);
     // Click opens the in-page lightbox; modifier / middle clicks keep the
     // native "open image in a new tab" behaviour (the href stays intact).
@@ -9917,20 +12644,25 @@ function buildPhotoCard(s) {
     }
     const urls = el('div', { class: 'photo-urls' });
     const name = s.name || '';
+    const mdName = escapePhotoMarkdownAlt(name);
+    const htmlName = escapePhotoHtmlAttr(name);
+    const htmlFullUrl = escapePhotoHtmlAttr(p.imgUrl);
+    const htmlThumbUrl = escapePhotoHtmlAttr(p.thumbUrl);
+    const htmlMicroUrl = escapePhotoHtmlAttr(p.microUrl);
     // Full size → direct embed; Mini/Micro → clickable preview linking to the full image.
     urls.appendChild(photoUrlRow(t('photo.full'), p.imgUrl, {
-      md: '![' + name + '](' + p.imgUrl + ')',
-      html: '<img src="' + p.imgUrl + '" alt="' + name + '">',
+      md: '![' + mdName + '](' + p.imgUrl + ')',
+      html: '<img src="' + htmlFullUrl + '" alt="' + htmlName + '">',
       bb: '[img]' + p.imgUrl + '[/img]',
     }));
     urls.appendChild(photoUrlRow(t('photo.thumb'), p.thumbUrl, {
-      md: '[![' + name + '](' + p.thumbUrl + ')](' + p.imgUrl + ')',
-      html: '<a href="' + p.imgUrl + '"><img src="' + p.thumbUrl + '" alt="' + name + '"></a>',
+      md: '[![' + mdName + '](' + p.thumbUrl + ')](' + p.imgUrl + ')',
+      html: '<a href="' + htmlFullUrl + '"><img src="' + htmlThumbUrl + '" alt="' + htmlName + '"></a>',
       bb: '[url=' + p.imgUrl + '][img]' + p.thumbUrl + '[/img][/url]',
     }));
     urls.appendChild(photoUrlRow(t('photo.micro'), p.microUrl, {
-      md: '[![' + name + '](' + p.microUrl + ')](' + p.imgUrl + ')',
-      html: '<a href="' + p.imgUrl + '"><img src="' + p.microUrl + '" alt="' + name + '"></a>',
+      md: '[![' + mdName + '](' + p.microUrl + ')](' + p.imgUrl + ')',
+      html: '<a href="' + htmlFullUrl + '"><img src="' + htmlMicroUrl + '" alt="' + htmlName + '"></a>',
       bb: '[url=' + p.imgUrl + '][img]' + p.microUrl + '[/img][/url]',
     }));
     card.appendChild(urls);
@@ -10006,6 +12738,19 @@ function buildPhotoCard(s) {
     const qrBtn = el('button', { class: 'btn ghost sm', text: t('sh.qr'), attrs: { title: t('sh.qrTitle') } });
     qrBtn.addEventListener('click', () => openQrFor(s.name, p.imgUrl));
     actions.appendChild(qrBtn);
+    // Feature 20 — basic in-browser image editor (rotate / crop), parity with the PWA.
+    if (!s.encrypted) {
+      const editBtn = el('button', { class: 'btn ghost sm', text: t('photo.edit'), attrs: { title: t('photo.editTitle') } });
+      editBtn.addEventListener('click', () => openPhotoEditor(s));
+      actions.appendChild(editBtn);
+    }
+    // Feature 25 — copy the full image's pixels to the clipboard (hidden where the
+    // ClipboardItem image API is unavailable, e.g. non-secure contexts / older browsers).
+    if (clipboardImageSupported()) {
+      const copyImgBtn = el('button', { class: 'btn ghost sm', text: t('photo.copyImage'), attrs: { title: t('photo.copyImageTitle') } });
+      copyImgBtn.addEventListener('click', () => copyPhotoImage(s, copyImgBtn));
+      actions.appendChild(copyImgBtn);
+    }
     // Resize the Mini (and, kept at half, the Micro) from the full image, same URL.
     const resizeMiniBtn = el('button', { class: 'btn ghost sm', text: t('photo.resizeMini'), attrs: { title: t('photo.resizeMini') } });
     resizeMiniBtn.addEventListener('click', () => resizePhotoMini(s));
@@ -10032,13 +12777,13 @@ function renderAlbums(albums) {
     const a = s.album || {};
     return [s.token, s.name, s.active, a.count || 0, s.expiresAt || 0, s.views || 0, pendingShareDeletionFor(s.id)];
   }));
-  if (sig === state.lastAlbumsSig) return;
+  if (sig === state.lastAlbumsSig) { applySharePresence(); return; }
   state.lastAlbumsSig = sig;
   list.textContent = '';
   albums.forEach((s) => {
     const a = s.album || {};
     const isPendingDelete = pendingShareDeletionFor(s.id);
-    const card = el('div', { class: 'album-card' + (s.active ? '' : ' inactive') + (isPendingDelete ? ' pending-delete' : '') });
+    const card = el('div', { class: 'album-card' + (s.active ? '' : ' inactive') + (isPendingDelete ? ' pending-delete' : ''), attrs: { 'data-share-id': s.id } });
     const head = el('div', { class: 'album-head' });
     head.appendChild(el('span', { class: 'album-name', text: s.name || t('album.untitled') }));
     const metaBits = [t('album.count', { n: a.count || 0 })];
@@ -10069,6 +12814,7 @@ function renderAlbums(albums) {
     if (isPendingDelete) card.appendChild(pendingShareDeletionBar(s));
     list.appendChild(card);
   });
+  applySharePresence();
 }
 
 function syncPhotoAlbumControls(albums) {
@@ -10197,7 +12943,13 @@ function exportPhotos(fmt) {
     filename = 'direct-xfer-images-' + stamp + '.json';
   } else {
     const cols = Object.keys(rows[0]);
-    const esc = (v) => { const str = String(v == null ? '' : v); return /[",\n]/.test(str) ? '"' + str.replace(/"/g, '""') + '"' : str; };
+    const esc = (v) => {
+      let str = String(v == null ? '' : v);
+      // Match the server-side CSV exports: uploader-controlled names must never
+      // turn into spreadsheet formulas when an administrator opens the file.
+      if (/^[=+\-@\t\r]/.test(str)) str = "'" + str;
+      return /[",\n\r;]/.test(str) ? '"' + str.replace(/"/g, '""') + '"' : str;
+    };
     const csv = [cols.join(',')].concat(rows.map((r) => cols.map((c) => esc(r[c])).join(','))).join('\n');
     blob = new Blob([csv], { type: 'text/csv' });
     filename = 'direct-xfer-images-' + stamp + '.csv';
@@ -10211,6 +12963,7 @@ function exportPhotos(fmt) {
 if ($('photos-search')) $('photos-search').addEventListener('input', () => {
   state.photoSearch = $('photos-search').value;
   updateUiPrefs({ photoSearch: state.photoSearch });
+  schedulePhotoOcrSearch(state.photoSearch);
   if (state.photosData) renderPhotos(state.photosData);
 });
 if ($('photos-sort')) $('photos-sort').addEventListener('change', () => {
@@ -10239,7 +12992,7 @@ if ($('photos-favorites-toggle')) $('photos-favorites-toggle').addEventListener(
   if (state.photosData) renderPhotos(state.photosData);
 });
 if ($('photos-filter-reset')) $('photos-filter-reset').addEventListener('click', () => {
-  state.photoSearch = ''; state.photoSort = 'new'; state.photoFormat = ''; state.photoOrientation = '';
+  state.photoSearch = ''; state.photoOcrQuery = ''; state.photoOcrMatches = new Set(); state.photoSort = 'new'; state.photoFormat = ''; state.photoOrientation = '';
   state.photoVariants = ''; state.photoAlbum = ''; state.photoFavoritesOnly = false;
   updateUiPrefs({
     photoSearch: '', photoSort: 'new', photoFormat: '', photoOrientation: '',
@@ -10395,12 +13148,23 @@ async function runPhotoUploadBatch(tasks, initialSkipped = 0, stripMetadata = fa
           ? prepared.name : ('image-' + Date.now() + (typeExt ? '.' + typeExt : '.jpg'));
         let uploadUrl = '/api/photos/upload?name=' + encodeURIComponent(name);
         if (prepared.metadataStripped) uploadUrl += '&metadataRemoved=1';
-        const response = await fetch(uploadUrl, {
+        const sendPhoto = (url) => fetch(url, {
           method: 'POST', credentials: 'same-origin',
           headers: { 'Content-Type': prepared.type || 'application/octet-stream', 'X-CSRF-Token': state.csrf || '' },
           body: prepared.blob,
         });
-        if (!response.ok) throw new Error('upload');
+        let response = await sendPhoto(uploadUrl);
+        if (response.status === 409) {
+          const warning = await response.clone().json().catch(() => ({}));
+          if (warning.error === 'dlp-warning' && confirmDlpWarning(warning)) {
+            response = await sendPhoto(uploadUrl + (uploadUrl.includes('?') ? '&' : '?') + 'dlpOverride=1');
+          }
+        }
+        if (!response.ok) {
+          const denied = await response.clone().json().catch(() => ({}));
+          if (denied.error === 'dlp-blocked') toast(t('dlp.blocked'), 'err');
+          throw new Error('upload');
+        }
         const data = await response.json();
         ok += 1;
         if (prepared.metadataStripped) cleaned += 1;
@@ -10676,6 +13440,29 @@ function toggleItem(entry, row) {
   updateSelectionUI();
 }
 
+function confirmDlpWarning(data) {
+  const d = data && data.dlp;
+  if (!d || (!d.count && !d.incomplete)) return false;
+  // The scan's only gap is the OCR tool not being installed on the server — a
+  // clearer message than "incomplete (0 skipped, 0 OCR errors, …)".
+  const onlyOcrUnavailable = d.ocrUnavailable && !d.count && !d.filesSkipped && !d.ocrErrors && !d.scanErrors && !d.incompleteEntries && !d.truncated;
+  const msg = onlyOcrUnavailable
+    ? t('dlp.ocrUnavailableConfirm')
+    : d.incomplete
+      ? t('dlp.incompleteConfirm', { skipped:d.filesSkipped || 0, ocr:d.ocrErrors || 0, scan:d.scanErrors || 0, archive:d.incompleteEntries || 0 })
+      : t('dlp.warningConfirm', { n:d.count || 0, level:d.highest || '—', files:d.filesScanned || 0 });
+  return window.confirm(msg);
+}
+async function apiWithDlpOverride(method, url, payload) {
+  try { return await api(method, url, payload); }
+  catch (e) {
+    if (e && e.data && e.data.error === 'dlp-warning' && confirmDlpWarning(e.data)) {
+      return api(method, url, Object.assign({}, payload || {}, { dlpOverride:true }));
+    }
+    throw e;
+  }
+}
+
 $('create-share-btn').addEventListener('click', async () => {
   // Folder chooser for the "default folder" config field: take the current folder.
   if (state.pickerMode === 'configDir') {
@@ -10692,7 +13479,7 @@ $('create-share-btn').addEventListener('click', async () => {
   }
   if (state.pickerMode === 'addTo') {
     try {
-      await api('POST', '/api/shares/' + encodeURIComponent(state.addToShareId) + '/items', { paths });
+      await apiWithDlpOverride('POST', '/api/shares/' + encodeURIComponent(state.addToShareId) + '/items', { paths });
       toast(t('sh.added'), 'ok');
       closePicker();
       refreshShares();
@@ -10713,35 +13500,69 @@ $('create-share-btn').addEventListener('click', async () => {
     $('opt-password').focus();
     return;
   }
-  const rateKBps = parseInt($('opt-rate').value, 10) || 0;
+  const rateRaw = String($('opt-rate').value || '').trim();
+  const rateKBps = rateRaw === '' ? 0 : Number(rateRaw);
+  if (!Number.isFinite(rateKBps) || !Number.isInteger(rateKBps) || rateKBps < 0) {
+    toast(t('sh.addFail', { error:'invalid-rate' }), 'err');
+    $('opt-rate').focus();
+    return;
+  }
   const allowZip = $('opt-allowzip').checked;
   const noPreview = !$('opt-preview').checked;
   const burnAfterDownload = $('opt-burn').checked;
+  const color = $('opt-color') ? $('opt-color').value.trim() : '';
+  const tags = $('opt-tags') ? $('opt-tags').value.split(',').map((x) => x.trim()).filter(Boolean) : [];
+  const descriptionMd = $('opt-description') ? $('opt-description').value : '';
+  const expiryReminderHours = $('opt-reminder') && $('opt-reminder').value !== '' ? Number($('opt-reminder').value) : null;
+  const firstUseExpirySeconds = $('opt-firstuse') ? Math.max(0, Math.round((parseFloat($('opt-firstuse').value) || 0) * 3600)) : 0;
+  const inactiveExpirySeconds = $('opt-inactive') ? Math.max(0, Math.round((parseFloat($('opt-inactive').value) || 0) * 86400)) : 0;
   const note = $('opt-note') ? $('opt-note').value : '';
   const startsAt = startsAtMs('opt-startsat');
   try {
-    const resp = await api('POST', '/api/shares', {
+    const resp = await apiWithDlpOverride('POST', '/api/shares', {
       paths,
       expiresInSeconds: expiry,
+      expiresAt: expireAtMs('opt-expireat') || undefined, // feature 2 — absolute date wins when set
       startsAt,
       maxDownloads: maxdl,
       maxVisitors: parseInt($('opt-maxvisitors').value, 10) || 0,
+      notifyDownloadThreshold: parseInt($('opt-dlthreshold') && $('opt-dlthreshold').value, 10) || 0, // download-goal alert
+      maxDownloadsPerIp: parseInt($('opt-maxdlperip').value, 10) || 0, // feature 24
+      maxBytesServed: Math.round((parseFloat($('opt-maxbytesserved') && $('opt-maxbytesserved').value) || 0) * 1073741824), // feature 13 (GB→bytes)
+      emoji: $('opt-emoji') ? $('opt-emoji').value : '', // feature 6
       password,
+      pwHint: $('opt-pwhint') ? $('opt-pwhint').value : '', // feature 6
       rateKBps,
       allowZip,
       noPreview,
       burnAfterDownload,
+      requestAccess: $('opt-requestaccess') ? $('opt-requestaccess').checked : false, // feature 28
+      allowFeedback: $('opt-feedback') ? $('opt-feedback').checked : false, // feature 38
+      color, tags, descriptionMd, expiryReminderHours, firstUseExpirySeconds, inactiveExpirySeconds,
       note,
     });
+    if (password && resp && resp.share) rememberLinkPassword(resp.share.url, password); // feature 5
     toast(t('sh.created2'), 'ok');
     $('opt-maxdl').value = '';
     $('opt-maxvisitors').value = '';
+    if ($('opt-dlthreshold')) $('opt-dlthreshold').value = '';
+    if ($('opt-maxdlperip')) $('opt-maxdlperip').value = '';
+    if ($('opt-pwhint')) $('opt-pwhint').value = '';
     $('opt-password').value = '';
     $('opt-rate').value = '';
     $('opt-startsat').value = '';
+    if ($('opt-expireat')) $('opt-expireat').value = '';
     $('opt-allowzip').checked = true;
     $('opt-preview').checked = true;
     $('opt-burn').checked = false;
+    if ($('opt-requestaccess')) $('opt-requestaccess').checked = false;
+    if ($('opt-feedback')) $('opt-feedback').checked = false;
+    if ($('opt-color')) $('opt-color').value = '';
+    if ($('opt-tags')) $('opt-tags').value = '';
+    if ($('opt-description')) $('opt-description').value = '';
+    if ($('opt-reminder')) $('opt-reminder').value = '';
+    if ($('opt-firstuse')) $('opt-firstuse').value = '';
+    if ($('opt-inactive')) $('opt-inactive').value = '';
     if ($('opt-note')) $('opt-note').value = '';
     $('opt-password').required = false;
     closePicker();
@@ -10760,7 +13581,7 @@ $('create-share-btn').addEventListener('click', async () => {
 // ------------------------------------------------------------------
 async function loadMeta() {
   try {
-    const r = await fetch('/api/meta', { credentials: 'same-origin' });
+    const r = await fetchWithTimeout('/api/meta', { credentials: 'same-origin' }, 10000);
     const m = await r.json();
     state.meta = m; // kept for the About dialog (version, release date)
     document.querySelectorAll('.app-version').forEach((e) => {
@@ -10799,14 +13620,22 @@ async function loadMeta() {
 // Lifecycle
 // ------------------------------------------------------------------
 async function init() {
-  await loadNetwork();
+  // Authenticated data must not wait on network diagnostics: a slow public-IP or
+  // interface probe must never delay the links list, notifications or restored URL.
+  startNotificationsPolling();
   startPolling();
   maybeOpenAdminSubpageFromUrl(); // reopen /images or /dashboards after sign-in/reload
+  void loadNetwork();
 }
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) stopPolling();
-  else if (isLoggedIn()) startPolling();
+  else if (isLoggedIn()) {
+    startPolling();
+    // Notification polling intentionally sleeps in hidden tabs. Refresh once on
+    // return so the badge catches up immediately instead of waiting up to 4 s.
+    refreshNotifications(true);
+  }
 });
 
 // Restore theme, filters, periods and view modes before the first render.
@@ -10814,14 +13643,16 @@ setTheme(getTheme());
 applyUiPreferencesToControls();
 // Apply the language + load the version, then check the session.
 setLang(state.lang);
+initPasswordTools(); // feature 3/20 — password generator + strength meter
 loadMeta();
 setTimeout(loadMeta, 12000); // re-check so a freshly-started server surfaces an update
 
 (async function bootstrap() {
   try {
-    const s = await fetch('/api/session', { credentials: 'same-origin' });
+    const s = await fetchWithTimeout('/api/session', { credentials: 'same-origin' }, 12000);
     if (s.ok) {
       const data = await s.json();
+      state.authEpoch += 1;
       state.csrf = data.csrf;
       state.username = data.username;
       state.role = data.role;
@@ -11343,10 +14174,28 @@ setTimeout(loadMeta, 12000); // re-check so a freshly-started server surfaces an
     $('audit-overlay').classList.remove('hidden');
     try {
       const data = await api('GET', '/api/audit?limit=200');
+      renderAuditIntegrity(data.integrity);
       renderAudit(data.entries || []);
     } catch (e) {
       if (e.message !== 'not-authenticated') $('audit-list').appendChild(el('div', { class: 'empty', text: t('audit.loadFail') }));
     }
+  }
+
+  function renderAuditIntegrity(info) {
+    const box = $('audit-integrity'); if (!box) return;
+    if (!info) { box.textContent = t('audit.verifying'); box.className = 'muted sm'; return; }
+    if (info.ok) {
+      box.textContent = t('audit.integrityOk', { n: info.entries || 0, seq: info.headSeq || 0 });
+      box.className = 'sm audit-integrity-ok';
+    } else {
+      box.textContent = t('audit.integrityBad', { reason: info.reason || 'unknown' });
+      box.className = 'sm audit-integrity-bad';
+    }
+  }
+  async function verifyAuditIntegrity() {
+    const box = $('audit-integrity'); if (box) { box.textContent = t('audit.verifying'); box.className = 'muted sm'; }
+    try { const r = await api('GET', '/api/audit/verify'); renderAuditIntegrity(r.integrity); }
+    catch (_) { renderAuditIntegrity({ ok:false, reason:'verification-failed' }); }
   }
 
   function actionLabel(action) {
@@ -11374,6 +14223,7 @@ setTimeout(loadMeta, 12000); // re-check so a freshly-started server surfaces an
   }
 
   if ($('audit-btn')) $('audit-btn').addEventListener('click', openAudit);
+  if ($('audit-verify')) $('audit-verify').addEventListener('click', verifyAuditIntegrity);
   if ($('audit-close')) $('audit-close').addEventListener('click', closeAudit);
   if ($('audit-overlay')) $('audit-overlay').addEventListener('click', (e) => {
     if (e.target === $('audit-overlay')) closeAudit();
@@ -11396,9 +14246,18 @@ function openEditModal(s) {
   $('edit-name-label').textContent = s.name;
   $('edit-name').value = s.name || '';
   $('edit-expiry').value = 'keep'; // default: don't touch the expiry
+  // Feature 2 — start the exact-date field EMPTY. Prefilling it would make an
+  // untouched absolute date silently override the preset dropdown on save (the
+  // server prefers expiresAt), so picking "Never"/"7 days" would be ignored.
+  if ($('edit-expireat')) $('edit-expireat').value = '';
   $('edit-startsat').value = s.startsAt ? toLocalDatetime(new Date(s.startsAt)) : '';
   $('edit-maxdl').value = s.maxDownloads ? String(s.maxDownloads) : '';
   $('edit-maxvisitors').value = s.maxVisitors ? String(s.maxVisitors) : '';
+  if ($('edit-dlthreshold')) $('edit-dlthreshold').value = s.notifyDownloadThreshold ? String(s.notifyDownloadThreshold) : ''; // download-goal alert
+  if ($('edit-maxdlperip')) $('edit-maxdlperip').value = s.maxDownloadsPerIp ? String(s.maxDownloadsPerIp) : ''; // feature 24
+  if ($('edit-maxbytesserved')) $('edit-maxbytesserved').value = s.maxBytesServed ? String(Math.round(s.maxBytesServed / 1073741824 * 100) / 100) : ''; // feature 13
+  if ($('edit-emoji')) $('edit-emoji').value = s.emoji || ''; // feature 6
+  if ($('edit-pwhint')) $('edit-pwhint').value = s.pwHint || ''; // feature 6
   $('edit-password').value = '';
   $('edit-password').placeholder = s.hasPassword ? t('ed.pwSet') : t('ed.pwPh');
   $('edit-clearpw').checked = false;
@@ -11407,6 +14266,20 @@ function openEditModal(s) {
   $('edit-allowzip').checked = s.allowZip !== false;
   $('edit-preview').checked = !s.noPreview;
   $('edit-burn').checked = !!s.burnAfterDownload;
+  // Feature 28 — the access gate applies to file + folder download links (both go
+  // through requireActiveShare). Feature 38 — the feedback form is rendered on the
+  // file/collection page only, so it's offered for 'file' shares (single or bundle),
+  // not folders. Hidden entirely for reception/collab/image links.
+  const gateType = s.type === 'file' || s.type === 'folder';
+  const fbType = s.type === 'file';
+  if ($('edit-requestaccess')) { $('edit-requestaccess').checked = !!s.requestAccess; $('edit-requestaccess').parentElement.classList.toggle('hidden', !gateType); } // feature 28
+  if ($('edit-feedback')) { $('edit-feedback').checked = !!s.allowFeedback; $('edit-feedback').parentElement.classList.toggle('hidden', !fbType); } // feature 38
+  if ($('edit-color')) $('edit-color').value = s.color || '';
+  if ($('edit-tags')) $('edit-tags').value = Array.isArray(s.tags) ? s.tags.join(', ') : '';
+  if ($('edit-description')) $('edit-description').value = s.descriptionMd || '';
+  if ($('edit-reminder')) $('edit-reminder').value = s.expiryReminderHours == null ? '' : String(s.expiryReminderHours);
+  if ($('edit-firstuse')) $('edit-firstuse').value = s.firstUseExpirySeconds ? String(Math.round((s.firstUseExpirySeconds / 3600) * 10) / 10) : '';
+  if ($('edit-inactive')) $('edit-inactive').value = s.inactiveExpirySeconds ? String(Math.round((s.inactiveExpirySeconds / 86400) * 10) / 10) : '';
   // Access rules (feature 11)
   $('edit-geomode').value = s.geoMode || 'off';
   $('edit-geocountries').value = Array.isArray(s.geoCountries) ? s.geoCountries.join(', ') : '';
@@ -11424,14 +14297,32 @@ if ($('edit-overlay')) $('edit-overlay').addEventListener('click', (e) => {
 });
 if ($('edit-save')) $('edit-save').addEventListener('click', async () => {
   if (!editShareId) return;
+  const editRateRaw = String($('edit-rate').value || '').trim();
+  const editRateKBps = editRateRaw === '' ? 0 : Number(editRateRaw);
+  if (!Number.isFinite(editRateKBps) || !Number.isInteger(editRateKBps) || editRateKBps < 0) {
+    const err = $('edit-error'); err.textContent = t('ed.saveFail', { error:'invalid-rate' }); err.classList.remove('hidden'); $('edit-rate').focus(); return;
+  }
   const payload = {
     name: $('edit-name').value,
     maxDownloads: parseInt($('edit-maxdl').value, 10) || 0,
     maxVisitors: parseInt($('edit-maxvisitors').value, 10) || 0,
-    rateKBps: parseInt($('edit-rate').value, 10) || 0,
+    notifyDownloadThreshold: parseInt($('edit-dlthreshold') && $('edit-dlthreshold').value, 10) || 0, // download-goal alert
+    maxDownloadsPerIp: parseInt($('edit-maxdlperip').value, 10) || 0, // feature 24
+    maxBytesServed: Math.round((parseFloat($('edit-maxbytesserved') && $('edit-maxbytesserved').value) || 0) * 1073741824), // feature 13 (GB→bytes)
+    emoji: $('edit-emoji') ? $('edit-emoji').value : '', // feature 6
+    pwHint: $('edit-pwhint') ? $('edit-pwhint').value : '', // feature 6
+    rateKBps: editRateKBps,
     allowZip: $('edit-allowzip').checked,
     noPreview: !$('edit-preview').checked,
     burnAfterDownload: $('edit-burn').checked,
+    requestAccess: $('edit-requestaccess') ? $('edit-requestaccess').checked : false, // feature 28
+    allowFeedback: $('edit-feedback') ? $('edit-feedback').checked : false, // feature 38
+    color: $('edit-color') ? $('edit-color').value.trim() : '',
+    tags: $('edit-tags') ? $('edit-tags').value.split(',').map((x) => x.trim()).filter(Boolean) : [],
+    descriptionMd: $('edit-description') ? $('edit-description').value : '',
+    expiryReminderHours: $('edit-reminder') && $('edit-reminder').value !== '' ? Number($('edit-reminder').value) : null,
+    firstUseExpirySeconds: $('edit-firstuse') ? Math.max(0, Math.round((parseFloat($('edit-firstuse').value) || 0) * 3600)) : 0,
+    inactiveExpirySeconds: $('edit-inactive') ? Math.max(0, Math.round((parseFloat($('edit-inactive').value) || 0) * 86400)) : 0,
     note: $('edit-note') ? $('edit-note').value : '',
     startsAt: startsAtMs('edit-startsat'),
     geoMode: $('edit-geomode').value,
@@ -11442,11 +14333,15 @@ if ($('edit-save')) $('edit-save').addEventListener('click', async () => {
   // Expiry: 'keep' leaves it untouched; any other value re-sets it (0 = never).
   const exp = $('edit-expiry').value;
   if (exp !== 'keep') payload.expiresInSeconds = parseInt(exp, 10) || 0;
+  // Feature 2 — an exact date, when provided, takes precedence over the preset.
+  const exAt = expireAtMs('edit-expireat');
+  if (exAt) payload.expiresAt = exAt;
   // Password: "remove" wins; else a typed value sets/replaces; blank = keep.
   if ($('edit-clearpw').checked) payload.password = ''; // server treats '' as clear
   else { const pw = $('edit-password').value; if (pw !== '') payload.password = pw; }
   try {
     const r = await api('PATCH', '/api/shares/' + encodeURIComponent(editShareId), payload);
+    if (payload.password && r && r.share) rememberLinkPassword(r.share.url, payload.password); // feature 5
     toast(t('ed.saved'), 'ok');
     closeEditModal();
     refreshShares();

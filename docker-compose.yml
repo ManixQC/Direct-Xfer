@@ -51,11 +51,24 @@ services:
       # MAX_CONCURRENT_UPLOADS: "8"
       # MAX_CONCURRENT_ZIPS: "2"
       # UPLOAD_IDLE_TIMEOUT_SECONDS: "120"
+      # Universal search OCR in the full admin UI. The Docker image includes
+      # Tesseract + Poppler and French/English/Spanish language packs. Unchanged
+      # files are cached under /data, so subsequent reindexes are cheap.
+      # SEARCH_OCR_ENABLED: "true"
+      # SEARCH_OCR_LANGS: "fra+eng"
+      # SEARCH_OCR_BATCH: "100"
+      # SEARCH_OCR_PDF_MAX_PAGES: "12"
       # Encrypt the metadata store (shares.json: host paths, filenames, password
       # hashes) at rest with AES-256-GCM. Keep this secret safe and STABLE — if it
       # is lost or changed, the store can no longer be read and the container
       # refuses to start (it never overwrites encrypted data with an empty store).
       # DATA_KEY: "a-long-random-secret"
+      # Strongly recommended for the tamper-evident audit journal. On an existing
+      # install that still has /data/audit-chain.key, simply setting this once
+      # triggers a verified transactional migration; the local key is deleted only
+      # after the old chain and the re-signed chain both verify successfully.
+      # Keep this secret stable after migration.
+      # AUDIT_HMAC_KEY: "a-different-long-random-secret"
       # Native HTTPS (so encrypted shares / secret notes / E2E reception work
       # without a reverse proxy — WebCrypto needs a secure context). Provide a
       # cert/key pair, OR set TLS_SELF_SIGNED to auto-generate one (cached in

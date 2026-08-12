@@ -376,7 +376,7 @@ test('PWA image API reports dimensions, byte sizes, views and unique visitors fo
     'base64'
   );
 
-  const created = await fetch(`${base}/app/image?name=stats.png&w=1&h=1`, {
+  const created = await fetch(`${base}/app/image?name=stats.png&w=1&h=1&dlpOverride=1`, {
     method: 'POST',
     headers: {
       'Content-Type': 'image/png',
@@ -456,7 +456,7 @@ test('PWA image management enforces duplicate, metadata, password, view-limit an
   );
   const hash = 'a'.repeat(64);
 
-  const created = await fetch(`${base}/app/image?name=managed.png&w=1&h=1&clientHash=${hash}`, {
+  const created = await fetch(`${base}/app/image?name=managed.png&w=1&h=1&clientHash=${hash}&dlpOverride=1`, {
     method: 'POST', headers: { ...headers, 'Content-Type': 'image/png' }, body: png,
   });
   assert.equal(created.status, 201, JSON.stringify(await json(created.clone())));
@@ -508,7 +508,7 @@ test('PWA image management enforces duplicate, metadata, password, view-limit an
   const limited = await fetch(photo.imgUrl, { headers: { Cookie: unlockCookie }, cache: 'no-store' });
   assert.equal(limited.status, 404);
 
-  const albumImageResponse = await fetch(`${base}/app/image?name=album.png&w=1&h=1`, {
+  const albumImageResponse = await fetch(`${base}/app/image?name=album.png&w=1&h=1&dlpOverride=1`, {
     method: 'POST', headers: { ...headers, 'Content-Type': 'image/png' }, body: png,
   });
   assert.equal(albumImageResponse.status, 201);
@@ -564,7 +564,7 @@ test('PWA advanced image protection enforces hotlink policy, first-view alerts a
     'base64'
   );
 
-  const created = await fetch(`${base}/app/image?name=protected-hotlink.png&w=1&h=1`, {
+  const created = await fetch(`${base}/app/image?name=protected-hotlink.png&w=1&h=1&dlpOverride=1`, {
     method: 'POST',
     headers: { ...mutationHeaders, 'Content-Type': 'image/png' },
     body: png,
@@ -634,4 +634,140 @@ test('PWA advanced image protection enforces hotlink policy, first-view alerts a
     body: JSON.stringify({ enabled: false, maxViews: 0, maxAgeDays: 0, inactiveDays: 0, maxStorageMB: 0 }),
   });
   assert.equal(disabled.status, 200);
+});
+
+test('global upload dedupe requires byte-range possession proof before cross-share copy', async () => {
+  const crypto = require('node:crypto');
+  const admin = adminAuth;
+  assert.ok(admin);
+  const createInbox = async (name) => {
+    const r = await fetch(`${base}/app/inbox`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': admin.csrf, Cookie: admin.cookie, Origin: base },
+      body: JSON.stringify({ name }),
+    });
+    assert.equal(r.status, 201, JSON.stringify(await json(r.clone())));
+    return json(r);
+  };
+  const sourceShare = await createInbox('Dedupe source');
+  const targetShare = await createInbox('Dedupe target');
+  const content = Buffer.from('Direct-Xfer proof-of-possession integration payload '.repeat(180));
+  const sha = crypto.createHash('sha256').update(content).digest('hex');
+  const uploadId = 'dedupesource2026';
+  const upload = await fetch(`${base}/u/${encodeURIComponent(sourceShare.token)}/upload?path=source.bin&id=${uploadId}&size=${content.length}&offset=0&sha256=${sha}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/octet-stream' }, body: content,
+  });
+  assert.equal(upload.status, 200, JSON.stringify(await json(upload.clone())));
+  assert.equal((await json(upload)).complete, true);
+
+  const postProbe = (body) => fetch(`${base}/u/${encodeURIComponent(targetShare.token)}/dedupe`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  });
+  const baseBody = { path: 'target.bin', size: content.length, sha256: sha, id: 'dedupetarget2026' };
+  const probe = await postProbe(baseBody);
+  assert.equal(probe.status, 200, JSON.stringify(await json(probe.clone())));
+  const challenge = await json(probe);
+  assert.equal(challenge.deduped, false);
+  assert.match(challenge.challenge || '', /^[a-f0-9]{48}$/);
+  assert.ok(Array.isArray(challenge.ranges) && challenge.ranges.length >= 1);
+
+  // Knowing only the digest is insufficient: a fake proof is rejected and the
+  // challenge is one-use, preventing replay or a known-hash cross-share oracle.
+  const fake = await postProbe({ ...baseBody, challenge: challenge.challenge, proof: challenge.ranges.map((r) => Buffer.alloc(r.length).toString('base64')) });
+  assert.equal(fake.status, 403);
+  assert.equal((await json(fake)).error, 'dedupe-proof-failed');
+
+  const probe2 = await postProbe(baseBody);
+  assert.equal(probe2.status, 200);
+  const challenge2 = await json(probe2);
+  const proof = challenge2.ranges.map((r) => content.subarray(r.offset, r.offset + r.length).toString('base64'));
+  const hit = await postProbe({ ...baseBody, challenge: challenge2.challenge, proof });
+  assert.equal(hit.status, 200, JSON.stringify(await json(hit.clone())));
+  const hitData = await json(hit);
+  assert.equal(hitData.deduped, true);
+  assert.equal(hitData.complete, true);
+
+  function findNamed(dir, name) {
+    for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
+      const abs = path.join(dir, ent.name);
+      if (ent.isDirectory()) { const got = findNamed(abs, name); if (got) return got; }
+      else if (ent.isFile() && ent.name === name) return abs;
+    }
+    return null;
+  }
+  const target = findNamed(path.join(tempRoot, 'inbox'), 'target.bin');
+  assert.ok(target, 'deduped file should be materialized inside the writable inbox');
+  assert.deepEqual(fs.readFileSync(target), content);
+});
+
+test('global upload dedupe still enforces per-sender caps and duplicate rejection', async () => {
+  const crypto = require('node:crypto');
+  const admin = adminAuth;
+  assert.ok(admin);
+  const makeInbox = async (name, extra) => {
+    const r = await fetch(`${base}/api/inbox`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': admin.csrf, Cookie: admin.cookie, Origin: base },
+      body: JSON.stringify({ name, ...(extra || {}) }),
+    });
+    assert.equal(r.status, 201, JSON.stringify(await json(r.clone())));
+    return (await json(r)).share;
+  };
+  const seedUpload = (token, name, content, sender) => {
+    const q = `name=${encodeURIComponent(name)}` + (sender ? `&sender=${encodeURIComponent(sender)}` : '');
+    return fetch(`${base}/u/${encodeURIComponent(token)}/upload?${q}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/octet-stream' }, body: content,
+    });
+  };
+  // Runs the full two-leg dedupe (probe → possession proof) and returns the final
+  // response, or the probe response when the server rejects/misses before a challenge.
+  const dedupe = async (token, relPath, content, sender) => {
+    const sha = crypto.createHash('sha256').update(content).digest('hex');
+    const body = { path: relPath, size: content.length, sha256: sha, id: 'dd' + crypto.randomBytes(6).toString('hex') };
+    const url = `${base}/u/${encodeURIComponent(token)}/dedupe` + (sender ? `?sender=${encodeURIComponent(sender)}` : '');
+    const post = (b) => fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(b) });
+    const probe = await post(body);
+    const first = await json(probe.clone());
+    if (probe.status !== 200 || first.deduped || !first.challenge) return probe;
+    const proof = first.ranges.map((rg) => content.subarray(rg.offset, rg.offset + rg.length).toString('base64'));
+    return post({ ...body, challenge: first.challenge, proof });
+  };
+  const payload = (tag) => Buffer.from(`dedupe-gate ${tag} `.repeat(200)); // > 192 B → real 3-range challenge
+
+  // A source link (no caps) seeds identical bytes so the target link finds a match.
+  const source = await makeInbox('Gate seed source');
+  const payloadA = payload('alpha'), payloadB = payload('bravo');
+  assert.equal((await seedUpload(source.token, 'a.bin', payloadA)).status, 200);
+  assert.equal((await seedUpload(source.token, 'b.bin', payloadB)).status, 200);
+
+  // Per-sender cap: Mallory's first dedupe fills her single-file quota; the second
+  // must be refused with the same sender-file-limit the streaming path returns.
+  const capped = await makeInbox('Gate per-sender', { maxFilesPerSender: 1 });
+  const firstHit = await dedupe(capped.token, 'a.bin', payloadA, 'Mallory');
+  assert.equal(firstHit.status, 200, JSON.stringify(await json(firstHit.clone())));
+  assert.equal((await json(firstHit)).deduped, true);
+  const secondHit = await dedupe(capped.token, 'b.bin', payloadB, 'Mallory');
+  assert.equal(secondHit.status, 409, JSON.stringify(await json(secondHit.clone())));
+  assert.equal((await json(secondHit)).error, 'sender-file-limit');
+
+  // rejectDuplicates must also cover the dedupe path: bytes already received on the
+  // link cannot be smuggled back in as a "free" server-side copy.
+  const dedup = await makeInbox('Gate no-dupes', { rejectDuplicates: true });
+  const payloadC = payload('charlie');
+  assert.equal((await seedUpload(dedup.token, 'c.bin', payloadC)).status, 200);
+  const dupAttempt = await dedupe(dedup.token, 'c-again.bin', payloadC);
+  assert.equal(dupAttempt.status, 409, JSON.stringify(await json(dupAttempt.clone())));
+  assert.equal((await json(dupAttempt)).error, 'duplicate');
+
+  // The refused dedupe left nothing behind: payloadC exists exactly once on disk.
+  function countMatching(dir, buf) {
+    let n = 0;
+    for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
+      const abs = path.join(dir, ent.name);
+      if (ent.isDirectory()) n += countMatching(abs, buf);
+      else if (ent.isFile() && fs.statSync(abs).size === buf.length && fs.readFileSync(abs).equals(buf)) n += 1;
+    }
+    return n;
+  }
+  assert.equal(countMatching(path.join(tempRoot, 'inbox'), payloadC), 1, 'duplicate dedupe must not leave a second copy');
 });

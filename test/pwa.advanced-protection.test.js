@@ -42,21 +42,41 @@ test('24. destructive image retention is owner-scoped, disabled by default and c
   assert.match(server, /app\.post\('\/app\/images\/retention'/);
   assert.match(server, /enabled:\s*!!b\.enabled/);
   assert.match(server, /ownerKeyForPhoto\(s\) === ownerKey/);
-  assert.match(server, /setInterval\(runAllPwaImageRetention, 5 \* 60 \* 1000\)/);
+  assert.match(server, /setInterval\(\(\) => \{ runAllPwaImageRetention\(\)\.catch/);
   assert.match(js, /window\.confirm\(t\('imgRetentionWarning'\)\)/);
 });
 
-test('27. smart blur is local, reviewable and supports faces, plates and manual regions', () => {
+test('27. smart blur/redaction is local, reviewable and preserves image resolution by default', () => {
   assert.ok(hasId('img-smart-blur'));
   assert.ok(hasId('ann-detect-faces'));
   assert.ok(hasId('ann-detect-plates'));
+  assert.ok(hasId('ann-redact'));
   assert.match(js, /async function openSmartBlurReview\(file, mode\)/);
   assert.match(js, /new FaceDetector/);
   assert.match(js, /function plateCandidates\(canvas\)/);
   assert.match(js, /function pixelateRect\(/);
+  assert.match(js, /function redactRect\(a, b\)/);
+  assert.match(js, /annCtx\.fillStyle = '#000'/);
+  assert.match(js, /window\.confirm\(t\('editorLargeConfirm'/);
+  assert.match(js, /Math\.max\(w, h\) > 8192 \|\| w \* h > 40000000/);
   assert.match(js, /await openSmartBlurReview\(file, options\.smartBlurMode\)/);
   assert.match(css, /\.ann-detect-status/);
   assert.doesNotMatch(js, /fetch\([^\n]*face|fetch\([^\n]*plate/i, 'smart detection must not upload imagery to an external detector');
+});
+
+test('image editor has explicit access from the send queue and Images workspace', () => {
+  assert.ok(hasId('pick-imglink-edit'));
+  assert.match(html, /id="pick-imglink-edit"[^>]*accept="image\/\*"/);
+  assert.match(html, /data-i18n="editorBeforeShare"/);
+  assert.equal((js.match(/editorBeforeShare:/g) || []).length, 3);
+  assert.match(js, /queue-editor-action annotate/);
+  assert.match(js, /ann\.textContent = '🎨 ' \+ t\('editorTitle'\)/);
+  assert.match(js, /function openImageLinkEditor\(file\)/);
+  assert.match(js, /if \(!edited \|\| edited === file\) return;/);
+  assert.match(js, /options\.smartBlurMode = 'off'/);
+  assert.match(js, /\$\('pick-imglink-edit'\).*addEventListener\('change'/);
+  assert.match(css, /\.uprow \.top \{ flex-wrap: wrap; \}/);
+  assert.match(css, /\.uprow \.row-actions \{ flex: 1 0 100%;/);
 });
 
 test('PWA build identifiers are synchronized', () => {

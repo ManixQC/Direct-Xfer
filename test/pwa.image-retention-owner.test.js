@@ -95,7 +95,7 @@ test('retention rules on a paired device resolve to the account that owns its im
 
   // Upload an image FROM the device only (no admin session cookie) — this is how an
   // installed PWA works day-to-day. The image is account-owned (ownerId set).
-  const upload = await fetch(`${base}/app/image?name=holiday.png`, {
+  const upload = await fetch(`${base}/app/image?name=holiday.png&dlpOverride=1`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/octet-stream', 'X-CSRF-Token': deviceCsrf, Cookie: deviceCookie, Origin: base },
     body: PNG,

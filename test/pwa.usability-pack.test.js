@@ -67,7 +67,7 @@ test('7. installed-app shortcuts include files and camera but not document scann
 test('8. app badge reflects queued and failed items even while idle', () => {
   assert.match(js, /function updateAppBadge\(\)/);
   assert.match(js, /navigator\.setAppBadge\(pending\)/);
-  assert.match(js, /updateFilesCount\(\); updateResultActions\(\); updateAppBadge\(\)/);
+  assert.match(js, /updateFilesCount\(\);[\s\S]{0,120}updateResultActions\(\); updateAppBadge\(\)/);
 });
 
 test('9. large cellular uploads request confirmation', () => {

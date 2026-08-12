@@ -15,7 +15,7 @@ WORKDIR /app
 # npm/corepack are build tools, not runtime dependencies; removing them from the
 # final image drops their global dependency tree and its avoidable CVE surface.
 RUN apk upgrade --no-cache \
-  && apk add --no-cache su-exec \
+  && apk add --no-cache su-exec poppler-utils tesseract-ocr tesseract-ocr-data-eng tesseract-ocr-data-fra tesseract-ocr-data-spa \
   && rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
   && rm -f /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack \
     /usr/local/bin/pnpm /usr/local/bin/yarn
@@ -66,10 +66,10 @@ RUN printf '%s\n' \
   > /usr/local/bin/docker-entrypoint.sh \
   && chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Probes the public /api/meta endpoint (always 200 when the server is healthy) and
-# requires a real 200 — so an internal error / misroute actually fails the check.
+# Probes the public /healthz liveness endpoint (always 200 when the server is
+# healthy) and requires a real 200 — so an internal error / misroute fails the check.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://127.0.0.1:'+(process.env.PORT||55750)+'/api/meta',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
+  CMD node -e "require('http').get('http://127.0.0.1:'+(process.env.PORT||55750)+'/healthz',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
 
 # NOTE for scanners: no static `USER` here on purpose. The container must start
 # as root ONLY to chown the bind-mounted /data, /Images and /Direct-Xfer volumes (see the

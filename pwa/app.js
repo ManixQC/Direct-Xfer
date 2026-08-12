@@ -4,13 +4,13 @@
  * - identifiants d'upload stables + reprise par morceaux
  * - pause/reprise, reconnexion automatique et parallélisme borné
  * - Web Share Target par lots, E2E DXE1, association d'appareil limitée à /app
- * - aucune dépendance ni service tiers
+ * - OCR local: les documents restent sur l’appareil; moteurs OCR/PDF chargés à la demande
  */
 (function () {
   // Build tag, shown in the footer so a user can confirm at a glance which version
   // is actually running after an update. Keep it in lock-step with sw.js VERSION.
-  var APP_VERSION = '1.33.9';
-  var APP_BUILD = '2026.08.07-pwa123';
+  var APP_VERSION = '1.48.4';
+  var APP_BUILD = '2026.08.11-pwa240';
   // Upload blocks are deliberately small on mobile. A number of reverse proxies
   // still default to a 1 MiB request-body limit; an 8 MiB first block can therefore
   // be rejected before the browser emits any useful progress event, which looks like
@@ -27,16 +27,31 @@
   var UPLOAD_TIMEOUT_MS = 4 * 60 * 1000;
   var OFFSET_TIMEOUT_MS = 15 * 1000;
   var MAX_RECOVERABLE_FAILURES = 8;
+  var LARGE_TRANSFER_TEST_BYTES = 100 * 1024 * 1024;
+  var NETWORK_TEST_MAX_AGE_MS = 10 * 60 * 1000;
+  var NETWORK_GRAPH_POINTS = 72;
+  // OCR #25: the recognition happens in-browser. Only engine/model files are fetched
+  // from the pinned CDN on first use; the selected image/PDF bytes are never uploaded.
+  var OCR_TESSERACT_URL = 'https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/tesseract.min.js';
+  var OCR_TESSERACT_WORKER_URL = 'https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/worker.min.js';
+  var OCR_TESSERACT_CORE_URL = 'https://cdn.jsdelivr.net/npm/tesseract.js-core@7.0.0';
+  var OCR_ENGINE_SCRIPT_TIMEOUT_MS = 20000;
+  var OCR_ENGINE_INIT_TIMEOUT_MS = 90000;
+  var OCR_PDFJS_URL = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@6.2.108/build/pdf.min.mjs';
+  var OCR_PDF_WORKER_URL = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@6.2.108/build/pdf.worker.min.mjs';
+  var PRIVACY_PDFLIB_URL = 'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js';
+  var PRIVACY_JSZIP_URL = 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
   var MOBILE_DURABLE_LIMIT = 32 * 1024 * 1024;
   var DESKTOP_DURABLE_LIMIT = 128 * 1024 * 1024;
   var PERSIST_DEBOUNCE_MS = 5000;
   var DB_NAME = 'direct-xfer-pwa';
-  var DB_VERSION = 6;
+  var DB_VERSION = 7;
   var QUEUE_STORE = 'queue';
   var DEST_STORE = 'destinations';
   var META_STORE = 'meta';
   var HISTORY_STORE = 'history';
   var IMAGE_STORE = 'images';
+  var OCR_INDEX_STORE = 'ocrIndex';
   var IMAGE_BACKUP_KEY = 'dx-pwa-images-backup-v1';
   var DEST_BACKUP_KEY = 'dx-pwa-dests-backup-v1';
   var QUEUE_BACKUP_KEY = 'dx-pwa-queue-backup-v1';
@@ -46,24 +61,41 @@
   var OPFS_COPY_CHUNK = 4 * 1024 * 1024;
   var launchParams = new URLSearchParams(location.search);
   var launchAction = launchParams.get('action') || '';
+  var launchDestinationUrl = launchParams.get('dest') || '';
+  var launchOpenCenter = launchParams.get('opencenter') === '1'; // feature 14 cold start
+  var launchCenterPanel = launchParams.get('panel') || '';
   var pairedClaim = launchParams.get('paired') === '1';
   var $ = function (id) { return document.getElementById(id); };
+  function el(tag, options) {
+    options = options || {};
+    var node = document.createElement(tag);
+    if (options.class) node.className = options.class;
+    if (options.text != null) node.textContent = options.text;
+    if (options.attrs) Object.keys(options.attrs).forEach(function (name) {
+      var value = options.attrs[name];
+      if (value !== null && value !== undefined && value !== false) node.setAttribute(name, value === true ? '' : String(value));
+    });
+    return node;
+  }
 
   var STRINGS = {
     fr: {
-      title: 'Envoyer', navMain: 'Navigation principale', navSend: 'Envoyer', navSendHint: 'Préparer et envoyer des fichiers vers une destination.', navImages: 'Images', navImagesHint: 'Créer, gérer et suivre vos liens d’image.', navActivity: 'Activité', navActivityHint: 'Consulter l’historique local des transferts.', navSettings: 'Réglages', navSettingsHint: 'Configurer la PWA, la sécurité et le stockage.', navShares: 'Partages', navSharesHint: 'Créer des liens de partage depuis les fichiers du serveur.', sharesTitle: 'Partager des fichiers du serveur', sharesHint: 'Parcourez les fichiers de votre serveur et créez des liens de partage directs.', sharesAdminRequired: 'Connectez-vous avec un compte administrateur pour parcourir les fichiers du serveur.', sharesSignIn: 'Se connecter en administrateur', sharesBrowse: 'Fichiers du serveur', sharesUp: 'Dossier parent', sharesCreate: 'Créer le partage', sharesNoneSelected: 'Aucun fichier sélectionné.', sharesSelected: '{n} élément(s) sélectionné(s)', sharesExpiry: 'Expiration', sharesExpiryNever: 'Jamais', sharesExpiry1h: '1 heure', sharesExpiry1d: '1 jour', sharesExpiry7d: '7 jours', sharesExpiry30d: '30 jours', sharesMaxDownloads: 'Téléchargements max (0 = illimité)', sharesPassword: 'Mot de passe (facultatif)', sharesPasswordPlaceholder: '—', sharesCreateBtn: 'Créer le lien de partage', sharesCreating: 'Création…', sharesCreated: 'Partage créé ✓', sharesCreateFail: 'Échec de la création du partage', sharesLibrary: 'Vos partages', sharesEmpty: 'Aucun partage pour l’instant.', sharesBrowseFail: 'Impossible de lire ce dossier.', sharesLoginNeeded: 'Connexion administrateur requise.', sharesOpen: 'Ouvrir', sharesCopy: 'Copier', sharesRevoke: 'Révoquer', sharesRevoked: 'Partage révoqué ✓', sharesRevokeFail: 'Échec de la révocation', sharesRevokeConfirm: 'Révoquer ce partage ? Le lien cessera de fonctionner.', sharesItems: '{n} élément(s)', sharesReceptions: 'Liens de réception', sharesReceptionsEmpty: 'Aucun lien de réception.', sharesReceived: '{bytes} reçus', openAdmin: "Ouvrir l'administration", language: 'Langue', theme: 'Thème', copyLink: 'Copier le lien', pasteLink: 'Coller un lien', editDestination: 'Modifier la destination', addDestination: 'Ajouter une destination', passwordPlaceholder: 'Mot de passe du lien', destinationPlaceholder: 'Lien ou jeton de réception', destinationNamePlaceholder: 'Nom facultatif de la destination', senderPlaceholder: 'Nom demandé par ce lien', globalProgress: 'Progression globale', keyPlaceholder: 'Clé de chiffrement du lien', titlePlaceholder: 'Contenu partagé', pairedBadge: 'Appareil associé', themeDark: 'Sombre', themeLight: 'Clair', themeAuto: 'Auto', install: 'Installer', installIosHint: 'Pour installer Direct-Xfer : touchez le bouton Partager du navigateur, puis « Sur l’écran d’accueil ».', installBrowserHint: 'Chrome n’a pas encore validé l’installation complète. Ne choisissez pas un simple raccourci : utilisez une adresse HTTPS avec certificat reconnu, touchez la page et gardez-la ouverte quelques instants.', installHttpsRequired: 'Installation complète impossible depuis cette adresse HTTP ou ce certificat non reconnu. Android ne peut créer qu’un raccourci. Ouvrez Direct-Xfer en HTTPS avec un certificat valide.', installSecurePending: 'Installation en préparation. Dans Chrome, touchez la page et gardez-la ouverte environ 30 secondes. Si le logo n’apparaît pas, vérifiez que le certificat HTTPS est reconnu par Android.', installOpenHttps: 'Ouvrir en HTTPS',
+      imgEditUploaded: 'Modifier avec l’éditeur photo', imgEditUploadedDone: 'Image modifiée, URL conservée ✓',
+      notificationsTitle: 'Notifications', notificationsLoading: 'Chargement…', notificationsEmpty: 'Aucune notification.', notificationsFirstView: 'Première vue de « {name} »', notificationsDelete: 'Supprimer cette notification', notificationsClearAll: 'Tout supprimer', notificationsClearConfirm: 'Supprimer toutes les notifications ?', notificationsLoadMore: 'Afficher plus ({n})', notificationsLinkCopied: 'Lien copié ✓', notificationsSound: 'Son à la réception', notificationsSoundOn: 'Son activé', notificationsSoundOff: 'Son désactivé', notificationsPrefs: 'Préférences', notificationsPrefsHint: 'Décochez une catégorie pour ne plus créer ses notifications.', notificationsPrefsSaved: 'Préférences enregistrées ✓', notificationsSettingsTitle: 'Centre de notifications', notificationsSettingsHint: 'Choisissez les catégories de notifications à recevoir dans le centre de notifications pour ce compte.', notificationsSettingsRequired: 'Toujours activée', notificationsSettingsRequiredHint: 'Les notifications Sécurité, Maintenance et Santé système restent toujours activées.', notificationsSettingsSaving: 'Enregistrement…', notificationsSettingsError: 'Impossible d’enregistrer les préférences.', notificationsRulesTitle: 'Alertes personnalisées', notificationsRulesHint: 'Créez jusqu’à 50 règles qui déclenchent une notification lorsqu’un seuil est atteint.', notificationsRuleMetric: 'Mesure', notificationsRuleTarget: 'Lien', notificationsRuleThreshold: 'Seuil', notificationsRuleLabel: 'Nom (facultatif)', notificationsRuleAdd: 'Ajouter la règle', notificationsRuleAllTargets: 'Tous mes liens compatibles', notificationsRuleTargetUnavailable: 'Lien indisponible ou supprimé', notificationsRuleEmpty: 'Aucune règle personnalisée.', notificationsRuleSaved: 'Règle enregistrée ✓', notificationsRuleDeleted: 'Règle supprimée', notificationsRuleError: 'Impossible d’enregistrer la règle.', notificationsRuleEnable: 'Activer', notificationsRuleDisable: 'Désactiver', notificationsRuleDelete: 'Supprimer', notificationsRuleMetricViews: 'Vues', notificationsRuleMetricDownloads: 'Téléchargements', notificationsRuleMetricBytesServed: 'Données servies (Go)', notificationsRuleMetricReceivedBytes: 'Données reçues (Go)', notificationsRuleCustomTitle: 'Alerte personnalisée : {name}', notificationsTimeAgo: 'il y a {v}', notificationsCount: '{n} notification(s)', notificationsFilteredCount: '{shown} / {total} notification(s)', notificationsNoMatch: 'Aucune notification ne correspond aux filtres.', notificationsFilters: 'Filtres de notifications', notificationsCategoryFilter: 'Filtrer par catégorie', notificationsSeverityFilter: 'Filtrer par gravité', notificationsAllCategories: 'Toutes les catégories', notificationsAllSeverities: 'Toutes les gravités', notificationsSearch: 'Rechercher…', notificationsSearchAria: 'Rechercher dans les notifications', notificationsCategoryActivity: 'Activité', notificationsCategoryVisitors: 'Visiteurs', notificationsCategoryThresholds: 'Seuils', notificationsCategoryTraffic: 'Trafic', notificationsCategoryImages: 'Images', notificationsCategoryPwa: 'PWA', notificationsCategoryReceptions: 'Réceptions', notificationsCategorySearch: 'Recherche / OCR', notificationsCategorySecurity: 'Sécurité', notificationsCategoryShares: 'Partages', notificationsCategorySystemHealth: 'Santé système', notificationsCategoryMaintenance: 'Maintenance', notificationsCategoryNetwork: 'Réseau', notificationsCategoryRestarts: 'Redémarrages', notificationsCategoryUpdates: 'Mises à jour', notificationsCategoryTransfers: 'Transferts', notificationsCategoryDescShares: 'Téléchargements, expiration, limites et changements concernant les liens de partage.', notificationsCategoryDescReceptions: 'Dépôts reçus, fichiers disponibles et quotas des liens de réception.', notificationsCategoryDescImages: 'Premières vues, remplacements d’images et régénération des variantes.', notificationsCategoryDescTransfers: 'Transferts terminés ou échoués, abandons et reprises impossibles.', notificationsCategoryDescVisitors: 'Nouveaux pays et nouveaux navigateurs ou appareils visiteurs.', notificationsCategoryDescThresholds: 'Seuils de vues et de téléchargements atteints sur vos liens.', notificationsCategoryDescTraffic: 'Volume de téléchargement inhabituel et liens devenant viraux.', notificationsCategoryDescSearch: 'Échecs OCR et problèmes d’indexation pour la recherche.', notificationsCategoryDescPwa: 'Appareils PWA, abonnements Push et permissions de notifications.', notificationsCategoryDescSecurity: 'Connexions inhabituelles, mots de passe, DLP et autres alertes de sécurité.', notificationsCategoryDescSystemHealth: 'Pannes de service, erreurs de configuration et problèmes système importants.', notificationsCategoryDescMaintenance: 'Nettoyages automatiques et suppressions de fichiers selon les règles de rétention.', notificationsCategoryDescNetwork: 'Changements d’adresse IP publique et événements réseau du service.', notificationsCategoryDescRestarts: 'Redémarrages détectés de Direct-Xfer, avec durée d’indisponibilité lorsque disponible.', notificationsCategoryDescUpdates: 'Mises à jour disponibles et confirmation après installation.', notificationsSeverityInfo: 'Information', notificationsSeveritySuccess: 'Succès', notificationsSeverityWarning: 'Avertissement', notificationsSeverityCritical: 'Critique',
+      title: 'Envoyer', navMain: 'Navigation principale', navSend: 'Envoyer', navSendHint: 'Préparer et envoyer des fichiers vers une destination.', navImages: 'Images', navImagesHint: 'Créer, gérer et suivre vos liens d’image.', navActivity: 'Activité', navActivityHint: 'Consulter l’historique local des transferts.', navSettings: 'Réglages', navSettingsHint: 'Configurer la PWA, la sécurité et le stockage.', navShares: 'Partages', navSharesHint: 'Créer des liens de partage depuis les fichiers du serveur.', sharesTitle: 'Partager des fichiers du serveur', sharesHint: 'Parcourez les fichiers de votre serveur et créez des liens de partage directs.', sharesAdminRequired: 'Connectez-vous avec un compte administrateur pour parcourir les fichiers du serveur.', sharesSignIn: 'Se connecter en administrateur', sharesBrowse: 'Fichiers du serveur', sharesUp: 'Dossier parent', sharesCreate: 'Créer le partage', sharesNoneSelected: 'Aucun fichier sélectionné.', sharesSelected: '{n} élément(s) sélectionné(s)', sharesExpiry: 'Expiration', sharesExpiryNever: 'Jamais', sharesExpiry1h: '1 heure', sharesExpiry1d: '1 jour', sharesExpiry7d: '7 jours', sharesExpiry30d: '30 jours', sharesMaxDownloads: 'Téléchargements max (0 = illimité)', sharesRateLimit: 'Débit maximal (Ko/s, 0 = illimité)', sharesRateEdit: 'Débit', sharesRatePrompt: 'Débit maximal en Ko/s (0 = illimité) :', sharesRateSaved: 'Débit mis à jour ✓', sharesRateFail: 'Impossible de modifier le débit', sharesPassword: 'Mot de passe (facultatif)', sharesPasswordPlaceholder: '—', sharesCreateBtn: 'Créer le lien de partage', sharesCreating: 'Création…', sharesCreated: 'Partage créé ✓', sharesCreateFail: 'Échec de la création du partage', sharesDlpWarning: 'DLP : {n} détection(s) sensible(s) ({level}). Publier quand même ?', sharesDlpBlocked: 'Publication bloquée par la politique DLP.', dlpTest: 'Tester DLP', dlpTestQueue: '🛡 Tester DLP', dlpTestSelected: '🛡 Tester DLP', dlpTesting: 'Analyse DLP…', dlpSafe: 'DLP ✓ aucun contenu sensible détecté', dlpFound: 'DLP : {n} détection(s) ({level})', dlpLocalBlocked: 'Envoi bloqué par la politique DLP avant transfert.', dlpLocalConfirm: 'DLP a détecté {n} élément(s) sensible(s) ({level}) dans {files} fichier(s). Envoyer quand même ?', dlpScanSkipped: 'DLP : {n} fichier(s) trop volumineux/non analysé(s)', dlpScanFailed: 'Test DLP impossible : {error}', dlpOcrIncomplete: 'DLP incomplet : OCR impossible pour {n} fichier(s)', dlpPolicyLoading: 'Chargement de la politique DLP…', dlpPolicyDisabled: 'DLP désactivé sur le serveur', dlpPolicyText: 'Politique {mode} · {mb} Mo/fichier · OCR {ocr}', dlpModeWarn: 'Avertir', dlpModeBlock: 'Bloquer', dlpModeLog: 'Journaliser', dlpOcrOn: 'activé', dlpOcrOff: 'désactivé', dlpIncompleteBlocked: 'Envoi bloqué : l’analyse DLP est incomplète.', dlpIncompleteConfirm: 'L’analyse DLP est incomplète pour {files} fichier(s) et a trouvé {n} détection(s). Envoyer quand même ?', dlpPolicyUnavailable: 'Politique DLP indisponible : envoi suspendu par sécurité.', dlpScanIncomplete: 'DLP incomplet : {n} élément(s) non analysé(s)', sharesLibrary: 'Vos partages', sharesEmpty: 'Aucun partage pour l’instant.', sharesBrowseFail: 'Impossible de lire ce dossier.', sharesLoginNeeded: 'Connexion administrateur requise.', sharesOpen: 'Ouvrir', sharesCopy: 'Copier', sharesRevoke: 'Révoquer', sharesRevoked: 'Partage révoqué ✓', sharesRevokeFail: 'Échec de la révocation', sharesRevokeConfirm: 'Révoquer ce partage ? Le lien cessera de fonctionner.', sharesItems: '{n} élément(s)', sharesReceptions: 'Liens de réception', sharesReceptionsEmpty: 'Aucun lien de réception.', sharesReceived: '{bytes} reçus', sharesDownloadingNow: '{n} téléchargement(s) en cours', threadTitle: 'Discussion', threadEmpty: 'Aucun message.', threadReplyPh: 'Répondre au visiteur…', threadSend: 'Envoyer', threadSending: 'Envoi…', threadError: 'Envoi impossible, réessayez.', threadYou: 'Vous', threadVisitor: 'Visiteur', openAdmin: "Ouvrir l'administration", language: 'Langue', theme: 'Thème', copyLink: 'Copier le lien', pasteLink: 'Coller un lien', editDestination: 'Modifier la destination', addDestination: 'Ajouter une destination', passwordPlaceholder: 'Mot de passe du lien', destinationPlaceholder: 'Lien ou jeton de réception', destinationNamePlaceholder: 'Nom facultatif de la destination', senderPlaceholder: 'Nom demandé par ce lien', globalProgress: 'Progression globale', keyPlaceholder: 'Clé de chiffrement du lien', titlePlaceholder: 'Contenu partagé', themeDark: 'Sombre', themeLight: 'Clair', themeAuto: 'Auto', install: 'Installer', installIosHint: 'Pour installer Direct-Xfer : touchez le bouton Partager du navigateur, puis « Sur l’écran d’accueil ».', installBrowserHint: 'Chrome n’a pas encore validé l’installation complète. Ne choisissez pas un simple raccourci : utilisez une adresse HTTPS avec certificat reconnu, touchez la page et gardez-la ouverte quelques instants.', installHttpsRequired: 'Installation complète impossible depuis cette adresse HTTP ou ce certificat non reconnu. Android ne peut créer qu’un raccourci. Ouvrez Direct-Xfer en HTTPS avec un certificat valide.', installSecurePending: 'Installation en préparation. Dans Chrome, touchez la page et gardez-la ouverte environ 30 secondes. Si le logo n’apparaît pas, vérifiez que le certificat HTTPS est reconnu par Android.', installOpenHttps: 'Ouvrir en HTTPS',
       offline: 'Hors ligne — les envois reprendront à la reconnexion.', updateReady: 'Une nouvelle version est disponible.', updateNow: 'Actualiser', pullToRefresh: 'Glissez vers le bas pour actualiser', releaseToRefresh: 'Relâchez pour actualiser', refreshing: 'Actualisation…', backExit: 'Appuyez à nouveau pour quitter',
       destination: 'Destination', destinationHint: 'Un lien de réception Direct-Xfer de cette instance.', linkOrToken: 'Lien ou jeton', displayName: 'Nom affiché',
       rememberDestination: 'Mémoriser cette destination sur cet appareil', rememberKey: 'Mémoriser aussi la clé secrète sur cet appareil', scanQr: '📷 Scanner un QR', saveDestination: 'Ajouter', updateDestination: 'Enregistrer', createLinkTitle: 'Créer un lien de réception', newLink: 'Nouveau', createLinkName: 'Nom du nouveau lien', createLinkPlaceholder: 'Ex. Photos vacances', createLinkHint: 'Un nouveau lien de réception sera créé et ajouté à vos destinations. Partagez-le pour recevoir des fichiers.', createDo: 'Créer le lien', creating: 'Création…', createOk: 'Lien créé ✓', createFail: 'Création du lien impossible',
-      imgLinksTitle: 'Liens d’image', imgLinksHint: 'Créez des liens directs vers vos images : chaque lien offre les versions Pleine, Mini et Micro, sans page relais.', imgLinksAdd: 'Ajouter des images', imgCreateTitle: 'Créer des liens', imgCreateHint: 'Choisissez vos images et le format qui sera proposé en priorité.', imgLibraryTitle: 'Vos liens', imgLibraryHint: 'Recherchez, triez et gérez les images déjà partagées.', imgGlobalActions: 'Actions globales', imgCopyActions: 'Copier un format', imgManageActions: 'Gérer le lien', imgStripExif: 'Retirer les données EXIF/GPS avant le partage', imgStripExifHint: 'Le nettoyage est effectué localement sur cet appareil avant le téléversement.', imgStrippingMetadata: 'Suppression des EXIF/GPS…', imgMetadataRemoved: 'EXIF/GPS retirés', imgUploading: 'Téléversement…', imgThumbing: 'Mini et Micro…', imgReady: 'Prêt', imgCopyFull: '🔗 Pleine grandeur', imgCopyThumb: '🔗 Mini', imgCopyMicro: '🔗 Micro', imgCopied: 'Lien copié ✓', imgLinkFail: 'Échec de la création du lien', revokeShare: 'Révoquer', revokeConfirm: 'Révoquer ce partage ? Le lien cessera de fonctionner.', revokeSuccess: 'Révoqué ✓', revokeFail: 'Échec de la révocation', imgVariantFull: 'Pleine', imgVariantMini: 'Mini', imgVariantMicro: 'Micro', imgViews: '{n} vues', imgVisitors: '{n} visiteurs', imgStatsLoading: 'Statistiques…', imgStatsUnavailable: 'Statistiques indisponibles',
-      imgSearch: 'Rechercher une image…', imgSortLabel: 'Trier les images', imgSortNewest: 'Plus récentes', imgSortOldest: 'Plus anciennes', imgSortName: 'Nom', imgSortSize: 'Taille', imgSortViews: 'Vues', imgSortVisitors: 'Visiteurs', imgSortExpiry: 'Expiration', imgFilterLabel: 'Filtrer les images', imgFilterAll: 'Toutes', imgFilterActive: 'Actives', imgFilterPopular: 'Populaires', imgFilterLarge: 'Volumineuses', imgFilterExpiring: 'Bientôt expirées', imgFilterFavorite: 'Favorites', imgFilterProtected: 'Protégées', imgDefaultVariantLabel: 'Format d’image favori', imgAdvancedOptions: 'Options des images', imgCompact: 'Affichage compact', imgHideExpired: 'Masquer les images expirées', imgAutoCopy: 'Copier automatiquement après création', imgDefaultExpiry: 'Expiration favorite', imgMaxViews: 'Limite de vues', imgPassword: 'Mot de passe', imgTags: 'Tags', imgPrivateNote: 'Note privée', imgRenameTemplate: 'Modèle de renommage', imgBulkEdit: 'Modifier', imgCreateAlbum: 'Créer un album', imgDashboard: 'Statistiques graphiques', imgAlbums: 'Albums partageables', imgActionHistory: 'Historique des actions d’image', imgSelected: '{n} sélectionnée(s)', imgEditPrompt: 'Modifier les images sélectionnées', imgAlbumName: 'Nom de l’album', imgAlbumCreated: 'Album créé ✓', imgSettingsSaved: 'Réglages enregistrés ✓', imgDuplicateFound: 'Cette image a déjà été partagée. Continuer quand même ?', imgExpirySoon: 'Le lien « {name} » expire bientôt.', imgUndoRevoke: 'Image retirée — Annuler ?', imgRevokePending: 'Révocation dans quelques secondes…', imgQrDownloaded: 'QR téléchargé ✓', imgFavorite: 'Favorite', imgUnfavorite: 'Retirer des favorites', imgExpired: 'Expirée', imgInactive: 'Inactive', imgViewLimitReached: 'Limite de vues atteinte', imgProtected: 'Protégée', imgViewLimit: '{n} vues max', imgNoAlbums: 'Aucun album.', imgVariantAuto: 'Automatique', imgReplace: 'Remplacer sans changer le lien', imgVersions: 'Versions', imgReplaceDone: 'Image remplacée, URL conservée ✓', imgResizeMini: 'Redimensionner la Mini', imgResizeMiniPrompt: 'Nouvelle taille de la Mini : un nombre de pixels (côté le plus long, ex. 250) OU un pourcentage de la taille totale (ex. 50%). La Micro sera la moitié :', imgResizeMiniInvalid: 'Valeur invalide : pixels (16 à 4096) ou pourcentage (1 à 100 %).', imgResizeMiniDone: 'Mini redimensionnée en {w}×{h} ✓', imgRestoreVersion: 'Restaurer une version', imgVersionRestored: 'Version restaurée ✓', imgAdaptiveReady: 'Optimisation adaptative', albumInvites: 'Invitations', albumInviteCreate: 'Créer une invitation', albumInviteRole: 'Rôle (reader, contributor, manager)', albumInviteCopied: 'Lien d’invitation copié ✓', albumInviteRevoke: 'Révoquer une invitation', albumCollabSummary: '{n} invitation(s)', imgAlbumCopied: 'Lien de l’album copié ✓', imgChartSummary: '{images} images · {views} vues · {visitors} visiteurs · {bytes}', imgHotlinkHosts: 'Domaines autorisés pour l’intégration', imgHotlinkPlaceholder: 'forum.exemple.com, *.site.net', imgHotlinkHint: 'Vide = protection désactivée. Les visites directes restent autorisées.', imgHotlinkProtected: 'Anti-hotlink', imgNotifyFirstView: 'Notifier à la première consultation', imgFirstViewArmed: 'Alerte 1re vue', imgFirstViewSent: 'Première vue notifiée', imgFirstViewToast: '👁 Première consultation de « {name} »', imgSmartBlur: 'Floutage intelligent local', imgSmartBlurFaces: 'Visages', imgSmartBlurFacesPlates: 'Visages et plaques', imgSmartBlurHint: 'Analyse locale avec révision avant envoi; aucune image n’est envoyée à un service externe.', imgSmartBlurAnalyzing: 'Analyse locale…', imgSmartBlurReady: '{n} zone(s) masquée(s). Vérifiez puis appliquez.', imgSmartBlurUnsupported: 'Détection des visages non prise en charge par ce navigateur; ajoutez les zones manuellement.', imgSmartBlurSkip: 'Continuer sans flou', imgRetentionRules: 'Règles automatiques de rétention', imgRetentionWarning: 'Ces règles révoquent définitivement les images et suppriment leurs fichiers. Elles sont désactivées par défaut.', imgRetentionAge: 'Âge maximal (jours)', imgRetentionInactive: 'Inactivité maximale (jours)', imgRetentionViews: 'Révoquer après ce nombre de vues', imgRetentionStorage: 'Stockage maximal (Mo)', imgRetentionSave: 'Enregistrer et appliquer', imgRetentionSaved: 'Règles de rétention enregistrées ✓', imgRetentionResult: '{n} image(s) révoquée(s) · {bytes} libérés', imgRetentionSummary: '{n} image(s) · {bytes}', enabled: 'Activé', disabled: 'Désactivé', optional: 'Facultatif', refresh: 'Rafraîchir', themeSchedule: 'Selon l’heure',
+      imgLinksTitle: 'Liens d’image', imgLinksHint: 'Créez des liens directs vers vos images : chaque lien offre les versions Pleine, Mini et Micro, sans page relais.', imgLinksAdd: 'Ajouter des images', imgCreateTitle: 'Créer des liens', imgCreateHint: 'Choisissez les images à partager ou modifiez-en une avant l’envoi.', imgLibraryTitle: 'Vos liens', imgLibraryHint: 'Recherchez, triez et gérez les images déjà partagées.', imgGlobalActions: 'Actions globales', imgManageActions: 'Gérer le lien', imgStripExif: 'Retirer les données EXIF/GPS avant le partage', imgStripExifHint: 'Le nettoyage est effectué localement sur cet appareil avant le téléversement.', imgStrippingMetadata: 'Suppression des EXIF/GPS…', imgMetadataRemoved: 'EXIF/GPS retirés', imgUploading: 'Téléversement…', imgThumbing: 'Mini et Micro…', imgReady: 'Prêt', imgCopyBBCode: 'Copier le BBCode', imgCopied: 'Lien copié ✓', clearSearch: 'Effacer la recherche', imgListEmpty: 'Aucune image partagée pour l’instant. Utilisez « Ajouter des images » pour créer votre premier lien.', imgNoMatch: 'Aucune image ne correspond à votre recherche.', destEmptyHint: 'Aucune destination. Ajoutez un lien de réception (＋) ou créez-en un avec « Nouveau ».', destEmoji: 'Emoji (repère visuel)', imgCopyImage: 'Copier l’image', imgCompare: 'Comparer', imgCompareTitle: 'Comparer les formats', pwStrengthLabel: 'Force du mot de passe', pwWeak: 'Faible', pwMedium: 'Moyen', pwStrong: 'Fort', historyResend: 'Renvoyer', historyDestGone: 'Destination introuvable — ajoutez-la à nouveau.', resendReady: 'Destination sélectionnée — ajoutez vos fichiers.', imgLinkFail: 'Échec de la création du lien', imgVariantsFailed: 'Image enregistrée, mais Mini/Micro n’ont pas pu être mises à jour.', revokeShare: 'Révoquer', revokeConfirm: 'Révoquer ce partage ? Le lien cessera de fonctionner.', revokeSuccess: 'Révoqué ✓', revokeFail: 'Échec de la révocation', imgVariantFull: 'Pleine', imgVariantMini: 'Mini', imgVariantMicro: 'Micro', imgViews: '{n} vues', imgVisitors: '{n} visiteurs', imgStatsLoading: 'Statistiques…', imgStatsUnavailable: 'Statistiques indisponibles', imgStatsButton: '📊 Stats', imgStatsTitle: 'Statistiques détaillées', imgStatsOverview: 'Vue d’ensemble', imgStatsCopies: 'Copies de l’image', imgStatsRecent: 'Accès récents à l’image', imgStatsStorage: 'Stockage', imgStatsDimensions: 'Dimensions', imgStatsLastView: 'Dernière vue', imgStatsCreated: 'Créée', imgStatsExpiry: 'Expiration', imgStatsStatus: 'État', imgStatsActive: 'Active', imgStatsInactive: 'Inactive', imgStatsExpired: 'Expirée', imgStatsNoRecent: 'Aucun accès récent enregistré.', imgStatsNever: 'Jamais', imgStatsUnknown: 'Inconnu',
+      imgSearch: 'Rechercher nom, tag ou texte OCR…', imgSortLabel: 'Trier les images', imgSortNewest: 'Plus récentes', imgSortOldest: 'Plus anciennes', imgSortName: 'Nom', imgSortSize: 'Taille', imgSortViews: 'Vues', imgSortVisitors: 'Visiteurs', imgSortExpiry: 'Expiration', imgFilterLabel: 'Filtrer les images', imgFilterAll: 'Toutes', imgFilterActive: 'Actives', imgFilterPopular: 'Populaires', imgFilterLarge: 'Volumineuses', imgFilterExpiring: 'Bientôt expirées', imgFilterFavorite: 'Favorites', imgFilterProtected: 'Protégées', imgAdvancedOptions: 'Options des images', imgCompact: 'Affichage compact', imgHideExpired: 'Masquer les images expirées', imgAutoCopy: 'Copier automatiquement après création', imgDefaultExpiry: 'Expiration favorite', imgMaxViews: 'Limite de vues', imgPassword: 'Mot de passe', imgTags: 'Tags', imgPrivateNote: 'Note privée', imgRenameTemplate: 'Modèle de renommage', imgBulkEdit: 'Modifier', imgCreateAlbum: 'Créer un album', imgDashboard: 'Statistiques graphiques', imgAlbums: 'Albums partageables', imgActionHistory: 'Historique des actions d’image', imgSelected: '{n} sélectionnée(s)', imgEditPrompt: 'Modifier les images sélectionnées', imgAlbumName: 'Nom de l’album', imgAlbumCreated: 'Album créé ✓', imgSettingsSaved: 'Réglages enregistrés ✓', imgDuplicateFound: 'Cette image a déjà été partagée. Continuer quand même ?', imgExpirySoon: 'Le lien « {name} » expire bientôt.', imgUndoRevoke: 'Image retirée — Annuler ?', imgRevokePending: 'Révocation dans {n} s…', imgCancelRevoke: 'Annuler révocation', imgRevokeCancelled: 'Révocation annulée ✓', imgQrDownloaded: 'QR téléchargé ✓', imgFavorite: 'Favorite', imgUnfavorite: 'Retirer des favorites', imgExpired: 'Expirée', imgInactive: 'Inactive', imgViewLimitReached: 'Limite de vues atteinte', imgProtected: 'Protégée', imgViewLimit: '{n} vues max', imgNoAlbums: 'Aucun album.', imgVariantAuto: 'Automatique', imgReplace: 'Remplacer sans changer le lien', imgVersions: 'Versions', imgReplaceDone: 'Image remplacée, URL conservée ✓', imgResizeMini: 'Redimensionner la Mini', imgResizeMiniPrompt: 'Nouvelle taille de la Mini : un nombre de pixels (côté le plus long, ex. 250) OU un pourcentage de la taille totale (ex. 50%). La Micro sera la moitié :', imgResizeMiniInvalid: 'Valeur invalide : pixels (16 à 4096) ou pourcentage (1 à 100 %).', imgResizeMiniDone: 'Mini redimensionnée en {w}×{h} ✓', imgRestoreVersion: 'Restaurer une version', imgVersionRestored: 'Version restaurée ✓', imgAdaptiveReady: 'Optimisation adaptative', albumInvites: 'Invitations', albumInviteCreate: 'Créer une invitation', albumInviteRole: 'Rôle (reader, contributor, manager)', albumInviteCopied: 'Lien d’invitation copié ✓', albumInviteRevoke: 'Révoquer une invitation', albumCollabSummary: '{n} invitation(s)', imgAlbumCopied: 'Lien de l’album copié ✓', imgChartSummary: '{images} images · {views} vues · {visitors} visiteurs · {bytes}', imgComparePeriod: 'Période comparative', imgCompare7d: '7 jours', imgCompare30d: '30 jours', imgCompareSummary: '{days} j vs période précédente : {views} vues · {created} images créées', imgCompareNew: 'nouveau', imgHotlinkHosts: 'Domaines autorisés pour l’intégration', imgHotlinkPlaceholder: 'forum.exemple.com, *.site.net', imgHotlinkHint: 'Vide = protection désactivée. Les visites directes restent autorisées.', imgHotlinkProtected: 'Anti-hotlink', imgNotifyFirstView: 'Notifier à la première consultation', imgFirstViewArmed: 'Alerte 1re vue', imgFirstViewSent: 'Première vue notifiée', imgFirstViewToast: '👁 Première consultation de « {name} »', imgSmartBlur: 'Floutage intelligent local', imgSmartBlurFaces: 'Visages', imgSmartBlurFacesPlates: 'Visages et plaques', imgSmartBlurAll: 'Visages, plaques et texte sensible', imgSmartBlurHint: 'Analyse locale avec révision avant envoi; aucune image n’est envoyée à un service externe.', imgSmartBlurAnalyzing: 'Analyse locale…', imgSmartBlurReady: '{n} zone(s) masquée(s). Vérifiez puis appliquez.', imgSmartBlurUnsupported: 'Détection des visages non prise en charge par ce navigateur; ajoutez les zones manuellement.', imgSmartBlurSkip: 'Continuer sans flou', imgRetentionRules: 'Règles automatiques de rétention', imgRetentionWarning: 'Ces règles révoquent définitivement les images et suppriment leurs fichiers. Elles sont désactivées par défaut.', imgRetentionAge: 'Âge maximal (jours)', imgRetentionInactive: 'Inactivité maximale (jours)', imgRetentionViews: 'Révoquer après ce nombre de vues', imgRetentionStorage: 'Stockage maximal (Mo)', imgRetentionSave: 'Enregistrer et appliquer', imgRetentionSaved: 'Règles de rétention enregistrées ✓', imgRetentionResult: '{n} image(s) révoquée(s) · {bytes} libérés', imgRetentionSummary: '{n} image(s) · {bytes}', enabled: 'Activé', disabled: 'Désactivé', optional: 'Facultatif', refresh: 'Rafraîchir', themeSchedule: 'Selon l’heure',
       removeDestination: 'Retirer', cancel: 'Annuler', protectedLink: '🔒 Lien protégé', unlock: 'Déverrouiller', encryptedLink: '🔐 Chiffrement de bout en bout',
       encryptionKey: 'Clé du lien', passphrase: 'Phrase secrète', addFiles: 'Ajouter des fichiers', durableQueue: 'Les fichiers sont copiés dans le stockage durable avant l’envoi afin de reprendre après une fermeture de la PWA.',
       takePhoto: 'Prendre une photo', chooseFiles: 'Choisir des fichiers', chooseFolder: 'Choisir un dossier',
       optimizePhotos: 'Optimiser les photos avant envoi', parallelUploads: 'Envois parallèles', senderName: 'Votre nom', pause: 'Pause', resume: 'Reprendre',
       retryAll: '↻ Réessayer', removePending: 'Tout retirer', send: 'Envoyer', clearCompleted: 'Effacer les envois terminés', history: 'Historique local',
       clearHistory: 'Effacer l’historique', settings: 'Réglages et sécurité', autoResume: 'Reprendre automatiquement après fermeture ou reconnexion', storage: 'Stockage local',
-      protectStorage: 'Protéger', deviceAccess: 'Accès de cet appareil', deviceChecking: 'Vérification de l’appareil…', deviceStatusUnavailable: 'État de l’appareil indisponible. Touchez Appairer pour réessayer.', pairDevice: 'Appairer cet appareil', unpairDevice: 'Désappairer cet appareil', pairOther: 'Appairer par QR', pairOtherTitle: 'Appairer un autre appareil', pairOtherHelp: 'Scannez ce QR sur l’autre appareil. Le lien est à usage unique et expire après cinq minutes.', pairQrAlt: 'QR d’association de l’appareil', pairLink: 'Lien d’association', pairExpires: 'Expire à {date}', pairQrFailed: 'Création du QR impossible', copy: 'Copier', revokeDevice: 'Révoquer', pairedDevices: 'Appareils associés',
+      protectStorage: 'Protéger', passkeyTitle: 'Identification biométrique', passkeyHint: 'Utilisez l’empreinte, la reconnaissance faciale ou le verrouillage sécurisé de cet appareil pour vous connecter sans mot de passe.', passkeyAdd: 'Activer sur cet appareil', passkeyAdding: 'Activation…', passkeyAdded: 'Identification biométrique activée ✓', passkeyFailed: 'Impossible de modifier l’identification biométrique.', passkeyEmpty: 'Aucune identification biométrique enregistrée.', passkeyRemove: 'Désactiver celle-ci', passkeyRemoveConfirm: 'Désactiver cette identification biométrique ?', passkeyRemoveSharedConfirm: 'Cette identification est associée à {n} appareils. La désactiver partout ?', passkeyRemoved: 'Identification biométrique désactivée', passkeyDevices: '{n} appareil(s)', biometricDisable: 'Désactiver l’identification biométrique', biometricDisabling: 'Désactivation…', biometricDisableConfirm: 'Désactiver toutes les identifications biométriques de ce compte sur tous les appareils ?', biometricDisabled: 'Identification biométrique entièrement désactivée ✓', passkeyNamePrompt: 'Nom de la passkey (facultatif) :', passkeyCreated: 'Activée {date}', passkeyUsed: 'utilisée {date}', passkeyNeverUsed: 'jamais utilisée', passkeyCurrent: 'cet appareil', biometricChecking: 'Vérification de la compatibilité…', biometricReady: 'Compatible — vous pouvez l’activer sur cet appareil.', biometricEnabled: 'Identification biométrique activée sur cet appareil.', biometricConfigured: '{n} identification(s) biométrique(s) configurée(s) pour ce compte.', biometricUnsupported: 'La biométrie sécurisée n’est pas disponible sur cet appareil ou ce navigateur. Vous pouvez tout de même désactiver les identifications existantes.', biometricHttpsRequired: 'L’activation biométrique exige une connexion HTTPS reconnue. La désactivation reste disponible.', biometricRecentAuth: 'Reconnectez-vous pour modifier ce réglage sensible.', biometricReauth: 'Se reconnecter pour modifier', biometricReauthFailed: 'Impossible de relancer l’authentification.', biometricStatusUnavailable: 'État biométrique momentanément indisponible.', biometricCredentialName: 'Biométrie · {device}', biometricLoadFailed: 'Impossible de charger les identifications enregistrées.', autoLock: 'Verrouillage automatique', autoLockNever: 'Jamais', autoLock5: 'Après 5 minutes', autoLock15: 'Après 15 minutes', autoLock30: 'Après 30 minutes', autoLock60: 'Après 1 heure', autoLocking: 'Session verrouillée — authentifiez-vous pour continuer.',
+      deviceAccess: 'Accès de cet appareil', deviceChecking: 'Vérification de l’appareil…', deviceStatusUnavailable: 'État de l’appareil indisponible. Touchez Appairer pour réessayer.', pairDevice: 'Appairer cet appareil', unpairDevice: 'Désappairer cet appareil', pairOther: 'Appairer par QR', pairOtherTitle: 'Appairer un autre appareil', pairOtherHelp: 'Scannez ce QR sur l’autre appareil. Le lien est à usage unique et expire après cinq minutes.', pairQrAlt: 'QR d’association de l’appareil', pairLink: 'Lien d’association', pairExpires: 'Expire à {date}', pairQrFailed: 'Création du QR impossible', copy: 'Copier', revokeDevice: 'Révoquer', pairedDevices: 'Appareils associés',
       clearLocalData: 'Effacer toutes les données locales', closeSession: 'Fermer la session', closeSessionConfirm: 'Fermer la session sur cet appareil ? Les transferts, images et historiques locaux seront conservés.', closingSession: 'Fermeture…', closeSessionFailed: 'Impossible de fermer la session. Réessayez.', companionApp: 'application compagnon', qrHint: 'Visez un QR code de lien de réception…', close: 'Fermer',
       noLink: '— Aucun lien —', addLinkHint: 'Ajoutez un lien de réception avec le bouton ＋.', checking: 'Vérification…', ready: '✓ Prêt à recevoir',
       locked: '🔒 Lien protégé — déverrouillez-le', revoked: '✗ Lien révoqué ou expiré', offlineServer: '⚠ Serveur injoignable', invalid: '✗ Lien introuvable',
@@ -106,9 +138,10 @@
       updateApplied: 'Mise à jour appliquée.', historyDest: 'vers {dest}', textSharedHeader: 'Contenu partagé', urlSharedHeader: 'URL partagée',
       help: 'Aide', shortcutsTitle: 'Raccourcis clavier', shortcutSend: 'Envoyer la file', shortcutEsc: 'Fermer un panneau ou une fenêtre', shortcutHelp: 'Afficher cette aide',
       sortBy: 'Trier', sortAdded: 'Ordre d’ajout', sortName: 'Nom', sortSize: 'Taille',
-      imgCopyAll: '🔗 Copier tous', imgOpen: 'Ouvrir dans un onglet', allImgCopied: '{n} lien(s) copié(s) ✓', noImgLinks: 'Aucun lien à copier.', imgCopyTemplate: 'Modèle de copie', copyTemplateStandard: 'Standard', copyTemplateForum: 'Forum', copyTemplateEmail: 'Courriel', imgQrZip: '🗜 QR en ZIP', imgQrZipDone: 'Archive de QR téléchargée ✓', imgExportStatsCsv: 'CSV statistiques', imgStatsCsvDone: 'Statistiques exportées ✓', imgFavoriteAction1: 'Action favorite 1', imgFavoriteAction2: 'Action favorite 2', imgFavoriteAction3: 'Action favorite 3', imgActionCopy: 'Copier', imgActionOpen: 'Ouvrir', imgQrDownload: 'Télécharger QR', pinItem: 'Épingler', unpinItem: 'Désépingler', tagColors: 'Couleurs des tags', tagColorsReset: 'Réinitialiser les couleurs', expiresIn: 'Expire dans {time}', expiredNow: 'Expiré',
+      imgCopyAll: '🔗 Copier tous', imgOpen: 'Ouvrir dans un onglet', allImgCopied: '{n} lien(s) copié(s) ✓', noImgLinks: 'Aucun lien à copier.', imgCopyTemplate: 'Modèle de copie', copyTemplateStandard: 'Standard', copyTemplateForum: 'Forum', copyTemplateEmail: 'Courriel', imgQrZip: '🗜 QR en ZIP', imgQrZipDone: 'Archive de QR téléchargée ✓', imgExportStatsCsv: 'CSV statistiques', imgStatsCsvDone: 'Statistiques exportées ✓', imgFavoriteAction1: 'Action favorite 1', imgFavoriteAction2: 'Action favorite 2', imgFavoriteAction3: 'Action favorite 3', imgActionOpen: 'Ouvrir', imgQrDownload: 'Télécharger QR', pinItem: 'Épingler', unpinItem: 'Désépingler', tagColors: 'Couleurs des tags', tagColorsReset: 'Réinitialiser les couleurs', expiresIn: 'Expire dans {time}', expiredNow: 'Expiré',
       shareLink: 'Partager le lien', qrForLink: 'QR du lien', qrTitle: 'QR du lien de réception', qrDestHelp: 'Scannez ce code sur un autre appareil pour ouvrir le lien de réception.', qrFail: 'Création du QR impossible',
       receivedTitle: 'Contenu reçu', receivedHelp: 'Fichiers reçus sur ce lien de réception, servis par le serveur.', receivedRefresh: 'Actualiser', receivedLoading: 'Chargement…', receivedEmpty: 'Aucun fichier reçu pour l’instant.', receivedFail: 'Impossible de charger le contenu reçu.', receivedCount: '{n} fichier(s) · {size}', receivedDownload: 'Télécharger',
+      receivedPendingTitle: 'En attente d’approbation', receivedApprove: 'Approuver', receivedReject: 'Rejeter', receivedPendingCount: '{n} fichier(s) en attente', createModerated: 'Validation manuelle : garder les fichiers en attente jusqu’à approbation', sharesFirstUseExpiry: 'Expiration après première utilisation (heures, 0 = désactivé)', sharesOneTime: 'Usage unique renforcé (révoquer après la première récupération complète)', sharesSmartExpiryHint: 'Expiration intelligente : les limites actives sont combinées avec « OU »; la première atteinte désactive le lien.',
       sessionStats: 'Cette session', sessionStatsValue: '{files} fichier(s) · {size} envoyés', sessionStatsEmpty: 'Aucun envoi durant cette session.',
       maintenance: 'Maintenance', checkUpdate: 'Rechercher une mise à jour', checkingUpdate: 'Recherche…', updateFound: 'Mise à jour trouvée — préparation…', updateNone: 'Déjà à jour ✓',
       copyDiag: 'Copier le diagnostic', diagCopied: 'Diagnostic copié ✓', diagNone: 'Aucune erreur d’envoi enregistrée.',
@@ -123,17 +156,17 @@
       wifiOnly: 'Envoyer seulement en Wi-Fi', waitingWifi: 'attente Wi-Fi', stripExif: 'Retirer les métadonnées (EXIF/GPS)',
       zipBundle: '🗜 Regrouper en ZIP', zipDone: 'Archive ZIP créée ✓', zipNeedTwo: 'Sélectionnez au moins deux fichiers.', zipping: 'Création du ZIP…',
       voiceNote: 'Note vocale', recording: 'Enregistrement', recStop: '⏹ Arrêter', recAdd: 'Ajouter à la file', recMicFail: 'Micro indisponible',
-      annotate: 'Annoter', annPen: '✏️ Stylo', annBlur: '🌫 Flou', annDetectFaces: '🙂 Détecter les visages', annDetectPlates: '▭ Détecter les plaques', annUndo: '↶ Défaire', annClear: 'Tout effacer', annApply: 'Appliquer',
+      annotate: 'Annoter', editorBeforeShare: 'Modifier avant partage', annPan: '✋ Déplacer', annPen: '✏️ Stylo', annBlur: '🌫 Flou', annRedact: '⬛ Caviarder', annDetectFaces: '🙂 Détecter les visages', annDetectPlates: '▭ Détecter les plaques', annUndo: '↶ Défaire', annClear: 'Tout effacer', annApply: 'Appliquer',
       selectedN: '{n} sélectionné(s)', bulkRemove: 'Retirer', bulkRetry: 'Réessayer', selectAll: 'Tout',
       batchNote: 'Étiquette / note (facultatif)', notePlaceholder: 'Ex. Facture, Vacances…',
       multiSend: '📢 Envoyer à plusieurs…', multiSendTitle: 'Envoyer à plusieurs destinations', multiSendHelp: 'Le lot sera envoyé à chaque destination cochée. Les liens chiffrés ou exigeant un nom sont ignorés.', multiSendGo: 'Lancer les envois', multiSendNone: 'Aucune destination compatible sélectionnée.', multiSendQueued: 'Envoi vers {n} destination(s) préparé.',
       cmdPalette: 'Palette de commandes', cmdPlaceholder: 'Tapez une commande…', cmdNoMatch: 'Aucune commande.', cmdOpenSettings: 'Ouvrir les réglages', cmdOpenHistory: 'Ouvrir l’historique', cmdToggleTheme: 'Changer de thème',
       expireLabel: 'Expiration (auto-suppression)', expNever: 'Jamais', exp1h: '1 heure', exp24h: '24 heures', exp7d: '7 jours', exp30d: '30 jours',
-      liveTitle: 'Réceptions en direct', liveReceived: '📥 {name} reçu sur « {dest} »', liveEnable: 'Notifications de réception', livePush: 'Notifications push (appli fermée)', livePushOn: 'Notifications push activées ✓', livePushOff: 'Notifications push désactivées', livePushFail: 'Activation des notifications impossible', liveConnected: 'En direct ✓',
+      liveTitle: 'Réceptions en direct', liveReceived: '📥 {name} reçu sur « {dest} »', liveEnable: 'Notifications de réception', livePush: 'Notifications push (appli fermée)', pushLanguage: 'Langue des notifications push', pushLanguageSaved: 'Langue des notifications push enregistrée ✓', livePushOn: 'Notifications push activées ✓', livePushOff: 'Notifications push désactivées', livePushFail: 'Activation des notifications impossible', liveConnected: 'En direct ✓', pushTestBtn: 'Test notifications push', pushTestHelp: 'Envoie une vraie notification via le serveur vers cet appareil.', pushTestSending: 'Test push en cours…', pushTestPreparing: 'Préparation de l’abonnement push…', pushTestAccepted: 'Service Push accepté en {ms} ms · attente d’Android…', pushTestSent: 'Notification de test envoyée ✓', pushTestDenied: 'Notifications refusées dans Android/le navigateur.', pushTestUnsupported: 'Web Push n’est pas disponible sur cet appareil.', pushTestNoSub: 'Aucun abonnement push valide pour cet appareil.', pushTestRepairing: 'Abonnement push expiré : réparation et nouvel essai…', pushTestFailed: 'Échec du test push.', pushTestDelivered: 'Notification reçue par Android {ms} ms après l’envoi ✓', pushTestAcceptedDelayed: 'Acceptée par le service Push, mais pas reçue par Android après {seconds} s.',
       copyToken: 'Copier le jeton', tokenCopied: 'Jeton copié ✓',
       pinDestination: '⭐ Épingler', unpinDestination: '☆ Détacher', pinned: 'Destination épinglée ✓', unpinned: 'Destination détachée',
       resetBatch: '↺ Réinitialiser le lot', resetBatchDone: 'Options du lot réinitialisées ✓',
-      filesPending: '{n} en attente', pasteText: 'Coller du texte', pastedTextName: 'texte-collé.txt', pasteTextEmpty: 'Aucun texte dans le presse-papiers.',
+      filesPending: '{n} en attente', filesTotalSummary: '{n} fichier(s) · {total} · {sent} envoyés', clipboardQueue: 'Presse-papiers', clipboardQueued: '{n} élément(s) du presse-papiers ajouté(s) ✓', clipboardEmpty: 'Le presse-papiers ne contient aucun fichier, image ou texte utilisable.', clipboardUrlFallback: 'URL ajoutée comme texte (le téléchargement direct est bloqué).', pasteText: 'Coller du texte', pastedTextName: 'texte-collé.txt', pasteTextEmpty: 'Aucun texte dans le presse-papiers.',
       masterSelect: 'Tout sélectionner', addFromUrl: 'Depuis une URL', urlPrompt: 'Adresse de l’image ou du fichier à ajouter :', urlFetching: 'Récupération…', urlFailed: 'Récupération impossible (bloquée par CORS ?)', urlAdded: 'Fichier ajouté ✓', urlInvalid: 'Adresse invalide.',
       bulkRename: '✎ Renommer', renamePrompt: 'Préfixe des noms (une numérotation sera ajoutée) :', renameDone: '{n} fichier(s) renommé(s)',
       hashTitle: 'Empreinte SHA-256', hashing: 'Calcul de l’empreinte…', hashCopied: 'Empreinte SHA-256 copiée ✓', hashFail: 'Calcul de l’empreinte impossible',
@@ -141,11 +174,19 @@
       accentLabel: 'Couleur d’accent', accentReset: 'Défaut',
       screenCapture: 'Capturer l’écran', captureFailed: 'Capture d’écran impossible', screenshotName: 'capture-ecran',
       undo: 'Annuler', fileRemoved: 'Fichier retiré', fileRestored: 'Fichier restauré ✓', lightboxAlt: 'Aperçu de l’image',
-      sortType: 'Type', bulkInvert: '⇄ Inverser', expandAll: 'Tout déplier', collapseAll: 'Tout replier',
-      queueSearch: 'Filtrer la file…', estOptim: '≈ {size} après optim.', rotate: 'Pivoter',
+      sortType: 'Type', bulkInvert: '⇄ Inverser',
+      ocrTitle: 'OCR local', ocrAction: 'Extraire le texte (OCR)', ocrPrivacy: 'Traitement sur cet appareil. Seuls les moteurs et modèles OCR/PDF sont téléchargés; votre document n’est envoyé à aucun service OCR.', ocrLanguage: 'Langue', ocrLangFrEn: 'Français + anglais', ocrLangFr: 'Français', ocrLangEn: 'Anglais', ocrLangEs: 'Espagnol', ocrRun: 'Extraire le texte', ocrCancel: 'Annuler l’OCR', ocrCopy: 'Copier le texte', ocrAddTxt: 'Ajouter .txt à la file', ocrSearch: 'Rechercher dans le texte…', ocrPrev: 'Précédent', ocrNext: 'Suivant', ocrReady: 'Prêt à extraire le texte.', ocrLoadingEngine: 'Chargement du moteur OCR…', ocrLoadingPdf: 'Lecture du PDF…', ocrEmbedded: 'Texte PDF incorporé détecté', ocrScanningPage: 'OCR de la page {page}/{total}…', ocrReadingPage: 'Lecture de la page {page}/{total}…', ocrComplete: 'OCR terminé · {chars} caractères', ocrNoText: 'Aucun texte détecté.', ocrFailed: 'OCR impossible : {error}', ocrCanceled: 'OCR annulé.', ocrCopied: 'Texte OCR copié ✓', ocrQueued: 'Fichier texte ajouté à la file ✓', ocrMatches: '{current}/{total}', ocrNoMatch: '0 résultat', ocrUnsupported: 'OCR disponible pour les images et les PDF.', ocrEngineNetwork: 'Le premier OCR nécessite Internet pour télécharger le moteur et les modèles.', ocrEngineTimeout: 'Le moteur OCR ne répond pas. Vérifiez la connexion Internet puis réessayez.',
+      dedupeChecking: 'Recherche d’un doublon sur le serveur…', dedupeHit: 'Déjà présent sur le serveur · envoi évité ✓', dedupeUnavailable: 'Déduplication indisponible — envoi normal.',
+      editorTitle: 'Éditeur photo', editorAdjust: 'Réglages', editorBrightness: 'Luminosité', editorContrast: 'Contraste', editorSaturation: 'Saturation', editorApplyAdjust: 'Appliquer les réglages', editorRotateLeft: '↶ 90°', editorRotateRight: '↷ 90°', editorFlipH: '↔ Miroir', editorFlipV: '↕ Retourner', editorResizeMax: 'Dimension max', editorResizeApply: 'Redimensionner', editorFormat: 'Format de sortie', editorQuality: 'Qualité', editorZoom: 'Zoom', editorZoomOut: 'Dézoomer', editorZoomIn: 'Zoomer', editorZoomFit: 'Ajuster', editorBrushSize: 'Grosseur du pinceau', editorLargeConfirm: 'Cette image est très grande ({w}×{h}). OK : utiliser une copie de travail de 1800 px. Annuler : conserver la résolution originale (plus de mémoire).',
+      privacyInspect: 'Confidentialité', privacyTitle: 'Nettoyage des métadonnées', privacyLocal: 'Analyse et nettoyage effectués localement sur cet appareil.', privacyAnalyze: 'Analyser', privacyClean: 'Nettoyer et remplacer', privacyCleaned: 'Métadonnées sensibles nettoyées ✓', privacyNoFindings: 'Aucune métadonnée sensible évidente détectée.', privacyFindings: '{n} élément(s) sensible(s) détecté(s)', privacyImageMetadata: 'Métadonnées image (EXIF/XMP/IPTC)', privacyPdfMetadata: 'Métadonnées PDF', privacyOfficeMetadata: 'Propriétés Office', privacyThumbnail: 'Miniature incorporée', privacyAuthor: 'Auteur / dernier auteur', privacyGps: 'Coordonnées GPS', privacyCustom: 'Propriétés personnalisées', privacyUnsupported: 'Nettoyage automatique non pris en charge pour ce format.', privacyAnalyzing: 'Analyse locale…', privacyCleaning: 'Nettoyage local…',
+      annDetectSensitive: '🔐 Texte sensible', sensitiveScanning: 'Recherche locale de texte sensible…', sensitiveFound: '{n} zone(s) de texte sensible masquée(s). Vérifiez le résultat.',
+      ocrIndexTitle: 'Index OCR local', ocrIndexHint: 'Recherchez dans tous les documents OCR traités sur cet appareil.', ocrIndexSearch: 'Rechercher dans tous les OCR…', ocrIndexEmpty: 'Aucun document OCR indexé.', ocrIndexSaved: 'Document ajouté à l’index OCR local ✓', ocrIndexCount: '{n} document(s) indexé(s)', ocrIndexOpen: 'Ouvrir', ocrIndexDelete: 'Supprimer de l’index', ocrIndexClear: 'Vider l’index', ocrIndexClearConfirm: 'Supprimer tout l’index OCR local ?', ocrIndexMeta: '{size} · {date} · {chars} caractères',
+      queueSearch: 'Filtrer la file…', estOptim: '≈ {size} après optim.', optimizationEstimate: '{before} → ≈ {after} · économie {saved} ({pct} %) {eta}', optimizationEstimating: 'Estimation de l’optimisation…', copyQueueNames: 'Copier les noms', queueNamesCopied: '{n} nom(s) copié(s) ✓', quickFilters: 'Filtres rapides', filterAll: 'Tous', filterImages: 'Images', filterVideos: 'Vidéos', filterDocuments: 'Documents', filterWaiting: 'En attente', filterDone: 'Terminés', filterErrors: 'Erreurs', dragHandle: 'Déplacer dans la file', batchElapsed: '⏱ {time}', avgPerFile: 'moy. {time}/fichier', transferActiveExit: 'Un transfert est en cours. Terminez-le ou mettez-le en pause avant de quitter.', lowBatteryConfirm: 'Batterie à {level} % et non branchée. Continuer avec 1 envoi parallèle ? Annuler pour brancher l’appareil.', notifUploadTitle: 'Transfert Direct-Xfer terminé', notifUploadBody: '{ok} réussi(s){fail}', notifOpen: 'Ouvrir', notifCopyLink: 'Copier le lien', notifResend: 'Renvoyer', notifLinkCopied: 'Lien de destination copié ✓', rotate: 'Pivoter',
       quotaNearFull: 'Quota bientôt atteint sur cette destination.',
       imgQrAll: '▦ QR groupé', imgQrTooBig: 'Trop de liens pour tenir dans un seul QR.', bulkShare: 'Partager',
       onlineStatus: 'En ligne', offlineStatus: 'Hors ligne', networkWifi: 'Wi-Fi', networkCellular: 'Données mobiles',
+      networkDashboard: 'Réseau en direct', networkDashboardHint: 'Débit, latence, chunks et reprises pendant les transferts.', networkTestNow: 'Tester la connexion', networkTesting: 'Test réseau…', networkTestDone: 'Réseau : {quality} · ↑ {up} · ↓ {down} · {latency} ms', networkTestFailed: 'Test réseau impossible — réglages automatiques conservés.', networkTestAuto: 'Gros transfert détecté : test réseau avant envoi…', networkLatency: 'Latence', networkUpload: 'Montant', networkDownload: 'Descendant', networkLiveRate: 'Débit actuel', networkChunk: 'Chunk', networkParallel: 'Parallèles', networkRetries: 'Reprises', networkActive: 'Actifs', networkQualityExcellent: 'excellent', networkQualityGood: 'bon', networkQualityFair: 'moyen', networkQualityPoor: 'faible', networkNotTested: 'Non testé', networkLastTest: 'Dernier test : {when}', networkGraphLabel: 'Historique du débit montant',
+      errorCenter: 'Centre d’erreurs', errorCenterHint: 'Diagnostic regroupé des échecs récents et des fichiers en erreur.', errorCenterEmpty: 'Aucune erreur récente.', errorCenterClear: 'Effacer le journal', errorCenterCopy: 'Copier le rapport', errorCenterRetry: 'Réessayer', errorCenterRetryAll: 'Réessayer toutes', errorCategoryProxy: 'Reverse proxy', errorCategoryQuota: 'Quota / stockage', errorCategoryNetwork: 'Connexion', errorCategoryServer: 'Serveur', errorCategoryAuth: 'Autorisation', errorCategoryFile: 'Fichier', errorCategoryOther: 'Autre', errorLogCleared: 'Journal d’erreurs effacé ✓', errorReportCopied: 'Rapport d’erreurs copié ✓', errorLocalStorage: 'Stockage local insuffisant ou indisponible.',
       resendLastBatch: '↺ Renvoyer le dernier lot', lastBatchUnavailable: 'Le dernier lot n’est plus disponible localement.', lastBatchRestored: '{n} fichier(s) du dernier lot restauré(s) ✓',
       copySummary: '⧉ Copier le résumé', shareResult: '📤 Partager le résultat', summaryCopied: 'Résumé copié ✓', noSummary: 'Aucun résumé de transfert disponible.',
       privacyNames: 'Masquer les noms de fichiers sensibles', privacyFile: 'Fichier {n}',
@@ -156,17 +197,20 @@
       moveEarlier: 'Monter dans la file', moveLater: 'Descendre dans la file'
     },
     en: {
-      title: 'Send', navMain: 'Main navigation', navSend: 'Send', navSendHint: 'Prepare and send files to a destination.', navImages: 'Images', navImagesHint: 'Create, manage and monitor image links.', navActivity: 'Activity', navActivityHint: 'Review the local transfer history.', navSettings: 'Settings', navSettingsHint: 'Configure the PWA, security and storage.', navShares: 'Shares', navSharesHint: 'Create share links from files on your server.', sharesTitle: 'Share server files', sharesHint: 'Browse the files on your server and create direct share links.', sharesAdminRequired: 'Sign in with an administrator account to browse server files.', sharesSignIn: 'Sign in as administrator', sharesBrowse: 'Server files', sharesUp: 'Parent folder', sharesCreate: 'Create the share', sharesNoneSelected: 'No file selected.', sharesSelected: '{n} item(s) selected', sharesExpiry: 'Expiry', sharesExpiryNever: 'Never', sharesExpiry1h: '1 hour', sharesExpiry1d: '1 day', sharesExpiry7d: '7 days', sharesExpiry30d: '30 days', sharesMaxDownloads: 'Max downloads (0 = unlimited)', sharesPassword: 'Password (optional)', sharesPasswordPlaceholder: '—', sharesCreateBtn: 'Create share link', sharesCreating: 'Creating…', sharesCreated: 'Share created ✓', sharesCreateFail: 'Could not create the share', sharesLibrary: 'Your shares', sharesEmpty: 'No shares yet.', sharesBrowseFail: 'Could not read this folder.', sharesLoginNeeded: 'Administrator login required.', sharesOpen: 'Open', sharesCopy: 'Copy', sharesRevoke: 'Revoke', sharesRevoked: 'Share revoked ✓', sharesRevokeFail: 'Could not revoke', sharesRevokeConfirm: 'Revoke this share? The link will stop working.', sharesItems: '{n} item(s)', sharesReceptions: 'Reception links', sharesReceptionsEmpty: 'No reception links.', sharesReceived: '{bytes} received', openAdmin: 'Open administration', language: 'Language', theme: 'Theme', copyLink: 'Copy link', pasteLink: 'Paste link', editDestination: 'Edit destination', addDestination: 'Add destination', passwordPlaceholder: 'Link password', destinationPlaceholder: 'Reception link or token', destinationNamePlaceholder: 'Optional destination name', senderPlaceholder: 'Name required by this link', globalProgress: 'Overall progress', keyPlaceholder: 'Link encryption key', titlePlaceholder: 'Shared content', pairedBadge: 'Paired device', themeDark: 'Dark', themeLight: 'Light', themeAuto: 'Auto', install: 'Install', installIosHint: 'To install Direct-Xfer, tap the browser Share button, then “Add to Home Screen”.', installBrowserHint: 'Chrome has not validated full installation yet. Do not choose a simple shortcut: use a trusted HTTPS address, interact with the page, and keep it open briefly.', installHttpsRequired: 'Full installation is impossible from this HTTP address or untrusted certificate. Android can only create a shortcut. Open Direct-Xfer over HTTPS with a valid certificate.', installSecurePending: 'Installation is being prepared. In Chrome, interact with the page and keep it open for about 30 seconds. If the logo does not appear, verify that Android trusts the HTTPS certificate.', installOpenHttps: 'Open HTTPS version',
+      imgEditUploaded: 'Edit with the photo editor', imgEditUploadedDone: 'Image edited, URL preserved ✓',
+      notificationsTitle: 'Notifications', notificationsLoading: 'Loading…', notificationsEmpty: 'No notifications.', notificationsFirstView: 'First view of “{name}”', notificationsDelete: 'Delete this notification', notificationsClearAll: 'Delete all', notificationsClearConfirm: 'Delete all notifications?', notificationsLoadMore: 'Show more ({n})', notificationsLinkCopied: 'Link copied ✓', notificationsSound: 'Sound on arrival', notificationsSoundOn: 'Sound on', notificationsSoundOff: 'Sound off', notificationsPrefs: 'Preferences', notificationsPrefsHint: 'Uncheck a category to stop creating its notifications.', notificationsPrefsSaved: 'Preferences saved ✓', notificationsSettingsTitle: 'Notification center', notificationsSettingsHint: 'Choose which notification categories this account receives in the notification center.', notificationsSettingsRequired: 'Always on', notificationsSettingsRequiredHint: 'Security, Maintenance and System health notifications always remain enabled.', notificationsSettingsSaving: 'Saving…', notificationsSettingsError: 'Could not save notification preferences.', notificationsRulesTitle: 'Custom alerts', notificationsRulesHint: 'Create up to 50 rules that trigger a notification when a threshold is reached.', notificationsRuleMetric: 'Metric', notificationsRuleTarget: 'Link', notificationsRuleThreshold: 'Threshold', notificationsRuleLabel: 'Name (optional)', notificationsRuleAdd: 'Add rule', notificationsRuleAllTargets: 'All my compatible links', notificationsRuleTargetUnavailable: 'Link unavailable or deleted', notificationsRuleEmpty: 'No custom rules.', notificationsRuleSaved: 'Rule saved ✓', notificationsRuleDeleted: 'Rule deleted', notificationsRuleError: 'Could not save the rule.', notificationsRuleEnable: 'Enable', notificationsRuleDisable: 'Disable', notificationsRuleDelete: 'Delete', notificationsRuleMetricViews: 'Views', notificationsRuleMetricDownloads: 'Downloads', notificationsRuleMetricBytesServed: 'Data served (GB)', notificationsRuleMetricReceivedBytes: 'Data received (GB)', notificationsRuleCustomTitle: 'Custom alert: {name}', notificationsTimeAgo: '{v} ago', notificationsCount: '{n} notification(s)', notificationsFilteredCount: '{shown} / {total} notification(s)', notificationsNoMatch: 'No notifications match the filters.', notificationsFilters: 'Notification filters', notificationsCategoryFilter: 'Filter by category', notificationsSeverityFilter: 'Filter by severity', notificationsAllCategories: 'All categories', notificationsAllSeverities: 'All severities', notificationsSearch: 'Search…', notificationsSearchAria: 'Search notifications', notificationsCategoryActivity: 'Activity', notificationsCategoryVisitors: 'Visitors', notificationsCategoryThresholds: 'Thresholds', notificationsCategoryTraffic: 'Traffic', notificationsCategoryImages: 'Images', notificationsCategoryPwa: 'PWA', notificationsCategoryReceptions: 'Receptions', notificationsCategorySearch: 'Search / OCR', notificationsCategorySecurity: 'Security', notificationsCategoryShares: 'Shares', notificationsCategorySystemHealth: 'System health', notificationsCategoryMaintenance: 'Maintenance', notificationsCategoryNetwork: 'Network', notificationsCategoryRestarts: 'Restarts', notificationsCategoryUpdates: 'Updates', notificationsCategoryTransfers: 'Transfers', notificationsCategoryDescShares: 'Downloads, expiry, limits and changes affecting shared links.', notificationsCategoryDescReceptions: 'Received deposits, available files and reception-link quotas.', notificationsCategoryDescImages: 'First views, image replacements and variant regeneration.', notificationsCategoryDescTransfers: 'Completed or failed transfers, abandoned transfers and impossible resumes.', notificationsCategoryDescVisitors: 'New countries and new visitor browsers or devices.', notificationsCategoryDescThresholds: 'View and download thresholds reached on your links.', notificationsCategoryDescTraffic: 'Unusually high download volume and links becoming viral.', notificationsCategoryDescSearch: 'OCR failures and search-indexing problems.', notificationsCategoryDescPwa: 'PWA devices, Push subscriptions and notification permissions.', notificationsCategoryDescSecurity: 'Unusual logins, password events, DLP and other security alerts.', notificationsCategoryDescSystemHealth: 'Service outages, configuration errors and important system problems.', notificationsCategoryDescMaintenance: 'Automatic cleanups and file removals performed by retention rules.', notificationsCategoryDescNetwork: 'Public IP address changes and service network events.', notificationsCategoryDescRestarts: 'Detected Direct-Xfer restarts, including downtime when available.', notificationsCategoryDescUpdates: 'Available updates and confirmation after installation.', notificationsSeverityInfo: 'Information', notificationsSeveritySuccess: 'Success', notificationsSeverityWarning: 'Warning', notificationsSeverityCritical: 'Critical',
+      title: 'Send', navMain: 'Main navigation', navSend: 'Send', navSendHint: 'Prepare and send files to a destination.', navImages: 'Images', navImagesHint: 'Create, manage and monitor image links.', navActivity: 'Activity', navActivityHint: 'Review the local transfer history.', navSettings: 'Settings', navSettingsHint: 'Configure the PWA, security and storage.', navShares: 'Shares', navSharesHint: 'Create share links from files on your server.', sharesTitle: 'Share server files', sharesHint: 'Browse the files on your server and create direct share links.', sharesAdminRequired: 'Sign in with an administrator account to browse server files.', sharesSignIn: 'Sign in as administrator', sharesBrowse: 'Server files', sharesUp: 'Parent folder', sharesCreate: 'Create the share', sharesNoneSelected: 'No file selected.', sharesSelected: '{n} item(s) selected', sharesExpiry: 'Expiry', sharesExpiryNever: 'Never', sharesExpiry1h: '1 hour', sharesExpiry1d: '1 day', sharesExpiry7d: '7 days', sharesExpiry30d: '30 days', sharesMaxDownloads: 'Max downloads (0 = unlimited)', sharesRateLimit: 'Maximum rate (KB/s, 0 = unlimited)', sharesRateEdit: 'Rate', sharesRatePrompt: 'Maximum rate in KB/s (0 = unlimited):', sharesRateSaved: 'Rate updated ✓', sharesRateFail: 'Could not update the rate', sharesPassword: 'Password (optional)', sharesPasswordPlaceholder: '—', sharesCreateBtn: 'Create share link', sharesCreating: 'Creating…', sharesCreated: 'Share created ✓', sharesCreateFail: 'Could not create the share', sharesDlpWarning: 'DLP: {n} sensitive finding(s) ({level}). Publish anyway?', sharesDlpBlocked: 'Publishing blocked by the DLP policy.', dlpTest: 'Test DLP', dlpTestQueue: '🛡 Test DLP', dlpTestSelected: '🛡 Test DLP', dlpTesting: 'DLP scan…', dlpSafe: 'DLP ✓ no sensitive content detected', dlpFound: 'DLP: {n} finding(s) ({level})', dlpLocalBlocked: 'Upload blocked by the DLP policy before transfer.', dlpLocalConfirm: 'DLP found {n} sensitive item(s) ({level}) in {files} file(s). Send anyway?', dlpScanSkipped: 'DLP: {n} file(s) too large/not scanned', dlpScanFailed: 'DLP test failed: {error}', dlpOcrIncomplete: 'DLP incomplete: OCR failed for {n} file(s)', dlpPolicyLoading: 'Loading DLP policy…', dlpPolicyDisabled: 'DLP disabled on the server', dlpPolicyText: '{mode} policy · {mb} MB/file · OCR {ocr}', dlpModeWarn: 'Warn', dlpModeBlock: 'Block', dlpModeLog: 'Log', dlpOcrOn: 'enabled', dlpOcrOff: 'disabled', dlpIncompleteBlocked: 'Upload blocked: the DLP scan is incomplete.', dlpIncompleteConfirm: 'The DLP scan is incomplete for {files} file(s) and found {n} finding(s). Send anyway?', dlpPolicyUnavailable: 'DLP policy unavailable: upload paused for safety.', dlpScanIncomplete: 'DLP incomplete: {n} item(s) not scanned', sharesLibrary: 'Your shares', sharesEmpty: 'No shares yet.', sharesBrowseFail: 'Could not read this folder.', sharesLoginNeeded: 'Administrator login required.', sharesOpen: 'Open', sharesCopy: 'Copy', sharesRevoke: 'Revoke', sharesRevoked: 'Share revoked ✓', sharesRevokeFail: 'Could not revoke', sharesRevokeConfirm: 'Revoke this share? The link will stop working.', sharesItems: '{n} item(s)', sharesReceptions: 'Reception links', sharesReceptionsEmpty: 'No reception links.', sharesReceived: '{bytes} received', sharesDownloadingNow: '{n} download(s) in progress', threadTitle: 'Conversation', threadEmpty: 'No messages.', threadReplyPh: 'Reply to the visitor…', threadSend: 'Send', threadSending: 'Sending…', threadError: 'Could not send, try again.', threadYou: 'You', threadVisitor: 'Visitor', openAdmin: 'Open administration', language: 'Language', theme: 'Theme', copyLink: 'Copy link', pasteLink: 'Paste link', editDestination: 'Edit destination', addDestination: 'Add destination', passwordPlaceholder: 'Link password', destinationPlaceholder: 'Reception link or token', destinationNamePlaceholder: 'Optional destination name', senderPlaceholder: 'Name required by this link', globalProgress: 'Overall progress', keyPlaceholder: 'Link encryption key', titlePlaceholder: 'Shared content', themeDark: 'Dark', themeLight: 'Light', themeAuto: 'Auto', install: 'Install', installIosHint: 'To install Direct-Xfer, tap the browser Share button, then “Add to Home Screen”.', installBrowserHint: 'Chrome has not validated full installation yet. Do not choose a simple shortcut: use a trusted HTTPS address, interact with the page, and keep it open briefly.', installHttpsRequired: 'Full installation is impossible from this HTTP address or untrusted certificate. Android can only create a shortcut. Open Direct-Xfer over HTTPS with a valid certificate.', installSecurePending: 'Installation is being prepared. In Chrome, interact with the page and keep it open for about 30 seconds. If the logo does not appear, verify that Android trusts the HTTPS certificate.', installOpenHttps: 'Open HTTPS version',
       offline: 'Offline — uploads will resume when the connection returns.', updateReady: 'A new version is available.', updateNow: 'Update', pullToRefresh: 'Pull down to refresh', releaseToRefresh: 'Release to refresh', refreshing: 'Refreshing…', backExit: 'Press back again to exit',
       destination: 'Destination', destinationHint: 'A Direct-Xfer reception link from this instance.', linkOrToken: 'Link or token', displayName: 'Display name',
       rememberDestination: 'Remember this destination on this device', rememberKey: 'Also remember the secret key on this device', scanQr: '📷 Scan QR', saveDestination: 'Add', updateDestination: 'Save', removeDestination: 'Remove', createLinkTitle: 'Create a reception link', newLink: 'New', createLinkName: 'New link name', createLinkPlaceholder: 'e.g. Holiday photos', createLinkHint: 'A new reception link will be created and added to your destinations. Share it to receive files.', createDo: 'Create link', creating: 'Creating…', createOk: 'Link created ✓', createFail: 'Could not create the link',
-      imgLinksTitle: 'Image links', imgLinksHint: 'Create direct links to your images: each link offers Full, Mini, and Micro versions, with no relay page.', imgLinksAdd: 'Add images', imgCreateTitle: 'Create links', imgCreateHint: 'Choose your images and the format to feature first.', imgLibraryTitle: 'Your links', imgLibraryHint: 'Search, sort and manage images you already shared.', imgGlobalActions: 'Global actions', imgCopyActions: 'Copy a format', imgManageActions: 'Manage link', imgStripExif: 'Remove EXIF/GPS data before sharing', imgStripExifHint: 'The cleanup is performed locally on this device before upload.', imgStrippingMetadata: 'Removing EXIF/GPS…', imgMetadataRemoved: 'EXIF/GPS removed', imgUploading: 'Uploading…', imgThumbing: 'Mini and Micro…', imgReady: 'Ready', imgCopyFull: '🔗 Full size', imgCopyThumb: '🔗 Mini', imgCopyMicro: '🔗 Micro', imgCopied: 'Link copied ✓', imgLinkFail: 'Could not create the link', revokeShare: 'Revoke', revokeConfirm: 'Revoke this share? The link will stop working.', revokeSuccess: 'Revoked ✓', revokeFail: 'Could not revoke', imgVariantFull: 'Full', imgVariantMini: 'Mini', imgVariantMicro: 'Micro', imgViews: '{n} views', imgVisitors: '{n} visitors', imgStatsLoading: 'Statistics…', imgStatsUnavailable: 'Statistics unavailable',
-      imgSearch: 'Search images…', imgSortLabel: 'Sort images', imgSortNewest: 'Newest', imgSortOldest: 'Oldest', imgSortName: 'Name', imgSortSize: 'Size', imgSortViews: 'Views', imgSortVisitors: 'Visitors', imgSortExpiry: 'Expiry', imgFilterLabel: 'Filter images', imgFilterAll: 'All', imgFilterActive: 'Active', imgFilterPopular: 'Popular', imgFilterLarge: 'Large', imgFilterExpiring: 'Expiring soon', imgFilterFavorite: 'Favorites', imgFilterProtected: 'Protected', imgDefaultVariantLabel: 'Favorite image size', imgAdvancedOptions: 'Image options', imgCompact: 'Compact display', imgHideExpired: 'Hide expired images', imgAutoCopy: 'Copy automatically after creation', imgDefaultExpiry: 'Favorite expiry', imgMaxViews: 'View limit', imgPassword: 'Password', imgTags: 'Tags', imgPrivateNote: 'Private note', imgRenameTemplate: 'Rename template', imgBulkEdit: 'Edit', imgCreateAlbum: 'Create album', imgDashboard: 'Statistics chart', imgAlbums: 'Shareable albums', imgActionHistory: 'Image action history', imgSelected: '{n} selected', imgEditPrompt: 'Edit selected images', imgAlbumName: 'Album name', imgAlbumCreated: 'Album created ✓', imgSettingsSaved: 'Settings saved ✓', imgDuplicateFound: 'This image has already been shared. Continue anyway?', imgExpirySoon: 'The link “{name}” expires soon.', imgUndoRevoke: 'Image removed — Undo?', imgRevokePending: 'Revoking in a few seconds…', imgQrDownloaded: 'QR downloaded ✓', imgFavorite: 'Favorite', imgUnfavorite: 'Remove from favorites', imgExpired: 'Expired', imgInactive: 'Inactive', imgViewLimitReached: 'View limit reached', imgProtected: 'Protected', imgViewLimit: '{n} views max', imgNoAlbums: 'No albums.', imgVariantAuto: 'Automatic', imgReplace: 'Replace without changing link', imgVersions: 'Versions', imgReplaceDone: 'Image replaced, URL preserved ✓', imgResizeMini: 'Resize the Mini', imgResizeMiniPrompt: 'New Mini size: a number of pixels (longest side, e.g. 250) OR a percentage of the full size (e.g. 50%). The Micro will be half:', imgResizeMiniInvalid: 'Invalid value: pixels (16 to 4096) or percentage (1 to 100%).', imgResizeMiniDone: 'Mini resized to {w}×{h} ✓', imgRestoreVersion: 'Restore a version', imgVersionRestored: 'Version restored ✓', imgAdaptiveReady: 'Adaptive optimization', albumInvites: 'Invitations', albumInviteCreate: 'Create invitation', albumInviteRole: 'Role (reader, contributor, manager)', albumInviteCopied: 'Invitation link copied ✓', albumInviteRevoke: 'Revoke invitation', albumCollabSummary: '{n} invitation(s)', imgAlbumCopied: 'Album link copied ✓', imgChartSummary: '{images} images · {views} views · {visitors} visitors · {bytes}', imgHotlinkHosts: 'Allowed embedding domains', imgHotlinkPlaceholder: 'forum.example.com, *.site.net', imgHotlinkHint: 'Empty = protection disabled. Direct visits remain allowed.', imgHotlinkProtected: 'Hotlink protection', imgNotifyFirstView: 'Notify on first view', imgFirstViewArmed: 'First-view alert', imgFirstViewSent: 'First view notified', imgFirstViewToast: '👁 First view of “{name}”', imgSmartBlur: 'Local smart blur', imgSmartBlurFaces: 'Faces', imgSmartBlurFacesPlates: 'Faces and plates', imgSmartBlurHint: 'Local analysis with review before upload; no image is sent to an external service.', imgSmartBlurAnalyzing: 'Local analysis…', imgSmartBlurReady: '{n} area(s) hidden. Review and apply.', imgSmartBlurUnsupported: 'Face detection is not supported by this browser; add areas manually.', imgSmartBlurSkip: 'Continue without blur', imgRetentionRules: 'Automatic retention rules', imgRetentionWarning: 'These rules permanently revoke images and delete their files. They are disabled by default.', imgRetentionAge: 'Maximum age (days)', imgRetentionInactive: 'Maximum inactivity (days)', imgRetentionViews: 'Revoke after this many views', imgRetentionStorage: 'Maximum storage (MB)', imgRetentionSave: 'Save and apply', imgRetentionSaved: 'Retention rules saved ✓', imgRetentionResult: '{n} image(s) revoked · {bytes} freed', imgRetentionSummary: '{n} image(s) · {bytes}', enabled: 'Enabled', disabled: 'Disabled', optional: 'Optional', refresh: 'Refresh', themeSchedule: 'By time',
+      imgLinksTitle: 'Image links', imgLinksHint: 'Create direct links to your images: each link offers Full, Mini, and Micro versions, with no relay page.', imgLinksAdd: 'Add images', imgCreateTitle: 'Create links', imgCreateHint: 'Choose images to share or edit one before uploading.', imgLibraryTitle: 'Your links', imgLibraryHint: 'Search, sort and manage images you already shared.', imgGlobalActions: 'Global actions', imgManageActions: 'Manage link', imgStripExif: 'Remove EXIF/GPS data before sharing', imgStripExifHint: 'The cleanup is performed locally on this device before upload.', imgStrippingMetadata: 'Removing EXIF/GPS…', imgMetadataRemoved: 'EXIF/GPS removed', imgUploading: 'Uploading…', imgThumbing: 'Mini and Micro…', imgReady: 'Ready', imgCopyBBCode: 'Copy BBCode', imgCopied: 'Link copied ✓', clearSearch: 'Clear search', imgListEmpty: 'No shared images yet. Use “Add images” to create your first link.', imgNoMatch: 'No image matches your search.', destEmptyHint: 'No destination yet. Add a reception link (＋) or create one with “New”.', destEmoji: 'Emoji (visual cue)', imgCopyImage: 'Copy image', imgCompare: 'Compare', imgCompareTitle: 'Compare formats', pwStrengthLabel: 'Password strength', pwWeak: 'Weak', pwMedium: 'Fair', pwStrong: 'Strong', historyResend: 'Resend', historyDestGone: 'Destination not found — add it again.', resendReady: 'Destination selected — add your files.', imgLinkFail: 'Could not create the link', imgVariantsFailed: 'Image saved, but Mini/Micro could not be updated.', revokeShare: 'Revoke', revokeConfirm: 'Revoke this share? The link will stop working.', revokeSuccess: 'Revoked ✓', revokeFail: 'Could not revoke', imgVariantFull: 'Full', imgVariantMini: 'Mini', imgVariantMicro: 'Micro', imgViews: '{n} views', imgVisitors: '{n} visitors', imgStatsLoading: 'Statistics…', imgStatsUnavailable: 'Statistics unavailable', imgStatsButton: '📊 Stats', imgStatsTitle: 'Detailed statistics', imgStatsOverview: 'Overview', imgStatsCopies: 'Image copies', imgStatsRecent: 'Recent image access', imgStatsStorage: 'Storage', imgStatsDimensions: 'Dimensions', imgStatsLastView: 'Last view', imgStatsCreated: 'Created', imgStatsExpiry: 'Expiry', imgStatsStatus: 'Status', imgStatsActive: 'Active', imgStatsInactive: 'Inactive', imgStatsExpired: 'Expired', imgStatsNoRecent: 'No recent access recorded.', imgStatsNever: 'Never', imgStatsUnknown: 'Unknown',
+      imgSearch: 'Search name, tag or OCR text…', imgSortLabel: 'Sort images', imgSortNewest: 'Newest', imgSortOldest: 'Oldest', imgSortName: 'Name', imgSortSize: 'Size', imgSortViews: 'Views', imgSortVisitors: 'Visitors', imgSortExpiry: 'Expiry', imgFilterLabel: 'Filter images', imgFilterAll: 'All', imgFilterActive: 'Active', imgFilterPopular: 'Popular', imgFilterLarge: 'Large', imgFilterExpiring: 'Expiring soon', imgFilterFavorite: 'Favorites', imgFilterProtected: 'Protected', imgAdvancedOptions: 'Image options', imgCompact: 'Compact display', imgHideExpired: 'Hide expired images', imgAutoCopy: 'Copy automatically after creation', imgDefaultExpiry: 'Favorite expiry', imgMaxViews: 'View limit', imgPassword: 'Password', imgTags: 'Tags', imgPrivateNote: 'Private note', imgRenameTemplate: 'Rename template', imgBulkEdit: 'Edit', imgCreateAlbum: 'Create album', imgDashboard: 'Statistics chart', imgAlbums: 'Shareable albums', imgActionHistory: 'Image action history', imgSelected: '{n} selected', imgEditPrompt: 'Edit selected images', imgAlbumName: 'Album name', imgAlbumCreated: 'Album created ✓', imgSettingsSaved: 'Settings saved ✓', imgDuplicateFound: 'This image has already been shared. Continue anyway?', imgExpirySoon: 'The link “{name}” expires soon.', imgUndoRevoke: 'Image removed — Undo?', imgRevokePending: 'Revoking in {n} s…', imgCancelRevoke: 'Cancel revocation', imgRevokeCancelled: 'Revocation cancelled ✓', imgQrDownloaded: 'QR downloaded ✓', imgFavorite: 'Favorite', imgUnfavorite: 'Remove from favorites', imgExpired: 'Expired', imgInactive: 'Inactive', imgViewLimitReached: 'View limit reached', imgProtected: 'Protected', imgViewLimit: '{n} views max', imgNoAlbums: 'No albums.', imgVariantAuto: 'Automatic', imgReplace: 'Replace without changing link', imgVersions: 'Versions', imgReplaceDone: 'Image replaced, URL preserved ✓', imgResizeMini: 'Resize the Mini', imgResizeMiniPrompt: 'New Mini size: a number of pixels (longest side, e.g. 250) OR a percentage of the full size (e.g. 50%). The Micro will be half:', imgResizeMiniInvalid: 'Invalid value: pixels (16 to 4096) or percentage (1 to 100%).', imgResizeMiniDone: 'Mini resized to {w}×{h} ✓', imgRestoreVersion: 'Restore a version', imgVersionRestored: 'Version restored ✓', imgAdaptiveReady: 'Adaptive optimization', albumInvites: 'Invitations', albumInviteCreate: 'Create invitation', albumInviteRole: 'Role (reader, contributor, manager)', albumInviteCopied: 'Invitation link copied ✓', albumInviteRevoke: 'Revoke invitation', albumCollabSummary: '{n} invitation(s)', imgAlbumCopied: 'Album link copied ✓', imgChartSummary: '{images} images · {views} views · {visitors} visitors · {bytes}', imgComparePeriod: 'Comparison period', imgCompare7d: '7 days', imgCompare30d: '30 days', imgCompareSummary: '{days} d vs previous period: {views} views · {created} images created', imgCompareNew: 'new', imgHotlinkHosts: 'Allowed embedding domains', imgHotlinkPlaceholder: 'forum.example.com, *.site.net', imgHotlinkHint: 'Empty = protection disabled. Direct visits remain allowed.', imgHotlinkProtected: 'Hotlink protection', imgNotifyFirstView: 'Notify on first view', imgFirstViewArmed: 'First-view alert', imgFirstViewSent: 'First view notified', imgFirstViewToast: '👁 First view of “{name}”', imgSmartBlur: 'Local smart blur', imgSmartBlurFaces: 'Faces', imgSmartBlurFacesPlates: 'Faces and plates', imgSmartBlurAll: 'Faces, plates and sensitive text', imgSmartBlurHint: 'Local analysis with review before upload; no image is sent to an external service.', imgSmartBlurAnalyzing: 'Local analysis…', imgSmartBlurReady: '{n} area(s) hidden. Review and apply.', imgSmartBlurUnsupported: 'Face detection is not supported by this browser; add areas manually.', imgSmartBlurSkip: 'Continue without blur', imgRetentionRules: 'Automatic retention rules', imgRetentionWarning: 'These rules permanently revoke images and delete their files. They are disabled by default.', imgRetentionAge: 'Maximum age (days)', imgRetentionInactive: 'Maximum inactivity (days)', imgRetentionViews: 'Revoke after this many views', imgRetentionStorage: 'Maximum storage (MB)', imgRetentionSave: 'Save and apply', imgRetentionSaved: 'Retention rules saved ✓', imgRetentionResult: '{n} image(s) revoked · {bytes} freed', imgRetentionSummary: '{n} image(s) · {bytes}', enabled: 'Enabled', disabled: 'Disabled', optional: 'Optional', refresh: 'Refresh', themeSchedule: 'By time',
       cancel: 'Cancel', protectedLink: '🔒 Protected link', unlock: 'Unlock', encryptedLink: '🔐 End-to-end encryption', encryptionKey: 'Link key', passphrase: 'Passphrase',
       addFiles: 'Add files', durableQueue: 'Files are copied to durable storage before upload so they can resume after the PWA is closed.', takePhoto: 'Take a photo', chooseFiles: 'Choose files',
       chooseFolder: 'Choose a folder', optimizePhotos: 'Optimize photos before upload', parallelUploads: 'Parallel uploads', senderName: 'Your name', pause: 'Pause', resume: 'Resume',
       retryAll: '↻ Retry', removePending: 'Remove all', send: 'Send', clearCompleted: 'Clear completed uploads', history: 'Local history', clearHistory: 'Clear history',
-      settings: 'Settings and security', autoResume: 'Resume automatically after closing or reconnecting', storage: 'Local storage', protectStorage: 'Protect', deviceAccess: 'Device access', deviceChecking: 'Checking device…', deviceStatusUnavailable: 'Device status is unavailable. Tap Pair to try again.',
+      settings: 'Settings and security', autoResume: 'Resume automatically after closing or reconnecting', storage: 'Local storage', protectStorage: 'Protect', passkeyTitle: 'Biometric identification', passkeyHint: 'Use your fingerprint, face recognition or this device’s secure unlock to sign in without a password.', passkeyAdd: 'Enable on this device', passkeyAdding: 'Enabling…', passkeyAdded: 'Biometric identification enabled ✓', passkeyFailed: 'Could not change biometric identification.', passkeyEmpty: 'No biometric identification registered.', passkeyRemove: 'Disable this one', passkeyRemoveConfirm: 'Disable this biometric identification?', passkeyRemoveSharedConfirm: 'This identification is linked to {n} devices. Disable it everywhere?', passkeyRemoved: 'Biometric identification disabled', passkeyDevices: '{n} device(s)', biometricDisable: 'Disable biometric identification', biometricDisabling: 'Disabling…', biometricDisableConfirm: 'Disable every biometric identification for this account on all devices?', biometricDisabled: 'Biometric identification fully disabled ✓', passkeyNamePrompt: 'Passkey name (optional):', passkeyCreated: 'Enabled {date}', passkeyUsed: 'used {date}', passkeyNeverUsed: 'never used', passkeyCurrent: 'this device', biometricChecking: 'Checking compatibility…', biometricReady: 'Compatible — you can enable it on this device.', biometricEnabled: 'Biometric identification is enabled on this device.', biometricConfigured: '{n} biometric identification(s) configured for this account.', biometricUnsupported: 'Secure biometrics are not available on this device or browser. Existing identifications can still be disabled.', biometricHttpsRequired: 'Biometric activation requires a trusted HTTPS connection. Disabling remains available.', biometricRecentAuth: 'Sign in again to change this sensitive setting.', biometricReauth: 'Sign in again to change', biometricReauthFailed: 'Could not restart authentication.', biometricStatusUnavailable: 'Biometric status is temporarily unavailable.', biometricCredentialName: 'Biometrics · {device}', biometricLoadFailed: 'Could not load registered identifications.', autoLock: 'Automatic lock', autoLockNever: 'Never', autoLock5: 'After 5 minutes', autoLock15: 'After 15 minutes', autoLock30: 'After 30 minutes', autoLock60: 'After 1 hour', autoLocking: 'Session locked — authenticate to continue.',
+      deviceAccess: 'Device access', deviceChecking: 'Checking device…', deviceStatusUnavailable: 'Device status is unavailable. Tap Pair to try again.',
       pairDevice: 'Pair this device', unpairDevice: 'Unpair this device', pairOther: 'Pair by QR', pairOtherTitle: 'Pair another device', pairOtherHelp: 'Scan this QR on the other device. The link is single-use and expires after five minutes.', pairQrAlt: 'Device pairing QR code', pairLink: 'Pairing link', pairExpires: 'Expires at {date}', pairQrFailed: 'Could not create the QR code', copy: 'Copy', revokeDevice: 'Revoke', pairedDevices: 'Paired devices', clearLocalData: 'Clear all local data', closeSession: 'Sign out', closeSessionConfirm: 'Sign out on this device? Local transfers, images and history will be kept.', closingSession: 'Signing out…', closeSessionFailed: 'Could not sign out. Try again.', companionApp: 'companion app', qrHint: 'Point at a reception-link QR code…', close: 'Close',
       noLink: '— No link —', addLinkHint: 'Add a reception link with the ＋ button.', checking: 'Checking…', ready: '✓ Ready to receive', locked: '🔒 Protected link — unlock it',
       revoked: '✗ Revoked or expired link', offlineServer: '⚠ Server unreachable', invalid: '✗ Link not found', e2eKeyReady: 'The link key will encrypt files in this browser.',
@@ -204,9 +248,10 @@
       updateApplied: 'Update applied.', historyDest: 'to {dest}', textSharedHeader: 'Shared content', urlSharedHeader: 'Shared URL',
       help: 'Help', shortcutsTitle: 'Keyboard shortcuts', shortcutSend: 'Send the queue', shortcutEsc: 'Close a panel or dialog', shortcutHelp: 'Show this help',
       sortBy: 'Sort', sortAdded: 'Order added', sortName: 'Name', sortSize: 'Size',
-      imgCopyAll: '🔗 Copy all', imgOpen: 'Open in a tab', allImgCopied: '{n} link(s) copied ✓', noImgLinks: 'No link to copy.', imgCopyTemplate: 'Copy template', copyTemplateStandard: 'Standard', copyTemplateForum: 'Forum', copyTemplateEmail: 'Email', imgQrZip: '🗜 QR ZIP', imgQrZipDone: 'QR archive downloaded ✓', imgExportStatsCsv: 'Statistics CSV', imgStatsCsvDone: 'Statistics exported ✓', imgFavoriteAction1: 'Favorite action 1', imgFavoriteAction2: 'Favorite action 2', imgFavoriteAction3: 'Favorite action 3', imgActionCopy: 'Copy', imgActionOpen: 'Open', imgQrDownload: 'Download QR', pinItem: 'Pin', unpinItem: 'Unpin', tagColors: 'Tag colors', tagColorsReset: 'Reset colors', expiresIn: 'Expires in {time}', expiredNow: 'Expired',
+      imgCopyAll: '🔗 Copy all', imgOpen: 'Open in a tab', allImgCopied: '{n} link(s) copied ✓', noImgLinks: 'No link to copy.', imgCopyTemplate: 'Copy template', copyTemplateStandard: 'Standard', copyTemplateForum: 'Forum', copyTemplateEmail: 'Email', imgQrZip: '🗜 QR ZIP', imgQrZipDone: 'QR archive downloaded ✓', imgExportStatsCsv: 'Statistics CSV', imgStatsCsvDone: 'Statistics exported ✓', imgFavoriteAction1: 'Favorite action 1', imgFavoriteAction2: 'Favorite action 2', imgFavoriteAction3: 'Favorite action 3', imgActionOpen: 'Open', imgQrDownload: 'Download QR', pinItem: 'Pin', unpinItem: 'Unpin', tagColors: 'Tag colors', tagColorsReset: 'Reset colors', expiresIn: 'Expires in {time}', expiredNow: 'Expired',
       shareLink: 'Share link', qrForLink: 'Link QR', qrTitle: 'Reception link QR', qrDestHelp: 'Scan this code on another device to open the reception link.', qrFail: 'Could not create the QR code',
       receivedTitle: 'Received content', receivedHelp: 'Files received on this reception link, served by the server.', receivedRefresh: 'Refresh', receivedLoading: 'Loading…', receivedEmpty: 'No files received yet.', receivedFail: 'Could not load received content.', receivedCount: '{n} file(s) · {size}', receivedDownload: 'Download',
+      receivedPendingTitle: 'Awaiting approval', receivedApprove: 'Approve', receivedReject: 'Reject', receivedPendingCount: '{n} file(s) pending', createModerated: 'Manual approval: keep files pending until you approve them', sharesFirstUseExpiry: 'Expire after first use (hours, 0 = off)', sharesOneTime: 'Reinforced one-time use (revoke after the first complete retrieval)', sharesSmartExpiryHint: 'Smart expiry: enabled limits are combined with OR; the first limit reached disables the link.',
       sessionStats: 'This session', sessionStatsValue: '{files} file(s) · {size} sent', sessionStatsEmpty: 'No upload during this session.',
       maintenance: 'Maintenance', checkUpdate: 'Check for an update', checkingUpdate: 'Checking…', updateFound: 'Update found — preparing…', updateNone: 'Already up to date ✓',
       copyDiag: 'Copy diagnostics', diagCopied: 'Diagnostics copied ✓', diagNone: 'No upload error recorded.',
@@ -221,17 +266,17 @@
       wifiOnly: 'Upload on Wi-Fi only', waitingWifi: 'waiting for Wi-Fi', stripExif: 'Remove metadata (EXIF/GPS)',
       zipBundle: '🗜 Bundle into ZIP', zipDone: 'ZIP archive created ✓', zipNeedTwo: 'Select at least two files.', zipping: 'Building ZIP…',
       voiceNote: 'Voice note', recording: 'Recording', recStop: '⏹ Stop', recAdd: 'Add to queue', recMicFail: 'Microphone unavailable',
-      annotate: 'Annotate', annPen: '✏️ Pen', annBlur: '🌫 Blur', annDetectFaces: '🙂 Detect faces', annDetectPlates: '▭ Detect plates', annUndo: '↶ Undo', annClear: 'Clear all', annApply: 'Apply',
+      annotate: 'Annotate', editorBeforeShare: 'Edit before sharing', annPan: '✋ Pan', annPen: '✏️ Pen', annBlur: '🌫 Blur', annRedact: '⬛ Redact', annDetectFaces: '🙂 Detect faces', annDetectPlates: '▭ Detect plates', annUndo: '↶ Undo', annClear: 'Clear all', annApply: 'Apply',
       selectedN: '{n} selected', bulkRemove: 'Remove', bulkRetry: 'Retry', selectAll: 'All',
       batchNote: 'Tag / note (optional)', notePlaceholder: 'e.g. Invoice, Holiday…',
       multiSend: '📢 Send to several…', multiSendTitle: 'Send to several destinations', multiSendHelp: 'The batch is sent to each ticked destination. Encrypted links or links requiring a name are skipped.', multiSendGo: 'Start sending', multiSendNone: 'No compatible destination selected.', multiSendQueued: 'Sending to {n} destination(s) prepared.',
       cmdPalette: 'Command palette', cmdPlaceholder: 'Type a command…', cmdNoMatch: 'No command.', cmdOpenSettings: 'Open settings', cmdOpenHistory: 'Open history', cmdToggleTheme: 'Toggle theme',
       expireLabel: 'Expiry (auto-delete)', expNever: 'Never', exp1h: '1 hour', exp24h: '24 hours', exp7d: '7 days', exp30d: '30 days',
-      liveTitle: 'Live receptions', liveReceived: '📥 {name} received on “{dest}”', liveEnable: 'Reception notifications', livePush: 'Push notifications (app closed)', livePushOn: 'Push notifications enabled ✓', livePushOff: 'Push notifications disabled', livePushFail: 'Could not enable notifications', liveConnected: 'Live ✓',
+      liveTitle: 'Live receptions', liveReceived: '📥 {name} received on “{dest}”', liveEnable: 'Reception notifications', livePush: 'Push notifications (app closed)', pushLanguage: 'Push notification language', pushLanguageSaved: 'Push notification language saved ✓', livePushOn: 'Push notifications enabled ✓', livePushOff: 'Push notifications disabled', livePushFail: 'Could not enable notifications', liveConnected: 'Live ✓', pushTestBtn: 'Test push notifications', pushTestHelp: 'Sends a real notification from the server to this device.', pushTestSending: 'Testing push…', pushTestPreparing: 'Preparing the push subscription…', pushTestAccepted: 'Push service accepted in {ms} ms · waiting for Android…', pushTestSent: 'Test notification sent ✓', pushTestDenied: 'Notifications are blocked in Android/the browser.', pushTestUnsupported: 'Web Push is not available on this device.', pushTestNoSub: 'No valid push subscription for this device.', pushTestRepairing: 'Expired push subscription: repairing and retrying…', pushTestFailed: 'Push test failed.', pushTestDelivered: 'Notification received by Android {ms} ms after send ✓', pushTestAcceptedDelayed: 'Accepted by the push service, but not received by Android after {seconds} s.',
       copyToken: 'Copy token', tokenCopied: 'Token copied ✓',
       pinDestination: '⭐ Pin', unpinDestination: '☆ Unpin', pinned: 'Destination pinned ✓', unpinned: 'Destination unpinned',
       resetBatch: '↺ Reset batch', resetBatchDone: 'Batch options reset ✓',
-      filesPending: '{n} pending', pasteText: 'Paste text', pastedTextName: 'pasted-text.txt', pasteTextEmpty: 'No text in the clipboard.',
+      filesPending: '{n} pending', filesTotalSummary: '{n} file(s) · {total} · {sent} sent', clipboardQueue: 'Clipboard', clipboardQueued: '{n} clipboard item(s) added ✓', clipboardEmpty: 'The clipboard contains no usable file, image or text.', clipboardUrlFallback: 'URL added as text (direct download is blocked).', pasteText: 'Paste text', pastedTextName: 'pasted-text.txt', pasteTextEmpty: 'No text in the clipboard.',
       masterSelect: 'Select all', addFromUrl: 'From a URL', urlPrompt: 'Address of the image or file to add:', urlFetching: 'Fetching…', urlFailed: 'Could not fetch (blocked by CORS?)', urlAdded: 'File added ✓', urlInvalid: 'Invalid address.',
       bulkRename: '✎ Rename', renamePrompt: 'Name prefix (numbering will be appended):', renameDone: '{n} file(s) renamed',
       hashTitle: 'SHA-256 fingerprint', hashing: 'Computing fingerprint…', hashCopied: 'SHA-256 fingerprint copied ✓', hashFail: 'Could not compute the fingerprint',
@@ -239,11 +284,19 @@
       accentLabel: 'Accent colour', accentReset: 'Default',
       screenCapture: 'Capture screen', captureFailed: 'Screen capture failed', screenshotName: 'screen-capture',
       undo: 'Undo', fileRemoved: 'File removed', fileRestored: 'File restored ✓', lightboxAlt: 'Image preview',
-      sortType: 'Type', bulkInvert: '⇄ Invert', expandAll: 'Expand all', collapseAll: 'Collapse all',
-      queueSearch: 'Filter the queue…', estOptim: '≈ {size} after optimizing', rotate: 'Rotate',
+      sortType: 'Type', bulkInvert: '⇄ Invert',
+      ocrTitle: 'Local OCR', ocrAction: 'Extract text (OCR)', ocrPrivacy: 'Processed on this device. Only OCR/PDF engines and models are downloaded; your document is not sent to an OCR service.', ocrLanguage: 'Language', ocrLangFrEn: 'French + English', ocrLangFr: 'French', ocrLangEn: 'English', ocrLangEs: 'Spanish', ocrRun: 'Extract text', ocrCancel: 'Cancel OCR', ocrCopy: 'Copy text', ocrAddTxt: 'Add .txt to queue', ocrSearch: 'Search extracted text…', ocrPrev: 'Previous', ocrNext: 'Next', ocrReady: 'Ready to extract text.', ocrLoadingEngine: 'Loading OCR engine…', ocrLoadingPdf: 'Reading PDF…', ocrEmbedded: 'Embedded PDF text detected', ocrScanningPage: 'OCR page {page}/{total}…', ocrReadingPage: 'Reading page {page}/{total}…', ocrComplete: 'OCR complete · {chars} characters', ocrNoText: 'No text detected.', ocrFailed: 'OCR failed: {error}', ocrCanceled: 'OCR canceled.', ocrCopied: 'OCR text copied ✓', ocrQueued: 'Text file added to queue ✓', ocrMatches: '{current}/{total}', ocrNoMatch: '0 matches', ocrUnsupported: 'OCR is available for images and PDFs.', ocrEngineNetwork: 'The first OCR needs Internet to download the engine and language models.',
+      dedupeChecking: 'Checking for a server-side duplicate…', dedupeHit: 'Already on the server · upload skipped ✓', dedupeUnavailable: 'Deduplication unavailable — normal upload.',
+      editorTitle: 'Photo editor', editorAdjust: 'Adjustments', editorBrightness: 'Brightness', editorContrast: 'Contrast', editorSaturation: 'Saturation', editorApplyAdjust: 'Apply adjustments', editorRotateLeft: '↶ 90°', editorRotateRight: '↷ 90°', editorFlipH: '↔ Mirror', editorFlipV: '↕ Flip', editorResizeMax: 'Max dimension', editorResizeApply: 'Resize', editorFormat: 'Output format', editorQuality: 'Quality', editorZoom: 'Zoom', editorZoomOut: 'Zoom out', editorZoomIn: 'Zoom in', editorZoomFit: 'Fit', editorBrushSize: 'Brush size', editorLargeConfirm: 'This image is very large ({w}×{h}). OK: use an 1800 px working copy. Cancel: preserve the original resolution (uses more memory).',
+      privacyInspect: 'Privacy', privacyTitle: 'Metadata cleaner', privacyLocal: 'Analysis and cleanup happen locally on this device.', privacyAnalyze: 'Analyze', privacyClean: 'Clean and replace', privacyCleaned: 'Sensitive metadata cleaned ✓', privacyNoFindings: 'No obvious sensitive metadata detected.', privacyFindings: '{n} sensitive item(s) detected', privacyImageMetadata: 'Image metadata (EXIF/XMP/IPTC)', privacyPdfMetadata: 'PDF metadata', privacyOfficeMetadata: 'Office properties', privacyThumbnail: 'Embedded thumbnail', privacyAuthor: 'Author / last author', privacyGps: 'GPS coordinates', privacyCustom: 'Custom properties', privacyUnsupported: 'Automatic cleanup is not supported for this format.', privacyAnalyzing: 'Local analysis…', privacyCleaning: 'Local cleanup…',
+      annDetectSensitive: '🔐 Sensitive text', sensitiveScanning: 'Locally scanning for sensitive text…', sensitiveFound: '{n} sensitive text area(s) hidden. Review the result.',
+      ocrIndexTitle: 'Local OCR index', ocrIndexHint: 'Search every OCR document processed on this device.', ocrIndexSearch: 'Search all OCR text…', ocrIndexEmpty: 'No OCR document indexed.', ocrIndexSaved: 'Document added to the local OCR index ✓', ocrIndexCount: '{n} indexed document(s)', ocrIndexOpen: 'Open', ocrIndexDelete: 'Remove from index', ocrIndexClear: 'Clear index', ocrIndexClearConfirm: 'Delete the entire local OCR index?', ocrIndexMeta: '{size} · {date} · {chars} characters',
+      queueSearch: 'Filter the queue…', estOptim: '≈ {size} after optimizing', optimizationEstimate: '{before} → ≈ {after} · saved {saved} ({pct}%) {eta}', optimizationEstimating: 'Estimating optimized size…', copyQueueNames: 'Copy names', queueNamesCopied: '{n} name(s) copied ✓', quickFilters: 'Quick filters', filterAll: 'All', filterImages: 'Images', filterVideos: 'Videos', filterDocuments: 'Documents', filterWaiting: 'Waiting', filterDone: 'Done', filterErrors: 'Errors', dragHandle: 'Reorder in queue', batchElapsed: '⏱ {time}', avgPerFile: 'avg {time}/file', transferActiveExit: 'A transfer is active. Finish or pause it before leaving.', lowBatteryConfirm: 'Battery is at {level}% and not charging. Continue with 1 parallel upload? Cancel to plug the device in.', notifUploadTitle: 'Direct-Xfer transfer finished', notifUploadBody: '{ok} succeeded{fail}', notifOpen: 'Open', notifCopyLink: 'Copy link', notifResend: 'Resend', notifLinkCopied: 'Destination link copied ✓', rotate: 'Rotate',
       quotaNearFull: 'This destination’s quota is almost full.',
       imgQrAll: '▦ Combined QR', imgQrTooBig: 'Too many links to fit in one QR.', bulkShare: 'Share',
       onlineStatus: 'Online', offlineStatus: 'Offline', networkWifi: 'Wi-Fi', networkCellular: 'Mobile data',
+      networkDashboard: 'Live network', networkDashboardHint: 'Throughput, latency, chunks and retries during transfers.', networkTestNow: 'Test connection', networkTesting: 'Network test…', networkTestDone: 'Network: {quality} · ↑ {up} · ↓ {down} · {latency} ms', networkTestFailed: 'Network test failed — automatic defaults kept.', networkTestAuto: 'Large transfer detected: testing the network before upload…', networkLatency: 'Latency', networkUpload: 'Upload', networkDownload: 'Download', networkLiveRate: 'Live rate', networkChunk: 'Chunk', networkParallel: 'Parallel', networkRetries: 'Retries', networkActive: 'Active', networkQualityExcellent: 'excellent', networkQualityGood: 'good', networkQualityFair: 'fair', networkQualityPoor: 'poor', networkNotTested: 'Not tested', networkLastTest: 'Last test: {when}', networkGraphLabel: 'Upload throughput history',
+      errorCenter: 'Error center', errorCenterHint: 'Grouped diagnostics for recent failures and files currently in error.', errorCenterEmpty: 'No recent error.', errorCenterClear: 'Clear log', errorCenterCopy: 'Copy report', errorCenterRetry: 'Retry', errorCenterRetryAll: 'Retry all', errorCategoryProxy: 'Reverse proxy', errorCategoryQuota: 'Quota / storage', errorCategoryNetwork: 'Connection', errorCategoryServer: 'Server', errorCategoryAuth: 'Authorization', errorCategoryFile: 'File', errorCategoryOther: 'Other', errorLogCleared: 'Error log cleared ✓', errorReportCopied: 'Error report copied ✓', errorLocalStorage: 'Local storage is insufficient or unavailable.',
       resendLastBatch: '↺ Resend last batch', lastBatchUnavailable: 'The last batch is no longer available locally.', lastBatchRestored: '{n} file(s) from the last batch restored ✓',
       copySummary: '⧉ Copy summary', shareResult: '📤 Share result', summaryCopied: 'Summary copied ✓', noSummary: 'No transfer summary is available.',
       privacyNames: 'Hide sensitive file names', privacyFile: 'File {n}',
@@ -254,17 +307,20 @@
       moveEarlier: 'Move earlier in queue', moveLater: 'Move later in queue'
     },
     es: {
-      title: 'Enviar', navMain: 'Navegación principal', navSend: 'Enviar', navSendHint: 'Preparar y enviar archivos a un destino.', navImages: 'Imágenes', navImagesHint: 'Crear, gestionar y supervisar enlaces de imagen.', navActivity: 'Actividad', navActivityHint: 'Consultar el historial local de transferencias.', navSettings: 'Ajustes', navSettingsHint: 'Configurar la PWA, la seguridad y el almacenamiento.', navShares: 'Compartir', navSharesHint: 'Crear enlaces para compartir desde archivos de tu servidor.', sharesTitle: 'Compartir archivos del servidor', sharesHint: 'Explora los archivos de tu servidor y crea enlaces directos para compartir.', sharesAdminRequired: 'Inicia sesión con una cuenta de administrador para explorar los archivos del servidor.', sharesSignIn: 'Iniciar sesión como administrador', sharesBrowse: 'Archivos del servidor', sharesUp: 'Carpeta superior', sharesCreate: 'Crear el recurso compartido', sharesNoneSelected: 'Ningún archivo seleccionado.', sharesSelected: '{n} elemento(s) seleccionado(s)', sharesExpiry: 'Caducidad', sharesExpiryNever: 'Nunca', sharesExpiry1h: '1 hora', sharesExpiry1d: '1 día', sharesExpiry7d: '7 días', sharesExpiry30d: '30 días', sharesMaxDownloads: 'Descargas máx. (0 = ilimitado)', sharesPassword: 'Contraseña (opcional)', sharesPasswordPlaceholder: '—', sharesCreateBtn: 'Crear enlace para compartir', sharesCreating: 'Creando…', sharesCreated: 'Recurso creado ✓', sharesCreateFail: 'No se pudo crear el recurso', sharesLibrary: 'Tus recursos compartidos', sharesEmpty: 'Aún no hay recursos compartidos.', sharesBrowseFail: 'No se pudo leer esta carpeta.', sharesLoginNeeded: 'Se requiere inicio de sesión de administrador.', sharesOpen: 'Abrir', sharesCopy: 'Copiar', sharesRevoke: 'Revocar', sharesRevoked: 'Recurso revocado ✓', sharesRevokeFail: 'No se pudo revocar', sharesRevokeConfirm: '¿Revocar este recurso compartido? El enlace dejará de funcionar.', sharesItems: '{n} elemento(s)', sharesReceptions: 'Enlaces de recepción', sharesReceptionsEmpty: 'No hay enlaces de recepción.', sharesReceived: '{bytes} recibidos', openAdmin: 'Abrir la administración', language: 'Idioma', theme: 'Tema', copyLink: 'Copiar enlace', pasteLink: 'Pegar enlace', editDestination: 'Editar destino', addDestination: 'Añadir destino', passwordPlaceholder: 'Contraseña del enlace', destinationPlaceholder: 'Enlace o token de recepción', destinationNamePlaceholder: 'Nombre opcional del destino', senderPlaceholder: 'Nombre solicitado por este enlace', globalProgress: 'Progreso global', keyPlaceholder: 'Clave de cifrado del enlace', titlePlaceholder: 'Contenido compartido', pairedBadge: 'Dispositivo vinculado', themeDark: 'Oscuro', themeLight: 'Claro', themeAuto: 'Auto', install: 'Instalar', installIosHint: 'Para instalar Direct-Xfer, toca el botón Compartir del navegador y luego «Añadir a pantalla de inicio».', installBrowserHint: 'Chrome todavía no ha validado la instalación completa. No elijas un simple acceso directo: usa una dirección HTTPS de confianza, interactúa con la página y mantenla abierta unos instantes.', installHttpsRequired: 'La instalación completa no es posible desde esta dirección HTTP o certificado no confiable. Android solo puede crear un acceso directo. Abre Direct-Xfer mediante HTTPS con un certificado válido.', installSecurePending: 'La instalación se está preparando. En Chrome, interactúa con la página y mantenla abierta unos 30 segundos. Si el logotipo no aparece, verifica que Android confíe en el certificado HTTPS.', installOpenHttps: 'Abrir en HTTPS',
+      imgEditUploaded: 'Modificar con el editor de fotos', imgEditUploadedDone: 'Imagen modificada, URL conservada ✓',
+      notificationsTitle: 'Notificaciones', notificationsLoading: 'Cargando…', notificationsEmpty: 'No hay notificaciones.', notificationsFirstView: 'Primera vista de «{name}»', notificationsDelete: 'Eliminar esta notificación', notificationsClearAll: 'Eliminar todas', notificationsClearConfirm: '¿Eliminar todas las notificaciones?', notificationsLoadMore: 'Mostrar más ({n})', notificationsLinkCopied: 'Enlace copiado ✓', notificationsSound: 'Sonido al recibir', notificationsSoundOn: 'Sonido activado', notificationsSoundOff: 'Sonido desactivado', notificationsPrefs: 'Preferencias', notificationsPrefsHint: 'Desmarca una categoría para dejar de crear sus notificaciones.', notificationsPrefsSaved: 'Preferencias guardadas ✓', notificationsSettingsTitle: 'Centro de notificaciones', notificationsSettingsHint: 'Elige qué categorías de notificaciones recibirá esta cuenta en el centro de notificaciones.', notificationsSettingsRequired: 'Siempre activada', notificationsSettingsRequiredHint: 'Las notificaciones de Seguridad, Mantenimiento y Salud del sistema permanecen siempre activadas.', notificationsSettingsSaving: 'Guardando…', notificationsSettingsError: 'No se pudieron guardar las preferencias de notificación.', notificationsRulesTitle: 'Alertas personalizadas', notificationsRulesHint: 'Crea hasta 50 reglas que generan una notificación al alcanzar un umbral.', notificationsRuleMetric: 'Métrica', notificationsRuleTarget: 'Enlace', notificationsRuleThreshold: 'Umbral', notificationsRuleLabel: 'Nombre (opcional)', notificationsRuleAdd: 'Añadir regla', notificationsRuleAllTargets: 'Todos mis enlaces compatibles', notificationsRuleTargetUnavailable: 'Enlace no disponible o eliminado', notificationsRuleEmpty: 'No hay reglas personalizadas.', notificationsRuleSaved: 'Regla guardada ✓', notificationsRuleDeleted: 'Regla eliminada', notificationsRuleError: 'No se pudo guardar la regla.', notificationsRuleEnable: 'Activar', notificationsRuleDisable: 'Desactivar', notificationsRuleDelete: 'Eliminar', notificationsRuleMetricViews: 'Vistas', notificationsRuleMetricDownloads: 'Descargas', notificationsRuleMetricBytesServed: 'Datos servidos (GB)', notificationsRuleMetricReceivedBytes: 'Datos recibidos (GB)', notificationsRuleCustomTitle: 'Alerta personalizada: {name}', notificationsTimeAgo: 'hace {v}', notificationsCount: '{n} notificación(es)', notificationsFilteredCount: '{shown} / {total} notificación(es)', notificationsNoMatch: 'Ninguna notificación coincide con los filtros.', notificationsFilters: 'Filtros de notificaciones', notificationsCategoryFilter: 'Filtrar por categoría', notificationsSeverityFilter: 'Filtrar por gravedad', notificationsAllCategories: 'Todas las categorías', notificationsAllSeverities: 'Todas las gravedades', notificationsSearch: 'Buscar…', notificationsSearchAria: 'Buscar en las notificaciones', notificationsCategoryActivity: 'Actividad', notificationsCategoryVisitors: 'Visitantes', notificationsCategoryThresholds: 'Umbrales', notificationsCategoryTraffic: 'Tráfico', notificationsCategoryImages: 'Imágenes', notificationsCategoryPwa: 'PWA', notificationsCategoryReceptions: 'Recepciones', notificationsCategorySearch: 'Búsqueda / OCR', notificationsCategorySecurity: 'Seguridad', notificationsCategoryShares: 'Compartidos', notificationsCategorySystemHealth: 'Salud del sistema', notificationsCategoryMaintenance: 'Mantenimiento', notificationsCategoryNetwork: 'Red', notificationsCategoryRestarts: 'Reinicios', notificationsCategoryUpdates: 'Actualizaciones', notificationsCategoryTransfers: 'Transferencias', notificationsCategoryDescShares: 'Descargas, caducidad, límites y cambios relacionados con los enlaces compartidos.', notificationsCategoryDescReceptions: 'Depósitos recibidos, archivos disponibles y cuotas de los enlaces de recepción.', notificationsCategoryDescImages: 'Primeras vistas, reemplazos de imágenes y regeneración de variantes.', notificationsCategoryDescTransfers: 'Transferencias completadas o fallidas, abandonos y reanudaciones imposibles.', notificationsCategoryDescVisitors: 'Nuevos países y nuevos navegadores o dispositivos visitantes.', notificationsCategoryDescThresholds: 'Umbrales de vistas y descargas alcanzados en tus enlaces.', notificationsCategoryDescTraffic: 'Volumen de descarga inusualmente alto y enlaces que se vuelven virales.', notificationsCategoryDescSearch: 'Fallos de OCR y problemas de indexación para la búsqueda.', notificationsCategoryDescPwa: 'Dispositivos PWA, suscripciones Push y permisos de notificaciones.', notificationsCategoryDescSecurity: 'Inicios de sesión inusuales, contraseñas, DLP y otras alertas de seguridad.', notificationsCategoryDescSystemHealth: 'Caídas de servicio, errores de configuración y problemas importantes del sistema.', notificationsCategoryDescMaintenance: 'Limpiezas automáticas y eliminaciones de archivos según las reglas de retención.', notificationsCategoryDescNetwork: 'Cambios de la dirección IP pública y eventos de red del servicio.', notificationsCategoryDescRestarts: 'Reinicios detectados de Direct-Xfer, incluida la indisponibilidad cuando está disponible.', notificationsCategoryDescUpdates: 'Actualizaciones disponibles y confirmación después de la instalación.', notificationsSeverityInfo: 'Información', notificationsSeveritySuccess: 'Éxito', notificationsSeverityWarning: 'Advertencia', notificationsSeverityCritical: 'Crítica',
+      title: 'Enviar', navMain: 'Navegación principal', navSend: 'Enviar', navSendHint: 'Preparar y enviar archivos a un destino.', navImages: 'Imágenes', navImagesHint: 'Crear, gestionar y supervisar enlaces de imagen.', navActivity: 'Actividad', navActivityHint: 'Consultar el historial local de transferencias.', navSettings: 'Ajustes', navSettingsHint: 'Configurar la PWA, la seguridad y el almacenamiento.', navShares: 'Compartir', navSharesHint: 'Crear enlaces para compartir desde archivos de tu servidor.', sharesTitle: 'Compartir archivos del servidor', sharesHint: 'Explora los archivos de tu servidor y crea enlaces directos para compartir.', sharesAdminRequired: 'Inicia sesión con una cuenta de administrador para explorar los archivos del servidor.', sharesSignIn: 'Iniciar sesión como administrador', sharesBrowse: 'Archivos del servidor', sharesUp: 'Carpeta superior', sharesCreate: 'Crear el recurso compartido', sharesNoneSelected: 'Ningún archivo seleccionado.', sharesSelected: '{n} elemento(s) seleccionado(s)', sharesExpiry: 'Caducidad', sharesExpiryNever: 'Nunca', sharesExpiry1h: '1 hora', sharesExpiry1d: '1 día', sharesExpiry7d: '7 días', sharesExpiry30d: '30 días', sharesMaxDownloads: 'Descargas máx. (0 = ilimitado)', sharesRateLimit: 'Velocidad máxima (KB/s, 0 = ilimitado)', sharesRateEdit: 'Velocidad', sharesRatePrompt: 'Velocidad máxima en KB/s (0 = ilimitado):', sharesRateSaved: 'Velocidad actualizada ✓', sharesRateFail: 'No se pudo modificar la velocidad', sharesPassword: 'Contraseña (opcional)', sharesPasswordPlaceholder: '—', sharesCreateBtn: 'Crear enlace para compartir', sharesCreating: 'Creando…', sharesCreated: 'Recurso creado ✓', sharesCreateFail: 'No se pudo crear el recurso', sharesDlpWarning: 'DLP: {n} detección(es) sensible(s) ({level}). ¿Publicar de todos modos?', sharesDlpBlocked: 'Publicación bloqueada por la política DLP.', dlpTest: 'Probar DLP', dlpTestQueue: '🛡 Probar DLP', dlpTestSelected: '🛡 Probar DLP', dlpTesting: 'Análisis DLP…', dlpSafe: 'DLP ✓ no se detectó contenido sensible', dlpFound: 'DLP: {n} detección(es) ({level})', dlpLocalBlocked: 'Carga bloqueada por la política DLP antes de transferir.', dlpLocalConfirm: 'DLP detectó {n} elemento(s) sensible(s) ({level}) en {files} archivo(s). ¿Enviar igualmente?', dlpScanSkipped: 'DLP: {n} archivo(s) demasiado grandes/no analizados', dlpScanFailed: 'No se pudo ejecutar DLP: {error}', dlpOcrIncomplete: 'DLP incompleto: OCR falló para {n} archivo(s)', dlpPolicyLoading: 'Cargando política DLP…', dlpPolicyDisabled: 'DLP desactivado en el servidor', dlpPolicyText: 'Política {mode} · {mb} MB/archivo · OCR {ocr}', dlpModeWarn: 'Avisar', dlpModeBlock: 'Bloquear', dlpModeLog: 'Registrar', dlpOcrOn: 'activado', dlpOcrOff: 'desactivado', dlpIncompleteBlocked: 'Carga bloqueada: el análisis DLP está incompleto.', dlpIncompleteConfirm: 'El análisis DLP está incompleto para {files} archivo(s) y encontró {n} detección(es). ¿Enviar igualmente?', dlpPolicyUnavailable: 'Política DLP no disponible: carga suspendida por seguridad.', dlpScanIncomplete: 'DLP incompleto: {n} elemento(s) sin analizar', sharesLibrary: 'Tus recursos compartidos', sharesEmpty: 'Aún no hay recursos compartidos.', sharesBrowseFail: 'No se pudo leer esta carpeta.', sharesLoginNeeded: 'Se requiere inicio de sesión de administrador.', sharesOpen: 'Abrir', sharesCopy: 'Copiar', sharesRevoke: 'Revocar', sharesRevoked: 'Recurso revocado ✓', sharesRevokeFail: 'No se pudo revocar', sharesRevokeConfirm: '¿Revocar este recurso compartido? El enlace dejará de funcionar.', sharesItems: '{n} elemento(s)', sharesReceptions: 'Enlaces de recepción', sharesReceptionsEmpty: 'No hay enlaces de recepción.', sharesReceived: '{bytes} recibidos', sharesDownloadingNow: '{n} descarga(s) en curso', threadTitle: 'Conversación', threadEmpty: 'Sin mensajes.', threadReplyPh: 'Responder al visitante…', threadSend: 'Enviar', threadSending: 'Enviando…', threadError: 'No se pudo enviar, inténtalo de nuevo.', threadYou: 'Tú', threadVisitor: 'Visitante', openAdmin: 'Abrir la administración', language: 'Idioma', theme: 'Tema', copyLink: 'Copiar enlace', pasteLink: 'Pegar enlace', editDestination: 'Editar destino', addDestination: 'Añadir destino', passwordPlaceholder: 'Contraseña del enlace', destinationPlaceholder: 'Enlace o token de recepción', destinationNamePlaceholder: 'Nombre opcional del destino', senderPlaceholder: 'Nombre solicitado por este enlace', globalProgress: 'Progreso global', keyPlaceholder: 'Clave de cifrado del enlace', titlePlaceholder: 'Contenido compartido', themeDark: 'Oscuro', themeLight: 'Claro', themeAuto: 'Auto', install: 'Instalar', installIosHint: 'Para instalar Direct-Xfer, toca el botón Compartir del navegador y luego «Añadir a pantalla de inicio».', installBrowserHint: 'Chrome todavía no ha validado la instalación completa. No elijas un simple acceso directo: usa una dirección HTTPS de confianza, interactúa con la página y mantenla abierta unos instantes.', installHttpsRequired: 'La instalación completa no es posible desde esta dirección HTTP o certificado no confiable. Android solo puede crear un acceso directo. Abre Direct-Xfer mediante HTTPS con un certificado válido.', installSecurePending: 'La instalación se está preparando. En Chrome, interactúa con la página y mantenla abierta unos 30 segundos. Si el logotipo no aparece, verifica que Android confíe en el certificado HTTPS.', installOpenHttps: 'Abrir en HTTPS',
       offline: 'Sin conexión — los envíos continuarán al reconectarse.', updateReady: 'Hay una nueva versión disponible.', updateNow: 'Actualizar', pullToRefresh: 'Desliza hacia abajo para actualizar', releaseToRefresh: 'Suelta para actualizar', refreshing: 'Actualizando…', backExit: 'Pulsa de nuevo para salir', destination: 'Destino',
       destinationHint: 'Un enlace de recepción Direct-Xfer de esta instancia.', linkOrToken: 'Enlace o token', displayName: 'Nombre visible', rememberDestination: 'Recordar este destino en el dispositivo', rememberKey: 'Recordar también la clave secreta en este dispositivo',
       scanQr: '📷 Escanear QR', saveDestination: 'Añadir', updateDestination: 'Guardar', removeDestination: 'Quitar', cancel: 'Cancelar', createLinkTitle: 'Crear un enlace de recepción', newLink: 'Nuevo', createLinkName: 'Nombre del nuevo enlace', createLinkPlaceholder: 'ej. Fotos vacaciones', createLinkHint: 'Se creará un nuevo enlace de recepción y se añadirá a tus destinos. Compártelo para recibir archivos.', createDo: 'Crear enlace', creating: 'Creando…', createOk: 'Enlace creado ✓', createFail: 'No se pudo crear el enlace',
-      imgLinksTitle: 'Enlaces de imagen', imgLinksHint: 'Crea enlaces directos a tus imágenes: cada enlace ofrece las versiones Completa, Mini y Micro, sin página intermedia.', imgLinksAdd: 'Añadir imágenes', imgCreateTitle: 'Crear enlaces', imgCreateHint: 'Elige tus imágenes y el formato que se mostrará primero.', imgLibraryTitle: 'Tus enlaces', imgLibraryHint: 'Busca, ordena y administra las imágenes ya compartidas.', imgGlobalActions: 'Acciones globales', imgCopyActions: 'Copiar un formato', imgManageActions: 'Administrar enlace', imgStripExif: 'Quitar datos EXIF/GPS antes de compartir', imgStripExifHint: 'La limpieza se realiza localmente en este dispositivo antes de subir la imagen.', imgStrippingMetadata: 'Quitando EXIF/GPS…', imgMetadataRemoved: 'EXIF/GPS eliminados', imgUploading: 'Subiendo…', imgThumbing: 'Mini y Micro…', imgReady: 'Listo', imgCopyFull: '🔗 Tamaño completo', imgCopyThumb: '🔗 Mini', imgCopyMicro: '🔗 Micro', imgCopied: 'Enlace copiado ✓', imgLinkFail: 'No se pudo crear el enlace', revokeShare: 'Revocar', revokeConfirm: '¿Revocar este recurso compartido? El enlace dejará de funcionar.', revokeSuccess: 'Revocado ✓', revokeFail: 'No se pudo revocar', imgVariantFull: 'Completa', imgVariantMini: 'Mini', imgVariantMicro: 'Micro', imgViews: '{n} vistas', imgVisitors: '{n} visitantes', imgStatsLoading: 'Estadísticas…', imgStatsUnavailable: 'Estadísticas no disponibles',
-      imgSearch: 'Buscar imágenes…', imgSortLabel: 'Ordenar imágenes', imgSortNewest: 'Más recientes', imgSortOldest: 'Más antiguas', imgSortName: 'Nombre', imgSortSize: 'Tamaño', imgSortViews: 'Vistas', imgSortVisitors: 'Visitantes', imgSortExpiry: 'Caducidad', imgFilterLabel: 'Filtrar imágenes', imgFilterAll: 'Todas', imgFilterActive: 'Activas', imgFilterPopular: 'Populares', imgFilterLarge: 'Grandes', imgFilterExpiring: 'Próximas a caducar', imgFilterFavorite: 'Favoritas', imgFilterProtected: 'Protegidas', imgDefaultVariantLabel: 'Tamaño de imagen favorito', imgAdvancedOptions: 'Opciones de imágenes', imgCompact: 'Vista compacta', imgHideExpired: 'Ocultar imágenes caducadas', imgAutoCopy: 'Copiar automáticamente al crear', imgDefaultExpiry: 'Caducidad favorita', imgMaxViews: 'Límite de vistas', imgPassword: 'Contraseña', imgTags: 'Etiquetas', imgPrivateNote: 'Nota privada', imgRenameTemplate: 'Plantilla de nombre', imgBulkEdit: 'Editar', imgCreateAlbum: 'Crear álbum', imgDashboard: 'Gráfico de estadísticas', imgAlbums: 'Álbumes compartibles', imgActionHistory: 'Historial de acciones de imagen', imgSelected: '{n} seleccionada(s)', imgEditPrompt: 'Editar imágenes seleccionadas', imgAlbumName: 'Nombre del álbum', imgAlbumCreated: 'Álbum creado ✓', imgSettingsSaved: 'Ajustes guardados ✓', imgDuplicateFound: 'Esta imagen ya fue compartida. ¿Continuar?', imgExpirySoon: 'El enlace «{name}» caduca pronto.', imgUndoRevoke: 'Imagen retirada — ¿Deshacer?', imgRevokePending: 'Revocación en unos segundos…', imgQrDownloaded: 'QR descargado ✓', imgFavorite: 'Favorita', imgUnfavorite: 'Quitar de favoritas', imgExpired: 'Caducada', imgInactive: 'Inactiva', imgViewLimitReached: 'Límite de vistas alcanzado', imgProtected: 'Protegida', imgViewLimit: '{n} vistas máx.', imgNoAlbums: 'No hay álbumes.', imgVariantAuto: 'Automático', imgReplace: 'Reemplazar sin cambiar el enlace', imgVersions: 'Versiones', imgReplaceDone: 'Imagen reemplazada, URL conservada ✓', imgResizeMini: 'Redimensionar la Mini', imgResizeMiniPrompt: 'Nuevo tamaño de la Mini: un número de píxeles (lado más largo, ej. 250) O un porcentaje del tamaño total (ej. 50%). La Micro será la mitad:', imgResizeMiniInvalid: 'Valor no válido: píxeles (16 a 4096) o porcentaje (1 a 100%).', imgResizeMiniDone: 'Mini redimensionada a {w}×{h} ✓', imgRestoreVersion: 'Restaurar una versión', imgVersionRestored: 'Versión restaurada ✓', imgAdaptiveReady: 'Optimización adaptativa', albumInvites: 'Invitaciones', albumInviteCreate: 'Crear invitación', albumInviteRole: 'Rol (reader, contributor, manager)', albumInviteCopied: 'Enlace de invitación copiado ✓', albumInviteRevoke: 'Revocar invitación', albumCollabSummary: '{n} invitación(es)', imgAlbumCopied: 'Enlace del álbum copiado ✓', imgChartSummary: '{images} imágenes · {views} vistas · {visitors} visitantes · {bytes}', imgHotlinkHosts: 'Dominios autorizados para integrar', imgHotlinkPlaceholder: 'foro.ejemplo.com, *.sitio.net', imgHotlinkHint: 'Vacío = protección desactivada. Las visitas directas siguen permitidas.', imgHotlinkProtected: 'Protección hotlink', imgNotifyFirstView: 'Notificar en la primera visita', imgFirstViewArmed: 'Alerta de primera visita', imgFirstViewSent: 'Primera visita notificada', imgFirstViewToast: '👁 Primera visita de «{name}»', imgSmartBlur: 'Desenfoque inteligente local', imgSmartBlurFaces: 'Rostros', imgSmartBlurFacesPlates: 'Rostros y matrículas', imgSmartBlurHint: 'Análisis local con revisión antes del envío; ninguna imagen se envía a un servicio externo.', imgSmartBlurAnalyzing: 'Análisis local…', imgSmartBlurReady: '{n} zona(s) ocultada(s). Revísalas y aplica.', imgSmartBlurUnsupported: 'Este navegador no admite la detección de rostros; añade las zonas manualmente.', imgSmartBlurSkip: 'Continuar sin desenfoque', imgRetentionRules: 'Reglas automáticas de retención', imgRetentionWarning: 'Estas reglas revocan definitivamente las imágenes y borran sus archivos. Están desactivadas por defecto.', imgRetentionAge: 'Edad máxima (días)', imgRetentionInactive: 'Inactividad máxima (días)', imgRetentionViews: 'Revocar tras este número de vistas', imgRetentionStorage: 'Almacenamiento máximo (MB)', imgRetentionSave: 'Guardar y aplicar', imgRetentionSaved: 'Reglas de retención guardadas ✓', imgRetentionResult: '{n} imagen(es) revocada(s) · {bytes} liberados', imgRetentionSummary: '{n} imagen(es) · {bytes}', enabled: 'Activado', disabled: 'Desactivado', optional: 'Opcional', refresh: 'Actualizar', themeSchedule: 'Según la hora', protectedLink: '🔒 Enlace protegido', unlock: 'Desbloquear',
+      imgLinksTitle: 'Enlaces de imagen', imgLinksHint: 'Crea enlaces directos a tus imágenes: cada enlace ofrece las versiones Completa, Mini y Micro, sin página intermedia.', imgLinksAdd: 'Añadir imágenes', imgCreateTitle: 'Crear enlaces', imgCreateHint: 'Elige las imágenes que quieres compartir o edita una antes de subirla.', imgLibraryTitle: 'Tus enlaces', imgLibraryHint: 'Busca, ordena y administra las imágenes ya compartidas.', imgGlobalActions: 'Acciones globales', imgManageActions: 'Administrar enlace', imgStripExif: 'Quitar datos EXIF/GPS antes de compartir', imgStripExifHint: 'La limpieza se realiza localmente en este dispositivo antes de subir la imagen.', imgStrippingMetadata: 'Quitando EXIF/GPS…', imgMetadataRemoved: 'EXIF/GPS eliminados', imgUploading: 'Subiendo…', imgThumbing: 'Mini y Micro…', imgReady: 'Listo', imgCopyBBCode: 'Copiar BBCode', imgCopied: 'Enlace copiado ✓', clearSearch: 'Borrar búsqueda', imgListEmpty: 'Aún no hay imágenes compartidas. Usa «Añadir imágenes» para crear tu primer enlace.', imgNoMatch: 'Ninguna imagen coincide con tu búsqueda.', destEmptyHint: 'Aún no hay destino. Añade un enlace de recepción (＋) o crea uno con «Nuevo».', destEmoji: 'Emoji (indicador visual)', imgCopyImage: 'Copiar imagen', imgCompare: 'Comparar', imgCompareTitle: 'Comparar formatos', pwStrengthLabel: 'Fuerza de la contraseña', pwWeak: 'Débil', pwMedium: 'Media', pwStrong: 'Fuerte', historyResend: 'Reenviar', historyDestGone: 'Destino no encontrado — vuelve a añadirlo.', resendReady: 'Destino seleccionado — añade tus archivos.', imgLinkFail: 'No se pudo crear el enlace', imgVariantsFailed: 'Imagen guardada, pero no se pudieron actualizar Mini/Micro.', revokeShare: 'Revocar', revokeConfirm: '¿Revocar este recurso compartido? El enlace dejará de funcionar.', revokeSuccess: 'Revocado ✓', revokeFail: 'No se pudo revocar', imgVariantFull: 'Completa', imgVariantMini: 'Mini', imgVariantMicro: 'Micro', imgViews: '{n} vistas', imgVisitors: '{n} visitantes', imgStatsLoading: 'Estadísticas…', imgStatsUnavailable: 'Estadísticas no disponibles', imgStatsButton: '📊 Stats', imgStatsTitle: 'Estadísticas detalladas', imgStatsOverview: 'Resumen', imgStatsCopies: 'Copias de la imagen', imgStatsRecent: 'Accesos recientes a la imagen', imgStatsStorage: 'Almacenamiento', imgStatsDimensions: 'Dimensiones', imgStatsLastView: 'Última vista', imgStatsCreated: 'Creada', imgStatsExpiry: 'Caducidad', imgStatsStatus: 'Estado', imgStatsActive: 'Activa', imgStatsInactive: 'Inactiva', imgStatsExpired: 'Caducada', imgStatsNoRecent: 'No hay accesos recientes registrados.', imgStatsNever: 'Nunca', imgStatsUnknown: 'Desconocido',
+      imgSearch: 'Buscar imágenes…', imgSortLabel: 'Ordenar imágenes', imgSortNewest: 'Más recientes', imgSortOldest: 'Más antiguas', imgSortName: 'Nombre', imgSortSize: 'Tamaño', imgSortViews: 'Vistas', imgSortVisitors: 'Visitantes', imgSortExpiry: 'Caducidad', imgFilterLabel: 'Filtrar imágenes', imgFilterAll: 'Todas', imgFilterActive: 'Activas', imgFilterPopular: 'Populares', imgFilterLarge: 'Grandes', imgFilterExpiring: 'Próximas a caducar', imgFilterFavorite: 'Favoritas', imgFilterProtected: 'Protegidas', imgAdvancedOptions: 'Opciones de imágenes', imgCompact: 'Vista compacta', imgHideExpired: 'Ocultar imágenes caducadas', imgAutoCopy: 'Copiar automáticamente al crear', imgDefaultExpiry: 'Caducidad favorita', imgMaxViews: 'Límite de vistas', imgPassword: 'Contraseña', imgTags: 'Etiquetas', imgPrivateNote: 'Nota privada', imgRenameTemplate: 'Plantilla de nombre', imgBulkEdit: 'Editar', imgCreateAlbum: 'Crear álbum', imgDashboard: 'Gráfico de estadísticas', imgAlbums: 'Álbumes compartibles', imgActionHistory: 'Historial de acciones de imagen', imgSelected: '{n} seleccionada(s)', imgEditPrompt: 'Editar imágenes seleccionadas', imgAlbumName: 'Nombre del álbum', imgAlbumCreated: 'Álbum creado ✓', imgSettingsSaved: 'Ajustes guardados ✓', imgDuplicateFound: 'Esta imagen ya fue compartida. ¿Continuar?', imgExpirySoon: 'El enlace «{name}» caduca pronto.', imgUndoRevoke: 'Imagen retirada — ¿Deshacer?', imgRevokePending: 'Revocación en {n} s…', imgCancelRevoke: 'Cancelar revocación', imgRevokeCancelled: 'Revocación cancelada ✓', imgQrDownloaded: 'QR descargado ✓', imgFavorite: 'Favorita', imgUnfavorite: 'Quitar de favoritas', imgExpired: 'Caducada', imgInactive: 'Inactiva', imgViewLimitReached: 'Límite de vistas alcanzado', imgProtected: 'Protegida', imgViewLimit: '{n} vistas máx.', imgNoAlbums: 'No hay álbumes.', imgVariantAuto: 'Automático', imgReplace: 'Reemplazar sin cambiar el enlace', imgVersions: 'Versiones', imgReplaceDone: 'Imagen reemplazada, URL conservada ✓', imgResizeMini: 'Redimensionar la Mini', imgResizeMiniPrompt: 'Nuevo tamaño de la Mini: un número de píxeles (lado más largo, ej. 250) O un porcentaje del tamaño total (ej. 50%). La Micro será la mitad:', imgResizeMiniInvalid: 'Valor no válido: píxeles (16 a 4096) o porcentaje (1 a 100%).', imgResizeMiniDone: 'Mini redimensionada a {w}×{h} ✓', imgRestoreVersion: 'Restaurar una versión', imgVersionRestored: 'Versión restaurada ✓', imgAdaptiveReady: 'Optimización adaptativa', albumInvites: 'Invitaciones', albumInviteCreate: 'Crear invitación', albumInviteRole: 'Rol (reader, contributor, manager)', albumInviteCopied: 'Enlace de invitación copiado ✓', albumInviteRevoke: 'Revocar invitación', albumCollabSummary: '{n} invitación(es)', imgAlbumCopied: 'Enlace del álbum copiado ✓', imgChartSummary: '{images} imágenes · {views} vistas · {visitors} visitantes · {bytes}', imgComparePeriod: 'Período comparativo', imgCompare7d: '7 días', imgCompare30d: '30 días', imgCompareSummary: '{days} d vs período anterior: {views} vistas · {created} imágenes creadas', imgCompareNew: 'nuevo', imgHotlinkHosts: 'Dominios autorizados para integrar', imgHotlinkPlaceholder: 'foro.ejemplo.com, *.sitio.net', imgHotlinkHint: 'Vacío = protección desactivada. Las visitas directas siguen permitidas.', imgHotlinkProtected: 'Protección hotlink', imgNotifyFirstView: 'Notificar en la primera visita', imgFirstViewArmed: 'Alerta de primera visita', imgFirstViewSent: 'Primera visita notificada', imgFirstViewToast: '👁 Primera visita de «{name}»', imgSmartBlur: 'Desenfoque inteligente local', imgSmartBlurFaces: 'Rostros', imgSmartBlurFacesPlates: 'Rostros y matrículas', imgSmartBlurAll: 'Rostros, matrículas y texto sensible', imgSmartBlurHint: 'Análisis local con revisión antes del envío; ninguna imagen se envía a un servicio externo.', imgSmartBlurAnalyzing: 'Análisis local…', imgSmartBlurReady: '{n} zona(s) ocultada(s). Revísalas y aplica.', imgSmartBlurUnsupported: 'Este navegador no admite la detección de rostros; añade las zonas manualmente.', imgSmartBlurSkip: 'Continuar sin desenfoque', imgRetentionRules: 'Reglas automáticas de retención', imgRetentionWarning: 'Estas reglas revocan definitivamente las imágenes y borran sus archivos. Están desactivadas por defecto.', imgRetentionAge: 'Edad máxima (días)', imgRetentionInactive: 'Inactividad máxima (días)', imgRetentionViews: 'Revocar tras este número de vistas', imgRetentionStorage: 'Almacenamiento máximo (MB)', imgRetentionSave: 'Guardar y aplicar', imgRetentionSaved: 'Reglas de retención guardadas ✓', imgRetentionResult: '{n} imagen(es) revocada(s) · {bytes} liberados', imgRetentionSummary: '{n} imagen(es) · {bytes}', enabled: 'Activado', disabled: 'Desactivado', optional: 'Opcional', refresh: 'Actualizar', themeSchedule: 'Según la hora', protectedLink: '🔒 Enlace protegido', unlock: 'Desbloquear',
       encryptedLink: '🔐 Cifrado de extremo a extremo', encryptionKey: 'Clave del enlace', passphrase: 'Frase secreta', addFiles: 'Añadir archivos',
       durableQueue: 'Los archivos se copian al almacenamiento duradero antes del envío para poder reanudarlos tras cerrar la PWA.', takePhoto: 'Tomar una foto', chooseFiles: 'Elegir archivos',
       chooseFolder: 'Elegir carpeta', optimizePhotos: 'Optimizar fotos antes de enviar', parallelUploads: 'Envíos paralelos', senderName: 'Tu nombre', pause: 'Pausa', resume: 'Continuar',
       retryAll: '↻ Reintentar', removePending: 'Quitar todo', send: 'Enviar', clearCompleted: 'Borrar envíos terminados', history: 'Historial local', clearHistory: 'Borrar historial',
-      settings: 'Ajustes y seguridad', autoResume: 'Continuar automáticamente tras cerrar o reconectar', storage: 'Almacenamiento local', protectStorage: 'Proteger', deviceAccess: 'Acceso del dispositivo', deviceChecking: 'Comprobando el dispositivo…', deviceStatusUnavailable: 'El estado del dispositivo no está disponible. Toca Vincular para volver a intentarlo.',
+      settings: 'Ajustes y seguridad', autoResume: 'Continuar automáticamente tras cerrar o reconectar', storage: 'Almacenamiento local', protectStorage: 'Proteger', passkeyTitle: 'Identificación biométrica', passkeyHint: 'Usa la huella, el reconocimiento facial o el desbloqueo seguro del dispositivo para iniciar sesión sin contraseña.', passkeyAdd: 'Activar en este dispositivo', passkeyAdding: 'Activando…', passkeyAdded: 'Identificación biométrica activada ✓', passkeyFailed: 'No se pudo modificar la identificación biométrica.', passkeyEmpty: 'No hay ninguna identificación biométrica registrada.', passkeyRemove: 'Desactivar esta', passkeyRemoveConfirm: '¿Desactivar esta identificación biométrica?', passkeyRemoveSharedConfirm: 'Esta identificación está vinculada a {n} dispositivos. ¿Desactivarla en todos?', passkeyRemoved: 'Identificación biométrica desactivada', passkeyDevices: '{n} dispositivo(s)', biometricDisable: 'Desactivar la identificación biométrica', biometricDisabling: 'Desactivando…', biometricDisableConfirm: '¿Desactivar todas las identificaciones biométricas de esta cuenta en todos los dispositivos?', biometricDisabled: 'Identificación biométrica desactivada por completo ✓', passkeyNamePrompt: 'Nombre de la passkey (opcional):', passkeyCreated: 'Activada {date}', passkeyUsed: 'usada {date}', passkeyNeverUsed: 'nunca usada', passkeyCurrent: 'este dispositivo', biometricChecking: 'Comprobando compatibilidad…', biometricReady: 'Compatible: puedes activarla en este dispositivo.', biometricEnabled: 'La identificación biométrica está activada en este dispositivo.', biometricConfigured: '{n} identificación(es) biométrica(s) configurada(s) para esta cuenta.', biometricUnsupported: 'La biometría segura no está disponible en este dispositivo o navegador. Aun así, puedes desactivar las identificaciones existentes.', biometricHttpsRequired: 'La activación biométrica requiere una conexión HTTPS de confianza. La desactivación sigue disponible.', biometricRecentAuth: 'Vuelve a iniciar sesión para modificar este ajuste sensible.', biometricReauth: 'Volver a iniciar sesión para modificar', biometricReauthFailed: 'No se pudo reiniciar la autenticación.', biometricStatusUnavailable: 'El estado biométrico no está disponible temporalmente.', biometricCredentialName: 'Biometría · {device}', biometricLoadFailed: 'No se pudieron cargar las identificaciones registradas.', autoLock: 'Bloqueo automático', autoLockNever: 'Nunca', autoLock5: 'Después de 5 minutos', autoLock15: 'Después de 15 minutos', autoLock30: 'Después de 30 minutos', autoLock60: 'Después de 1 hora', autoLocking: 'Sesión bloqueada — autentícate para continuar.',
+      deviceAccess: 'Acceso del dispositivo', deviceChecking: 'Comprobando el dispositivo…', deviceStatusUnavailable: 'El estado del dispositivo no está disponible. Toca Vincular para volver a intentarlo.',
       pairDevice: 'Vincular este dispositivo', unpairDevice: 'Desvincular este dispositivo', pairOther: 'Vincular por QR', pairOtherTitle: 'Vincular otro dispositivo', pairOtherHelp: 'Escanea este QR en el otro dispositivo. El enlace es de un solo uso y caduca en cinco minutos.', pairQrAlt: 'Código QR para vincular el dispositivo', pairLink: 'Enlace de vinculación', pairExpires: 'Caduca a las {date}', pairQrFailed: 'No se pudo crear el código QR', copy: 'Copiar', revokeDevice: 'Revocar', pairedDevices: 'Dispositivos vinculados', clearLocalData: 'Borrar todos los datos locales', closeSession: 'Cerrar sesión', closeSessionConfirm: '¿Cerrar la sesión en este dispositivo? Se conservarán las transferencias, imágenes y el historial local.', closingSession: 'Cerrando sesión…', closeSessionFailed: 'No se pudo cerrar la sesión. Inténtalo de nuevo.', companionApp: 'aplicación complementaria',
       qrHint: 'Apunta a un QR de enlace de recepción…', close: 'Cerrar', noLink: '— Sin enlace —', addLinkHint: 'Añade un enlace con el botón ＋.', checking: 'Comprobando…',
       ready: '✓ Listo para recibir', locked: '🔒 Enlace protegido — desbloquéalo', revoked: '✗ Enlace revocado o caducado', offlineServer: '⚠ Servidor inaccesible', invalid: '✗ Enlace no encontrado',
@@ -303,9 +359,10 @@
       updateApplied: 'Actualización aplicada.', historyDest: 'a {dest}', textSharedHeader: 'Contenido compartido', urlSharedHeader: 'URL compartida',
       help: 'Ayuda', shortcutsTitle: 'Atajos de teclado', shortcutSend: 'Enviar la cola', shortcutEsc: 'Cerrar un panel o ventana', shortcutHelp: 'Mostrar esta ayuda',
       sortBy: 'Ordenar', sortAdded: 'Orden de adición', sortName: 'Nombre', sortSize: 'Tamaño',
-      imgCopyAll: '🔗 Copiar todos', imgOpen: 'Abrir en una pestaña', allImgCopied: '{n} enlace(s) copiado(s) ✓', noImgLinks: 'No hay enlaces para copiar.', imgCopyTemplate: 'Plantilla de copia', copyTemplateStandard: 'Estándar', copyTemplateForum: 'Foro', copyTemplateEmail: 'Correo', imgQrZip: '🗜 QR en ZIP', imgQrZipDone: 'Archivo de QR descargado ✓', imgExportStatsCsv: 'CSV de estadísticas', imgStatsCsvDone: 'Estadísticas exportadas ✓', imgFavoriteAction1: 'Acción favorita 1', imgFavoriteAction2: 'Acción favorita 2', imgFavoriteAction3: 'Acción favorita 3', imgActionCopy: 'Copiar', imgActionOpen: 'Abrir', imgQrDownload: 'Descargar QR', pinItem: 'Fijar', unpinItem: 'Desfijar', tagColors: 'Colores de etiquetas', tagColorsReset: 'Restablecer colores', expiresIn: 'Caduca en {time}', expiredNow: 'Caducado',
+      imgCopyAll: '🔗 Copiar todos', imgOpen: 'Abrir en una pestaña', allImgCopied: '{n} enlace(s) copiado(s) ✓', noImgLinks: 'No hay enlaces para copiar.', imgCopyTemplate: 'Plantilla de copia', copyTemplateStandard: 'Estándar', copyTemplateForum: 'Foro', copyTemplateEmail: 'Correo', imgQrZip: '🗜 QR en ZIP', imgQrZipDone: 'Archivo de QR descargado ✓', imgExportStatsCsv: 'CSV de estadísticas', imgStatsCsvDone: 'Estadísticas exportadas ✓', imgFavoriteAction1: 'Acción favorita 1', imgFavoriteAction2: 'Acción favorita 2', imgFavoriteAction3: 'Acción favorita 3', imgActionOpen: 'Abrir', imgQrDownload: 'Descargar QR', pinItem: 'Fijar', unpinItem: 'Desfijar', tagColors: 'Colores de etiquetas', tagColorsReset: 'Restablecer colores', expiresIn: 'Caduca en {time}', expiredNow: 'Caducado',
       shareLink: 'Compartir enlace', qrForLink: 'QR del enlace', qrTitle: 'QR del enlace de recepción', qrDestHelp: 'Escanea este código en otro dispositivo para abrir el enlace de recepción.', qrFail: 'No se pudo crear el código QR',
       receivedTitle: 'Contenido recibido', receivedHelp: 'Archivos recibidos en este enlace de recepción, servidos por el servidor.', receivedRefresh: 'Actualizar', receivedLoading: 'Cargando…', receivedEmpty: 'Aún no se ha recibido ningún archivo.', receivedFail: 'No se pudo cargar el contenido recibido.', receivedCount: '{n} archivo(s) · {size}', receivedDownload: 'Descargar',
+      receivedPendingTitle: 'Pendiente de aprobación', receivedApprove: 'Aprobar', receivedReject: 'Rechazar', receivedPendingCount: '{n} archivo(s) pendientes', createModerated: 'Validación manual: mantener los archivos pendientes hasta aprobarlos', sharesFirstUseExpiry: 'Caducar tras el primer uso (horas, 0 = desactivado)', sharesOneTime: 'Uso único reforzado (revocar tras la primera recuperación completa)', sharesSmartExpiryHint: 'Caducidad inteligente: los límites activos se combinan con O; el primero alcanzado desactiva el enlace.',
       sessionStats: 'Esta sesión', sessionStatsValue: '{files} archivo(s) · {size} enviados', sessionStatsEmpty: 'Sin envíos durante esta sesión.',
       maintenance: 'Mantenimiento', checkUpdate: 'Buscar una actualización', checkingUpdate: 'Buscando…', updateFound: 'Actualización encontrada — preparando…', updateNone: 'Ya está actualizado ✓',
       copyDiag: 'Copiar el diagnóstico', diagCopied: 'Diagnóstico copiado ✓', diagNone: 'No se registró ningún error de envío.',
@@ -320,17 +377,17 @@
       wifiOnly: 'Enviar solo con Wi-Fi', waitingWifi: 'esperando Wi-Fi', stripExif: 'Quitar metadatos (EXIF/GPS)',
       zipBundle: '🗜 Agrupar en ZIP', zipDone: 'Archivo ZIP creado ✓', zipNeedTwo: 'Selecciona al menos dos archivos.', zipping: 'Creando ZIP…',
       voiceNote: 'Nota de voz', recording: 'Grabando', recStop: '⏹ Detener', recAdd: 'Añadir a la cola', recMicFail: 'Micrófono no disponible',
-      annotate: 'Anotar', annPen: '✏️ Lápiz', annBlur: '🌫 Desenfoque', annDetectFaces: '🙂 Detectar rostros', annDetectPlates: '▭ Detectar matrículas', annUndo: '↶ Deshacer', annClear: 'Borrar todo', annApply: 'Aplicar',
+      annotate: 'Anotar', editorBeforeShare: 'Editar antes de compartir', annPan: '✋ Mover', annPen: '✏️ Lápiz', annBlur: '🌫 Desenfoque', annRedact: '⬛ Censurar', annDetectFaces: '🙂 Detectar rostros', annDetectPlates: '▭ Detectar matrículas', annUndo: '↶ Deshacer', annClear: 'Borrar todo', annApply: 'Aplicar',
       selectedN: '{n} seleccionado(s)', bulkRemove: 'Quitar', bulkRetry: 'Reintentar', selectAll: 'Todo',
       batchNote: 'Etiqueta / nota (opcional)', notePlaceholder: 'ej. Factura, Vacaciones…',
       multiSend: '📢 Enviar a varios…', multiSendTitle: 'Enviar a varias destinaciones', multiSendHelp: 'El lote se envía a cada destino marcado. Se omiten los enlaces cifrados o que requieren un nombre.', multiSendGo: 'Iniciar envíos', multiSendNone: 'No hay destino compatible seleccionado.', multiSendQueued: 'Envío a {n} destino(s) preparado.',
       cmdPalette: 'Paleta de comandos', cmdPlaceholder: 'Escribe un comando…', cmdNoMatch: 'Sin comandos.', cmdOpenSettings: 'Abrir ajustes', cmdOpenHistory: 'Abrir el historial', cmdToggleTheme: 'Cambiar tema',
       expireLabel: 'Caducidad (auto-borrado)', expNever: 'Nunca', exp1h: '1 hora', exp24h: '24 horas', exp7d: '7 días', exp30d: '30 días',
-      liveTitle: 'Recepciones en vivo', liveReceived: '📥 {name} recibido en «{dest}»', liveEnable: 'Notificaciones de recepción', livePush: 'Notificaciones push (app cerrada)', livePushOn: 'Notificaciones push activadas ✓', livePushOff: 'Notificaciones push desactivadas', livePushFail: 'No se pudieron activar las notificaciones', liveConnected: 'En vivo ✓',
+      liveTitle: 'Recepciones en vivo', liveReceived: '📥 {name} recibido en «{dest}»', liveEnable: 'Notificaciones de recepción', livePush: 'Notificaciones push (app cerrada)', pushLanguage: 'Idioma de las notificaciones push', pushLanguageSaved: 'Idioma de las notificaciones push guardado ✓', livePushOn: 'Notificaciones push activadas ✓', livePushOff: 'Notificaciones push desactivadas', livePushFail: 'No se pudieron activar las notificaciones', liveConnected: 'En vivo ✓', pushTestBtn: 'Probar notificaciones push', pushTestHelp: 'Envía una notificación real desde el servidor a este dispositivo.', pushTestSending: 'Probando push…', pushTestPreparing: 'Preparando la suscripción push…', pushTestAccepted: 'Servicio push aceptado en {ms} ms · esperando Android…', pushTestSent: 'Notificación de prueba enviada ✓', pushTestDenied: 'Las notificaciones están bloqueadas en Android/el navegador.', pushTestUnsupported: 'Web Push no está disponible en este dispositivo.', pushTestNoSub: 'No hay una suscripción push válida para este dispositivo.', pushTestRepairing: 'Suscripción push caducada: reparando y reintentando…', pushTestFailed: 'Falló la prueba push.', pushTestDelivered: 'Notificación recibida por Android {ms} ms después del envío ✓', pushTestAcceptedDelayed: 'Aceptada por el servicio push, pero no recibida por Android después de {seconds} s.',
       copyToken: 'Copiar token', tokenCopied: 'Token copiado ✓',
       pinDestination: '⭐ Fijar', unpinDestination: '☆ Soltar', pinned: 'Destino fijado ✓', unpinned: 'Destino soltado',
       resetBatch: '↺ Restablecer lote', resetBatchDone: 'Opciones del lote restablecidas ✓',
-      filesPending: '{n} en espera', pasteText: 'Pegar texto', pastedTextName: 'texto-pegado.txt', pasteTextEmpty: 'No hay texto en el portapapeles.',
+      filesPending: '{n} en espera', filesTotalSummary: '{n} archivo(s) · {total} · {sent} enviados', clipboardQueue: 'Portapapeles', clipboardQueued: '{n} elemento(s) del portapapeles añadido(s) ✓', clipboardEmpty: 'El portapapeles no contiene archivos, imágenes ni texto utilizables.', clipboardUrlFallback: 'URL añadida como texto (la descarga directa está bloqueada).', pasteText: 'Pegar texto', pastedTextName: 'texto-pegado.txt', pasteTextEmpty: 'No hay texto en el portapapeles.',
       masterSelect: 'Seleccionar todo', addFromUrl: 'Desde una URL', urlPrompt: 'Dirección de la imagen o archivo a añadir:', urlFetching: 'Obteniendo…', urlFailed: 'No se pudo obtener (¿bloqueado por CORS?)', urlAdded: 'Archivo añadido ✓', urlInvalid: 'Dirección no válida.',
       bulkRename: '✎ Renombrar', renamePrompt: 'Prefijo de los nombres (se añadirá numeración):', renameDone: '{n} archivo(s) renombrado(s)',
       hashTitle: 'Huella SHA-256', hashing: 'Calculando huella…', hashCopied: 'Huella SHA-256 copiada ✓', hashFail: 'No se pudo calcular la huella',
@@ -338,11 +395,19 @@
       accentLabel: 'Color de acento', accentReset: 'Predeterminado',
       screenCapture: 'Capturar pantalla', captureFailed: 'No se pudo capturar la pantalla', screenshotName: 'captura-pantalla',
       undo: 'Deshacer', fileRemoved: 'Archivo retirado', fileRestored: 'Archivo restaurado ✓', lightboxAlt: 'Vista previa de la imagen',
-      sortType: 'Tipo', bulkInvert: '⇄ Invertir', expandAll: 'Desplegar todo', collapseAll: 'Plegar todo',
-      queueSearch: 'Filtrar la cola…', estOptim: '≈ {size} tras optimizar', rotate: 'Girar',
+      sortType: 'Tipo', bulkInvert: '⇄ Invertir',
+      ocrTitle: 'OCR local', ocrAction: 'Extraer texto (OCR)', ocrPrivacy: 'Procesado en este dispositivo. Solo se descargan los motores y modelos OCR/PDF; el documento no se envía a ningún servicio OCR.', ocrLanguage: 'Idioma', ocrLangFrEn: 'Francés + inglés', ocrLangFr: 'Francés', ocrLangEn: 'Inglés', ocrLangEs: 'Español', ocrRun: 'Extraer texto', ocrCancel: 'Cancelar OCR', ocrCopy: 'Copiar texto', ocrAddTxt: 'Añadir .txt a la cola', ocrSearch: 'Buscar en el texto…', ocrPrev: 'Anterior', ocrNext: 'Siguiente', ocrReady: 'Listo para extraer texto.', ocrLoadingEngine: 'Cargando motor OCR…', ocrLoadingPdf: 'Leyendo PDF…', ocrEmbedded: 'Texto PDF incorporado detectado', ocrScanningPage: 'OCR de la página {page}/{total}…', ocrReadingPage: 'Leyendo página {page}/{total}…', ocrComplete: 'OCR terminado · {chars} caracteres', ocrNoText: 'No se detectó texto.', ocrFailed: 'No se pudo hacer OCR: {error}', ocrCanceled: 'OCR cancelado.', ocrCopied: 'Texto OCR copiado ✓', ocrQueued: 'Archivo de texto añadido a la cola ✓', ocrMatches: '{current}/{total}', ocrNoMatch: '0 resultados', ocrUnsupported: 'OCR disponible para imágenes y PDF.', ocrEngineNetwork: 'El primer OCR necesita Internet para descargar el motor y los modelos.',
+      dedupeChecking: 'Buscando un duplicado en el servidor…', dedupeHit: 'Ya está en el servidor · subida evitada ✓', dedupeUnavailable: 'Deduplicación no disponible — subida normal.',
+      editorTitle: 'Editor de fotos', editorAdjust: 'Ajustes', editorBrightness: 'Brillo', editorContrast: 'Contraste', editorSaturation: 'Saturación', editorApplyAdjust: 'Aplicar ajustes', editorRotateLeft: '↶ 90°', editorRotateRight: '↷ 90°', editorFlipH: '↔ Espejo', editorFlipV: '↕ Voltear', editorResizeMax: 'Dimensión máx.', editorResizeApply: 'Redimensionar', editorFormat: 'Formato de salida', editorQuality: 'Calidad', editorZoom: 'Zoom', editorZoomOut: 'Alejar', editorZoomIn: 'Acercar', editorZoomFit: 'Ajustar', editorBrushSize: 'Tamaño del pincel', editorLargeConfirm: 'Esta imagen es muy grande ({w}×{h}). Aceptar: usar una copia de 1800 px. Cancelar: conservar la resolución original (usa más memoria).',
+      privacyInspect: 'Privacidad', privacyTitle: 'Limpieza de metadatos', privacyLocal: 'El análisis y la limpieza se realizan localmente en este dispositivo.', privacyAnalyze: 'Analizar', privacyClean: 'Limpiar y reemplazar', privacyCleaned: 'Metadatos sensibles limpiados ✓', privacyNoFindings: 'No se detectaron metadatos sensibles evidentes.', privacyFindings: '{n} elemento(s) sensible(s) detectado(s)', privacyImageMetadata: 'Metadatos de imagen (EXIF/XMP/IPTC)', privacyPdfMetadata: 'Metadatos PDF', privacyOfficeMetadata: 'Propiedades Office', privacyThumbnail: 'Miniatura incorporada', privacyAuthor: 'Autor / último autor', privacyGps: 'Coordenadas GPS', privacyCustom: 'Propiedades personalizadas', privacyUnsupported: 'La limpieza automática no es compatible con este formato.', privacyAnalyzing: 'Análisis local…', privacyCleaning: 'Limpieza local…',
+      annDetectSensitive: '🔐 Texto sensible', sensitiveScanning: 'Buscando texto sensible localmente…', sensitiveFound: '{n} zona(s) de texto sensible ocultada(s). Revisa el resultado.',
+      ocrIndexTitle: 'Índice OCR local', ocrIndexHint: 'Busca en todos los documentos OCR procesados en este dispositivo.', ocrIndexSearch: 'Buscar en todos los OCR…', ocrIndexEmpty: 'No hay documentos OCR indexados.', ocrIndexSaved: 'Documento añadido al índice OCR local ✓', ocrIndexCount: '{n} documento(s) indexado(s)', ocrIndexOpen: 'Abrir', ocrIndexDelete: 'Eliminar del índice', ocrIndexClear: 'Vaciar índice', ocrIndexClearConfirm: '¿Eliminar todo el índice OCR local?', ocrIndexMeta: '{size} · {date} · {chars} caracteres',
+      queueSearch: 'Filtrar la cola…', estOptim: '≈ {size} tras optimizar', optimizationEstimate: '{before} → ≈ {after} · ahorro {saved} ({pct} %) {eta}', optimizationEstimating: 'Estimando el tamaño optimizado…', copyQueueNames: 'Copiar nombres', queueNamesCopied: '{n} nombre(s) copiado(s) ✓', quickFilters: 'Filtros rápidos', filterAll: 'Todos', filterImages: 'Imágenes', filterVideos: 'Vídeos', filterDocuments: 'Documentos', filterWaiting: 'En espera', filterDone: 'Terminados', filterErrors: 'Errores', dragHandle: 'Mover en la cola', batchElapsed: '⏱ {time}', avgPerFile: 'prom. {time}/archivo', transferActiveExit: 'Hay una transferencia en curso. Termínala o ponla en pausa antes de salir.', lowBatteryConfirm: 'La batería está al {level}% y no está cargando. ¿Continuar con 1 envío paralelo? Cancela para conectar el dispositivo.', notifUploadTitle: 'Transferencia Direct-Xfer terminada', notifUploadBody: '{ok} correcto(s){fail}', notifOpen: 'Abrir', notifCopyLink: 'Copiar enlace', notifResend: 'Reenviar', notifLinkCopied: 'Enlace de destino copiado ✓', rotate: 'Girar',
       quotaNearFull: 'La cuota de este destino está casi llena.',
       imgQrAll: '▦ QR combinado', imgQrTooBig: 'Demasiados enlaces para un solo QR.', bulkShare: 'Compartir',
       onlineStatus: 'En línea', offlineStatus: 'Sin conexión', networkWifi: 'Wi-Fi', networkCellular: 'Datos móviles',
+      networkDashboard: 'Red en directo', networkDashboardHint: 'Velocidad, latencia, bloques y reintentos durante las transferencias.', networkTestNow: 'Probar conexión', networkTesting: 'Prueba de red…', networkTestDone: 'Red: {quality} · ↑ {up} · ↓ {down} · {latency} ms', networkTestFailed: 'No se pudo probar la red — se conservan los ajustes automáticos.', networkTestAuto: 'Transferencia grande detectada: probando la red antes del envío…', networkLatency: 'Latencia', networkUpload: 'Subida', networkDownload: 'Bajada', networkLiveRate: 'Velocidad actual', networkChunk: 'Bloque', networkParallel: 'Paralelos', networkRetries: 'Reintentos', networkActive: 'Activos', networkQualityExcellent: 'excelente', networkQualityGood: 'buena', networkQualityFair: 'media', networkQualityPoor: 'baja', networkNotTested: 'Sin probar', networkLastTest: 'Última prueba: {when}', networkGraphLabel: 'Historial de velocidad de subida',
+      errorCenter: 'Centro de errores', errorCenterHint: 'Diagnóstico agrupado de fallos recientes y archivos con error.', errorCenterEmpty: 'No hay errores recientes.', errorCenterClear: 'Borrar registro', errorCenterCopy: 'Copiar informe', errorCenterRetry: 'Reintentar', errorCenterRetryAll: 'Reintentar todos', errorCategoryProxy: 'Proxy inverso', errorCategoryQuota: 'Cuota / almacenamiento', errorCategoryNetwork: 'Conexión', errorCategoryServer: 'Servidor', errorCategoryAuth: 'Autorización', errorCategoryFile: 'Archivo', errorCategoryOther: 'Otro', errorLogCleared: 'Registro de errores borrado ✓', errorReportCopied: 'Informe de errores copiado ✓', errorLocalStorage: 'El almacenamiento local es insuficiente o no está disponible.',
       resendLastBatch: '↺ Reenviar el último lote', lastBatchUnavailable: 'El último lote ya no está disponible localmente.', lastBatchRestored: '{n} archivo(s) del último lote restaurado(s) ✓',
       copySummary: '⧉ Copiar resumen', shareResult: '📤 Compartir resultado', summaryCopied: 'Resumen copiado ✓', noSummary: 'No hay resumen de transferencia disponible.',
       privacyNames: 'Ocultar nombres de archivos sensibles', privacyFile: 'Archivo {n}',
@@ -353,6 +418,28 @@
       moveEarlier: 'Subir en la cola', moveLater: 'Bajar en la cola'
     }
   };
+  // 1.48.2 — enrollment diagnostics shared by the multi-device biometric flow.
+  Object.assign(STRINGS.fr, {
+    biometricPairRequired: 'Associez d’abord cet appareil à Direct-Xfer avant d’activer la biométrie.',
+    biometricAlreadyEnabled: 'Identification biométrique déjà disponible et associée à cet appareil ✓',
+    biometricAlreadySynced: 'Cette identification est déjà synchronisée sur l’appareil. Déconnectez-vous puis utilisez le bouton biométrique une fois pour l’associer.',
+    biometricDomainMismatch: 'Le domaine HTTPS de la PWA ne correspond pas à celui configuré pour la biométrie.',
+    biometricServerRejected: 'Le serveur a refusé l’identification créée. Réessayez après avoir rouvert les paramètres.'
+  });
+  Object.assign(STRINGS.en, {
+    biometricPairRequired: 'Pair this device with Direct-Xfer before enabling biometrics.',
+    biometricAlreadyEnabled: 'Biometric identification is already available and linked to this device ✓',
+    biometricAlreadySynced: 'This identification is already synchronized on the device. Sign out, then use the biometric button once to link it.',
+    biometricDomainMismatch: 'The PWA HTTPS domain does not match the domain configured for biometrics.',
+    biometricServerRejected: 'The server rejected the created identification. Reopen settings and try again.'
+  });
+  Object.assign(STRINGS.es, {
+    biometricPairRequired: 'Vincula primero este dispositivo con Direct-Xfer antes de activar la biometría.',
+    biometricAlreadyEnabled: 'La identificación biométrica ya está disponible y vinculada a este dispositivo ✓',
+    biometricAlreadySynced: 'Esta identificación ya está sincronizada en el dispositivo. Cierra la sesión y usa una vez el botón biométrico para vincularla.',
+    biometricDomainMismatch: 'El dominio HTTPS de la PWA no coincide con el configurado para la biometría.',
+    biometricServerRejected: 'El servidor rechazó la identificación creada. Vuelve a abrir los ajustes e inténtalo de nuevo.'
+  });
 
   var lang = 'fr';
   function detectLang() {
@@ -379,14 +466,15 @@
       });
     });
     var manifest = document.getElementById('app-manifest');
-    if (manifest) manifest.href = (lang === 'fr' ? '/direct-xfer-pwa.webmanifest' : '/direct-xfer-pwa-' + lang + '.webmanifest') + '?v=111';
+    if (manifest) manifest.href = (lang === 'fr' ? '/direct-xfer-pwa.webmanifest' : '/direct-xfer-pwa-' + lang + '.webmanifest') + '?v=228';
     $('lang-select').value = lang;
     $('dest-save-btn').textContent = editingToken ? t('updateDestination') : t('saveDestination');
     renderDests(); renderQueue(); renderHistory(); renderDeviceStatus();
+    if (notificationPrefsLoaded) renderPwaNotificationPrefs();
     if (typeof updateSessionStats === 'function') updateSessionStats();
     if (typeof updateSendBtn === 'function') updateSendBtn();
-    if (typeof updateToggleCardsLabel === 'function') updateToggleCardsLabel();
     if (typeof activatePwaPanel === 'function') activatePwaPanel(activePwaPanel, { keepScroll: true, instant: true });
+    if (typeof sendLangToSw === 'function') sendLangToSw(); // feature 2 — keep the SW's resume prompt localized
   }
 
   var activePwaPanel = 'send';
@@ -437,12 +525,13 @@
     if ($('pwa-panel-kicker')) $('pwa-panel-kicker').textContent = t(meta.label);
     if ($('pwa-panel-summary')) $('pwa-panel-summary').textContent = t(meta.hint);
     if (panel === 'activity' && $('history-card')) $('history-card').open = true;
-    if (panel === 'settings' && $('settings-card')) $('settings-card').open = true;
+    if (panel === 'settings' && $('settings-card')) { $('settings-card').open = true; if (!notificationPrefsLoaded) loadPwaNotificationPrefs(); else renderPwaNotificationPrefs(); if(!notificationRulesLoaded)loadPwaNotificationRules(); else renderPwaNotificationRules(); }
     if (panel === 'images') {
       refreshImageStats(false).catch(function () {});
       refreshAlbums().catch(function () {});
     }
-    if (panel === 'shares') { onSharesPanelShown(); }
+    if (panel === 'shares') { onSharesPanelShown(); startSharesPresence(); }
+    else stopSharesPresence();
     if (!options.keepScroll) {
       var scroller = document.querySelector('.wrap');
       if (scroller) scroller.scrollTo({ top: 0, behavior: options.instant ? 'auto' : 'smooth' });
@@ -516,6 +605,11 @@
     var h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
     return '~' + (h ? h + 'h ' : '') + (m ? m + 'min ' : '') + s + 's';
   }
+  function fmtClock(sec) {
+    sec = Math.max(0, Math.floor(sec || 0));
+    var h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+    return (h ? String(h).padStart(2, '0') + ':' : '') + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+  }
   function fmtDate(ms) {
     try { return new Intl.DateTimeFormat(lang, { dateStyle: 'short', timeStyle: 'short' }).format(new Date(ms)); }
     catch (_) { return new Date(ms).toLocaleString(); }
@@ -544,7 +638,7 @@
     else action = new Promise(function (resolve, reject) {
       try {
         var ta = document.createElement('textarea'); ta.value = text; ta.setAttribute('readonly', ''); ta.className = 'sr-only';
-        document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); resolve();
+        document.body.appendChild(ta); ta.select(); var copied=document.execCommand('copy')===true; ta.remove(); if(copied)resolve();else reject(new Error('clipboard-denied'));
       } catch (e) { reject(e); }
     });
     return action.then(function (value) { haptic('light'); return value; });
@@ -662,12 +756,370 @@
   }
   function fetchWithTimeout(url, options, timeoutMs) {
     options = options || {};
-    if (!window.AbortController) return fetch(url, options);
+    timeoutMs = timeoutMs || OFFSET_TIMEOUT_MS;
+    if (!window.AbortController) {
+      var fallbackTimer = null;
+      return Promise.race([
+        fetch(url, options),
+        new Promise(function (_, reject) { fallbackTimer = setTimeout(function () { reject(new Error('fetch-timeout')); }, timeoutMs); })
+      ]).finally(function () { if (fallbackTimer) clearTimeout(fallbackTimer); });
+    }
     var ctrl = new AbortController();
-    var timer = setTimeout(function () { ctrl.abort(); }, timeoutMs || OFFSET_TIMEOUT_MS);
-    options = Object.assign({}, options, { signal: ctrl.signal });
-    return fetch(url, options).finally(function () { clearTimeout(timer); });
+    var upstream = options.signal || null;
+    var relayAbort = function () { try { ctrl.abort(); } catch (_) {} };
+    if (upstream) {
+      if (upstream.aborted) relayAbort();
+      else try { upstream.addEventListener('abort', relayAbort, { once: true }); } catch (_) {}
+    }
+    var timer = setTimeout(relayAbort, timeoutMs);
+    var requestOptions = Object.assign({}, options, { signal: ctrl.signal });
+    return fetch(url, requestOptions).finally(function () {
+      clearTimeout(timer);
+      if (upstream) try { upstream.removeEventListener('abort', relayAbort); } catch (_) {}
+    });
   }
+
+  // Account notification center -----------------------------------------------
+  var accountNotifications = [];
+  var notificationPollTimer = null;
+  var notificationRequestSeq = 0;
+  var notificationRequestInFlight = false;
+  var notificationRequestController = null;
+  // Feature 6/12 — arrival detection + on-demand paging state.
+  var notificationSeenIds = null; // null until first load so the backlog never toasts
+  var notificationSoundOn = false;
+  try { notificationSoundOn = localStorage.getItem('dx-notif-sound') === '1'; } catch (_) {}
+  var NOTIFICATIONS_PAGE_SIZE = 20;
+  var notificationsShown = NOTIFICATIONS_PAGE_SIZE;
+  // Feature 7 — category opt-outs (Security/System health are always-on server-side).
+  var NOTIFICATION_MUTABLE_CATEGORIES = ['images','shares','receptions','transfers','search','pwa','visitors','thresholds','traffic','network','restarts','updates'];
+  var NOTIFICATION_REQUIRED_CATEGORIES = ['security','maintenance','system_health'];
+  var NOTIFICATION_SETTINGS_CATEGORIES = ['shares','receptions','images','transfers','visitors','thresholds','traffic','search','pwa','network','restarts','updates','maintenance','security','system_health'];
+  var notificationMutedCategories = [];
+  var notificationPrefsLoaded = false;
+  var notificationPrefsSaving = false;
+  var notificationPrefsSaveQueued = false;
+  function pwaNotificationVariant(v) {
+    if (v === 'thumb') return 'Mini'; if (v === 'micro') return 'Micro';
+    return lang === 'fr' ? 'Pleine' : lang === 'es' ? 'Completa' : 'Full';
+  }
+  // Feature 2 — relative timestamp; the absolute date is the row's hover tooltip.
+  function pwaTimeAgo(ts) {
+    var s = Math.floor((Date.now() - Number(ts || 0)) / 1000); if (s < 0) s = 0;
+    var v;
+    if (s < 60) v = s + ' s';
+    else { var m = Math.floor(s / 60); if (m < 60) v = m + ' min'; else { var h = Math.floor(m / 60); if (h < 24) v = h + ' h'; else v = Math.floor(h / 24) + ' ' + (lang === 'fr' ? 'j' : 'd'); } }
+    return t('notificationsTimeAgo', { v: v });
+  }
+  function pwaNotificationIcon(n) {
+    if (n.severity === 'critical') return '🚨'; if (n.severity === 'warning') return '⚠️'; if (n.severity === 'success') return '✅';
+    var icons={images:'👁️',shares:'🔗',receptions:'📥',transfers:'↕️',security:'🔐',search:'🔎',pwa:'📱',system_health:'🩺',maintenance:'🧹',network:'🌐',restarts:'🔄',updates:'⬆️',visitors:'👥',thresholds:'🎯',traffic:'📈',activity:'📊',system:'⚙️'};
+    return icons[n.category] || '🔔';
+  }
+  function pwaNotificationTitle(n) {
+    var name=n.name || (lang==='fr'?'Lien':lang==='es'?'Enlace':'Link'), count=Number(n.count)||0, threshold=Number(n.threshold)||Number(n.limit)||count;
+    var maps={
+      fr:{'image-first-view':'Première vue de « '+name+' »','share-first-download':'Premier téléchargement de « '+name+' »','inbox-first-deposit':'Premier dépôt sur « '+name+' »','transfer-complete':'Transfert terminé : '+name,'transfer-failed':'Transfert échoué : '+name,'link-expired':'Lien expiré : '+name,'link-expiring-soon':'Lien bientôt expiré : '+name,'download-limit-reached':'Limite de téléchargements atteinte : '+name,'reception-quota-reached':'Quota de réception atteint : '+name,'link-new-visitor':'Nouveau visiteur sur « '+name+' »','new-country':'Nouveau pays pour '+name,'view-threshold':threshold+' vues atteintes : '+name,'download-threshold':threshold+' téléchargements atteints : '+name,'unusual-activity':'Activité inhabituelle : '+name,'repeated-downloads':'Téléchargements répétés : '+name,'password-failures':'Échecs de mot de passe répétés : '+name,'link-auto-disabled':'Lien désactivé automatiquement : '+name,'dlp-detected':'DLP : contenu sensible détecté','dlp-blocked':'DLP : publication bloquée','ocr-failed':'Échec OCR'+(n.name?' : '+n.name:''),'index-failed':'Échec de l’indexation','pwa-device-paired':'Nouvel appareil PWA : '+(n.device||''),'pwa-device-revoked':'Appareil PWA révoqué : '+(n.device||''),'admin-login':'Connexion administrateur : '+(n.username||''),'admin-login-unusual':'Connexion administrateur inhabituelle : '+(n.username||''),'system-problem':'Problème système détecté','update-available':'Mise à jour disponible : '+(n.latest||''),'update-installed':'Mise à jour installée : '+(n.version||'')},
+      en:{'image-first-view':'First view of “'+name+'”','share-first-download':'First download of “'+name+'”','inbox-first-deposit':'First deposit on “'+name+'”','transfer-complete':'Transfer completed: '+name,'transfer-failed':'Transfer failed: '+name,'link-expired':'Link expired: '+name,'link-expiring-soon':'Link expiring soon: '+name,'download-limit-reached':'Download limit reached: '+name,'reception-quota-reached':'Reception quota reached: '+name,'link-new-visitor':'New visitor on “'+name+'”','new-country':'New country for '+name,'view-threshold':threshold+' views reached: '+name,'download-threshold':threshold+' downloads reached: '+name,'unusual-activity':'Unusual activity: '+name,'repeated-downloads':'Repeated downloads: '+name,'password-failures':'Repeated password failures: '+name,'link-auto-disabled':'Link automatically disabled: '+name,'dlp-detected':'DLP: sensitive content detected','dlp-blocked':'DLP: publication blocked','ocr-failed':'OCR failed'+(n.name?' : '+n.name:''),'index-failed':'Indexing failed','pwa-device-paired':'New PWA device: '+(n.device||''),'pwa-device-revoked':'PWA device revoked: '+(n.device||''),'admin-login':'Administrator login: '+(n.username||''),'admin-login-unusual':'Unusual administrator login: '+(n.username||''),'system-problem':'System problem detected','update-available':'Update available: '+(n.latest||''),'update-installed':'Update installed: '+(n.version||'')},
+      es:{'image-first-view':'Primera vista de «'+name+'»','share-first-download':'Primera descarga de «'+name+'»','inbox-first-deposit':'Primer depósito en «'+name+'»','transfer-complete':'Transferencia completada: '+name,'transfer-failed':'Transferencia fallida: '+name,'link-expired':'Enlace caducado: '+name,'link-expiring-soon':'Enlace próximo a caducar: '+name,'download-limit-reached':'Límite de descargas alcanzado: '+name,'reception-quota-reached':'Cuota de recepción alcanzada: '+name,'link-new-visitor':'Nuevo visitante en «'+name+'»','new-country':'Nuevo país para '+name,'view-threshold':threshold+' vistas alcanzadas: '+name,'download-threshold':threshold+' descargas alcanzadas: '+name,'unusual-activity':'Actividad inusual: '+name,'repeated-downloads':'Descargas repetidas: '+name,'password-failures':'Fallos de contraseña repetidos: '+name,'link-auto-disabled':'Enlace desactivado automáticamente: '+name,'dlp-detected':'DLP: contenido sensible detectado','dlp-blocked':'DLP: publicación bloqueada','ocr-failed':'Error OCR'+(n.name?' : '+n.name:''),'index-failed':'Error de indexación','pwa-device-paired':'Nuevo dispositivo PWA: '+(n.device||''),'pwa-device-revoked':'Dispositivo PWA revocado: '+(n.device||''),'admin-login':'Inicio de sesión administrador: '+(n.username||''),'admin-login-unusual':'Inicio de sesión administrador inusual: '+(n.username||''),'system-problem':'Problema del sistema detectado','update-available':'Actualización disponible: '+(n.latest||''),'update-installed':'Actualización instalada: '+(n.version||'')}
+    };
+    var extra={
+      fr:{'received-file-ready':'Fichier reçu disponible : '+name,'download-abandoned':'Téléchargement abandonné : '+name,'upload-abandoned':'Upload abandonné : '+name,'resume-impossible':'Reprise impossible : '+name,'protected-link-first-access':'Premier accès au lien protégé : '+name,'password-recovered':'Mot de passe accepté après des échecs : '+name,'visitor-device-new':'Nouveau navigateur/appareil visiteur sur « '+name+' »','simultaneous-downloads':'Téléchargements simultanés inhabituels : '+name,'high-download-volume':'Volume téléchargé inhabituellement élevé : '+name,'link-viral':'Lien devenu viral : '+name,'link-unused':'Lien inutilisé depuis longtemps : '+name,'shared-file-replaced':'Fichier source remplacé : '+name,'image-full-replaced':'Image pleine remplacée : '+name,'image-variant-regenerated':pwaNotificationVariant(n.variant)+' régénérée : '+name,'retention-file-deleted':'Fichier supprimé par rétention : '+name,'cleanup-complete':'Nettoyage automatique terminé','service-unavailable':'Service indisponible : '+(n.source||''),'service-restored':'Service rétabli : '+(n.source||''),'config-save-failed':'Échec de sauvegarde de la configuration','server-restarted':'Direct-Xfer redémarré : v'+(n.version||''),'server-clean-shutdown':'Arrêt propre de Direct-Xfer','server-crash-recovered':'Reprise après arrêt non propre','public-ip-changed':'Adresse IP publique modifiée','push-subscription-expired':'Abonnement Push expiré','push-subscription-repaired':'Abonnement Push réparé automatiquement','push-permission-revoked':'Permission Notifications retirée','custom-alert-rule':t('notificationsRuleCustomTitle',{name:name})},
+      en:{'received-file-ready':'Received file available: '+name,'download-abandoned':'Download abandoned: '+name,'upload-abandoned':'Upload abandoned: '+name,'resume-impossible':'Resume impossible: '+name,'protected-link-first-access':'First access to protected link: '+name,'password-recovered':'Password accepted after failures: '+name,'visitor-device-new':'New visitor browser/device on “'+name+'”','simultaneous-downloads':'Unusual simultaneous downloads: '+name,'high-download-volume':'Unusually high download volume: '+name,'link-viral':'Link is going viral: '+name,'link-unused':'Link unused for a long time: '+name,'shared-file-replaced':'Shared source file replaced: '+name,'image-full-replaced':'Full image replaced: '+name,'image-variant-regenerated':pwaNotificationVariant(n.variant)+' regenerated: '+name,'retention-file-deleted':'File deleted by retention: '+name,'cleanup-complete':'Automatic cleanup completed','service-unavailable':'Service unavailable: '+(n.source||''),'service-restored':'Service restored: '+(n.source||''),'config-save-failed':'Configuration save failed','server-restarted':'Direct-Xfer restarted: v'+(n.version||''),'server-clean-shutdown':'Direct-Xfer shut down cleanly','server-crash-recovered':'Recovered after unclean shutdown','public-ip-changed':'Public IP address changed','push-subscription-expired':'Push subscription expired','push-subscription-repaired':'Push subscription repaired automatically','push-permission-revoked':'Notification permission removed','custom-alert-rule':t('notificationsRuleCustomTitle',{name:name})},
+      es:{'received-file-ready':'Archivo recibido disponible: '+name,'download-abandoned':'Descarga abandonada: '+name,'upload-abandoned':'Carga abandonada: '+name,'resume-impossible':'Reanudación imposible: '+name,'protected-link-first-access':'Primer acceso al enlace protegido: '+name,'password-recovered':'Contraseña aceptada tras fallos: '+name,'visitor-device-new':'Nuevo navegador/dispositivo visitante en «'+name+'»','simultaneous-downloads':'Descargas simultáneas inusuales: '+name,'high-download-volume':'Volumen de descarga inusualmente alto: '+name,'link-viral':'Enlace viral: '+name,'link-unused':'Enlace sin uso desde hace mucho: '+name,'shared-file-replaced':'Archivo fuente reemplazado: '+name,'image-full-replaced':'Imagen completa reemplazada: '+name,'image-variant-regenerated':pwaNotificationVariant(n.variant)+' regenerada: '+name,'retention-file-deleted':'Archivo eliminado por retención: '+name,'cleanup-complete':'Limpieza automática terminada','service-unavailable':'Servicio no disponible: '+(n.source||''),'service-restored':'Servicio restablecido: '+(n.source||''),'config-save-failed':'Error al guardar la configuración','server-restarted':'Direct-Xfer reiniciado: v'+(n.version||''),'server-clean-shutdown':'Direct-Xfer se apagó correctamente','server-crash-recovered':'Recuperado tras un cierre incorrecto','public-ip-changed':'La IP pública cambió','push-subscription-expired':'Suscripción Push caducada','push-subscription-repaired':'Suscripción Push reparada automáticamente','push-permission-revoked':'Permiso de notificaciones retirado','custom-alert-rule':t('notificationsRuleCustomTitle',{name:name})}
+    };
+    return ((extra[lang]||extra.fr)[n.type]) || ((maps[lang]||maps.fr)[n.type]) || n.detail || n.type || t('notificationsTitle');
+  }
+  function pwaNotificationMeta(n) {
+    var parts=[];
+    if(n.type==='image-first-view')parts.push(pwaNotificationVariant(n.variant));
+    if(n.flag&&n.flag!=='🌐')parts.push(n.flag); if(n.ip)parts.push(n.ip); if(n.country)parts.push(n.country);
+    var byteQuota=n.type==='reception-quota-reached'&&n.reason==='bytes';
+    if(n.type==='custom-alert-rule'){
+      var metricKey={views:'notificationsRuleMetricViews',downloads:'notificationsRuleMetricDownloads',bytes_served:'notificationsRuleMetricBytesServed',received_bytes:'notificationsRuleMetricReceivedBytes'}[n.reason];
+      if(metricKey)parts.push(t(metricKey));
+      if(n.reason==='bytes_served'||n.reason==='received_bytes')parts.push(fmtBytes(n.bytes||0)+' / '+fmtBytes(n.limit||0));
+      else if(n.threshold)parts.push(String(Number(n.count)||0)+' / '+String(Number(n.threshold)||0));
+      if(n.source)parts.push(n.source);
+    }else if(byteQuota&&n.limit)parts.push(fmtBytes(n.bytes||n.count||0)+' / '+fmtBytes(n.limit));
+    else { if(n.bytes)parts.push(fmtBytes(n.bytes)); if(n.count&&!['view-threshold','download-threshold'].includes(n.type))parts.push(String(n.count)); if(n.limit)parts.push((lang==='fr'?'limite ':lang==='es'?'límite ':'limit ')+n.limit); }
+    if(n.expiresAt)parts.push(fmtDate(n.expiresAt));
+    if(n.reason&&n.type!=='custom-alert-rule')parts.push(String(n.reason).replace(/-/g,' ')); if(n.sender)parts.push(n.sender); if(n.device&&pwaNotificationTitle(n).indexOf(String(n.device))===-1)parts.push(n.device);
+    if(n.version&&n.latest)parts.push(n.version+' → '+n.latest); if(n.previous&&n.current)parts.push(n.previous+' → '+n.current); if(n.durationMs)parts.push(Math.round(n.durationMs/1000)+' s'); if(n.detail)parts.push(n.detail); if(n.at)parts.push(pwaTimeAgo(n.at));
+    return parts.filter(Boolean).join(' · ');
+  }
+  function normalizePwaNotificationSearch(value){var text=String(value==null?'':value).toLocaleLowerCase();try{text=text.normalize('NFD').replace(/[\u0300-\u036f]/g,'');}catch(_){}return text.trim();}
+  function pwaNotificationCategorySearchLabel(category){var key=String(category||'system_health');var map={activity:'notificationsCategoryActivity',visitors:'notificationsCategoryVisitors',thresholds:'notificationsCategoryThresholds',traffic:'notificationsCategoryTraffic',images:'notificationsCategoryImages',pwa:'notificationsCategoryPwa',receptions:'notificationsCategoryReceptions',search:'notificationsCategorySearch',security:'notificationsCategorySecurity',shares:'notificationsCategoryShares',system_health:'notificationsCategorySystemHealth',maintenance:'notificationsCategoryMaintenance',network:'notificationsCategoryNetwork',restarts:'notificationsCategoryRestarts',updates:'notificationsCategoryUpdates',system:'notificationsCategorySystemHealth',transfers:'notificationsCategoryTransfers'};return map[key]?t(map[key]):key;}
+  function pwaNotificationSeveritySearchLabel(severity){var key=String(severity||'info');var map={info:'notificationsSeverityInfo',success:'notificationsSeveritySuccess',warning:'notificationsSeverityWarning',critical:'notificationsSeverityCritical'};return map[key]?t(map[key]):key;}
+  function pwaNotificationMatchesFilters(n){
+    var category=$('pwa-notifications-category-filter')?$('pwa-notifications-category-filter').value:'';
+    var severity=$('pwa-notifications-severity-filter')?$('pwa-notifications-severity-filter').value:'';
+    var query=normalizePwaNotificationSearch($('pwa-notifications-search')?$('pwa-notifications-search').value:'');
+    if(category&&String(n&&n.category||'system_health')!==category)return false;
+    if(severity&&String(n&&n.severity||'info')!==severity)return false;
+    if(!query)return true;
+    var haystack=normalizePwaNotificationSearch([n&&n.type,n&&n.category,n&&n.severity,pwaNotificationCategorySearchLabel(n&&n.category),pwaNotificationSeveritySearchLabel(n&&n.severity),pwaNotificationTitle(n||{}),pwaNotificationMeta(n||{}),n&&n.name,n&&n.detail,n&&n.reason,n&&n.sender,n&&n.device,n&&n.username,n&&n.source].filter(Boolean).join(' '));
+    return haystack.indexOf(query)!==-1;
+  }
+  // Feature 1 — deep-link a notification to its bottom-nav panel.
+  function pwaNotificationPanel(n){
+    var cat=String(n&&n.category||''), type=String(n&&n.type||'');
+    if(cat==='images'||type.indexOf('image')===0||type==='ocr-failed') return 'images';
+    if(cat==='shares'||cat==='receptions') return 'shares';
+    if(['system','system_health','maintenance','network','restarts','updates','pwa'].indexOf(cat)!==-1) return 'settings';
+    return 'activity';
+  }
+  function openPwaNotificationTarget(n){ closePwaNotifications(); activatePwaPanel(pwaNotificationPanel(n)); }
+  // Feature 9 — public link for a notification's share, by category (download /s/,
+  // reception /u/, image /i/). Only shown when a token is present.
+  function pwaNotificationLink(n){
+    // The server resolves this against the CURRENT managed share and configured
+    // public/image base. No linkUrl means the share is gone/expired or not owned,
+    // so do not offer a stale local-origin URL.
+    return n&&n.linkUrl?String(n.linkUrl):null;
+  }
+  function pwaNotificationActions(n){
+    var out=[]; if(!n) return out;
+    var link=pwaNotificationLink(n);
+    if(link) out.push({label:t('copyLink'),run:function(){ copyText(link).then(function(){toast(t('notificationsLinkCopied'),'ok');},function(){toast(t('copyFailed'),'err');}); }});
+    return out;
+  }
+  function markOnePwaNotificationRead(n){
+    if(!n||!(n.unread===true||!(Number(n.readAt)>0))) return;
+    var at=Date.now();
+    accountNotifications=accountNotifications.map(function(x){return x&&x.id===n.id?Object.assign({},x,{readAt:at,unread:false}):x;});
+    renderPwaNotifications();
+    appMutate('/app/notifications/read','application/json',JSON.stringify({ids:[String(n.id)]})).catch(function(){});
+  }
+  // Feature 6 — optional arrival sound + bell pulse.
+  function playPwaNotificationSound(){
+    try{
+      var AC=window.AudioContext||window.webkitAudioContext; if(!AC) return;
+      var ctx=playPwaNotificationSound._ctx||(playPwaNotificationSound._ctx=new AC());
+      if(ctx.state==='suspended')ctx.resume().catch(function(){});
+      var now=ctx.currentTime,o=ctx.createOscillator(),g=ctx.createGain();
+      o.type='sine';o.frequency.setValueAtTime(880,now);o.frequency.setValueAtTime(1245,now+0.09);
+      g.gain.setValueAtTime(0.0001,now);g.gain.exponentialRampToValueAtTime(0.14,now+0.02);g.gain.exponentialRampToValueAtTime(0.0001,now+0.3);
+      o.connect(g).connect(ctx.destination);o.start(now);o.stop(now+0.32);
+    }catch(_){}
+  }
+  function pulsePwaBell(){var b=$('pwa-notifications-btn');if(!b)return;b.classList.remove('notif-pulse');void b.offsetWidth;b.classList.add('notif-pulse');setTimeout(function(){b.classList.remove('notif-pulse');},2600);}
+  function announcePwaNotifications(fresh){
+    if(!fresh||!fresh.length)return;
+    pulsePwaBell();
+    var newest=fresh.slice().sort(function(a,b){return Number(b.at||0)-Number(a.at||0);})[0];
+    if(newest)toast('🔔 '+pwaNotificationTitle(newest),(newest.severity==='critical'||newest.severity==='warning')?'warn':'ok');
+    if(notificationSoundOn)playPwaNotificationSound();
+  }
+  function renderPwaNotifications() {
+    var list=$('pwa-notifications-list'), badge=$('pwa-notifications-badge'), count=$('pwa-notifications-count'), clear=$('pwa-notifications-clear');
+    if (!list) return;
+    var rows=Array.isArray(accountNotifications)?accountNotifications:[];
+    var visibleRows=rows.filter(pwaNotificationMatchesFilters);
+    var filtersActive=!!(($('pwa-notifications-category-filter')&&$('pwa-notifications-category-filter').value)||($('pwa-notifications-severity-filter')&&$('pwa-notifications-severity-filter').value)||normalizePwaNotificationSearch($('pwa-notifications-search')?$('pwa-notifications-search').value:''));
+    var unreadCount=rows.reduce(function(total,n){return total+((n&&(n.unread===true||!(Number(n.readAt)>0)))?1:0);},0);
+    if (badge) { badge.textContent=unreadCount>99?'99+':String(unreadCount); badge.classList.toggle('hidden',!unreadCount); }
+    if (count) count.textContent=rows.length?(filtersActive?t('notificationsFilteredCount',{shown:visibleRows.length,total:rows.length}):t('notificationsCount',{n:rows.length})):'';
+    if (clear) clear.classList.toggle('hidden',!rows.length);
+    list.textContent='';
+    if (!rows.length) { var empty=document.createElement('span'); empty.className='muted sm'; empty.textContent=t('notificationsEmpty'); list.appendChild(empty); return; }
+    if (!visibleRows.length) { var none=document.createElement('span'); none.className='muted sm'; none.textContent=t('notificationsNoMatch'); list.appendChild(none); return; }
+    var shown=Math.min(visibleRows.length, Math.max(NOTIFICATIONS_PAGE_SIZE, notificationsShown));
+    visibleRows.slice(0,shown).forEach(function(n){
+      var row=document.createElement('div'); var isUnread=n&&(n.unread===true||!(Number(n.readAt)>0)); row.className='pwa-notification-item notification-'+(n.severity||'info')+(isUnread?' notification-unread':'');
+      var main=document.createElement('div'); main.className='pwa-notification-main notification-clickable'; main.setAttribute('role','button'); main.setAttribute('tabindex','0');
+      var title=document.createElement('div'); title.className='pwa-notification-title'; title.textContent=pwaNotificationIcon(n)+' '+pwaNotificationTitle(n);
+      var meta=document.createElement('div'); meta.className='pwa-notification-meta'; meta.textContent=pwaNotificationMeta(n); if(n.at)meta.title=fmtDate(n.at);
+      main.appendChild(title); main.appendChild(meta);
+      var go=function(){markOnePwaNotificationRead(n);openPwaNotificationTarget(n);};
+      main.addEventListener('click',go);
+      main.addEventListener('keydown',function(ev){if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();go();}});
+      var acts=pwaNotificationActions(n);
+      if(acts.length){var wrap=document.createElement('div');wrap.className='pwa-notification-actions';acts.forEach(function(a){var b=document.createElement('button');b.type='button';b.className='btn ghost sm pwa-notification-action';b.textContent=a.label;b.addEventListener('click',function(ev){ev.stopPropagation();markOnePwaNotificationRead(n);a.run();});wrap.appendChild(b);});main.appendChild(wrap);}
+      var del=document.createElement('button'); del.type='button'; del.className='btn ghost sm pwa-notification-delete'; del.textContent='×'; del.title=t('notificationsDelete'); del.setAttribute('aria-label',t('notificationsDelete'));
+      del.addEventListener('click',async function(e){e.stopPropagation();del.disabled=true;try{var r=await appMutate('/app/notifications/delete','application/json',JSON.stringify({id:n.id}));if(!r.ok)throw new Error('delete');notificationRequestSeq+=1;accountNotifications=accountNotifications.filter(function(x){return x&&x.id!==n.id;});renderPwaNotifications();if(!notificationRequestInFlight)await refreshPwaNotifications();}catch(_){del.disabled=false;}});
+      row.appendChild(main); row.appendChild(del); list.appendChild(row);
+    });
+    if(visibleRows.length>shown){var more=document.createElement('button');more.type='button';more.className='btn ghost sm pwa-notification-loadmore';more.textContent=t('notificationsLoadMore',{n:visibleRows.length-shown});more.addEventListener('click',function(ev){ev.stopPropagation();notificationsShown=shown+NOTIFICATIONS_PAGE_SIZE;renderPwaNotifications();if(pwaNotificationsOpen())void markPwaNotificationsRead();});list.appendChild(more);}
+  }
+  var notificationReadInFlight=false;
+  var notificationReadSeq=0;
+  function pwaNotificationsOpen(){var d=$('pwa-notifications-dropdown');return !!(d&&!d.classList.contains('hidden'));}
+  function visiblePwaNotificationReadIds(){
+    var visible=accountNotifications.filter(pwaNotificationMatchesFilters);
+    var shown=Math.min(visible.length,Math.max(NOTIFICATIONS_PAGE_SIZE,notificationsShown));
+    return visible.slice(0,shown).filter(function(n){return n&&(n.unread===true||!(Number(n.readAt)>0));}).map(function(n){return String(n.id);});
+  }
+  async function markPwaNotificationsRead(){
+    if(notificationReadInFlight||!pwaNotificationsOpen())return;
+    var readIds=visiblePwaNotificationReadIds();
+    if(!readIds.length)return;
+    notificationReadInFlight=true;
+    var readSeq=++notificationReadSeq;
+    var succeeded=false;
+    try{
+      var r=await appMutate('/app/notifications/read','application/json',JSON.stringify({ids:readIds}));
+      if(!r.ok)throw new Error('read');
+      var data={};try{data=await r.json();}catch(_){}
+      if(readSeq!==notificationReadSeq)return;
+      invalidatePwaNotificationFetch();
+      var at=Math.max(1,Number(data&&data.readAt)||Date.now());
+      var markedIds=new Set(Array.isArray(data&&data.ids)?data.ids.map(String):[]);
+      var existingIds=Array.isArray(data&&data.existingIds)?new Set(data.existingIds.map(String)):null;
+      if(existingIds)accountNotifications=accountNotifications.filter(function(n){return n&&existingIds.has(String(n.id));});
+      accountNotifications=accountNotifications.map(function(n){if(n&&markedIds.has(String(n.id))){n=Object.assign({},n,{readAt:at,unread:false});}return n;});
+      renderPwaNotifications();
+      succeeded=true;
+    }catch(_){}finally{if(readSeq===notificationReadSeq){notificationReadInFlight=false;
+      // Only re-run to catch a notification that arrived during a SUCCESSFUL read.
+      // Re-scheduling on failure would busy-loop POSTs at request latency while the
+      // panel stays open; the next 4 s poll (or a reopen) is the intended retry.
+      if(succeeded&&pwaNotificationsOpen()&&accountNotifications.some(function(n){return n&&(n.unread===true||!(Number(n.readAt)>0));}))setTimeout(function(){void markPwaNotificationsRead();},0);}}
+  }
+  function invalidatePwaNotificationFetch(){notificationRequestSeq+=1;if(notificationRequestController){try{notificationRequestController.abort();}catch(_){}}}
+
+  async function refreshPwaNotifications() {
+    if(notificationRequestInFlight)return;
+    notificationRequestInFlight=true;
+    var seq=++notificationRequestSeq;
+    var ctrl=window.AbortController?new AbortController():null;
+    notificationRequestController=ctrl;
+    var timer=ctrl?setTimeout(function(){ctrl.abort();},15000):null;
+    try {
+      var r=await fetch('/app/notifications',{credentials:'same-origin',cache:'no-store',signal:ctrl?ctrl.signal:undefined});
+      if(seq!==notificationRequestSeq)return;
+      if(r.status===401||r.status===403){accountNotifications=[];renderPwaNotifications();return;}
+      if(!r.ok)throw new Error('notifications-'+r.status);
+      var d=await r.json();
+      if(seq!==notificationRequestSeq)return; // ignore an older poll that arrived late
+      var incoming=(d&&d.notifications)||[];
+      // Feature 6 — announce new, still-unread rows when the panel is closed.
+      if(notificationSeenIds){var fresh=incoming.filter(function(n){return n&&!notificationSeenIds.has(String(n.id))&&(n.unread===true||!(Number(n.readAt)>0));});if(fresh.length&&!pwaNotificationsOpen())announcePwaNotifications(fresh);}
+      notificationSeenIds=new Set(incoming.map(function(n){return String(n&&n.id);}));
+      accountNotifications=incoming; renderPwaNotifications(); if(pwaNotificationsOpen())void markPwaNotificationsRead();
+    }
+    catch (_) { if(seq!==notificationRequestSeq)return; }
+    finally { if(timer)clearTimeout(timer); if(notificationRequestController===ctrl)notificationRequestController=null; notificationRequestInFlight=false; }
+  }
+  function closePwaNotifications(){var d=$('pwa-notifications-dropdown'),b=$('pwa-notifications-btn');if(d)d.classList.add('hidden');if(b)b.setAttribute('aria-expanded','false');}
+  // Feature 14 — a push tap (or ?opencenter=1 cold start) lands on the right panel
+  // and opens the notification center so the matching alert is right there.
+  function openPwaNotificationCenter(panel){
+    if(panel)activatePwaPanel(panel);
+    var d=$('pwa-notifications-dropdown'); if(!d)return;
+    d.classList.remove('hidden');
+    var b=$('pwa-notifications-btn'); if(b)b.setAttribute('aria-expanded','true');
+    notificationsShown=NOTIFICATIONS_PAGE_SIZE;
+    renderPwaNotifications(); void markPwaNotificationsRead(); refreshPwaNotifications();
+  }
+  function startNotificationPolling(){ if(notificationPollTimer)return; refreshPwaNotifications(); notificationPollTimer=setInterval(function(){if(!document.hidden)refreshPwaNotifications();},4000); }
+  // Feature 6 — optional arrival sound toggle, remembered locally (default off).
+  function updatePwaNotificationsSoundBtn(){
+    var b=$('pwa-notifications-sound'); if(!b) return;
+    b.textContent=notificationSoundOn?'🔔':'🔕';
+    b.setAttribute('aria-pressed',notificationSoundOn?'true':'false');
+    var label=t('notificationsSound')+' — '+(notificationSoundOn?t('notificationsSoundOn'):t('notificationsSoundOff'));
+    b.title=label; b.setAttribute('aria-label',label);
+  }
+  // Feature 7 — per-account category opt-outs. The dropdown and Settings panel
+  // intentionally share one state/store so changing either surface immediately updates
+  // the other. Security/System are always enabled by the server and shown read-only.
+  function pwaNotificationCategoryLabel(cat){
+    var labels={activity:'notificationsCategoryActivity',visitors:'notificationsCategoryVisitors',thresholds:'notificationsCategoryThresholds',traffic:'notificationsCategoryTraffic',images:'notificationsCategoryImages',pwa:'notificationsCategoryPwa',receptions:'notificationsCategoryReceptions',search:'notificationsCategorySearch',security:'notificationsCategorySecurity',shares:'notificationsCategoryShares',system_health:'notificationsCategorySystemHealth',maintenance:'notificationsCategoryMaintenance',network:'notificationsCategoryNetwork',restarts:'notificationsCategoryRestarts',updates:'notificationsCategoryUpdates',system:'notificationsCategorySystemHealth',transfers:'notificationsCategoryTransfers'};
+    return labels[cat]?t(labels[cat]):cat;
+  }
+  function pwaNotificationCategoryDescription(cat){
+    var descriptions={shares:'notificationsCategoryDescShares',receptions:'notificationsCategoryDescReceptions',images:'notificationsCategoryDescImages',transfers:'notificationsCategoryDescTransfers',visitors:'notificationsCategoryDescVisitors',thresholds:'notificationsCategoryDescThresholds',traffic:'notificationsCategoryDescTraffic',search:'notificationsCategoryDescSearch',pwa:'notificationsCategoryDescPwa',security:'notificationsCategoryDescSecurity',system_health:'notificationsCategoryDescSystemHealth',maintenance:'notificationsCategoryDescMaintenance',network:'notificationsCategoryDescNetwork',restarts:'notificationsCategoryDescRestarts',updates:'notificationsCategoryDescUpdates',system:'notificationsCategoryDescSystemHealth'};
+    return descriptions[cat]?t(descriptions[cat]):'';
+  }
+  function setPwaNotificationPrefsStatus(key,kind){
+    var node=$('settings-notification-status'); if(!node)return;
+    node.textContent=key?t(key):'';
+    node.className='muted sm notification-settings-status'+(kind?' '+kind:'');
+  }
+  function setPwaNotificationCategoryPreference(cat,enabled){
+    cat=String(cat||''); if(NOTIFICATION_MUTABLE_CATEGORIES.indexOf(cat)===-1)return;
+    var next=new Set(notificationMutedCategories);
+    if(enabled)next.delete(cat);else next.add(cat);
+    notificationMutedCategories=NOTIFICATION_MUTABLE_CATEGORIES.filter(function(value){return next.has(value);});
+    renderPwaNotificationPrefs();
+    setPwaNotificationPrefsStatus('notificationsSettingsSaving');
+    savePwaNotificationPrefs();
+  }
+  function appendPwaNotificationPrefRow(box,cat,required,showDescription){
+    var lab=document.createElement('label'); lab.className='notification-pref-row'+(required?' notification-pref-required':'');
+    var cb=document.createElement('input'); cb.type='checkbox'; cb.checked=required||notificationMutedCategories.indexOf(cat)===-1; cb.setAttribute('data-cat',cat);
+    if(required){cb.disabled=true;cb.setAttribute('aria-label',pwaNotificationCategoryLabel(cat)+' — '+t('notificationsSettingsRequired'));}
+    else cb.addEventListener('change',function(){setPwaNotificationCategoryPreference(cat,cb.checked);});
+    lab.appendChild(cb);
+    if(showDescription){
+      var copy=document.createElement('span');copy.className='notification-pref-copy';
+      var title=document.createElement('span');title.className='notification-pref-title';title.textContent=pwaNotificationCategoryLabel(cat);copy.appendChild(title);
+      var desc=document.createElement('small');desc.className='muted notification-pref-description';desc.textContent=pwaNotificationCategoryDescription(cat);copy.appendChild(desc);
+      lab.appendChild(copy);
+    }else{
+      var span=document.createElement('span'); span.textContent=pwaNotificationCategoryLabel(cat);lab.appendChild(span);
+    }
+    if(required){var badge=document.createElement('small');badge.className='muted notification-pref-required-label';badge.textContent=t('notificationsSettingsRequired');lab.appendChild(badge);}
+    box.appendChild(lab);
+  }
+  function renderPwaNotificationPrefs(){
+    var popup=$('pwa-notifications-prefs');
+    if(popup){
+      popup.textContent='';
+      var hint=document.createElement('div'); hint.className='muted sm notification-prefs-hint'; hint.textContent=t('notificationsPrefsHint'); popup.appendChild(hint);
+      NOTIFICATION_MUTABLE_CATEGORIES.forEach(function(cat){appendPwaNotificationPrefRow(popup,cat,false);});
+    }
+    var settings=$('settings-notification-prefs');
+    if(settings){
+      settings.textContent='';
+      NOTIFICATION_SETTINGS_CATEGORIES.forEach(function(cat){appendPwaNotificationPrefRow(settings,cat,NOTIFICATION_REQUIRED_CATEGORIES.indexOf(cat)!==-1,true);});
+      var requiredHint=document.createElement('div');requiredHint.className='muted sm notification-settings-required-hint';requiredHint.textContent=t('notificationsSettingsRequiredHint');settings.appendChild(requiredHint);
+    }
+    if(notificationRulesLoaded)renderPwaNotificationRules();
+  }
+  async function loadPwaNotificationPrefs(preserveStatus){
+    var loaded=false;
+    try{
+      var r=await fetch('/app/notifications/prefs',{credentials:'same-origin',cache:'no-store'});
+      if(r.ok){var d=await r.json();notificationMutedCategories=Array.isArray(d&&d.mutedCategories)?d.mutedCategories.map(String).filter(function(cat){return NOTIFICATION_MUTABLE_CATEGORIES.indexOf(cat)!==-1;}):[];loaded=true;if(!preserveStatus)setPwaNotificationPrefsStatus('');}
+      else throw new Error('prefs-'+r.status);
+    }catch(_){setPwaNotificationPrefsStatus('notificationsSettingsError','setting-error');}
+    // A failed GET must stay retryable the next time Preferences/Settings is opened.
+    notificationPrefsLoaded=loaded; renderPwaNotificationPrefs();
+  }
+  async function savePwaNotificationPrefs(){
+    if(notificationPrefsSaving){notificationPrefsSaveQueued=true;return;}
+    notificationPrefsSaving=true;
+    try{
+      do{
+        notificationPrefsSaveQueued=false;
+        var desired=notificationMutedCategories.slice();
+        var r=await appMutate('/app/notifications/prefs','application/json',JSON.stringify({mutedCategories:desired}));
+        if(!r.ok)throw new Error('prefs-'+r.status);
+        var data={};try{data=await r.json();}catch(_){}
+        if(!notificationPrefsSaveQueued){notificationMutedCategories=Array.isArray(data&&data.mutedCategories)?data.mutedCategories.map(String).filter(function(cat){return NOTIFICATION_MUTABLE_CATEGORIES.indexOf(cat)!==-1;}):desired;notificationPrefsLoaded=true;renderPwaNotificationPrefs();setPwaNotificationPrefsStatus('notificationsPrefsSaved','setting-ok');toast(t('notificationsPrefsSaved'),'ok');}
+      }while(notificationPrefsSaveQueued);
+    }catch(_){notificationPrefsLoaded=false;setPwaNotificationPrefsStatus('notificationsSettingsError','setting-error');await loadPwaNotificationPrefs(true);}
+    finally{notificationPrefsSaving=false;if(notificationPrefsSaveQueued){notificationPrefsSaveQueued=false;savePwaNotificationPrefs();}}
+  }
+
+  // Feature 31 — custom notification threshold rules, shared with the standard UI.
+  var notificationRules=[], notificationRuleTargets=[], notificationRulesLoaded=false, notificationRulesRequestSeq=0, notificationRuleMutationBusy=false;
+  function pwaRuleMetricLabel(metric){var key={views:'notificationsRuleMetricViews',downloads:'notificationsRuleMetricDownloads',bytes_served:'notificationsRuleMetricBytesServed',received_bytes:'notificationsRuleMetricReceivedBytes'}[metric];return key?t(key):metric;}
+  function pwaRuleIsBytes(metric){return metric==='bytes_served'||metric==='received_bytes';}
+  function pwaRuleThresholdForInput(metric,value){return pwaRuleIsBytes(metric)?Math.round((Number(value)||0)/1073741824*100)/100:Math.max(0,Number(value)||0);}
+  function pwaRuleThresholdFromInput(metric,value){var n=Math.max(0,Number(value)||0);return pwaRuleIsBytes(metric)?Math.round(n*1073741824):Math.floor(n);}
+  function pwaRuleTargetName(id){var row=notificationRuleTargets.find(function(x){return String(x.id)===String(id);});return row?row.name:t('notificationsRuleTargetUnavailable');}
+  function updatePwaRuleTargets(){var metric=$('settings-notification-rule-metric')?$('settings-notification-rule-metric').value:'views';var target=$('settings-notification-rule-target');if(!target)return;var prev=target.value;target.textContent='';var all=document.createElement('option');all.value='';all.textContent=t('notificationsRuleAllTargets');target.appendChild(all);notificationRuleTargets.filter(function(x){return Array.isArray(x.metrics)&&x.metrics.indexOf(metric)!==-1;}).forEach(function(x){var o=document.createElement('option');o.value=x.id;o.textContent=x.name;target.appendChild(o);});for(var i=0;i<target.options.length;i++)if(target.options[i].value===prev){target.value=prev;break;}var input=$('settings-notification-rule-threshold');if(input){input.step=pwaRuleIsBytes(metric)?'0.1':'1';input.min=pwaRuleIsBytes(metric)?'0.01':'1';}}
+  function renderPwaNotificationRules(){var metric=$('settings-notification-rule-metric');if(metric){var prev=metric.value;metric.textContent='';['views','downloads','bytes_served','received_bytes'].forEach(function(m){var o=document.createElement('option');o.value=m;o.textContent=pwaRuleMetricLabel(m);metric.appendChild(o);});if(prev)metric.value=prev;}updatePwaRuleTargets();var box=$('settings-notification-rule-list');if(!box)return;box.textContent='';if(!notificationRules.length){var empty=document.createElement('p');empty.className='muted sm';empty.textContent=t('notificationsRuleEmpty');box.appendChild(empty);return;}notificationRules.forEach(function(rule){var row=document.createElement('div');row.className='notification-rule-row';if(rule.enabled===false)row.classList.add('muted');var main=document.createElement('div');main.className='notification-rule-row-main';var title=document.createElement('strong');var threshold=pwaRuleThresholdForInput(rule.metric,rule.threshold);title.textContent=(rule.label?rule.label+' — ':'')+pwaRuleMetricLabel(rule.metric)+' ≥ '+threshold;var sub=document.createElement('small');sub.className='muted';sub.textContent=rule.shareId?pwaRuleTargetName(rule.shareId):t('notificationsRuleAllTargets');main.appendChild(title);main.appendChild(sub);row.appendChild(main);var actions=document.createElement('div');actions.className='notification-rule-row-actions';var toggle=document.createElement('button');toggle.type='button';toggle.className='btn ghost sm';toggle.textContent=rule.enabled!==false?t('notificationsRuleDisable'):t('notificationsRuleEnable');toggle.addEventListener('click',function(){savePwaNotificationRule({id:rule.id,metric:rule.metric,threshold:rule.threshold,shareId:rule.shareId||null,label:rule.label||'',enabled:rule.enabled===false});});var del=document.createElement('button');del.type='button';del.className='btn danger sm';del.textContent=t('notificationsRuleDelete');del.addEventListener('click',function(){deletePwaNotificationRule(rule.id);});actions.appendChild(toggle);actions.appendChild(del);row.appendChild(actions);box.appendChild(row);});}
+  async function loadPwaNotificationRules(){var seq=++notificationRulesRequestSeq;try{var r=await fetch('/app/notification-rules',{credentials:'same-origin',cache:'no-store'});if(!r.ok)throw new Error('rules-'+r.status);var data=await r.json();if(seq!==notificationRulesRequestSeq)return false;notificationRules=Array.isArray(data.rules)?data.rules:[];notificationRuleTargets=Array.isArray(data.targets)?data.targets:[];notificationRulesLoaded=true;renderPwaNotificationRules();return true;}catch(_){if(seq!==notificationRulesRequestSeq)return false;notificationRulesLoaded=false;var st=$('settings-notification-rule-status');if(st)st.textContent=t('notificationsRuleError');return false;}}
+  function setPwaNotificationRuleBusy(busy){notificationRuleMutationBusy=!!busy;var add=$('settings-notification-rule-add');if(add)add.disabled=!!busy;var box=$('settings-notification-rule-list');if(box)Array.prototype.forEach.call(box.querySelectorAll('button'),function(btn){btn.disabled=!!busy;});}
+  async function savePwaNotificationRule(payload){var st=$('settings-notification-rule-status');if(notificationRuleMutationBusy)return false;setPwaNotificationRuleBusy(true);try{var r=await appMutate('/app/notification-rules','application/json',JSON.stringify(payload));if(!r.ok)throw new Error('rule-'+r.status);if(st)st.textContent=t('notificationsRuleSaved');await loadPwaNotificationRules();return true;}catch(_){if(st)st.textContent=t('notificationsRuleError');return false;}finally{setPwaNotificationRuleBusy(false);}}
+  async function addPwaNotificationRule(){var metric=$('settings-notification-rule-metric')?$('settings-notification-rule-metric').value:'views';var threshold=pwaRuleThresholdFromInput(metric,$('settings-notification-rule-threshold')&&$('settings-notification-rule-threshold').value);var st=$('settings-notification-rule-status');if(!threshold){if(st)st.textContent=t('notificationsRuleError');return;}var saved=await savePwaNotificationRule({metric:metric,threshold:threshold,shareId:$('settings-notification-rule-target')&&$('settings-notification-rule-target').value||null,label:$('settings-notification-rule-label')&&$('settings-notification-rule-label').value||'',enabled:true});if(saved){if($('settings-notification-rule-threshold'))$('settings-notification-rule-threshold').value='';if($('settings-notification-rule-label'))$('settings-notification-rule-label').value='';}}
+  async function deletePwaNotificationRule(id){var st=$('settings-notification-rule-status');if(notificationRuleMutationBusy)return false;setPwaNotificationRuleBusy(true);try{var r=await appMutate('/app/notification-rules/delete','application/json',JSON.stringify({id:id}));if(!r.ok)throw new Error('rule-delete-'+r.status);if(st)st.textContent=t('notificationsRuleDeleted');await loadPwaNotificationRules();return true;}catch(_){if(st)st.textContent=t('notificationsRuleError');return false;}finally{setPwaNotificationRuleBusy(false);}}
+  if($('settings-notification-rule-metric'))$('settings-notification-rule-metric').addEventListener('change',updatePwaRuleTargets);
+  if($('settings-notification-rule-add'))$('settings-notification-rule-add').addEventListener('click',addPwaNotificationRule);
 
   // IndexedDB ---------------------------------------------------------------
   var dbPromise = null;
@@ -696,6 +1148,7 @@
         if (!db.objectStoreNames.contains(META_STORE)) db.createObjectStore(META_STORE, { keyPath: 'key' });
         if (!db.objectStoreNames.contains(HISTORY_STORE)) db.createObjectStore(HISTORY_STORE, { keyPath: 'id' });
         if (!db.objectStoreNames.contains(IMAGE_STORE)) db.createObjectStore(IMAGE_STORE, { keyPath: 'token' });
+        if (!db.objectStoreNames.contains(OCR_INDEX_STORE)) db.createObjectStore(OCR_INDEX_STORE, { keyPath: 'id' });
       };
       req.onsuccess = function () {
         if (settled) { try { req.result.close(); } catch (_) {} return; }
@@ -706,6 +1159,12 @@
       req.onerror = function () { if (settled) return; settled = true; clearTimeout(timer); reject(req.error); };
       // `blocked` never resolves on its own: reject so the boot proceeds via fallbacks.
       req.onblocked = function () { if (settled) return; settled = true; clearTimeout(timer); try { console.warn('[dx] indexedDB.open blocked'); } catch (_) {} reject(new Error('idb-blocked')); };
+    }).catch(function (error) {
+      // A transient Android/WebView IndexedDB outage must not poison the whole page
+      // lifetime. Clearing the memoized rejected promise lets the next operation retry
+      // once the old tab/upgrade lock disappears, without requiring a full reload.
+      dbPromise = null;
+      throw error;
     });
     return dbPromise;
   }
@@ -714,11 +1173,21 @@
       return new Promise(function (resolve, reject) {
         var tx = db.transaction(storeName, mode);
         var store = tx.objectStore(storeName);
-        var value;
-        try { value = fn(store); } catch (e) { reject(e); return; }
-        tx.oncomplete = function () { resolve(value); };
-        tx.onerror = function () { reject(tx.error); };
-        tx.onabort = function () { reject(tx.error || new Error('idb-abort')); };
+        var value, settled = false;
+        var timer = setTimeout(function () {
+          if (settled) return; settled = true;
+          try { tx.abort(); } catch (_) {}
+          dbPromise = null;
+          reject(new Error('idb-transaction-timeout'));
+        }, 8000);
+        function finish(error) {
+          if (settled) return; settled = true; clearTimeout(timer);
+          if (error) reject(error); else resolve(value);
+        }
+        try { value = fn(store); } catch (e) { clearTimeout(timer); settled = true; reject(e); return; }
+        tx.oncomplete = function () { finish(null); };
+        tx.onerror = function () { finish(tx.error || new Error('idb-error')); };
+        tx.onabort = function () { finish(tx.error || new Error('idb-abort')); };
       });
     });
   }
@@ -728,31 +1197,37 @@
   function idbGetAll(store) {
     return openDb().then(function (db) {
       return new Promise(function (resolve, reject) {
-        var req = db.transaction(store, 'readonly').objectStore(store).getAll();
-        req.onsuccess = function () { resolve(req.result || []); };
-        req.onerror = function () { reject(req.error); };
+        var tx = db.transaction(store, 'readonly'), req = tx.objectStore(store).getAll(), settled = false;
+        var timer = setTimeout(function () { if (settled) return; settled = true; try { tx.abort(); } catch (_) {} dbPromise = null; reject(new Error('idb-read-timeout')); }, 8000);
+        req.onsuccess = function () { if (settled) return; settled = true; clearTimeout(timer); resolve(req.result || []); };
+        req.onerror = function () { if (settled) return; settled = true; clearTimeout(timer); reject(req.error); };
+        tx.onabort = function () { if (settled) return; settled = true; clearTimeout(timer); reject(tx.error || new Error('idb-abort')); };
       });
     });
   }
   function idbReplaceAll(store, values) {
     return openDb().then(function (db) {
       return new Promise(function (resolve, reject) {
-        var tx = db.transaction(store, 'readwrite');
+        var tx = db.transaction(store, 'readwrite'), settled = false;
+        var timer = setTimeout(function () { if (settled) return; settled = true; try { tx.abort(); } catch (_) {} dbPromise = null; reject(new Error('idb-transaction-timeout')); }, 8000);
         var target = tx.objectStore(store);
         target.clear();
         (Array.isArray(values) ? values : []).forEach(function (value) { target.put(value); });
-        tx.oncomplete = function () { resolve(); };
-        tx.onerror = function () { reject(tx.error); };
-        tx.onabort = function () { reject(tx.error || new Error('idb-abort')); };
+        function finish(error) { if (settled) return; settled = true; clearTimeout(timer); error ? reject(error) : resolve(); }
+        tx.oncomplete = function () { finish(null); };
+        tx.onerror = function () { finish(tx.error || new Error('idb-error')); };
+        tx.onabort = function () { finish(tx.error || new Error('idb-abort')); };
       });
     });
   }
   function idbGet(store, key) {
     return openDb().then(function (db) {
       return new Promise(function (resolve, reject) {
-        var req = db.transaction(store, 'readonly').objectStore(store).get(key);
-        req.onsuccess = function () { resolve(req.result || null); };
-        req.onerror = function () { reject(req.error); };
+        var tx = db.transaction(store, 'readonly'), req = tx.objectStore(store).get(key), settled = false;
+        var timer = setTimeout(function () { if (settled) return; settled = true; try { tx.abort(); } catch (_) {} dbPromise = null; reject(new Error('idb-read-timeout')); }, 8000);
+        req.onsuccess = function () { if (settled) return; settled = true; clearTimeout(timer); resolve(req.result || null); };
+        req.onerror = function () { if (settled) return; settled = true; clearTimeout(timer); reject(req.error); };
+        tx.onabort = function () { if (settled) return; settled = true; clearTimeout(timer); reject(tx.error || new Error('idb-abort')); };
       });
     });
   }
@@ -775,6 +1250,11 @@
     if (!opfsDirPromise) {
       opfsDirPromise = navigator.storage.getDirectory().then(function (root) {
         return root.getDirectoryHandle(OPFS_QUEUE_DIR, { create: true });
+      }).catch(function (error) {
+        // Storage availability can change after quota pressure / WebView resume.
+        // Never memoize a rejected OPFS promise for the rest of the page lifetime.
+        opfsDirPromise = null;
+        throw error;
       });
     }
     return opfsDirPromise;
@@ -862,6 +1342,7 @@
       if (payloadBytesForPersistence(it) <= durablePayloadLimit()) {
         try { it.volatile = false; await idbPut(QUEUE_STORE, queueRecord(it)); updateItemUi(it, statusText(it)); return true; } catch (_) {}
       }
+      recordTransferError(it, { code: 'local-storage', badge: 'storage', hint: t('errorLocalStorage') });
       await markSessionOnly(it, !!notifyOnFallback);
       updateItemUi(it, statusText(it));
       return false;
@@ -898,6 +1379,15 @@
     await idbPut(QUEUE_STORE, queueRecord(it)).catch(function () {});
     return false;
   }
+  function preparedPayloadIsDurable(it) {
+    var uploadSize = Number(it && it.upSize);
+    if (!it || !it.preparedBlob || !Number.isFinite(uploadSize) || uploadSize < 0) return false;
+    if (it.preparedOpfsPath) return true;
+    if (it.preparedBlob === it.file || it.preparedUsesSource) {
+      return !!it.opfsPath || (!it.volatile && !!it.file && payloadBytesForPersistence(it) <= durablePayloadLimit());
+    }
+    return !it.preparedVolatile && payloadBytesForPersistence(it) <= durablePayloadLimit();
+  }
   function invalidatePreparedPayload(it) {
     if (!it) return;
     var oldPrepared = it.preparedOpfsPath;
@@ -908,6 +1398,11 @@
     it.upName = null;
     it.upSize = null;
     it.preparedEncrypted = false;
+    it.contentHash = '';
+    it.deduped = false;
+    it.dlpLocal = null;
+    it.dlpApprovedFingerprint = '';
+    it.backgroundReady = false;
     if (oldPrepared) deleteOpfsPath(oldPrepared);
   }
   async function replaceItemSourceDurably(it, file) {
@@ -930,6 +1425,11 @@
     for (var i = 0; i < records.length; i++) {
       var r = records[i];
       if (!r) continue;
+      if (r.state === 'done-background') {
+        restoredBackgroundCompletions.push(r);
+        await idbDelete(QUEUE_STORE, r.id).catch(function () {});
+        continue;
+      }
       if (!r.file && r.opfsPath) {
         try { r.file = await readOpfsBlob(r.opfsPath, r.type || 'application/octet-stream'); }
         catch (_) { r.file = null; r.opfsPath = null; }
@@ -947,6 +1447,26 @@
       restored.push(makeItem(r));
     }
     return restored;
+  }
+
+  async function importBackgroundCompletions() {
+    var completed = restoredBackgroundCompletions.splice(0);
+    for (var i = 0; i < completed.length; i++) {
+      var r = completed[i], historyId = 'background-' + String(r.id || '');
+      if (!r.id || historyEntries.some(function (h) { return h.id === historyId; })) continue;
+      var snap = r.snapshot || {}, bytes = Number(r.upSize) || Number(r.size) || 0;
+      await addHistory({
+        id: historyId, name: r.name || r.upName || 'file', size: Number(r.size) || bytes,
+        sentSize: bytes, destination: snap.name || ('…' + String(snap.token || '').slice(-8)),
+        destToken: snap.token || '', encrypted: !!(r.preparedEncrypted || snap.enc),
+        at: Number(r.backgroundCompletedAt) || Date.now(), rate: 0, note: r.note || '', background: true
+      });
+      sessionFiles++; sessionBytes += bytes; lifetimeFiles++; lifetimeBytes += bytes;
+    }
+    if (completed.length) {
+      await metaSet('lifetime', { files: lifetimeFiles, bytes: lifetimeBytes }).catch(function () {});
+      updateSessionStats();
+    }
   }
 
   // Destinations -------------------------------------------------------------
@@ -1081,7 +1601,7 @@
       list.forEach(function (d) {
         var opt = document.createElement('option'); opt.value = d.token;
         var dot = destDot(destStatusCache[d.token]);
-        opt.textContent = (d.pinned ? '⭐ ' : '') + (dot ? dot + ' ' : '') + (d.name || ('…' + d.token.slice(-8)));
+        opt.textContent = (d.emoji ? d.emoji + ' ' : '') + (d.pinned ? '⭐ ' : '') + (dot ? dot + ' ' : '') + (d.name || ('…' + d.token.slice(-8)));
         sel.appendChild(opt);
       });
       var chosen = list.some(function (d) { return d.token === previous; }) ? previous : list[0].token;
@@ -1092,6 +1612,7 @@
     var chosenDest = sel.value ? findDest(sel.value) : null;
     $('dest-revoke-btn').classList.toggle('hidden', !(chosenDest && chosenDest.owned));
     if ($('dest-received-btn')) $('dest-received-btn').classList.toggle('hidden', !(chosenDest && chosenDest.owned));
+    if ($('dest-empty-hint')) $('dest-empty-hint').classList.toggle('hidden', !!list.length);
   }
   function saveDestinationRecord(dest, remember) {
     sessionDests = sessionDests.filter(function (d) { return d.token !== dest.token; });
@@ -1133,35 +1654,19 @@
       try { localStorage.removeItem('dx_dests'); localStorage.removeItem('dx_active'); } catch (_) {}
     });
   }
-  function extractJson(text, marker) {
-    var i = text.indexOf(marker); if (i < 0) return null;
-    i = text.indexOf('{', i); if (i < 0) return null;
-    var depth = 0, inString = false, escaped = false;
-    for (var j = i; j < text.length; j++) {
-      var c = text[j];
-      if (inString) {
-        if (escaped) escaped = false; else if (c === '\\') escaped = true; else if (c === '"') inString = false;
-      } else if (c === '"') inString = true;
-      else if (c === '{') depth++;
-      else if (c === '}') {
-        depth--;
-        if (depth === 0) { try { return JSON.parse(text.slice(i, j + 1)); } catch (_) { return null; } }
-      }
-    }
-    return null;
-  }
   function validateDest(dest) {
-    return fetch('/u/' + encodeURIComponent(dest.token) + '/upload-status?id=dxcheck0000', { credentials: 'same-origin', cache: 'no-store' })
+    // IMPORTANT: never GET the public /u/:token page just to validate a destination.
+    // That route represents a real visitor page view and intentionally increments the
+    // share's view/unique-visitor counters. The upload-status probe is side-effect-free;
+    // ?config=1 asks it to return the small public upload configuration the PWA needs.
+    return fetchWithTimeout('/u/' + encodeURIComponent(dest.token) + '/upload-status?id=dxcheck0000&config=1', { credentials: 'same-origin', cache: 'no-store' }, 10000)
       .then(function (r) {
         if (r.status === 401) return { status: 'locked' };
         if (r.status === 403) return { status: 'revoked' };
         if (!r.ok) return { status: 'invalid' };
-        return fetch('/u/' + encodeURIComponent(dest.token), { credentials: 'same-origin', cache: 'no-store' })
-          .then(function (page) { return page.text(); })
-          .then(function (html) {
-            var cfg = extractJson(html, 'DX_INBOX') || {};
-            return { status: 'ok', config: cfg };
-          });
+        return r.json().then(function (data) {
+          return { status: 'ok', config: (data && data.config) || {} };
+        });
       }).catch(function () { return { status: 'offline' }; });
   }
   function showLimits(cfg) {
@@ -1257,6 +1762,7 @@
     var d = editingToken ? findDest(editingToken) : null;
     $('dest-url').value = d ? (location.origin + '/u/' + d.token + (d.key ? '#k=' + d.key : '')) : '';
     $('dest-name').value = d ? (d.name || '') : '';
+    if ($('dest-emoji')) $('dest-emoji').value = d ? (d.emoji || '') : '';
     updateCharCount($('dest-name'), $('dest-name-count'), 80);
     $('dest-remember').checked = !!(d && d.remembered);
     $('dest-remember-key').checked = !!(d && d.rememberKey && d.key);
@@ -1285,7 +1791,7 @@
     up.disabled = i <= 0; down.disabled = i < 0 || i >= list.length - 1;
   }
   function closeDestForm() {
-    editingToken = ''; $('dest-form').classList.add('hidden'); $('dest-url').value = ''; $('dest-name').value = ''; $('dest-remove-btn').classList.add('hidden');
+    editingToken = ''; $('dest-form').classList.add('hidden'); $('dest-url').value = ''; $('dest-name').value = ''; if ($('dest-emoji')) $('dest-emoji').value = ''; $('dest-remove-btn').classList.add('hidden');
     updateDestReorderButtons(); updatePinButton();
   }
 
@@ -1297,6 +1803,7 @@
     $('unlock-form').classList.add('hidden');
     $('create-error').classList.add('hidden');
     $('create-name').value = '';
+    if ($('create-moderated')) $('create-moderated').checked = false;
     $('create-form').classList.remove('hidden');
     $('create-name').focus();
   }
@@ -1308,7 +1815,7 @@
     var prev = btn.textContent;
     btn.disabled = true; btn.textContent = t('creating');
     try {
-      var r = await appMutate('/app/inbox', 'application/json', JSON.stringify({ name: name }));
+      var r = await appMutate('/app/inbox', 'application/json', JSON.stringify({ name: name, moderated: !!($('create-moderated') && $('create-moderated').checked) }));
       if (!r.ok) {
         var serverError = '';
         try { var ed = await r.clone().json(); serverError = ed && ed.error ? String(ed.error) : ''; } catch (_) {}
@@ -1362,17 +1869,41 @@
   try { avgRate = Number(localStorage.getItem('dx-pwa-avg-rate')) || 0; } catch (_) {}
   // Last upload failure, kept for the "Copy diagnostics" button.
   var lastDiag = null;
+  var recentErrors = [];
+  try { recentErrors = JSON.parse(localStorage.getItem('dx-pwa-error-log') || '[]'); if (!Array.isArray(recentErrors)) recentErrors = []; } catch (_) { recentErrors = []; }
+  recentErrors = recentErrors.slice(-30);
+  var lastNetworkTest = null;
+  try { lastNetworkTest = JSON.parse(localStorage.getItem('dx-pwa-network-test') || 'null'); } catch (_) { lastNetworkTest = null; }
+  var networkTestPromise = null;
+  var networkRecommendedChunk = 0;
+  var networkRecommendedConcurrency = 0;
+  var networkConfiguredConcurrency = 0;
+  var networkRetryCount = 0;
+  var networkActiveTransfers = 0;
+  var networkRateSamples = [];
+  var networkLastSampleAt = 0;
   // Full-size URLs of image links created this session, for "Copy all".
   var imageLinkUrls = [];
   var imageRowsByToken = new Map();
   var imageRecordsByToken = new Map();
   var selectedImageTokens = new Set();
   var pendingImageRevokes = new Map();
+  // Only the most recently selected image keeps the five-second undo window.
+  // Older entries may remain in the map briefly while their server mutation is
+  // in flight, which also prevents a refresh from rendering them again.
+  var activePendingImageRevoke = null;
   var imageStatsTimer = null;
   var imageStatsAbortController = null;
+  var imageFullRefreshInFlight = false;
   var imageRefreshGeneration = 0;
   var imageMissingConfirmations = new Map();
   var imageCountdownTimer = null;
+  // OCR matches for already-shared images. Server tokens come from the persistent
+  // global OCR index; local records come from this device's IndexedDB OCR index.
+  var imageOcrServerTokens = new Set();
+  var imageOcrServerQuery = '';
+  var imageOcrSearchTimer = null;
+  var imageOcrSearchRequest = 0;
   var imageAlbums = [];
   var imageRetentionRules = null;
   var tagColorMap = {};
@@ -1387,6 +1918,7 @@
   // the id being dragged (reorder), and per-destination "quota near full" warnings.
   var sortMode = 'added';
   var queueFilter = '';
+  var queueKindFilter = 'all';
   var dragId = null;
   var quotaWarned = new Set();
   var historyFilter = '';
@@ -1403,6 +1935,9 @@
   var privacyNames = false;
   var previewUrl = '';
   var mobileDataConfirmedForBatch = false;
+  var batchStartedAt = 0;
+  var batchClockTimer = null;
+  var restoredBackgroundCompletions = [];
 
   function payloadBytesForPersistence(it) {
     var total = it.file && !it.opfsPath && it.file.size ? it.file.size : 0;
@@ -1435,7 +1970,12 @@
       preparedEncrypted: !!it.preparedEncrypted,
       optimized: !!it.optimized,
       errorCode: it.errorCode || null,
-      note: it.note || ''
+      note: it.note || '',
+      contentHash: it.contentHash || '',
+      deduped: !!it.deduped,
+      dlpLocal: it.dlpLocal || null,
+      dlpApprovedFingerprint: it.dlpApprovedFingerprint || '',
+      backgroundReady: !!it.backgroundReady
     };
   }
   // Durable localStorage mirror of the transfer queue. IndexedDB is the primary
@@ -1473,6 +2013,9 @@
     if (!it) return Promise.resolve(false);
     var changed = !it.volatile;
     it.volatile = true;
+    // A service worker cannot read an in-memory/session-only payload. Keep the
+    // normal foreground queue usable, but never advertise it as background-safe.
+    it.backgroundReady = false;
     var timer = persistTimers.get(it.id);
     if (timer) { clearTimeout(timer); persistTimers.delete(it.id); }
     void notify; void changed;
@@ -1486,7 +2029,11 @@
     // them recoverable even when IndexedDB itself is unavailable on this device.
     if (it.opfsPath || it.preparedOpfsPath) {
       saveQueueBackup();
-      return idbPut(QUEUE_STORE, queueRecord(it)).then(function () { return true; }).catch(function () { return true; });
+      return idbPut(QUEUE_STORE, queueRecord(it)).then(function () { return true; }).catch(function () {
+        // localStorage can restore OPFS metadata when the page reopens, but the
+        // service worker has no localStorage access and therefore cannot resume it.
+        it.backgroundReady = false; saveQueueBackup(); return true;
+      });
     }
     if (it.volatile || payloadBytesForPersistence(it) > durablePayloadLimit()) {
       return markSessionOnly(it, !!notifyOnFallback);
@@ -1541,6 +2088,11 @@
       optimized: !!record.optimized,
       errorCode: record.errorCode || null,
       note: record.note || '',
+      contentHash: record.contentHash || '',
+      deduped: !!record.deduped,
+      dlpLocal: record.dlpLocal || null,
+      dlpApprovedFingerprint: record.dlpApprovedFingerprint || '',
+      backgroundReady: !!record.backgroundReady,
       volatile: !!record.volatile,
       resumeOnOpen: !!record.resumeOnOpen,
       persisting: false,
@@ -1588,23 +2140,23 @@
     // FileList objects are live: clearing the <input> can empty them while this
     // async function is awaiting storage information. Snapshot immediately.
     var files = Array.prototype.slice.call(fileList || []);
-    if (!files.length) return;
+    if (!files.length) return [];
     var budget = await durableBudget();
     var limit = durablePayloadLimit();
     var plannedDurable = 0;
-    var skipped = 0, added = 0, sessionOnlyCount = 0;
+    var skipped = 0, added = 0, sessionOnlyCount = 0, addedItems = [];
     if (opfsAvailable()) requestPersistentStorage().catch(function () {});
     for (var i = 0; i < files.length; i++) {
       var file = files[i];
       if (isDuplicate(file)) { skipped++; continue; }
       var reason = rejectReason(file);
-      if (reason) { toast(t(reason), 'warn'); continue; }
+      if (reason) { toast(t(reason), 'warn'); recordTransferError(null, { name: file.name || '', code: reason, hint: t(reason) }); continue; }
       var rel = file.webkitRelativePath || file.name || ('file-' + Date.now());
       var canOpfs = opfsAvailable() && plannedDurable + file.size <= budget;
       var canIdb = !canOpfs && file.size <= limit && plannedDurable + file.size <= budget;
       var durable = canOpfs || canIdb;
       var item = makeItem({ file: file, name: rel, originalName: rel, type: file.type, size: file.size, lastModified: file.lastModified, state: 'waiting', volatile: !durable });
-      items.push(item);
+      items.push(item); addedItems.push(item);
       if (durable) {
         plannedDurable += file.size;
         if (canOpfs) item.persistPromise = ensureSourceDurable(item, true);
@@ -1617,6 +2169,7 @@
     renderQueue(); updateSendBtn(); updateStorageStatus(); estimateOptimizedSizes();
     if (skipped) toast(t('duplicate', { n: skipped }), 'warn');
     if (added) toast(t('queued', { n: added }), 'ok');
+    return addedItems;
   }
   function statusText(it) {
     if (it.persisting) return t('durableSaving');
@@ -1657,8 +2210,19 @@
     if (/^(zip|rar|7z|tar|gz|bz2|xz)$/.test(e)) return '7-archive';
     return '9-' + (e || 'other');
   }
+  function queueKindMatches(it) {
+    if (!it || queueKindFilter === 'all') return true;
+    var type = String(it.type || ''), key = fileTypeKey(it);
+    if (queueKindFilter === 'images') return /^image\//.test(type) || key === '1-image';
+    if (queueKindFilter === 'videos') return /^video\//.test(type) || key === '2-video';
+    if (queueKindFilter === 'documents') return !/^image\//.test(type) && !/^video\//.test(type) && !/^audio\//.test(type);
+    if (queueKindFilter === 'waiting') return ['waiting', 'paused', 'waiting-network', 'sending', 'encrypting', 'optimizing'].indexOf(it.state) !== -1;
+    if (queueKindFilter === 'done') return it.state === 'done';
+    if (queueKindFilter === 'errors') return it.state === 'error';
+    return true;
+  }
   function sortedItems() {
-    var visible = items.filter(function (it) { return it.state !== 'removed'; });
+    var visible = items.filter(function (it) { return it.state !== 'removed' && queueKindMatches(it); });
     if (queueFilter) { var q = queueFilter.toLowerCase(); visible = visible.filter(function (it) { return String(it.name).toLowerCase().indexOf(q) !== -1; }); }
     if (sortMode === 'name') visible.sort(function (a, b) { return String(a.name).localeCompare(String(b.name), lang, { numeric: true }); });
     else if (sortMode === 'size') visible.sort(function (a, b) { return (b.upSize || b.size || 0) - (a.upSize || a.size || 0); });
@@ -1677,13 +2241,20 @@
     list.innerHTML = '';
     var totalVisible = items.filter(function (it) { return it.state !== 'removed'; }).length;
     var visible = sortedItems();
+    // Bulk actions are scoped to the visible queue. Without pruning here, changing
+    // a quick filter/search left hidden files selected and bulk remove/retry/DLP
+    // could unexpectedly act on rows the user could no longer see.
+    var visibleIds = new Set(visible.map(function (it) { return it.id; }));
+    Array.from(selectedIds).forEach(function (id) { if (!visibleIds.has(id)) selectedIds.delete(id); });
     if ($('queue-sort')) $('queue-sort').classList.toggle('hidden', totalVisible < 2);
-    if ($('queue-search')) $('queue-search').classList.toggle('hidden', totalVisible < 4);
-    if (queueFilter && !visible.length && totalVisible) {
+    if ($('queue-quick-filters')) $('queue-quick-filters').classList.toggle('hidden', totalVisible === 0);
+    Array.prototype.forEach.call(document.querySelectorAll('[data-queue-kind]'), function (btn) { btn.classList.toggle('active', btn.dataset.queueKind === queueKindFilter); });
+    if ($('queue-search-wrap')) $('queue-search-wrap').classList.toggle('hidden', totalVisible < 4 && !queueFilter);
+    if ((queueFilter || queueKindFilter !== 'all') && !visible.length && totalVisible) {
       var none = document.createElement('p'); none.className = 'muted sm'; none.textContent = t('historyNoMatch'); list.appendChild(none);
     }
     // Drag-to-reorder only makes sense in manual "order added" mode with no active filter.
-    var canDrag = sortMode === 'added' && !queueFilter && !sending;
+    var canDrag = sortMode === 'added' && !queueFilter && queueKindFilter === 'all' && !sending;
     visible.forEach(function (it, visibleIndex) {
       if (it.state === 'removed') return;
       var row = document.createElement('div'); row.className = 'uprow' + (selectedIds.has(it.id) ? ' selected' : ''); row.dataset.id = it.id;
@@ -1700,6 +2271,10 @@
       var sel = document.createElement('input'); sel.type = 'checkbox'; sel.className = 'sel'; sel.checked = selectedIds.has(it.id); sel.setAttribute('aria-label', t('selectAll'));
       sel.addEventListener('change', function () { if (sel.checked) selectedIds.add(it.id); else selectedIds.delete(it.id); row.classList.toggle('selected', sel.checked); updateBulkBar(); });
       top.appendChild(sel);
+      if (canDrag) {
+        var grip = document.createElement('button'); grip.type = 'button'; grip.className = 'drag-handle'; grip.textContent = '↕'; grip.title = t('dragHandle'); grip.setAttribute('aria-label', t('dragHandle'));
+        top.appendChild(grip); attachTouchReorderHandle(grip, row, it, list);
+      }
       if (/^image\//.test(it.type) && it.file) {
         var img = document.createElement('img'); img.className = 'thumb'; img.alt = ''; img.title = t('lightboxAlt');
         try {
@@ -1718,17 +2293,35 @@
       });
       top.appendChild(name);
       var status = document.createElement('span'); status.className = 'st' + (it.state === 'done' ? ' ok' : it.state === 'error' ? ' err' : ''); status.textContent = statusText(it); top.appendChild(status);
+      if (it.dlpLocal) {
+        var dlpChip = document.createElement('span');
+        dlpChip.className = 'dlp-chip' + (it.dlpLocal.scanning ? ' scanning' : it.dlpLocal.count ? ' finding' : pwaDlpIncomplete(it.dlpLocal) ? ' warn' : ' safe');
+        dlpChip.textContent = it.dlpLocal.scanning ? 'DLP…' : it.dlpLocal.count ? ('DLP ' + it.dlpLocal.count) : pwaDlpIncomplete(it.dlpLocal) ? 'DLP ?' : 'DLP ✓';
+        dlpChip.title = pwaDlpChipText(it); top.appendChild(dlpChip);
+      }
       var actions = document.createElement('div'); actions.className = 'row-actions';
       if (it.file) {
         var pv = document.createElement('button'); pv.type = 'button'; pv.className = 'icon-action preview'; pv.textContent = '◉'; pv.title = t('preview'); pv.setAttribute('aria-label', t('preview'));
         pv.addEventListener('click', function () { openPreview(it); }); actions.appendChild(pv);
+        if (pwaDlpPolicy().enabled) {
+          var dlpBtn = document.createElement('button'); dlpBtn.type = 'button'; dlpBtn.className = 'icon-action dlp-test'; dlpBtn.textContent = 'DLP'; dlpBtn.title = t('dlpTest'); dlpBtn.setAttribute('aria-label', t('dlpTest'));
+          dlpBtn.addEventListener('click', function () { runPwaDlpForItem(it, { force:true }); }); actions.appendChild(dlpBtn);
+        }
+      }
+      if (canOcrItem(it)) {
+        var ocr = document.createElement('button'); ocr.type = 'button'; ocr.className = 'icon-action ocr'; ocr.textContent = 'T'; ocr.title = t('ocrAction'); ocr.setAttribute('aria-label', t('ocrAction'));
+        ocr.addEventListener('click', function () { openOcr(it); }); actions.appendChild(ocr);
+      }
+      if (canPrivacyInspectItem(it)) {
+        var priv = document.createElement('button'); priv.type = 'button'; priv.className = 'icon-action privacy'; priv.textContent = '🛡'; priv.title = t('privacyInspect'); priv.setAttribute('aria-label', t('privacyInspect'));
+        priv.addEventListener('click', function () { openPrivacyInspector(it); }); actions.appendChild(priv);
       }
       if (it.state === 'error') {
         var retry = document.createElement('button'); retry.type = 'button'; retry.className = 'icon-action'; retry.textContent = '↻'; retry.title = t('retry'); retry.setAttribute('aria-label', t('retry'));
         retry.addEventListener('click', function () { retryItem(it); }); actions.appendChild(retry);
       }
       if (/^image\//.test(it.type) && it.file && !it.snapshot && ['sending', 'encrypting', 'optimizing', 'done'].indexOf(it.state) === -1) {
-        var ann = document.createElement('button'); ann.type = 'button'; ann.className = 'icon-action annotate'; ann.textContent = '✎'; ann.title = t('annotate'); ann.setAttribute('aria-label', t('annotate'));
+        var ann = document.createElement('button'); ann.type = 'button'; ann.className = 'btn ghost sm queue-editor-action annotate'; ann.textContent = '🎨 ' + t('editorTitle'); ann.title = t('annotate'); ann.setAttribute('aria-label', t('editorTitle'));
         ann.addEventListener('click', function () { openAnnotate(it); }); actions.appendChild(ann);
         var rot = document.createElement('button'); rot.type = 'button'; rot.className = 'icon-action rotate'; rot.textContent = '⟳'; rot.title = t('rotate'); rot.setAttribute('aria-label', t('rotate'));
         rot.addEventListener('click', function () { rotateItem(it); }); actions.appendChild(rot);
@@ -1753,6 +2346,7 @@
       attachSwipeGestures(row, it);
       it.row = row; it.progress = progress; it.status = status; it.meta = meta; it.nameInput = name;
     });
+    if ($('dlp-test-queue-btn')) $('dlp-test-queue-btn').classList.toggle('hidden', !totalVisible || !pwaDlpPolicy().enabled || sending);
     updateBulkBar(); updateFilesCount(); updateAppBadge();
   }
   function selectedItems() {
@@ -1766,6 +2360,7 @@
     var n = selectedIds.size;
     bar.classList.toggle('hidden', n === 0);
     if (n) $('bulk-count').textContent = t('selectedN', { n: n });
+    if ($('bulk-dlp-btn')) $('bulk-dlp-btn').disabled = !n || !pwaDlpPolicy().enabled || sending;
     updateMasterSelect();
   }
   async function bulkRemove() {
@@ -1854,6 +2449,11 @@
     if (!optimize && !strip) return file;
     it.state = 'optimizing'; updateItemUi(it, t('optimizing'));
     try {
+      // Metadata-only mode keeps JPEG/PNG/WebP pixel data byte-for-byte intact.
+      // This avoids the quality loss and huge-memory canvas round-trip of the old path.
+      if (!optimize && strip && (/^image\/(jpeg|png|webp)$/i.test(it.type || '') || /\.(jpe?g|png|webp)$/i.test(it.name || ''))) {
+        return await cleanImagePrivacy(file);
+      }
       var image = await loadImage(file);
       // Optimize path: user-chosen dimension cap + JPEG quality. Strip-only path:
       // re-encode at native size (a canvas round-trip drops EXIF/GPS), keeping PNG
@@ -1885,25 +2485,51 @@
   //     Mini, and Micro), no relay page. The bytes are uploaded (a phone photo isn't
   //     on the host FS); both smaller variants are generated on-device. The
   //     returned URLs already use the Images domain when the admin configured one. ---
-  async function makeImageVariants(file) {
+  function imageVariantLongSide(variant, fallback) {
+    var width = Math.max(0, Math.round(Number(variant && variant.w) || 0));
+    var height = Math.max(0, Math.round(Number(variant && variant.h) || 0));
+    var current = Math.max(width, height);
+    return current > 0 ? current : Math.max(1, Math.round(Number(fallback) || 1));
+  }
+  function imageVariantDimensions(width, height, longestSide) {
+    width = Math.max(1, Math.round(Number(width) || 1));
+    height = Math.max(1, Math.round(Number(height) || 1));
+    longestSide = Math.max(1, Math.round(Number(longestSide) || 1));
+    var scale = Math.min(1, longestSide / Math.max(width, height));
+    return {
+      width: Math.max(1, Math.round(width * scale)),
+      height: Math.max(1, Math.round(height * scale))
+    };
+  }
+  async function makeImageVariants(file, currentVariants) {
     var image = await loadImage(file);
     var w = image.width, h = image.height;
-    var thumbScale = Math.min(1, 480 / Math.max(w, h));
-    var thumbWidth = Math.max(1, Math.round(w * thumbScale));
-    var thumbHeight = Math.max(1, Math.round(h * thumbScale));
+    // Existing images can have custom Mini/Micro sizes. Preserve each variant's
+    // current longest side when the Full is edited or replaced, while deriving the
+    // other side again from the edited image so rotations/crops never get stretched.
+    // New images (or old records without dimensions) still use 480/240 defaults.
+    var thumbTarget = imageVariantLongSide(currentVariants && currentVariants.thumb, 480);
+    var thumbDimensions = imageVariantDimensions(w, h, thumbTarget);
+    var thumbWidth = thumbDimensions.width;
+    var thumbHeight = thumbDimensions.height;
     async function make(width, height) {
       var canvas = document.createElement('canvas');
       canvas.width = width;
       canvas.height = height;
-      canvas.getContext('2d', { alpha: false }).drawImage(image, 0, 0, canvas.width, canvas.height);
+      var context = canvas.getContext('2d', { alpha: false });
+      context.fillStyle = '#fff'; context.fillRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
       // Near-lossless JPEG for the Mini/Micro variants: same resolution as before but
       // ~3× the file size and visibly cleaner (raised from 0.82). 1.0 is avoided as it
       // disables chroma subsampling and roughly sextuples the size for no visible gain.
       return canvasBlob(canvas, 'image/jpeg', 0.99);
     }
     try {
-      var microWidth = Math.max(1, Math.round(thumbWidth / 2));
-      var microHeight = Math.max(1, Math.round(thumbHeight / 2));
+      var microFallback = Math.max(1, Math.round(Math.max(thumbWidth, thumbHeight) / 2));
+      var microTarget = imageVariantLongSide(currentVariants && currentVariants.micro, microFallback);
+      var microDimensions = imageVariantDimensions(w, h, microTarget);
+      var microWidth = microDimensions.width;
+      var microHeight = microDimensions.height;
       var adaptiveScale = Math.min(1, 1920 / Math.max(w, h));
       var adaptiveCanvas = document.createElement('canvas');
       adaptiveCanvas.width = Math.max(1, Math.round(w * adaptiveScale)); adaptiveCanvas.height = Math.max(1, Math.round(h * adaptiveScale));
@@ -1926,7 +2552,9 @@
   // POST a revocation for a PWA-created share (image link or reception link).
   // Resolves true on success. The server authorizes by device/account ownership.
   function revokeShareRequest(token) {
-    return appMutate('/app/share/' + encodeURIComponent(token) + '/revoke', 'application/json', null)
+    // Always send a valid JSON document. Some reverse proxies reject a POST that
+    // advertises application/json with a zero-length body before Express sees it.
+    return appMutate('/app/share/' + encodeURIComponent(token) + '/revoke', 'application/json', '{}')
       .then(function (r) { return r.ok; }).catch(function () { return false; });
   }
 
@@ -2033,6 +2661,9 @@
   async function createHostShare() {
     var paths = selectedSharePaths();
     if (!paths.length) return;
+    var rateRaw = String($('share-rate') && $('share-rate').value || '').trim();
+    var rateValue = rateRaw === '' ? 0 : Number(rateRaw);
+    if (!Number.isFinite(rateValue) || !Number.isInteger(rateValue) || rateValue < 0) { toast(t('sharesRateFail'),'err'); if($('share-rate'))$('share-rate').focus(); return; }
     var btn = $('share-create-btn'), status = $('share-create-status');
     var prev = btn.textContent; btn.disabled = true; btn.textContent = t('sharesCreating');
     if (status) { status.textContent = ''; status.className = 'dest-status muted'; }
@@ -2040,15 +2671,32 @@
       paths: paths,
       expiresInSeconds: Number($('share-expiry') && $('share-expiry').value) || 0,
       maxDownloads: Number($('share-maxdl') && $('share-maxdl').value) || 0,
+      rateKBps: rateValue,
+      firstUseExpirySeconds: Math.max(0, Math.round((Number($('share-first-use') && $('share-first-use').value) || 0) * 3600)),
+      burnAfterDownload: !!($('share-one-time') && $('share-one-time').checked),
       password: ($('share-password') && $('share-password').value) || ''
     };
     try {
       var r = await appMutate('/app/host/shares', 'application/json', JSON.stringify(payload));
-      if (!r.ok) throw new Error('create ' + r.status);
+      if (r.status === 409) {
+        var warning = await r.clone().json().catch(function () { return {}; });
+        if (warning.error === 'dlp-warning' && warning.dlp && window.confirm(pwaServerDlpWarningText(warning.dlp))) {
+          payload.dlpOverride = true;
+          r = await appMutate('/app/host/shares', 'application/json', JSON.stringify(payload));
+        }
+      }
+      if (!r.ok) {
+        var denied = await r.clone().json().catch(function () { return {}; });
+        if (denied.error === 'dlp-blocked' && status) { status.textContent = t('sharesDlpBlocked'); status.className = 'dest-status err'; }
+        throw new Error('create ' + r.status);
+      }
       var data = await r.json();
       var url = data.share && data.share.url;
       shareSelected = Object.create(null); updateShareSelection();
       if ($('share-password')) $('share-password').value = '';
+      if ($('share-first-use')) $('share-first-use').value = '0';
+      if ($('share-rate')) $('share-rate').value = '0';
+      if ($('share-one-time')) $('share-one-time').checked = false;
       sharesBrowse(shareCwd);
       if (url) { try { await copyText(url); } catch (_) {} }
       if (status) { status.textContent = t('sharesCreated'); status.className = 'dest-status ok'; }
@@ -2058,6 +2706,51 @@
       if (status) { status.textContent = t('sharesCreateFail'); status.className = 'dest-status err'; }
       toast(t('sharesCreateFail'), 'err');
     } finally { btn.textContent = prev; btn.disabled = selectedSharePaths().length === 0; }
+  }
+
+  // Feature 20 — live "downloading now" presence. A single SSE stream, open only
+  // while the Shares panel is visible, reports how many downloads are in progress
+  // on each of the viewer's links. The payload is authoritative full state, so any
+  // link absent from `counts` is cleared.
+  var presenceSource = null;
+  var presenceCounts = Object.create(null);
+  function applyPresenceToCards() {
+    var nodes = document.querySelectorAll('.share-live-badge[data-share-id]');
+    for (var i = 0; i < nodes.length; i++) {
+      var node = nodes[i], id = node.getAttribute('data-share-id');
+      var n = (id && presenceCounts[id]) || 0;
+      if (n > 0) {
+        node.textContent = '⬇ ' + n;
+        node.setAttribute('title', t('sharesDownloadingNow', { n: n }));
+        node.setAttribute('aria-label', t('sharesDownloadingNow', { n: n }));
+        node.classList.remove('hidden');
+      } else {
+        node.textContent = '';
+        node.classList.add('hidden');
+      }
+    }
+  }
+  function startSharesPresence() {
+    if (presenceSource || typeof EventSource !== 'function') return;
+    try { presenceSource = new EventSource('/app/shares/presence/stream', { withCredentials: true }); }
+    catch (_) { presenceSource = null; return; }
+    presenceSource.addEventListener('presence', function (e) {
+      try {
+        var data = JSON.parse(e.data);
+        presenceCounts = (data && data.counts && typeof data.counts === 'object') ? data.counts : Object.create(null);
+      } catch (_) { presenceCounts = Object.create(null); }
+      applyPresenceToCards();
+    });
+    // EventSource reconnects on its own; a hard error (e.g. 403 after logout) closes
+    // it for good, so drop our handle and clear the badges.
+    presenceSource.addEventListener('error', function () {
+      if (presenceSource && presenceSource.readyState === 2) stopSharesPresence();
+    });
+  }
+  function stopSharesPresence() {
+    if (presenceSource) { try { presenceSource.close(); } catch (_) {} presenceSource = null; }
+    presenceCounts = Object.create(null);
+    applyPresenceToCards();
   }
 
   async function loadHostShares() {
@@ -2072,7 +2765,7 @@
       // Badge count = active share links only (an expired / disabled link is not "active").
       activeShareCount = shares.filter(function (s) { return s && s.active !== false; }).length;
       updatePwaNavBadges();
-      if ($('share-list')) renderHostShares(shares);
+      if ($('share-list')) { renderHostShares(shares); applyPresenceToCards(); }
     } catch (_) {}
   }
 
@@ -2086,10 +2779,21 @@
       var meta = document.createElement('div'); meta.className = 'muted sm';
       var bits = [];
       if (s.type === 'folder') bits.push('📁');
+      if (s.type === 'collab') bits.push('🔁');
       if (s.collection && s.itemCount) bits.push(t('sharesItems', { n: s.itemCount }));
       else if (s.size != null) bits.push(fmtBytes(s.size));
+      if (Number(s.rateKBps) > 0) bits.push('⚡ ' + Number(s.rateKBps) + ' KB/s');
       bits.push(fmtDate(s.createdAt));
       meta.textContent = bits.join(' · '); main.appendChild(meta);
+      // Feature 20 — live "downloading now" badge, hidden until the presence stream
+      // reports an active download for this link.
+      if (s.id) {
+        var live = document.createElement('span');
+        live.className = 'share-live-badge hidden';
+        live.setAttribute('data-share-id', String(s.id));
+        live.setAttribute('role', 'status');
+        main.appendChild(live);
+      }
       row.appendChild(main);
       var actions = document.createElement('div'); actions.className = 'share-link-actions';
       var copy = document.createElement('button'); copy.type = 'button'; copy.className = 'btn ghost sm'; copy.textContent = '🔗 ' + t('sharesCopy');
@@ -2098,12 +2802,24 @@
       var open = document.createElement('button'); open.type = 'button'; open.className = 'btn ghost sm'; open.textContent = t('sharesOpen');
       open.addEventListener('click', function () { if (s.url) window.open(s.url, '_blank', 'noopener'); });
       actions.appendChild(open);
+      if (s.type === 'file' || s.type === 'folder') {
+        var rate = document.createElement('button'); rate.type='button'; rate.className='btn ghost sm'; rate.textContent='⚡ '+t('sharesRateEdit');
+        rate.addEventListener('click', function(){ editHostShareRate(s); }); actions.appendChild(rate);
+      }
       var rev = document.createElement('button'); rev.type = 'button'; rev.className = 'btn danger sm'; rev.textContent = t('sharesRevoke');
       rev.addEventListener('click', function () { revokeHostShare(s.token); });
       actions.appendChild(rev);
       row.appendChild(actions);
       listEl.appendChild(row);
     });
+  }
+
+  async function editHostShareRate(share) {
+    var current=Math.max(0,Number(share&&share.rateKBps)||0); var raw=window.prompt(t('sharesRatePrompt'),String(current)); if(raw===null)return;
+    raw=String(raw).trim(); var next=raw===''?0:Number(raw);
+    if(!Number.isFinite(next)||!Number.isInteger(next)||next<0){toast(t('sharesRateFail'),'err');return;}
+    try{var r=await appMutate('/app/host/shares/'+encodeURIComponent(share.token)+'/rate','application/json',JSON.stringify({rateKBps:next}));if(!r.ok)throw new Error('rate-'+r.status);toast(t('sharesRateSaved'),'ok');loadHostShares();}
+    catch(_){toast(t('sharesRateFail'),'err');}
   }
 
   async function revokeHostShare(token) {
@@ -2124,15 +2840,48 @@
       createdAt: s.createdAt || 0, fromServer: true
     };
   }
+  function pruneUnavailableOwnedReceptions(activeTokens) {
+    if (!Array.isArray(activeTokens)) return Promise.resolve();
+    var live = Object.create(null);
+    activeTokens.forEach(function (token) { if (token) live[String(token)] = true; });
+    var stale = Object.create(null);
+    function keep(dest) {
+      if (!dest || !dest.token) return true;
+      // Only purge reception links this PWA knows it owns on THIS instance. Manual
+      // or external destinations must remain untouched even when the server does not
+      // list them in /app/receptions.
+      var localOwned = dest.owned === true && (!dest.sourceOrigin || dest.sourceOrigin === location.origin);
+      if (!localOwned || live[dest.token]) return true;
+      stale[dest.token] = true;
+      delete destStatusCache[dest.token];
+      return false;
+    }
+    persistentDests = persistentDests.filter(keep);
+    sessionDests = sessionDests.filter(keep);
+    var staleTokens = Object.keys(stale);
+    if (!staleTokens.length) return Promise.resolve();
+    persistSessionDests();
+    saveDestsBackup();
+    try { if (stale[sessionStorage.getItem('dx-active-dest') || '']) sessionStorage.removeItem('dx-active-dest'); } catch (_) {}
+    try { if (stale[localStorage.getItem('dx-pwa-last-dest') || '']) localStorage.removeItem('dx-pwa-last-dest'); } catch (_) {}
+    return Promise.all(staleTokens.map(function (token) { return idbDelete(DEST_STORE, token).catch(function () {}); }));
+  }
   async function loadReceptions() {
     try {
       var r = await fetch('/app/receptions', { credentials: 'same-origin', cache: 'no-store' });
       if (r.status === 403) return; // note is driven by the FS-browse endpoint only
       if (!r.ok) throw new Error('receptions');
       var data = await r.json();
-      var list = data.receptions || [];
-      // Feed the first-page Destination picker so every reception link (any origin) is
-      // selectable there, then keep the Partages panel's detailed list in sync.
+      var now = Date.now();
+      // Defensive client-side filter too: even if an older server response contains an
+      // expired record, never expose it as a selectable PWA destination.
+      var list = (data.receptions || []).filter(function (s) {
+        var expiry = Number(s && (s.effectiveExpiresAt || s.expiresAt)) || 0;
+        return !!(s && s.token) && !(expiry && now > expiry);
+      });
+      await pruneUnavailableOwnedReceptions(Array.isArray(data.activeTokens) ? data.activeTokens : null);
+      // Feed the first-page Destination picker so every still-valid reception link
+      // (any origin) is selectable there, then keep the Partages panel in sync.
       serverReceptions = list.map(receptionAsDest);
       renderDests();
       if ($('reception-list')) renderReceptions(list);
@@ -2159,6 +2908,13 @@
       var open = document.createElement('button'); open.type = 'button'; open.className = 'btn ghost sm'; open.textContent = t('sharesOpen');
       open.addEventListener('click', function () { if (s.url) window.open(s.url, '_blank', 'noopener'); });
       actions.appendChild(open);
+      // Feature 27 — open the two-way conversation with this link's visitors.
+      var chat = document.createElement('button'); chat.type = 'button'; chat.className = 'btn ghost sm reception-thread-btn';
+      chat.textContent = '💬' + (Number(s.threadUnread) > 0 ? ' ' + s.threadUnread : '');
+      if (Number(s.threadUnread) > 0) chat.classList.add('has-unread');
+      chat.setAttribute('aria-label', t('threadTitle'));
+      chat.addEventListener('click', function () { openReceptionThread(s); });
+      actions.appendChild(chat);
       var rev = document.createElement('button'); rev.type = 'button'; rev.className = 'btn danger sm'; rev.textContent = t('sharesRevoke');
       rev.addEventListener('click', function () { revokeReception(s.token); });
       actions.appendChild(rev);
@@ -2174,9 +2930,79 @@
     else toast(t('sharesRevokeFail'), 'err');
   }
 
+  // Feature 27 — owner-side reception thread modal. Reads the conversation, lets
+  // the owner reply, and clears the unread flag. Text is inserted via textContent
+  // only, so a visitor message can never inject markup.
+  function openReceptionThread(s) {
+    var tk = s.token;
+    var overlay = document.createElement('div'); overlay.className = 'thread-overlay';
+    var modal = document.createElement('div'); modal.className = 'thread-modal';
+    var head = document.createElement('div'); head.className = 'thread-modal-head';
+    var title = document.createElement('h3'); title.textContent = '💬 ' + (s.name || t('sharesReceptions')); head.appendChild(title);
+    var closeBtn = document.createElement('button'); closeBtn.type = 'button'; closeBtn.className = 'icon-btn'; closeBtn.textContent = '✕'; closeBtn.setAttribute('aria-label', 'Close'); head.appendChild(closeBtn);
+    modal.appendChild(head);
+    var listEl = document.createElement('div'); listEl.className = 'thread-list'; modal.appendChild(listEl);
+    var form = document.createElement('div'); form.className = 'thread-form';
+    var textEl = document.createElement('textarea'); textEl.rows = 2; textEl.maxLength = 2000; textEl.placeholder = t('threadReplyPh'); form.appendChild(textEl);
+    var sendEl = document.createElement('button'); sendEl.type = 'button'; sendEl.className = 'btn sm'; sendEl.textContent = t('threadSend'); form.appendChild(sendEl);
+    modal.appendChild(form);
+    overlay.appendChild(modal); document.body.appendChild(overlay);
+
+    var closed = false, lastKey = '', timer = null, sending = false;
+    function pad(n) { return n < 10 ? '0' + n : '' + n; }
+    function fmt(at) { try { var d = new Date(at); return pad(d.getHours()) + ':' + pad(d.getMinutes()); } catch (_) { return ''; } }
+    function render(messages) {
+      var key = messages.map(function (m) { return m.id; }).join(',');
+      if (key === lastKey) return;
+      lastKey = key;
+      listEl.textContent = '';
+      if (!messages.length) { var em = document.createElement('p'); em.className = 'muted sm'; em.textContent = t('threadEmpty'); listEl.appendChild(em); return; }
+      messages.forEach(function (m) {
+        var rowm = document.createElement('div'); rowm.className = 'thread-msg ' + (m.from === 'owner' ? 'from-owner' : 'from-visitor');
+        var meta = document.createElement('div'); meta.className = 'thread-meta';
+        meta.textContent = (m.from === 'owner' ? t('threadYou') : (m.name || t('threadVisitor'))) + (m.flag ? (' ' + m.flag) : '') + ' · ' + fmt(m.at);
+        var body = document.createElement('div'); body.className = 'thread-text'; body.textContent = m.text;
+        rowm.appendChild(meta); rowm.appendChild(body); listEl.appendChild(rowm);
+      });
+      listEl.scrollTop = listEl.scrollHeight;
+    }
+    function load() {
+      fetch('/app/receptions/' + encodeURIComponent(tk) + '/thread', { credentials: 'same-origin', cache: 'no-store' })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) { if (!closed && d && Array.isArray(d.messages)) render(d.messages); })
+        .catch(function () {});
+    }
+    function post() {
+      if (sending) return;
+      var text = String(textEl.value || '').trim();
+      if (!text) return;
+      sending = true; sendEl.disabled = true; var lbl = sendEl.textContent; sendEl.textContent = t('threadSending');
+      appMutate('/app/receptions/' + encodeURIComponent(tk) + '/thread', 'application/json', JSON.stringify({ text: text }))
+        .then(function (r) { if (!r.ok) throw new Error('post'); return r.json(); })
+        .then(function (d) { if (d && Array.isArray(d.messages)) { textEl.value = ''; lastKey = ''; render(d.messages); } })
+        .catch(function () { toast(t('threadError'), 'err'); })
+        .then(function () { sending = false; sendEl.disabled = false; sendEl.textContent = lbl; });
+    }
+    function markRead() {
+      appMutate('/app/receptions/' + encodeURIComponent(tk) + '/thread/read', 'application/json', '{}')
+        .then(function () { loadReceptions(); }).catch(function () {});
+    }
+    function close() { if (closed) return; closed = true; if (timer) clearInterval(timer); document.removeEventListener('keydown', onKey); overlay.remove(); }
+    function onKey(e) { if (e.key === 'Escape') close(); }
+    sendEl.addEventListener('click', post);
+    textEl.addEventListener('keydown', function (e) { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); post(); } });
+    closeBtn.addEventListener('click', close);
+    overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
+    document.addEventListener('keydown', onKey);
+    load();
+    if (Number(s.threadUnread) > 0) markRead();
+    timer = setInterval(function () { if (document.visibilityState !== 'hidden') load(); }, 10000);
+  }
+
   function imageJsonMutation(url, payload) {
     return appMutate(url, 'application/json', JSON.stringify(payload || {}));
   }
+  var IMAGE_PRIMARY_VARIANT = 'auto';
   function imageVariantUrl(photo, kind) {
     return kind === 'auto' ? (photo.autoUrl || photo.imgUrl) : kind === 'thumb' ? photo.thumbUrl : kind === 'micro' ? photo.microUrl : photo.imgUrl;
   }
@@ -2193,16 +3019,14 @@
     var previews = photo && photo.previewUrls || {};
     return previews.micro || previews.thumb || previews.full || photo.microUrl || photo.thumbUrl || photo.imgUrl;
   }
-  function imageDefaultVariant() {
-    return $('img-default-variant') ? $('img-default-variant').value : 'full';
-  }
   function persistImagePreferences() {
-    var ids = ['img-sort', 'img-filter', 'img-default-variant', 'img-expiry', 'img-max-views', 'img-hotlink-hosts', 'img-smart-blur', 'img-tags', 'img-note', 'img-rename-template', 'img-copy-template', 'img-action-1', 'img-action-2', 'img-action-3'];
+    var ids = ['img-sort', 'img-filter', 'img-expiry', 'img-max-views', 'img-hotlink-hosts', 'img-smart-blur', 'img-tags', 'img-note', 'img-rename-template', 'img-copy-template', 'img-action-1', 'img-action-2', 'img-action-3'];
     ids.forEach(function (id) { var el = $(id); if (el) try { localStorage.setItem('dx-pwa-' + id, el.value); } catch (_) {} });
     ['img-compact', 'img-hide-expired', 'img-auto-copy', 'img-notify-first-view'].forEach(function (id) { var el = $(id); if (el) try { localStorage.setItem('dx-pwa-' + id, el.checked ? '1' : '0'); } catch (_) {} });
   }
   function restoreImagePreferences() {
-    ['img-sort', 'img-filter', 'img-default-variant', 'img-expiry', 'img-max-views', 'img-hotlink-hosts', 'img-smart-blur', 'img-tags', 'img-note', 'img-rename-template', 'img-copy-template', 'img-action-1', 'img-action-2', 'img-action-3'].forEach(function (id) {
+    try { localStorage.removeItem('dx-pwa-img-default-variant'); } catch (_) {}
+    ['img-sort', 'img-filter', 'img-expiry', 'img-max-views', 'img-hotlink-hosts', 'img-smart-blur', 'img-tags', 'img-note', 'img-rename-template', 'img-copy-template', 'img-action-1', 'img-action-2', 'img-action-3'].forEach(function (id) {
       var el = $(id); if (!el) return;
       try { var v = localStorage.getItem('dx-pwa-' + id); if (v !== null) el.value = v; } catch (_) {}
     });
@@ -2212,9 +3036,9 @@
     });
     if ($('imglink-list')) $('imglink-list').classList.toggle('img-compact', !!($('img-compact') && $('img-compact').checked));
     if ($('img-copy-template') && !$('img-copy-template').value) $('img-copy-template').value = 'standard';
-    if ($('img-action-1') && !$('img-action-1').value) $('img-action-1').value = 'full';
-    if ($('img-action-2') && !$('img-action-2').value) $('img-action-2').value = 'open';
-    if ($('img-action-3') && !$('img-action-3').value) $('img-action-3').value = 'qr';
+    if ($('img-action-1') && !$('img-action-1').value) $('img-action-1').value = 'open';
+    if ($('img-action-2') && !$('img-action-2').value) $('img-action-2').value = 'qr';
+    if ($('img-action-3') && !$('img-action-3').value) $('img-action-3').value = 'edit';
   }
   function colorForTag(tag) {
     tag = String(tag || '').trim().toLowerCase();
@@ -2249,11 +3073,11 @@
   }
   function favoriteImageActions() {
     var raw = ['img-action-1', 'img-action-2', 'img-action-3'].map(function (id) { return $(id) ? $(id).value : ''; }).filter(Boolean);
-    return Array.from(new Set(raw.length ? raw : ['full', 'open', 'qr'])).slice(0, 3);
+    return Array.from(new Set(raw.length ? raw : ['open', 'qr', 'edit'])).slice(0, 3);
   }
   function arrangeImageActions(row) {
     if (!row) return;
-    var mapping = { auto: '.il-auto', full: '.il-full', thumb: '.il-thumb', micro: '.il-micro', open: '.il-open', qr: '.il-qr', edit: '.il-edit', pin: '.il-favorite', qrdl: '.il-qrdl', replace: '.il-replace', versions: '.il-versions' };
+    var mapping = { open: '.il-open', qr: '.il-qr', edit: '.il-edit', ocr: '.il-ocr', pin: '.il-favorite', qrdl: '.il-qrdl', replace: '.il-replace', versions: '.il-versions' };
     var favorites = favoriteImageActions();
     Object.keys(mapping).forEach(function (kind) { var el = row.querySelector(mapping[kind]); if (el) el.classList.toggle('action-secondary', favorites.indexOf(kind) === -1); });
     var more = row.querySelector('.il-more'); if (more) more.classList.toggle('hidden', !row.querySelector('.action-secondary'));
@@ -2386,6 +3210,34 @@
     if (row) { row.classList.toggle('selected', selected); var cb = row.querySelector('.img-select'); if (cb) cb.checked = selected; }
     updateImageBulkBar();
   }
+  async function refreshImageOcrSearch(query) {
+    var q = String(query || '').trim().toLowerCase();
+    var request = ++imageOcrSearchRequest;
+    if (q.length < 2) {
+      imageOcrServerQuery = q; imageOcrServerTokens = new Set(); applyImageView(); return;
+    }
+    try {
+      var r = await fetch('/app/images/search?q=' + encodeURIComponent(q) + '&limit=500', { credentials:'same-origin', cache:'no-store' });
+      if (!r.ok) throw new Error('search');
+      var data = await r.json();
+      if (request !== imageOcrSearchRequest || q !== String($('img-search') && $('img-search').value || '').trim().toLowerCase()) return;
+      imageOcrServerQuery = q;
+      imageOcrServerTokens = new Set(Array.isArray(data.tokens) ? data.tokens : []);
+    } catch (_) {
+      if (request !== imageOcrSearchRequest) return;
+      imageOcrServerQuery = q; imageOcrServerTokens = new Set();
+    }
+    applyImageView();
+  }
+  function scheduleImageOcrSearch(query) {
+    if (imageOcrSearchTimer) clearTimeout(imageOcrSearchTimer);
+    var q = String(query || '').trim().toLowerCase();
+    if (imageOcrServerQuery !== q) imageOcrServerTokens = new Set();
+    imageOcrSearchTimer = setTimeout(function () { imageOcrSearchTimer = null; refreshImageOcrSearch(q); }, q.length >= 2 ? 180 : 0);
+  }
+  function imageExpiryDeadline(photo) {
+    return Math.max(0, Number(photo && (photo.effectiveExpiresAt || photo.expiresAt)) || 0);
+  }
   function applyImageView() {
     var q = String($('img-search') && $('img-search').value || '').trim().toLowerCase();
     var filter = $('img-filter') ? $('img-filter').value : 'all';
@@ -2395,12 +3247,17 @@
     imageRowsByToken.forEach(function (row, token) {
       var photo = imageRecordsByToken.get(token); if (!photo) return;
       var hay = [photo.name, token, (photo.tags || []).join(' '), photo.note || ''].join(' ').toLowerCase();
-      var show = !q || hay.indexOf(q) !== -1;
+      var localOcrMatch = !!q && ocrIndexRecords.some(function (rec) {
+        return rec && rec.imageToken === token && (String(rec.name || '').toLowerCase().indexOf(q) !== -1 || String(rec.text || '').toLowerCase().indexOf(q) !== -1);
+      });
+      var serverOcrMatch = !!q && imageOcrServerQuery === q && imageOcrServerTokens.has(token);
+      var show = !q || hay.indexOf(q) !== -1 || localOcrMatch || serverOcrMatch;
+      row.classList.toggle('ocr-search-match', !!(localOcrMatch || serverOcrMatch));
       if (hideExpired && photo.expired) show = false;
       if (show && filter === 'active') show = !!photo.active;
       if (show && filter === 'popular') show = imageRecordViews(photo) >= 10;
       if (show && filter === 'large') show = imageRecordBytes(photo) >= 5 * 1024 * 1024;
-      if (show && filter === 'expiring') show = !!photo.expiresAt && photo.expiresAt > now && photo.expiresAt - now <= 86400000;
+      if (show && filter === 'expiring') show = imageExpiryDeadline(photo) > now && imageExpiryDeadline(photo) - now <= 86400000;
       if (show && filter === 'favorite') show = !!photo.favorite;
       if (show && filter === 'protected') show = !!photo.hasPassword;
       row.classList.toggle('hidden', !show);
@@ -2414,10 +3271,28 @@
       if (sort === 'size') return imageRecordBytes(b.photo) - imageRecordBytes(a.photo);
       if (sort === 'views') return imageRecordViews(b.photo) - imageRecordViews(a.photo);
       if (sort === 'visitors') return imageRecordVisitors(b.photo) - imageRecordVisitors(a.photo);
-      if (sort === 'expiry') return (a.photo.expiresAt || Number.MAX_SAFE_INTEGER) - (b.photo.expiresAt || Number.MAX_SAFE_INTEGER);
+      if (sort === 'expiry') return (imageExpiryDeadline(a.photo) || Number.MAX_SAFE_INTEGER) - (imageExpiryDeadline(b.photo) || Number.MAX_SAFE_INTEGER);
       return (b.photo.createdAt || 0) - (a.photo.createdAt || 0);
     });
+    // A filter/search changes the scope of bulk actions. Clear any selection that
+    // is no longer visible so a later revoke/edit cannot affect an unseen image.
+    var visibleTokens = new Set(rows.map(function (item) { return item.photo.token; }));
+    Array.from(selectedImageTokens).forEach(function (token) {
+      if (visibleTokens.has(token)) return;
+      selectedImageTokens.delete(token);
+      var hiddenRow = imageRowsByToken.get(token);
+      if (hiddenRow) {
+        hiddenRow.classList.remove('selected');
+        var hiddenCb = hiddenRow.querySelector('.img-select'); if (hiddenCb) hiddenCb.checked = false;
+      }
+    });
     var host = $('imglink-list'); rows.forEach(function (item) { host.appendChild(item.row); });
+    // Empty state: distinguish "no images at all" from "none match the search/filter".
+    var emptyEl = $('imglink-empty');
+    if (emptyEl) {
+      var emptyMsg = imageRecordsByToken.size === 0 ? t('imgListEmpty') : (rows.length === 0 ? t('imgNoMatch') : '');
+      emptyEl.textContent = emptyMsg; emptyEl.classList.toggle('hidden', !emptyMsg);
+    }
     updateImageBulkBar();
   }
   function imageRename(name, index) {
@@ -2430,18 +3305,59 @@
     if (out.indexOf('.') === -1 && ext) out += '.' + ext;
     return safeName(out).slice(0, 120) || name;
   }
-  async function sha256Blob(blob) {
-    if (!(window.crypto && crypto.subtle) || !blob || blob.size > 256 * 1024 * 1024) return '';
-    var buf = await blob.arrayBuffer();
-    var digest = await crypto.subtle.digest('SHA-256', buf);
-    return Array.from(new Uint8Array(digest)).map(function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+  // Incremental SHA-256 used by global deduplication. WebCrypto.digest requires
+  // one contiguous ArrayBuffer, which is unsuitable for multi-gigabyte mobile files.
+  // This implementation consumes 4 MiB slices and keeps only one SHA block in memory.
+  var SHA256_K = new Uint32Array([0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2]);
+  function Sha256Incremental() {
+    this.h = new Uint32Array([0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19]);
+    this.buf = new Uint8Array(64); this.bufLen = 0; this.bytes = 0; this.w = new Uint32Array(64);
+  }
+  function rotr32(x, n) { return (x >>> n) | (x << (32 - n)); }
+  Sha256Incremental.prototype.block = function (data, off) {
+    var w = this.w, i;
+    for (i = 0; i < 16; i++) { var j = off + i * 4; w[i] = ((data[j] << 24) | (data[j+1] << 16) | (data[j+2] << 8) | data[j+3]) >>> 0; }
+    for (i = 16; i < 64; i++) { var a0 = w[i-15], b0 = w[i-2]; var s0 = rotr32(a0,7)^rotr32(a0,18)^(a0>>>3), s1=rotr32(b0,17)^rotr32(b0,19)^(b0>>>10); w[i]=(w[i-16]+s0+w[i-7]+s1)>>>0; }
+    var a=this.h[0],b=this.h[1],c=this.h[2],d=this.h[3],e=this.h[4],f=this.h[5],g=this.h[6],h=this.h[7];
+    for (i=0;i<64;i++){ var S1=rotr32(e,6)^rotr32(e,11)^rotr32(e,25), ch=(e&f)^((~e)&g), t1=(h+S1+ch+SHA256_K[i]+w[i])>>>0, S0=rotr32(a,2)^rotr32(a,13)^rotr32(a,22), maj=(a&b)^(a&c)^(b&c), t2=(S0+maj)>>>0; h=g;g=f;f=e;e=(d+t1)>>>0;d=c;c=b;b=a;a=(t1+t2)>>>0; }
+    this.h[0]=(this.h[0]+a)>>>0;this.h[1]=(this.h[1]+b)>>>0;this.h[2]=(this.h[2]+c)>>>0;this.h[3]=(this.h[3]+d)>>>0;this.h[4]=(this.h[4]+e)>>>0;this.h[5]=(this.h[5]+f)>>>0;this.h[6]=(this.h[6]+g)>>>0;this.h[7]=(this.h[7]+h)>>>0;
+  };
+  Sha256Incremental.prototype.update = function (bytes) {
+    if (!(bytes instanceof Uint8Array)) bytes = new Uint8Array(bytes); this.bytes += bytes.length; var pos=0;
+    if (this.bufLen) { var need=64-this.bufLen, take=Math.min(need,bytes.length); this.buf.set(bytes.subarray(0,take),this.bufLen); this.bufLen+=take;pos+=take; if(this.bufLen===64){this.block(this.buf,0);this.bufLen=0;} }
+    while(pos+64<=bytes.length){this.block(bytes,pos);pos+=64;}
+    if(pos<bytes.length){this.buf.set(bytes.subarray(pos),0);this.bufLen=bytes.length-pos;}
+    return this;
+  };
+  Sha256Incremental.prototype.hex = function () {
+    var tailLen=this.bufLen<56?64:128, tail=new Uint8Array(tailLen); tail.set(this.buf.subarray(0,this.bufLen));tail[this.bufLen]=0x80;
+    var hi=Math.floor(this.bytes/0x20000000)>>>0, lo=(this.bytes*8)>>>0, n=tail.length; tail[n-8]=(hi>>>24)&255;tail[n-7]=(hi>>>16)&255;tail[n-6]=(hi>>>8)&255;tail[n-5]=hi&255;tail[n-4]=(lo>>>24)&255;tail[n-3]=(lo>>>16)&255;tail[n-2]=(lo>>>8)&255;tail[n-1]=lo&255;
+    for(var off=0;off<tail.length;off+=64)this.block(tail,off);
+    return Array.prototype.map.call(this.h,function(v){return ('00000000'+v.toString(16)).slice(-8);}).join('');
+  };
+  async function sha256Blob(blob, onProgress) {
+    if (!blob || typeof blob.slice !== 'function') return '';
+    // Fast native path for modest files; the streaming path avoids a giant contiguous
+    // allocation for large uploads and is also used where WebCrypto is unavailable.
+    if (window.crypto && crypto.subtle && blob.size <= 32 * 1024 * 1024) {
+      var nativeBuf = await blob.arrayBuffer(); var nativeDigest = await crypto.subtle.digest('SHA-256', nativeBuf);
+      if (onProgress) onProgress(1);
+      return Array.from(new Uint8Array(nativeDigest)).map(function (b) { return b.toString(16).padStart(2,'0'); }).join('');
+    }
+    var hash = new Sha256Incremental(), step = 4 * 1024 * 1024, done = 0;
+    while (done < blob.size) {
+      var end = Math.min(blob.size, done + step), part = new Uint8Array(await blob.slice(done,end).arrayBuffer()); hash.update(part); done=end;
+      if (onProgress) onProgress(blob.size ? done/blob.size : 1);
+      if ((done / step) % 8 === 0) await sleep(0); // keep Android's UI responsive while hashing GBs
+    }
+    if (onProgress) onProgress(1); return hash.hex();
   }
   async function imageDuplicate(hash) {
     if (!hash) return null;
     try { var r = await fetch('/app/image/duplicate?hash=' + encodeURIComponent(hash), { credentials: 'same-origin', cache: 'no-store' }); return r.ok ? (await r.json()).image : null; } catch (_) { return null; }
   }
   async function imageQrPng(photo) {
-    var url = imageVariantUrl(photo, imageDefaultVariant());
+    var url = imageVariantUrl(photo, IMAGE_PRIMARY_VARIANT);
     var r = await fetch('/app/qr?data=' + encodeURIComponent(url), { credentials: 'same-origin', cache: 'no-store' });
     if (!r.ok) throw new Error('qr');
     var svg = await r.text();
@@ -2486,21 +3402,72 @@
     var blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
     var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'direct-xfer-images-' + new Date().toISOString().slice(0, 10) + '.csv'; a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000); toast(t('imgStatsCsvDone'), 'ok');
   }
+  function restoreImageRowStatus(row, photo) {
+    if (!row || !photo) return;
+    var st = row.querySelector('.imglink-st');
+    if (!st) return;
+    var stateText = photo.expired ? t('imgExpired') : !photo.active ? ((photo.maxViews && imageRecordViews(photo) >= photo.maxViews) ? t('imgViewLimitReached') : t('imgInactive')) : t('imgReady');
+    st.textContent = stateText + (photo.metadataRemoved ? ' · ' + t('imgMetadataRemoved') : '');
+    st.className = 'imglink-st ' + (photo.active ? 'ok' : 'muted') + ' sm';
+  }
   function scheduleImageRevoke(row, photo) {
     if (!row || !photo || pendingImageRevokes.has(photo.token)) return;
+    // Starting a second undo window commits the previous image immediately.
+    // Do not await the network request: the new image must receive its full five
+    // seconds even if the first revocation is slow behind a reverse proxy.
+    if (activePendingImageRevoke && activePendingImageRevoke.commit) activePendingImageRevoke.commit();
+    var undoBar = row.querySelector('.imglink-revoke-undo');
+    var undoText = row.querySelector('.imglink-revoke-undo-text');
+    var undoButton = row.querySelector('.imglink-cancel-revoke');
+    var st = row.querySelector('.imglink-st');
+    var deadline = Date.now() + 5000;
+    var pending = { token: photo.token, timer: null, ticker: null, cancelled: false, committed: false, commit: null };
+    function renderCountdown() {
+      var seconds = Math.max(1, Math.ceil((deadline - Date.now()) / 1000));
+      var text = t('imgRevokePending', { n: seconds });
+      if (st) { st.textContent = text; st.className = 'imglink-st muted sm'; }
+      if (undoText) undoText.textContent = text;
+    }
+    function clearPending(restoreStatus) {
+      clearTimeout(pending.timer); clearInterval(pending.ticker);
+      if (pendingImageRevokes.get(photo.token) === pending) pendingImageRevokes.delete(photo.token);
+      if (activePendingImageRevoke === pending) activePendingImageRevoke = null;
+      row.classList.remove('pending-revoke');
+      if (undoBar) undoBar.classList.add('hidden');
+      if (undoButton) undoButton.onclick = null;
+      if (restoreStatus) restoreImageRowStatus(row, imageRecordsByToken.get(photo.token) || photo);
+    }
+    function cancelPending() {
+      if (pending.cancelled || pending.committed || pendingImageRevokes.get(photo.token) !== pending) return;
+      pending.cancelled = true;
+      clearPending(true);
+      recordImageAction('restored', photo, 'revoke-cancelled');
+      toast(t('imgRevokeCancelled'), 'ok');
+    }
     row.classList.add('pending-revoke');
-    var st = row.querySelector('.imglink-st'); if (st) st.textContent = t('imgRevokePending');
-    var timer = setTimeout(function () {
-      pendingImageRevokes.delete(photo.token);
+    if (undoBar) undoBar.classList.remove('hidden');
+    if (undoButton) { undoButton.textContent = t('imgCancelRevoke'); undoButton.onclick = cancelPending; }
+    renderCountdown();
+    pending.ticker = setInterval(renderCountdown, 250);
+    pending.commit = function () {
+      if (pending.cancelled || pending.committed || pendingImageRevokes.get(photo.token) !== pending) return;
+      pending.committed = true;
+      clearTimeout(pending.timer);
+      clearInterval(pending.ticker);
+      if (undoButton) { undoButton.disabled = true; undoButton.onclick = null; }
       revokeShareRequest(photo.token).then(function (ok) {
-        if (ok) { removeImageRow(row, photo.token, photo.imgUrl); imageRecordsByToken.delete(photo.token); recordImageAction('revoked', photo); toast(t('revokeSuccess'), 'ok'); }
-        else { row.classList.remove('pending-revoke'); renderImageVariantStats(row, photo); toast(t('revokeFail'), 'err'); }
+        if (ok) {
+          clearPending(false);
+          removeImageRow(row, photo.token, photo.imgUrl); imageRecordsByToken.delete(photo.token); recordImageAction('revoked', photo); toast(t('revokeSuccess'), 'ok');
+        } else {
+          if (undoButton) undoButton.disabled = false;
+          clearPending(true); renderImageVariantStats(row, photo); toast(t('revokeFail'), 'err');
+        }
       });
-    }, 8500);
-    pendingImageRevokes.set(photo.token, timer);
-    showUndo(photo.name, function () {
-      clearTimeout(timer); pendingImageRevokes.delete(photo.token); row.classList.remove('pending-revoke'); renderImageVariantStats(row, photo); recordImageAction('restored', photo); toast(t('fileRestored'), 'ok');
-    }, t('imgUndoRevoke'));
+    };
+    pendingImageRevokes.set(photo.token, pending);
+    activePendingImageRevoke = pending;
+    pending.timer = setTimeout(pending.commit, 5000);
   }
   async function editSelectedImages() {
     var tokens = Array.from(selectedImageTokens); if (!tokens.length) return;
@@ -2617,13 +3584,28 @@
       ctx.fillStyle = text; ctx.font = '10px system-ui'; var d = new Date(point.at); ctx.fillText((d.getMonth() + 1) + '/' + d.getDate(), x - 2, h - 10);
     });
   }
+  function comparisonMetricText(change) {
+    if (!change) return '—';
+    var delta = Number(change.delta) || 0;
+    if (change.pct == null) return (delta > 0 ? '+' : '') + delta + ' (' + t('imgCompareNew') + ')';
+    var pct = Number(change.pct) || 0;
+    return (delta > 0 ? '+' : '') + delta + ' (' + (pct > 0 ? '+' : '') + pct + '%)';
+  }
   async function refreshImageDashboard() {
-    try { var r = await fetch('/app/images/dashboard?days=7', { credentials: 'same-origin', cache: 'no-store' }); if (!r.ok) throw new Error(); var data = await r.json(); if ($('img-dashboard-summary')) $('img-dashboard-summary').textContent = t('imgChartSummary', { images: data.totals.images, views: data.totals.views, visitors: data.totals.visitors, bytes: fmtBytes(data.totals.bytes) }); drawImageDashboard(data); } catch (_) {}
+    try {
+      var days = Math.max(1, Math.min(30, Number($('img-dashboard-period') && $('img-dashboard-period').value) || 7));
+      var r = await fetch('/app/images/dashboard?days=' + encodeURIComponent(days), { credentials: 'same-origin', cache: 'no-store' }); if (!r.ok) throw new Error();
+      var data = await r.json();
+      if ($('img-dashboard-summary')) $('img-dashboard-summary').textContent = t('imgChartSummary', { images: data.totals.images, views: data.totals.views, visitors: data.totals.visitors, bytes: fmtBytes(data.totals.bytes) });
+      if ($('img-dashboard-comparison')) $('img-dashboard-comparison').textContent = data.comparison ? t('imgCompareSummary', { days: data.comparison.days, views: comparisonMetricText(data.comparison.changes && data.comparison.changes.views), created: comparisonMetricText(data.comparison.changes && data.comparison.changes.created) }) : '';
+      drawImageDashboard(data);
+    } catch (_) {}
   }
   function warnExpiringImages(photos) {
     var now = Date.now(), changed = false;
     photos.forEach(function (photo) {
-      if (!photo.active || !photo.expiresAt || photo.expiresAt - now > 86400000 || photo.expiresAt <= now || warnedImageExpiries.has(photo.token)) return;
+      var deadline = imageExpiryDeadline(photo);
+      if (!photo.active || !deadline || deadline - now > 86400000 || deadline <= now || warnedImageExpiries.has(photo.token)) return;
       warnedImageExpiries.add(photo.token); changed = true; toast(t('imgExpirySoon', { name: photo.name }), 'warn');
       if ('Notification' in window && Notification.permission === 'granted') try { new Notification('Direct-Xfer', { body: t('imgExpirySoon', { name: photo.name }), icon: '/app/icon-192.png' }); } catch (_) {}
     });
@@ -2638,6 +3620,8 @@
   }
   var ICONS = {
     eye: dxIcon('<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/>'),
+    link: dxIcon('<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>'),
+    clipboard: dxIcon('<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>'),
     star: dxIcon('<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>'),
     edit: dxIcon('<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>'),
     grid: dxIcon('<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>'),
@@ -2648,6 +3632,30 @@
     x: dxIcon('<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>')
   };
 
+  // Copy an image (by same-origin URL) to the clipboard as a bitmap. The Clipboard API
+  // accepts image/png across browsers, so a non-PNG variant is re-encoded via a canvas.
+  function blobToPng(blob) {
+    if (blob.type === 'image/png') return Promise.resolve(blob);
+    return new Promise(function (resolve, reject) {
+      var url = URL.createObjectURL(blob), img = new Image();
+      img.onload = function () {
+        try {
+          var c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
+          c.getContext('2d').drawImage(img, 0, 0);
+          c.toBlob(function (out) { URL.revokeObjectURL(url); out ? resolve(out) : reject(new Error('encode')); }, 'image/png');
+        } catch (e) { URL.revokeObjectURL(url); reject(e); }
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('load')); };
+      img.src = url;
+    });
+  }
+  async function copyImageToClipboard(url) {
+    if (!navigator.clipboard || !window.ClipboardItem) throw new Error('unsupported');
+    var resp = await fetch(url, { credentials: 'same-origin', cache: 'no-store' });
+    if (!resp.ok) throw new Error('fetch');
+    var png = await blobToPng(await resp.blob());
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]);
+  }
   function imgLinkRow(name, previewUrl, previewIsObjectUrl) {
     var row = document.createElement('div'); row.className = 'imglink-row';
     row.innerHTML =
@@ -2658,24 +3666,22 @@
       '<div class="imglink-st muted sm"></div>' +
       '<div class="imglink-meta"></div><div class="imglink-note hidden"></div></div>' +
       '<button class="il-revoke hidden" type="button">' + ICONS.x + '</button></div>' +
-      '<div class="imglink-summary-row"><div class="imglink-total muted sm hidden" aria-label="Statistiques totales"><span class="img-total-metric it-views"><span class="img-total-icon" aria-hidden="true">👁</span><span class="img-total-text">—</span></span><span class="img-total-metric it-visitors"><span class="img-total-icon" aria-hidden="true">👤</span><span class="img-total-text">—</span></span></div></div>' +
+      '<div class="imglink-revoke-undo hidden" role="status" aria-live="polite"><span class="imglink-revoke-undo-text"></span><button class="btn sm imglink-cancel-revoke" type="button"></button></div>' +
+      '<div class="imglink-summary-row"><div class="imglink-total muted sm hidden" aria-label="Statistiques totales"><span class="img-total-metric it-views"><span class="img-total-icon" aria-hidden="true">👁</span><span class="img-total-text">—</span></span><span class="img-total-metric it-visitors"><span class="img-total-icon" aria-hidden="true">👤</span><span class="img-total-text">—</span></span></div><div class="imglink-summary-actions"><button class="btn ghost sm il-stats" type="button">📊 Stats</button><button class="btn ghost sm il-compare" type="button">⇄</button></div></div>' +
       '<div class="imglink-variants hidden" role="list">' +
-      '<div class="imgvariant" data-kind="full" role="listitem"><span class="iv-name"></span><span class="iv-dims">—</span><span class="iv-size">—</span><span class="iv-metrics"><span class="iv-metric iv-views"><span class="iv-metric-icon" aria-hidden="true">👁</span><span class="iv-metric-text">—</span></span><span class="iv-metric iv-visitors"><span class="iv-metric-icon" aria-hidden="true">👤</span><span class="iv-metric-text">—</span></span></span><button class="iv-open" type="button">' + ICONS.eye + '</button></div>' +
-      '<div class="imgvariant" data-kind="thumb" role="listitem"><span class="iv-name"></span><span class="iv-dims">—</span><span class="iv-size">—</span><span class="iv-metrics"><span class="iv-metric iv-views"><span class="iv-metric-icon" aria-hidden="true">👁</span><span class="iv-metric-text">—</span></span><span class="iv-metric iv-visitors"><span class="iv-metric-icon" aria-hidden="true">👤</span><span class="iv-metric-text">—</span></span></span><button class="iv-open" type="button">' + ICONS.eye + '</button></div>' +
-      '<div class="imgvariant" data-kind="micro" role="listitem"><span class="iv-name"></span><span class="iv-dims">—</span><span class="iv-size">—</span><span class="iv-metrics"><span class="iv-metric iv-views"><span class="iv-metric-icon" aria-hidden="true">👁</span><span class="iv-metric-text">—</span></span><span class="iv-metric iv-visitors"><span class="iv-metric-icon" aria-hidden="true">👤</span><span class="iv-metric-text">—</span></span></span><button class="iv-open" type="button">' + ICONS.eye + '</button></div>' +
+      '<div class="imgvariant" data-kind="full" role="listitem"><span class="iv-name"></span><span class="iv-dims">—</span><span class="iv-size">—</span><span class="iv-metrics"><span class="iv-metric iv-views"><span class="iv-metric-icon" aria-hidden="true">👁</span><span class="iv-metric-text">—</span></span><span class="iv-metric iv-visitors"><span class="iv-metric-icon" aria-hidden="true">👤</span><span class="iv-metric-text">—</span></span></span><span class="iv-actions"><button class="iv-copy" type="button">' + ICONS.link + '</button><button class="iv-bb" type="button">BB</button><button class="iv-img" type="button">' + ICONS.clipboard + '</button><button class="iv-open" type="button">' + ICONS.eye + '</button></span></div>' +
+      '<div class="imgvariant" data-kind="thumb" role="listitem"><span class="iv-name"></span><span class="iv-dims">—</span><span class="iv-size">—</span><span class="iv-metrics"><span class="iv-metric iv-views"><span class="iv-metric-icon" aria-hidden="true">👁</span><span class="iv-metric-text">—</span></span><span class="iv-metric iv-visitors"><span class="iv-metric-icon" aria-hidden="true">👤</span><span class="iv-metric-text">—</span></span></span><span class="iv-actions"><button class="iv-copy" type="button">' + ICONS.link + '</button><button class="iv-bb" type="button">BB</button><button class="iv-img" type="button">' + ICONS.clipboard + '</button><button class="iv-open" type="button">' + ICONS.eye + '</button></span></div>' +
+      '<div class="imgvariant" data-kind="micro" role="listitem"><span class="iv-name"></span><span class="iv-dims">—</span><span class="iv-size">—</span><span class="iv-metrics"><span class="iv-metric iv-views"><span class="iv-metric-icon" aria-hidden="true">👁</span><span class="iv-metric-text">—</span></span><span class="iv-metric iv-visitors"><span class="iv-metric-icon" aria-hidden="true">👤</span><span class="iv-metric-text">—</span></span></span><span class="iv-actions"><button class="iv-copy" type="button">' + ICONS.link + '</button><button class="iv-bb" type="button">BB</button><button class="iv-img" type="button">' + ICONS.clipboard + '</button><button class="iv-open" type="button">' + ICONS.eye + '</button></span></div>' +
       '</div>' +
       '<div class="imglink-actions hidden">' +
-      '<div class="imglink-action-group imglink-copy-group"><span class="imglink-action-label imglink-copy-label"></span><div class="imglink-action-buttons">' +
-      '<button class="btn ghost sm il-auto" type="button"></button>' +
-      '<button class="btn ghost sm il-full" type="button"></button>' +
-      '<button class="btn ghost sm il-thumb" type="button"></button>' +
-      '<button class="btn ghost sm il-micro" type="button"></button></div></div>' +
       '<div class="imglink-action-group imglink-manage-group"><span class="imglink-action-label imglink-manage-label"></span><div class="imglink-action-buttons">' +
       '<button class="btn ghost sm il-open" type="button"></button>' +
       '<button class="btn ghost sm il-favorite" type="button">' + ICONS.star + '</button>' +
       '<button class="btn ghost sm il-edit" type="button">' + ICONS.edit + '</button>' +
+      '<button class="btn ghost sm il-ocr" type="button">T/OCR</button>' +
       '<button class="btn ghost sm il-qr" type="button">' + ICONS.grid + '</button>' +
       '<button class="btn ghost sm il-qrdl" type="button">⇩QR</button>' +
+      '<button class="btn ghost sm il-photo-edit" type="button">🎨</button>' +
       '<button class="btn ghost sm il-replace" type="button">' + ICONS.refresh + '</button><button class="btn ghost sm il-versions" type="button">' + ICONS.clock + '</button><button class="btn ghost sm il-resize-mini" type="button">' + ICONS.maximize + '</button><button class="btn ghost sm il-more" type="button" aria-label="Plus d’actions">' + ICONS.more + '</button></div></div></div>';
     row.querySelector('.imglink-name').textContent = name;
     if (previewUrl) {
@@ -2700,12 +3706,34 @@
       line.querySelector('.iv-size').textContent = fmtBytes(variant.bytes);
       line.querySelector('.iv-views .iv-metric-text').textContent = t('imgViews', { n: Number(variant.views) || 0 });
       line.querySelector('.iv-visitors .iv-metric-text').textContent = t('imgVisitors', { n: Number(variant.visitors) || 0 });
+      // A variant's link can be used (viewed or copied) only once its file is ready and
+      // the share is still active; open and copy share the exact same gate.
+      var canUse = photo.active !== false && variant.ready !== false && !!imageVariantUrl(photo, kind);
       var openVariant = line.querySelector('.iv-open');
       if (openVariant) {
-        var canOpen = photo.active !== false && variant.ready !== false && !!imageVariantUrl(photo, kind);
-        openVariant.disabled = !canOpen;
+        openVariant.disabled = !canUse;
         openVariant.title = t('imgOpen') + ' — ' + imageVariantLabel(kind);
         openVariant.setAttribute('aria-label', openVariant.title);
+      }
+      var copyVariant = line.querySelector('.iv-copy');
+      if (copyVariant) {
+        copyVariant.disabled = !canUse;
+        copyVariant.title = t('copyLink') + ' — ' + imageVariantLabel(kind);
+        copyVariant.setAttribute('aria-label', copyVariant.title);
+      }
+      var bbVariant = line.querySelector('.iv-bb');
+      if (bbVariant) {
+        bbVariant.disabled = !canUse;
+        bbVariant.title = t('imgCopyBBCode') + ' — ' + imageVariantLabel(kind);
+        bbVariant.setAttribute('aria-label', bbVariant.title);
+      }
+      var imgBtn = line.querySelector('.iv-img');
+      if (imgBtn) {
+        // The clipboard-image API is not universal; hide the button where unsupported.
+        imgBtn.classList.toggle('hidden', !(window.ClipboardItem && navigator.clipboard));
+        imgBtn.disabled = !canUse;
+        imgBtn.title = t('imgCopyImage') + ' — ' + imageVariantLabel(kind);
+        imgBtn.setAttribute('aria-label', imgBtn.title);
       }
       line.classList.toggle('not-ready', variant.ready === false);
     });
@@ -2723,6 +3751,7 @@
       meta.innerHTML = '';
       function chip(text, cls) { var el = document.createElement('span'); el.className = 'img-chip' + (cls ? ' ' + cls : ''); el.textContent = text; meta.appendChild(el); return el; }
       if (photo.expired) chip(t('imgExpired'), 'warn');
+      else if (imageExpiryDeadline(photo) > Date.now() && imageExpiryDeadline(photo) - Date.now() <= 86400000) chip('⏳ ' + t('imgFilterExpiring'), 'warn');
       if (photo.hasPassword) chip('🔒 ' + t('imgProtected'), 'lock');
       if (photo.maxViews) chip(t('imgViewLimit', { n: photo.maxViews }));
       if (photo.hotlinkHosts && photo.hotlinkHosts.length) chip('🔗 ' + t('imgHotlinkProtected'), 'hotlink');
@@ -2730,21 +3759,125 @@
       if (photo.adaptive && (photo.adaptive.webp || photo.adaptive.avif)) chip('⚡ ' + t('imgAdaptiveReady'), 'adaptive');
       if (photo.metadataRemoved) chip('🛡 ' + t('imgMetadataRemoved'), 'privacy');
       if (photo.versionCount) chip('⏱ ' + photo.versionCount + ' ' + t('imgVersions'), 'versions');
-      if (photo.expiresAt && !photo.expired) { var expiryChip = chip(''); expiryChip.setAttribute('data-expiry-countdown', String(photo.expiresAt)); }
+      if (imageExpiryDeadline(photo) && !photo.expired) { var expiryChip = chip(''); expiryChip.setAttribute('data-expiry-countdown', String(imageExpiryDeadline(photo))); }
       (photo.tags || []).forEach(function (tag) { var tagChip = chip('#' + tag, 'tag-chip'); var color = colorForTag(tag); tagChip.style.background = color; tagChip.style.borderColor = color; tagChip.style.color = tagTextColor(color); });
     }
     var note = row.querySelector('.imglink-note');
     if (note) { note.textContent = photo.note || ''; note.classList.toggle('hidden', !photo.note); }
-    ['.il-auto', '.il-full', '.il-thumb', '.il-micro', '.il-open', '.il-qr', '.il-qrdl', '.il-replace', '.il-versions', '.il-resize-mini'].forEach(function (selector) {
+    ['.il-open', '.il-ocr', '.il-qr', '.il-qrdl', '.il-photo-edit', '.il-replace', '.il-versions', '.il-resize-mini', '.il-compare'].forEach(function (selector) {
       var action = row.querySelector(selector); if (action) action.disabled = !photo.active;
     });
   }
+  function imageStatsStatusLabel(data) {
+    if (data && data.expired) return t('imgStatsExpired');
+    return data && data.active !== false ? t('imgStatsActive') : t('imgStatsInactive');
+  }
+  function imageStatsCountryName(code, fallback) {
+    code = String(code || '').toUpperCase();
+    if (code && typeof Intl !== 'undefined' && Intl.DisplayNames) {
+      try { return new Intl.DisplayNames([lang], { type: 'region' }).of(code) || fallback || code; } catch (_) {}
+    }
+    return fallback || code || t('imgStatsUnknown');
+  }
+  function imageStatsSection(title) {
+    var section = document.createElement('section'); section.className = 'image-stats-section';
+    var h = document.createElement('h3'); h.textContent = title; section.appendChild(h);
+    return section;
+  }
+  function imageStatsMetric(icon, value, label) {
+    var card = document.createElement('div'); card.className = 'image-stats-metric';
+    var ico = document.createElement('span'); ico.className = 'image-stats-metric-icon'; ico.setAttribute('aria-hidden', 'true'); ico.textContent = icon;
+    var main = document.createElement('div');
+    var strong = document.createElement('strong'); strong.textContent = value;
+    var small = document.createElement('span'); small.textContent = label;
+    main.appendChild(strong); main.appendChild(small); card.appendChild(ico); card.appendChild(main); return card;
+  }
+  function imageStatsDetail(label, value) {
+    var row = document.createElement('div'); row.className = 'image-stats-detail';
+    var dt = document.createElement('span'); dt.textContent = label;
+    var dd = document.createElement('strong'); dd.textContent = value;
+    row.appendChild(dt); row.appendChild(dd); return row;
+  }
+  function renderImageDetailedStats(data) {
+    var body = $('image-stats-body');
+    if (!body) return;
+    body.innerHTML = '';
+    if (!data) { body.textContent = t('imgStatsUnavailable'); return; }
+    var totals = data.totals || {};
+    var overview = imageStatsSection(t('imgStatsOverview'));
+    var metrics = document.createElement('div'); metrics.className = 'image-stats-metrics';
+    metrics.appendChild(imageStatsMetric('👁', String(Number(totals.views) || 0), t('imgViews', { n: Number(totals.views) || 0 }).replace(/^\d+\s*/, '')));
+    metrics.appendChild(imageStatsMetric('👤', String(Number(totals.visitors) || 0), t('imgVisitors', { n: Number(totals.visitors) || 0 }).replace(/^\d+\s*/, '')));
+    metrics.appendChild(imageStatsMetric('🗄', fmtBytes(Number(totals.bytes) || 0), t('imgStatsStorage')));
+    overview.appendChild(metrics);
+    var details = document.createElement('div'); details.className = 'image-stats-details';
+    details.appendChild(imageStatsDetail(t('imgStatsStatus'), imageStatsStatusLabel(data)));
+    details.appendChild(imageStatsDetail(t('imgStatsCreated'), data.createdAt ? fmtDate(data.createdAt) : '—'));
+    details.appendChild(imageStatsDetail(t('imgStatsExpiry'), data.expiresAt ? fmtDate(data.expiresAt) : t('imgStatsNever')));
+    overview.appendChild(details); body.appendChild(overview);
+
+    var copies = imageStatsSection(t('imgStatsCopies'));
+    var variantGrid = document.createElement('div'); variantGrid.className = 'image-stats-variants';
+    ['full', 'thumb', 'micro'].forEach(function (kind) {
+      var variant = data.variants && data.variants[kind] || {};
+      var card = document.createElement('div'); card.className = 'image-stats-variant' + (variant.present === false ? ' missing' : '');
+      var title = document.createElement('strong'); title.textContent = imageVariantLabel(kind); card.appendChild(title);
+      var dims = variant.w && variant.h ? variant.w + '×' + variant.h : '—';
+      [
+        [t('imgStatsDimensions'), dims],
+        [t('imgStatsStorage'), fmtBytes(variant.bytes)],
+        [t('imgViews', { n: Number(variant.views) || 0 }), ''],
+        [t('imgVisitors', { n: Number(variant.visitors) || 0 }), ''],
+        [t('imgStatsLastView'), variant.lastAt ? fmtDate(variant.lastAt) : '—']
+      ].forEach(function (entry) {
+        var line = document.createElement('span');
+        line.textContent = entry[1] === '' ? entry[0] : entry[0] + ' : ' + entry[1];
+        card.appendChild(line);
+      });
+      variantGrid.appendChild(card);
+    });
+    copies.appendChild(variantGrid); body.appendChild(copies);
+
+    var recentSection = imageStatsSection(t('imgStatsRecent'));
+    var recent = document.createElement('div'); recent.className = 'image-stats-recent';
+    var recentViews = Array.isArray(data.recentViews) ? data.recentViews : [];
+    if (!recentViews.length) {
+      var empty = document.createElement('p'); empty.className = 'muted sm'; empty.textContent = t('imgStatsNoRecent'); recent.appendChild(empty);
+    } else recentViews.forEach(function (event) {
+      var row = document.createElement('div'); row.className = 'image-stats-event';
+      var icon = document.createElement('span'); icon.className = 'image-stats-event-icon'; icon.setAttribute('aria-hidden', 'true'); icon.textContent = event.kind === 'full' ? '🖼' : event.kind === 'thumb' ? '▣' : '▫';
+      var main = document.createElement('div'); main.className = 'image-stats-event-main';
+      var title = document.createElement('strong'); title.textContent = imageVariantLabel(event.kind || 'full');
+      var meta = document.createElement('span');
+      meta.textContent = [event.flag || '🌐', event.ip || '—', imageStatsCountryName(event.countryCode, event.country)].join(' · ');
+      main.appendChild(title); main.appendChild(meta);
+      var time = document.createElement('time'); time.textContent = event.at ? fmtDate(event.at) : '—';
+      row.appendChild(icon); row.appendChild(main); row.appendChild(time); recent.appendChild(row);
+    });
+    recentSection.appendChild(recent); body.appendChild(recentSection);
+  }
+  async function openImageDetailedStats(photo) {
+    if (!photo || !photo.token || !$('image-stats-overlay')) return;
+    $('image-stats-title').textContent = t('imgStatsTitle');
+    $('image-stats-subtitle').textContent = photo.name || '';
+    $('image-stats-body').textContent = t('imgStatsLoading');
+    $('image-stats-overlay').classList.remove('hidden');
+    if ($('image-stats-close')) $('image-stats-close').focus();
+    try {
+      var response = await fetch('/app/image/' + encodeURIComponent(photo.token) + '/stats-detail', { credentials: 'same-origin', cache: 'no-store' });
+      if (!response.ok) throw new Error('http ' + response.status);
+      renderImageDetailedStats(await response.json());
+    } catch (_) { $('image-stats-body').textContent = t('imgStatsUnavailable'); }
+  }
+  function closeImageDetailedStats() { if ($('image-stats-overlay')) $('image-stats-overlay').classList.add('hidden'); }
+
   function imageDataUrls(data) {
     return {
       token: data.token,
       name: data.name,
       createdAt: data.createdAt || Date.now(),
       expiresAt: data.expiresAt || null,
+      effectiveExpiresAt: data.effectiveExpiresAt || data.expiresAt || null,
       active: data.active !== false,
       expired: !!data.expired,
       disabled: !!data.disabled,
@@ -2930,14 +4063,75 @@
     recordImageAction('edited', updated || photo); toast(t('imgSettingsSaved'), 'ok'); applyImageView();
   }
   async function uploadGeneratedImageVariants(token, variants) {
-    if (!variants) return;
+    if (!variants || !variants.thumb || !variants.micro) return false;
     var jobs = [
-      fetch('/app/image/' + encodeURIComponent(token) + '/thumb', { method: 'POST', credentials: 'same-origin', headers: appMutationHeaders('image/jpeg'), body: variants.thumb }),
-      fetch('/app/image/' + encodeURIComponent(token) + '/micro', { method: 'POST', credentials: 'same-origin', headers: appMutationHeaders('image/jpeg'), body: variants.micro })
+      appMutate('/app/image/' + encodeURIComponent(token) + '/thumb', 'image/jpeg', variants.thumb),
+      appMutate('/app/image/' + encodeURIComponent(token) + '/micro', 'image/jpeg', variants.micro)
     ];
-    if (variants.adaptiveWebp) jobs.push(fetch('/app/image/' + encodeURIComponent(token) + '/adaptive/webp', { method: 'POST', credentials: 'same-origin', headers: appMutationHeaders('image/webp'), body: variants.adaptiveWebp }));
-    if (variants.adaptiveAvif) jobs.push(fetch('/app/image/' + encodeURIComponent(token) + '/adaptive/avif', { method: 'POST', credentials: 'same-origin', headers: appMutationHeaders('image/avif'), body: variants.adaptiveAvif }));
-    await Promise.allSettled(jobs);
+    if (variants.adaptiveWebp) jobs.push(appMutate('/app/image/' + encodeURIComponent(token) + '/adaptive/webp', 'image/webp', variants.adaptiveWebp));
+    if (variants.adaptiveAvif) jobs.push(appMutate('/app/image/' + encodeURIComponent(token) + '/adaptive/avif', 'image/avif', variants.adaptiveAvif));
+    var settled = await Promise.allSettled(jobs);
+    // fetch() resolves even for HTTP 4xx/5xx. Mini + Micro are required; adaptive
+    // formats remain best-effort and must not turn a valid full image into failure.
+    return settled.slice(0, 2).every(function (result) {
+      return result.status === 'fulfilled' && result.value && result.value.ok;
+    });
+  }
+  function applyUpdatedImageRecord(updated) {
+    if (!updated || !updated.token) return null;
+    updated = imageDataUrls(updated);
+    imageRecordsByToken.set(updated.token, updated);
+    persistImageRecord(updated);
+    var linked = imageLinkUrls.find(function (entry) { return entry.token === updated.token; });
+    if (linked) Object.assign(linked, { imgUrl: updated.imgUrl, thumbUrl: updated.thumbUrl, microUrl: updated.microUrl, name: updated.name });
+    var row = imageRowsByToken.get(updated.token);
+    if (row) {
+      row.dataset.imgUrl = updated.imgUrl || '';
+      var preview = imageCardPreviewUrl(updated);
+      var thumb = row.querySelector('.imglink-thumb');
+      if (thumb && preview) thumb.src = preview + (preview.indexOf('?') === -1 ? '?' : '&') + 'v=' + Date.now();
+      var name = row.querySelector('.imglink-name'); if (name) name.textContent = updated.name;
+      renderImageVariantStats(row, updated); restoreImageRowStatus(row, updated);
+    }
+    refreshCopyAll();
+    return updated;
+  }
+  async function commitImageReplacement(photo, prepared, metadataRemoved) {
+    var variants = null; try { variants = await makeImageVariants(prepared.blob, photo && photo.variants); } catch (_) {}
+    var replaceUrl = '/app/image/' + encodeURIComponent(photo.token) + '/replace?name=' + encodeURIComponent(prepared.name);
+    if (metadataRemoved || prepared.metadataStripped) replaceUrl += '&metadataRemoved=1';
+    var response = await imageDlpMutate(replaceUrl, prepared.type, prepared.blob);
+    if (!response) return null;
+    if (!response.ok) {
+      var replaceErr = null; try { replaceErr = await response.clone().json(); } catch (_) {}
+      var replaceFailure = new Error('http ' + response.status);
+      if (replaceErr && replaceErr.error === 'dlp-blocked') replaceFailure.dxReason = t('sharesDlpBlocked');
+      throw replaceFailure;
+    }
+    var responseData = await response.json();
+    var variantsOk = await uploadGeneratedImageVariants(photo.token, variants);
+    var fresh = await fetch('/app/image/' + encodeURIComponent(photo.token) + '/stats', { credentials: 'same-origin', cache: 'no-store' });
+    var updated = fresh.ok ? await fresh.json() : responseData.image;
+    return { updated: applyUpdatedImageRecord(updated), variantsOk: variantsOk };
+  }
+  async function editUploadedImage(photo) {
+    photo = photo && (imageRecordsByToken.get(photo.token) || photo);
+    if (!photo || photo.active === false) { toast(t('imgInactive'), 'warn'); return; }
+    try {
+      var sourceUrl = photo.previewUrls && photo.previewUrls.full || ('/app/image/' + encodeURIComponent(photo.token) + '/preview/full');
+      var sourceResponse = await fetch(sourceUrl, { credentials: 'same-origin', cache: 'no-store' });
+      if (!sourceResponse.ok) throw new Error('http ' + sourceResponse.status);
+      var sourceBlob = await sourceResponse.blob();
+      var sourceFile = namedFile(sourceBlob, photo.name || ('image-' + Date.now()), sourceBlob.type || 'image/jpeg', Date.now());
+      var edited = await openImageLinkEditor(sourceFile);
+      // Cancel/Escape returns the exact source object. No server mutation or new
+      // version is created until the user explicitly applies an edit.
+      if (!edited || edited === sourceFile) return;
+      var result = await commitImageReplacement(photo, { blob: edited, name: edited.name, type: edited.type || 'image/jpeg', metadataStripped: true }, true);
+      if (!result) return;
+      recordImageAction('edited', result.updated || photo, 'photo-editor');
+      toast(t(result.variantsOk ? 'imgEditUploadedDone' : 'imgVariantsFailed'), result.variantsOk ? 'ok' : 'warn');
+    } catch (e) { toast(e && e.dxReason ? e.dxReason : t('imgLinkFail'), 'err'); }
   }
   async function replaceImageKeepingUrl(photo) {
     if (!photo || !askConfirmation('replace', t('imgReplace') + ' ?')) return;
@@ -2946,17 +4140,11 @@
       var file = input.files && input.files[0]; if (!file) return;
       try {
         var prepared = await prepareImageForLink(file, !!($('imglink-strip-exif') && $('imglink-strip-exif').checked));
-        var variants = null; try { variants = await makeImageVariants(prepared.blob); } catch (_) {}
-        var replaceUrl = '/app/image/' + encodeURIComponent(photo.token) + '/replace?name=' + encodeURIComponent(prepared.name);
-        if (prepared.metadataStripped) replaceUrl += '&metadataRemoved=1';
-        var r = await appMutate(replaceUrl, prepared.type, prepared.blob);
-        if (!r.ok) throw new Error('http ' + r.status);
-        await uploadGeneratedImageVariants(photo.token, variants);
-        var fresh = await fetch('/app/image/' + encodeURIComponent(photo.token) + '/stats', { credentials: 'same-origin', cache: 'no-store' });
-        var updated = fresh.ok ? await fresh.json() : (await r.json()).image;
-        if (updated) { updated = imageDataUrls(updated); imageRecordsByToken.set(updated.token, updated); var row = imageRowsByToken.get(updated.token); if (row) { row.querySelector('.imglink-thumb').src = imageCardPreviewUrl(updated) + (imageCardPreviewUrl(updated).indexOf('?') === -1 ? '?' : '&') + 'v=' + Date.now(); row.querySelector('.imglink-name').textContent = updated.name; renderImageVariantStats(row, updated); } }
-        recordImageAction('edited', updated || photo, 'replace'); toast(t('imgReplaceDone'), 'ok');
-      } catch (_) { toast(t('imgLinkFail'), 'err'); }
+        var result = await commitImageReplacement(photo, prepared, prepared.metadataStripped);
+        if (!result) return;
+        recordImageAction('edited', result.updated || photo, 'replace');
+        toast(t(result.variantsOk ? 'imgReplaceDone' : 'imgVariantsFailed'), result.variantsOk ? 'ok' : 'warn');
+      } catch (e) { toast(e && e.dxReason ? e.dxReason : t('imgLinkFail'), 'err'); }
     };
     input.click();
   }
@@ -2994,8 +4182,8 @@
       var thumbBlob = await make(tw, th), microBlob = await make(mw, mh);
       if (full.close) full.close();
       var results = await Promise.all([
-        fetch('/app/image/' + encodeURIComponent(photo.token) + '/thumb', { method: 'POST', credentials: 'same-origin', headers: appMutationHeaders('image/jpeg'), body: thumbBlob }),
-        fetch('/app/image/' + encodeURIComponent(photo.token) + '/micro', { method: 'POST', credentials: 'same-origin', headers: appMutationHeaders('image/jpeg'), body: microBlob })
+        appMutate('/app/image/' + encodeURIComponent(photo.token) + '/thumb', 'image/jpeg', thumbBlob),
+        appMutate('/app/image/' + encodeURIComponent(photo.token) + '/micro', 'image/jpeg', microBlob)
       ]);
       if (!results.every(function (x) { return x.ok; })) throw new Error('upload');
       var fresh = await fetch('/app/image/' + encodeURIComponent(photo.token) + '/stats', { credentials: 'same-origin', cache: 'no-store' });
@@ -3048,33 +4236,53 @@
     rev.classList.remove('hidden');
     rev.addEventListener('click', function () { if (askConfirmation('revoke', t('revokeConfirm'))) scheduleImageRevoke(row, imageRecordsByToken.get(data.token) || data); });
 
-    var ba = row.querySelector('.il-auto'), bf = row.querySelector('.il-full'), bt = row.querySelector('.il-thumb'), bm = row.querySelector('.il-micro'), bo = row.querySelector('.il-open'), fav = row.querySelector('.il-favorite'), edit = row.querySelector('.il-edit'), bq = row.querySelector('.il-qr'), qrdl = row.querySelector('.il-qrdl'), replaceBtn = row.querySelector('.il-replace'), versionsBtn = row.querySelector('.il-versions'), resizeMiniBtn = row.querySelector('.il-resize-mini'), more = row.querySelector('.il-more');
-    ba.textContent = t('imgVariantAuto'); bf.textContent = t('imgCopyFull'); bt.textContent = t('imgCopyThumb'); bm.textContent = t('imgCopyMicro');
-    var copyLabel = row.querySelector('.imglink-copy-label'), manageLabel = row.querySelector('.imglink-manage-label');
-    if (copyLabel) copyLabel.textContent = t('imgCopyActions');
+    var bo = row.querySelector('.il-open'), fav = row.querySelector('.il-favorite'), edit = row.querySelector('.il-edit'), ocrBtn = row.querySelector('.il-ocr'), bq = row.querySelector('.il-qr'), qrdl = row.querySelector('.il-qrdl'), photoEditBtn = row.querySelector('.il-photo-edit'), replaceBtn = row.querySelector('.il-replace'), versionsBtn = row.querySelector('.il-versions'), resizeMiniBtn = row.querySelector('.il-resize-mini'), more = row.querySelector('.il-more');
+    var manageLabel = row.querySelector('.imglink-manage-label');
     if (manageLabel) manageLabel.textContent = t('imgManageActions');
     bo.innerHTML = ICONS.eye; bo.title = t('imgOpen') + ' — ' + t('imgVariantAuto'); bo.setAttribute('aria-label', bo.title);
     bq.title = t('qrForLink'); bq.setAttribute('aria-label', t('qrForLink'));
     qrdl.title = t('imgQrDownloaded'); qrdl.setAttribute('aria-label', t('imgQrDownloaded'));
+    photoEditBtn.title = t('imgEditUploaded'); photoEditBtn.setAttribute('aria-label', t('imgEditUploaded'));
     replaceBtn.title = t('imgReplace'); replaceBtn.setAttribute('aria-label', t('imgReplace'));
     versionsBtn.title = t('imgVersions'); versionsBtn.setAttribute('aria-label', t('imgVersions'));
     resizeMiniBtn.title = t('imgResizeMini'); resizeMiniBtn.setAttribute('aria-label', t('imgResizeMini'));
+    var statsBtn = row.querySelector('.il-stats');
+    if (statsBtn) {
+      statsBtn.textContent = t('imgStatsButton'); statsBtn.title = t('imgStatsTitle'); statsBtn.setAttribute('aria-label', statsBtn.title);
+      statsBtn.addEventListener('click', function () { openImageDetailedStats(imageRecordsByToken.get(data.token) || data); });
+    }
+    var cmp = row.querySelector('.il-compare');
+    if (cmp) {
+      cmp.textContent = '⇄ ' + t('imgCompare'); cmp.title = t('imgCompareTitle'); cmp.setAttribute('aria-label', cmp.title);
+      cmp.addEventListener('click', function () { openVariantCompare(imageRecordsByToken.get(data.token) || data); });
+    }
     function copyOne(kind) { return function () { var photo = imageRecordsByToken.get(data.token) || data; var url = imageVariantUrl(photo, kind); copyText(formatLink(url, photo.name, photo, kind)).then(function () { recordImageAction('copied', photo, kind); toast(t('imgCopied'), 'ok'); }); }; }
-    ba.addEventListener('click', copyOne('auto'));
-    bf.addEventListener('click', copyOne('full'));
-    bt.addEventListener('click', copyOne('thumb'));
-    bm.addEventListener('click', copyOne('micro'));
+    // Always copy forum-friendly BBCode for this exact variant, regardless of the
+    // selected copy format/template. Mini/Micro are clickable thumbnails that open
+    // the Full image, matching the standard Direct-Xfer interface.
+    function copyBB(kind) { return function () { var photo = imageRecordsByToken.get(data.token) || data; var url = imageVariantUrl(photo, kind); copyText(imageVariantBBCode(photo, kind, url)).then(function () { recordImageAction('copied', photo, kind); toast(t('imgCopied'), 'ok'); }); }; }
+    // Copy this variant's actual pixels to the clipboard (paste an image into chat/docs).
+    function copyImageBitmap(kind) { return function () { var photo = imageRecordsByToken.get(data.token) || data; var url = imagePreviewUrl(photo, kind); if (!url) return; copyImageToClipboard(url).then(function () { recordImageAction('copied', photo, kind); toast(t('imgCopied'), 'ok'); }, function () { toast(t('copyFailed'), 'err'); }); }; }
     row.querySelectorAll('.imgvariant').forEach(function (line) {
       var kind = line.dataset.kind;
       var openVariant = line.querySelector('.iv-open');
-      if (!openVariant) return;
-      openVariant.addEventListener('click', function () {
+      if (openVariant) openVariant.addEventListener('click', function () {
         var photo = imageRecordsByToken.get(data.token) || data;
         var url = imagePreviewUrl(photo, kind);
         if (!url || photo.active === false) return;
         recordImageAction('opened', photo, kind);
         openImageUrlPreview(url, photo.name);
       });
+      // Copy this exact variant's link, reusing the same copy behaviour (formatLink +
+      // "copied" action + toast) as the grouped copy buttons below.
+      var copyVariant = line.querySelector('.iv-copy');
+      if (copyVariant) copyVariant.addEventListener('click', copyOne(kind));
+      // Copy this variant as BBCode, forced regardless of the selected copy format.
+      var bbVariant = line.querySelector('.iv-bb');
+      if (bbVariant) bbVariant.addEventListener('click', copyBB(kind));
+      // Copy this variant's pixels to the clipboard as a bitmap.
+      var imgBtn = line.querySelector('.iv-img');
+      if (imgBtn) imgBtn.addEventListener('click', copyImageBitmap(kind));
     });
     bo.addEventListener('click', function () { var photo = imageRecordsByToken.get(data.token) || data; var url = imagePreviewUrl(photo, 'auto'); if (!url) return; recordImageAction('opened', photo, 'auto'); openImageUrlPreview(url, photo.name); });
     fav.addEventListener('click', async function () {
@@ -3083,19 +4291,24 @@
       if (r.ok) { var updated = (await r.json()).image; imageRecordsByToken.set(photo.token, imageDataUrls(updated)); persistImageRecord(imageRecordsByToken.get(photo.token)); fav.classList.toggle('active', enabled); row.classList.toggle('pinned', enabled); fav.title = enabled ? t('unpinItem') : t('pinItem'); fav.setAttribute('aria-label', fav.title); recordImageAction('edited', updated, enabled ? 'favorite' : 'unfavorite'); applyImageView(); }
     });
     edit.addEventListener('click', function () { editOneImage(imageRecordsByToken.get(data.token) || data); });
-    bq.addEventListener('click', function () { var photo = imageRecordsByToken.get(data.token) || data; showQrOverlay(imageVariantUrl(photo, imageDefaultVariant()), photo.name); });
+    if (ocrBtn) {
+      ocrBtn.title = t('ocrAction'); ocrBtn.setAttribute('aria-label', t('ocrAction'));
+      ocrBtn.addEventListener('click', function () { openImageRecordOcr(imageRecordsByToken.get(data.token) || data); });
+    }
+    bq.addEventListener('click', function () { var photo = imageRecordsByToken.get(data.token) || data; showQrOverlay(imageVariantUrl(photo, IMAGE_PRIMARY_VARIANT), photo.name); });
     qrdl.addEventListener('click', function () { downloadImageQr(imageRecordsByToken.get(data.token) || data); });
+    photoEditBtn.addEventListener('click', async function () {
+      if (photoEditBtn.disabled) return;
+      photoEditBtn.disabled = true;
+      try { await editUploadedImage(imageRecordsByToken.get(data.token) || data); }
+      finally { var current = imageRecordsByToken.get(data.token) || data; photoEditBtn.disabled = current.active === false; }
+    });
     replaceBtn.addEventListener('click', function () { replaceImageKeepingUrl(imageRecordsByToken.get(data.token) || data); });
     versionsBtn.addEventListener('click', function () { manageImageVersions(imageRecordsByToken.get(data.token) || data); });
     resizeMiniBtn.addEventListener('click', function () { resizeImageMini(imageRecordsByToken.get(data.token) || data); });
     row.querySelector('.imglink-actions').classList.remove('hidden');
-    var st = row.querySelector('.imglink-st');
-    var stateText = data.expired ? t('imgExpired') : !data.active ? ((data.maxViews && imageRecordViews(data) >= data.maxViews) ? t('imgViewLimitReached') : t('imgInactive')) : t('imgReady');
-    st.textContent = stateText + (data.metadataRemoved ? ' · ' + t('imgMetadataRemoved') : '');
-    st.className = 'imglink-st ' + (data.active ? 'ok' : 'muted') + ' sm';
+    restoreImageRowStatus(row, data);
     fav.classList.toggle('active', !!data.favorite); row.classList.toggle('pinned', !!data.favorite); fav.title = data.favorite ? t('unpinItem') : t('pinItem'); fav.setAttribute('aria-label', fav.title);
-    var defaultKind = imageDefaultVariant();
-    [['auto', ba], ['full', bf], ['thumb', bt], ['micro', bm]].forEach(function (pair) { pair[1].classList.toggle('il-primary', pair[0] === defaultKind); });
     if (more) more.addEventListener('click', function () { row.classList.toggle('show-all-actions'); more.setAttribute('aria-expanded', row.classList.contains('show-all-actions') ? 'true' : 'false'); });
     arrangeImageActions(row); updateExpiryCountdowns(); renderTagColorManager();
     if (trackForCopyAll !== false && !imageLinkUrls.some(function (o) { return o.token === data.token; })) imageLinkUrls.push({ token: data.token, imgUrl: data.imgUrl, thumbUrl: data.thumbUrl, microUrl: data.microUrl, name: data.name });
@@ -3103,6 +4316,11 @@
     refreshCopyAll(); applyImageView();
   }
   async function refreshImageStats(loadMissing) {
+    // Never let the lightweight 3-second poll abort a full paginated inventory
+    // restore on a large library. This previously made libraries >500 entries
+    // repeatedly restart page 1 on slower phones/proxies.
+    if (!loadMissing && imageFullRefreshInFlight) return;
+    if (loadMissing) imageFullRefreshInFlight = true;
     var generation = ++imageRefreshGeneration;
     if (imageStatsAbortController && typeof imageStatsAbortController.abort === 'function') {
       try { imageStatsAbortController.abort(); } catch (_) {}
@@ -3111,34 +4329,55 @@
     try {
       var requestOptions = { credentials: 'same-origin', cache: 'no-store' };
       if (imageStatsAbortController) requestOptions.signal = imageStatsAbortController.signal;
-      var r = await fetch('/app/images?limit=500&includeInactive=1', requestOptions);
+      var r = await fetchWithTimeout('/app/images?limit=500&offset=0&includeInactive=1', requestOptions, 15000);
       if (!r.ok) throw new Error('http ' + r.status);
       var payload = await r.json();
       if (generation !== imageRefreshGeneration) return;
+      var rawImages = payload && Array.isArray(payload.images) ? payload.images.slice() : [];
+      var inventoryComplete = !(payload && payload.hasMore);
+      // A first/full refresh paginates the inventory so a new device can restore
+      // libraries larger than 500 images. The 3-second poll intentionally stays on
+      // page 1: it sees every newly-created image without hammering the server with
+      // hundreds of follow-up /stats requests for older records.
+      if (loadMissing && payload && payload.hasMore) {
+        var nextOffset = Math.max(0, Number(payload.offset) || 0) + rawImages.length;
+        var pages = 1;
+        while (payload.hasMore && pages < 20) {
+          var pageResponse = await fetchWithTimeout('/app/images?limit=500&offset=' + encodeURIComponent(nextOffset) + '&includeInactive=1', requestOptions, 15000);
+          if (!pageResponse.ok) { inventoryComplete = false; break; }
+          payload = await pageResponse.json();
+          if (generation !== imageRefreshGeneration) return;
+          var pageImages = payload && Array.isArray(payload.images) ? payload.images : [];
+          rawImages = rawImages.concat(pageImages);
+          nextOffset = Math.max(nextOffset, Number(payload.offset) || nextOffset) + pageImages.length;
+          pages += 1;
+          if (!payload.hasMore) { inventoryComplete = true; break; }
+          if (!pageImages.length) { inventoryComplete = false; break; }
+        }
+        if (payload && payload.hasMore) inventoryComplete = false;
+      }
       var now = Date.now();
-      var photos = payload && Array.isArray(payload.images) ? payload.images.map(function (entry) {
+      var photos = rawImages.map(function (entry) {
         var existing = entry && entry.token ? imageRecordsByToken.get(entry.token) : null;
         entry = imageDataUrls(entry);
         entry.localCommittedAt = existing && existing.localCommittedAt || 0;
         entry.lastServerConfirmedAt = now;
         return entry;
-      }) : [];
+      });
       var known = new Set(photos.map(function (photo) { return photo.token; }));
 
-      // A list response may have started before the upload was committed. Never
-      // interpret one missing token as a deletion: verify it through the dedicated
-      // authenticated stats route first. This also repairs incomplete list results
-      // after a service-worker update or ownership-cookie rehydration.
-      var missing = Array.from(imageRecordsByToken.values()).filter(function (photo) {
+      // Missing records are meaningful only after a COMPLETE inventory. A truncated
+      // page-1 poll must never turn the 501st cached image into a deletion candidate.
+      var missing = inventoryComplete ? Array.from(imageRecordsByToken.values()).filter(function (photo) {
         return photo && photo.token && !known.has(photo.token) && !pendingImageRevokes.has(photo.token);
-      });
+      }) : [];
       if (missing.length) {
         var recovered = await Promise.all(missing.map(async function (cached) {
           try {
-            var fresh = await fetch('/app/image/' + encodeURIComponent(cached.token) + '/stats', {
+            var fresh = await fetchWithTimeout('/app/image/' + encodeURIComponent(cached.token) + '/stats', {
               credentials: 'same-origin', cache: 'no-store',
               signal: imageStatsAbortController ? imageStatsAbortController.signal : undefined,
-            });
+            }, 10000);
             if (fresh.status === 404 || fresh.status === 410) return { missingToken: cached.token, cached: cached };
             if (!fresh.ok) return { keepToken: cached.token };
             var record = imageDataUrls(await fresh.json());
@@ -3165,14 +4404,14 @@
         var existingLink = imageLinkUrls.find(function (o) { return o.token === photo.token; });
         if (existingLink) Object.assign(existingLink, photo); else imageLinkUrls.push({ token: photo.token, imgUrl: photo.imgUrl, thumbUrl: photo.thumbUrl, microUrl: photo.microUrl, name: photo.name });
         var row = imageRowsByToken.get(photo.token);
-        if (!row && loadMissing) {
+        if (!row) {
           row = imgLinkRow(photo.name || 'image', imageCardPreviewUrl(photo), false);
           activateImageLinkRow(row, photo, photo.name || 'image', false, false);
         } else if (row) {
           row.querySelector('.imglink-name').textContent = photo.name || 'image';
           renderImageVariantStats(row, photo);
           var fav = row.querySelector('.il-favorite'); if (fav) { fav.classList.toggle('active', !!photo.favorite); fav.title = photo.favorite ? t('unpinItem') : t('pinItem'); fav.setAttribute('aria-label', fav.title); } row.classList.toggle('pinned', !!photo.favorite);
-          var st = row.querySelector('.imglink-st'); if (st) { var statusText = photo.expired ? t('imgExpired') : !photo.active ? ((photo.maxViews && imageRecordViews(photo) >= photo.maxViews) ? t('imgViewLimitReached') : t('imgInactive')) : t('imgReady'); st.textContent = statusText + (photo.metadataRemoved ? ' · ' + t('imgMetadataRemoved') : ''); st.className = 'imglink-st ' + (photo.active ? 'ok' : 'muted') + ' sm'; }
+          if (!pendingImageRevokes.has(photo.token)) restoreImageRowStatus(row, photo);
         }
         } catch (e) { try { console.error('[dx] image card render failed for ' + (photo && photo.token), e); } catch (_) {} }
       });
@@ -3197,12 +4436,13 @@
         // Authentication/network failures are already surfaced elsewhere in the PWA.
       }
     } finally {
+      if (loadMissing) imageFullRefreshInFlight = false;
       if (generation === imageRefreshGeneration) imageStatsAbortController = null;
     }
   }
   function startImageStatsPolling() {
     if (imageStatsTimer) clearInterval(imageStatsTimer);
-    imageStatsTimer = setInterval(function () { if (!document.hidden) refreshImageStats(true); }, 3000);
+    imageStatsTimer = setInterval(function () { if (!document.hidden) refreshImageStats(false); }, 3000);
   }
   // Server accepts only these image extensions for a direct link. Anything else
   // (notably iPhone HEIC/HEIF, or files that arrive without an extension) must be
@@ -3251,17 +4491,22 @@
     st.textContent = stripMetadata ? t('imgStrippingMetadata') : t('imgUploading');
     try {
       var clientHash = '';
-      try { clientHash = await sha256Blob(file); } catch (_) {}
-      var duplicate = await imageDuplicate(clientHash);
-      if (duplicate && !askConfirmation('replace', t('imgDuplicateFound'))) { if (row.parentNode) row.parentNode.removeChild(row); return null; }
       var workingFile = file;
       var smartBlurRemovedMetadata = false;
       if (options.smartBlurMode && options.smartBlurMode !== 'off') {
         st.textContent = t('imgSmartBlurAnalyzing');
         var reviewedFile = await openSmartBlurReview(file, options.smartBlurMode);
-        if (reviewedFile) { workingFile = reviewedFile; smartBlurRemovedMetadata = true; }
+        // Skip/cancel resolves with the exact original File. Only an applied canvas
+        // result has actually removed metadata and changed the bytes to deduplicate.
+        if (reviewedFile) { workingFile = reviewedFile; smartBlurRemovedMetadata = reviewedFile !== file; }
       }
       var prepared = await prepareImageForLink(workingFile, stripMetadata);
+      // Hash the final privacy-reviewed payload source, not the pre-redaction photo.
+      // Otherwise an unredacted original (or a different redaction of it) is falsely
+      // reported as a duplicate of the already-censored image.
+      try { clientHash = await sha256Blob(workingFile); } catch (_) {}
+      var duplicate = await imageDuplicate(clientHash);
+      if (duplicate && !askConfirmation('replace', t('imgDuplicateFound'))) { if (row.parentNode) row.parentNode.removeChild(row); return null; }
       var metadataRemoved = !!(prepared.metadataStripped || smartBlurRemovedMetadata);
       if (desiredName) {
         var preparedDot = prepared.name.lastIndexOf('.');
@@ -3276,15 +4521,19 @@
       if (variants) uploadUrl += '&w=' + variants.width + '&h=' + variants.height;
       if (clientHash) uploadUrl += '&clientHash=' + encodeURIComponent(clientHash);
       if (metadataRemoved) uploadUrl += '&metadataRemoved=1';
-      var r = await appMutate(uploadUrl, prepared.type, prepared.blob);
-      if (!r.ok) throw new Error('http ' + r.status);
+      var r = await imageDlpMutate(uploadUrl, prepared.type, prepared.blob);
+      if (!r) { if (row.parentNode) row.parentNode.removeChild(row); return null; }
+      if (!r.ok) {
+        var uploadErr = null; try { uploadErr = await r.clone().json(); } catch (_) {}
+        var uploadFailure = new Error('http ' + r.status);
+        if (uploadErr && uploadErr.error === 'dlp-blocked') uploadFailure.dxReason = t('sharesDlpBlocked');
+        throw uploadFailure;
+      }
       var data = await r.json();
       if (!data || !data.token) throw new Error('no-token');
       st.textContent = t('imgThumbing');
-      try {
-        if (!variants) throw new Error('variants-unavailable');
-        await uploadGeneratedImageVariants(data.token, variants);
-      } catch (_) {}
+      var variantsOk = false;
+      try { variantsOk = await uploadGeneratedImageVariants(data.token, variants); } catch (_) { variantsOk = false; }
       var settingsPayload = Object.assign({}, options); delete settingsPayload.smartBlurMode;
       var settingsResponse = await imageJsonMutation('/app/image/' + encodeURIComponent(data.token) + '/settings', settingsPayload);
       if (settingsResponse.ok) {
@@ -3306,9 +4555,10 @@
       recordImageAction('created', imageDataUrls(data));
       if ($('img-auto-copy') && $('img-auto-copy').checked) {
         var photo = imageRecordsByToken.get(data.token) || imageDataUrls(data);
-        await copyText(formatLink(imageVariantUrl(photo, imageDefaultVariant()), photo.name, photo, imageDefaultVariant()));
-        toast(t('imgCopied'), 'ok'); recordImageAction('copied', photo, imageDefaultVariant());
+        await copyText(formatLink(imageVariantUrl(photo, IMAGE_PRIMARY_VARIANT), photo.name, photo, IMAGE_PRIMARY_VARIANT));
+        toast(t('imgCopied'), 'ok'); recordImageAction('copied', photo, IMAGE_PRIMARY_VARIANT);
       }
+      if (!variantsOk) toast(t('imgVariantsFailed'), 'warn');
       refreshImageStats(false); refreshImageDashboard();
       return data;
     } catch (e) {
@@ -3322,18 +4572,27 @@
   }
   // Render a link in the chosen copy format (raw URL, Markdown, or HTML img tag).
   function escapeMarkup(value) { return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function escapeMarkdownLabel(value) { return String(value || '').replace(/\\/g, '\\\\').replace(/\]/g, '\\]'); }
+  function imageVariantBBCode(photo, kind, url) {
+    var variantUrl = url || imageVariantUrl(photo || {}, kind);
+    var fullUrl = photo && photo.imgUrl ? photo.imgUrl : variantUrl;
+    if ((kind === 'thumb' || kind === 'micro') && fullUrl && variantUrl) {
+      return '[url=' + fullUrl + '][img]' + variantUrl + '[/img][/url]';
+    }
+    return '[img]' + variantUrl + '[/img]';
+  }
   function formatLink(url, name, photo, kind) {
     var fmt = $('img-format') ? $('img-format').value : 'url';
     var template = $('img-copy-template') ? $('img-copy-template').value : 'standard';
     var alt = (name || 'image').replace(/\.[^.]+$/, '');
     var full = photo && photo.imgUrl ? photo.imgUrl : url;
     if (template === 'discord') return url;
-    if (template === 'reddit') return '[' + alt.replace(/\]/g, '\]') + '](' + url + ')';
+    if (template === 'reddit') return '[' + escapeMarkdownLabel(alt) + '](' + url + ')';
     if (template === 'forum') return '[url=' + full + '][img]' + url + '[/img][/url]';
     if (template === 'email') return '<a href="' + full + '"><img src="' + url + '" alt="' + escapeMarkup(alt) + '"></a>';
-    if (fmt === 'md') return '![' + alt + '](' + url + ')';
+    if (fmt === 'md') return '![' + escapeMarkdownLabel(alt) + '](' + url + ')';
     if (fmt === 'html') return '<img src="' + url + '" alt="' + escapeMarkup(alt) + '">';
-    if (fmt === 'bb') return '[img]' + url + '[/img]';
+    if (fmt === 'bb') return imageVariantBBCode(photo, kind, url);
     return url;
   }
   function refreshCopyAll() {
@@ -3347,7 +4606,7 @@
   function copyAllImageLinks() {
     var links = imageLinkUrls.filter(function (o) { var p = imageRecordsByToken.get(o.token); return !p || p.active; });
     if (!links.length) { toast(t('noImgLinks'), 'warn'); return; }
-    var kind = imageDefaultVariant();
+    var kind = IMAGE_PRIMARY_VARIANT;
     var text = links.map(function (o) { var photo = imageRecordsByToken.get(o.token) || o; return formatLink(imageVariantUrl(photo, kind), photo.name || o.name, photo, kind); }).join('\n');
     copyText(text).then(
       function () { links.forEach(function (o) { recordImageAction('copied', imageRecordsByToken.get(o.token) || o, kind); }); toast(t('allImgCopied', { n: links.length }), 'ok'); },
@@ -3368,6 +4627,21 @@
     persistImagePreferences();
     for (var i = 0; i < files.length; i++) { await createOneImageLink(files[i], stripMetadata, imageRename(files[i].name || ('image-' + (i + 1) + '.jpg'), i), options); }
   }
+  async function editImageBeforeLink(fileList) {
+    var files = Array.prototype.slice.call(fileList || []);
+    var file = files.find(function (candidate) { return candidate && (/^image\//.test(candidate.type || '') || /\.(jpe?g|png|gif|webp|bmp|avif|heic|heif)$/i.test(candidate.name || '')); });
+    if (!file) return;
+    var edited = await openImageLinkEditor(file);
+    // Cancel, Escape and tapping outside the dialog all return the original object.
+    if (!edited || edited === file) return;
+    var stripMetadata = !!($('imglink-strip-exif') && $('imglink-strip-exif').checked);
+    var options = imageOptionsFromUi();
+    // The manual editor already presented every privacy tool. Do not immediately
+    // reopen it because the optional smart-blur preference is enabled.
+    options.smartBlurMode = 'off';
+    persistImagePreferences();
+    await createOneImageLink(edited, stripMetadata, imageRename(edited.name || ('image-' + Date.now() + '.jpg'), 0), options);
+  }
 
   function encryptionContext(snapshot) {
     var enc = snapshot.enc;
@@ -3382,7 +4656,10 @@
     return window.DXCrypto.importRawKey(window.DXCrypto.b64urlDecode(snapshot.key)).then(function (key) { return { mode: 'key', key: key, salt: null }; });
   }
   async function prepareUpload(it) {
-    if (it.preparedBlob && it.upName && it.upSize != null) return;
+    if (it.preparedBlob && it.upName && it.upSize != null) {
+      it.backgroundReady = !!($('auto-resume') && $('auto-resume').checked && preparedPayloadIsDurable(it));
+      return;
+    }
     var source = await optimizeImage(it);
     if (!it.snapshot.enc) {
       it.preparedBlob = source;
@@ -3391,6 +4668,7 @@
       it.preparedEncrypted = false;
       it.state = 'waiting';
       await ensurePreparedDurable(it);
+      it.backgroundReady = !!($('auto-resume') && $('auto-resume').checked && preparedPayloadIsDurable(it));
       return;
     }
     it.state = 'encrypting'; updateItemUi(it, t('encrypting'));
@@ -3413,6 +4691,157 @@
     it.state = 'waiting';
     it.prepareProgress = 1;
     await ensurePreparedDurable(it);
+    it.backgroundReady = !!($('auto-resume') && $('auto-resume').checked && preparedPayloadIsDurable(it));
+  }
+
+  function persistErrorLog() {
+    try { localStorage.setItem('dx-pwa-error-log', JSON.stringify(recentErrors.slice(-30))); } catch (_) {}
+  }
+  function errorCategory(code, badge, hint) {
+    var text = [code, badge, hint].join(' ').toLowerCase();
+    if (/413|proxy|gateway|502|503|504|post.*block|body.size|buffer/.test(text)) return 'proxy';
+    if (/quota|max-files|storage|disk|space|opfs|indexeddb/.test(text)) return 'quota';
+    if (/network|connect|timeout|offline|wifi|net.cut|refused|429|rate/.test(text)) return 'network';
+    if (/401|403|locked|revoked|auth|permission|csrf|origin/.test(text)) return 'auth';
+    if (/file-too-large|too-large|ext-|infected|read|prepare|nocrypto|nokey|nopass/.test(text)) return 'file';
+    if (/500|server|write-error|inbox-dir|busy|offset/.test(text)) return 'server';
+    return 'other';
+  }
+  function errorCategoryLabel(category) {
+    return t({ proxy: 'errorCategoryProxy', quota: 'errorCategoryQuota', network: 'errorCategoryNetwork', server: 'errorCategoryServer', auth: 'errorCategoryAuth', file: 'errorCategoryFile', other: 'errorCategoryOther' }[category] || 'errorCategoryOther');
+  }
+  function recordTransferError(it, detail) {
+    detail = detail || {};
+    var rec = {
+      id: genId(12), itemId: it && it.id || '', name: it && it.name || detail.name || '',
+      code: detail.code || (it && it.errorCode) || '', badge: detail.badge || (it && it.lastFail) || '',
+      hint: detail.hint || (it && it.lastHint) || reasonText(detail.code || (it && it.errorCode) || '') || '', at: Date.now()
+    };
+    rec.category = errorCategory(rec.code, rec.badge, rec.hint);
+    recentErrors.push(rec); recentErrors = recentErrors.slice(-30); persistErrorLog();
+    lastDiag = { name: rec.name, badge: rec.badge, hint: rec.hint, code: rec.code, at: rec.at };
+    renderErrorCenter();
+    return rec;
+  }
+  function clearErrorLog() { recentErrors = []; lastDiag = null; persistErrorLog(); renderErrorCenter(); if ($('diag-status')) $('diag-status').textContent = t('diagNone'); toast(t('errorLogCleared'), 'ok'); }
+  function currentErrorRecords() {
+    var records = recentErrors.slice().reverse(), seen = new Set(records.map(function (r) { return r.itemId; }).filter(Boolean));
+    items.filter(function (it) { return it.state === 'error' && !seen.has(it.id); }).forEach(function (it) {
+      records.unshift({ id: 'live-' + it.id, itemId: it.id, name: it.name, code: it.errorCode || '', badge: it.lastFail || '', hint: it.lastHint || reasonText(it.errorCode), category: errorCategory(it.errorCode, it.lastFail, it.lastHint), at: Date.now() });
+    });
+    return records.slice(0, 20);
+  }
+  function renderErrorCenter() {
+    var center = $('error-center'), list = $('error-center-list'), count = $('error-center-count');
+    if (!center || !list) return;
+    var records = currentErrorRecords();
+    center.classList.toggle('hidden', !records.length);
+    if (count) count.textContent = String(records.length);
+    list.innerHTML = '';
+    if (!records.length) { var empty = document.createElement('p'); empty.className = 'muted sm'; empty.textContent = t('errorCenterEmpty'); list.appendChild(empty); return; }
+    records.forEach(function (rec, recIndex) {
+      var row = document.createElement('div'); row.className = 'error-center-row';
+      var icon = document.createElement('span'); icon.className = 'error-center-icon'; icon.textContent = rec.category === 'proxy' ? '🧱' : rec.category === 'quota' ? '💾' : rec.category === 'network' ? '📡' : rec.category === 'server' ? '🖥' : rec.category === 'auth' ? '🔐' : rec.category === 'file' ? '📄' : '⚠️'; row.appendChild(icon);
+      var main = document.createElement('div'); main.className = 'error-center-main';
+      var top = document.createElement('div'); top.className = 'error-center-top';
+      var cat = document.createElement('strong'); cat.textContent = errorCategoryLabel(rec.category); top.appendChild(cat);
+      var when = document.createElement('span'); when.className = 'muted sm'; when.textContent = fmtDate(rec.at); top.appendChild(when); main.appendChild(top);
+      if (rec.name) { var name = document.createElement('div'); name.className = 'error-center-name'; name.textContent = privacyNames ? t('privacyFile', { n: recIndex + 1 }) : rec.name; main.appendChild(name); }
+      var hint = document.createElement('div'); hint.className = 'muted sm'; hint.textContent = [rec.badge, rec.hint].filter(Boolean).join(' — ') || t('error'); main.appendChild(hint); row.appendChild(main);
+      var item = rec.itemId ? items.find(function (it) { return it.id === rec.itemId && it.state === 'error'; }) : null;
+      if (item) { var retry = document.createElement('button'); retry.type = 'button'; retry.className = 'btn ghost sm error-retry'; retry.textContent = t('errorCenterRetry'); retry.addEventListener('click', function () { retryItem(item); }); row.appendChild(retry); }
+      list.appendChild(row);
+    });
+  }
+  function errorReportText() {
+    var records = currentErrorRecords();
+    var lines = ['Direct-Xfer PWA · ' + APP_BUILD, 'online: ' + navigator.onLine, 'errors: ' + records.length];
+    if (lastNetworkTest) lines.push('network: ' + Math.round(lastNetworkTest.latency || 0) + ' ms · up ' + fmtBytes(lastNetworkTest.uploadBps || 0) + '/s · down ' + fmtBytes(lastNetworkTest.downloadBps || 0) + '/s');
+    records.forEach(function (r) { lines.push('[' + errorCategoryLabel(r.category) + '] ' + fmtDate(r.at) + ' · ' + (r.name || '-') + ' · ' + [r.badge, r.code, r.hint].filter(Boolean).join(' — ')); });
+    return lines.join('\n');
+  }
+  function copyErrorReport() { copyText(errorReportText()).then(function () { toast(t('errorReportCopied'), 'ok'); }, function () { toast(t('copyFailed'), 'err'); }); }
+
+  function networkQuality(result) {
+    if (!result) return 'unknown';
+    var up = result.uploadBps || 0, latency = result.latency || 9999;
+    if (up >= 12 * 1024 * 1024 && latency < 80) return 'excellent';
+    if (up >= 3 * 1024 * 1024 && latency < 180) return 'good';
+    if (up >= 768 * 1024 && latency < 450) return 'fair';
+    return 'poor';
+  }
+  function networkQualityLabel(q) { return t(q === 'excellent' ? 'networkQualityExcellent' : q === 'good' ? 'networkQualityGood' : q === 'fair' ? 'networkQualityFair' : q === 'poor' ? 'networkQualityPoor' : 'networkNotTested'); }
+  function applyNetworkRecommendation(result) {
+    if (!result) return;
+    var q = networkQuality(result), mobile = isMobileLike();
+    if (q === 'poor') { networkRecommendedChunk = MIN_CHUNK; networkRecommendedConcurrency = 1; }
+    else if (q === 'fair') { networkRecommendedChunk = mobile ? MOBILE_CHUNK : 1024 * 1024; networkRecommendedConcurrency = 1; }
+    else if (q === 'good') { networkRecommendedChunk = mobile ? MOBILE_CHUNK : 2 * 1024 * 1024; networkRecommendedConcurrency = mobile ? 1 : 2; }
+    else { networkRecommendedChunk = mobile ? 1536 * 1024 : DESKTOP_CHUNK; networkRecommendedConcurrency = mobile ? 2 : 3; }
+  }
+  function recordNetworkRate(rate) {
+    rate = Number(rate) || 0; if (rate <= 0) return;
+    var now = Date.now(); if (now - networkLastSampleAt < 450) return; networkLastSampleAt = now;
+    networkRateSamples.push({ at: now, rate: rate }); if (networkRateSamples.length > NETWORK_GRAPH_POINTS) networkRateSamples.shift();
+    renderNetworkDashboard();
+  }
+  function drawNetworkGraph() {
+    var canvas = $('network-rate-chart'); if (!canvas || !canvas.getContext) return;
+    var rect = canvas.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1), w = Math.max(260, Math.round(rect.width || 300)), h = 96;
+    canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr); var ctx = canvas.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
+    var samples = networkRateSamples.slice(); if (!samples.length) return;
+    var max = Math.max.apply(null, samples.map(function (x) { return x.rate; }).concat([1]));
+    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--accent-2').trim() || '#5b8dff'; ctx.lineWidth = 2; ctx.beginPath();
+    samples.forEach(function (x, i) { var px = samples.length === 1 ? w : (i / (samples.length - 1)) * w; var py = h - 8 - (x.rate / max) * (h - 16); if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py); }); ctx.stroke();
+  }
+  function renderNetworkDashboard() {
+    var c = connectionInfo(), test = lastNetworkTest || null;
+    var set = function (id, text) { if ($(id)) $(id).textContent = text; };
+    set('net-latency', test ? Math.round(test.latency || 0) + ' ms' : '—');
+    set('net-upload', test ? fmtBytes(test.uploadBps || 0) + '/s' : '—');
+    set('net-download', test ? fmtBytes(test.downloadBps || 0) + '/s' : '—');
+    var live = globalRate && globalRate.ema ? globalRate.ema : 0; set('net-live-rate', live > 0 ? fmtBytes(live) + '/s' : '—');
+    var liveChunk = batch.length ? Math.max.apply(null, batch.map(function (it) { return it.chunkSize || 0; })) : networkRecommendedChunk; set('net-chunk', liveChunk ? fmtBytes(liveChunk) : fmtBytes(initialChunkSize()));
+    set('net-parallel', String(networkConfiguredConcurrency || networkRecommendedConcurrency || (parseInt($('concurrency-select') && $('concurrency-select').value, 10) || 1)));
+    set('net-active', String(networkActiveTransfers));
+    set('net-retries', String(networkRetryCount));
+    var q = networkQuality(test), quality = $('network-quality'); if (quality) { quality.textContent = networkQualityLabel(q); quality.dataset.quality = q; }
+    if ($('network-last-test')) $('network-last-test').textContent = test && test.at ? t('networkLastTest', { when: fmtDate(test.at) }) : t('networkNotTested');
+    if ($('network-connection-detail')) $('network-connection-detail').textContent = c ? [c.type || '', c.effectiveType || '', c.downlink ? c.downlink + ' Mb/s' : ''].filter(Boolean).join(' · ') : (navigator.onLine ? t('onlineStatus') : t('offlineStatus'));
+    drawNetworkGraph();
+  }
+  async function runNetworkTest(options) {
+    options = options || {}; if (networkTestPromise) return networkTestPromise;
+    networkTestPromise = (async function () {
+      var btn = $('network-test-btn'); if (btn) btn.disabled = true;
+      if (!options.silent) toast(t('networkTesting'));
+      try {
+        if (navigator.onLine === false) throw new Error('offline');
+        if (!deviceInfo || !deviceInfo.csrf) await fetchDeviceStatus();
+        var pings = [];
+        for (var i = 0; i < 3; i++) { var p0 = performance.now(); var pr = await fetchWithTimeout('/app/network-test?probe=1&_=' + Date.now() + '-' + i, { credentials: 'same-origin', cache: 'no-store' }, 6000); if (!pr.ok) throw new Error('ping-' + pr.status); await pr.text(); pings.push(performance.now() - p0); }
+        pings.sort(function (a,b) { return a-b; }); var latency = pings[1];
+        var downBytes = 384 * 1024, d0 = performance.now(); var dr = await fetchWithTimeout('/app/network-test?bytes=' + downBytes + '&_=' + Date.now(), { credentials: 'same-origin', cache: 'no-store' }, 10000); if (!dr.ok) throw new Error('down-' + dr.status); var dbuf = await dr.arrayBuffer(); var dsec = Math.max(.001, (performance.now() - d0) / 1000); var downloadBps = dbuf.byteLength / dsec;
+        var upBytes = 512 * 1024, payload = new Uint8Array(upBytes), u0 = performance.now(); var ur = await fetchWithTimeout('/app/network-test', { method: 'POST', credentials: 'same-origin', cache: 'no-store', headers: appMutationHeaders('application/octet-stream'), body: payload }, 12000); if (!ur.ok) throw new Error('up-' + ur.status); var uj = await ur.json(); var sent = Number(uj.bytes) || upBytes; var usec = Math.max(.001, (performance.now() - u0) / 1000); var uploadBps = sent / usec;
+        lastNetworkTest = { at: Date.now(), latency: latency, uploadBps: uploadBps, downloadBps: downloadBps }; applyNetworkRecommendation(lastNetworkTest);
+        try { localStorage.setItem('dx-pwa-network-test', JSON.stringify(lastNetworkTest)); } catch (_) {}
+        renderNetworkDashboard();
+        if (!options.silent) toast(t('networkTestDone', { quality: networkQualityLabel(networkQuality(lastNetworkTest)), up: fmtBytes(uploadBps) + '/s', down: fmtBytes(downloadBps) + '/s', latency: Math.round(latency) }), 'ok');
+        return lastNetworkTest;
+      } catch (e) { if (!options.silent) toast(t('networkTestFailed'), 'warn'); return null; }
+      finally { if (btn) btn.disabled = false; networkTestPromise = null; }
+    })();
+    return networkTestPromise;
+  }
+  async function maybeTestNetworkForLargeTransfer(candidates) {
+    var bytes = candidates.reduce(function (sum, it) { return sum + (it.upSize || it.size || 0); }, 0);
+    if (bytes < LARGE_TRANSFER_TEST_BYTES) return lastNetworkTest;
+    if (lastNetworkTest && Date.now() - (lastNetworkTest.at || 0) < NETWORK_TEST_MAX_AGE_MS) { applyNetworkRecommendation(lastNetworkTest); return lastNetworkTest; }
+    toast(t('networkTestAuto'));
+    var tested = await runNetworkTest({ silent: true });
+    if (tested) toast(t('networkTestDone', { quality: networkQualityLabel(networkQuality(tested)), up: fmtBytes(tested.uploadBps || 0) + '/s', down: fmtBytes(tested.downloadBps || 0) + '/s', latency: Math.round(tested.latency || 0) }), 'ok');
+    else toast(t('networkTestFailed'), 'warn');
+    return tested;
   }
 
   // Upload protocol ----------------------------------------------------------
@@ -3522,6 +4951,7 @@
       var qs = '?path=' + encodeURIComponent(it.upName) + '&id=' + encodeURIComponent(it.uploadId) + '&size=' + it.upSize + '&offset=' + offset;
       if (it.snapshot.sender) qs += '&sender=' + encodeURIComponent(it.snapshot.sender);
       if (it.snapshot.expire) qs += '&expire=' + encodeURIComponent(it.snapshot.expire);
+      if (it.contentHash) qs += '&sha256=' + encodeURIComponent(it.contentHash);
       xhr.open('POST', '/u/' + encodeURIComponent(it.snapshot.token) + '/upload' + qs);
       xhr.withCredentials = true;
       xhr.timeout = UPLOAD_TIMEOUT_MS;
@@ -3588,7 +5018,8 @@
         if (xhr.status === 413) return finish({ retry: true, offset: serverOffset, shrink: true, proxyLimit: true, status: 413, serverCode: code });
         finish({ retry: true, offset: serverOffset, shrink: offset === 0 && xhr.status >= 500, status: xhr.status, serverCode: code });
       };
-      xhr.send(blob.slice(offset, end));
+      try { xhr.send(blob.slice(offset, end)); }
+      catch (_) { finish({ retry: true, offset: null, shrink: offset === 0, netError: true, sentAny: false, ms: Date.now() - started }); }
     });
   }
   function waitUntilOnline() {
@@ -3616,7 +5047,7 @@
     return new Promise(function (resolve) { resumeWaiters.push(resolve); });
   }
   async function finishItem(it, response) {
-    it.state = 'done'; it.sentBytes = it.upSize; it.errorCode = null; it.resumeOnOpen = false;
+    it.state = 'done'; it.sentBytes = it.upSize; it.errorCode = null; it.resumeOnOpen = false; it.backgroundReady = false;
     updateItemUi(it, t('done'), 'ok'); if (it.meta) it.meta.textContent = fmtBytes(it.upSize);
     await removePersistedItem(it);
     // Average rate for THIS file (bytes actually pushed this attempt over its wall time).
@@ -3631,24 +5062,81 @@
     var usedDest = findDest(it.snapshot.token);
     if (usedDest) { usedDest.lastUsedAt = Date.now(); if (usedDest.remembered) persistDestination(usedDest).catch(function () {}); else persistSessionDests(); }
     if (it.snapshot.sender) rememberSender(it.snapshot.sender);
-    await addHistory({ id: genId(18), name: it.name, size: it.size, sentSize: it.upSize, destination: it.snapshot.name, encrypted: !!it.snapshot.enc, at: Date.now(), rate: rate, note: it.note || '' });
+    await addHistory({ id: genId(18), name: it.name, size: it.size, sentSize: it.upSize, destination: it.snapshot.name, destToken: it.snapshot.token, encrypted: !!it.snapshot.enc, at: Date.now(), rate: rate, note: it.note || '' });
     if (response && currentConfig && currentDest && currentDest.token === it.snapshot.token) {
       if (response.filesReceived != null) currentConfig.filesReceived = response.filesReceived;
       if (response.bytesReceived != null) currentConfig.bytesReceived = response.bytesReceived;
       showLimits(currentConfig);
     }
   }
+  async function tryServerDedup(it) {
+    // End-to-end encryption intentionally uses fresh ciphertext, so content
+    // deduplication is meaningful only for the exact unencrypted payload.
+    if (!it || !it.preparedBlob || !it.snapshot || !it.snapshot.token || it.snapshot.enc) return null;
+    try {
+      updateItemUi(it, t('dedupeChecking'));
+      if (!it.contentHash) {
+        it.contentHash = await sha256Blob(it.preparedBlob, function (fraction) {
+          if (it.meta) it.meta.textContent = t('dedupeChecking') + ' ' + Math.round(fraction * 100) + '%';
+        });
+      }
+      if (!it.contentHash || it.state === 'removed') return null;
+      await persistItem(it, false).catch(function () {});
+      var payload = { path: it.upName, size: it.upSize, sha256: it.contentHash, id: it.uploadId, sender: it.snapshot.sender || '', expire: it.snapshot.expire || 0 };
+      var dedupeUrl = '/u/' + encodeURIComponent(it.snapshot.token) + '/dedupe';
+      if (it.snapshot.sender) dedupeUrl += '?sender=' + encodeURIComponent(it.snapshot.sender);
+      var r = await fetchWithTimeout(dedupeUrl, {
+        method: 'POST', credentials: 'same-origin', cache: 'no-store', headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }, body: JSON.stringify(payload)
+      }, 20000);
+      if (!r.ok) return null;
+      var data = await r.json().catch(function () { return null; });
+      if (data && data.deduped) return data;
+      // A global hash match is followed by a proof-of-possession challenge. This
+      // prevents a known SHA-256 from becoming a cross-share content oracle.
+      if (data && data.challenge && Array.isArray(data.ranges) && data.ranges.length) {
+        var proof = [];
+        for (var pi = 0; pi < data.ranges.length; pi++) {
+          var rr = data.ranges[pi] || {}, off = Number(rr.offset) || 0, len = Number(rr.length) || 0;
+          if (off < 0 || len < 1 || len > 4096 || off + len > it.preparedBlob.size) return null;
+          var bytes = new Uint8Array(await it.preparedBlob.slice(off, off + len).arrayBuffer()), binary = '';
+          for (var bi = 0; bi < bytes.length; bi++) binary += String.fromCharCode(bytes[bi]);
+          proof.push(btoa(binary));
+        }
+        payload.challenge = data.challenge; payload.proof = proof;
+        var r2 = await fetchWithTimeout(dedupeUrl, {
+          method: 'POST', credentials: 'same-origin', cache: 'no-store', headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }, body: JSON.stringify(payload)
+        }, 20000);
+        if (!r2.ok) return null;
+        var data2 = await r2.json().catch(function () { return null; });
+        return data2 && data2.deduped ? data2 : null;
+      }
+      return null;
+    } catch (_) { return null; }
+  }
+
   async function uploadOne(it) {
     if (it.state === 'removed' || it.state === 'done') return true;
     try { await prepareUpload(it); }
     catch (e) {
-      it.state = 'error'; it.resumeOnOpen = false; it.errorCode = e && e.message === 'nokey' ? 'nokey' : e && e.message === 'nopass' ? 'nopass' : e && e.message === 'nocrypto' ? 'nocrypto' : 'prepare';
+      it.state = 'error'; it.resumeOnOpen = false; it.backgroundReady = false; it.errorCode = e && e.message === 'nokey' ? 'nokey' : e && e.message === 'nopass' ? 'nopass' : e && e.message === 'nocrypto' ? 'nocrypto' : 'prepare';
       updateItemUi(it, it.errorCode === 'nokey' ? t('keyRequired') : it.errorCode === 'nopass' ? t('passRequired') : it.errorCode === 'nocrypto' ? t('noCrypto') : t('error'), 'err');
+      recordTransferError(it, { code: it.errorCode, badge: 'prepare', hint: statusText(it) });
       await persistItem(it, false); return false;
     }
     it.prepareProgress = 0;
     var offset = await getOffset(it.snapshot, it.uploadId);
     offset = Math.min(offset, it.upSize); it.sentBytes = offset;
+    if (offset === 0 && !it.preparedEncrypted) {
+      var dedupe = await tryServerDedup(it);
+      if (dedupe) {
+        it.deduped = true; it.sendStartAt = Date.now(); it.sendStartBytes = it.upSize;
+        await finishItem(it, dedupe);
+        updateItemUi(it, t('dedupeHit'), 'ok');
+        if (it.row) it.row.classList.add('deduped');
+        if (it.meta) it.meta.textContent = t('dedupeHit') + ' · ' + fmtBytes(it.upSize);
+        return true;
+      }
+    }
     // Open with a small, proxy-safe block; ramp up (below) only after successes.
     // chunkCeil is the largest size proven to work this session — lowered whenever
     // a block is rejected so the upload never grows back into a failing size.
@@ -3659,13 +5147,16 @@
     while (it.state !== 'removed') {
       await waitUntilResumed();
       if (!navigator.onLine) {
-        it.state = 'waiting-network'; updateItemUi(it, t('waitingNetwork')); schedulePersistItem(it); await waitUntilOnline(); continue;
+        it.state = 'waiting-network'; updateItemUi(it, t('waitingNetwork')); schedulePersistItem(it); registerBackgroundSync(); await waitUntilOnline(); continue;
       }
       if (!wifiOk()) {
         it.state = 'waiting-network'; updateItemUi(it, t('waitingWifi')); schedulePersistItem(it); await waitUntilWifi(); continue;
       }
       it.state = 'sending'; updateItemUi(it, offset ? Math.round((offset / Math.max(1, it.upSize)) * 100) + '%' : t('startingUpload'));
-      var result = await putChunk(it, offset);
+      networkActiveTransfers++; renderNetworkDashboard();
+      var result;
+      try { result = await putChunk(it, offset); }
+      finally { networkActiveTransfers = Math.max(0, networkActiveTransfers - 1); renderNetworkDashboard(); }
       if (result.cancelled) return false;
       if (result.paused) { it.state = 'paused'; updateItemUi(it, t('paused')); await persistItem(it, false); continue; }
       if (result.done) { await finishItem(it, result.response); return true; }
@@ -3676,8 +5167,8 @@
         schedulePersistItem(it); updateGlobalProgress(); continue;
       }
       if (result.fatal) {
-        it.state = 'error'; it.resumeOnOpen = false; it.errorCode = result.code; updateItemUi(it, reasonText(result.code), 'err');
-        lastDiag = { name: it.name, badge: 'HTTP', hint: reasonText(result.code), code: result.code, at: Date.now() };
+        it.state = 'error'; it.resumeOnOpen = false; it.backgroundReady = false; it.errorCode = result.code; updateItemUi(it, reasonText(result.code), 'err');
+        recordTransferError(it, { badge: 'HTTP', hint: reasonText(result.code), code: result.code });
         await persistItem(it, false); return false;
       }
       if (result.rateLimited) {
@@ -3691,7 +5182,7 @@
         await sleep(Math.min(60000, Math.max(2000, (result.retryAfter || 5) * 1000)));
         continue;
       }
-      failures++;
+      failures++; networkRetryCount++; renderNetworkDashboard();
       // Record why this block failed: a short badge for the live status line and a
       // precise sentence for the final give-up message. Both make a stalled upload
       // diagnosable on a phone without dev tools.
@@ -3709,11 +5200,11 @@
         else { it.lastHint = t('diagNoConnect'); }
       }
       var stall = function () {
-        it.state = 'error'; it.resumeOnOpen = false; it.errorCode = 'upload-stalled';
+        it.state = 'error'; it.resumeOnOpen = false; it.backgroundReady = false; it.errorCode = 'upload-stalled';
         var msg = it.lastHint ? t('uploadStalled') + ' — ' + it.lastHint : t('uploadStalled');
         updateItemUi(it, msg, 'err');
         if (it.meta) it.meta.textContent = it.lastHint || t('uploadStalled');
-        lastDiag = { name: it.name, badge: it.lastFail || '', hint: it.lastHint || '', at: Date.now() };
+        recordTransferError(it, { badge: it.lastFail || '', hint: it.lastHint || '', code: 'upload-stalled' });
       };
       var currentChunk = Math.max(MIN_CHUNK, it.chunkSize || initialChunkSize());
       if (result.shrink || (offset === 0 && failures >= 2)) {
@@ -3780,9 +5271,10 @@
     } catch (_) {}
   }
   function summaryForBatch(candidates, ok, fail) {
-    var destination = candidates[0] && candidates[0].snapshot ? candidates[0].snapshot.name : (currentDest && currentDest.name) || '';
+    var firstSnapshot = candidates[0] && candidates[0].snapshot ? candidates[0].snapshot : null;
+    var destination = firstSnapshot ? firstSnapshot.name : (currentDest && currentDest.name) || '';
     return {
-      at: Date.now(), destination: destination, ok: ok, fail: fail,
+      at: Date.now(), destination: destination, token: firstSnapshot ? (firstSnapshot.token || '') : (currentDest && currentDest.token) || '', ok: ok, fail: fail,
       totalSize: candidates.reduce(function (sum, it) { return sum + (it.upSize || it.size || 0); }, 0),
       files: candidates.map(function (it) { return { name: it.name, size: it.upSize || it.size || 0, state: it.state, note: it.note || '' }; })
     };
@@ -3828,22 +5320,23 @@
   }
   async function resendLastBatch() {
     var rec = lastBatchRecord;
-    if (!rec || !rec.files || !rec.files.length) { toast(t('lastBatchUnavailable'), 'warn'); updateResultActions(); return; }
+    if (!rec || !rec.files || !rec.files.length) { toast(t('lastBatchUnavailable'), 'warn'); updateResultActions(); return []; }
     if (rec.token && findDest(rec.token)) {
       setActiveToken(rec.token); renderDests(); $('dest-select').value = rec.token; await refreshDestStatus();
     }
     if ($('batch-note')) { $('batch-note').value = rec.note || ''; updateCharCount($('batch-note'), $('note-count'), 120); }
     if ($('expire-select')) $('expire-select').value = String(rec.expire || 0);
     if ($('sender-name') && rec.sender) { $('sender-name').value = rec.sender; saveSenderForCurrent(); }
-    var added = 0;
+    var restored = [];
     for (var i = 0; i < rec.files.length; i++) {
       var f = rec.files[i];
       if (!f.file) continue;
       var it = makeItem({ file: f.file, name: f.name, originalName: f.originalName, type: f.type, size: f.size, lastModified: f.lastModified, state: 'waiting' });
-      items.push(it); persistItem(it, false); added++;
+      items.push(it); persistItem(it, false); restored.push(it);
     }
     renderQueue(); updateSendBtn(); updateStorageStatus();
-    toast(t('lastBatchRestored', { n: added }), added ? 'ok' : 'warn');
+    toast(t('lastBatchRestored', { n: restored.length }), restored.length ? 'ok' : 'warn');
+    return restored;
   }
   function copyLastSummary() {
     if (!lastBatchSummary) { toast(t('noSummary'), 'warn'); return; }
@@ -3890,12 +5383,67 @@
     if (total < 10 * 1024 * 1024) return true;
     return confirm(t('mobileDataConfirm', { size: fmtBytes(total) }));
   }
+  function estimatedCandidateBytes(candidates) {
+    var optimize = $('optimize-images') && $('optimize-images').checked;
+    return candidates.reduce(function (sum, it) {
+      var size = it.upSize || it.size || 0;
+      if (optimize && /^image\//.test(it.type || '') && it.estSize > 0) size = it.estSize;
+      return sum + size;
+    }, 0);
+  }
+  async function checkBatteryBeforeBatch(candidates) {
+    if (!navigator.getBattery || !candidates || !candidates.length) return true;
+    try {
+      var battery = await navigator.getBattery();
+      var level = Math.round((Number(battery.level) || 0) * 100);
+      var bytes = estimatedCandidateBytes(candidates);
+      var longByRate = avgRate > 0 && bytes / avgRate >= 180;
+      if (battery.charging || level > 20 || (bytes < 100 * 1024 * 1024 && !longByRate)) return true;
+      var proceed = confirm(t('lowBatteryConfirm', { level: level }));
+      if (!proceed) return false;
+      if ($('concurrency-select')) { $('concurrency-select').value = '1'; try { localStorage.setItem('dx-pwa-concurrency', '1'); } catch (_) {} }
+      return true;
+    } catch (_) { return true; }
+  }
+  function startBatchClock() {
+    batchStartedAt = Date.now();
+    if (batchClockTimer) clearInterval(batchClockTimer);
+    batchClockTimer = setInterval(function () { if (sending) updateGlobalProgress(); }, 1000);
+  }
+  function stopBatchClock() {
+    if (batchClockTimer) clearInterval(batchClockTimer);
+    batchClockTimer = null;
+    batchStartedAt = 0;
+  }
+  async function showBatchCompletionNotification(ok, fail, summary) {
+    if (!summary || !('Notification' in window) || Notification.permission !== 'granted' || !navigator.serviceWorker) return;
+    try {
+      var reg = await navigator.serviceWorker.ready;
+      if (!reg || !reg.showNotification) return;
+      var actions = [
+        { action: 'open', title: t('notifOpen') },
+        { action: 'copy-link', title: t('notifCopyLink') },
+        { action: 'resend-last', title: t('notifResend') }
+      ];
+      if (typeof Notification.maxActions === 'number' && Notification.maxActions > 0) actions = actions.slice(0, Notification.maxActions);
+      var failText = fail ? ' · ' + t('failures', { n: fail }) : '';
+      var token = summary.token || '';
+      await reg.showNotification(t('notifUploadTitle'), {
+        body: t('notifUploadBody', { ok: ok, fail: failText }),
+        icon: '/app/icon-192.png', badge: '/app/icon-192.png', tag: 'dx-upload-complete', renotify: true, actions: actions,
+        data: { kind: 'upload-complete', url: '/app/?action=send', destinationUrl: token ? (location.origin + '/u/' + encodeURIComponent(token)) : '' }
+      });
+    } catch (_) {}
+  }
 
   async function startBatch(onlyItems) {
     if (sending) return;
     var candidates = (onlyItems || items).filter(function (it) { return it.state === 'waiting' || it.state === 'error' || it.state === 'waiting-network'; });
     if (!candidates.length) { toast(t('noPending'), 'warn'); return; }
+    if (!await ensurePwaDlpBeforeBatch(candidates)) return;
     if (!confirmMobileDataIfNeeded(candidates)) return;
+    if (!await checkBatteryBeforeBatch(candidates)) return;
+    await maybeTestNetworkForLargeTransfer(candidates);
     saveSenderForCurrent();
     var snap = candidates.every(function (it) { return !!it.snapshot; }) ? null : snapshotForCurrentDest();
     if (snap && !validateSnapshot(snap)) return;
@@ -3908,6 +5456,7 @@
       else if (!durableItem.opfsPath && !durableItem.volatile && opfsAvailable()) await ensureSourceDurable(durableItem, true);
     }
     var batchNote = $('batch-note') ? String($('batch-note').value || '').trim().slice(0, 120) : '';
+    var preparedCandidates = [];
     for (var i = 0; i < candidates.length; i++) {
       var item = candidates[i];
       if (batchNote && !item.note) item.note = batchNote;
@@ -3923,16 +5472,41 @@
         if (!validateSnapshot(item.snapshot)) return;
       }
       item.resumeOnOpen = true;
-      await persistItem(item, false); // resume metadata must exist before the first network request
+      // Prepare the exact bytes before the first network request. This page-side
+      // step owns DLP, transformations and encryption; the service worker is allowed
+      // to resume only the resulting durable payload and never receives a secret.
+      try {
+        await prepareUpload(item);
+        if (item.snapshot) { item.snapshot.key = ''; item.snapshot.passphrase = ''; }
+        await persistItem(item, false); // metadata + final payload precede all upload traffic
+        preparedCandidates.push(item);
+      } catch (e) {
+        item.state = 'error'; item.resumeOnOpen = false; item.backgroundReady = false;
+        item.errorCode = e && e.message === 'nokey' ? 'nokey' : e && e.message === 'nopass' ? 'nopass' : e && e.message === 'nocrypto' ? 'nocrypto' : 'prepare';
+        updateItemUi(item, reasonText(item.errorCode), 'err');
+        recordTransferError(item, { code: item.errorCode, badge: 'prepare', hint: statusText(item) });
+        await persistItem(item, false).catch(function () {});
+      }
     }
+    candidates = preparedCandidates;
+    if (!candidates.length) { renderQueue(); updateSendBtn(); return; }
+    if (candidates.some(function (it) { return it.backgroundReady; })) registerBackgroundSync();
     sending = true; paused = false; batch = candidates; batchTotal = candidates.reduce(function (sum, it) { return sum + (it.upSize || it.size || 0); }, 0);
-    globalRate = {}; candidates.forEach(function (it) { it.rate = {}; }); // fresh smoothed-rate baselines for this batch
+    startBatchClock();
+    globalRate = {}; networkRetryCount = 0; networkRateSamples = []; networkLastSampleAt = 0;
+    candidates.forEach(function (it) { it.rate = {}; if (networkRecommendedChunk > 0) it.chunkCeil = Math.max(MIN_CHUNK, networkRecommendedChunk); }); // fresh smoothed-rate baselines for this batch
+    renderNetworkDashboard();
     batchSnapshot = candidates[0].snapshot; setDestinationLocked(true); $('send-btn').disabled = true; $('pause-btn').classList.remove('hidden'); $('resume-btn').classList.add('hidden');
     $('global-progress-wrap').classList.remove('hidden'); await acquireWake(); updateGlobalProgress();
     var queue = candidates.slice(), ok = 0, fail = 0;
     var concurrency = Math.max(1, Math.min(3, parseInt($('concurrency-select').value, 10) || 2));
-    // Mobile browsers are much more reliable with one large upload at a time.
-    if (isMobileLike() || candidates.some(function (it) { return (it.size || 0) >= 128 * 1024 * 1024; })) concurrency = 1;
+    if (networkRecommendedConcurrency > 0) concurrency = Math.min(concurrency, networkRecommendedConcurrency);
+    // Without a fresh network recommendation, keep the conservative mobile rule.
+    // A successful test may explicitly allow 2 parallel streams on a strong mobile link,
+    // while any individual 128 MiB+ file remains single-stream for Android reliability.
+    if ((!lastNetworkTest || Date.now() - (lastNetworkTest.at || 0) >= NETWORK_TEST_MAX_AGE_MS) && isMobileLike()) concurrency = 1;
+    if (candidates.some(function (it) { return (it.size || 0) >= 128 * 1024 * 1024; })) concurrency = 1;
+    networkConfiguredConcurrency = concurrency; renderNetworkDashboard();
     async function worker() {
       while (queue.length) {
         var it = queue.shift();
@@ -3946,7 +5520,9 @@
     var learned = emaRate(globalRate, batchTotal);
     await rememberLastBatch(candidates, ok, fail);
     if (learned > 0) { avgRate = avgRate > 0 ? avgRate * 0.5 + learned * 0.5 : learned; try { localStorage.setItem('dx-pwa-avg-rate', String(Math.round(avgRate))); } catch (_) {} }
-    sending = false; paused = false; batch = []; batchTotal = 0; batchSnapshot = null; setDestinationLocked(false);
+    stopBatchClock();
+    sending = false; paused = false; networkConfiguredConcurrency = 0; networkActiveTransfers = 0; batch = []; batchTotal = 0; batchSnapshot = null; setDestinationLocked(false);
+    await showBatchCompletionNotification(ok, fail, lastBatchSummary);
     if (!($('keep-awake') && $('keep-awake').checked)) releaseWake();
     $('pause-btn').classList.add('hidden'); $('resume-btn').classList.add('hidden'); $('global-progress-wrap').classList.add('hidden');
     if (navigator.vibrate && (!$('vibrate-finish') || $('vibrate-finish').checked)) { try { navigator.vibrate(fail ? [60, 40, 60] : 35); } catch (_) {} }
@@ -3969,10 +5545,15 @@
     $('global-progress').max = Math.max(1, total); $('global-progress').value = Math.min(total, sent);
     var pct = total > 0 ? Math.min(100, Math.round((sent / total) * 100)) : 0;
     var line = pct + ' % · ' + done + '/' + source.length + ' · ' + fmtBytes(sent) + ' / ' + fmtBytes(total);
+    if (sending && batchStartedAt) {
+      var elapsedSec = Math.max(0, (Date.now() - batchStartedAt) / 1000);
+      line += ' · ' + t('batchElapsed', { time: fmtClock(elapsedSec) });
+      if (done > 0) line += ' · ' + t('avgPerFile', { time: fmtClock(elapsedSec / done) });
+    }
     // Overall smoothed rate + ETA across the whole batch, shown while actively sending.
     if (sending && !paused) {
       var rate = emaRate(globalRate, sent);
-      if (rate > 0) {
+      if (rate > 0) { recordNetworkRate(rate);
         line += ' · ↑ ' + fmtBytes(rate) + '/s';
         var remain = Math.max(0, total - sent);
         if (remain > 0) line += ' · ⏳ ' + fmtEta(remain / rate);
@@ -3983,6 +5564,7 @@
     // queued and failed files while idle, so it is updated centrally.
     if (sending) document.title = '(' + pct + ' %) ' + baseTitle;
     else if (document.title !== baseTitle) document.title = baseTitle;
+    updateFilesCount();
     updateAppBadge();
   }
   function updateSendBtn() {
@@ -4010,7 +5592,7 @@
     var pendingLocal = items.filter(function (it) { return ['waiting', 'error', 'paused', 'waiting-network'].indexOf(it.state) !== -1 && !it.snapshot && it.file; });
     if ($('zip-btn')) $('zip-btn').classList.toggle('hidden', sending || pendingLocal.length < 2);
     if ($('multisend-btn')) $('multisend-btn').classList.toggle('hidden', sending || !pendingLocal.length || !allDests().length);
-    updateFilesCount(); updateResultActions(); updateAppBadge();
+    updateFilesCount(); updateOptimizationEstimate(); updateResultActions(); updateAppBadge(); renderErrorCenter(); renderNetworkDashboard();
   }
   function maybeAutoResume() {
     if (sending || !$('auto-resume').checked || !navigator.onLine) return;
@@ -4086,6 +5668,19 @@
     historyEntries = historyEntries.filter(function (x) { return x.id !== h.id; });
     idbDelete(HISTORY_STORE, h.id).catch(function () {}); persistHistorySnapshot(); renderHistory();
   }
+  // Re-select the destination a past batch used and jump to the Send tab, ready to
+  // re-add files. The sent bytes are not retained, so this restores the target and
+  // settings, not the files. Matches by stored token, falling back to the saved
+  // destination name for entries created before destToken existed.
+  function resendFromHistory(h) {
+    var dest = (h.destToken && findDest(h.destToken)) ||
+      (h.destination && allDests().find(function (d) { return (d.name || '') === h.destination; })) || null;
+    if (!dest) { toast(t('historyDestGone'), 'warn'); return; }
+    activatePwaPanel('send');
+    var sel = $('dest-select');
+    if (sel) { sel.value = dest.token; setActiveToken(sel.value); $('enc-key').value = ''; $('enc-passphrase').value = ''; refreshDestStatus(); }
+    toast(t('resendReady'), 'ok');
+  }
   // Day bucket label for grouped history: Today / Yesterday / short date.
   function dayLabel(ms) {
     var d = new Date(ms), today = new Date();
@@ -4134,7 +5729,7 @@
       var icon = document.createElement('span'); icon.textContent = h.encrypted ? '🔐' : '✓'; row.appendChild(icon);
       var main = document.createElement('div'); main.className = 'history-main';
       var strong = document.createElement('strong'); strong.textContent = privacyNames ? privateFileName(historyIndex) : h.name; main.appendChild(strong);
-      var metaText = (h.note ? '🏷 ' + h.note + ' · ' : '') + fmtBytes(h.size) + ' · ' + t('historyDest', { dest: h.destination }) + ' · ' + fmtDate(h.at);
+      var metaText = (h.note ? '🏷 ' + h.note + ' · ' : '') + fmtBytes(h.size) + ' · ' + t('historyDest', { dest: h.destination }) + ' · ' + fmtRelative(h.at);
       if (h.rate > 0) metaText += ' · ' + t('rateAvg', { rate: fmtBytes(h.rate) });
       var meta = document.createElement('div'); meta.className = 'history-meta'; meta.textContent = metaText; main.appendChild(meta);
       row.appendChild(main);
@@ -4143,7 +5738,9 @@
       copy.addEventListener('click', function () { copyText(privacyNames ? [privateFileName(historyIndex), fmtBytes(h.size), t('historyDest', { dest: h.destination }), fmtDate(h.at)].join(' · ') : historyDetailText(h)).then(function () { toast(t('copied'), 'ok'); }, function () { toast(t('copyFailed'), 'err'); }); });
       var del = document.createElement('button'); del.type = 'button'; del.className = 'icon-action remove'; del.textContent = '✕'; del.title = t('remove'); del.setAttribute('aria-label', t('remove'));
       del.addEventListener('click', function () { removeHistoryEntry(h); });
-      actions.appendChild(copy); actions.appendChild(del); row.appendChild(actions);
+      var resend = document.createElement('button'); resend.type = 'button'; resend.className = 'icon-action'; resend.textContent = '↻'; resend.title = t('historyResend'); resend.setAttribute('aria-label', t('historyResend'));
+      resend.addEventListener('click', function () { resendFromHistory(h); });
+      actions.appendChild(resend); actions.appendChild(copy); actions.appendChild(del); row.appendChild(actions);
       list.appendChild(row);
     });
   }
@@ -4152,63 +5749,349 @@
   async function loadSharedBatch() {
     var params = new URLSearchParams(location.search);
     var batchId = params.get('shared');
+    if (!batchId) { try { batchId = localStorage.getItem('dx-pwa-pending-shared-batch') || ''; } catch (_) {} }
     if (!batchId || typeof caches === 'undefined') return;
-    try { history.replaceState(null, '', '/app/'); } catch (_) {}
-    var files = [], cache = await caches.open('dx-share-v2');
-    var metaResponse = await cache.match('/app/__shared/' + batchId + '/meta');
-    if (!metaResponse) { toast(t('authExpired'), 'warn'); return; }
-    var meta = await metaResponse.json();
-    for (var i = 0; i < (meta.files || []).length; i++) {
-      var response = await cache.match('/app/__shared/' + batchId + '/file/' + i); if (!response) continue;
-      var blob = await response.blob(); var info = meta.files[i];
-      files.push(namedFile(blob, info.name || ('file-' + (i + 1)), info.type || blob.type, info.lastModified || Date.now()));
+    try { localStorage.setItem('dx-pwa-pending-shared-batch', batchId); } catch (_) {}
+    if (params.get('shared')) { try { history.replaceState(null, '', '/app/'); } catch (_) {} }
+    var files = [], cache, meta;
+    try {
+      cache = await caches.open('dx-share-v2');
+      var metaResponse = await cache.match('/app/__shared/' + batchId + '/meta');
+      if (!metaResponse) { try { localStorage.removeItem('dx-pwa-pending-shared-batch'); } catch (_) {} return; }
+      meta = await metaResponse.json();
+      var batchAge = Date.now() - Math.max(0, Number(meta && meta.createdAt) || 0);
+      if (!meta || meta.complete !== true) {
+        // An incomplete batch can only come from a worker/browser interruption.
+        // Keep it briefly for diagnostics/retry, but never pin broken CacheStorage
+        // data forever on mobile devices with tight storage quotas.
+        if (batchAge > 10 * 60 * 1000) {
+          var partialKeys = await cache.keys();
+          await Promise.all(partialKeys.filter(function (req) { return new URL(req.url).pathname.indexOf('/app/__shared/' + batchId + '/') === 0; }).map(function (req) { return cache.delete(req); }));
+          try { localStorage.removeItem('dx-pwa-pending-shared-batch'); } catch (_) {}
+        }
+        return;
+      }
+      if (batchAge > 24 * 60 * 60 * 1000) {
+        var staleKeys = await cache.keys();
+        await Promise.all(staleKeys.filter(function (req) { return new URL(req.url).pathname.indexOf('/app/__shared/' + batchId + '/') === 0; }).map(function (req) { return cache.delete(req); }));
+        try { localStorage.removeItem('dx-pwa-pending-shared-batch'); } catch (_) {}
+        return;
+      }
+      for (var i = 0; i < (meta.files || []).length; i++) {
+        var response = await cache.match('/app/__shared/' + batchId + '/file/' + i);
+        if (!response) return; // incomplete batch: never silently drop a shared file
+        var blob = await response.blob(); var info = meta.files[i];
+        files.push(namedFile(blob, info.name || ('file-' + (i + 1)), info.type || blob.type, info.lastModified || meta.createdAt || Date.now()));
+      }
+      var textParts = [];
+      if (meta.title) textParts.push(meta.title);
+      if (meta.text) textParts.push(meta.text);
+      if (meta.url) textParts.push(meta.url);
+      // Use the batch timestamp, not Date.now(), so a crash/retry produces the
+      // same logical File identity and cannot duplicate shared text in the queue.
+      if (textParts.length) files.push(namedFile(new Blob([textParts.join('\n\n')], { type: 'text/plain;charset=utf-8' }), t('sharedTextName'), 'text/plain', meta.createdAt || Date.now()));
+      if (!files.length) return;
+    } catch (_) {
+      // Share Target recovery must never abort the rest of PWA initialization.
+      // Keep the pending batch id so a later launch can retry once CacheStorage
+      // or the browser storage subsystem recovers.
+      return;
     }
-    var textParts = [];
-    if (meta.title) textParts.push(meta.title);
-    if (meta.text) textParts.push(meta.text);
-    if (meta.url) textParts.push(meta.url);
-    if (textParts.length) files.push(namedFile(new Blob([textParts.join('\n\n')], { type: 'text/plain;charset=utf-8' }), t('sharedTextName'), 'text/plain', Date.now()));
-    var keys = await cache.keys();
-    await Promise.all(keys.filter(function (req) { return new URL(req.url).pathname.indexOf('/app/__shared/' + batchId + '/') === 0; }).map(function (req) { return cache.delete(req); }));
-    if (files.length) { await addFiles(files); toast(t('sharedReceived', { n: files.length }), 'ok'); }
+    var added;
+    try { added = await addFiles(files); }
+    catch (_) { return; }
+    // Do not delete the Share Target cache until every newly-added payload has a
+    // durable OPFS/IndexedDB copy. If local storage is full, keeping the batch + ID
+    // is the only crash-safe source and the next launch can try again.
+    var durable = true;
+    for (var j = 0; j < (added || []).length; j++) {
+      var it = added[j];
+      if (it.persistPromise) await it.persistPromise.catch(function () {});
+      else if (!it.volatile) await persistItem(it, false).catch(function () {});
+      if (!hasDurablePayload(it)) durable = false;
+    }
+    if ((added || []).length === 0) {
+      // A retry can legitimately find every file already queued. Only consume the
+      // cache if matching live queue entries are durable.
+      durable = files.every(function (file) {
+        var name = file.webkitRelativePath || file.name || '';
+        var match = items.find(function (it) { return it.state !== 'removed' && it.size === file.size && it.originalName === name && it.lastModified === (file.lastModified || 0); });
+        return !!(match && hasDurablePayload(match));
+      });
+    }
+    if (durable) {
+      var keys = await cache.keys();
+      await Promise.all(keys.filter(function (req) { return new URL(req.url).pathname.indexOf('/app/__shared/' + batchId + '/') === 0; }).map(function (req) { return cache.delete(req); }));
+      try { localStorage.removeItem('dx-pwa-pending-shared-batch'); } catch (_) {}
+    }
+    toast(t('sharedReceived', { n: files.length }), 'ok');
   }
 
   // Device pairing -----------------------------------------------------------
-  var deviceInfo = null;
+  var deviceInfo = null, deviceStatusPromise = null;
+  var DLP_POLICY_CACHE_KEY = 'dx-pwa-dlp-policy-v1';
+  function sanitizePwaDlpPolicy(d) {
+    if (!d || typeof d !== 'object') return null;
+    return { enabled:d.enabled !== false, mode:['warn','block','log'].indexOf(d.mode) !== -1 ? d.mode : 'warn', maxFiles:Math.max(1, Number(d.maxFiles) || 100), maxFileMB:Math.max(1, Number(d.maxFileMB) || 25), scanOcr:d.scanOcr !== false };
+  }
+  function cachedPwaDlpPolicy() {
+    try { return sanitizePwaDlpPolicy(JSON.parse(localStorage.getItem(DLP_POLICY_CACHE_KEY) || 'null')); } catch (_) { return null; }
+  }
+  function cachePwaDlpPolicy(d) {
+    var clean = sanitizePwaDlpPolicy(d); if (!clean) return;
+    try { localStorage.setItem(DLP_POLICY_CACHE_KEY, JSON.stringify(clean)); } catch (_) {}
+  }
   function appMutationHeaders(contentType) {
     var headers = { 'Content-Type': contentType || 'application/octet-stream' };
     if (deviceInfo && deviceInfo.csrf) headers['X-CSRF-Token'] = deviceInfo.csrf;
     return headers;
   }
   function platformName() { return navigator.userAgentData && navigator.userAgentData.platform || navigator.platform || 'mobile'; }
-  async function fetchDeviceStatus() {
-    try {
-      var r = await fetch('/app/device/status', { credentials: 'same-origin', cache: 'no-store' });
-      if (!r.ok) throw new Error('status');
-      deviceInfo = await r.json();
-      deviceInfo.unavailable = false;
-    } catch (_) { deviceInfo = { paired: false, adminSession: false, devices: [], unavailable: true }; }
-    renderDeviceStatus();
-    return deviceInfo;
+  function fetchDeviceStatus() {
+    // Coalesce concurrent callers (startup used to issue this request twice) and
+    // bound the request so a half-open mobile connection cannot freeze the entire
+    // PWA initialization sequence forever.
+    if (deviceStatusPromise) return deviceStatusPromise;
+    deviceStatusPromise = (async function () {
+      try {
+        var r = await fetchWithTimeout('/app/device/status', { credentials: 'same-origin', cache: 'no-store' }, 10000);
+        if (r.status === 401 || r.status === 403) { accountNotifications = []; renderPwaNotifications(); }
+        if (!r.ok) throw new Error('status');
+        deviceInfo = await r.json();
+        deviceInfo.unavailable = false;
+        if (deviceInfo.dlp) { deviceInfo.dlp = sanitizePwaDlpPolicy(deviceInfo.dlp); cachePwaDlpPolicy(deviceInfo.dlp); }
+      } catch (_) {
+        // Never downgrade an unknown server policy to the permissive default. Reuse
+        // the last authenticated policy when available; on a first-run status failure
+        // the upload preflight fails closed until Direct-Xfer can fetch the policy.
+        deviceInfo = { paired: false, adminSession: false, devices: [], unavailable: true, dlp: cachedPwaDlpPolicy() };
+      }
+      renderDeviceStatus();
+      return deviceInfo;
+    })().finally(function () { deviceStatusPromise = null; });
+    return deviceStatusPromise;
   }
   // Authenticated PWA mutation. A 403 usually means the CSRF token went stale (an
   // old value that used to get cached by the service worker, or a rotated session);
   // refresh device status once to pick up a fresh token and retry.
   async function appMutate(url, contentType, body) {
     if (!deviceInfo) await fetchDeviceStatus();
+    // Keep every JSON mutation syntactically valid, including action-only routes.
+    // This avoids proxy/browser differences around Content-Type: application/json
+    // combined with an absent request body.
+    if (/^application\/json(?:\s*;|$)/i.test(String(contentType || '')) && body == null) body = '{}';
     var r = await fetch(url, { method: 'POST', credentials: 'same-origin', headers: appMutationHeaders(contentType), body: body });
+    // Only retry an actual stale-CSRF response. Other 403s (DLP block, role,
+    // origin, revoked capability, etc.) are deliberate policy decisions and must
+    // never cause the same upload to be sent a second time.
     if (r.status === 403) {
-      await fetchDeviceStatus();
-      r = await fetch(url, { method: 'POST', credentials: 'same-origin', headers: appMutationHeaders(contentType), body: body });
+      var err = null; try { err = await r.clone().json(); } catch (_) {}
+      if (err && err.error === 'invalid-csrf') {
+        await fetchDeviceStatus();
+        r = await fetch(url, { method: 'POST', credentials: 'same-origin', headers: appMutationHeaders(contentType), body: body });
+      }
     }
     return r;
   }
+  function pwaServerDlpWarningText(d) {
+    if (d && (d.incomplete || d.filesSkipped || d.ocrErrors || d.scanErrors || d.truncated)) {
+      return t('dlpIncompleteConfirm', { n:d.count || 0, files:Math.max(1, (Number(d.filesScanned)||0) + (Number(d.filesSkipped)||0)) });
+    }
+    return t('sharesDlpWarning', { n:d && d.count || 0, level:d && d.highest || '—' });
+  }
+  async function imageDlpMutate(url, contentType, body) {
+    var r = await appMutate(url, contentType, body);
+    if (r.status !== 409) return r;
+    var warning = null; try { warning = await r.clone().json(); } catch (_) {}
+    if (!warning || warning.error !== 'dlp-warning' || !warning.dlp) return r;
+    if (!window.confirm(pwaServerDlpWarningText(warning.dlp))) return null;
+    var retryUrl = url + (url.indexOf('?') >= 0 ? '&' : '?') + 'dlpOverride=1';
+    return appMutate(retryUrl, contentType, body);
+  }
+
+  // PWA main-queue DLP -------------------------------------------------------
+  // Server-side DLP already protects shares and image publication. Reception
+  // uploads are a streaming endpoint, so the PWA performs a matching local
+  // preflight before the first upload byte. Findings are redacted and remain on
+  // this device; only the active policy knobs are read from /app/device/status.
+  function pwaDlpPolicy() {
+    var d = deviceInfo && deviceInfo.dlp;
+    return {
+      known: !!d && !(deviceInfo && deviceInfo.unavailable),
+      enabled: !d || d.enabled !== false,
+      // Unknown/unreachable policy is deliberately fail-closed. A cached policy may be
+      // shown for context, but it is never trusted to authorize a new upload.
+      mode: d && ['warn','block','log'].indexOf(d.mode) !== -1 ? d.mode : 'block',
+      maxFiles: Math.max(1, Number(d && d.maxFiles) || 100),
+      maxFileMB: Math.max(1, Number(d && d.maxFileMB) || 25),
+      scanOcr: !d || d.scanOcr !== false
+    };
+  }
+  function renderPwaDlpPolicy() {
+    var el = $('dlp-pwa-policy'); if (!el) return;
+    var p = pwaDlpPolicy();
+    if (!p.known) { el.textContent = deviceInfo && deviceInfo.unavailable ? t('dlpPolicyUnavailable') : t('dlpPolicyLoading'); return; }
+    if (!p.enabled) { el.textContent = t('dlpPolicyDisabled'); return; }
+    var modeKey = p.mode === 'block' ? 'dlpModeBlock' : p.mode === 'log' ? 'dlpModeLog' : 'dlpModeWarn';
+    el.textContent = t('dlpPolicyText', { mode:t(modeKey), mb:p.maxFileMB, ocr:t(p.scanOcr ? 'dlpOcrOn' : 'dlpOcrOff') });
+  }
+  function pwaDlpFingerprint(it, policy) {
+    policy = policy || pwaDlpPolicy();
+    var engine = window.DirectXferDlp && window.DirectXferDlp.version || '0';
+    return [engine, String(it && it.name || ''), Number(it && it.size || 0), Number(it && it.lastModified || 0), policy.maxFiles, policy.maxFileMB, policy.scanOcr ? 1 : 0].join(':');
+  }
+  function pwaDlpMerge(summaries) {
+    var findings = [], scanned = 0, skipped = 0, ocrErrors = 0, scanErrors = 0, incompleteEntries = 0, truncated = false, seen = new Set();
+    (summaries || []).forEach(function (r) {
+      if (!r) return;
+      scanned += Number(r.filesScanned) || 0; skipped += Number(r.filesSkipped) || 0; ocrErrors += Number(r.ocrErrors) || 0; scanErrors += Number(r.scanErrors) || 0; incompleteEntries += Number(r.incompleteEntries) || 0; truncated = truncated || !!r.truncated;
+      (r.findings || []).forEach(function (f) { var k = String(f.type || '') + ':' + String(f.sample || '') + ':' + String(f.file || ''); if (!seen.has(k) && findings.length < 100) { seen.add(k); findings.push(f); } });
+    });
+    var D = window.DirectXferDlp;
+    return D && D.summarize ? D.summarize(findings, { filesScanned:scanned, filesSkipped:skipped, ocrErrors:ocrErrors, scanErrors:scanErrors, incompleteEntries:incompleteEntries, truncated:truncated }) : { count:findings.length, findings:findings, filesScanned:scanned, filesSkipped:skipped, ocrErrors:ocrErrors, scanErrors:scanErrors, incompleteEntries:incompleteEntries, truncated:truncated, incomplete:!!(skipped || ocrErrors || scanErrors || incompleteEntries || truncated) };
+  }
+  function pwaDlpIncomplete(d) {
+    var D = window.DirectXferDlp;
+    return D && typeof D.isIncomplete === 'function' ? D.isIncomplete(d) : !!(d && (d.incomplete || d.filesSkipped || d.ocrErrors || d.scanErrors || d.incompleteEntries || d.truncated || d.error));
+  }
+  async function pwaDlpPdfText(file, withOcr) {
+    var pdfjs = await ensureOcrPdfLib(), bytes = new Uint8Array(await file.arrayBuffer());
+    var loading = pdfjs.getDocument({ data:bytes, isEvalSupported:false }), pdf = await loading.promise, pages = [], failedPages = 0;
+    var total = pdf.numPages || 0, limit = withOcr ? Math.min(total, 40) : total;
+    try {
+      for (var n = 1; n <= limit; n++) {
+        var page = await pdf.getPage(n), embedded = '';
+        try { embedded = normalizePdfText((await page.getTextContent()).items); } catch (_) {}
+        var visual = '';
+        if (withOcr) {
+          var canvas = null;
+          try {
+            canvas = await renderPdfPageForOcr(page);
+            var worker = await getOcrWorker();
+            if (ocrAbort) throw new Error('OCR_CANCELLED');
+            var ret = await worker.recognize(canvas); visual = ret && ret.data ? String(ret.data.text || '').trim() : '';
+          } catch (err) {
+            failedPages++;
+            if (err && err.message === 'OCR_CANCELLED') throw err;
+          } finally { if (canvas) { canvas.width = 1; canvas.height = 1; } }
+        }
+        if (embedded || visual) pages.push('--- Page ' + n + ' ---\n' + [embedded, visual].filter(Boolean).join('\n'));
+        if (page.cleanup) try { page.cleanup(); } catch (_) {}
+      }
+    } finally { if (pdf && pdf.destroy) try { await pdf.destroy(); } catch (_) {} }
+    if (!withOcr) return pages.join('\n\n');
+    return { text:pages.join('\n\n'), incompletePages:failedPages + Math.max(0, total - limit), truncated:failedPages > 0 || total > limit };
+  }
+  function pwaDlpChipText(it) {
+    var d = it && it.dlpLocal;
+    if (!d) return '';
+    if (d.scanning) return t('dlpTesting');
+    if (d.count) return t('dlpFound', { n:d.count, level:d.highest || '—' }) + (pwaDlpIncomplete(d) ? ' · ' + t('dlpScanIncomplete', { n:(Number(d.filesSkipped)||0) + (Number(d.ocrErrors)||0) + (Number(d.scanErrors)||0) + (Number(d.incompleteEntries)||0) }) : '');
+    if (pwaDlpIncomplete(d)) return t('dlpScanIncomplete', { n:Math.max(1, (Number(d.filesSkipped)||0) + (Number(d.ocrErrors)||0) + (Number(d.scanErrors)||0) + (Number(d.incompleteEntries)||0)) });
+    return t('dlpSafe');
+  }
+  async function runPwaDlpForItem(it, options) {
+    options = options || {};
+    if (!it || !it.file) return null;
+    var policy = pwaDlpPolicy(), D = window.DirectXferDlp;
+    if (!policy.enabled || !D || typeof D.scanFile !== 'function') return null;
+    var fingerprint = pwaDlpFingerprint(it, policy);
+    if (!options.force && it.dlpLocal && it.dlpLocal.fingerprint === fingerprint && !it.dlpLocal.scanning) return it.dlpLocal;
+    it.dlpLocal = { scanning:true, fingerprint:fingerprint, count:0, findings:[] }; renderQueue();
+    try {
+      if (policy.scanOcr && canOcrItem(it) && ocrRunning) {
+        var busy = { fingerprint:fingerprint, scanning:false, count:0, findings:[], filesScanned:0, filesSkipped:0, ocrErrors:1, scanErrors:0, incompleteEntries:0, incomplete:true, error:'ocr-busy', scannedAt:Date.now() };
+        it.dlpLocal = busy; await persistItem(it, false).catch(function () {}); renderQueue();
+        if (options.toast !== false) toast(t('dlpOcrIncomplete', { n:1 }), 'warn');
+        return busy;
+      }
+      if (policy.scanOcr && canOcrItem(it)) ocrAbort = false;
+      var result = await D.scanFile(it.file, {
+        name:it.name || it.file.name,
+        type:it.type || it.file.type,
+        maxBytes:policy.maxFileMB * 1024 * 1024,
+        scanOcr:policy.scanOcr,
+        ocrImage:policy.scanOcr ? recognizeOcrImage : null,
+        extractPdfText:pwaDlpPdfText,
+        maxZipEntries:60,
+        maxZipTextBytes:2 * 1024 * 1024
+      });
+      result.fingerprint = fingerprint; result.scanning = false; result.scannedAt = Date.now();
+      it.dlpLocal = result;
+      if (it.dlpApprovedFingerprint && it.dlpApprovedFingerprint !== fingerprint) it.dlpApprovedFingerprint = '';
+      await persistItem(it, false).catch(function () {}); renderQueue();
+      if (options.toast !== false) {
+        if (result.count) toast(t('dlpFound', { n:result.count, level:result.highest || '—' }), policy.mode === 'block' ? 'err' : 'warn');
+        if (pwaDlpIncomplete(result)) toast(t('dlpScanIncomplete', { n:Math.max(1, (Number(result.filesSkipped)||0) + (Number(result.ocrErrors)||0) + (Number(result.scanErrors)||0) + (Number(result.incompleteEntries)||0)) }), 'warn');
+        else if (!result.count) toast(t('dlpSafe'), 'ok');
+      }
+      return result;
+    } catch (err) {
+      it.dlpLocal = { scanning:false, fingerprint:fingerprint, count:0, findings:[], filesScanned:0, filesSkipped:0, ocrErrors:0, scanErrors:1, incompleteEntries:0, incomplete:true, error:String(err && err.message || err || 'scan') };
+      await persistItem(it, false).catch(function () {}); renderQueue();
+      if (options.toast !== false) toast(t('dlpScanFailed', { error:it.dlpLocal.error.slice(0,120) }), 'warn');
+      return it.dlpLocal;
+    } finally {
+      // A DLP OCR pass uses the same lazy worker as the OCR tool. Free it after a
+      // headless batch so Android does not keep hundreds of MB resident.
+      if (!options.keepOcrWorker && !ocrRunning) await terminateOcrWorker().catch(function () {});
+    }
+  }
+  async function runPwaDlpForItems(targets, options) {
+    options = options || {}; targets = (targets || []).filter(function (it) { return it && it.file && it.state !== 'removed'; });
+    var policy = pwaDlpPolicy(), max = Math.min(targets.length, policy.maxFiles), results = [];
+    try {
+      for (var i = 0; i < max; i++) results.push(await runPwaDlpForItem(targets[i], { force:!!options.force, toast:false, keepOcrWorker:true }));
+      // Files beyond the configured batch inspection cap were previously represented
+      // only in the merged summary. In warn mode that left no item requiring approval,
+      // so a large all-safe batch could continue without acknowledging the unscanned
+      // files. Mark every omitted item explicitly as incomplete and fingerprint it so
+      // a later policy increase invalidates the cached result and scans it for real.
+      for (var j = max; j < targets.length; j++) {
+        var skipped = targets[j], skippedFingerprint = pwaDlpFingerprint(skipped, policy);
+        skipped.dlpLocal = { scanning:false, fingerprint:skippedFingerprint, count:0, findings:[], filesScanned:0, filesSkipped:1, ocrErrors:0, scanErrors:0, incompleteEntries:0, truncated:true, incomplete:true, error:'max-files', scannedAt:Date.now() };
+        if (skipped.dlpApprovedFingerprint && skipped.dlpApprovedFingerprint !== skippedFingerprint) skipped.dlpApprovedFingerprint = '';
+        await persistItem(skipped, false).catch(function () {});
+        results.push(skipped.dlpLocal);
+      }
+    } finally {
+      if (!ocrRunning) await terminateOcrWorker().catch(function () {});
+    }
+    var merged = pwaDlpMerge(results);
+    if (options.toast !== false) {
+      if (merged.count) toast(t('dlpFound', { n:merged.count, level:merged.highest || '—' }), policy.mode === 'block' ? 'err' : 'warn');
+      if (pwaDlpIncomplete(merged)) toast(t('dlpScanIncomplete', { n:Math.max(1, (Number(merged.filesSkipped)||0) + (Number(merged.ocrErrors)||0) + (Number(merged.scanErrors)||0) + (Number(merged.incompleteEntries)||0)) }), 'warn');
+      else if (!merged.count) toast(t('dlpSafe'), 'ok');
+    }
+    return merged;
+  }
+  async function ensurePwaDlpBeforeBatch(candidates) {
+    await fetchDeviceStatus().catch(function () {});
+    var policy = pwaDlpPolicy();
+    if (!policy.known) { toast(t('dlpPolicyUnavailable'), 'err'); return false; }
+    if (!policy.enabled) return true;
+    if (!window.DirectXferDlp) { toast(t('dlpScanFailed', { error:'module' }), 'err'); return false; }
+    var result = await runPwaDlpForItems(candidates, { toast:false });
+    var incomplete = pwaDlpIncomplete(result);
+    if (result.count) toast(t('dlpFound', { n:result.count, level:result.highest || '—' }), policy.mode === 'block' ? 'err' : 'warn');
+    if (incomplete) toast(t('dlpScanIncomplete', { n:Math.max(1, (Number(result.filesSkipped)||0) + (Number(result.ocrErrors)||0) + (Number(result.scanErrors)||0) + (Number(result.incompleteEntries)||0)) }), policy.mode === 'block' ? 'err' : 'warn');
+    if (policy.mode === 'block' && (result.count || incomplete)) { toast(incomplete ? t('dlpIncompleteBlocked') : t('dlpLocalBlocked'), 'err'); renderQueue(); return false; }
+    if (policy.mode === 'log') return true;
+    if (!result.count && !incomplete) return true;
+    var needsApproval = candidates.filter(function (it) { return it.dlpLocal && (it.dlpLocal.count || pwaDlpIncomplete(it.dlpLocal)) && it.dlpApprovedFingerprint !== it.dlpLocal.fingerprint; });
+    if (!needsApproval.length) return true;
+    var msg = incomplete ? t('dlpIncompleteConfirm', { n:result.count || 0, files:needsApproval.length }) : t('dlpLocalConfirm', { n:result.count, level:result.highest || '—', files:needsApproval.length });
+    if (!window.confirm(msg)) return false;
+    needsApproval.forEach(function (it) { it.dlpApprovedFingerprint = it.dlpLocal.fingerprint; persistItem(it, false); });
+    return true;
+  }
+  function testPwaDlpQueue() { return runPwaDlpForItems(items.filter(function (it) { return it.state !== 'removed' && it.state !== 'done'; }), { force:true }); }
+  function testPwaDlpSelected() { return runPwaDlpForItems(selectedItems(), { force:true }); }
   function renderDeviceStatus() {
     if (!deviceInfo) return;
     var paired = !!deviceInfo.paired;
     var pairButton = $('pair-device-btn');
     var unpairButton = $('revoke-device-btn');
-    $('device-badge').classList.toggle('hidden', !paired);
     if (pairButton) {
       pairButton.classList.toggle('hidden', paired);
       pairButton.disabled = false;
@@ -4227,21 +6110,300 @@
       : paired ? (currentName ? currentName + ' · ' + t('devicePaired') : t('devicePaired'))
       : deviceInfo.adminSession ? t('deviceAdmin') : t('deviceUnpaired');
     var devices = Array.isArray(deviceInfo.devices) ? deviceInfo.devices : [];
-    $('device-list-wrap').classList.toggle('hidden', !deviceInfo.adminSession || !devices.length);
+    $('device-list-wrap').classList.toggle('hidden', !devices.length);
     var list = $('device-list'); list.innerHTML = '';
     devices.forEach(function (d) {
       var row = document.createElement('div'); row.className = 'device-row';
       var main = document.createElement('div'); main.className = 'device-main';
       var strong = document.createElement('strong'); strong.textContent = d.name + (d.current ? ' · ' + t('deviceCurrent') : ''); main.appendChild(strong);
       var meta = document.createElement('div'); meta.className = 'device-meta'; meta.textContent = t('deviceLast', { date: fmtDate(d.lastUsedAt || d.createdAt) }); main.appendChild(meta); row.appendChild(main);
-      var rename = document.createElement('button'); rename.type = 'button'; rename.className = 'btn ghost sm'; rename.textContent = t('renameDevice');
-      rename.addEventListener('click', function () { renameDevice(d.id, d.name, !!d.current); }); row.appendChild(rename);
-      if (!d.current) {
+      // The current device already has the primary Rename action above in
+      // "Accès de cet appareil". Keep list actions only for OTHER devices so the
+      // settings panel never shows two Rename buttons for the same device.
+      if (!d.current && deviceInfo.adminSession) {
+        var rename = document.createElement('button'); rename.type = 'button'; rename.className = 'btn ghost sm'; rename.textContent = t('renameDevice');
+        rename.addEventListener('click', function () { renameDevice(d.id, d.name, false); }); row.appendChild(rename);
+      }
+      if (!d.current && deviceInfo.adminSession) {
         var revoke = document.createElement('button'); revoke.type = 'button'; revoke.className = 'btn danger sm'; revoke.textContent = t('revokeDevice');
         revoke.addEventListener('click', function () { revokeDevice(d.id, false); }); row.appendChild(revoke);
       }
       list.appendChild(row);
     });
+    renderPwaDlpPolicy();
+    renderPasskeySection();
+  }
+
+  // Biometric sign-in is implemented with a device-bound WebAuthn credential. Keep
+  // the setting visible even when unavailable so HTTP/browser/session problems are
+  // explained instead of making the feature appear to be missing.
+  var passkeysLoaded = false, passkeysLoading = false, passkeyRecords = [], passkeysLoadPromise = null;
+  var biometricCapability = null, biometricCapabilityPromise = null, biometricMutationInFlight = false;
+  function passkeySupported() { return !!(window.PublicKeyCredential && navigator.credentials && navigator.credentials.create); }
+  function biometricSecureContext() {
+    var host = String(location.hostname || '').toLowerCase();
+    return !!window.isSecureContext && (location.protocol === 'https:' || host === 'localhost' || host === '127.0.0.1' || host === '::1' || host === '[::1]');
+  }
+  function detectBiometricCapability() {
+    if (biometricCapabilityPromise) return biometricCapabilityPromise;
+    biometricCapabilityPromise = (async function () {
+      if (!biometricSecureContext() || !passkeySupported()) return false;
+      if (typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable !== 'function') return true;
+      try { return !!(await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()); }
+      catch (_) { return false; }
+    })().then(function (available) {
+      biometricCapability = available;
+      renderPasskeySection();
+      return available;
+    });
+    return biometricCapabilityPromise;
+  }
+  function bufToB64u(buf) {
+    var bytes = new Uint8Array(buf), s = '';
+    for (var i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+    return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  function b64uToBuf(value) {
+    var s = String(value || '').replace(/-/g, '+').replace(/_/g, '/');
+    while (s.length % 4) s += '=';
+    var bin = atob(s), bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return bytes.buffer;
+  }
+  function setBiometricStatus(key, kind, vars) {
+    var status = $('biometric-status'); if (!status) return;
+    status.textContent = t(key, vars);
+    status.classList.remove('ok', 'warn', 'error');
+    if (kind) status.classList.add(kind);
+  }
+  function currentDeviceHasPasskey(list) {
+    // Once the server list has loaded it is authoritative. Falling back to the
+    // earlier device-status snapshot after that point made a remotely deleted
+    // credential continue to appear enabled until the PWA was restarted.
+    if (passkeysLoaded) return (list || []).some(function (p) { return p && p.currentDevice; });
+    return !!(deviceInfo && deviceInfo.biometricEnabled);
+  }
+  function updateBiometricSummary(list) {
+    list = list || passkeyRecords;
+    var add = $('add-passkey-btn'), disable = $('disable-biometric-btn');
+    var enabledHere = currentDeviceHasPasskey(list);
+    var canManage = !!(deviceInfo && deviceInfo.passkeyManagement === true && !deviceInfo.unavailable && !biometricMutationInFlight);
+    if (add) add.disabled = !canManage || enabledHere || biometricCapability !== true;
+    if (disable) disable.disabled = !canManage || !list.length;
+    if (!biometricSecureContext()) { setBiometricStatus('biometricHttpsRequired', 'error'); return; }
+    if (biometricCapability === null) { setBiometricStatus('biometricChecking', ''); detectBiometricCapability(); return; }
+    if (!biometricCapability) { setBiometricStatus('biometricUnsupported', 'warn'); return; }
+    if (enabledHere) setBiometricStatus('biometricEnabled', 'ok');
+    else if (list.length) setBiometricStatus('biometricConfigured', '', { n:list.length });
+    else setBiometricStatus('biometricReady', 'ok');
+  }
+  function setBiometricMutationBusy(busy) {
+    biometricMutationInFlight = !!busy;
+    document.querySelectorAll('#passkey-section button').forEach(function (button) { button.disabled = !!busy; });
+    if (!busy) {
+      renderPasskeyList(passkeyRecords);
+      renderPasskeySection();
+    }
+  }
+  function renderPasskeySection() {
+    var section = $('passkey-section'); if (!section) return;
+    section.classList.remove('hidden');
+    var add = $('add-passkey-btn'), disable = $('disable-biometric-btn'), reauth = $('reauth-biometric-btn');
+    if (add) add.disabled = true;
+    if (disable) disable.disabled = true;
+    if (reauth) reauth.classList.add('hidden');
+    if (!deviceInfo || deviceInfo.unavailable) { setBiometricStatus('biometricStatusUnavailable', 'warn'); return; }
+    if (!deviceInfo.paired || !deviceInfo.device) { setBiometricStatus('biometricPairRequired', 'warn'); return; }
+    if (deviceInfo.passkeyManagement !== true) {
+      setBiometricStatus('biometricRecentAuth', 'warn');
+      if (reauth) reauth.classList.remove('hidden');
+      return;
+    }
+    if (!passkeysLoaded && !passkeysLoading) { loadPasskeys(); return; }
+    updateBiometricSummary(passkeyRecords);
+    // Compatibility gates activation only. Server-side deactivation must remain
+    // available even if biometrics or HTTPS stopped working on this browser.
+    if (biometricCapability === null) detectBiometricCapability();
+  }
+  function renderPasskeyList(list) {
+    var box = $('passkey-list'); if (!box) return; box.innerHTML = '';
+    passkeyRecords = Array.isArray(list) ? list : [];
+    if (!passkeyRecords.length) { box.appendChild(el('p', { class: 'muted sm', text: t('passkeyEmpty') })); updateBiometricSummary(passkeyRecords); return; }
+    passkeyRecords.forEach(function (p) {
+      var row = el('div', { class: 'passkey-row' });
+      var main = el('div', { class: 'passkey-main' });
+      main.appendChild(el('strong', { text: (p.name || t('passkeyTitle')) + (p.currentDevice ? ' · ' + t('passkeyCurrent') : ''), class: p.currentDevice ? 'passkey-current' : '' }));
+      var used = p.lastUsedAt ? t('passkeyUsed', { date: fmtDate(p.lastUsedAt) }) : t('passkeyNeverUsed');
+      var deviceCount = Math.max(1, Number(p.deviceCount) || 1);
+      main.appendChild(el('span', { class: 'muted xs', text: t('passkeyCreated', { date: fmtDate(p.createdAt) }) + ' · ' + used + ' · ' + t('passkeyDevices', { n:deviceCount }) }));
+      row.appendChild(main);
+      var rm = el('button', { class: 'btn danger sm', attrs: { type: 'button' }, text: t('passkeyRemove') });
+      rm.disabled = biometricMutationInFlight || !(deviceInfo && deviceInfo.passkeyManagement === true);
+      rm.addEventListener('click', function () { removePasskey(p); });
+      row.appendChild(rm);
+      box.appendChild(row);
+    });
+    updateBiometricSummary(passkeyRecords);
+  }
+  async function loadPasskeys() {
+    if (passkeysLoadPromise) return passkeysLoadPromise;
+    passkeysLoading = true;
+    passkeysLoadPromise = (async function () {
+      try {
+      var r = await fetch('/app/webauthn/passkeys', { credentials: 'same-origin', cache: 'no-store' });
+      if (!r.ok) {
+        var failed = await r.clone().json().catch(function () { return {}; });
+        if (r.status === 401 && failed.error === 'recent-auth-required' && deviceInfo) { deviceInfo.passkeyManagement = false; renderPasskeySection(); return; }
+        throw new Error('load');
+      }
+      var data = await r.json();
+      passkeysLoaded = true;
+      renderPasskeyList(data.passkeys || []);
+      return passkeyRecords;
+      } catch (_) {
+        passkeysLoaded = false;
+        setBiometricStatus('biometricLoadFailed', 'error');
+        return null;
+      } finally {
+        passkeysLoading = false;
+        passkeysLoadPromise = null;
+      }
+    })();
+    return passkeysLoadPromise;
+  }
+  async function addPasskey() {
+    if (biometricMutationInFlight || biometricCapability !== true || !deviceInfo || deviceInfo.passkeyManagement !== true) { renderPasskeySection(); return; }
+    var btn = $('add-passkey-btn'); if (!btn) return;
+    var label = btn.textContent; setBiometricMutationBusy(true); btn.textContent = t('passkeyAdding');
+    try {
+      var optResp = await appMutate('/app/webauthn/register/options', 'application/json', '{}');
+      if (!optResp.ok) {
+        var optError = await optResp.clone().json().catch(function () { return {}; });
+        if (optResp.status === 401 && optError.error === 'recent-auth-required') { deviceInfo.passkeyManagement = false; renderPasskeySection(); return; }
+        if (optError.error === 'device-required') { setBiometricStatus('biometricPairRequired', 'warn'); toast(t('biometricPairRequired'), 'warn'); return; }
+        var optionFailure = new Error('options'); optionFailure.serverError = optError.error || ''; throw optionFailure;
+      }
+      var opt = await optResp.json(), pk = opt.publicKey || {};
+      var publicKey = {
+        challenge: b64uToBuf(pk.challenge),
+        rp: pk.rp,
+        user: { id: b64uToBuf(pk.user.id), name: pk.user.name, displayName: pk.user.displayName },
+        pubKeyCredParams: pk.pubKeyCredParams,
+        authenticatorSelection: pk.authenticatorSelection,
+        timeout: pk.timeout,
+        attestation: pk.attestation,
+        excludeCredentials: (pk.excludeCredentials || []).map(function (c) { return { type: 'public-key', id: b64uToBuf(c.id), transports: c.transports }; })
+      };
+      var cred = await navigator.credentials.create({ publicKey: publicKey });
+      if (!cred) throw new Error('cancelled');
+      var res = cred.response;
+      var verify = await appMutate('/app/webauthn/register/verify', 'application/json', JSON.stringify({
+        token: opt.token, name: t('biometricCredentialName', { device:platformName() }).slice(0, 60),
+        credential: { id: cred.id, rawId: bufToB64u(cred.rawId), type: cred.type, response: { clientDataJSON: bufToB64u(res.clientDataJSON), attestationObject: bufToB64u(res.attestationObject), transports: typeof res.getTransports === 'function' ? res.getTransports() : [] } }
+      }));
+      var data = await verify.json().catch(function () { return {}; });
+      if (!verify.ok || !data.ok) { var verifyFailure = new Error('verify'); verifyFailure.serverError = data.error || ''; throw verifyFailure; }
+      passkeyRecords = Array.isArray(data.passkeys) ? data.passkeys : [];
+      if (deviceInfo) deviceInfo.biometricEnabled = passkeyRecords.some(function (p) { return p && p.currentDevice; });
+      toast(t(data.already ? 'biometricAlreadyEnabled' : 'passkeyAdded'), 'ok');
+      renderPasskeyList(passkeyRecords);
+    } catch (err) {
+      if (err && (err.name === 'NotAllowedError' || err.name === 'AbortError')) return;
+      if (err && err.name === 'InvalidStateError') {
+        // A synchronized passkey already present in the platform authenticator can
+        // trigger this before the server receives anything. It remains usable for
+        // login; explain the one-time association instead of reporting corruption.
+        await loadPasskeys().catch(function () {});
+        toast(t('biometricAlreadySynced'), 'warn');
+      } else if (err && err.name === 'SecurityError') {
+        toast(t('biometricDomainMismatch'), 'err');
+      } else if (err && err.serverError) {
+        toast(t('biometricServerRejected'), 'err');
+      } else {
+        toast(t('passkeyFailed'), 'err');
+      }
+    } finally {
+      btn.textContent = label;
+      setBiometricMutationBusy(false);
+    }
+  }
+  async function biometricDelete(url) {
+    var r = await fetch(url, { method: 'DELETE', credentials: 'same-origin', cache: 'no-store', headers: appMutationHeaders() });
+    if (r.status === 403) {
+      var e = await r.clone().json().catch(function () { return {}; });
+      if (e.error === 'invalid-csrf') {
+        await fetchDeviceStatus();
+        r = await fetch(url, { method: 'DELETE', credentials: 'same-origin', cache: 'no-store', headers: appMutationHeaders() });
+      }
+    }
+    return r;
+  }
+  async function removePasskey(record) {
+    if (!record || !record.id || biometricMutationInFlight) return;
+    var count = Math.max(1, Number(record.deviceCount) || 1);
+    var confirmText = count > 1 ? t('passkeyRemoveSharedConfirm', { n:count }) : t('passkeyRemoveConfirm');
+    if (!askConfirmation('passkey-remove', confirmText)) return;
+    setBiometricMutationBusy(true);
+    try {
+      var r = await biometricDelete('/app/webauthn/passkeys/' + encodeURIComponent(record.id));
+      var data = await r.json().catch(function () { return {}; });
+      if (!r.ok) {
+        if (r.status === 401 && data.error === 'recent-auth-required' && deviceInfo) { deviceInfo.passkeyManagement = false; renderPasskeySection(); toast(t('biometricRecentAuth'), 'warn'); return; }
+        throw new Error('delete');
+      }
+      passkeyRecords = data.passkeys || [];
+      if (deviceInfo) deviceInfo.biometricEnabled = passkeyRecords.some(function (p) { return p && p.currentDevice; });
+      toast(t('passkeyRemoved'), 'ok');
+      renderPasskeyList(passkeyRecords);
+    } catch (_) { toast(t('passkeyFailed'), 'err'); }
+    finally { setBiometricMutationBusy(false); }
+  }
+  async function disableBiometricIdentification() {
+    if (biometricMutationInFlight || !passkeysLoaded || !passkeyRecords.length) return;
+    if (!askConfirmation('biometric-disable-all', t('biometricDisableConfirm'))) return;
+    var btn = $('disable-biometric-btn'), label = btn ? btn.textContent : '';
+    setBiometricMutationBusy(true);
+    if (btn) btn.textContent = t('biometricDisabling');
+    try {
+      var r = await biometricDelete('/app/webauthn/passkeys');
+      var data = await r.json().catch(function () { return {}; });
+      if (!r.ok) {
+        if (r.status === 401 && data.error === 'recent-auth-required' && deviceInfo) {
+          deviceInfo.passkeyManagement = false;
+          toast(t('biometricRecentAuth'), 'warn');
+          return;
+        }
+        throw new Error('disable');
+      }
+      passkeyRecords = [];
+      passkeysLoaded = true;
+      if (deviceInfo) {
+        deviceInfo.biometricEnabled = false;
+        deviceInfo.biometricCredentialCount = 0;
+      }
+      toast(t('biometricDisabled'), 'ok');
+    } catch (_) { toast(t('passkeyFailed'), 'err'); }
+    finally {
+      if (btn) btn.textContent = label;
+      setBiometricMutationBusy(false);
+    }
+  }
+  async function reauthenticateForBiometric() {
+    var btn = $('reauth-biometric-btn'); if (btn) btn.disabled = true;
+    try {
+      try { sessionStorage.setItem('dx-pwa-active-panel', 'settings'); } catch (_) {}
+      if (!deviceInfo || !deviceInfo.csrf) await fetchDeviceStatus();
+      if (!deviceInfo || !deviceInfo.csrf) throw new Error('status');
+      var response = await fetchWithTimeout('/app/session/lock', {
+        method: 'POST', credentials: 'same-origin', cache: 'no-store',
+        headers: appMutationHeaders('application/json'), body: JSON.stringify({ reason:'biometric-settings' })
+      }, 5000);
+      if (!response.ok) throw new Error('lock');
+      location.replace('/app/login?next=' + encodeURIComponent('/app/'));
+    } catch (_) {
+      if (btn) btn.disabled = false;
+      toast(t('biometricReauthFailed'), 'err');
+    }
   }
   async function pairDevice() {
     var button = $('pair-device-btn');
@@ -4319,6 +6481,25 @@
   // Received content: files that landed on a reception link this device owns. The
   // list is fetched from the server on demand, so it is durable by nature and
   // survives IndexedDB/localStorage loss, WebAPK relaunch and reconnection.
+  var pendingModerationActions = new Set();
+  async function moderateReceivedPending(token, id, action, rowEl) {
+    if (!token || !id || (action !== 'approve' && action !== 'reject')) return;
+    var key = token + ':' + id;
+    if (pendingModerationActions.has(key)) return;
+    pendingModerationActions.add(key);
+    var buttons = rowEl ? Array.from(rowEl.querySelectorAll('button')) : [];
+    buttons.forEach(function(btn){ btn.disabled = true; });
+    try {
+      var r = await appMutate('/app/inbox/' + encodeURIComponent(token) + '/pending/' + encodeURIComponent(id) + '/' + action, 'application/json', '{}');
+      if (!r.ok) throw new Error('moderation');
+      await loadReceivedFiles(token); loadReceptions();
+      toast((action === 'approve' ? t('receivedApprove') : t('receivedReject')) + ' ✓', 'ok');
+    } catch (_) { toast(t('receivedFail'), 'err'); }
+    finally {
+      pendingModerationActions.delete(key);
+      if (rowEl && rowEl.isConnected) buttons.forEach(function(btn){ btn.disabled = false; });
+    }
+  }
   var receivedPrevFocus = null;
   function closeReceivedDialog() {
     $('received-overlay').classList.add('hidden');
@@ -4338,13 +6519,30 @@
   }
   async function loadReceivedFiles(token) {
     var listEl = $('received-list'), statusEl = $('received-status');
-    listEl.innerHTML = ''; statusEl.textContent = t('receivedLoading');
+    var pendingWrap = $('received-pending-wrap'), pendingList = $('received-pending-list');
+    listEl.innerHTML = ''; if (pendingList) pendingList.innerHTML = ''; if (pendingWrap) pendingWrap.classList.add('hidden'); statusEl.textContent = t('receivedLoading');
     try {
+      var pendingReq = fetch('/app/inbox/' + encodeURIComponent(token) + '/pending', { credentials: 'same-origin', cache: 'no-store' }).then(function(resp){ return resp.ok ? resp.json() : { pending: [] }; }).catch(function(){ return { pending: [] }; });
       var r = await fetch('/app/inbox/' + encodeURIComponent(token) + '/files', { credentials: 'same-origin', cache: 'no-store' });
       if (!r.ok) throw new Error('http ' + r.status);
       var data = await r.json();
+      var pendingData = await pendingReq;
+      var pending = Array.isArray(pendingData.pending) ? pendingData.pending : [];
+      if (pending.length && pendingWrap && pendingList) {
+        pendingWrap.classList.remove('hidden');
+        pending.forEach(function(pendingFile){
+          var prow=document.createElement('div'); prow.className='received-row';
+          var pmain=document.createElement('div'); pmain.className='received-main';
+          var pstrong=document.createElement('strong'); pstrong.textContent=pendingFile.name||'—'; pmain.appendChild(pstrong);
+          var pmeta=document.createElement('div'); pmeta.className='received-meta'; pmeta.textContent=[fmtBytes(pendingFile.size||0), pendingFile.sender||'', pendingFile.at?fmtDate(pendingFile.at):''].filter(Boolean).join(' · '); pmain.appendChild(pmeta); prow.appendChild(pmain);
+          var pacts=document.createElement('div'); pacts.className='share-link-actions';
+          var approve=document.createElement('button'); approve.type='button'; approve.className='btn sm'; approve.textContent=t('receivedApprove'); approve.addEventListener('click',function(){ moderateReceivedPending(token,pendingFile.id,'approve',prow); }); pacts.appendChild(approve);
+          var reject=document.createElement('button'); reject.type='button'; reject.className='btn danger sm'; reject.textContent=t('receivedReject'); reject.addEventListener('click',function(){ moderateReceivedPending(token,pendingFile.id,'reject',prow); }); pacts.appendChild(reject);
+          prow.appendChild(pacts); pendingList.appendChild(prow);
+        });
+      }
       var files = Array.isArray(data.files) ? data.files : [];
-      if (!files.length) { statusEl.textContent = t('receivedEmpty'); return; }
+      if (!files.length) { statusEl.textContent = pending.length ? t('receivedPendingCount', { n: pending.length }) : t('receivedEmpty'); return; }
       var totalBytes = files.reduce(function (sum, f) { return sum + (Number(f.size) || 0); }, 0);
       statusEl.textContent = t('receivedCount', { n: files.length, size: fmtBytes(totalBytes) });
       files.forEach(function (f) {
@@ -4451,6 +6649,7 @@
   // can paste it to support without opening dev tools on a phone.
   function copyDiagnostic() {
     var lines = ['Direct-Xfer PWA', 'build: ' + APP_BUILD, 'ua: ' + (navigator.userAgent || '-'), 'online: ' + navigator.onLine];
+    if (lastNetworkTest) lines.push('network: ' + Math.round(lastNetworkTest.latency || 0) + ' ms · up ' + fmtBytes(lastNetworkTest.uploadBps || 0) + '/s · down ' + fmtBytes(lastNetworkTest.downloadBps || 0) + '/s');
     if (lastDiag) {
       lines.push('last error: ' + (lastDiag.badge || '') + (lastDiag.hint ? ' — ' + lastDiag.hint : ''));
       if (lastDiag.name) lines.push('file: ' + lastDiag.name);
@@ -4488,6 +6687,7 @@
     if (d.type === 'image-first-view') {
       toast(t('imgFirstViewToast', { name: d.name || '' }), 'ok');
       refreshImageStats(true);
+      refreshPwaNotifications();
       haptic('success');
       return;
     }
@@ -4511,26 +6711,191 @@
     for (var i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
     return out;
   }
-  async function enablePush() {
-    try {
-      if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return false;
-      var perm = await Notification.requestPermission();
-      if (perm !== 'granted') return false;
-      var reg = swReg || await navigator.serviceWorker.ready;
-      var vp = await fetch('/app/push/vapid', { credentials: 'same-origin' }).then(function (r) { return r.json(); });
-      if (!vp || !vp.publicKey) return false;
-      var sub = await reg.pushManager.getSubscription();
-      if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToUint8Array(vp.publicKey) });
-      var r = await appMutate('/app/push/subscribe', 'application/json', JSON.stringify({ subscription: sub.toJSON ? sub.toJSON() : sub }));
-      return r.ok;
-    } catch (_) { return false; }
+  var lastPushFailure = null;
+  function pushPromiseTimeout(promise, ms) {
+    var timer = null;
+    return Promise.race([
+      promise,
+      new Promise(function (_, reject) { timer = setTimeout(function () { reject(new Error('push-timeout')); }, ms); })
+    ]).finally(function () { if (timer) clearTimeout(timer); });
   }
-  async function disablePush() {
+  function pushApplicationKeyMatches(sub, expectedKey) {
     try {
-      var reg = swReg || await navigator.serviceWorker.ready;
-      var sub = await reg.pushManager.getSubscription();
-      if (sub) { var ep = sub.endpoint; await sub.unsubscribe().catch(function () {}); await appMutate('/app/push/unsubscribe', 'application/json', JSON.stringify({ endpoint: ep })).catch(function () {}); }
+      var actual = sub && sub.options && sub.options.applicationServerKey;
+      if (!actual) return true; // older engines do not expose the subscription option
+      var a = new Uint8Array(actual), b = expectedKey instanceof Uint8Array ? expectedKey : new Uint8Array(expectedKey);
+      if (a.length !== b.length) return false;
+      for (var i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+      return true;
+    } catch (_) { return true; }
+  }
+  async function retireBrowserPushSubscription(sub) {
+    if (!sub) return;
+    var endpoint = sub.endpoint || '';
+    try { await pushPromiseTimeout(sub.unsubscribe(), 12000); } catch (_) {}
+    if (endpoint) {
+      try { await appMutate('/app/push/unsubscribe', 'application/json', JSON.stringify({ endpoint: endpoint })); } catch (_) {}
+    }
+  }
+  function selectedPushLanguage() {
+    var value = '';
+    try { value = ($('push-language') && $('push-language').value) || localStorage.getItem('dx-pwa-push-lang') || lang || 'fr'; } catch (_) { value = lang || 'fr'; }
+    value = String(value || '').toLowerCase().slice(0, 2);
+    return value === 'en' || value === 'es' ? value : 'fr';
+  }
+  async function registerPushSubscription(allowPermissionPrompt, forceRenew) {
+    lastPushFailure = null;
+    try {
+      if (!window.isSecureContext || !('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) { lastPushFailure = 'unsupported'; return false; }
+      var perm = Notification.permission;
+      if (perm !== 'granted' && allowPermissionPrompt) perm = await Notification.requestPermission();
+      if (perm !== 'granted') {
+        if (perm === 'denied') { try { await appMutate('/app/push/permission-state', 'application/json', JSON.stringify({ permission:'denied' })); } catch (_) {} }
+        lastPushFailure = perm === 'denied' ? 'denied' : 'permission'; return false;
+      }
+      var reg = swReg || await pushPromiseTimeout(navigator.serviceWorker.ready, 20000);
+      var vr = await fetchWithTimeout('/app/push/vapid', { credentials: 'same-origin', cache: 'no-store' }, 15000);
+      var vp = await vr.json().catch(function () { return null; });
+      if (!vr.ok || !vp || !vp.publicKey) { lastPushFailure = 'vapid'; return false; }
+      var serverKey = urlB64ToUint8Array(vp.publicKey);
+      var sub = await pushPromiseTimeout(reg.pushManager.getSubscription(), 15000);
+      var repairedPush = false;
+      // Push subscriptions are bound to the VAPID/application server public key.
+      // A restored/recreated Direct-Xfer instance can have a new VAPID key while
+      // Android still holds the old subscription. Replace it instead of silently
+      // re-posting an endpoint that the current VAPID identity cannot use.
+      if (sub && (forceRenew || !pushApplicationKeyMatches(sub, serverKey))) {
+        repairedPush = true;
+        await retireBrowserPushSubscription(sub);
+        sub = null;
+      }
+      if (!sub) sub = await pushPromiseTimeout(reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: serverKey }), 25000);
+      var r = await appMutate('/app/push/subscribe', 'application/json', JSON.stringify({ subscription: sub.toJSON ? sub.toJSON() : sub, language: selectedPushLanguage(), repaired: repairedPush }));
+      if (!r.ok) { lastPushFailure = 'server-register'; return false; }
+      return true;
+    } catch (e) { lastPushFailure = e && e.message ? e.message : 'push-error'; return false; }
+  }
+  async function enablePush(forceRenew) { return registerPushSubscription(true, forceRenew === true); }
+  async function syncPushSubscription() { return registerPushSubscription(false, false); }
+  async function disablePush() {
+    var endpoint = '';
+    try {
+      var reg = swReg || await pushPromiseTimeout(navigator.serviceWorker.ready, 20000);
+      var sub = await pushPromiseTimeout(reg.pushManager.getSubscription(), 15000);
+      if (sub) {
+        endpoint = sub.endpoint || '';
+        try { await pushPromiseTimeout(sub.unsubscribe(), 12000); } catch (_) {}
+      }
     } catch (_) {}
+    // Always remove the server-side record even when Android/Chrome hangs while
+    // unsubscribing locally. Re-enabling Push force-creates a fresh browser
+    // subscription, so a half-failed disable cannot resurrect a stale endpoint.
+    if (endpoint) { try { await appMutate('/app/push/unsubscribe', 'application/json', JSON.stringify({ endpoint: endpoint })); } catch (_) {} }
+  }
+
+  function setPushTestStatus(key, tone, vars) {
+    var el = $('push-test-status'); if (!el) return;
+    el.textContent = key ? t(key, vars || {}) : '';
+    el.className = 'muted sm' + (tone === 'ok' ? ' ok' : tone === 'err' ? ' err' : '');
+  }
+  var pushReceiptWaiters = new Map();
+  var pushReceiptSeen = new Map();
+  var activePushTest = null;
+  function pushDeliveryMs(receipt, fallbackSentAt) {
+    if (!receipt) return 0;
+    var receivedAt = Number(receipt.receivedAt) || Date.now();
+    var sentAt = Number(receipt.sentAt) || Number(fallbackSentAt) || receivedAt;
+    return Math.max(0, receivedAt - sentAt);
+  }
+  function notePushReceipt(data) {
+    var id = data && data.testId ? String(data.testId) : '';
+    if (!id) return;
+    var receipt = {
+      receivedAt: Number(data.receivedAt) || Date.now(),
+      sentAt: Number(data.sentAt) || 0,
+      swVersion: data.swVersion ? String(data.swVersion) : ''
+    };
+    pushReceiptSeen.set(id, receipt);
+    var waiter = pushReceiptWaiters.get(id);
+    if (waiter) { pushReceiptWaiters.delete(id); clearTimeout(waiter.timer); waiter.resolve(receipt); }
+    if (activePushTest && activePushTest.id === id) {
+      setPushTestStatus('pushTestDelivered', 'ok', { ms: pushDeliveryMs(receipt, activePushTest.sentAt) });
+    }
+    // Keep only a tiny recent receipt cache; this is diagnostic state, not history.
+    if (pushReceiptSeen.size > 12) pushReceiptSeen.delete(pushReceiptSeen.keys().next().value);
+  }
+  function waitForPushReceipt(id, ms) {
+    if (pushReceiptSeen.has(id)) return Promise.resolve(pushReceiptSeen.get(id));
+    return new Promise(function (resolve) {
+      var timer = setTimeout(function () { pushReceiptWaiters.delete(id); resolve(null); }, ms);
+      pushReceiptWaiters.set(id, { resolve: resolve, timer: timer });
+    });
+  }
+  async function currentPushSubscription() {
+    var reg = swReg || await pushPromiseTimeout(navigator.serviceWorker.ready, 20000);
+    return { reg: reg, sub: await pushPromiseTimeout(reg.pushManager.getSubscription(), 15000) };
+  }
+  async function postPushTest(endpoint, testId) {
+    var r = await appMutate('/app/push/test', 'application/json', JSON.stringify({ endpoint: endpoint, testId: testId }));
+    var data = null; try { data = await r.clone().json(); } catch (_) {}
+    return { response: r, data: data || {} };
+  }
+  async function testPushNotifications() {
+    var btn = $('push-test-btn'); if (!btn) return;
+    var old = btn.textContent; btn.disabled = true; setPushTestStatus('pushTestPreparing');
+    var testId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : ('dx-' + Date.now() + '-' + Math.random().toString(36).slice(2));
+    activePushTest = { id: testId, sentAt: 0 };
+    try {
+      if (!window.isSecureContext || !('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) { setPushTestStatus('pushTestUnsupported', 'err'); return; }
+      if (Notification.permission === 'denied') { setPushTestStatus('pushTestDenied', 'err'); return; }
+      var ok = await registerPushSubscription(true, false);
+      if (!ok) { setPushTestStatus(lastPushFailure === 'denied' ? 'pushTestDenied' : 'pushTestFailed', 'err'); return; }
+      var current = await currentPushSubscription();
+      if (!current.sub) { setPushTestStatus('pushTestNoSub', 'err'); return; }
+      setPushTestStatus('pushTestSending');
+      var requestStartedAt = Date.now();
+      var result = await postPushTest(current.sub.endpoint, testId);
+      // A stale endpoint or a vendor rejection commonly means Android kept a
+      // subscription tied to an older VAPID identity. Recreate it once and retry.
+      if (!result.response.ok && (result.data.error === 'stale-subscription' || result.data.error === 'push-service-rejected')) {
+        setPushTestStatus('pushTestRepairing');
+        ok = await registerPushSubscription(false, true);
+        if (ok) {
+          current = await currentPushSubscription();
+          if (current.sub) {
+            requestStartedAt = Date.now();
+            result = await postPushTest(current.sub.endpoint, testId);
+          }
+        }
+      }
+      if (result.response.ok) {
+        if ($('live-push')) $('live-push').checked = true;
+        try { localStorage.setItem('dx-pwa-push', '1'); } catch (_) {}
+        var acceptedAt = Date.now();
+        var sentAt = Number(result.data.sentAt) || requestStartedAt;
+        activePushTest.sentAt = sentAt;
+        setPushTestStatus('pushTestAccepted', '', { ms: Math.max(0, acceptedAt - requestStartedAt) });
+        // Start the Android delivery window ONLY after the push service accepted the
+        // message. Subscription repair / VAPID negotiation can take many seconds and
+        // must not consume the delivery timeout before a push was even sent.
+        var receipt = await waitForPushReceipt(testId, 30000);
+        if (receipt) {
+          var deliveryMs = pushDeliveryMs(receipt, sentAt);
+          setPushTestStatus('pushTestDelivered', 'ok', { ms: deliveryMs });
+          toast(t('pushTestDelivered', { ms: deliveryMs }), 'ok');
+        } else {
+          // HTTP success only means the push service accepted the message. Delivery
+          // can still be deferred downstream; keep listening so a late receipt from
+          // the service worker updates this status when it eventually arrives.
+          setPushTestStatus('pushTestAcceptedDelayed', 'warn', { seconds: 30 });
+          toast(t('pushTestAcceptedDelayed', { seconds: 30 }), 'warn');
+        }
+      } else {
+        setPushTestStatus(result.data.error === 'no-subscription' ? 'pushTestNoSub' : 'pushTestFailed', 'err');
+        toast(t('pushTestFailed'), 'err');
+      }
+    } catch (_) { setPushTestStatus('pushTestFailed', 'err'); toast(t('pushTestFailed'), 'err'); }
+    finally { btn.disabled = false; btn.textContent = old; }
   }
 
   // --- ZIP bundling (store-only, no compression) -----------------------------
@@ -4636,16 +7001,47 @@
   // available. Plate detection is a conservative, fully local edge/contrast
   // heuristic. Every detected area is shown in the same review canvas, where the
   // user can undo it or add manual zones before any byte is uploaded.
-  var annItem = null, annCanvas = null, annCtx = null, annTool = 'pen', annUndoStack = [], annDrawing = false, annStart = null, annPrevFocus = null;
-  var annResolve = null, annSourceFile = null, annSmartMode = false, annBusy = false;
-  async function loadAnnotateCanvas(file) {
+  var annItem = null, annCanvas = null, annCtx = null, annTool = 'pen', annUndoStack = [], annBaseSnapshot = null, annAtBase = true, annDrawing = false, annStart = null, annLastPoint = null, annGestureChanged = false, annPrevFocus = null;
+  var annResolve = null, annSourceFile = null, annSmartMode = false, annBusy = false, annExporting = false;
+  var annZoom = 1, annPanning = null, annPinch = null, annResizeFrame = 0, annSession = 0, annOcrInFlight = false;
+  function beginAnnotateSession() {
+    annSession += 1; annExporting = false; setAnnBusy(false); return annSession;
+  }
+  function annSessionMatches(session, canvas) {
+    return session === annSession && !!annCanvas && (!canvas || canvas === annCanvas);
+  }
+  async function loadAnnotateCanvas(file, session) {
     var img = await loadImage(file);
-    annCanvas = $('annotate-canvas'); annCtx = annCanvas.getContext('2d', { alpha: false });
-    var w = img.width, h = img.height, scale = Math.min(1, 1800 / Math.max(w, h));
-    annCanvas.width = Math.max(1, Math.round(w * scale)); annCanvas.height = Math.max(1, Math.round(h * scale));
-    annCtx.drawImage(img, 0, 0, annCanvas.width, annCanvas.height);
-    if (img.close) img.close();
-    annUndoStack = []; pushAnnUndo(); setAnnTool('blur');
+    try {
+      if (session !== annSession) return false;
+      var canvas = $('annotate-canvas'), context = canvas && canvas.getContext('2d');
+      if (!canvas || !context) throw new Error('canvas-unavailable');
+      var w = Number(img.naturalWidth || img.width) || 0, h = Number(img.naturalHeight || img.height) || 0, scale = 1;
+      if (!(w > 0 && h > 0)) throw new Error('invalid-image-size');
+      // Preserve normal phone/camera resolution. Only exceptionally large canvases
+      // offer an explicit memory-saving working copy; cancelling keeps every pixel.
+      if ((Math.max(w, h) > 8192 || w * h > 40000000) && window.confirm(t('editorLargeConfirm', { w: w, h: h }))) {
+        scale = Math.min(1, 1800 / Math.max(w, h));
+      }
+      if (session !== annSession) return false;
+      canvas.width = Math.max(1, Math.round(w * scale)); canvas.height = Math.max(1, Math.round(h * scale));
+      context.drawImage(img, 0, 0, canvas.width, canvas.height);
+      annCanvas = canvas; annCtx = context;
+      annUndoStack = []; annBaseSnapshot = null; annAtBase = true;
+      pushAnnUndo(); annBaseSnapshot = annUndoStack[0] || null; annAtBase = true; updateAnnHistoryControls(); setAnnTool('blur');
+      if ($('ann-brightness')) $('ann-brightness').value = '100';
+      if ($('ann-contrast')) $('ann-contrast').value = '100';
+      if ($('ann-saturation')) $('ann-saturation').value = '100';
+      if ($('ann-resize-max')) $('ann-resize-max').value = '2048';
+      if ($('ann-output-format')) $('ann-output-format').value = 'keep';
+      if ($('ann-output-quality')) $('ann-output-quality').value = '99';
+      if ($('ann-brush-size')) $('ann-brush-size').value = String(Math.max(2, Math.min(200, Math.round(Math.max(canvas.width, canvas.height) / 180))));
+      updateAnnBrushSize(); annZoom = 1; annPanning = null; annPinch = null;
+      refreshEditorDimensions();
+      return true;
+    } finally {
+      if (img && img.close) try { img.close(); } catch (_) {}
+    }
   }
   function setAnnStatus(text, kind) {
     var el = $('ann-detect-status'); if (!el) return;
@@ -4654,70 +7050,345 @@
   function setAnnBusy(busy) {
     annBusy = !!busy;
     var overlay = $('annotate-overlay'); if (overlay) overlay.querySelector('.annotate-dialog').classList.toggle('detecting', annBusy);
-    ['ann-detect-faces','ann-detect-plates','ann-apply','ann-cancel'].forEach(function (id) { if ($(id)) $(id).disabled = annBusy; });
+    ['ann-pan','ann-pen','ann-blur','ann-redact','ann-detect-faces','ann-detect-plates','ann-detect-sensitive','ann-rotate-left','ann-rotate-right','ann-flip-h','ann-flip-v','ann-crop-square','ann-crop-43','ann-crop-169','ann-adjust-apply','ann-resize-apply','ann-apply','ann-cancel'].forEach(function (id) { if ($(id)) $(id).disabled = annBusy; });
+    updateAnnHistoryControls();
+  }
+  function showAnnotateOverlay() {
+    $('annotate-overlay').classList.remove('hidden');
+    requestAnimationFrame(function () {
+      setEditorZoom(1);
+      var activeTool = $('ann-' + annTool); if (activeTool && !activeTool.disabled) activeTool.focus();
+    });
   }
   async function openAnnotate(it) {
     if (!it.file) return;
-    try { await loadAnnotateCanvas(it.file); } catch (_) { toast(t('optimizeFallback'), 'warn'); return; }
+    var session = beginAnnotateSession(), loaded = false;
+    try { loaded = await loadAnnotateCanvas(it.file, session); } catch (_) { if (session === annSession) toast(t('optimizeFallback'), 'warn'); return; }
+    if (!loaded || session !== annSession) return;
     annItem = it; annSourceFile = it.file; annResolve = null; annSmartMode = false;
     if ($('ann-cancel')) $('ann-cancel').textContent = t('cancel');
-    setAnnStatus(''); annPrevFocus = document.activeElement; $('annotate-overlay').classList.remove('hidden');
+    setAnnStatus(''); annPrevFocus = document.activeElement; showAnnotateOverlay();
+  }
+  async function openImageLinkEditor(file) {
+    if (!file) return null;
+    var session = beginAnnotateSession(), loaded = false;
+    try { loaded = await loadAnnotateCanvas(file, session); } catch (_) { if (session === annSession) toast(t('optimizeFallback'), 'warn'); return null; }
+    if (!loaded || session !== annSession) return null;
+    annItem = null; annSourceFile = file; annResolve = null; annSmartMode = false;
+    if ($('ann-cancel')) $('ann-cancel').textContent = t('cancel');
+    setAnnStatus(''); annPrevFocus = document.activeElement; showAnnotateOverlay();
+    // closeAnnotate resolves with the original File, which lets the caller
+    // distinguish Cancel/Escape from an image exported with Apply.
+    return new Promise(function (resolve) { annResolve = resolve; });
   }
   async function openSmartBlurReview(file, mode) {
     if (!file || !mode || mode === 'off') return file;
-    try { await loadAnnotateCanvas(file); } catch (_) { toast(t('optimizeFallback'), 'warn'); return file; }
+    var session = beginAnnotateSession(), loaded = false;
+    try { loaded = await loadAnnotateCanvas(file, session); } catch (_) { if (session === annSession) toast(t('optimizeFallback'), 'warn'); return file; }
+    if (!loaded || session !== annSession) return file;
     annItem = null; annSourceFile = file; annSmartMode = true;
     if ($('ann-cancel')) $('ann-cancel').textContent = t('imgSmartBlurSkip');
-    annPrevFocus = document.activeElement; $('annotate-overlay').classList.remove('hidden');
+    annPrevFocus = document.activeElement; showAnnotateOverlay();
     setAnnStatus(t('imgSmartBlurAnalyzing'));
     return new Promise(function (resolve) {
       annResolve = resolve;
       setTimeout(async function () {
+        if (!annSessionMatches(session)) return;
         var n = 0;
         try {
           setAnnBusy(true);
-          if (mode === 'faces' || mode === 'faces-plates') n += await detectAndBlurFaces(false);
-          if (mode === 'faces-plates') n += await detectAndBlurPlates(false);
+          if (mode === 'faces' || mode === 'faces-plates' || mode === 'faces-plates-text') n += await detectAndBlurFaces(false);
+          if (mode === 'faces-plates' || mode === 'faces-plates-text') n += await detectAndBlurPlates(false);
+          if (mode === 'faces-plates-text') n += await detectAndBlurSensitiveText(false);
+          if (!annSessionMatches(session)) return;
           if (n) pushAnnUndo();
           setAnnStatus(n ? t('imgSmartBlurReady', { n: n }) : (('FaceDetector' in window) ? t('imgSmartBlurReady', { n: 0 }) : t('imgSmartBlurUnsupported')), n ? 'ok' : 'warn');
-        } catch (_) { setAnnStatus(t('imgSmartBlurUnsupported'), 'warn'); }
-        finally { setAnnBusy(false); }
+        } catch (_) { if (annSessionMatches(session)) setAnnStatus(t('imgSmartBlurUnsupported'), 'warn'); }
+        finally { if (annSessionMatches(session)) setAnnBusy(false); }
       }, 30);
     });
   }
-  function pushAnnUndo() { try { annUndoStack.push(annCtx.getImageData(0, 0, annCanvas.width, annCanvas.height)); if (annUndoStack.length > 15) annUndoStack.shift(); } catch (_) {} }
-  function annUndo() { if (annUndoStack.length > 1) { annUndoStack.pop(); annCtx.putImageData(annUndoStack[annUndoStack.length - 1], 0, 0); setAnnStatus(''); } }
-  function annClear() { if (annUndoStack.length) { annCtx.putImageData(annUndoStack[0], 0, 0); annUndoStack = [annUndoStack[0]]; setAnnStatus(''); } }
+  function captureAnnSnapshot() {
+    if (!annCanvas || !annCtx) return null;
+    try { return { width: annCanvas.width, height: annCanvas.height, pixels: annCtx.getImageData(0, 0, annCanvas.width, annCanvas.height) }; }
+    catch (_) { return null; }
+  }
+  function restoreAnnSnapshot(snapshot) {
+    if (!snapshot || !annCanvas) return false;
+    try {
+      if (annCanvas.width !== snapshot.width || annCanvas.height !== snapshot.height) { annCanvas.width = snapshot.width; annCanvas.height = snapshot.height; }
+      annCtx = annCanvas.getContext('2d'); annCtx.putImageData(snapshot.pixels, 0, 0);
+      annAtBase = snapshot === annBaseSnapshot;
+      refreshEditorDimensions(); scheduleEditorZoomLayout(); updateAnnHistoryControls(); return true;
+    } catch (_) { return false; }
+  }
+  function updateAnnHistoryControls() {
+    if ($('ann-undo')) $('ann-undo').disabled = annBusy || annUndoStack.length <= 1;
+    if ($('ann-clear')) $('ann-clear').disabled = annBusy || !annBaseSnapshot || annAtBase;
+  }
+  function pushAnnUndo(existingSnapshot) {
+    var snapshot = existingSnapshot || captureAnnSnapshot(); if (!snapshot) { updateAnnHistoryControls(); return false; }
+    // Bound exact ImageData history by both count and an approximate 96 MiB budget.
+    // This prevents a 12–40 MP phone photo from allocating fifteen full-size copies.
+    var bytes = Math.max(1, snapshot.width * snapshot.height * 4);
+    var maxUndo = Math.max(2, Math.min(15, Math.floor((96 * 1024 * 1024) / bytes)));
+    annUndoStack.push(snapshot);
+    while (annUndoStack.length > maxUndo) annUndoStack.shift();
+    annAtBase = !!annBaseSnapshot && snapshot === annBaseSnapshot;
+    updateAnnHistoryControls(); return true;
+  }
+  function annUndo() { if (!annBusy && annUndoStack.length > 1) { annUndoStack.pop(); restoreAnnSnapshot(annUndoStack[annUndoStack.length - 1]); setAnnStatus(''); updateAnnHistoryControls(); } }
+  function annClear() {
+    if (!annBusy && !annAtBase && annBaseSnapshot && restoreAnnSnapshot(annBaseSnapshot)) {
+      // Reuse the immutable base snapshot rather than allocating an identical full
+      // ImageData copy. Clear remains undoable while using far less memory.
+      if (!pushAnnUndo(annBaseSnapshot)) annUndoStack = [annBaseSnapshot];
+      annAtBase = true; updateAnnHistoryControls();
+      setAnnStatus('');
+    }
+  }
+  function refreshEditorDimensions() {
+    if ($('editor-dimensions') && annCanvas) $('editor-dimensions').textContent = annCanvas.width + '×' + annCanvas.height;
+  }
+  function readAnnBrushSize() {
+    var input = $('ann-brush-size'); return input ? Math.max(2, Math.min(200, Number(input.value) || 20)) : 20;
+  }
+  function updateAnnBrushSize() {
+    var input = $('ann-brush-size'), value = readAnnBrushSize();
+    if (input) input.value = String(value);
+    if ($('ann-brush-value')) $('ann-brush-value').textContent = Math.round(value) + ' px';
+    if (annDrawing && annCtx && (annTool === 'pen' || annTool === 'redact')) annCtx.lineWidth = value;
+    return value;
+  }
+  function editorZoomAnchor(clientX, clientY) {
+    var wrap = $('annotate-canvas-wrap');
+    if (!wrap || !annCanvas) return null;
+    var wrapRect = wrap.getBoundingClientRect(), canvasRect = annCanvas.getBoundingClientRect();
+    if (!(canvasRect.width > 0 && canvasRect.height > 0)) return null;
+    if (!Number.isFinite(clientX)) clientX = wrapRect.left + wrap.clientWidth / 2;
+    if (!Number.isFinite(clientY)) clientY = wrapRect.top + wrap.clientHeight / 2;
+    return {
+      x: Math.max(0, Math.min(1, (clientX - canvasRect.left) / canvasRect.width)),
+      y: Math.max(0, Math.min(1, (clientY - canvasRect.top) / canvasRect.height)),
+      viewX: clientX - wrapRect.left,
+      viewY: clientY - wrapRect.top
+    };
+  }
+  function setEditorZoom(nextZoom, point) {
+    if (!annCanvas) return;
+    var wrap = $('annotate-canvas-wrap'), stage = $('annotate-canvas-stage');
+    if (!wrap || !stage || !wrap.clientWidth || !wrap.clientHeight) return;
+    var anchor = editorZoomAnchor(point && point.clientX, point && point.clientY);
+    annZoom = Math.max(.25, Math.min(4, Number(nextZoom) || 1));
+    var availableWidth = Math.max(1, wrap.clientWidth - 12), availableHeight = Math.max(1, wrap.clientHeight - 12);
+    var fitScale = Math.min(1, availableWidth / annCanvas.width, availableHeight / annCanvas.height);
+    var displayWidth = Math.max(1, annCanvas.width * fitScale * annZoom);
+    var displayHeight = Math.max(1, annCanvas.height * fitScale * annZoom);
+    annCanvas.style.width = displayWidth + 'px'; annCanvas.style.height = displayHeight + 'px';
+    stage.style.width = Math.max(wrap.clientWidth, displayWidth + 12) + 'px';
+    stage.style.height = Math.max(wrap.clientHeight, displayHeight + 12) + 'px';
+    if ($('ann-zoom')) $('ann-zoom').value = String(Math.round(annZoom * 100));
+    if ($('ann-zoom-value')) $('ann-zoom-value').textContent = Math.round(annZoom * 100) + ' %';
+    if ($('ann-zoom-out')) $('ann-zoom-out').disabled = annZoom <= .25;
+    if ($('ann-zoom-in')) $('ann-zoom-in').disabled = annZoom >= 4;
+    if (anchor) requestAnimationFrame(function () {
+      wrap.scrollLeft = annCanvas.offsetLeft + anchor.x * annCanvas.offsetWidth - anchor.viewX;
+      wrap.scrollTop = annCanvas.offsetTop + anchor.y * annCanvas.offsetHeight - anchor.viewY;
+    });
+  }
+  function stepEditorZoom(direction, point) {
+    setEditorZoom(Math.round((annZoom + direction * .25) * 4) / 4, point);
+  }
+  function scheduleEditorZoomLayout() {
+    if (!annCanvas || $('annotate-overlay').classList.contains('hidden')) return;
+    cancelAnimationFrame(annResizeFrame);
+    annResizeFrame = requestAnimationFrame(function () { annResizeFrame = 0; setEditorZoom(annZoom); });
+  }
+  function replaceEditorCanvas(tmp) {
+    annCanvas.width = tmp.width; annCanvas.height = tmp.height; annCtx = annCanvas.getContext('2d'); annCtx.drawImage(tmp, 0, 0);
+    pushAnnUndo();
+    refreshEditorDimensions(); scheduleEditorZoomLayout(); setAnnStatus('');
+  }
+  function rotateAnnotate(dir) {
+    if (!annCanvas || annBusy) return;
+    var tmp=document.createElement('canvas'); tmp.width=annCanvas.height; tmp.height=annCanvas.width; var c=tmp.getContext('2d');
+    if (dir < 0) { c.translate(0,tmp.height); c.rotate(-Math.PI/2); } else { c.translate(tmp.width,0); c.rotate(Math.PI/2); }
+    c.drawImage(annCanvas,0,0); replaceEditorCanvas(tmp);
+  }
+  function flipAnnotate(horizontal) {
+    if (!annCanvas || annBusy) return;
+    var tmp=document.createElement('canvas'); tmp.width=annCanvas.width; tmp.height=annCanvas.height; var c=tmp.getContext('2d');
+    c.save(); c.translate(horizontal ? tmp.width : 0, horizontal ? 0 : tmp.height); c.scale(horizontal ? -1 : 1, horizontal ? 1 : -1); c.drawImage(annCanvas,0,0); c.restore(); replaceEditorCanvas(tmp);
+  }
+  function adjustedEditorChannel(value, brightness, contrast) {
+    return Math.max(0, Math.min(255, (value * brightness - 128) * contrast + 128));
+  }
+  function applyEditorAdjustmentsFallback(brightness, contrast, saturation) {
+    var imageData = annCtx.getImageData(0, 0, annCanvas.width, annCanvas.height), data = imageData.data;
+    var b = brightness / 100, c = contrast / 100, s = saturation / 100;
+    for (var i = 0; i < data.length; i += 4) {
+      var r = adjustedEditorChannel(data[i], b, c), g = adjustedEditorChannel(data[i + 1], b, c), blue = adjustedEditorChannel(data[i + 2], b, c);
+      var luminance = r * .2126 + g * .7152 + blue * .0722;
+      data[i] = Math.max(0, Math.min(255, luminance + (r - luminance) * s));
+      data[i + 1] = Math.max(0, Math.min(255, luminance + (g - luminance) * s));
+      data[i + 2] = Math.max(0, Math.min(255, luminance + (blue - luminance) * s));
+    }
+    annCtx.putImageData(imageData, 0, 0);
+  }
+  function applyEditorAdjustments() {
+    if (!annCanvas || annBusy) return;
+    var b=Number($('ann-brightness')&&$('ann-brightness').value)||100, c0=Number($('ann-contrast')&&$('ann-contrast').value)||100, sat=Number($('ann-saturation')&&$('ann-saturation').value)||100;
+    if (b===100 && c0===100 && sat===100) return;
+    try {
+      var tmp=document.createElement('canvas'); tmp.width=annCanvas.width; tmp.height=annCanvas.height; var c=tmp.getContext('2d');
+      if (c && 'filter' in c) {
+        c.filter='brightness('+b+'%) contrast('+c0+'%) saturate('+sat+'%)'; c.drawImage(annCanvas,0,0); c.filter='none'; annCtx.clearRect(0,0,annCanvas.width,annCanvas.height); annCtx.drawImage(tmp,0,0);
+      } else applyEditorAdjustmentsFallback(b, c0, sat);
+      pushAnnUndo();
+    } catch (_) { toast(t('error'), 'err'); setAnnStatus(t('error'), 'err'); return; }
+    $('ann-brightness').value='100'; $('ann-contrast').value='100'; $('ann-saturation').value='100';
+    setAnnStatus('');
+  }
+  function resizeAnnotate() {
+    if (!annCanvas || annBusy) return;
+    var max=Math.max(128,Math.min(8192,Number($('ann-resize-max')&&$('ann-resize-max').value)||2048));
+    if ($('ann-resize-max')) $('ann-resize-max').value = String(Math.round(max));
+    if (Math.max(annCanvas.width,annCanvas.height)<=max) return;
+    var scale=max/Math.max(annCanvas.width,annCanvas.height), tmp=document.createElement('canvas'); tmp.width=Math.max(1,Math.round(annCanvas.width*scale)); tmp.height=Math.max(1,Math.round(annCanvas.height*scale));
+    var c=tmp.getContext('2d'); c.imageSmoothingEnabled=true; c.imageSmoothingQuality='high'; c.drawImage(annCanvas,0,0,tmp.width,tmp.height); replaceEditorCanvas(tmp);
+  }
   function cropAnnotate(ratio) {
-    if (!annCanvas || !annCtx || !ratio) return;
+    if (!annCanvas || !annCtx || !ratio || annBusy) return;
     var sw = annCanvas.width, sh = annCanvas.height, tw = sw, th = Math.round(sw / ratio);
     if (th > sh) { th = sh; tw = Math.round(sh * ratio); }
+    if (tw === sw && th === sh) return;
     var sx = Math.max(0, Math.round((sw - tw) / 2)), sy = Math.max(0, Math.round((sh - th) / 2));
     var tmp = document.createElement('canvas'); tmp.width = tw; tmp.height = th;
     tmp.getContext('2d').drawImage(annCanvas, sx, sy, tw, th, 0, 0, tw, th);
-    annCanvas.width = tw; annCanvas.height = th; annCtx = annCanvas.getContext('2d', { alpha: false });
-    annCtx.drawImage(tmp, 0, 0); annUndoStack = []; pushAnnUndo();
+    replaceEditorCanvas(tmp);
   }
-  function setAnnTool(tool) { annTool = tool; if ($('ann-pen')) $('ann-pen').classList.toggle('is-active', tool === 'pen'); if ($('ann-blur')) $('ann-blur').classList.toggle('is-active', tool === 'blur'); }
+  function setAnnTool(tool) {
+    if (annBusy) return;
+    annTool = tool;
+    ['pan','pen','blur','redact'].forEach(function (name) { if ($('ann-' + name)) { $('ann-' + name).classList.toggle('is-active', tool === name); $('ann-' + name).setAttribute('aria-pressed', tool === name ? 'true' : 'false'); } });
+    if ($('annotate-canvas-wrap')) $('annotate-canvas-wrap').classList.toggle('is-pan-mode', tool === 'pan');
+  }
+  function annClientPoint(e) {
+    var touch = e.touches && e.touches[0] ? e.touches[0] : e.changedTouches && e.changedTouches[0] ? e.changedTouches[0] : e;
+    return { clientX: Number(touch && touch.clientX) || 0, clientY: Number(touch && touch.clientY) || 0 };
+  }
+  function annTouchDistance(touches) {
+    var dx = touches[0].clientX - touches[1].clientX, dy = touches[0].clientY - touches[1].clientY;
+    return Math.max(1, Math.hypot(dx, dy));
+  }
+  function annTouchMidpoint(touches) {
+    return { clientX: (touches[0].clientX + touches[1].clientX) / 2, clientY: (touches[0].clientY + touches[1].clientY) / 2 };
+  }
   function annPos(e) {
     var r = annCanvas.getBoundingClientRect();
     var touch = e.touches && e.touches[0] ? e.touches[0] : e.changedTouches && e.changedTouches[0] ? e.changedTouches[0] : e;
-    var cx = touch.clientX - r.left, cy = touch.clientY - r.top;
+    if (!(r.width > 0 && r.height > 0)) return null;
+    var cx = Math.max(0, Math.min(r.width, touch.clientX - r.left)), cy = Math.max(0, Math.min(r.height, touch.clientY - r.top));
     return { x: cx * (annCanvas.width / r.width), y: cy * (annCanvas.height / r.height) };
   }
-  function annDown(e) {
-    if (annBusy) return; e.preventDefault(); annDrawing = true; annStart = annPos(e);
-    if (annTool === 'pen') { annCtx.strokeStyle = '#ff3b5c'; annCtx.lineWidth = Math.max(3, annCanvas.width / 180); annCtx.lineCap = 'round'; annCtx.lineJoin = 'round'; annCtx.beginPath(); annCtx.moveTo(annStart.x, annStart.y); }
+  function paintSolidBrushSegment(a, b, size, color) {
+    if (!a || !b || !annCtx) return false;
+    annCtx.save(); annCtx.strokeStyle = color; annCtx.fillStyle = color; annCtx.lineWidth = size; annCtx.lineCap = 'round'; annCtx.lineJoin = 'round';
+    annCtx.beginPath(); annCtx.moveTo(a.x, a.y); annCtx.lineTo(b.x, b.y); annCtx.stroke();
+    if (a.x === b.x && a.y === b.y) { annCtx.beginPath(); annCtx.arc(a.x, a.y, size / 2, 0, Math.PI * 2); annCtx.fill(); }
+    annCtx.restore(); return true;
   }
-  function annMove(e) { if (!annDrawing) return; e.preventDefault(); var p = annPos(e); if (annTool === 'pen') { annCtx.lineTo(p.x, p.y); annCtx.stroke(); } }
+  function pixelateBrushAt(point, size) {
+    if (!point || !annCanvas || !annCtx) return false;
+    var radius = Math.max(1, size / 2), x = Math.max(0, Math.floor(point.x - radius)), y = Math.max(0, Math.floor(point.y - radius));
+    var right = Math.min(annCanvas.width, Math.ceil(point.x + radius)), bottom = Math.min(annCanvas.height, Math.ceil(point.y + radius));
+    var w = right - x, h = bottom - y; if (w < 1 || h < 1) return false;
+    var block = Math.max(3, Math.min(24, Math.round(size / 8))), tmp = document.createElement('canvas');
+    tmp.width = Math.max(1, Math.round(w / block)); tmp.height = Math.max(1, Math.round(h / block));
+    tmp.getContext('2d').drawImage(annCanvas, x, y, w, h, 0, 0, tmp.width, tmp.height);
+    annCtx.save(); annCtx.beginPath(); annCtx.arc(point.x, point.y, radius, 0, Math.PI * 2); annCtx.clip(); annCtx.imageSmoothingEnabled = false;
+    annCtx.drawImage(tmp, 0, 0, tmp.width, tmp.height, x, y, w, h); annCtx.restore(); return true;
+  }
+  function pixelateBrushSegment(a, b, size) {
+    if (!a || !b) return false;
+    var distance = Math.hypot(b.x - a.x, b.y - a.y), spacing = Math.max(1, size / 5), steps = Math.max(1, Math.ceil(distance / spacing)), changed = false;
+    for (var i = 0; i <= steps; i++) changed = pixelateBrushAt({ x: a.x + (b.x - a.x) * i / steps, y: a.y + (b.y - a.y) * i / steps }, size) || changed;
+    return changed;
+  }
+  function annDown(e) {
+    if (annBusy) return;
+    if (!e.touches && Number(e.button) !== 0) return;
+    if (e.touches && e.touches.length > 1) {
+      e.preventDefault();
+      if (annDrawing && annUndoStack.length) restoreAnnSnapshot(annUndoStack[annUndoStack.length - 1]);
+      annDrawing = false; annLastPoint = null; annGestureChanged = false; annPanning = null;
+      if ($('annotate-canvas-wrap')) $('annotate-canvas-wrap').classList.remove('is-panning');
+      annPinch = { distance: annTouchDistance(e.touches), zoom: annZoom };
+      return;
+    }
+    e.preventDefault();
+    if (annTool === 'pan') {
+      var wrap = $('annotate-canvas-wrap'), point = annClientPoint(e);
+      annPanning = { clientX: point.clientX, clientY: point.clientY, left: wrap.scrollLeft, top: wrap.scrollTop };
+      wrap.classList.add('is-panning'); return;
+    }
+    annDrawing = true; annStart = annPos(e); annLastPoint = annStart; annGestureChanged = false;
+    if (!annStart) { annDrawing = false; return; }
+    var brushSize = readAnnBrushSize();
+    if (annTool === 'pen') {
+      annCtx.strokeStyle = '#ff3b5c'; annCtx.fillStyle = '#ff3b5c'; annCtx.lineWidth = updateAnnBrushSize(); brushSize = annCtx.lineWidth; annCtx.lineCap = 'round'; annCtx.lineJoin = 'round'; annCtx.beginPath(); annCtx.moveTo(annStart.x, annStart.y);
+      annCtx.beginPath(); annCtx.arc(annStart.x, annStart.y, brushSize / 2, 0, Math.PI * 2); annCtx.fill(); annCtx.beginPath(); annCtx.moveTo(annStart.x, annStart.y); annGestureChanged = true;
+    } else if (annTool === 'blur') annGestureChanged = pixelateBrushAt(annStart, brushSize);
+    else if (annTool === 'redact') annGestureChanged = paintSolidBrushSegment(annStart, annStart, brushSize, '#000');
+  }
+  function annMove(e) {
+    if (annPinch && e.touches && e.touches.length > 1) {
+      e.preventDefault(); setEditorZoom(annPinch.zoom * annTouchDistance(e.touches) / annPinch.distance, annTouchMidpoint(e.touches)); return;
+    }
+    if (annPanning) {
+      e.preventDefault(); var wrap = $('annotate-canvas-wrap'), point = annClientPoint(e);
+      wrap.scrollLeft = annPanning.left - (point.clientX - annPanning.clientX);
+      wrap.scrollTop = annPanning.top - (point.clientY - annPanning.clientY); return;
+    }
+    if (!annDrawing) return; e.preventDefault(); var p = annPos(e); if (!p) return;
+    var brushSize = readAnnBrushSize();
+    if (annTool === 'pen') { annCtx.lineTo(p.x, p.y); annCtx.stroke(); annGestureChanged = true; }
+    else if (annTool === 'blur') annGestureChanged = pixelateBrushSegment(annLastPoint, p, brushSize) || annGestureChanged;
+    else if (annTool === 'redact') annGestureChanged = paintSolidBrushSegment(annLastPoint, p, brushSize, '#000') || annGestureChanged;
+    annLastPoint = p;
+  }
   function annUp(e) {
-    if (!annDrawing) return; annDrawing = false;
-    if (annTool === 'blur') { var p = annPos(e); pixelateRect(annStart, p); }
-    pushAnnUndo();
+    if (annPinch) { if (!e.touches || e.touches.length < 2) annPinch = null; annDrawing = false; return; }
+    if (annPanning) { annPanning = null; if ($('annotate-canvas-wrap')) $('annotate-canvas-wrap').classList.remove('is-panning'); return; }
+    if (!annDrawing) return;
+    var p = annPos(e), brushSize = readAnnBrushSize();
+    if (p && annLastPoint && (p.x !== annLastPoint.x || p.y !== annLastPoint.y)) {
+      if (annTool === 'pen') { annCtx.lineTo(p.x, p.y); annCtx.stroke(); annGestureChanged = true; }
+      else if (annTool === 'blur') annGestureChanged = pixelateBrushSegment(annLastPoint, p, brushSize) || annGestureChanged;
+      else if (annTool === 'redact') annGestureChanged = paintSolidBrushSegment(annLastPoint, p, brushSize, '#000') || annGestureChanged;
+    }
+    annDrawing = false; annStart = null; annLastPoint = null;
+    if (annGestureChanged) pushAnnUndo(); annGestureChanged = false;
+  }
+  function cancelAnnGesture() {
+    if (annDrawing && annUndoStack.length) restoreAnnSnapshot(annUndoStack[annUndoStack.length - 1]);
+    annDrawing = false; annStart = null; annLastPoint = null; annGestureChanged = false; annPinch = null; annPanning = null;
+    if ($('annotate-canvas-wrap')) $('annotate-canvas-wrap').classList.remove('is-panning');
+  }
+  function normalizedAnnRect(a, b) {
+    var ax = Math.max(0, Math.min(annCanvas.width, Number(a && a.x) || 0));
+    var ay = Math.max(0, Math.min(annCanvas.height, Number(a && a.y) || 0));
+    var bx = Math.max(0, Math.min(annCanvas.width, Number(b && b.x) || 0));
+    var by = Math.max(0, Math.min(annCanvas.height, Number(b && b.y) || 0));
+    return { x: Math.min(ax, bx), y: Math.min(ay, by), w: Math.abs(ax - bx), h: Math.abs(ay - by) };
+  }
+  function redactRect(a, b) {
+    var rect = normalizedAnnRect(a, b), x = rect.x, y = rect.y, w = rect.w, h = rect.h;
+    if (w < 4 || h < 4) return;
+    annCtx.save(); annCtx.fillStyle = '#000'; annCtx.fillRect(x, y, w, h); annCtx.restore();
   }
   function pixelateRect(a, b) {
-    var x = Math.max(0, Math.min(a.x, b.x)), y = Math.max(0, Math.min(a.y, b.y));
-    var w = Math.min(annCanvas.width - x, Math.abs(a.x - b.x)), h = Math.min(annCanvas.height - y, Math.abs(a.y - b.y));
+    var rect = normalizedAnnRect(a, b), x = rect.x, y = rect.y, w = rect.w, h = rect.h;
     if (w < 4 || h < 4) return;
     var tmp = document.createElement('canvas'), pw = Math.max(1, Math.round(w / 18)), ph = Math.max(1, Math.round(h / 18));
     tmp.width = pw; tmp.height = ph;
@@ -4731,16 +7402,18 @@
     });
   }
   async function detectAndBlurFaces(pushUndo) {
-    if (!annCanvas || !('FaceDetector' in window)) { setAnnStatus(t('imgSmartBlurUnsupported'), 'warn'); return 0; }
+    var session = annSession, canvas = annCanvas;
+    if (!canvas || !('FaceDetector' in window)) { if (annSessionMatches(session, canvas)) setAnnStatus(t('imgSmartBlurUnsupported'), 'warn'); return 0; }
     setAnnBusy(true); setAnnStatus(t('imgSmartBlurAnalyzing'));
     try {
       var detector = new FaceDetector({ fastMode: true, maxDetectedFaces: 40 });
-      var faces = await detector.detect(annCanvas);
+      var faces = await detector.detect(canvas);
+      if (!annSessionMatches(session, canvas)) return 0;
       var boxes = faces.map(function (f) { var b = f.boundingBox; return { x: b.x, y: b.y, width: b.width, height: b.height }; }).filter(function (b) { return b.width > 5 && b.height > 5; });
       blurBoxes(boxes); if (boxes.length && pushUndo !== false) pushAnnUndo();
       setAnnStatus(t('imgSmartBlurReady', { n: boxes.length }), boxes.length ? 'ok' : 'warn'); return boxes.length;
-    } catch (_) { setAnnStatus(t('imgSmartBlurUnsupported'), 'warn'); return 0; }
-    finally { setAnnBusy(false); }
+    } catch (_) { if (annSessionMatches(session, canvas)) setAnnStatus(t('imgSmartBlurUnsupported'), 'warn'); return 0; }
+    finally { if (annSessionMatches(session, canvas)) setAnnBusy(false); }
   }
   function rectIou(a, b) {
     var x1 = Math.max(a.x, b.x), y1 = Math.max(a.y, b.y), x2 = Math.min(a.x + a.width, b.x + b.width), y2 = Math.min(a.y + a.height, b.y + b.height);
@@ -4783,37 +7456,118 @@
     return picked;
   }
   async function detectAndBlurPlates(pushUndo) {
-    if (!annCanvas) return 0; setAnnBusy(true); setAnnStatus(t('imgSmartBlurAnalyzing'));
-    try { var boxes = plateCandidates(annCanvas); blurBoxes(boxes); if (boxes.length && pushUndo !== false) pushAnnUndo(); setAnnStatus(t('imgSmartBlurReady', { n: boxes.length }), boxes.length ? 'ok' : 'warn'); return boxes.length; }
-    catch (_) { setAnnStatus(t('imgSmartBlurReady', { n: 0 }), 'warn'); return 0; }
-    finally { setAnnBusy(false); }
+    var session = annSession, canvas = annCanvas;
+    if (!canvas) return 0; setAnnBusy(true); setAnnStatus(t('imgSmartBlurAnalyzing'));
+    try {
+      var boxes = plateCandidates(canvas); if (!annSessionMatches(session, canvas)) return 0;
+      blurBoxes(boxes); if (boxes.length && pushUndo !== false) pushAnnUndo(); setAnnStatus(t('imgSmartBlurReady', { n: boxes.length }), boxes.length ? 'ok' : 'warn'); return boxes.length;
+    }
+    catch (_) { if (annSessionMatches(session, canvas)) setAnnStatus(t('imgSmartBlurReady', { n: 0 }), 'warn'); return 0; }
+    finally { if (annSessionMatches(session, canvas)) setAnnBusy(false); }
+  }
+  function flattenOcrWordBoxes(data) {
+    var out=[];
+    if (data && Array.isArray(data.words)) data.words.forEach(function(w){ if(w&&w.bbox&&w.text) out.push(w); });
+    if (out.length) return out;
+    function walk(node) { if (!node || typeof node!=='object') return; if (node.bbox && node.text && !node.words) out.push(node); ['blocks','paragraphs','lines','words'].forEach(function(k){ if(Array.isArray(node[k])) node[k].forEach(walk); }); }
+    walk(data); return out;
+  }
+  function looksSensitiveText(text) {
+    text=String(text||'').trim(); if(!text) return false;
+    var digits=text.replace(/\D/g,'');
+    return /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(text) || /^\+?[\d().\- ]{8,}$/.test(text) || digits.length>=9 || /^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$/i.test(text);
+  }
+  async function detectAndBlurSensitiveText(pushUndo) {
+    var session = annSession, canvas = annCanvas, worker = null;
+    if (!canvas || ocrRunning || annOcrInFlight) return 0;
+    // The OCR worker is shared with the document OCR screen. Mark it globally busy
+    // so closing/reopening the editor cannot start a second recognition on it.
+    annOcrInFlight = true; ocrRunning = true; ocrAbort = false;
+    setAnnBusy(true); setAnnStatus(t('sensitiveScanning'));
+    try {
+      worker=await getOcrWorker(); if (!annSessionMatches(session, canvas)) return 0;
+      var ret=await worker.recognize(canvas); if (!annSessionMatches(session, canvas)) return 0;
+      var words=flattenOcrWordBoxes(ret&&ret.data), picked=[];
+      var keyword=/^(address|adresse|passport|passeport|driver|permis|license|licence|ssn|sin|nas|iban|account|compte|card|carte|birth|naissance)$/i;
+      words.forEach(function(w,i){ var text=String(w.text||'').trim(); if(looksSensitiveText(text)||keyword.test(text)){ for(var k=i;k<Math.min(words.length,i+(keyword.test(text)?4:1));k++){var b=words[k].bbox;if(b)picked.push({x:b.x0,y:b.y0,width:Math.max(1,b.x1-b.x0),height:Math.max(1,b.y1-b.y0)});} } });
+      // De-duplicate overlapping OCR boxes before pixelation.
+      var boxes=[]; picked.forEach(function(b){ if(!boxes.some(function(x){return rectIou(x,b)>.72;})) boxes.push(b); });
+      blurBoxes(boxes); if(boxes.length&&pushUndo!==false)pushAnnUndo(); setAnnStatus(t('sensitiveFound',{n:boxes.length}),boxes.length?'ok':'warn'); return boxes.length;
+    } catch (_) { if (annSessionMatches(session, canvas)) setAnnStatus(t('imgSmartBlurUnsupported'),'warn'); return 0; }
+    finally {
+      await terminateOcrWorker(); annOcrInFlight = false; ocrRunning = false;
+      if (annSessionMatches(session, canvas)) setAnnBusy(false);
+    }
+  }
+  function releaseAnnotateCanvas() {
+    var canvas = annCanvas || $('annotate-canvas'), stage = $('annotate-canvas-stage');
+    // Resetting width/height releases the backing pixel buffer immediately. Keeping a
+    // closed 40 MP canvas alive is enough to evict or crash a mobile PWA.
+    if (canvas) { canvas.width = 1; canvas.height = 1; canvas.style.width = ''; canvas.style.height = ''; }
+    if (stage) { stage.style.width = ''; stage.style.height = ''; }
   }
   function finishAnnotate(result) {
+    var resolve = annResolve, source = annSourceFile, previousFocus = annPrevFocus;
+    // Invalidate every pending detector/export before releasing the shared canvas.
+    annSession += 1; annExporting = false;
     $('annotate-overlay').classList.add('hidden'); setAnnStatus(''); setAnnBusy(false);
-    var resolve = annResolve; annResolve = null; annSmartMode = false; annItem = null; annCanvas = null; annCtx = null;
+    cancelAnimationFrame(annResizeFrame); annResizeFrame = 0; annPanning = null; annPinch = null; annDrawing = false; annStart = null; annLastPoint = null; annGestureChanged = false;
+    if ($('annotate-canvas-wrap')) $('annotate-canvas-wrap').classList.remove('is-panning', 'is-pan-mode');
+    releaseAnnotateCanvas();
+    annResolve = null; annSmartMode = false; annItem = null; annCanvas = null; annCtx = null; annUndoStack = []; annBaseSnapshot = null; annAtBase = true; annSourceFile = null; annPrevFocus = null;
     if ($('ann-cancel')) $('ann-cancel').textContent = t('cancel');
-    if (annPrevFocus && annPrevFocus.focus) annPrevFocus.focus(); annPrevFocus = null;
-    if (resolve) resolve(result || annSourceFile); annSourceFile = null;
+    updateAnnHistoryControls();
+    if (previousFocus && previousFocus.focus) try { previousFocus.focus(); } catch (_) {}
+    if (resolve) resolve(result || source);
   }
-  function closeAnnotate() { if (annResolve) return finishAnnotate(annSourceFile); $('annotate-overlay').classList.add('hidden'); annItem = null; annSourceFile = null; if (annPrevFocus && annPrevFocus.focus) annPrevFocus.focus(); annPrevFocus = null; }
+  function closeAnnotate() {
+    // Once encoding/persistence has begun, closing would claim the edit was cancelled
+    // even though bytes may already be committed. Keep the short operation atomic.
+    if (annExporting) return;
+    return finishAnnotate(annSourceFile);
+  }
+  function normalizedEditorExportType(requestedType, encodedType) {
+    var actual = String(encodedType || '').toLowerCase().split(';')[0];
+    return ['image/jpeg', 'image/png', 'image/webp'].indexOf(actual) !== -1 ? actual : requestedType;
+  }
   async function applyAnnotate() {
     if (!annCanvas) return closeAnnotate();
-    var source = annSourceFile || (annItem && annItem.file), sourceType = source && source.type || 'image/jpeg';
-    var outType = sourceType === 'image/png' ? 'image/png' : sourceType === 'image/webp' ? 'image/webp' : 'image/jpeg';
+    if (annBusy || annExporting) return;
+    var session = annSession, canvas = annCanvas, item = annItem, resolve = annResolve;
+    var source = annSourceFile || (item && item.file), sourceType = source && source.type || 'image/jpeg';
+    var selectedType = $('ann-output-format') && $('ann-output-format').value || 'keep';
+    var outType = selectedType !== 'keep' ? selectedType : (sourceType === 'image/png' ? 'image/png' : sourceType === 'image/webp' ? 'image/webp' : 'image/jpeg');
+    var outQuality = Math.max(.55, Math.min(1, (Number($('ann-output-quality') && $('ann-output-quality').value) || 99) / 100));
+    annExporting = true; setAnnBusy(true); setAnnStatus('');
     try {
-      var blob = await new Promise(function (res, rej) { annCanvas.toBlob(function (b) { b ? res(b) : rej(new Error('encode')); }, outType, outType === 'image/jpeg' ? .92 : .94); });
+      var exportCanvas = canvas;
+      // Preserve transparency for PNG/WebP. JPEG has no alpha channel, so flatten
+      // explicitly onto white instead of allowing transparent pixels to become black.
+      if (outType === 'image/jpeg') {
+        exportCanvas = document.createElement('canvas'); exportCanvas.width = canvas.width; exportCanvas.height = canvas.height;
+        var exportCtx = exportCanvas.getContext('2d', { alpha: false }); exportCtx.fillStyle = '#fff'; exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height); exportCtx.drawImage(canvas, 0, 0);
+      }
+      var blob = await new Promise(function (res, rej) { exportCanvas.toBlob(function (b) { b ? res(b) : rej(new Error('encode')); }, outType, outType === 'image/png' ? undefined : outQuality); });
+      if (!annSessionMatches(session, canvas)) return;
+      // Browsers may silently fall back to PNG when WebP encoding is unavailable.
+      // Use the bytes' real MIME type so the extension and Content-Type never lie.
+      outType = normalizedEditorExportType(outType, blob.type);
       var ext = outType === 'image/png' ? '.png' : outType === 'image/webp' ? '.webp' : '.jpg';
-      var originalName = source && source.name || (annItem && annItem.name) || ('image-' + Date.now());
+      var originalName = source && source.name || (item && item.name) || ('image-' + Date.now());
       var newName = originalName.replace(/\.[^.\/]+$/, '') + ext;
       var file = namedFile(blob, newName, outType, Date.now());
-      if (annResolve) return finishAnnotate(file);
-      if (annItem) {
-        annItem.name = newName;
-        await replaceItemSourceDurably(annItem, file);
+      if (resolve && resolve === annResolve) { annExporting = false; return finishAnnotate(file); }
+      if (item && item === annItem) {
+        await replaceItemSourceDurably(item, file);
+        if (!annSessionMatches(session, canvas)) return;
+        item.name = newName;
         renderQueue(); updateSendBtn();
       }
-    } catch (_) { toast(t('error'), 'err'); }
-    closeAnnotate();
+    } catch (_) {
+      if (annSessionMatches(session, canvas)) { annExporting = false; setAnnBusy(false); toast(t('error'), 'err'); setAnnStatus(t('error'), 'err'); }
+      return;
+    }
+    if (annSessionMatches(session, canvas)) { annExporting = false; finishAnnotate(); }
   }
 
   // --- Send one batch to several destinations (fan-out) ----------------------
@@ -4960,15 +7714,15 @@
     await Promise.all(oldItems.map(cancelPartial)).catch(function () {});
     sending = false; paused = false;
     var resume = resumeWaiters.splice(0); resume.forEach(function (resolve) { resolve(); });
-    await Promise.all([idbClear(QUEUE_STORE), idbClear(DEST_STORE), idbClear(META_STORE), idbClear(HISTORY_STORE), idbClear(IMAGE_STORE), purgeDirectXferCaches(), purgeOpfsQueue()]).catch(function () {});
+    await Promise.all([idbClear(QUEUE_STORE), idbClear(DEST_STORE), idbClear(META_STORE), idbClear(HISTORY_STORE), idbClear(IMAGE_STORE), idbClear(OCR_INDEX_STORE), purgeDirectXferCaches(), purgeOpfsQueue()]).catch(function () {});
     persistentDests = []; sessionDests = []; serverReceptions = []; persistSessionDests(); items = []; historyEntries = [];
     sessionFiles = 0; sessionBytes = 0; lifetimeFiles = 0; lifetimeBytes = 0; imageLinkUrls = []; imageRowsByToken.clear(); imageRecordsByToken.clear(); selectedImageTokens.clear(); imageActionHistory = []; tagColorMap = {}; pinnedAlbumTokens.clear(); lastDiag = null; avgRate = 0; historyFilter = '';
-    lastBatchRecord = null; lastBatchSummary = null; privacyNames = false; document.body.classList.remove('privacy-names');
+    lastBatchRecord = null; lastBatchSummary = null; ocrIndexRecords = []; renderOcrIndex(); privacyNames = false; document.body.classList.remove('privacy-names');
     destStatusCache = Object.create(null); selectedIds.clear();
-    queueFilter = ''; quotaWarned = new Set();
+    queueFilter = ''; queueKindFilter = 'all'; quotaWarned = new Set();
     if ($('history-search')) $('history-search').value = '';
     if ($('queue-search')) $('queue-search').value = '';
-    try { ['dx_sender', 'dx-pwa-sender-by-destination', 'dx-pwa-senders', 'dx-pwa-sort', 'dx-pwa-auto-resume', 'dx-pwa-concurrency', 'dx-pwa-avg-rate', 'dx-pwa-vibrate', 'dx-pwa-keepawake', 'dx-pwa-last-dest', 'dx-pwa-confirm-mobile', 'dx-pwa-privacy-names', 'dx-pwa-opt-preset', 'dx-pwa-haptic', 'dx-pwa-advanced-accordion', 'dx-pwa-confirm-revoke', 'dx-pwa-confirm-delete', 'dx-pwa-confirm-replace', 'dx-pwa-storage-warning-threshold', 'dx-pwa-tag-colors', 'dx-pwa-pinned-albums', 'dx-pwa-history-backup', 'dx-pwa-image-actions', 'dx-pwa-image-expiry-warned', IMAGE_BACKUP_KEY, DEST_BACKUP_KEY, QUEUE_BACKUP_KEY].forEach(function (k) { localStorage.removeItem(k); }); } catch (_) {}
+    try { ['dx_sender', 'dx-pwa-sender-by-destination', 'dx-pwa-senders', 'dx-pwa-sort', 'dx-pwa-auto-resume', 'dx-pwa-concurrency', 'dx-pwa-avg-rate', 'dx-pwa-vibrate', 'dx-pwa-keepawake', 'dx-pwa-last-dest', 'dx-pwa-confirm-mobile', 'dx-pwa-privacy-names', 'dx-pwa-opt-preset', 'dx-pwa-haptic', 'dx-pwa-advanced-accordion', 'dx-pwa-confirm-revoke', 'dx-pwa-confirm-delete', 'dx-pwa-confirm-replace', 'dx-pwa-storage-warning-threshold', 'dx-pwa-auto-lock-minutes', 'dx-pwa-last-active-at', 'dx-pwa-pagehide-at', 'dx-pwa-tag-colors', 'dx-pwa-pinned-albums', 'dx-pwa-history-backup', 'dx-pwa-image-actions', 'dx-pwa-image-expiry-warned', 'dx-pwa-pending-shared-batch', IMAGE_BACKUP_KEY, DEST_BACKUP_KEY, QUEUE_BACKUP_KEY].forEach(function (k) { localStorage.removeItem(k); }); } catch (_) {}
     try { sessionStorage.removeItem('dx-active-dest'); } catch (_) {}
     buildSenderList();
     renderDests(); renderQueue(); renderHistory(); refreshDestStatus(); updateSendBtn(); updateStorageStatus(); updateSessionStats(); refreshCopyAll();
@@ -4999,21 +7753,63 @@
       });
     });
   }
-  async function fetchWithTimeout(url, options, timeoutMs) {
-    var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-    var timer = controller ? setTimeout(function () { controller.abort(); }, timeoutMs) : null;
+  var logoutInProgress = false;
+  var autoLockInProgress = false;
+  var lastSessionActivityAt = Date.now();
+  var autoLockTimer = null;
+  function autoLockMinutes() {
+    var value = $('auto-lock-select') ? Number($('auto-lock-select').value) : 15;
+    return [0, 5, 15, 30, 60].indexOf(value) !== -1 ? value : 15;
+  }
+  function rememberSessionActivity() {
+    lastSessionActivityAt = Date.now();
+    try { localStorage.setItem('dx-pwa-last-active-at', String(lastSessionActivityAt)); } catch (_) {}
+  }
+  function closedLaunchNeedsLock() {
+    var closedAt = 0, navType = '';
     try {
-      var requestOptions = Object.assign({}, options || {});
-      if (controller) requestOptions.signal = controller.signal;
-      return await fetch(url, requestOptions);
-    } finally {
-      if (timer) clearTimeout(timer);
+      closedAt = Number(localStorage.getItem('dx-pwa-pagehide-at')) || 0;
+      localStorage.removeItem('dx-pwa-pagehide-at');
+      var nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
+      navType = nav && nav.type || '';
+    } catch (_) {}
+    return autoLockMinutes() > 0 && navType !== 'reload' && closedAt > 0 && Date.now() - closedAt < 7 * 86400000;
+  }
+  async function lockSessionAutomatically(reason) {
+    if (autoLockInProgress || logoutInProgress) return false;
+    autoLockInProgress = true;
+    stopSharesPresence(); disconnectLive();
+    try {
+      if (!deviceInfo || !deviceInfo.csrf) await settleWithin(fetchDeviceStatus(), 2500, null);
+      if (!deviceInfo || !deviceInfo.csrf || deviceInfo.unavailable) throw new Error('status');
+      var response = await fetchWithTimeout('/app/session/lock', {
+        method: 'POST', credentials: 'same-origin', cache: 'no-store', keepalive: true,
+        headers: appMutationHeaders('application/json'), body: JSON.stringify({ reason: reason || 'idle' })
+      }, 5000);
+      if (!response || !response.ok) throw new Error('lock');
+      try { localStorage.removeItem('dx-pwa-pagehide-at'); } catch (_) {}
+      try { location.replace('/app/login?locked=1&next=' + encodeURIComponent('/app/')); }
+      catch (_) { location.href = '/app/login?locked=1&next=' + encodeURIComponent('/app/'); }
+      return true;
+    } catch (_) {
+      autoLockInProgress = false;
+      return false;
     }
   }
-  var logoutInProgress = false;
+  function checkSessionAutoLock() {
+    var minutes = autoLockMinutes();
+    if (!minutes || document.visibilityState === 'hidden' || autoLockInProgress || logoutInProgress) return;
+    if (Date.now() - lastSessionActivityAt >= minutes * 60000) lockSessionAutomatically('idle');
+  }
+  function startSessionAutoLock() {
+    try { lastSessionActivityAt = Number(localStorage.getItem('dx-pwa-last-active-at')) || Date.now(); } catch (_) { lastSessionActivityAt = Date.now(); }
+    if (autoLockTimer) clearInterval(autoLockTimer);
+    autoLockTimer = setInterval(checkSessionAutoLock, 30000);
+  }
   async function closeSession() {
     if (logoutInProgress || !confirm(t('closeSessionConfirm'))) return;
     logoutInProgress = true;
+    stopSharesPresence(); // feature 20 — never let the presence stream outlive the session
     var button = $('logout-session-btn');
     var originalLabel = button ? button.textContent : '';
     if (button) {
@@ -5031,6 +7827,8 @@
       // prevent the actual server-side logout.
       await settleWithin(localSave, 900, null);
       disconnectLive();
+      accountNotifications = [];
+      renderPwaNotifications();
       await settleWithin(disablePush(), 700, null);
       if (!deviceInfo) await settleWithin(fetchDeviceStatus(), 1200, null);
       var response = await fetchWithTimeout('/app/session/logout', {
@@ -5206,10 +8004,35 @@
     } catch (_) {}
     setTimeout(refreshToNewVersion, 2500); // last-resort: reload even if no event fires
   }
+  function handleNotificationAction(action, data) {
+    data = data || {};
+    if (action === 'copy-link') {
+      var url = data.destinationUrl || launchDestinationUrl || '';
+      activatePwaPanel('send', { instant: true });
+      if (!url) { toast(t('copyFailed'), 'warn'); return; }
+      copyText(url).then(function () { toast(t('notifLinkCopied'), 'ok'); }, function () { toast(t('copyFailed'), 'err'); });
+      return;
+    }
+    if (action === 'resend-last') {
+      activatePwaPanel('send', { instant: true });
+      Promise.resolve(resendLastBatch()).then(function (restored) {
+        if (!restored || !restored.length || sending) return;
+        // Never let a notification resend unrelated pending files, and never silently
+        // redirect the last batch to whichever destination happens to be selected now.
+        if (lastBatchRecord && lastBatchRecord.token && (!currentDest || currentDest.token !== lastBatchRecord.token || !currentDestOk)) {
+          toast(t('historyDestGone'), 'warn'); return;
+        }
+        startBatch(restored);
+      });
+      return;
+    }
+    if (action === 'open') activatePwaPanel('send', { instant: true });
+  }
+
   function registerServiceWorker() {
     if (!navigator.serviceWorker || typeof navigator.serviceWorker.register !== 'function') return;
     navigator.serviceWorker.addEventListener('controllerchange', refreshToNewVersion);
-    var registrationPromise = navigator.serviceWorker.register('/direct-xfer-pwa-sw.js?v=111', { scope: '/app/' }).then(function (reg) {
+    var registrationPromise = navigator.serviceWorker.register('/direct-xfer-pwa-sw.js?v=228', { scope: '/app/' }).then(function (reg) {
       swReg = reg;
       navigator.serviceWorker.ready.then(function () {
         swReadyForInstall = true;
@@ -5242,15 +8065,46 @@
     }).catch(function () {});
     navigator.serviceWorker.addEventListener('message', function (e) {
       if (e.data && e.data.type === 'UPDATE_READY' && e.source) showUpdate(e.source);
+      else if (e.data && e.data.type === 'NOTIFICATION_ACTION') handleNotificationAction(e.data.action || 'open', e.data);
+      else if (e.data && e.data.type === 'OPEN_NOTIFICATION_CENTER') openPwaNotificationCenter(e.data.panel || '');
+      else if (e.data && e.data.type === 'PUSH_RECEIVED') notePushReceipt(e.data);
+      // Feature 2 — a Background Sync fired (connectivity returned while the app was
+      // backgrounded/closed): resume anything still pending.
+      else if (e.data && e.data.type === 'RESUME_TRANSFERS') maybeAutoResume();
     });
+    navigator.serviceWorker.ready.then(function () { sendLangToSw(); }).catch(function () {});
     return registrationPromise;
+  }
+
+  // Feature 2 — register both one-shot Background Sync and Periodic Sync. The
+  // one-shot handles a disconnect/close promptly; Periodic Sync is a recovery path
+  // when Android consumed the one-shot while a window was still alive. Unsupported
+  // APIs or denied permissions remain harmless no-ops.
+  function registerBackgroundSync() {
+    try {
+      if (!navigator.serviceWorker) return;
+      navigator.serviceWorker.ready.then(function (reg) {
+        if (reg && reg.sync && typeof reg.sync.register === 'function') reg.sync.register('dx-resume-uploads').catch(function () {});
+        if (reg && reg.periodicSync && typeof reg.periodicSync.register === 'function') {
+          reg.periodicSync.register('dx-periodic-uploads', { minInterval: 60 * 60 * 1000 }).catch(function () {});
+        }
+      }).catch(function () {});
+    } catch (_) {}
+  }
+  // Give the SW the current language so its closed-app "resume pending" prompt is localized.
+  function sendLangToSw() {
+    try {
+      if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({ type: 'SET_LANG', lang: lang });
+      }
+    } catch (_) {}
   }
 
   // --- Added features ---------------------------------------------------------
   // Per-file percentage helper (feature 5).
   function pctText(sent, total) { total = Number(total) || 0; return (total > 0 ? Math.min(100, Math.round((Number(sent) || 0) / total * 100)) : 0) + '%'; }
 
-  // Theme selection is handled by the explicit dropdown in the top bar.
+  // Theme selection is handled by the explicit dropdown at the top of Settings.
   function setTheme(v) {
     if (v !== 'light' && v !== 'auto' && v !== 'schedule') v = 'dark';
     var actual = v === 'schedule' ? ((new Date().getHours() >= 20 || new Date().getHours() < 7) ? 'dark' : 'light') : v;
@@ -5289,13 +8143,14 @@
     toast(t('resetBatchDone'), 'ok');
   }
 
-  // Pending-file counter shown in the "Add files" header (feature 6).
+  // Always-visible batch counter: file count, total payload and bytes already sent.
   function updateFilesCount() {
     var el = $('files-count'); if (!el) return;
-    var pending = items.filter(function (it) { return ['waiting', 'paused', 'waiting-network', 'error', 'sending', 'encrypting', 'optimizing'].indexOf(it.state) !== -1; });
-    var bytes = pending.reduce(function (s, it) { return s + (it.upSize || it.size || 0); }, 0);
-    el.textContent = pending.length ? t('filesPending', { n: pending.length }) + ' · ' + fmtBytes(bytes) : '';
-    el.classList.toggle('hidden', pending.length === 0);
+    var live = items.filter(function (it) { return it.state !== 'removed'; });
+    var total = live.reduce(function (s, it) { return s + (it.upSize || it.size || 0); }, 0);
+    var sent = live.reduce(function (s, it) { var n = it.upSize || it.size || 0; return s + Math.min(n, it.sentBytes || (it.state === 'done' ? n : 0)); }, 0);
+    el.textContent = live.length ? t('filesTotalSummary', { n: live.length, total: fmtBytes(total), sent: fmtBytes(sent) }) : '';
+    el.classList.toggle('hidden', live.length === 0);
   }
 
   // Master "select all / none" for the queue (feature 3).
@@ -5311,24 +8166,19 @@
     m.indeterminate = selN > 0 && selN < vis.length;
   }
 
-  // Turn clipboard text into a sendable .txt file (feature 7).
-  async function pasteTextFile() {
-    var text = '';
-    try { text = await navigator.clipboard.readText(); } catch (_) { toast(t('pasteFailed'), 'warn'); return; }
-    if (!text || !text.trim()) { toast(t('pasteTextEmpty'), 'warn'); return; }
-    var file = namedFile(new Blob([text], { type: 'text/plain;charset=utf-8' }), t('pastedTextName'), 'text/plain', Date.now());
-    addFiles([file]);
+  function clipboardExt(type) {
+    var map = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif', 'image/avif': 'avif' };
+    return map[String(type || '').toLowerCase()] || 'bin';
   }
-
-  // Fetch a remote image/file by URL and queue it, CORS permitting (feature 15).
-  async function addFromUrl() {
-    var url = window.prompt(t('urlPrompt'), '');
-    if (url == null) return;
-    url = String(url).trim(); if (!url) return;
+  function clipboardFileName(type, index) {
+    var stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/T/, '-').replace(/\..*$/, '');
+    return 'clipboard-' + stamp + (index > 0 ? '-' + (index + 1) : '') + '.' + clipboardExt(type);
+  }
+  async function queueRemoteUrl(rawUrl, silent) {
     var u;
-    try { u = new URL(url); } catch (_) { toast(t('urlInvalid'), 'warn'); return; }
-    if (!/^https?:$/.test(u.protocol)) { toast(t('urlInvalid'), 'warn'); return; }
-    toast(t('urlFetching'));
+    try { u = new URL(String(rawUrl || '').trim()); } catch (_) { return false; }
+    if (!/^https?:$/.test(u.protocol)) return false;
+    if (!silent) toast(t('urlFetching'));
     try {
       var r = await fetch(u.href, { mode: 'cors', credentials: 'omit', cache: 'no-store' });
       if (!r.ok) throw new Error('http ' + r.status);
@@ -5337,8 +8187,80 @@
       if (!/\.[^.\/]+$/.test(base)) { var ext = (String(blob.type).split('/')[1] || '').split(';')[0]; if (ext) base += '.' + ext; }
       var file = namedFile(blob, safeName(base), blob.type || 'application/octet-stream', Date.now());
       await addFiles([file]);
-      toast(t('urlAdded'), 'ok');
-    } catch (_) { toast(t('urlFailed'), 'err'); }
+      if (!silent) toast(t('urlAdded'), 'ok');
+      return true;
+    } catch (_) {
+      if (!silent) toast(t('urlFailed'), 'err');
+      return false;
+    }
+  }
+
+  // Empty the clipboard into the queue. Modern ClipboardItem data can contain an
+  // image/file; text is converted to a .txt file, while a lone HTTP(S) URL is first
+  // fetched as the actual remote file (with a text fallback when CORS blocks it).
+  async function emptyClipboardIntoQueue() {
+    if (!navigator.clipboard) { toast(t('pasteFailed'), 'warn'); return; }
+    var added = 0, text = '';
+    try {
+      if (typeof navigator.clipboard.read === 'function') {
+        var entries = await navigator.clipboard.read();
+        var files = [];
+        for (var i = 0; i < entries.length; i++) {
+          var ci = entries[i], imageType = (ci.types || []).find(function (ty) { return /^image\//.test(ty); });
+          if (imageType) {
+            var blob = await ci.getType(imageType);
+            files.push(namedFile(blob, clipboardFileName(imageType, files.length), imageType, Date.now()));
+          }
+          if (!text && (ci.types || []).indexOf('text/plain') !== -1) {
+            try { text = await (await ci.getType('text/plain')).text(); } catch (_) {}
+          }
+        }
+        if (files.length) { await addFiles(files); added += files.length; }
+      }
+      if (!text && typeof navigator.clipboard.readText === 'function') text = await navigator.clipboard.readText();
+    } catch (_) {
+      try { if (typeof navigator.clipboard.readText === 'function') text = await navigator.clipboard.readText(); }
+      catch (__) { toast(t('pasteFailed'), 'warn'); return; }
+    }
+    text = String(text || '').trim();
+    if (text) {
+      var isUrl = /^https?:\/\/\S+$/i.test(text);
+      if (isUrl && await queueRemoteUrl(text, true)) added++;
+      else {
+        var name = isUrl ? 'clipboard-url.txt' : t('pastedTextName');
+        var file = namedFile(new Blob([text], { type: 'text/plain;charset=utf-8' }), name, 'text/plain', Date.now());
+        await addFiles([file]); added++;
+        if (isUrl) toast(t('clipboardUrlFallback'), 'warn');
+      }
+    }
+    if (!added) toast(t('clipboardEmpty'), 'warn');
+  }
+
+  // Legacy helper retained for keyboard/tests and older UI references.
+  async function pasteTextFile() {
+    var text = '';
+    try { text = await navigator.clipboard.readText(); } catch (_) { toast(t('pasteFailed'), 'warn'); return; }
+    if (!text || !text.trim()) { toast(t('pasteTextEmpty'), 'warn'); return; }
+    var file = namedFile(new Blob([text], { type: 'text/plain;charset=utf-8' }), t('pastedTextName'), 'text/plain', Date.now());
+    addFiles([file]);
+  }
+
+  // Fetch a remote image/file by URL and queue it, CORS permitting.
+  async function addFromUrl() {
+    var url = window.prompt(t('urlPrompt'), '');
+    if (url == null) return;
+    url = String(url).trim(); if (!url) return;
+    var u;
+    try { u = new URL(url); } catch (_) { toast(t('urlInvalid'), 'warn'); return; }
+    if (!/^https?:$/.test(u.protocol)) { toast(t('urlInvalid'), 'warn'); return; }
+    await queueRemoteUrl(u.href, false);
+  }
+
+  function copyQueueNames() {
+    var live = items.filter(function (it) { return it.state !== 'removed'; }).sort(function (a, b) { return (a.createdAt || 0) - (b.createdAt || 0); });
+    if (!live.length) { toast(t('noPending'), 'warn'); return; }
+    var names = live.map(function (it, i) { return privacyNames ? privateFileName(i) : it.name; });
+    copyText(names.join('\n')).then(function () { toast(t('queueNamesCopied', { n: names.length }), 'ok'); }, function () { toast(t('copyFailed'), 'err'); });
   }
 
   // Bulk rename selected files with a shared prefix + auto numbering (feature 13).
@@ -5361,6 +8283,458 @@
     });
     renderQueue(); updateSendBtn();
     if (renamed) toast(t('renameDone', { n: renamed }), 'ok');
+  }
+
+  // Metadata privacy center (#14). JPEG/PNG/WebP metadata chunks are stripped
+  // without re-encoding pixels; PDFs use pdf-lib and OOXML containers use JSZip.
+  // The selected document bytes never leave the browser; only pinned JS libraries are fetched.
+  var privacyCurrentItem=null, privacyCurrentFindings=[], privacyBusy=false, pinnedLibraryPromises=Object.create(null);
+  function canPrivacyInspectItem(it) {
+    if (!it || !it.file) return false;
+    var type=String(it.type||it.file.type||'').toLowerCase(), ext=extOf(it.name||it.file.name||'');
+    return /^image\//.test(type) || type==='application/pdf' || ext==='pdf' || /^(docx|xlsx|pptx)$/.test(ext);
+  }
+  function privacyCanClean(it) {
+    if (!it || !it.file) return false;
+    var type=String(it.type||it.file.type||'').toLowerCase(), ext=extOf(it.name||it.file.name||'');
+    return /^(image\/(jpeg|png|webp))$/.test(type) || /^(jpe?g|png|webp)$/.test(ext) || type==='application/pdf' || ext==='pdf' || /^(docx|xlsx|pptx)$/.test(ext);
+  }
+  function loadPinnedGlobal(src, globalName) {
+    if (window[globalName]) return Promise.resolve(window[globalName]);
+    if (pinnedLibraryPromises[globalName]) return pinnedLibraryPromises[globalName];
+    pinnedLibraryPromises[globalName]=new Promise(function(resolve,reject){
+      var tag=document.createElement('script');tag.src=src;tag.async=true;tag.crossOrigin='anonymous';
+      tag.onload=function(){window[globalName]?resolve(window[globalName]):reject(new Error(globalName+' unavailable'));};
+      tag.onerror=function(){reject(new Error(t('ocrEngineNetwork')));};document.head.appendChild(tag);
+    }).catch(function(err){delete pinnedLibraryPromises[globalName];throw err;});
+    return pinnedLibraryPromises[globalName];
+  }
+  async function blobPrivacySample(file) {
+    var max=2*1024*1024, head=await file.slice(0,Math.min(file.size,max)).arrayBuffer(), text='';
+    try{text=new TextDecoder('latin1').decode(head);}catch(_){text=String.fromCharCode.apply(null,new Uint8Array(head).subarray(0,65535));}
+    if(file.size>max){var tail=await file.slice(Math.max(0,file.size-max)).arrayBuffer();try{text+='\n'+new TextDecoder('latin1').decode(tail);}catch(_){}}
+    return text;
+  }
+  function finding(key,label,detail){return{key:key,label:label,detail:detail||''};}
+  async function analyzePrivacyFile(file,name,type) {
+    var ext=extOf(name||file.name||''), findings=[];
+    if(/^image\//.test(type||file.type||'')||/^(jpe?g|png|webp|bmp|avif|gif)$/.test(ext)){
+      var sample=await blobPrivacySample(file);
+      if(/Exif\x00\x00|xmpmeta|photoshop:|iptc|XML:com\.adobe\.xmp/i.test(sample))findings.push(finding('image',t('privacyImageMetadata')));
+      if(/GPSLatitude|GPSLongitude|GPSInfo|GPSVersionID|gps:/i.test(sample))findings.push(finding('gps',t('privacyGps')));
+      if(/Artist\x00|Copyright\x00|CameraOwnerName|OwnerName/i.test(sample))findings.push(finding('author',t('privacyAuthor')));
+    } else if((type||file.type)==='application/pdf'||ext==='pdf'){
+      var pdfSample=await blobPrivacySample(file), meta=[];
+      if(/\/Author\s*[<(]/i.test(pdfSample))meta.push(t('privacyAuthor'));
+      if(/\/(Creator|Producer|Title|Subject|Keywords|CreationDate|ModDate)\s*[<(]/i.test(pdfSample)||/<x:xmpmeta|\/Metadata\b/i.test(pdfSample))meta.push(t('privacyPdfMetadata'));
+      if(meta.length)findings.push(finding('pdf',t('privacyPdfMetadata'),Array.from(new Set(meta)).join(' · ')));
+    } else if(/^(docx|xlsx|pptx)$/.test(ext)){
+      var JSZip=await loadPinnedGlobal(PRIVACY_JSZIP_URL,'JSZip'), zip=await JSZip.loadAsync(file);
+      var core=zip.file('docProps/core.xml'), app=zip.file('docProps/app.xml'), custom=zip.file('docProps/custom.xml');
+      if(core){var x=await core.async('text');if(/<dc:creator[^>]*>\s*[^<]/i.test(x)||/<cp:lastModifiedBy[^>]*>\s*[^<]/i.test(x))findings.push(finding('author',t('privacyAuthor')));if(/<dcterms:(created|modified)|<cp:revision/i.test(x))findings.push(finding('office',t('privacyOfficeMetadata')));}
+      if(app){var ax=await app.async('text');if(/<(Company|Manager)>\s*[^<]/i.test(ax))findings.push(finding('office-app',t('privacyOfficeMetadata')));}
+      if(custom)findings.push(finding('custom',t('privacyCustom')));
+      if(Object.keys(zip.files).some(function(k){return /^docProps\/thumbnail\./i.test(k);}))findings.push(finding('thumb',t('privacyThumbnail')));
+    }
+    var seen=Object.create(null);return findings.filter(function(f){if(seen[f.key])return false;seen[f.key]=1;return true;});
+  }
+  function renderPrivacyFindings() {
+    var box=$('privacy-findings'); if(!box)return; box.innerHTML='';
+    if(!privacyCurrentFindings.length){var p=document.createElement('p');p.className='muted sm';p.textContent=t('privacyNoFindings');box.appendChild(p);return;}
+    privacyCurrentFindings.forEach(function(f){var row=document.createElement('div');row.className='privacy-finding';var ico=document.createElement('span');ico.className='privacy-icon';ico.textContent='🛡';var body=document.createElement('div');var strong=document.createElement('strong');strong.textContent=f.label;body.appendChild(strong);if(f.detail){var d=document.createElement('span');d.className='muted sm';d.textContent=f.detail;body.appendChild(d);}row.appendChild(ico);row.appendChild(body);box.appendChild(row);});
+  }
+  function setPrivacyBusy(busy,status){privacyBusy=!!busy;if($('privacy-analyze'))$('privacy-analyze').disabled=busy;if($('privacy-clean'))$('privacy-clean').disabled=busy||!privacyCanClean(privacyCurrentItem);if(status&&$('privacy-status'))$('privacy-status').textContent=status;}
+  async function analyzePrivacyCurrent(){if(!privacyCurrentItem||privacyBusy)return;setPrivacyBusy(true,t('privacyAnalyzing'));try{privacyCurrentFindings=await analyzePrivacyFile(privacyCurrentItem.file,privacyCurrentItem.name,privacyCurrentItem.type);renderPrivacyFindings();$('privacy-status').textContent=privacyCurrentFindings.length?t('privacyFindings',{n:privacyCurrentFindings.length}):t('privacyNoFindings');}catch(e){privacyCurrentFindings=[];renderPrivacyFindings();$('privacy-status').textContent=t('privacyUnsupported');}finally{setPrivacyBusy(false);}}
+  function xmlBlankTag(xml,tag){var esc=tag.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');return xml.replace(new RegExp('<'+esc+'([^>]*)>[\\s\\S]*?<\\/'+esc+'>','gi'),'<'+tag+'$1></'+tag+'>');}
+  function xmlRemoveRelationship(xml,needle){return xml.replace(new RegExp('<Relationship\\b[^>]*Type="[^"]*'+needle+'[^"]*"[^>]*/>','gi'),'');}
+  function concatUint8(parts,total) { var out=new Uint8Array(total),pos=0;parts.forEach(function(part){out.set(part,pos);pos+=part.length;});return out; }
+  function stripJpegMetadataBytes(bytes) {
+    if(bytes.length<4||bytes[0]!==0xff||bytes[1]!==0xd8)throw new Error('jpeg');
+    var parts=[bytes.slice(0,2)],total=2,pos=2;
+    while(pos+1<bytes.length){
+      if(bytes[pos]!==0xff){parts.push(bytes.slice(pos));total+=bytes.length-pos;break;}
+      var marker=bytes[pos+1];
+      if(marker===0xda){parts.push(bytes.slice(pos));total+=bytes.length-pos;break;}
+      if(marker===0xd9||marker===0x01||(marker>=0xd0&&marker<=0xd7)){var bare=bytes.slice(pos,pos+2);parts.push(bare);total+=bare.length;pos+=2;continue;}
+      if(pos+3>=bytes.length)throw new Error('jpeg');var segLen=(bytes[pos+2]<<8)|bytes[pos+3],end=pos+2+segLen;if(segLen<2||end>bytes.length)throw new Error('jpeg');
+      // APP1 = EXIF/XMP, APP13 = IPTC/Photoshop, COM = comments. Preserve APP2
+      // because it commonly contains the ICC colour profile rather than identity data.
+      if(marker!==0xe1&&marker!==0xed&&marker!==0xfe){var seg=bytes.slice(pos,end);parts.push(seg);total+=seg.length;}
+      pos=end;
+    }
+    return concatUint8(parts,total);
+  }
+  function stripPngMetadataBytes(bytes) {
+    var sig=[137,80,78,71,13,10,26,10];for(var si=0;si<8;si++)if(bytes[si]!==sig[si])throw new Error('png');
+    var parts=[bytes.slice(0,8)],total=8,pos=8,remove={eXIf:1,tEXt:1,zTXt:1,iTXt:1,tIME:1};
+    while(pos+12<=bytes.length){var len=((bytes[pos]<<24)|(bytes[pos+1]<<16)|(bytes[pos+2]<<8)|bytes[pos+3])>>>0,end=pos+12+len;if(end>bytes.length)throw new Error('png');var type=String.fromCharCode(bytes[pos+4],bytes[pos+5],bytes[pos+6],bytes[pos+7]);if(!remove[type]){var chunk=bytes.slice(pos,end);parts.push(chunk);total+=chunk.length;}pos=end;if(type==='IEND')break;}
+    return concatUint8(parts,total);
+  }
+  function stripWebpMetadataBytes(bytes) {
+    function text4(at){return String.fromCharCode(bytes[at],bytes[at+1],bytes[at+2],bytes[at+3]);}
+    if(bytes.length<12||text4(0)!=='RIFF'||text4(8)!=='WEBP')throw new Error('webp');
+    var chunks=[],total=12,pos=12;
+    while(pos+8<=bytes.length){var type=text4(pos),len=(bytes[pos+4]|(bytes[pos+5]<<8)|(bytes[pos+6]<<16)|(bytes[pos+7]<<24))>>>0,end=pos+8+len+(len&1);if(end>bytes.length)throw new Error('webp');if(type!=='EXIF'&&type!=='XMP '){var chunk=bytes.slice(pos,end);if(type==='VP8X'&&len>=1){chunk=chunk.slice();chunk[8]&=~0x0c;}chunks.push(chunk);total+=chunk.length;}pos=end;}
+    var out=new Uint8Array(total);out.set(bytes.slice(0,12),0);var riffSize=total-8;out[4]=riffSize&255;out[5]=(riffSize>>>8)&255;out[6]=(riffSize>>>16)&255;out[7]=(riffSize>>>24)&255;var at=12;chunks.forEach(function(c){out.set(c,at);at+=c.length;});return out;
+  }
+  async function cleanImagePrivacy(file) {
+    var bytes=new Uint8Array(await file.arrayBuffer()),type=String(file.type||'').toLowerCase(),ext=extOf(file.name||'');var cleaned;
+    if(type==='image/jpeg'||/jpe?g/.test(ext))cleaned=stripJpegMetadataBytes(bytes);
+    else if(type==='image/png'||ext==='png')cleaned=stripPngMetadataBytes(bytes);
+    else if(type==='image/webp'||ext==='webp')cleaned=stripWebpMetadataBytes(bytes);
+    else throw new Error('unsupported');
+    return namedFile(new Blob([cleaned],{type:type||file.type||'application/octet-stream'}),file.name,type||file.type||'application/octet-stream',Date.now());
+  }
+  async function cleanPdfPrivacy(file) {
+    var PDFLib=await loadPinnedGlobal(PRIVACY_PDFLIB_URL,'PDFLib'), doc=await PDFLib.PDFDocument.load(await file.arrayBuffer(),{updateMetadata:false});
+    try{doc.setTitle('');doc.setAuthor('');doc.setSubject('');doc.setKeywords([]);doc.setCreator('');doc.setProducer('');doc.setCreationDate(new Date(0));doc.setModificationDate(new Date(0));}catch(_){}
+    try{if(PDFLib.PDFName&&doc.catalog)doc.catalog.delete(PDFLib.PDFName.of('Metadata'));}catch(_){}
+    var bytes=await doc.save({useObjectStreams:true,addDefaultPage:false,objectsPerTick:50});return namedFile(new Blob([bytes],{type:'application/pdf'}),file.name,'application/pdf',Date.now());
+  }
+  async function cleanOfficePrivacy(file) {
+    var JSZip=await loadPinnedGlobal(PRIVACY_JSZIP_URL,'JSZip'), zip=await JSZip.loadAsync(file), core=zip.file('docProps/core.xml'), app=zip.file('docProps/app.xml');
+    if(core){var x=await core.async('text');['dc:creator','cp:lastModifiedBy','cp:revision','dcterms:created','dcterms:modified'].forEach(function(tag){x=xmlBlankTag(x,tag);});zip.file('docProps/core.xml',x);}
+    if(app){var ax=await app.async('text');['Company','Manager'].forEach(function(tag){ax=xmlBlankTag(ax,tag);});zip.file('docProps/app.xml',ax);}
+    zip.remove('docProps/custom.xml');Object.keys(zip.files).filter(function(k){return /^docProps\/thumbnail\./i.test(k);}).forEach(function(k){zip.remove(k);});
+    var rel=zip.file('_rels/.rels');if(rel){var rx=await rel.async('text');rx=xmlRemoveRelationship(rx,'custom-properties');rx=xmlRemoveRelationship(rx,'thumbnail');zip.file('_rels/.rels',rx);}
+    var ct=zip.file('[Content_Types].xml');if(ct){var cx=await ct.async('text');cx=cx.replace(/<Override\b[^>]*PartName="\/docProps\/custom\.xml"[^>]*\/>/gi,'');zip.file('[Content_Types].xml',cx);}
+    var blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});return namedFile(blob,file.name,file.type||'application/vnd.openxmlformats-officedocument',Date.now());
+  }
+  async function cleanPrivacyCurrent(){if(!privacyCurrentItem||privacyBusy||!privacyCanClean(privacyCurrentItem))return;setPrivacyBusy(true,t('privacyCleaning'));try{var file=privacyCurrentItem.file,type=String(privacyCurrentItem.type||file.type||'').toLowerCase(),ext=extOf(privacyCurrentItem.name||file.name||''),cleaned;if(/^(image\/(jpeg|png|webp))$/.test(type)||/^(jpe?g|png|webp)$/.test(ext))cleaned=await cleanImagePrivacy(file);else if(type==='application/pdf'||ext==='pdf')cleaned=await cleanPdfPrivacy(file);else if(/^(docx|xlsx|pptx)$/.test(ext))cleaned=await cleanOfficePrivacy(file);else throw new Error('unsupported');await replaceItemSourceDurably(privacyCurrentItem,cleaned);privacyCurrentFindings=[];renderPrivacyFindings();$('privacy-status').textContent=t('privacyCleaned');renderQueue();updateSendBtn();toast(t('privacyCleaned'),'ok');}catch(e){$('privacy-status').textContent=t('privacyUnsupported');toast(t('privacyUnsupported'),'warn');}finally{setPrivacyBusy(false);}}
+  function openPrivacyInspector(it){if(!canPrivacyInspectItem(it))return;privacyCurrentItem=it;privacyCurrentFindings=[];renderPrivacyFindings();$('privacy-source').textContent=(it.name||it.file.name||'')+' · '+fmtBytes(it.file.size||0);$('privacy-status').textContent=t('privacyAnalyzing');$('privacy-overlay').classList.remove('hidden');setPrivacyBusy(false);setTimeout(analyzePrivacyCurrent,0);}
+  function closePrivacyInspector(){if(privacyBusy)return;$('privacy-overlay').classList.add('hidden');privacyCurrentItem=null;privacyCurrentFindings=[];}
+
+  // Local OCR for images and PDFs (#25). The file never leaves this browser. The
+  // pinned OCR/PDF engines are fetched only as code/model dependencies on first use.
+  var ocrCurrentItem = null, ocrWorker = null, ocrPdfLib = null, ocrRunning = false, ocrAbort = false;
+  var ocrText = '', ocrSearchPos = -1, ocrPrevFocus = null, ocrScriptPromise = null, ocrIndexedRecord = null, ocrIndexRecords = [];
+  function canOcrItem(it) {
+    if (!it || !it.file) return false;
+    var type = String(it.type || it.file.type || '').toLowerCase(), ext = extOf(it.name || it.file.name || '');
+    return /^image\//.test(type) || type === 'application/pdf' || ext === 'pdf';
+  }
+  function ocrTimeoutError() { return new Error(t('ocrEngineTimeout')); }
+  function loadExternalScript(src) {
+    if (window.Tesseract) return Promise.resolve(window.Tesseract);
+    if (ocrScriptPromise) return ocrScriptPromise;
+    ocrScriptPromise = new Promise(function (resolve, reject) {
+      var settled = false, timer = 0;
+      var tag = document.createElement('script'); tag.src = src; tag.async = true; tag.crossOrigin = 'anonymous';
+      function finish(err, value) {
+        if (settled) return; settled = true;
+        if (timer) clearTimeout(timer);
+        tag.onload = null; tag.onerror = null;
+        if (err) reject(err); else resolve(value);
+      }
+      tag.onload = function () { window.Tesseract ? finish(null, window.Tesseract) : finish(new Error('Tesseract unavailable')); };
+      tag.onerror = function () { finish(new Error(t('ocrEngineNetwork'))); };
+      timer = setTimeout(function () { finish(ocrTimeoutError()); }, OCR_ENGINE_SCRIPT_TIMEOUT_MS);
+      document.head.appendChild(tag);
+    }).catch(function (err) { ocrScriptPromise = null; throw err; });
+    return ocrScriptPromise;
+  }
+  function withOcrTimeout(promise, ms) {
+    var timer = 0;
+    return Promise.race([
+      Promise.resolve(promise),
+      new Promise(function (_, reject) { timer = setTimeout(function () { reject(ocrTimeoutError()); }, ms); })
+    ]).finally(function () { if (timer) clearTimeout(timer); });
+  }
+  async function ensureOcrPdfLib() {
+    if (ocrPdfLib) return ocrPdfLib;
+    try {
+      ocrPdfLib = await import(OCR_PDFJS_URL);
+      if (ocrPdfLib && ocrPdfLib.GlobalWorkerOptions) ocrPdfLib.GlobalWorkerOptions.workerSrc = OCR_PDF_WORKER_URL;
+      return ocrPdfLib;
+    } catch (_) { throw new Error(t('ocrEngineNetwork')); }
+  }
+  function ocrSetStatus(text, progress) {
+    var status = $('ocr-status'), bar = $('ocr-progress');
+    if (status) status.textContent = text || '';
+    if (bar && typeof progress === 'number' && isFinite(progress)) bar.value = Math.max(0, Math.min(1, progress));
+  }
+  function ocrLogger(m) {
+    if (!m || ocrAbort) return;
+    var p = typeof m.progress === 'number' ? m.progress : 0;
+    var status = String(m.status || '');
+    // During recognition the caller owns the translated page label and overall PDF
+    // progress. Do not replace it with Tesseract's English internal status string.
+    if (/recogniz/i.test(status)) return;
+    if (/language|traineddata/i.test(status)) ocrSetStatus(t('ocrLoadingEngine'), Math.min(.45, p * .45));
+    else ocrSetStatus(t('ocrLoadingEngine'), Math.min(.25, p * .25));
+  }
+  async function getOcrWorker() {
+    if (ocrWorker) return ocrWorker;
+    ocrSetStatus(t('ocrLoadingEngine'), .03);
+    var T = await loadExternalScript(OCR_TESSERACT_URL);
+    if (ocrAbort) throw new Error('OCR_CANCELLED');
+    var raw = ($('ocr-language') && $('ocr-language').value) || (lang === 'en' ? 'eng' : lang === 'es' ? 'spa' : 'fra+eng');
+    try { localStorage.setItem('dx-pwa-ocr-lang', raw); } catch (_) {}
+    var languages = raw.split('+').filter(Boolean);
+    var oem = T.OEM && T.OEM.LSTM_ONLY != null ? T.OEM.LSTM_ONLY : 1;
+    var initError = null;
+    var createPromise = T.createWorker(languages, oem, {
+      logger: ocrLogger,
+      workerPath: OCR_TESSERACT_WORKER_URL,
+      corePath: OCR_TESSERACT_CORE_URL,
+      errorHandler: function (err) { initError = err instanceof Error ? err : new Error(String(err || 'Tesseract worker error')); }
+    });
+    try {
+      ocrWorker = await withOcrTimeout(createPromise, OCR_ENGINE_INIT_TIMEOUT_MS);
+      if (initError) throw initError;
+      if (ocrAbort) throw new Error('OCR_CANCELLED');
+      return ocrWorker;
+    } catch (err) {
+      ocrWorker = null;
+      // A failed worker bootstrap can leave Tesseract's internal worker alive. If
+      // it eventually resolves after our timeout, terminate it rather than leaking
+      // memory or letting a stale worker serve the next OCR request.
+      Promise.resolve(createPromise).then(function (lateWorker) {
+        if (lateWorker && lateWorker.terminate) return lateWorker.terminate();
+      }).catch(function () {});
+      throw initError || err;
+    }
+  }
+  async function terminateOcrWorker() {
+    var worker = ocrWorker; ocrWorker = null;
+    if (worker && worker.terminate) { try { await worker.terminate(); } catch (_) {} }
+  }
+  function normalizePdfText(items) {
+    var out = [], lastY = null;
+    (items || []).forEach(function (item) {
+      var str = String(item && item.str || ''); if (!str) return;
+      var y = item && item.transform ? Math.round(item.transform[5] || 0) : null;
+      if (lastY != null && y != null && Math.abs(y - lastY) > 4) out.push('\n');
+      else if (out.length && out[out.length - 1] !== '\n') out.push(' ');
+      out.push(str); lastY = y;
+    });
+    return out.join('').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+  }
+  async function renderPdfPageForOcr(page) {
+    var base = page.getViewport({ scale: 1 });
+    var scale = Math.min(2.2, 2200 / Math.max(base.width || 1, base.height || 1));
+    scale = Math.max(1.35, scale);
+    var viewport = page.getViewport({ scale: scale });
+    var canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.floor(viewport.width)); canvas.height = Math.max(1, Math.floor(viewport.height));
+    var ctx = canvas.getContext('2d', { alpha: false });
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+    return canvas;
+  }
+  function setOcrResult(text) {
+    ocrText = String(text || '').trim(); ocrSearchPos = -1;
+    var result = $('ocr-result'); if (result) result.value = ocrText;
+    var has = !!ocrText;
+    if ($('ocr-copy')) $('ocr-copy').disabled = !has;
+    if ($('ocr-add-txt')) $('ocr-add-txt').disabled = !has;
+    updateOcrSearch(true);
+  }
+  async function recognizeOcrImage(file) {
+    var worker = await getOcrWorker();
+    if (ocrAbort) throw new Error('OCR_CANCELLED');
+    ocrSetStatus(t('ocrScanningPage', { page: 1, total: 1 }), .45);
+    var ret = await worker.recognize(file);
+    return ret && ret.data ? String(ret.data.text || '') : '';
+  }
+  async function recognizeOcrPdf(file) {
+    ocrSetStatus(t('ocrLoadingPdf'), .02);
+    var pdfjs = await ensureOcrPdfLib();
+    if (ocrAbort) throw new Error('OCR_CANCELLED');
+    var bytes = new Uint8Array(await file.arrayBuffer());
+    var loading = pdfjs.getDocument({ data: bytes, isEvalSupported: false });
+    var pdf = await loading.promise, total = pdf.numPages || 0, pages = [];
+    try {
+      for (var n = 1; n <= total; n++) {
+        if (ocrAbort) throw new Error('OCR_CANCELLED');
+        ocrSetStatus(t('ocrReadingPage', { page: n, total: total }), (n - 1) / Math.max(1, total));
+        var page = await pdf.getPage(n), embedded = '';
+        try { embedded = normalizePdfText((await page.getTextContent()).items); } catch (_) {}
+        if (embedded.replace(/\s/g, '').length >= 20) {
+          pages.push('--- Page ' + n + ' ---\n' + embedded);
+          ocrSetStatus(t('ocrEmbedded') + ' · ' + n + '/' + total, n / Math.max(1, total));
+        } else {
+          var canvas = await renderPdfPageForOcr(page);
+          try {
+            var worker = await getOcrWorker();
+            if (ocrAbort) throw new Error('OCR_CANCELLED');
+            ocrSetStatus(t('ocrScanningPage', { page: n, total: total }), (n - .6) / Math.max(1, total));
+            var ret = await worker.recognize(canvas);
+            var text = ret && ret.data ? String(ret.data.text || '').trim() : '';
+            pages.push('--- Page ' + n + ' ---\n' + text);
+          } finally { canvas.width = 1; canvas.height = 1; }
+        }
+        if (page.cleanup) try { page.cleanup(); } catch (_) {}
+      }
+    } finally { if (pdf && pdf.destroy) try { await pdf.destroy(); } catch (_) {} }
+    return pages.join('\n\n');
+  }
+  async function openImageRecordOcr(photo) {
+    if (!photo || !photo.token || photo.active === false) { toast(t('imgInactive'), 'warn'); return; }
+    try {
+      ocrSetStatus(t('ocrLoadingEngine'), 0);
+      var r = await fetch('/app/image/' + encodeURIComponent(photo.token) + '/preview/full', { credentials:'same-origin', cache:'no-store' });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      var blob = await r.blob();
+      var type = blob.type || 'image/' + (extOf(photo.name || '') || 'jpeg');
+      var name = photo.name || ('image-' + photo.token);
+      var file;
+      if (typeof File === 'function') file = new File([blob], name, { type:type, lastModified:Number(photo.createdAt) || Date.now() });
+      else {
+        file = blob;
+        try { Object.defineProperty(file, 'name', { value:name, configurable:true }); } catch (_) { file.name = name; }
+        try { Object.defineProperty(file, 'lastModified', { value:Number(photo.createdAt) || Date.now(), configurable:true }); } catch (_) {}
+      }
+      openOcr({ file:file, name:name, type:type, imageToken:photo.token, ocrSourceKind:'image-library', contentHash:photo.clientHash || '' });
+    } catch (err) { toast(t('ocrFailed', { error:String(err && err.message || err || '').slice(0, 120) }), 'err'); }
+  }
+  async function runOcr() {
+    if (ocrRunning || !ocrCurrentItem || !canOcrItem(ocrCurrentItem)) return;
+    ocrAbort = false; ocrRunning = true; setOcrResult('');
+    if ($('ocr-run')) $('ocr-run').disabled = true;
+    if ($('ocr-cancel-run')) $('ocr-cancel-run').disabled = false;
+    try {
+      var file = ocrCurrentItem.file, type = String(ocrCurrentItem.type || file.type || '').toLowerCase(), ext = extOf(ocrCurrentItem.name || file.name || '');
+      var text = (type === 'application/pdf' || ext === 'pdf') ? await recognizeOcrPdf(file) : await recognizeOcrImage(file);
+      if (ocrAbort) throw new Error('OCR_CANCELLED');
+      setOcrResult(text);
+      if (ocrText) await saveOcrIndexRecord(ocrCurrentItem, ocrText).catch(function () {});
+      ocrSetStatus(ocrText ? t('ocrComplete', { chars: ocrText.length }) : t('ocrNoText'), 1);
+    } catch (err) {
+      if (ocrAbort || (err && err.message === 'OCR_CANCELLED')) ocrSetStatus(t('ocrCanceled'), 0);
+      else { var msg = String(err && err.message || err || ''); ocrSetStatus(t('ocrFailed', { error: msg.slice(0, 180) }), 0); }
+    } finally {
+      await terminateOcrWorker();
+      ocrRunning = false;
+      if ($('ocr-run')) $('ocr-run').disabled = false;
+      if ($('ocr-cancel-run')) $('ocr-cancel-run').disabled = true;
+    }
+  }
+  function cancelOcr() { ocrAbort = true; terminateOcrWorker(); ocrSetStatus(t('ocrCanceled'), 0); }
+  function openOcr(it) {
+    if (!canOcrItem(it)) { toast(t('ocrUnsupported'), 'warn'); return; }
+    ocrCurrentItem = it; ocrIndexedRecord = null; ocrPrevFocus = document.activeElement; ocrAbort = false; setOcrResult('');
+    var idx = Math.max(0, sortedItems().indexOf(it));
+    var sourceName = it.imageToken ? String(it.name || it.file.name || 'image') : displayFileName(it, idx);
+    $('ocr-source').textContent = sourceName + ' · ' + fmtBytes(it.file.size || 0);
+    var saved = ''; try { saved = localStorage.getItem('dx-pwa-ocr-lang') || ''; } catch (_) {}
+    if ($('ocr-language')) $('ocr-language').value = saved || (lang === 'en' ? 'eng' : lang === 'es' ? 'spa' : 'fra+eng');
+    ocrSetStatus(t('ocrReady'), 0);
+    $('ocr-overlay').classList.remove('hidden'); $('ocr-run').focus();
+    // Clicking OCR is explicit consent to start local processing; launch immediately.
+    setTimeout(runOcr, 0);
+  }
+  async function closeOcr() {
+    ocrAbort = true; await terminateOcrWorker(); ocrRunning = false;
+    if ($('ocr-overlay')) $('ocr-overlay').classList.add('hidden');
+    ocrCurrentItem = null; ocrIndexedRecord = null; setOcrResult('');
+    if ($('ocr-run')) $('ocr-run').disabled = false;
+    if (ocrPrevFocus && ocrPrevFocus.focus) try { ocrPrevFocus.focus(); } catch (_) {}
+    ocrPrevFocus = null;
+  }
+  function updateOcrSearch(reset, focusResult) {
+    var q = String($('ocr-search') && $('ocr-search').value || '');
+    var label = $('ocr-match-count'), area = $('ocr-result');
+    if (!q || !ocrText) { if (label) label.textContent = ''; ocrSearchPos = -1; return; }
+    var hay = ocrText.toLocaleLowerCase(), needle = q.toLocaleLowerCase(), starts = [], pos = 0;
+    while (needle && (pos = hay.indexOf(needle, pos)) !== -1 && starts.length < 5000) { starts.push(pos); pos += Math.max(1, needle.length); }
+    if (!starts.length) { if (label) label.textContent = t('ocrNoMatch'); ocrSearchPos = -1; return; }
+    if (reset || ocrSearchPos < 0 || starts.indexOf(ocrSearchPos) === -1) ocrSearchPos = starts[0];
+    var current = Math.max(0, starts.indexOf(ocrSearchPos));
+    if (label) label.textContent = t('ocrMatches', { current: current + 1, total: starts.length });
+    if (area && area.setSelectionRange) { area.setSelectionRange(ocrSearchPos, ocrSearchPos + q.length); if (focusResult) area.focus(); }
+  }
+  function stepOcrSearch(dir) {
+    var q = String($('ocr-search') && $('ocr-search').value || ''); if (!q || !ocrText) return;
+    var hay = ocrText.toLocaleLowerCase(), needle = q.toLocaleLowerCase(), starts = [], pos = 0;
+    while ((pos = hay.indexOf(needle, pos)) !== -1 && starts.length < 5000) { starts.push(pos); pos += Math.max(1, needle.length); }
+    if (!starts.length) { updateOcrSearch(true); return; }
+    var idx = starts.indexOf(ocrSearchPos); if (idx < 0) idx = 0;
+    idx = (idx + dir + starts.length) % starts.length; ocrSearchPos = starts[idx]; updateOcrSearch(false, true);
+  }
+  function copyOcrText() {
+    if (!ocrText) return;
+    copyText(ocrText).then(function () { toast(t('ocrCopied'), 'ok'); }, function () { toast(t('copyFailed'), 'err'); });
+  }
+  async function addOcrTextToQueue() {
+    if (!ocrText || (!ocrCurrentItem && !ocrIndexedRecord)) return;
+    var original = String(ocrCurrentItem ? (ocrCurrentItem.name || ocrCurrentItem.file.name || 'document') : (ocrIndexedRecord.name || 'document'));
+    var base = original.replace(/\.[^.]+$/, '') || 'document';
+    var file = namedFile(new Blob([ocrText + '\n'], { type: 'text/plain;charset=utf-8' }), safeName(base + '-ocr.txt'), 'text/plain', Date.now());
+    await addFiles([file]); toast(t('ocrQueued'), 'ok');
+  }
+
+  // Persistent local OCR index (#16). Records live only in this browser's
+  // IndexedDB and contain the recognized text + enough source metadata to find it.
+  // Search is deliberately performed locally; no query or OCR text is sent out.
+  function ocrIndexStableId(it) {
+    var f = it && it.file, seed = it && it.imageToken ? ('image:' + it.imageToken) : (String(it && it.contentHash || '') || [it && it.name || f && f.name || '', f && f.size || 0, f && f.lastModified || 0].join('|'));
+    var h1 = 2166136261 >>> 0, h2 = 0x9e3779b9 >>> 0;
+    for (var i = 0; i < seed.length; i++) { h1 ^= seed.charCodeAt(i); h1 = Math.imul(h1, 16777619) >>> 0; h2 ^= (seed.charCodeAt(i) + i); h2 = Math.imul(h2, 2246822519) >>> 0; }
+    return 'ocr-' + h1.toString(16).padStart(8, '0') + h2.toString(16).padStart(8, '0');
+  }
+  async function saveOcrIndexRecord(it, text) {
+    text = String(text || '').trim(); if (!it || !it.file || !text) return;
+    var f = it.file, rec = {
+      id: ocrIndexStableId(it), name: String(it.name || f.name || 'document'), type: String(it.type || f.type || ''),
+      size: Number(f.size) || 0, lastModified: Number(f.lastModified) || 0, language: String($('ocr-language') && $('ocr-language').value || ''),
+      text: text, chars: text.length, indexedAt: Date.now(), sourceHash: String(it.contentHash || ''),
+      sourceKind: String(it.ocrSourceKind || (it.imageToken ? 'image-library' : 'queue')), imageToken: String(it.imageToken || '')
+    };
+    await idbPut(OCR_INDEX_STORE, rec);
+    var replaced = false;
+    ocrIndexRecords = ocrIndexRecords.map(function (row) { if (row.id === rec.id) { replaced = true; return rec; } return row; });
+    if (!replaced) ocrIndexRecords.push(rec);
+    ocrIndexRecords.sort(function (a, b) { return (b.indexedAt || 0) - (a.indexedAt || 0); });
+    renderOcrIndex();
+    if (!replaced) toast(t('ocrIndexSaved'), 'ok');
+  }
+  async function loadOcrIndex() {
+    ocrIndexRecords = await idbGetAll(OCR_INDEX_STORE).catch(function () { return []; });
+    if (!Array.isArray(ocrIndexRecords)) ocrIndexRecords = [];
+    ocrIndexRecords = ocrIndexRecords.filter(function (r) { return r && r.id && typeof r.text === 'string'; }).sort(function (a,b){return (b.indexedAt||0)-(a.indexedAt||0);});
+    renderOcrIndex();
+    if (imageRecordsByToken && imageRecordsByToken.size) applyImageView();
+    return ocrIndexRecords;
+  }
+  function ocrIndexSnippet(text, query) {
+    text = String(text || '').replace(/\s+/g, ' ').trim(); if (!text) return '';
+    if (!query) return text.slice(0, 220) + (text.length > 220 ? '…' : '');
+    var low = text.toLocaleLowerCase(), q = query.toLocaleLowerCase(), at = low.indexOf(q);
+    if (at < 0) return text.slice(0, 220) + (text.length > 220 ? '…' : '');
+    var start = Math.max(0, at - 85), end = Math.min(text.length, at + q.length + 115);
+    return (start ? '…' : '') + text.slice(start, end) + (end < text.length ? '…' : '');
+  }
+  function renderOcrIndex() {
+    var root = $('ocr-index-results'), badge = $('ocr-index-count'); if (!root) return;
+    var q = String($('ocr-index-search') && $('ocr-index-search').value || '').trim().toLocaleLowerCase();
+    var rows = ocrIndexRecords.filter(function (r) { return !q || String(r.name || '').toLocaleLowerCase().includes(q) || String(r.text || '').toLocaleLowerCase().includes(q); });
+    if (badge) badge.textContent = String(ocrIndexRecords.length); root.innerHTML = '';
+    if (!rows.length) { var empty=document.createElement('p'); empty.className='muted sm'; empty.textContent=t('ocrIndexEmpty'); root.appendChild(empty); return; }
+    rows.slice(0, 250).forEach(function (rec) {
+      var row=document.createElement('article'); row.className='ocr-index-row';
+      var main=document.createElement('div'); main.className='ocr-index-main';
+      var title=document.createElement('strong'); title.textContent=rec.name||'document'; main.appendChild(title);
+      var meta=document.createElement('span'); meta.className='muted sm'; meta.textContent=t('ocrIndexMeta',{size:fmtBytes(rec.size||0),date:new Date(rec.indexedAt||Date.now()).toLocaleString(),chars:String(rec.chars||String(rec.text||'').length)}); main.appendChild(meta);
+      var snip=document.createElement('p'); snip.className='ocr-index-snippet'; snip.textContent=ocrIndexSnippet(rec.text,q); main.appendChild(snip);
+      var actions=document.createElement('div'); actions.className='ocr-index-actions';
+      var open=document.createElement('button'); open.type='button'; open.className='btn ghost sm'; open.textContent=t('ocrIndexOpen'); open.addEventListener('click',function(){openIndexedOcr(rec);}); actions.appendChild(open);
+      var del=document.createElement('button'); del.type='button'; del.className='btn ghost sm danger'; del.textContent='×'; del.title=t('ocrIndexDelete'); del.setAttribute('aria-label',t('ocrIndexDelete')); del.addEventListener('click',async function(){await idbDelete(OCR_INDEX_STORE,rec.id).catch(function(){});ocrIndexRecords=ocrIndexRecords.filter(function(r){return r.id!==rec.id;});renderOcrIndex();}); actions.appendChild(del);
+      row.appendChild(main); row.appendChild(actions); root.appendChild(row);
+    });
+  }
+  function openIndexedOcr(rec) {
+    if (!rec) return; ocrCurrentItem=null; ocrIndexedRecord=rec; ocrPrevFocus=document.activeElement; ocrAbort=false;
+    $('ocr-source').textContent=String(rec.name||'document')+' · '+fmtBytes(rec.size||0); setOcrResult(rec.text||'');
+    ocrSetStatus(t('ocrComplete',{chars:String(rec.text||'').length}),1);
+    if ($('ocr-language') && rec.language) $('ocr-language').value=rec.language;
+    if ($('ocr-run')) $('ocr-run').disabled=true; if ($('ocr-cancel-run')) $('ocr-cancel-run').disabled=true;
+    $('ocr-overlay').classList.remove('hidden'); if ($('ocr-search')) $('ocr-search').focus();
+  }
+  async function clearOcrIndex() {
+    if (!ocrIndexRecords.length) return;
+    if (!window.confirm(t('ocrIndexClearConfirm'))) return;
+    await idbClear(OCR_INDEX_STORE).catch(function () {}); ocrIndexRecords=[]; renderOcrIndex();
   }
 
   // Local preview for images, video, audio, PDF and text before sending.
@@ -5419,6 +8793,36 @@
     $('lightbox-overlay').classList.remove('hidden');
     $('lightbox-close').focus();
   }
+  // Side-by-side comparison of the three variants (Full / Mini / Micro) for one image:
+  // preview + dimensions + byte size in one glance, inside a dismissible overlay.
+  var comparePrevFocus = null;
+  function openVariantCompare(photo) {
+    var grid = $('compare-grid'); if (!photo || !grid) return;
+    grid.innerHTML = '';
+    ['full', 'thumb', 'micro'].forEach(function (kind) {
+      var variant = (photo.variants || {})[kind] || {};
+      var url = imagePreviewUrl(photo, kind);
+      var col = document.createElement('div'); col.className = 'compare-col';
+      var name = document.createElement('div'); name.className = 'compare-name'; name.textContent = imageVariantLabel(kind); col.appendChild(name);
+      var wrap = document.createElement('div'); wrap.className = 'compare-imgwrap';
+      if (url) { var im = document.createElement('img'); im.className = 'compare-img'; im.alt = imageVariantLabel(kind); im.loading = 'lazy'; im.src = url; wrap.appendChild(im); }
+      col.appendChild(wrap);
+      var meta = document.createElement('div'); meta.className = 'compare-meta muted sm';
+      meta.textContent = (variant.w && variant.h ? variant.w + '×' + variant.h : '—') + ' · ' + fmtBytes(variant.bytes);
+      col.appendChild(meta);
+      grid.appendChild(col);
+    });
+    $('compare-title').textContent = t('imgCompareTitle') + (photo.name ? ' — ' + photo.name : '');
+    comparePrevFocus = document.activeElement;
+    $('compare-overlay').classList.remove('hidden');
+    $('compare-close').focus();
+  }
+  function closeCompare() {
+    $('compare-overlay').classList.add('hidden');
+    var grid = $('compare-grid'); if (grid) grid.innerHTML = '';
+    if (comparePrevFocus && comparePrevFocus.focus) { try { comparePrevFocus.focus(); } catch (_) {} }
+    comparePrevFocus = null;
+  }
   function closeLightbox(restoreFocus) {
     $('lightbox-overlay').classList.add('hidden'); resetPreviewElements();
     if (lightboxUrl) { URL.revokeObjectURL(lightboxUrl); lightboxUrl = ''; }
@@ -5432,9 +8836,8 @@
     if (!src || !(window.crypto && crypto.subtle)) { toast(t('hashFail'), 'err'); return; }
     toast(t('hashing'));
     try {
-      var buf = await src.arrayBuffer();
-      var digest = await crypto.subtle.digest('SHA-256', buf);
-      var hex = Array.prototype.map.call(new Uint8Array(digest), function (b) { return ('0' + b.toString(16)).slice(-2); }).join('');
+      var hex = await sha256Blob(src, function (fraction) { if (it.meta) it.meta.textContent = t('hashing') + ' ' + Math.round(fraction * 100) + '%'; });
+      if (!hex) throw new Error('hash');
       // Copy in `sha256sum` format ("<hash>  <name>") so it drops straight into a checksum file.
       await copyText(hex + '  ' + it.name);
       toast(t('hashCopied'), 'ok');
@@ -5538,13 +8941,6 @@
     renderQueue();
   }
 
-  // Expand / collapse both detail cards at once (feature 8).
-  function toggleAllCards() {
-    var h = $('history-card'), s = $('settings-card');
-    var anyClosed = (h && !h.open) || (s && !s.open);
-    if (h) h.open = anyClosed; if (s) s.open = anyClosed;
-    updateToggleCardsLabel();
-  }
   function bindAdvancedAccordion() {
     document.querySelectorAll('details.advanced-section').forEach(function (details) {
       if (details.dataset.accordionBound === '1') return; details.dataset.accordionBound = '1';
@@ -5558,23 +8954,35 @@
     bindAdvancedAccordion();
     if (closeNow && $('advanced-accordion') && $('advanced-accordion').checked) document.querySelectorAll('details.advanced-section').forEach(function (details) { details.open = false; });
   }
-  function updateToggleCardsLabel() {
-    var btn = $('toggle-cards-btn'); if (!btn) return;
-    var h = $('history-card'), s = $('settings-card');
-    var allOpen = (!h || h.open) && (!s || s.open);
-    btn.textContent = allOpen ? t('collapseAll') : t('expandAll');
-  }
-
-  // Estimated size of each image AFTER optimization, shown before sending (feature 10).
-  // Runs sequentially so a queue of photos never floods the main thread.
+  // Estimated size of each image AFTER optimization, plus a batch-wide preview
+  // (before → after, savings and approximate upload time at the learned rate).
   var estimating = false;
+  function updateOptimizationEstimate() {
+    var el = $('optimization-estimate'); if (!el) return;
+    if (!$('optimize-images') || !$('optimize-images').checked) { el.classList.add('hidden'); el.textContent = ''; return; }
+    var pending = items.filter(function (it) { return ['waiting', 'error', 'paused', 'waiting-network'].indexOf(it.state) !== -1; });
+    var optimizable = pending.filter(function (it) { return it.file && /^image\//.test(it.type) && !/svg|gif/i.test(it.type); });
+    if (!optimizable.length) { el.classList.add('hidden'); el.textContent = ''; return; }
+    var before = pending.reduce(function (sum, it) { return sum + (it.size || 0); }, 0);
+    var after = pending.reduce(function (sum, it) {
+      var eligible = it.file && /^image\//.test(it.type) && !/svg|gif/i.test(it.type);
+      return sum + (eligible && it.estSize > 0 ? it.estSize : (it.size || 0));
+    }, 0);
+    var saved = Math.max(0, before - after);
+    var pct = before > 0 ? Math.round(saved / before * 100) : 0;
+    var eta = avgRate > 0 && after > 0 ? '· ⏳ ' + fmtEta(after / avgRate) : '';
+    var unknown = optimizable.filter(function (it) { return it.estSize == null; }).length;
+    var text = t('optimizationEstimate', { before: fmtBytes(before), after: fmtBytes(after), saved: fmtBytes(saved), pct: pct, eta: eta });
+    if (unknown && estimating) text = t('optimizationEstimating') + ' · ' + text;
+    el.textContent = text; el.classList.remove('hidden');
+  }
   async function estimateOptimizedSizes() {
-    if (estimating || !$('optimize-images') || !$('optimize-images').checked) return;
-    estimating = true;
+    if (estimating || !$('optimize-images') || !$('optimize-images').checked) { updateOptimizationEstimate(); return; }
+    estimating = true; updateOptimizationEstimate();
     try {
-      var targets = items.filter(function (it) { return it.file && /^image\//.test(it.type) && !/svg|gif/i.test(it.type) && it.state === 'waiting' && it.estSize == null; });
-      for (var i = 0; i < targets.length; i++) { await estimateOne(targets[i]); }
-    } finally { estimating = false; }
+      var targets = items.filter(function (it) { return it.file && /^image\//.test(it.type) && !/svg|gif/i.test(it.type) && ['waiting', 'error', 'paused', 'waiting-network'].indexOf(it.state) !== -1 && it.estSize == null; });
+      for (var i = 0; i < targets.length; i++) { await estimateOne(targets[i]); updateOptimizationEstimate(); }
+    } finally { estimating = false; updateOptimizationEstimate(); }
   }
   async function estimateOne(it) {
     try {
@@ -5589,9 +8997,9 @@
       var blob = await canvasBlob(canvas, 'image/jpeg', q);
       it.estSize = Math.min(blob.size, it.size);
     } catch (_) { it.estSize = 0; }
-    if (it.meta && it.state === 'waiting') it.meta.textContent = rowMetaText(it);
+    if (it.meta && ['waiting', 'error', 'paused', 'waiting-network'].indexOf(it.state) !== -1) it.meta.textContent = rowMetaText(it);
   }
-  function clearEstimates() { items.forEach(function (it) { it.estSize = null; }); }
+  function clearEstimates() { items.forEach(function (it) { it.estSize = null; }); updateOptimizationEstimate(); }
 
   // Rotate a queued image 90° clockwise before sending (feature 11).
   async function rotateItem(it) {
@@ -5653,6 +9061,38 @@
     if (currentDest.remembered) persistDestination(currentDest).catch(function () {}); else persistSessionDests();
   }
 
+  // Touch/pen drag handle for mobile. HTML5 `draggable` is still unreliable in
+  // installed Android PWAs, so Pointer Events drive the same persistent reorder path.
+  function attachTouchReorderHandle(handle, row, it, list) {
+    if (!handle || !window.PointerEvent) return;
+    var active = false, targetId = '';
+    function clearTargets() {
+      Array.prototype.forEach.call(list.querySelectorAll('.uprow.drag-over'), function (el) { el.classList.remove('drag-over'); });
+    }
+    handle.addEventListener('pointerdown', function (e) {
+      if (e.pointerType === 'mouse' || e.button !== 0) return;
+      active = true; targetId = ''; dragId = it.id; row.classList.add('dragging', 'touch-dragging');
+      try { handle.setPointerCapture(e.pointerId); } catch (_) {}
+      e.preventDefault();
+    });
+    handle.addEventListener('pointermove', function (e) {
+      if (!active) return;
+      e.preventDefault();
+      var hit = document.elementFromPoint(e.clientX, e.clientY);
+      var target = hit && hit.closest ? hit.closest('.uprow') : null;
+      clearTargets();
+      if (target && target.dataset && target.dataset.id && target.dataset.id !== it.id) { targetId = target.dataset.id; target.classList.add('drag-over'); }
+    });
+    function finish() {
+      if (!active) return;
+      active = false; row.classList.remove('dragging', 'touch-dragging'); clearTargets(); dragId = null;
+      if (targetId) reorderQueue(it.id, targetId);
+      targetId = '';
+    }
+    handle.addEventListener('pointerup', finish);
+    handle.addEventListener('pointercancel', finish);
+  }
+
   // Drag-to-reorder the queue in "order added" mode (feature 17). We rewrite each
   // item's createdAt to the new position so the ordering persists in IndexedDB.
   function reorderQueue(fromId, toId) {
@@ -5711,11 +9151,22 @@
 
   // Events -------------------------------------------------------------------
   function bindEvents() {
-    $('lang-select').addEventListener('change', function () { applyLanguage(this.value); updateNetworkIndicator(); renderQueue(); renderHistory(); });
+    $('lang-select').addEventListener('change', function () { applyLanguage(this.value); updateNetworkIndicator(); renderQueue(); renderHistory(); renderErrorCenter(); renderNetworkDashboard(); renderOcrIndex(); renderPwaNotifications(); });
+    var netConn = connectionInfo(); if (netConn && netConn.addEventListener) netConn.addEventListener('change', function () { updateNetworkIndicator(); renderNetworkDashboard(); });
     var savedTheme = 'dark'; try { savedTheme = localStorage.getItem('dx-theme') || document.documentElement.getAttribute('data-theme-mode') || 'dark'; } catch (_) {}
     $('theme-select').value = savedTheme;
     $('theme-select').addEventListener('change', function () { setTheme(this.value); });
     setInterval(function () { if (($('theme-select') && $('theme-select').value) === 'schedule') setTheme('schedule'); }, 60000);
+    function onPwaNotificationFilterChanged(){ notificationsShown=NOTIFICATIONS_PAGE_SIZE; renderPwaNotifications(); if(pwaNotificationsOpen())void markPwaNotificationsRead(); }
+    ['pwa-notifications-category-filter','pwa-notifications-severity-filter'].forEach(function(id){var node=$(id);if(node)node.addEventListener('change',onPwaNotificationFilterChanged);});
+    if ($('pwa-notifications-search')) $('pwa-notifications-search').addEventListener('input',onPwaNotificationFilterChanged);
+    if ($('pwa-notifications-btn')) $('pwa-notifications-btn').addEventListener('click', function (e) {
+      e.stopPropagation(); var d=$('pwa-notifications-dropdown'); if(!d)return; var opening=d.classList.contains('hidden'); d.classList.toggle('hidden'); this.setAttribute('aria-expanded',opening?'true':'false'); if(opening){notificationsShown=NOTIFICATIONS_PAGE_SIZE;renderPwaNotifications();void markPwaNotificationsRead();refreshPwaNotifications();}
+    });
+    if ($('pwa-notifications-clear')) $('pwa-notifications-clear').addEventListener('click', async function(e){e.stopPropagation();if(!accountNotifications.length||!confirm(t('notificationsClearConfirm')))return;var r=await appMutate('/app/notifications/clear','application/json','{}');if(r.ok){notificationRequestSeq+=1;accountNotifications=[];renderPwaNotifications();if(!notificationRequestInFlight)await refreshPwaNotifications();}});
+    if ($('pwa-notifications-sound')) { updatePwaNotificationsSoundBtn(); $('pwa-notifications-sound').addEventListener('click', function(e){ e.stopPropagation(); notificationSoundOn=!notificationSoundOn; try{localStorage.setItem('dx-notif-sound',notificationSoundOn?'1':'0');}catch(_){} updatePwaNotificationsSoundBtn(); if(notificationSoundOn)playPwaNotificationSound(); }); }
+    if ($('pwa-notifications-prefs-btn')) { var pb=$('pwa-notifications-prefs-btn'); pb.textContent='⚙️'; pb.title=t('notificationsPrefs'); pb.setAttribute('aria-label',t('notificationsPrefs')); pb.addEventListener('click', function(e){ e.stopPropagation(); var box=$('pwa-notifications-prefs'); if(!box)return; var opening=box.classList.contains('hidden'); box.classList.toggle('hidden'); pb.setAttribute('aria-expanded',opening?'true':'false'); if(opening&&!notificationPrefsLoaded)loadPwaNotificationPrefs(); }); }
+    document.addEventListener('click', function(e){if(e.target.closest&&e.target.closest('#pwa-notifications-menu'))return;closePwaNotifications();});
     $('dest-add-btn').addEventListener('click', function () { if (!destinationLocked) openDestForm(); });
     $('dest-cancel-btn').addEventListener('click', closeDestForm);
     if ($('dest-create-btn')) $('dest-create-btn').addEventListener('click', function () { if (!destinationLocked) openCreateForm(); });
@@ -5731,7 +9182,7 @@
       var remember = $('dest-remember').checked;
       var rememberKey = remember && $('dest-remember-key').checked && !!parsed.key;
       var existing = findDest(parsed.token);
-      var dest = { token: parsed.token, name: String($('dest-name').value || '').trim(), key: parsed.key || '', rememberKey: rememberKey, sourceOrigin: parsed.sourceOrigin, remembered: remember, owned: !!(existing && existing.owned), pinned: !!(existing && existing.pinned), order: existing ? existing.order : undefined, createdAt: (existing && existing.createdAt) || Date.now() };
+      var dest = { token: parsed.token, name: String($('dest-name').value || '').trim(), emoji: String(($('dest-emoji') && $('dest-emoji').value) || '').trim().slice(0, 8), key: parsed.key || '', rememberKey: rememberKey, sourceOrigin: parsed.sourceOrigin, remembered: remember, owned: !!(existing && existing.owned), pinned: !!(existing && existing.pinned), order: existing ? existing.order : undefined, createdAt: (existing && existing.createdAt) || Date.now() };
       if (editingToken && editingToken !== dest.token) await removeDestinationRecord(editingToken);
       await saveDestinationRecord(dest, remember);
       setActiveToken(dest.token); closeDestForm(); renderDests(); $('dest-select').value = dest.token; refreshDestStatus();
@@ -5772,6 +9223,10 @@
       var el = $(id); if (el) el.addEventListener('change', function (e) { addFiles(e.target.files); e.target.value = ''; });
     });
     if ($('pick-imglink')) $('pick-imglink').addEventListener('change', function (e) { createImageLinks(e.target.files); e.target.value = ''; });
+    if ($('pick-imglink-edit')) $('pick-imglink-edit').addEventListener('change', function (e) {
+      var files = Array.prototype.slice.call(e.target.files || []); e.target.value = '';
+      editImageBeforeLink(files);
+    });
     $('send-btn').addEventListener('click', function () { startBatch(); });
     $('pause-btn').addEventListener('click', pauseBatch); $('resume-btn').addEventListener('click', resumeBatch);
     $('retry-all-btn').addEventListener('click', retryAll); $('clear-all-btn').addEventListener('click', clearPending); $('clear-done-btn').addEventListener('click', clearDone);
@@ -5793,15 +9248,69 @@
     if ($('rename-device-btn')) $('rename-device-btn').addEventListener('click', function () { renameDevice(null, deviceInfo && deviceInfo.device && deviceInfo.device.name, true); });
     $('clear-local-btn').addEventListener('click', clearLocalData);
     $('logout-session-btn').addEventListener('click', closeSession);
+    if ($('add-passkey-btn')) $('add-passkey-btn').addEventListener('click', addPasskey);
+    if ($('disable-biometric-btn')) $('disable-biometric-btn').addEventListener('click', disableBiometricIdentification);
+    if ($('reauth-biometric-btn')) $('reauth-biometric-btn').addEventListener('click', reauthenticateForBiometric);
     $('dest-scan-btn').addEventListener('click', startScan); $('qr-close').addEventListener('click', stopScan);
     $('update-btn').addEventListener('click', function () { applyUpdate(waitingWorker); });
-    $('auto-resume').addEventListener('change', function () { try { localStorage.setItem('dx-pwa-auto-resume', this.checked ? '1' : '0'); } catch (_) {} });
+    $('auto-resume').addEventListener('change', function () {
+      var enabled = !!this.checked;
+      try { localStorage.setItem('dx-pwa-auto-resume', enabled ? '1' : '0'); } catch (_) {}
+      items.forEach(function (it) {
+        if (!it || !it.snapshot || !it.preparedBlob || ['done', 'removed', 'paused'].indexOf(it.state) !== -1) return;
+        it.backgroundReady = enabled && preparedPayloadIsDurable(it);
+        persistItem(it, false).catch(function () {});
+      });
+      if (enabled) registerBackgroundSync();
+    });
     $('concurrency-select').addEventListener('change', function () { try { localStorage.setItem('dx-pwa-concurrency', this.value); } catch (_) {} });
     if ($('sort-select')) $('sort-select').addEventListener('change', function () { sortMode = this.value; try { localStorage.setItem('dx-pwa-sort', this.value); } catch (_) {} renderQueue(); });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-queue-kind]'), function (btn) {
+      btn.addEventListener('click', function () { queueKindFilter = this.dataset.queueKind || 'all'; try { localStorage.setItem('dx-pwa-queue-kind', queueKindFilter); } catch (_) {} renderQueue(); });
+    });
+    if ($('copy-queue-names-btn')) $('copy-queue-names-btn').addEventListener('click', copyQueueNames);
     if ($('queue-search')) $('queue-search').addEventListener('input', function () { queueFilter = this.value || ''; renderQueue(); });
+    // ✕ clear buttons for the search fields (image library + upload queue). The button
+    // shows only when the field holds text; clicking it empties the field, re-runs the
+    // matching filter and returns focus so typing can continue immediately.
+    function wireClearButton(inputId, clearId, onClear) {
+      var input = $(inputId), btn = $(clearId); if (!input || !btn) return;
+      var sync = function () { btn.classList.toggle('hidden', !input.value); };
+      input.addEventListener('input', sync);
+      btn.addEventListener('click', function (e) { e.preventDefault(); input.value = ''; sync(); if (onClear) onClear(); input.focus(); });
+      sync();
+    }
+    wireClearButton('img-search', 'img-search-clear', applyImageView);
+    wireClearButton('queue-search', 'queue-search-clear', function () { queueFilter = ''; renderQueue(); });
+    // Live password-strength meter for link passwords (image link + server-file share).
+    // Coarse 0–4 score → weak / fair / strong; hidden while the field is empty.
+    function passwordScore(v) {
+      v = String(v || ''); if (!v) return 0;
+      var s = 0;
+      if (v.length >= 8) s++;
+      if (v.length >= 12) s++;
+      if (/[a-z]/.test(v) && /[A-Z]/.test(v)) s++;
+      if (/\d/.test(v)) s++;
+      if (/[^A-Za-z0-9]/.test(v)) s++;
+      return Math.min(4, s);
+    }
+    function attachPwStrength(inputId, meterId) {
+      var input = $(inputId), meter = $(meterId); if (!input || !meter) return;
+      var bar = meter.querySelector('.pw-bar > i'), label = meter.querySelector('.pw-label');
+      var update = function () {
+        if (!input.value) { meter.className = 'pw-strength hidden'; return; }
+        var s = passwordScore(input.value), tier = s <= 1 ? 0 : (s <= 3 ? 1 : 2);
+        meter.className = 'pw-strength ' + ['pw-weak', 'pw-medium', 'pw-strong'][tier];
+        if (bar) bar.style.width = [22, 40, 60, 82, 100][s] + '%';
+        if (label) label.textContent = [t('pwWeak'), t('pwMedium'), t('pwStrong')][tier];
+      };
+      input.addEventListener('input', update);
+      update();
+    }
+    attachPwStrength('img-password', 'img-password-strength');
+    attachPwStrength('share-password', 'share-password-strength');
     if ($('bulk-invert-btn')) $('bulk-invert-btn').addEventListener('click', invertSelection);
     if ($('bulk-share-btn')) $('bulk-share-btn').addEventListener('click', shareSelection);
-    if ($('toggle-cards-btn')) $('toggle-cards-btn').addEventListener('click', toggleAllCards);
     if ($('imglink-qrall-btn')) $('imglink-qrall-btn').addEventListener('click', qrAllImageLinks);
     if ($('batch-note')) $('batch-note').addEventListener('input', function () { updateCharCount(this, $('note-count'), 120); });
     if ($('batch-note')) $('batch-note').addEventListener('change', saveDestPreset);
@@ -5813,11 +9322,15 @@
     if ($('dest-received-btn')) $('dest-received-btn').addEventListener('click', openReceivedDialog);
     if ($('received-close')) $('received-close').addEventListener('click', closeReceivedDialog);
     if ($('received-refresh-btn')) $('received-refresh-btn').addEventListener('click', function () { var tk = $('dest-select').value; if (tk) loadReceivedFiles(tk); });
-    if ($('help-btn')) $('help-btn').addEventListener('click', openHelp);
     if ($('help-close')) $('help-close').addEventListener('click', closeHelp);
     if ($('history-search')) $('history-search').addEventListener('input', function () { historyFilter = this.value || ''; renderHistory(); });
     if ($('check-update-btn')) $('check-update-btn').addEventListener('click', checkForUpdate);
     if ($('copy-diag-btn')) $('copy-diag-btn').addEventListener('click', copyDiagnostic);
+    if ($('network-test-btn')) $('network-test-btn').addEventListener('click', function () { runNetworkTest({ silent: false }); });
+    if ($('network-dashboard')) $('network-dashboard').addEventListener('toggle', function () { if (this.open) renderNetworkDashboard(); });
+    if ($('error-center-copy')) $('error-center-copy').addEventListener('click', copyErrorReport);
+    if ($('error-center-clear')) $('error-center-clear').addEventListener('click', clearErrorLog);
+    if ($('error-center-retry-all')) $('error-center-retry-all').addEventListener('click', retryAll);
     if ($('vibrate-finish')) $('vibrate-finish').addEventListener('change', function () { try { localStorage.setItem('dx-pwa-vibrate', this.checked ? '1' : '0'); } catch (_) {} });
     if ($('keep-awake')) $('keep-awake').addEventListener('change', function () { try { localStorage.setItem('dx-pwa-keepawake', this.checked ? '1' : '0'); } catch (_) {} applyKeepAwake(); });
     if ($('optimize-images')) $('optimize-images').addEventListener('change', function () {
@@ -5833,15 +9346,34 @@
     if ($('img-format')) $('img-format').addEventListener('change', function () { try { localStorage.setItem('dx-pwa-img-format', this.value); } catch (_) {} });
     if ($('img-copy-template')) $('img-copy-template').addEventListener('change', function () { persistImagePreferences(); });
     ['img-action-1','img-action-2','img-action-3'].forEach(function (id) { if ($(id)) $(id).addEventListener('change', function () { persistImagePreferences(); imageRowsByToken.forEach(arrangeImageActions); }); });
-    ['img-sort', 'img-filter', 'img-default-variant'].forEach(function (id) { if ($(id)) $(id).addEventListener('change', function () { persistImagePreferences(); applyImageView(); if (id === 'img-default-variant') imageRowsByToken.forEach(function (row) { var p = imageRecordsByToken.get(row.dataset.token); if (p) { var buttons = { full: row.querySelector('.il-full'), thumb: row.querySelector('.il-thumb'), micro: row.querySelector('.il-micro') }; Object.keys(buttons).forEach(function (kind) { if (buttons[kind]) buttons[kind].classList.toggle('il-primary', kind === imageDefaultVariant()); }); } }); }); });
-    if ($('img-search')) $('img-search').addEventListener('input', applyImageView);
+    ['img-sort', 'img-filter'].forEach(function (id) { if ($(id)) $(id).addEventListener('change', function () { persistImagePreferences(); applyImageView(); }); });
+    if ($('img-search')) $('img-search').addEventListener('input', function () { scheduleImageOcrSearch(this.value); applyImageView(); });
     ['img-expiry', 'img-max-views', 'img-hotlink-hosts', 'img-smart-blur', 'img-tags', 'img-note', 'img-rename-template'].forEach(function (id) { if ($(id)) $(id).addEventListener('change', persistImagePreferences); });
-    ['img-compact', 'img-hide-expired', 'img-auto-copy', 'img-notify-first-view'].forEach(function (id) { if ($(id)) $(id).addEventListener('change', function () { persistImagePreferences(); if (id === 'img-compact') $('imglink-list').classList.toggle('img-compact', this.checked); applyImageView(); }); });
+    ['img-compact', 'img-hide-expired', 'img-auto-copy', 'img-notify-first-view'].forEach(function (id) { if ($(id)) $(id).addEventListener('change', function () {
+      persistImagePreferences();
+      if (id === 'img-compact') $('imglink-list').classList.toggle('img-compact', this.checked);
+      if (id === 'img-notify-first-view' && this.checked && $('live-push') && !$('live-push').checked) {
+        var pushToggle = $('live-push');
+        pushToggle.checked = true;
+        enablePush(false).then(function (ok) {
+          if (ok) {
+            try { localStorage.setItem('dx-pwa-push', '1'); } catch (_) {}
+            toast(t('livePushOn'), 'ok');
+          } else {
+            pushToggle.checked = false;
+            try { localStorage.setItem('dx-pwa-push', '0'); } catch (_) {}
+            toast(t('livePushFail'), 'warn');
+          }
+        });
+      }
+      applyImageView();
+    }); });
     if ($('img-select-all')) $('img-select-all').addEventListener('change', function () { var checked = this.checked; imageRowsByToken.forEach(function (row, token) { if (!row.classList.contains('hidden')) selectImageToken(token, checked); }); });
     if ($('img-bulk-edit')) $('img-bulk-edit').addEventListener('click', editSelectedImages);
     if ($('img-bulk-album')) $('img-bulk-album').addEventListener('click', createAlbumFromSelection);
     if ($('img-bulk-revoke')) $('img-bulk-revoke').addEventListener('click', bulkRevokeImages);
     if ($('img-dashboard-refresh')) $('img-dashboard-refresh').addEventListener('click', refreshImageDashboard);
+    if ($('img-dashboard-period')) $('img-dashboard-period').addEventListener('change', refreshImageDashboard);
     if ($('img-action-history-clear')) $('img-action-history-clear').addEventListener('click', function () { imageActionHistory = []; try { localStorage.removeItem('dx-pwa-image-actions'); } catch (_) {} persistImageActionHistory(); renderImageActionHistory(); });
     if ($('tag-colors-reset')) $('tag-colors-reset').addEventListener('click', function () { tagColorMap = {}; persistTagColors(); renderTagColorManager(); imageRowsByToken.forEach(function (r, token) { var photo = imageRecordsByToken.get(token); if (photo) renderImageVariantStats(r, photo); }); });
     if ($('img-tags')) $('img-tags').addEventListener('input', renderTagColorManager);
@@ -5860,18 +9392,36 @@
     if ($('advanced-accordion')) $('advanced-accordion').addEventListener('change', function () { try { localStorage.setItem('dx-pwa-advanced-accordion', this.checked ? '1' : '0'); } catch (_) {} applyAdvancedAccordion(this.checked); });
     ['confirm-revoke','confirm-delete','confirm-replace'].forEach(function (id) { if ($(id)) $(id).addEventListener('change', function () { try { localStorage.setItem('dx-pwa-' + id, this.checked ? '1' : '0'); } catch (_) {} }); });
     if ($('storage-warning-threshold')) $('storage-warning-threshold').addEventListener('change', function () { try { localStorage.setItem('dx-pwa-storage-warning-threshold', this.value); } catch (_) {} updateStorageStatus(); });
+    if ($('auto-lock-select')) $('auto-lock-select').addEventListener('change', function () {
+      try { localStorage.setItem('dx-pwa-auto-lock-minutes', this.value); } catch (_) {}
+      rememberSessionActivity(); checkSessionAutoLock();
+    });
     if ($('density-select')) $('density-select').addEventListener('change', function () { applyDensity(this.value); });
     if ($('expire-select')) $('expire-select').addEventListener('change', function () { try { localStorage.setItem('dx-pwa-expire', this.value); } catch (_) {} saveDestPreset(); });
     if ($('live-enable')) $('live-enable').addEventListener('change', function () { try { localStorage.setItem('dx-pwa-live', this.checked ? '1' : '0'); } catch (_) {} if (this.checked) connectLive(); else disconnectLive(); });
+    if ($('push-test-btn')) $('push-test-btn').addEventListener('click', testPushNotifications);
     if ($('live-push')) $('live-push').addEventListener('change', async function () {
       var el = this;
       if (el.checked) {
-        var ok = await enablePush();
+        // A manual OFF -> ON is an explicit repair action: retire any surviving
+        // Android subscription and request a brand-new endpoint before registering
+        // it server-side. This prevents a stale browser subscription from making the
+        // toggle look enabled while real event pushes still go nowhere.
+        var ok = await enablePush(true);
         if (ok) { toast(t('livePushOn'), 'ok'); try { localStorage.setItem('dx-pwa-push', '1'); } catch (_) {} }
-        else { el.checked = false; toast(t('livePushFail'), 'err'); }
+        else { el.checked = false; try { localStorage.setItem('dx-pwa-push', '0'); } catch (_) {} toast(t('livePushFail'), 'err'); }
       } else {
         await disablePush(); toast(t('livePushOff'), 'warn'); try { localStorage.setItem('dx-pwa-push', '0'); } catch (_) {}
       }
+    });
+    if ($('push-language')) $('push-language').addEventListener('change', async function () {
+      var value = selectedPushLanguage();
+      try { localStorage.setItem('dx-pwa-push-lang', value); } catch (_) {}
+      if ($('live-push') && $('live-push').checked) {
+        var ok = await syncPushSubscription();
+        if (!ok) { toast(t('livePushFail'), 'err'); return; }
+      }
+      toast(t('pushLanguageSaved'), 'ok');
     });
     if ($('wifi-only')) $('wifi-only').addEventListener('change', function () { try { localStorage.setItem('dx-pwa-wifionly', this.checked ? '1' : '0'); } catch (_) {} releaseWifiWaiters(); maybeAutoResume(); });
     if ($('confirm-mobile-data')) $('confirm-mobile-data').addEventListener('change', function () { try { localStorage.setItem('dx-pwa-confirm-mobile', this.checked ? '1' : '0'); } catch (_) {} });
@@ -5882,7 +9432,7 @@
     });
     if ($('strip-exif')) $('strip-exif').addEventListener('change', function () { try { localStorage.setItem('dx-pwa-stripexif', this.checked ? '1' : '0'); } catch (_) {} });
     if ($('pick-voice')) $('pick-voice').addEventListener('click', openVoice);
-    if ($('pick-text')) $('pick-text').addEventListener('click', pasteTextFile);
+    if ($('pick-text')) $('pick-text').addEventListener('click', emptyClipboardIntoQueue);
     if ($('pick-url')) $('pick-url').addEventListener('click', addFromUrl);
     if ($('pick-screen')) $('pick-screen').addEventListener('click', captureScreen);
     if ($('reset-batch-btn')) $('reset-batch-btn').addEventListener('click', resetBatch);
@@ -5892,9 +9442,29 @@
     if ($('master-select')) $('master-select').addEventListener('change', function () { toggleMasterSelect(this.checked); });
     if ($('bulk-rename-btn')) $('bulk-rename-btn').addEventListener('click', bulkRename);
     if ($('undo-btn')) $('undo-btn').addEventListener('click', undoRemove);
+    if ($('ocr-run')) $('ocr-run').addEventListener('click', runOcr);
+    if ($('ocr-cancel-run')) $('ocr-cancel-run').addEventListener('click', cancelOcr);
+    if ($('ocr-copy')) $('ocr-copy').addEventListener('click', copyOcrText);
+    if ($('ocr-add-txt')) $('ocr-add-txt').addEventListener('click', addOcrTextToQueue);
+    if ($('ocr-search')) $('ocr-search').addEventListener('input', function () { updateOcrSearch(true, false); });
+    if ($('ocr-search-prev')) $('ocr-search-prev').addEventListener('click', function () { stepOcrSearch(-1); });
+    if ($('ocr-search-next')) $('ocr-search-next').addEventListener('click', function () { stepOcrSearch(1); });
+    if ($('ocr-close')) $('ocr-close').addEventListener('click', closeOcr);
+    if ($('ocr-overlay')) $('ocr-overlay').addEventListener('click', function (e) { if (e.target === this) closeOcr(); });
+    if ($('ocr-index-search')) $('ocr-index-search').addEventListener('input', renderOcrIndex);
+    if ($('ocr-index-clear')) $('ocr-index-clear').addEventListener('click', clearOcrIndex);
+    if ($('privacy-analyze')) $('privacy-analyze').addEventListener('click', analyzePrivacyCurrent);
+    if ($('privacy-clean')) $('privacy-clean').addEventListener('click', cleanPrivacyCurrent);
+    if ($('privacy-close')) $('privacy-close').addEventListener('click', closePrivacyInspector);
+    if ($('privacy-cancel')) $('privacy-cancel').addEventListener('click', closePrivacyInspector);
+    if ($('privacy-overlay')) $('privacy-overlay').addEventListener('click', function (e) { if (e.target === this) closePrivacyInspector(); });
     if ($('lightbox-close')) $('lightbox-close').addEventListener('click', closeLightbox);
     if ($('lightbox-x')) $('lightbox-x').addEventListener('click', closeLightbox);
     if ($('lightbox-overlay')) $('lightbox-overlay').addEventListener('click', function (e) { if (e.target === this) closeLightbox(); });
+    if ($('image-stats-close')) $('image-stats-close').addEventListener('click', closeImageDetailedStats);
+    if ($('image-stats-overlay')) $('image-stats-overlay').addEventListener('click', function (e) { if (e.target === this) closeImageDetailedStats(); });
+    if ($('compare-close')) $('compare-close').addEventListener('click', closeCompare);
+    if ($('compare-overlay')) $('compare-overlay').addEventListener('click', function (e) { if (e.target === this) closeCompare(); });
     if ($('export-settings-btn')) $('export-settings-btn').addEventListener('click', exportSettings);
     if ($('import-settings-btn')) $('import-settings-btn').addEventListener('click', function () { $('import-settings-input').click(); });
     if ($('import-settings-input')) $('import-settings-input').addEventListener('change', function (e) { if (e.target.files && e.target.files[0]) importSettings(e.target.files[0]); e.target.value = ''; });
@@ -5909,22 +9479,45 @@
     if ($('multisend-cancel')) $('multisend-cancel').addEventListener('click', closeMultiSend);
     if ($('bulk-remove-btn')) $('bulk-remove-btn').addEventListener('click', bulkRemove);
     if ($('bulk-retry-btn')) $('bulk-retry-btn').addEventListener('click', bulkRetry);
+    if ($('bulk-dlp-btn')) $('bulk-dlp-btn').addEventListener('click', testPwaDlpSelected);
+    if ($('dlp-test-queue-btn')) $('dlp-test-queue-btn').addEventListener('click', testPwaDlpQueue);
+    if ($('ann-pan')) $('ann-pan').addEventListener('click', function () { setAnnTool('pan'); });
     if ($('ann-pen')) $('ann-pen').addEventListener('click', function () { setAnnTool('pen'); });
     if ($('ann-blur')) $('ann-blur').addEventListener('click', function () { setAnnTool('blur'); });
+    if ($('ann-redact')) $('ann-redact').addEventListener('click', function () { setAnnTool('redact'); });
     if ($('ann-detect-faces')) $('ann-detect-faces').addEventListener('click', function () { detectAndBlurFaces(true); });
     if ($('ann-detect-plates')) $('ann-detect-plates').addEventListener('click', function () { detectAndBlurPlates(true); });
+    if ($('ann-detect-sensitive')) $('ann-detect-sensitive').addEventListener('click', function () { detectAndBlurSensitiveText(true); });
+    if ($('ann-rotate-left')) $('ann-rotate-left').addEventListener('click', function () { rotateAnnotate(-1); });
+    if ($('ann-rotate-right')) $('ann-rotate-right').addEventListener('click', function () { rotateAnnotate(1); });
+    if ($('ann-flip-h')) $('ann-flip-h').addEventListener('click', function () { flipAnnotate(true); });
+    if ($('ann-flip-v')) $('ann-flip-v').addEventListener('click', function () { flipAnnotate(false); });
+    if ($('ann-adjust-apply')) $('ann-adjust-apply').addEventListener('click', applyEditorAdjustments);
+    if ($('ann-resize-apply')) $('ann-resize-apply').addEventListener('click', resizeAnnotate);
     if ($('ann-undo')) $('ann-undo').addEventListener('click', annUndo);
     if ($('ann-clear')) $('ann-clear').addEventListener('click', annClear);
     if ($('ann-crop-square')) $('ann-crop-square').addEventListener('click', function () { cropAnnotate(1); });
     if ($('ann-crop-43')) $('ann-crop-43').addEventListener('click', function () { cropAnnotate(4 / 3); });
     if ($('ann-crop-169')) $('ann-crop-169').addEventListener('click', function () { cropAnnotate(16 / 9); });
+    if ($('ann-zoom-out')) $('ann-zoom-out').addEventListener('click', function () { stepEditorZoom(-1); });
+    if ($('ann-zoom-in')) $('ann-zoom-in').addEventListener('click', function () { stepEditorZoom(1); });
+    if ($('ann-zoom-fit')) $('ann-zoom-fit').addEventListener('click', function () { setEditorZoom(1); });
+    if ($('ann-zoom')) $('ann-zoom').addEventListener('input', function () { setEditorZoom(Number(this.value) / 100); });
+    if ($('ann-brush-size')) $('ann-brush-size').addEventListener('input', updateAnnBrushSize);
     if ($('ann-apply')) $('ann-apply').addEventListener('click', applyAnnotate);
     if ($('ann-cancel')) $('ann-cancel').addEventListener('click', closeAnnotate);
+    if ($('annotate-overlay')) $('annotate-overlay').addEventListener('click', function (e) { if (e.target === this) closeAnnotate(); });
     if ($('annotate-canvas')) {
       var ac = $('annotate-canvas');
       ac.addEventListener('mousedown', annDown); ac.addEventListener('mousemove', annMove); window.addEventListener('mouseup', annUp);
-      ac.addEventListener('touchstart', annDown, { passive: false }); ac.addEventListener('touchmove', annMove, { passive: false }); ac.addEventListener('touchend', annUp);
+      ac.addEventListener('touchstart', annDown, { passive: false }); ac.addEventListener('touchmove', annMove, { passive: false }); ac.addEventListener('touchend', annUp); ac.addEventListener('touchcancel', cancelAnnGesture);
     }
+    if ($('annotate-canvas-wrap')) $('annotate-canvas-wrap').addEventListener('wheel', function (e) {
+      if (!(e.ctrlKey || e.metaKey) || $('annotate-overlay').classList.contains('hidden')) return;
+      e.preventDefault(); stepEditorZoom(e.deltaY < 0 ? 1 : -1, { clientX: e.clientX, clientY: e.clientY });
+    }, { passive: false });
+    window.addEventListener('resize', scheduleEditorZoomLayout);
+    window.addEventListener('blur', function () { if (annDrawing || annPanning || annPinch) cancelAnnGesture(); });
     if ($('cmd-input')) {
       $('cmd-input').addEventListener('input', function () { renderCmd(this.value); });
       $('cmd-input').addEventListener('keydown', function (e) {
@@ -5953,9 +9546,13 @@
     window.addEventListener('online', function () {
       $('offbar').classList.add('hidden'); updateNetworkIndicator(); var waiters = onlineWaiters.splice(0); waiters.forEach(function (resolve) { resolve(); }); refreshDestStatus(); maybeAutoResume();
     });
-    window.addEventListener('offline', function () { $('offbar').classList.remove('hidden'); updateNetworkIndicator(); });
+    window.addEventListener('offline', function () { $('offbar').classList.remove('hidden'); updateNetworkIndicator(); registerBackgroundSync(); });
+    function hasActiveTransferRisk() {
+      if (sending || activeXhrs.size) return true;
+      return items.some(function (it) { return ['sending', 'encrypting', 'optimizing', 'waiting-network'].indexOf(it.state) !== -1 && it.resumeOnOpen; });
+    }
     window.addEventListener('beforeunload', function (e) {
-      if (!sending) return;
+      if (!hasActiveTransferRisk()) return;
       e.preventDefault(); e.returnValue = '';
       return '';
     });
@@ -5975,7 +9572,7 @@
       var dismissTopOverlay = function () {
         if (scanning || !$('qr-overlay').classList.contains('hidden')) { stopScan(); return true; }
         var closers = [
-          ['lightbox-overlay', closeLightbox], ['cmd-overlay', closeCmd], ['annotate-overlay', closeAnnotate],
+          ['privacy-overlay', closePrivacyInspector], ['ocr-overlay', closeOcr], ['image-stats-overlay', closeImageDetailedStats], ['compare-overlay', closeCompare], ['lightbox-overlay', closeLightbox], ['cmd-overlay', closeCmd], ['annotate-overlay', closeAnnotate],
           ['voice-overlay', closeVoice], ['multisend-overlay', closeMultiSend], ['destqr-overlay', closeDestQr],
           ['help-overlay', closeHelp], ['pair-overlay', closePairingDialog], ['received-overlay', closeReceivedDialog],
           ['dest-form', closeDestForm], ['create-form', closeCreateForm]
@@ -5996,6 +9593,12 @@
         if (history.state && history.state.dxBack) return;
         // A back press consumed our guard and moved us to the app's base entry.
         if (dismissTopOverlay()) { if (pwaExitTimer) { clearTimeout(pwaExitTimer); pwaExitTimer = null; } pushBackGuard(); return; }
+        if (hasActiveTransferRisk()) {
+          toast(t('transferActiveExit'), 'warn');
+          if (pwaExitTimer) { clearTimeout(pwaExitTimer); pwaExitTimer = null; }
+          pushBackGuard();
+          return;
+        }
         // Bare app view: warn now. The guard is already popped, so a prompt second back
         // reaches the root entry and Android closes the PWA. If no second press arrives,
         // re-arm the guard so a later back warns again instead of exiting silently.
@@ -6004,7 +9607,15 @@
         pwaExitTimer = setTimeout(function () { pwaExitTimer = null; pushBackGuard(); }, 2500);
       });
     }
-    document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible' && (sending || ($('keep-awake') && $('keep-awake').checked))) acquireWake(); });
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible') {
+        if (sending || ($('keep-awake') && $('keep-awake').checked)) acquireWake();
+        checkSessionAutoLock();
+      }
+    });
+    ['pointerdown', 'keydown', 'touchstart'].forEach(function (eventName) {
+      document.addEventListener(eventName, rememberSessionActivity, { passive: true });
+    });
     document.addEventListener('keydown', function (e) {
       var tag = (e.target && e.target.tagName || '').toLowerCase();
       var typing = tag === 'input' || tag === 'textarea' || tag === 'select' || (e.target && e.target.isContentEditable);
@@ -6013,6 +9624,10 @@
       if (e.key === 'Escape') {
         if (scanning) stopScan();
         else if (!$('qr-overlay').classList.contains('hidden')) stopScan();
+        else if (!$('privacy-overlay').classList.contains('hidden')) closePrivacyInspector();
+        else if (!$('ocr-overlay').classList.contains('hidden')) closeOcr();
+        else if (!$('image-stats-overlay').classList.contains('hidden')) closeImageDetailedStats();
+        else if (!$('compare-overlay').classList.contains('hidden')) closeCompare();
         else if (!$('lightbox-overlay').classList.contains('hidden')) closeLightbox();
         else if (!$('cmd-overlay').classList.contains('hidden')) closeCmd();
         else if (!$('annotate-overlay').classList.contains('hidden')) closeAnnotate();
@@ -6026,8 +9641,12 @@
         return;
       }
       if (typing) return;
-      var anyOverlay = ['pair-overlay', 'destqr-overlay', 'help-overlay', 'qr-overlay', 'cmd-overlay', 'annotate-overlay', 'voice-overlay', 'multisend-overlay', 'lightbox-overlay']
-        .some(function (id) { return !$(id).classList.contains('hidden'); });
+      var anyOverlay = ['pair-overlay', 'destqr-overlay', 'help-overlay', 'qr-overlay', 'cmd-overlay', 'annotate-overlay', 'voice-overlay', 'multisend-overlay', 'lightbox-overlay', 'image-stats-overlay', 'compare-overlay', 'ocr-overlay', 'privacy-overlay']
+        .some(function (id) { return $(id) && !$(id).classList.contains('hidden'); });
+      // Number keys 1–5 jump straight to the matching bottom-nav panel.
+      if (!anyOverlay && !e.ctrlKey && !e.metaKey && !e.altKey && /^[1-5]$/.test(e.key)) {
+        e.preventDefault(); activatePwaPanel(['send', 'images', 'shares', 'activity', 'settings'][Number(e.key) - 1]); return;
+      }
       // Ctrl/Cmd+A selects the whole queue (feature 5) when it isn't empty.
       if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A') && !anyOverlay && sortedItems().length) { e.preventDefault(); toggleMasterSelect(true); return; }
       // Enter sends the queue when it is ready and nothing modal is open.
@@ -6074,6 +9693,7 @@
       if ($('confirm-delete')) $('confirm-delete').checked = localStorage.getItem('dx-pwa-confirm-delete') !== '0';
       if ($('confirm-replace')) $('confirm-replace').checked = localStorage.getItem('dx-pwa-confirm-replace') !== '0';
       if ($('storage-warning-threshold')) $('storage-warning-threshold').value = localStorage.getItem('dx-pwa-storage-warning-threshold') || '80';
+      if ($('auto-lock-select')) $('auto-lock-select').value = localStorage.getItem('dx-pwa-auto-lock-minutes') || '15';
       if ($('wifi-only')) $('wifi-only').checked = localStorage.getItem('dx-pwa-wifionly') === '1';
       if ($('confirm-mobile-data')) $('confirm-mobile-data').checked = localStorage.getItem('dx-pwa-confirm-mobile') !== '0';
       privacyNames = localStorage.getItem('dx-pwa-privacy-names') === '1';
@@ -6083,6 +9703,10 @@
       if ($('expire-select')) $('expire-select').value = localStorage.getItem('dx-pwa-expire') || '0';
       if ($('live-enable')) $('live-enable').checked = localStorage.getItem('dx-pwa-live') !== '0';
       if ($('live-push')) $('live-push').checked = localStorage.getItem('dx-pwa-push') === '1';
+      if ($('push-language')) {
+        var savedPushLang = localStorage.getItem('dx-pwa-push-lang') || lang || 'fr';
+        $('push-language').value = savedPushLang === 'en' || savedPushLang === 'es' ? savedPushLang : 'fr';
+      }
       if ($('img-quality')) $('img-quality').value = localStorage.getItem('dx-pwa-img-quality') || '0.86';
       if ($('img-maxdim')) $('img-maxdim').value = localStorage.getItem('dx-pwa-img-maxdim') || '2560';
       if ($('optimize-preset')) applyOptimizationPreset(localStorage.getItem('dx-pwa-opt-preset') || 'original', false);
@@ -6102,18 +9726,21 @@
         var el = $(id); if (!el) return;
         var key = id === 'history-card' ? 'dx-pwa-history-open' : 'dx-pwa-settings-open';
         try { el.open = localStorage.getItem(key) === '1'; } catch (_) {}
-        el.addEventListener('toggle', function () { try { localStorage.setItem(key, el.open ? '1' : '0'); } catch (_) {} updateToggleCardsLabel(); });
+        el.addEventListener('toggle', function () { try { localStorage.setItem(key, el.open ? '1' : '0'); } catch (_) {} });
       });
-      updateToggleCardsLabel(); applyAdvancedAccordion(false); startExpiryCountdowns(); renderTagColorManager();
+      applyAdvancedAccordion(false); startExpiryCountdowns(); renderTagColorManager();
       // Screen capture is desktop-only; reveal the tile only when supported (feature 19).
       if ($('pick-screen') && navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) $('pick-screen').classList.remove('hidden');
       // Restore the queue sort mode (feature 3), populate the sender address book (feature 12),
       // reveal "Share selection" when the OS supports file sharing (feature 15).
       if ($('sort-select')) { sortMode = localStorage.getItem('dx-pwa-sort') || 'added'; $('sort-select').value = sortMode; }
+      queueKindFilter = localStorage.getItem('dx-pwa-queue-kind') || 'all';
+      if (['all', 'images', 'videos', 'documents', 'waiting', 'done', 'errors'].indexOf(queueKindFilter) === -1) queueKindFilter = 'all';
       buildSenderList();
       if ($('bulk-share-btn') && navigator.canShare) $('bulk-share-btn').classList.remove('hidden');
       if ($('batch-note')) updateCharCount($('batch-note'), $('note-count'), 120);
     } catch (_) {}
+    startSessionAutoLock();
     if (!navigator.onLine) $('offbar').classList.remove('hidden');
     if (!('webkitdirectory' in $('pick-folder'))) $('pick-folder').parentElement.classList.add('hidden');
     if (!('BarcodeDetector' in window) || !navigator.mediaDevices) {
@@ -6133,7 +9760,15 @@
     } catch (_) {}
     // Pairing controls are independent of queue/image restoration. Fetch them now
     // so Appairer / Désappairer remain available even if legacy local data is bad.
+    var lockAfterClosedLaunch = closedLaunchNeedsLock();
     var deviceBootstrap = fetchDeviceStatus();
+    if (lockAfterClosedLaunch) {
+      await settleWithin(deviceBootstrap, 3000, null);
+      if (deviceInfo && !deviceInfo.unavailable && deviceInfo.csrf) {
+        var locked = await lockSessionAutomatically('closed');
+        if (locked) return;
+      }
+    }
     // Start restoring the image library before any queue/history migration. This
     // promise keeps running even if another optional subsystem encounters bad data.
     var imageBootstrap = bootstrapImageLibrary(readServerImageBootstrap()).catch(function () { return []; });
@@ -6173,32 +9808,52 @@
     protectPersistentStorage();
     var life = await metaGet('lifetime', null).catch(function () { return null; });
     if (life) { lifetimeFiles = Number(life.files) || 0; lifetimeBytes = Number(life.bytes) || 0; }
+    await importBackgroundCompletions().catch(function () {});
     lastBatchRecord = await metaGet('lastBatch', null).catch(function () { return null; });
     lastBatchSummary = await metaGet('lastBatchSummary', null).catch(function () { return null; });
+    await loadOcrIndex().catch(function () { ocrIndexRecords = []; renderOcrIndex(); });
     renderBuildTag();
-    applyLanguage(lang); updateNetworkIndicator(); renderDests(); renderQueue(); renderHistory(); renderImageActionHistory(); updatePwaNavBadges(); updateSendBtn(); updateResultActions(); updateStorageStatus(); updateSessionStats(); restoreSender();
+    applyLanguage(lang); updateNetworkIndicator(); renderDests(); renderQueue(); renderHistory(); renderImageActionHistory(); updatePwaNavBadges(); updateSendBtn(); updateResultActions(); updateStorageStatus(); updateSessionStats(); restoreSender(); renderErrorCenter(); applyNetworkRecommendation(lastNetworkTest); renderNetworkDashboard();
     if ($('keep-awake') && $('keep-awake').checked) applyKeepAwake();
     if (pairedClaim) { toast(t('devicePairedOk'), 'ok'); try { history.replaceState(null, '', '/app/'); } catch (_) {} }
     await loadSharedBatch();
     renderDests(); renderQueue(); updateSendBtn();
     if (items.length) toast(t('resumedQueue', { n: items.length }), 'ok');
+    // Network bootstraps are useful but must never hold the whole PWA hostage on
+    // a half-open mobile connection. Let slow requests continue in the background,
+    // while startup proceeds after a bounded window so resume/actions/navigation
+    // remain usable offline or behind a flaky reverse proxy.
     await Promise.allSettled([
-      deviceBootstrap,
-      refreshDestStatus(),
-      fetchDeviceStatus(),
-      refreshImageStats(true),
-      refreshAlbums(),
-      refreshImageDashboard(),
-      loadImageRetentionRules(),
-      loadHostShares(), // populate the Partages nav badge without waiting for a tab visit
-      loadReceptions()  // list ALL reception links (incl. non-PWA) in the Destination picker
+      settleWithin(deviceBootstrap, 12000, null),
+      settleWithin(refreshDestStatus(), 12000, null),
+      settleWithin(refreshImageStats(true), 12000, null),
+      settleWithin(refreshAlbums(), 12000, null),
+      settleWithin(refreshImageDashboard(), 12000, null),
+      settleWithin(loadImageRetentionRules(), 12000, null),
+      settleWithin(loadHostShares(), 12000, null), // populate the Partages nav badge without waiting for a tab visit
+      settleWithin(loadReceptions(), 12000, null)  // list ALL reception links (incl. non-PWA) in the Destination picker
     ]);
-    maybeAutoResume(); startImageStatsPolling();
-    connectLive(); // live inbox receptions (SSE) when enabled
+    maybeAutoResume(); startImageStatsPolling(); startNotificationPolling();
+    connectLive(); // live inbox receptions + image first-view events (SSE) when enabled
+    // Keep the server-side subscription registry in sync with the browser. This is
+    // intentionally silent (no permission prompt at launch): if permission is still
+    // granted, an existing/missing subscription is healed; otherwise the toggle is
+    // corrected so the UI never claims closed-app push is active when it is not.
+    if ($('live-push') && $('live-push').checked) {
+      syncPushSubscription().then(function (ok) {
+        if (ok) return;
+        $('live-push').checked = false;
+        try { localStorage.setItem('dx-pwa-push', '0'); } catch (_) {}
+      });
+    }
     if (launchAction === 'destination') { activatePwaPanel('send', { instant: true }); openDestForm(); }
     else if (launchAction === 'camera') { activatePwaPanel('send', { instant: true }); setTimeout(function () { $('pick-camera').click(); }, 150); }
     else if (launchAction === 'files') { activatePwaPanel('send', { instant: true }); setTimeout(function () { $('pick-files').click(); }, 150); }
     else if (launchAction === 'shares') { activatePwaPanel('shares', { instant: true }); }
+    else if (launchAction === 'copy-link') { setTimeout(function () { handleNotificationAction('copy-link', { destinationUrl: launchDestinationUrl }); }, 150); }
+    else if (launchAction === 'resend-last') { setTimeout(function () { handleNotificationAction('resend-last', {}); }, 150); }
+    else if (launchAction === 'send') { activatePwaPanel('send', { instant: true }); }
+    if (launchOpenCenter) { setTimeout(function () { openPwaNotificationCenter(launchCenterPanel); }, 250); } // feature 14 cold start
     // OS "Open with Direct-Xfer" (manifest file_handlers): receive the launched files.
     if ('launchQueue' in window && window.launchQueue && window.launchQueue.setConsumer) {
       window.launchQueue.setConsumer(function (params) {
@@ -6231,8 +9886,19 @@
     persistImageActionHistory();
     Array.from(imageRecordsByToken.values()).forEach(function (photo) { persistImageRecord(photo); });
   }
-  window.addEventListener('pagehide', checkpointPersistentUiState);
-  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') checkpointPersistentUiState(); });
+  window.addEventListener('pagehide', function () {
+    checkpointPersistentUiState();
+    if (items.some(function (it) { return it.backgroundReady && it.resumeOnOpen; })) registerBackgroundSync();
+    if (!logoutInProgress && !autoLockInProgress && autoLockMinutes() > 0) {
+      try { localStorage.setItem('dx-pwa-pagehide-at', String(Date.now())); } catch (_) {}
+    }
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'hidden') {
+      checkpointPersistentUiState();
+      if (items.some(function (it) { return it.backgroundReady && it.resumeOnOpen; })) registerBackgroundSync();
+    }
+  });
 
   // On-device diagnostic (open /app/?diag=1). Reports every layer of the image
   // pipeline so a mobile-only failure can be pinpointed without desktop dev tools.

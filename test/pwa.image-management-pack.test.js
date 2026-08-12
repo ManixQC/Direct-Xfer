@@ -39,11 +39,13 @@ feature(4, 'expired images can be hidden without losing management access', () =
   assert.match(js, /includeInactive=1/);
 });
 
-feature(5, 'single-image revocation has an undo window', () => {
+feature(5, 'single-image revocation has an inline five-second undo window', () => {
   assert.match(js, /function scheduleImageRevoke\(/);
   assert.match(js, /pending-revoke/);
-  assert.match(js, /showUndo\(photo\.name/);
-  assert.match(js, /}, 8500\);/);
+  assert.match(js, /imglink-revoke-undo/);
+  assert.match(js, /imgCancelRevoke/);
+  assert.match(js, /deadline = Date\.now\(\) \+ 5000/);
+  assert.match(js, /}, 5000\);/);
 });
 
 feature(6, 'each image exposes a direct public-link action', () => {
@@ -59,7 +61,7 @@ feature(6, 'each image exposes a direct public-link action', () => {
 feature(7, 'instant search includes names, tokens, tags and private notes', () => {
   assert.match(html, /id="img-search"[^>]*type="search"/);
   assert.match(js, /\[photo\.name, token, \(photo\.tags \|\| \[\]\)\.join\(' '\), photo\.note \|\| ''\]/);
-  assert.match(js, /addEventListener\('input', applyImageView\)/);
+  assert.match(js, /addEventListener\('input', function \(\) \{ scheduleImageOcrSearch\(this\.value\); applyImageView\(\); \}\)/);
 });
 
 feature(8, 'quick filters cover active, popular, large, expiring, favorite and protected links', () => {
@@ -67,16 +69,17 @@ feature(8, 'quick filters cover active, popular, large, expiring, favorite and p
   assert.match(js, /filter === 'protected'/);
 });
 
-feature(9, 'favorite image variant controls single defaults and bulk copy', () => {
-  assert.match(html, /id="img-default-variant"/);
-  assert.match(js, /function imageDefaultVariant\(\)/);
-  assert.match(js, /var kind = imageDefaultVariant\(\);/);
+feature(9, 'automatic primary variant replaces the removed favorite-format setting', () => {
+  assert.doesNotMatch(html, /id="img-default-variant"/);
+  assert.doesNotMatch(js, /function imageDefaultVariant\(\)/);
+  assert.match(js, /var IMAGE_PRIMARY_VARIANT = 'auto';/);
+  assert.match(js, /var kind = IMAGE_PRIMARY_VARIANT;/);
 });
 
 feature(10, 'new image links can be copied automatically', () => {
   assert.match(html, /id="img-auto-copy"/);
   assert.match(js, /\$\('img-auto-copy'\) && \$\('img-auto-copy'\)\.checked/);
-  assert.match(js, /formatLink\(imageVariantUrl\(photo, imageDefaultVariant\(\)\)/);
+  assert.match(js, /formatLink\(imageVariantUrl\(photo, IMAGE_PRIMARY_VARIANT\)/);
 });
 
 feature(11, 'a favorite expiry is applied server-side and remembered', () => {
@@ -139,7 +142,8 @@ feature(19, 'advanced rename templates support name, extension, sequence, date a
 
 feature(20, 'links expiring within 24 hours trigger in-app and optional system alerts', () => {
   assert.match(js, /function warnExpiringImages\(/);
-  assert.match(js, /photo\.expiresAt - now > 86400000/);
+  assert.match(js, /var deadline = imageExpiryDeadline\(photo\)/);
+  assert.match(js, /deadline - now > 86400000/);
   assert.match(js, /new Notification\('Direct-Xfer'/);
 });
 
@@ -154,7 +158,7 @@ feature(21, 'selected images can form public manageable albums', () => {
 feature(22, 'the PWA includes a graphical image statistics dashboard', () => {
   assert.match(html, /id="img-dashboard-canvas"/);
   assert.match(js, /function drawImageDashboard\(/);
-  assert.match(js, /\/app\/images\/dashboard\?days=7/);
+  assert.match(js, /\/app\/images\/dashboard\?days=' \+ encodeURIComponent\(days\)/);
   assert.match(server, /res\.json\(\{ totals: \{ images: photos\.length/);
 });
 

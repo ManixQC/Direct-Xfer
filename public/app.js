@@ -311,6 +311,7 @@ const I18N = {
     'cfg.blockExt': 'Types bloqués (séparés par des virgules)',
     'cfg.encrypt': 'Activer le chiffrement de bout en bout par défaut',
     'cfg.limits': 'Limites globales',
+    'cfg.neverExpireNew':'Toujours créer les nouveaux liens sans expiration', 'cfg.confirmRevoke':'Demander confirmation avant de révoquer un partage', 'cfg.diskWarn':'Alerte si espace disque libre ≤ (%)',
     'cfg.globalRate': 'Plafond de débit serveur (Ko/s)',
     'cfg.globalRateHint': 'Plafond appliqué à chaque téléchargement, en plus des limites par lien.',
     'cfg.schedEnable': 'Plafonner la bande passante sur une plage horaire',
@@ -332,6 +333,7 @@ const I18N = {
     'cfg.leakHint': 'Envoie une notification (via le webhook / e-mail ci-dessus) quand un même lien est téléchargé depuis au moins ce nombre de pays dans la fenêtre — signe possible d’une fuite. Nécessite la géolocalisation des IP activée.',
     'cfg.auditJson': 'Exporter le journal d’audit (JSON)',
     'cfg.auditCsv': 'Exporter le journal d’audit (CSV)',
+    'cfg.auditProof': 'Exporter la preuve signée',
     'cfg.auditHint': 'Le journal des actions admin (connexions, création/révocation de liens, changements de réglages, alertes).',
     'cfg.bkTitle': 'Sauvegarde complète planifiée',
     'cfg.bkIntro': 'Une sauvegarde complète regroupe tout le store (liens + réglages), le journal des transferts et les notes secrètes dans un seul fichier — chiffré avec DATA_KEY si défini. Envoyé vers un dossier, WebDAV ou S3.',
@@ -364,6 +366,24 @@ const I18N = {
     'cfg.bkDownload': 'Télécharger une sauvegarde',
     'cfg.bkRestore': 'Restaurer depuis un fichier…',
     'cfg.bkSaveHint': 'Enregistrez vos réglages avant « Sauvegarder maintenant » / « Tester ». La restauration remplace tout et est irréversible.',
+    'connector.title': 'Connecteurs de stockage',
+    'connector.hint': 'Importez et exportez des fichiers par une destination rclone : SFTP, SMB, WebDAV, Google Drive, OneDrive, Dropbox ou Box. Les identifiants restent dans /data/rclone/rclone.conf.',
+    'connector.name': 'Nom', 'connector.type': 'Type', 'connector.remote': 'Destination rclone',
+    'connector.root': 'Dossier racine (facultatif)', 'connector.readOnly': 'Connecteur en lecture seule',
+    'connector.readOnlyShort': 'lecture seule', 'connector.add': 'Ajouter le connecteur', 'connector.save': 'Enregistrer',
+    'connector.choose': 'Connecteur', 'connector.remotePath': 'Chemin du fichier distant',
+    'connector.localPath': 'Chemin local/hôte', 'connector.transferHint': "Pour l’import, le champ local est un chemin facultatif sous /Direct-Xfer/Imports. Pour l’export, indiquez un fichier hôte, reçu ou image existant.",
+    'connector.import': 'Importer', 'connector.export': 'Exporter', 'connector.refresh': 'Actualiser',
+    'connector.ready': '{version} prêt', 'connector.unavailable': 'rclone est indisponible dans ce conteneur.',
+    'connector.none': 'Aucun connecteur configuré.', 'connector.test': 'Tester', 'connector.testing': 'Test en cours…',
+    'connector.testOk': 'Connexion réussie.', 'connector.testFail': 'Échec du test du connecteur.',
+    'connector.edit': 'Modifier', 'connector.delete': 'Supprimer', 'connector.deleteConfirm': 'Supprimer le connecteur « {name} » ?',
+    'connector.deleteFail': 'Échec de la suppression.', 'connector.saved': 'Connecteur enregistré.',
+    'connector.saveFail': 'Échec de l’enregistrement.', 'connector.required': 'Remplissez les chemins et champs requis.',
+    'connector.queued': 'Transfert ajouté à la file.', 'connector.transferFail': 'Impossible de démarrer le transfert.',
+    'connector.cancel': 'Annuler', 'connector.loadFail': 'Impossible de charger les connecteurs.',
+    'connector.status.queued': 'en attente', 'connector.status.running': 'en cours',
+    'connector.status.completed': 'terminé', 'connector.status.failed': 'échoué', 'connector.status.cancelled': 'annulé',
     'cfg.bkNever': 'Aucune sauvegarde effectuée pour l’instant.',
     'cfg.bkLastOk': 'Dernière sauvegarde : {when} → {dest} ✓',
     'cfg.bkLastFail': 'Dernière sauvegarde échouée : {when} — {err}',
@@ -398,6 +418,7 @@ const I18N = {
     'cfg.allowlistHint': 'Vide = comportement par défaut (réseau local). Le loopback est toujours autorisé. Une mauvaise entrée peut vous verrouiller dehors.',
     'cfg.ransomEnable': 'Protection ransomware / anomalies destructrices',
     'cfg.ransomHint': 'Bloque temporairement un client public après des suppressions massives ou une rafale d’uploads aux noms typiques de ransomware. Aucun fichier n’est supprimé automatiquement.',
+    'cfg.ransomSuspendLink': 'Suspendre aussi les écritures sur le lien de réception/collaboration touché',
     'cfg.ransomDelete': 'Seuil suppressions / 60 s',
     'cfg.ransomUpload': 'Uploads suspects / 120 s',
     'cfg.ransomBlock': 'Durée du blocage (minutes)',
@@ -407,10 +428,10 @@ const I18N = {
     'cfg.ransomUnblock': 'Débloquer',
     'cfg.dlpTitle': 'Data Loss Prevention (DLP)', 'cfg.dlpEnable': 'Analyser les partages sortants pour détecter les données sensibles',
     'cfg.dlpHint': 'Analyse locale avant publication. Les secrets détectés sont toujours masqués dans les journaux et l’interface.',
-    'cfg.dlpMode': 'Politique', 'cfg.dlpWarn': 'Avertir + confirmer', 'cfg.dlpBlock': 'Bloquer', 'cfg.dlpLog': 'Journaliser seulement',
+    'cfg.dlpMode': 'Politique de secours', 'cfg.dlpWarn': 'Avertir + confirmer', 'cfg.dlpBlock': 'Bloquer', 'cfg.dlpLog': 'Journaliser seulement', 'cfg.dlpQuarantine':'Quarantainer', 'cfg.dlpRules':'Réaction automatique selon la gravité', 'cfg.dlpLow':'Faible', 'cfg.dlpMedium':'Moyenne', 'cfg.dlpHigh':'Élevée', 'cfg.dlpCritical':'Critique', 'cfg.dlpQuarantineView':'Quarantaine',
     'cfg.dlpMaxFiles': 'Fichiers max par analyse', 'cfg.dlpMaxMb': 'Taille max par fichier (Mo)', 'cfg.dlpOcr': 'Utiliser l’OCR serveur pour les images/PDF scannés',
     'dlp.warningTitle': 'DLP : contenu sensible détecté', 'dlp.warningConfirm': '{n} détection(s) sensible(s) ({level}) dans {files} fichier(s). Continuer et publier quand même ?', 'dlp.incompleteConfirm': 'L’analyse DLP est incomplète ({skipped} ignoré(s), {ocr} erreur(s) OCR, {scan} erreur(s) de lecture, {archive} élément(s) d’archive non inspecté(s)). Publier quand même ?', 'dlp.ocrUnavailableConfirm': 'Analyse DLP du texte (OCR) indisponible sur le serveur : les images/PDF n’ont pas été inspectés pour du contenu sensible. Publier quand même ?',
-    'dlp.blocked': 'Publication bloquée par la politique DLP.', 'dlp.badge': 'DLP {n}',
+    'dlp.blocked': 'Publication bloquée par la politique DLP.', 'dlp.quarantined': 'Contenu placé en quarantaine par la politique DLP.', 'dlp.quarantineFailed': 'La mise en quarantaine DLP a échoué; aucun contenu n’a été publié.', 'dlp.badge': 'DLP {n}',
     'cfg.allowlistConfirm': 'Restreindre l’accès admin à ces IP ? Une erreur peut vous empêcher d’accéder à l’administration (seul le loopback restera autorisé).',
     'cfg.qrDefault': 'Afficher le QR code juste après la création d’un lien',
     'cfg.maxUpload': 'Taille max / fichier reçu (Mo)',
@@ -735,6 +756,7 @@ const I18N = {
     'dash.kpiUp': 'Réceptions',
     'dash.kpiVisitors': 'Visiteurs uniques',
     'dash.kpiShares': 'Liens actifs',
+    'dash.kpiDiskFree': 'Espace disque libre',
     'dash.activity': 'Activité',
     'dash.periodAll': 'Tout',
     'p3.insights': 'Analyses et alertes automatiques',
@@ -1286,7 +1308,7 @@ const I18N = {
     'sh.pauseTitle': 'Mettre en pause (désactiver sans supprimer)',
     'sh.resumeTitle': 'Réactiver ce lien',
     'sh.paused2': 'Lien mis en pause',
-    'sh.resumed': 'Lien réactivé',
+    'sh.resumed': 'Lien réactivé', 'sh.reactivate': '↻ Réactiver', 'sh.reactivateTitle': 'Réactiver ce lien révoqué si ses données existent encore', 'sh.reactivateOk': 'Lien révoqué réactivé ✓', 'sh.reactivateFail': 'Réactivation impossible', 'sh.reactivateMissing': 'Les données de ce lien ne sont plus disponibles',
     'sh.pauseFail': 'Échec de la mise en pause',
     'sh.noteBtn': '📝 Note',
     'sh.noteTitle': 'Note privée (visible par l’admin uniquement)',
@@ -1313,16 +1335,18 @@ const I18N = {
     'sh.expirySet': 'Expiration mise à jour', 'sh.expiryFail': 'Échec de la mise à jour de l’expiration',
     'sh.extend1d': '+1 j', 'sh.extend7d': '+7 j', 'sh.extend30d': '+30 j', 'sh.extended': 'Expiration prolongée', 'sh.extendFail': 'Échec de la prolongation',
     'sh.createdTip': 'Créé {v}', 'sh.emojiTip': 'Emoji du lien', 'sh.densityTip': 'Densité : compacte / confortable',
-    'sh.neverUsed': 'Jamais utilisé', 'sh.veryActive': 'Très actif', 'sh.changeHistory': 'Historique des changements', 'sh.historyBtn': '🕘 Historique',
-    'sh.historyLoading': 'Chargement…', 'sh.historyEmpty': 'Aucun changement enregistré.', 'sh.historyFail': 'Impossible de charger l’historique', 'sh.historyAction.created': 'Créé', 'sh.historyAction.revoked': 'Révoqué', 'sh.historyAction.restored': 'Restauré', 'sh.historyAction.created-from-duplicate': 'Créé par duplication',
+    'sh.neverUsed': 'Jamais utilisé', 'sh.neverDownloaded':'Jamais téléchargé', 'sh.totalSize':'Taille totale', 'sh.pinnedOnly':'★ Épinglés', 'sh.createdLinkReady':'Lien prêt à partager', 'sh.copyUrl':'📋 Copier l’URL', 'sh.veryActive': 'Très actif', 'sh.changeHistory': 'Historique des changements', 'sh.historyBtn': '🕘 Historique',
+    'sh.historyLoading': 'Chargement…', 'sh.historyEmpty': 'Aucun changement enregistré.', 'sh.historyFail': 'Impossible de charger l’historique', 'sh.historyAction.created': 'Créé', 'sh.historyAction.revoked': 'Révoqué', 'sh.historyAction.restored': 'Restauré', 'sh.historyAction.created-from-duplicate': 'Créé par duplication', 'sh.historyAction.reactivated': 'Réactivé',
     'sh.changedFields': 'Champs : {fields}', 'sh.copiedLinks': '{n} lien(s) copié(s)', 'sh.copyNoUrl': 'Aucun lien copiable dans la sélection', 'sh.pageSizeTitle': 'Nombre de liens par page', 'sh.page10': '10 / page', 'sh.page25': '25 / page', 'sh.page50': '50 / page', 'sh.page100': '100 / page', 'sh.pagePrev': '← Précédent', 'sh.pageNext': 'Suivant →', 'sh.pageLabel': '{from}–{to} sur {total}', 'sh.bulkSelectPage': '☑ Sélectionner la page', 'sh.bulkClearPage': '☐ Désélectionner la page',
     'sh.renameAction': '✎',
     'sh.log': '🧾 Journal',
     'sh.logTitle': 'Journal d’accès de ce lien',
     'filehist.button': '📥 Par fichier', 'filehist.title': 'Historique des téléchargements par fichier', 'filehist.loading': 'Chargement…', 'filehist.empty': 'Aucun téléchargement de fichier enregistré.', 'filehist.fail': 'Impossible de charger l’historique par fichier', 'filehist.transfers': '{n} transfert(s)', 'filehist.completed': '{n} réussi(s)', 'filehist.last': 'Dernier : {v}', 'filehist.truncated': 'Historique partiel : le journal dépasse la fenêtre lue ou un ZIP contenait plus de 500 éléments.',
     'recv.button': '📥 Fichiers reçus', 'recv.title': 'Fichiers reçus', 'recv.loading': 'Chargement…', 'recv.empty': 'Aucun fichier reçu pour l’instant.', 'recv.count': '{n} fichier(s)', 'recv.download': 'Télécharger', 'recv.fail': 'Impossible de charger les fichiers reçus.',
-    'trash.open': '🗑 Corbeille', 'trash.title': 'Corbeille', 'trash.empty': 'La corbeille est vide.', 'trash.restore': '↩ Restaurer', 'trash.purge': 'Supprimer définitivement', 'trash.purgeAll': 'Purger tout', 'trash.restoreOk': 'Partage restauré', 'trash.restoreFail': 'Restauration impossible', 'trash.purgeOk': 'Élément supprimé définitivement', 'trash.purgeFail': 'Suppression définitive impossible', 'trash.purgeConfirm': 'Supprimer définitivement « {name} » ? Cette action est irréversible.', 'trash.purgeAllConfirm': 'Purger définitivement toute la corbeille ?', 'trash.retention': 'Conservation : {n} jour(s)',
-    'activity.open': '◉ Activité en direct', 'activity.title': 'Activité en direct', 'activity.clear': 'Effacer la vue', 'activity.hint': 'Envois, téléchargements, OCR, antivirus, erreurs et actions auditées apparaissent ici en temps réel.', 'activity.connected': 'Connecté · événements en temps réel', 'activity.reconnecting': 'Reconnexion…', 'activity.empty': 'Aucune activité récente.',
+    'trash.restoreSelected':'Restaurer la sélection', 'trash.restoreSelectedN':'Restaurer la sélection ({n})', 'trash.selected':'{n} sélectionné(s)', 'trash.select':'Sélectionner cet élément', 'trash.restoreSelectedOk':'{n} élément(s) restauré(s)', 'trash.restoreSelectedFail':'{n} restauration(s) impossible(s)',
+    'trash.open': '🗑 Corbeille', 'trash.title': 'Corbeille', 'trash.empty': 'La corbeille est vide.', 'trash.restore': '↩ Restaurer', 'trash.purge': 'Supprimer définitivement', 'trash.purgeAll': 'Tout supprimer définitivement', 'trash.restoreOk': 'Partage restauré', 'trash.restoreFail': 'Restauration impossible', 'trash.purgeOk': 'Élément supprimé définitivement', 'trash.purgeFail': 'Suppression définitive impossible', 'trash.purgeConfirm': 'Supprimer définitivement « {name} » ? Cette action est irréversible.', 'trash.purgeAllConfirm': 'Supprimer définitivement tous les éléments de la corbeille ? Cette action est irréversible.', 'trash.retention': 'Conservation : {n} jour(s)',
+    'undo.open': '↶ Historique / Annuler', 'undo.title': 'Historique d’actions', 'undo.subtitle': 'Consultez les dernières actions administratives et annulez celles qui sont encore réversibles.', 'undo.empty': 'Aucune action récente.', 'undo.btn': '↶ Annuler', 'undo.done': 'Annulée', 'undo.unavailable': 'Plus annulable', 'undo.ok': 'Action annulée', 'undo.fail': 'Annulation impossible', 'undo.confirm': 'Annuler « {label} » ?', 'undo.type.settings': 'Configuration modifiée', 'undo.type.stats': 'Statistiques réinitialisées', 'undo.type.recipient': 'Destinataire retiré', 'undo.type.ipnames': 'Surnoms client effacés', 'undo.type.share': 'Partage supprimé', 'undo.reason.changed': 'État modifié depuis', 'undo.reason.restored': 'Déjà restaurée', 'undo.reason.purged': 'Élément supprimé définitivement', 'undo.reason.legacy': 'Ancienne entrée non sûre', 'undo.reason.forbidden': 'Lecture seule', 'undo.reason.gone': 'Partage introuvable', 'undo.reason.unsupported': 'Annulation non prise en charge', 'undo.reason.restoreConflict': 'Conflit avec un lien actif', 'undo.reason.tooLarge': 'Données d’annulation trop volumineuses', 'undo.loadFail': 'Impossible de charger l’historique',
+    'activity.open': '◉ Historique d’activité', 'activity.title': 'Historique d’activité', 'activity.sectionTitle': 'Activité', 'activity.back': 'Retour aux partages', 'activity.sectionHint': 'Historique persistant des événements pertinents de Direct-Xfer.', 'activity.openFull': 'Ouvrir l’historique complet', 'activity.clear': 'Effacer la vue', 'activity.hint': 'Les transferts pertinents, événements de sécurité, actions administratives et changements PWA sont conservés ici et mis à jour en temps réel.', 'activity.connected': 'Historique chargé · événements en temps réel', 'activity.reconnecting': 'Reconnexion…', 'activity.empty': 'Aucune activité enregistrée.', 'activity.searchPh': 'Rechercher une activité…', 'activity.filtersAria': 'Filtres d’activité', 'activity.kindAria': 'Type d’activité', 'activity.kindAll': 'Tous les types', 'activity.kindTransfer': 'Transferts', 'activity.kindAdmin': 'Administration', 'activity.kindSecurity': 'Sécurité', 'activity.kindVisitor': 'Visiteurs', 'activity.kindSystem': 'Système', 'activity.shareAria':'Partage', 'activity.shareAll':'Tous les partages', 'activity.imagesOnly':'Images seulement', 'activity.pwaOnly':'PWA seulement', 'activity.hideRoutine':'Masquer le système routinier', 'activity.resetFilters': 'Effacer les filtres', 'activity.summary': '{shown} affichée(s) sur {total}', 'activity.loadFail': 'Impossible de charger l’historique d’activité.',
     'cfg.trashRetention': 'Conservation de la corbeille (jours, 0 = garder indéfiniment)',
     'cfg.autoArchiveExpired': 'Archiver automatiquement les liens expirés après (jours, 0 = désactivé)',
     'cfg.autoArchiveExpiredHint': 'Masque les anciens liens de la liste principale sans supprimer leurs fichiers gérés.',
@@ -1346,8 +1370,8 @@ const I18N = {
     'cfg.expiryPresets': 'Préréglages d’expiration rapides',
     'cfg.expiryPresetsHint': 'Durées séparées par des virgules proposées dans les fenêtres de lien — ex. 6h, 3d, 2w, 1mo. « Jamais » est toujours disponible.',
     'search.btn': '🔎 Recherche universelle',
-    'search.ph': '🔎 Noms, PDF/OCR, Office, texte et archives…',
-    'search.semantic': 'Sémantique', 'search.semanticBadge': 'Sémantique',
+    'search.ph': '🔎 Liens, utilisateurs, journaux, PDF/OCR, Office…',
+    'search.semantic': 'Sémantique', 'search.semanticBadge': 'Sémantique', 'search.scopeAll': 'Tout', 'search.scopeContent': 'Fichiers / contenu', 'search.scopeLinks': 'Liens', 'search.scopeUsers': 'Utilisateurs', 'search.scopeLogs': 'Journaux', 'search.kindUser': 'Utilisateur', 'search.kindLog': 'Journal', 'search.kindLink': 'Lien',
     'search.indexLoading': 'Chargement de l’index…',
     'search.indexReady': 'Index : {n} fichier(s) · {when}',
     'search.indexBuilding': 'Indexation en cours · {n} fichier(s) disponibles',
@@ -1565,6 +1589,7 @@ const I18N = {
     'pk.hostInaccessible': 'Système de fichiers hôte inaccessible (montez /:/host:ro).',
     'pk.preview': '👁 Prévisualiser',
     'pk.previewUnsupported': 'Aperçu impossible dans ce navigateur pour ce format — le codec n’est pas pris en charge.',
+    'pk.previewTruncated': 'Aperçu tronqué pour protéger les performances. Le fichier complet n’a pas été chargé.',
     'pw.title': 'Changer le mot de passe',
     'pw.firstTitle': 'Définissez votre mot de passe',
     'pw.firstLoginHint':
@@ -1832,6 +1857,7 @@ const I18N = {
     'cfg.blockExt': 'Blocked extensions (comma-separated)',
     'cfg.encrypt': 'Enable end-to-end encryption by default',
     'cfg.limits': 'Global limits',
+    'cfg.neverExpireNew':'Always create new links without expiration', 'cfg.confirmRevoke':'Ask for confirmation before revoking a share', 'cfg.diskWarn':'Alert when free disk space ≤ (%)',
     'cfg.globalRate': 'Server-wide download cap (KB/s)',
     'cfg.globalRateHint': 'Hard ceiling applied to every download, on top of any per-link limit.',
     'cfg.schedEnable': 'Cap bandwidth during a time window',
@@ -1853,6 +1879,7 @@ const I18N = {
     'cfg.leakHint': 'Sends one notification (over the webhook / e-mail above) when a single link is downloaded from at least this many countries in the window — a sign the link may have leaked. Needs IP geolocation enabled.',
     'cfg.auditJson': 'Export audit log (JSON)',
     'cfg.auditCsv': 'Export audit log (CSV)',
+    'cfg.auditProof': 'Export signed proof',
     'cfg.auditHint': 'The admin action log (logins, link create/revoke, settings changes, alerts).',
     'cfg.bkTitle': 'Scheduled full backup',
     'cfg.bkIntro': 'A full backup bundles the whole store (links + settings), the transfer journal and the secret notes into one file — encrypted with DATA_KEY when it is set. Pushed to a folder, WebDAV or S3.',
@@ -1885,6 +1912,24 @@ const I18N = {
     'cfg.bkDownload': 'Download backup',
     'cfg.bkRestore': 'Restore from file…',
     'cfg.bkSaveHint': 'Save your settings before Backup now / Test. Restore replaces everything and cannot be undone.',
+    'connector.title': 'Storage connectors',
+    'connector.hint': 'Import and export files through an rclone remote: SFTP, SMB, WebDAV, Google Drive, OneDrive, Dropbox or Box. Credentials stay in /data/rclone/rclone.conf.',
+    'connector.name': 'Name', 'connector.type': 'Type', 'connector.remote': 'rclone remote',
+    'connector.root': 'Root folder (optional)', 'connector.readOnly': 'Read-only connector',
+    'connector.readOnlyShort': 'read only', 'connector.add': 'Add connector', 'connector.save': 'Save',
+    'connector.choose': 'Connector', 'connector.remotePath': 'Remote file path',
+    'connector.localPath': 'Local/host file path', 'connector.transferHint': 'For import, the local field is an optional path below /Direct-Xfer/Imports. For export, enter an existing host, reception or image file.',
+    'connector.import': 'Import', 'connector.export': 'Export', 'connector.refresh': 'Refresh',
+    'connector.ready': '{version} ready', 'connector.unavailable': 'rclone is unavailable in this container.',
+    'connector.none': 'No connector configured.', 'connector.test': 'Test', 'connector.testing': 'Testing…',
+    'connector.testOk': 'Connection successful.', 'connector.testFail': 'Connector test failed.',
+    'connector.edit': 'Edit', 'connector.delete': 'Delete', 'connector.deleteConfirm': 'Delete connector “{name}”?',
+    'connector.deleteFail': 'Could not delete connector.', 'connector.saved': 'Connector saved.',
+    'connector.saveFail': 'Could not save connector.', 'connector.required': 'Complete the required fields and paths.',
+    'connector.queued': 'Transfer queued.', 'connector.transferFail': 'Could not start the transfer.',
+    'connector.cancel': 'Cancel', 'connector.loadFail': 'Could not load storage connectors.',
+    'connector.status.queued': 'queued', 'connector.status.running': 'running',
+    'connector.status.completed': 'completed', 'connector.status.failed': 'failed', 'connector.status.cancelled': 'cancelled',
     'cfg.bkNever': 'No backup taken yet.',
     'cfg.bkLastOk': 'Last backup: {when} → {dest} ✓',
     'cfg.bkLastFail': 'Last backup failed: {when} — {err}',
@@ -1919,6 +1964,7 @@ const I18N = {
     'cfg.allowlistHint': 'Empty = default (local network). Loopback is always allowed. A wrong entry can lock you out.',
     'cfg.ransomEnable': 'Ransomware / destructive anomaly protection',
     'cfg.ransomHint': 'Temporarily blocks a public client after mass deletion or a ransomware-like upload burst. It never deletes files automatically.',
+    'cfg.ransomSuspendLink': 'Also suspend writes on the affected reception/collaboration link',
     'cfg.ransomDelete': 'Delete threshold / 60 s',
     'cfg.ransomUpload': 'Suspicious uploads / 120 s',
     'cfg.ransomBlock': 'Block duration (minutes)',
@@ -1928,10 +1974,10 @@ const I18N = {
     'cfg.ransomUnblock': 'Unblock',
     'cfg.dlpTitle': 'Data Loss Prevention (DLP)', 'cfg.dlpEnable': 'Scan outgoing shares for sensitive data',
     'cfg.dlpHint': 'Local scan before publishing. Detected secrets are always redacted in logs and the interface.',
-    'cfg.dlpMode': 'Policy', 'cfg.dlpWarn': 'Warn + confirm', 'cfg.dlpBlock': 'Block', 'cfg.dlpLog': 'Log only',
+    'cfg.dlpMode': 'Fallback policy', 'cfg.dlpWarn': 'Warn + confirm', 'cfg.dlpBlock': 'Block', 'cfg.dlpLog': 'Log only', 'cfg.dlpQuarantine':'Quarantine', 'cfg.dlpRules':'Automatic reaction by severity', 'cfg.dlpLow':'Low', 'cfg.dlpMedium':'Medium', 'cfg.dlpHigh':'High', 'cfg.dlpCritical':'Critical', 'cfg.dlpQuarantineView':'Quarantine',
     'cfg.dlpMaxFiles': 'Max files per scan', 'cfg.dlpMaxMb': 'Max size per file (MB)', 'cfg.dlpOcr': 'Use server OCR for images/scanned PDFs',
     'dlp.warningTitle': 'DLP: sensitive content detected', 'dlp.warningConfirm': '{n} sensitive finding(s) ({level}) in {files} file(s). Publish anyway?', 'dlp.incompleteConfirm': 'The DLP scan is incomplete ({skipped} skipped, {ocr} OCR error(s), {scan} read error(s), {archive} archive item(s) not inspected). Publish anyway?', 'dlp.ocrUnavailableConfirm': 'Server-side text scanning (OCR) is unavailable, so images/PDFs weren’t inspected for sensitive text. Publish anyway?',
-    'dlp.blocked': 'Publishing blocked by the DLP policy.', 'dlp.badge': 'DLP {n}',
+    'dlp.blocked': 'Publishing blocked by the DLP policy.', 'dlp.quarantined': 'Content was quarantined by the DLP policy.', 'dlp.quarantineFailed': 'DLP quarantine failed; no content was published.', 'dlp.badge': 'DLP {n}',
     'cfg.allowlistConfirm': 'Restrict admin access to these IPs? A mistake can lock you out of the admin (only loopback will remain allowed).',
     'cfg.qrDefault': 'Show the QR code right after creating a link',
     'cfg.maxUpload': 'Max size / received file (MB)',
@@ -2256,6 +2302,7 @@ const I18N = {
     'dash.kpiUp': 'Uploads received',
     'dash.kpiVisitors': 'Unique visitors',
     'dash.kpiShares': 'Active links',
+    'dash.kpiDiskFree': 'Free disk space',
     'dash.activity': 'Activity',
     'dash.periodAll': 'All',
     'p3.insights': 'Insights & automatic alerts',
@@ -2806,7 +2853,7 @@ const I18N = {
     'sh.pauseTitle': 'Pause (deactivate without deleting)',
     'sh.resumeTitle': 'Reactivate this link',
     'sh.paused2': 'Link paused',
-    'sh.resumed': 'Link reactivated',
+    'sh.resumed': 'Link reactivated', 'sh.reactivate': '↻ Reactivate', 'sh.reactivateTitle': 'Reactivate this revoked link if its backing data still exists', 'sh.reactivateOk': 'Revoked link reactivated ✓', 'sh.reactivateFail': 'Could not reactivate link', 'sh.reactivateMissing': 'This link’s backing data is no longer available',
     'sh.pauseFail': 'Could not pause the link',
     'sh.noteBtn': '📝 Note',
     'sh.noteTitle': 'Private note (admin-only)',
@@ -2833,16 +2880,18 @@ const I18N = {
     'sh.expirySet': 'Expiry updated', 'sh.expiryFail': 'Could not update expiry',
     'sh.extend1d': '+1 d', 'sh.extend7d': '+7 d', 'sh.extend30d': '+30 d', 'sh.extended': 'Expiry extended', 'sh.extendFail': 'Could not extend expiry',
     'sh.createdTip': 'Created {v}', 'sh.emojiTip': 'Link emoji', 'sh.densityTip': 'Density: compact / comfortable',
-    'sh.neverUsed': 'Never used', 'sh.veryActive': 'Very active', 'sh.changeHistory': 'Change history', 'sh.historyBtn': '🕘 History',
-    'sh.historyLoading': 'Loading…', 'sh.historyEmpty': 'No recorded changes.', 'sh.historyFail': 'Could not load change history', 'sh.historyAction.created': 'Created', 'sh.historyAction.revoked': 'Revoked', 'sh.historyAction.restored': 'Restored', 'sh.historyAction.created-from-duplicate': 'Created from duplicate',
+    'sh.neverUsed': 'Never used', 'sh.neverDownloaded':'Never downloaded', 'sh.totalSize':'Total size', 'sh.pinnedOnly':'★ Pinned', 'sh.createdLinkReady':'Link ready to share', 'sh.copyUrl':'📋 Copy URL', 'sh.veryActive': 'Very active', 'sh.changeHistory': 'Change history', 'sh.historyBtn': '🕘 History',
+    'sh.historyLoading': 'Loading…', 'sh.historyEmpty': 'No recorded changes.', 'sh.historyFail': 'Could not load change history', 'sh.historyAction.created': 'Created', 'sh.historyAction.revoked': 'Revoked', 'sh.historyAction.restored': 'Restored', 'sh.historyAction.created-from-duplicate': 'Created from duplicate', 'sh.historyAction.reactivated': 'Reactivated',
     'sh.changedFields': 'Fields: {fields}', 'sh.copiedLinks': '{n} link(s) copied', 'sh.copyNoUrl': 'No copyable link in the selection', 'sh.pageSizeTitle': 'Links per page', 'sh.page10': '10 / page', 'sh.page25': '25 / page', 'sh.page50': '50 / page', 'sh.page100': '100 / page', 'sh.pagePrev': '← Previous', 'sh.pageNext': 'Next →', 'sh.pageLabel': '{from}–{to} of {total}', 'sh.bulkSelectPage': '☑ Select page', 'sh.bulkClearPage': '☐ Clear page selection',
     'sh.renameAction': '✎',
     'sh.log': '🧾 Log',
     'sh.logTitle': 'This link’s access log',
     'filehist.button': '📥 Per file', 'filehist.title': 'Download history by file', 'filehist.loading': 'Loading…', 'filehist.empty': 'No file downloads recorded.', 'filehist.fail': 'Could not load per-file history', 'filehist.transfers': '{n} transfer(s)', 'filehist.completed': '{n} completed', 'filehist.last': 'Last: {v}', 'filehist.truncated': 'Partial history: the journal exceeds the read window or a ZIP contained more than 500 items.',
     'recv.button': '📥 Received files', 'recv.title': 'Received files', 'recv.loading': 'Loading…', 'recv.empty': 'No files received yet.', 'recv.count': '{n} file(s)', 'recv.download': 'Download', 'recv.fail': 'Could not load received files.',
-    'trash.open': '🗑 Trash', 'trash.title': 'Trash', 'trash.empty': 'Trash is empty.', 'trash.restore': '↩ Restore', 'trash.purge': 'Delete permanently', 'trash.purgeAll': 'Purge all', 'trash.restoreOk': 'Share restored', 'trash.restoreFail': 'Could not restore share', 'trash.purgeOk': 'Item permanently deleted', 'trash.purgeFail': 'Permanent deletion failed', 'trash.purgeConfirm': 'Permanently delete “{name}”? This cannot be undone.', 'trash.purgeAllConfirm': 'Permanently purge the entire trash?', 'trash.retention': 'Retention: {n} day(s)',
-    'activity.open': '◉ Live activity', 'activity.title': 'Live activity', 'activity.clear': 'Clear view', 'activity.hint': 'Uploads, downloads, OCR, antivirus, errors and audited link actions appear here in real time.', 'activity.connected': 'Connected · real-time events', 'activity.reconnecting': 'Reconnecting…', 'activity.empty': 'No recent activity.',
+    'trash.restoreSelected':'Restore selected', 'trash.restoreSelectedN':'Restore selected ({n})', 'trash.selected':'{n} selected', 'trash.select':'Select this item', 'trash.restoreSelectedOk':'{n} item(s) restored', 'trash.restoreSelectedFail':'{n} restore(s) failed',
+    'trash.open': '🗑 Trash', 'trash.title': 'Trash', 'trash.empty': 'Trash is empty.', 'trash.restore': '↩ Restore', 'trash.purge': 'Delete permanently', 'trash.purgeAll': 'Delete all permanently', 'trash.restoreOk': 'Share restored', 'trash.restoreFail': 'Could not restore share', 'trash.purgeOk': 'Item permanently deleted', 'trash.purgeFail': 'Permanent deletion failed', 'trash.purgeConfirm': 'Permanently delete “{name}”? This cannot be undone.', 'trash.purgeAllConfirm': 'Permanently delete every item in the trash? This action cannot be undone.', 'trash.retention': 'Retention: {n} day(s)',
+    'undo.open': '↶ History / Undo', 'undo.title': 'Action history', 'undo.subtitle': 'Review recent administrative actions and undo the ones that are still reversible.', 'undo.empty': 'No recent actions.', 'undo.btn': '↶ Undo', 'undo.done': 'Undone', 'undo.unavailable': 'No longer undoable', 'undo.ok': 'Action undone', 'undo.fail': 'Could not undo', 'undo.confirm': 'Undo “{label}”?', 'undo.type.settings': 'Settings changed', 'undo.type.stats': 'Stats reset', 'undo.type.recipient': 'Recipient removed', 'undo.type.ipnames': 'Client nicknames cleared', 'undo.type.share': 'Share deleted', 'undo.reason.changed': 'State changed since', 'undo.reason.restored': 'Already restored', 'undo.reason.purged': 'Item permanently deleted', 'undo.reason.legacy': 'Legacy entry is unsafe', 'undo.reason.forbidden': 'Read-only', 'undo.reason.gone': 'Share no longer exists', 'undo.reason.unsupported': 'Undo not supported', 'undo.reason.restoreConflict': 'Conflicts with an active link', 'undo.reason.tooLarge': 'Undo data is too large', 'undo.loadFail': 'Could not load action history',
+    'activity.open': '◉ Activity history', 'activity.title': 'Activity history', 'activity.sectionTitle': 'Activity', 'activity.back': 'Back to shares', 'activity.sectionHint': 'Persistent history of relevant Direct-Xfer events.', 'activity.openFull': 'Open full history', 'activity.clear': 'Clear view', 'activity.hint': 'Relevant transfers, security events, administrative actions and PWA changes are retained here and updated in real time.', 'activity.connected': 'History loaded · real-time events', 'activity.reconnecting': 'Reconnecting…', 'activity.empty': 'No recorded activity.', 'activity.searchPh': 'Search activity…', 'activity.filtersAria': 'Activity filters', 'activity.kindAria': 'Activity type', 'activity.kindAll': 'All types', 'activity.kindTransfer': 'Transfers', 'activity.kindAdmin': 'Administration', 'activity.kindSecurity': 'Security', 'activity.kindVisitor': 'Visitors', 'activity.kindSystem': 'System', 'activity.shareAria':'Share', 'activity.shareAll':'All shares', 'activity.imagesOnly':'Images only', 'activity.pwaOnly':'PWA only', 'activity.hideRoutine':'Hide routine system events', 'activity.resetFilters': 'Clear filters', 'activity.summary': '{shown} shown of {total}', 'activity.loadFail': 'Could not load activity history.',
     'cfg.trashRetention': 'Trash retention (days, 0 = keep forever)',
     'cfg.autoArchiveExpired': 'Auto-archive expired links after (days, 0 = off)',
     'cfg.autoArchiveExpiredHint': 'Keeps old links out of the main list without deleting their managed files.',
@@ -2866,8 +2915,8 @@ const I18N = {
     'cfg.expiryPresets': 'Quick expiry presets',
     'cfg.expiryPresetsHint': 'Comma-separated durations offered in the link modals — e.g. 6h, 3d, 2w, 1mo. “Never” is always available.',
     'search.btn': '🔎 Universal search',
-    'search.ph': '🔎 Names, PDF/OCR, Office, text and archives…',
-    'search.semantic': 'Semantic', 'search.semanticBadge': 'Semantic',
+    'search.ph': '🔎 Links, users, logs, PDF/OCR, Office…',
+    'search.semantic': 'Semantic', 'search.semanticBadge': 'Semantic', 'search.scopeAll': 'Everything', 'search.scopeContent': 'Files / content', 'search.scopeLinks': 'Links', 'search.scopeUsers': 'Users', 'search.scopeLogs': 'Logs', 'search.kindUser': 'User', 'search.kindLog': 'Log', 'search.kindLink': 'Link',
     'search.indexLoading': 'Loading index…',
     'search.indexReady': 'Index: {n} file(s) · {when}',
     'search.indexBuilding': 'Indexing · {n} file(s) currently available',
@@ -3085,6 +3134,7 @@ const I18N = {
     'pk.hostInaccessible': 'Host filesystem inaccessible (mount /:/host:ro).',
     'pk.preview': '👁 Preview',
     'pk.previewUnsupported': 'This format can’t be previewed in your browser — the codec isn’t supported.',
+    'pk.previewTruncated': 'Preview truncated to protect performance. The full file was not loaded.',
     'pw.title': 'Change password',
     'pw.firstTitle': 'Set your password',
     'pw.firstLoginHint': 'For security, choose a new password before continuing.',
@@ -3351,6 +3401,7 @@ const I18N = {
     'cfg.blockExt': 'Tipos bloqueados (separados por comas)',
     'cfg.encrypt': 'Activar cifrado de extremo a extremo por defecto',
     'cfg.limits': 'Límites globales',
+    'cfg.neverExpireNew':'Crear siempre los enlaces nuevos sin caducidad', 'cfg.confirmRevoke':'Pedir confirmación antes de revocar una compartición', 'cfg.diskWarn':'Alertar si el espacio libre en disco ≤ (%)',
     'cfg.globalRate': 'Límite de velocidad del servidor (KB/s)',
     'cfg.globalRateHint': 'Límite aplicado a cada descarga, además de los límites por enlace.',
     'cfg.schedEnable': 'Limitar el ancho de banda en una franja horaria',
@@ -3372,6 +3423,7 @@ const I18N = {
     'cfg.leakHint': 'Envía una notificación (por el webhook / correo de arriba) cuando un mismo enlace se descarga desde al menos esta cantidad de países en la ventana — posible señal de filtración. Requiere geolocalización de IP activada.',
     'cfg.auditJson': 'Exportar registro de auditoría (JSON)',
     'cfg.auditCsv': 'Exportar registro de auditoría (CSV)',
+    'cfg.auditProof': 'Exportar prueba firmada',
     'cfg.auditHint': 'El registro de acciones de administración (accesos, creación/revocación de enlaces, cambios de ajustes, alertas).',
     'cfg.bkTitle': 'Copia de seguridad completa programada',
     'cfg.bkIntro': 'Una copia completa agrupa todo el almacén (enlaces + ajustes), el registro de transferencias y las notas secretas en un solo archivo — cifrado con DATA_KEY si está definido. Enviado a una carpeta, WebDAV o S3.',
@@ -3404,6 +3456,24 @@ const I18N = {
     'cfg.bkDownload': 'Descargar copia',
     'cfg.bkRestore': 'Restaurar desde archivo…',
     'cfg.bkSaveHint': 'Guarda tus ajustes antes de Copiar ahora / Probar. La restauración reemplaza todo y no se puede deshacer.',
+    'connector.title': 'Conectores de almacenamiento',
+    'connector.hint': 'Importa y exporta archivos mediante un remoto rclone: SFTP, SMB, WebDAV, Google Drive, OneDrive, Dropbox o Box. Las credenciales permanecen en /data/rclone/rclone.conf.',
+    'connector.name': 'Nombre', 'connector.type': 'Tipo', 'connector.remote': 'Remoto rclone',
+    'connector.root': 'Carpeta raíz (opcional)', 'connector.readOnly': 'Conector de solo lectura',
+    'connector.readOnlyShort': 'solo lectura', 'connector.add': 'Añadir conector', 'connector.save': 'Guardar',
+    'connector.choose': 'Conector', 'connector.remotePath': 'Ruta del archivo remoto',
+    'connector.localPath': 'Ruta local/del host', 'connector.transferHint': 'Para importar, el campo local es una ruta opcional bajo /Direct-Xfer/Imports. Para exportar, indica un archivo existente del host, de recepción o de imágenes.',
+    'connector.import': 'Importar', 'connector.export': 'Exportar', 'connector.refresh': 'Actualizar',
+    'connector.ready': '{version} listo', 'connector.unavailable': 'rclone no está disponible en este contenedor.',
+    'connector.none': 'No hay conectores configurados.', 'connector.test': 'Probar', 'connector.testing': 'Probando…',
+    'connector.testOk': 'Conexión correcta.', 'connector.testFail': 'Falló la prueba del conector.',
+    'connector.edit': 'Editar', 'connector.delete': 'Eliminar', 'connector.deleteConfirm': '¿Eliminar el conector «{name}»?',
+    'connector.deleteFail': 'No se pudo eliminar.', 'connector.saved': 'Conector guardado.',
+    'connector.saveFail': 'No se pudo guardar.', 'connector.required': 'Completa los campos y rutas obligatorios.',
+    'connector.queued': 'Transferencia añadida a la cola.', 'connector.transferFail': 'No se pudo iniciar la transferencia.',
+    'connector.cancel': 'Cancelar', 'connector.loadFail': 'No se pudieron cargar los conectores.',
+    'connector.status.queued': 'en espera', 'connector.status.running': 'en curso',
+    'connector.status.completed': 'terminada', 'connector.status.failed': 'fallida', 'connector.status.cancelled': 'cancelada',
     'cfg.bkNever': 'Aún no se ha hecho ninguna copia.',
     'cfg.bkLastOk': 'Última copia: {when} → {dest} ✓',
     'cfg.bkLastFail': 'Última copia fallida: {when} — {err}',
@@ -3438,6 +3508,7 @@ const I18N = {
     'cfg.allowlistHint': 'Vacío = por defecto (red local). El loopback siempre está permitido. Una entrada incorrecta puede dejarte fuera.',
     'cfg.ransomEnable': 'Protección ransomware / anomalías destructivas',
     'cfg.ransomHint': 'Bloquea temporalmente a un cliente público tras borrados masivos o una ráfaga de subidas con nombres típicos de ransomware. Nunca borra archivos automáticamente.',
+    'cfg.ransomSuspendLink': 'Suspender también las escrituras en el enlace de recepción/colaboración afectado',
     'cfg.ransomDelete': 'Umbral de borrados / 60 s',
     'cfg.ransomUpload': 'Subidas sospechosas / 120 s',
     'cfg.ransomBlock': 'Duración del bloqueo (minutos)',
@@ -3447,10 +3518,10 @@ const I18N = {
     'cfg.ransomUnblock': 'Desbloquear',
     'cfg.dlpTitle': 'Prevención de pérdida de datos (DLP)', 'cfg.dlpEnable': 'Analizar recursos salientes para detectar datos sensibles',
     'cfg.dlpHint': 'Análisis local antes de publicar. Los secretos detectados se ocultan siempre en registros e interfaz.',
-    'cfg.dlpMode': 'Política', 'cfg.dlpWarn': 'Avisar + confirmar', 'cfg.dlpBlock': 'Bloquear', 'cfg.dlpLog': 'Solo registrar',
+    'cfg.dlpMode': 'Política de respaldo', 'cfg.dlpWarn': 'Avisar + confirmar', 'cfg.dlpBlock': 'Bloquear', 'cfg.dlpLog': 'Solo registrar', 'cfg.dlpQuarantine':'Cuarentena', 'cfg.dlpRules':'Reacción automática según gravedad', 'cfg.dlpLow':'Baja', 'cfg.dlpMedium':'Media', 'cfg.dlpHigh':'Alta', 'cfg.dlpCritical':'Crítica', 'cfg.dlpQuarantineView':'Cuarentena',
     'cfg.dlpMaxFiles': 'Archivos máx. por análisis', 'cfg.dlpMaxMb': 'Tamaño máx. por archivo (MB)', 'cfg.dlpOcr': 'Usar OCR del servidor para imágenes/PDF escaneados',
     'dlp.warningTitle': 'DLP: contenido sensible detectado', 'dlp.warningConfirm': '{n} detección(es) sensible(s) ({level}) en {files} archivo(s). ¿Publicar de todos modos?', 'dlp.incompleteConfirm': 'El análisis DLP está incompleto ({skipped} omitido(s), {ocr} error(es) OCR, {scan} error(es) de lectura, {archive} elemento(s) de archivo no inspeccionado(s)). ¿Publicar de todos modos?', 'dlp.ocrUnavailableConfirm': 'El análisis de texto (OCR) no está disponible en el servidor: las imágenes/PDF no se inspeccionaron en busca de texto sensible. ¿Publicar de todos modos?',
-    'dlp.blocked': 'Publicación bloqueada por la política DLP.', 'dlp.badge': 'DLP {n}',
+    'dlp.blocked': 'Publicación bloqueada por la política DLP.', 'dlp.quarantined': 'El contenido fue puesto en cuarentena por la política DLP.', 'dlp.quarantineFailed': 'Falló la cuarentena DLP; no se publicó ningún contenido.', 'dlp.badge': 'DLP {n}',
     'cfg.allowlistConfirm': '¿Restringir el acceso admin a estas IP? Un error puede impedirte acceder a la administración (solo el loopback seguirá permitido).',
     'cfg.qrDefault': 'Mostrar el código QR justo después de crear un enlace',
     'cfg.maxUpload': 'Tamaño máx. / archivo recibido (MB)',
@@ -3775,6 +3846,7 @@ const I18N = {
     'dash.kpiUp': 'Recepciones',
     'dash.kpiVisitors': 'Visitantes únicos',
     'dash.kpiShares': 'Enlaces activos',
+    'dash.kpiDiskFree': 'Espacio libre en disco',
     'dash.activity': 'Actividad',
     'dash.periodAll': 'Todo',
     'p3.insights': 'Análisis y alertas automáticas',
@@ -4326,7 +4398,7 @@ const I18N = {
     'sh.pauseTitle': 'Pausar (desactivar sin eliminar)',
     'sh.resumeTitle': 'Reactivar este enlace',
     'sh.paused2': 'Enlace pausado',
-    'sh.resumed': 'Enlace reactivado',
+    'sh.resumed': 'Enlace reactivado', 'sh.reactivate': '↻ Reactivar', 'sh.reactivateTitle': 'Reactivar este enlace revocado si sus datos siguen disponibles', 'sh.reactivateOk': 'Enlace revocado reactivado ✓', 'sh.reactivateFail': 'No se pudo reactivar', 'sh.reactivateMissing': 'Los datos de este enlace ya no están disponibles',
     'sh.pauseFail': 'No se pudo pausar el enlace',
     'sh.noteBtn': '📝 Nota',
     'sh.noteTitle': 'Nota privada (solo admin)',
@@ -4353,16 +4425,18 @@ const I18N = {
     'sh.expirySet': 'Caducidad actualizada', 'sh.expiryFail': 'No se pudo actualizar la caducidad',
     'sh.extend1d': '+1 d', 'sh.extend7d': '+7 d', 'sh.extend30d': '+30 d', 'sh.extended': 'Caducidad prolongada', 'sh.extendFail': 'No se pudo prolongar',
     'sh.createdTip': 'Creado {v}', 'sh.emojiTip': 'Emoji del enlace', 'sh.densityTip': 'Densidad: compacta / cómoda',
-    'sh.neverUsed': 'Nunca usado', 'sh.veryActive': 'Muy activo', 'sh.changeHistory': 'Historial de cambios', 'sh.historyBtn': '🕘 Historial',
-    'sh.historyLoading': 'Cargando…', 'sh.historyEmpty': 'No hay cambios registrados.', 'sh.historyFail': 'No se pudo cargar el historial', 'sh.historyAction.created': 'Creado', 'sh.historyAction.revoked': 'Revocado', 'sh.historyAction.restored': 'Restaurado', 'sh.historyAction.created-from-duplicate': 'Creado por duplicación',
+    'sh.neverUsed': 'Nunca usado', 'sh.neverDownloaded':'Nunca descargado', 'sh.totalSize':'Tamaño total', 'sh.pinnedOnly':'★ Fijados', 'sh.createdLinkReady':'Enlace listo para compartir', 'sh.copyUrl':'📋 Copiar URL', 'sh.veryActive': 'Muy activo', 'sh.changeHistory': 'Historial de cambios', 'sh.historyBtn': '🕘 Historial',
+    'sh.historyLoading': 'Cargando…', 'sh.historyEmpty': 'No hay cambios registrados.', 'sh.historyFail': 'No se pudo cargar el historial', 'sh.historyAction.created': 'Creado', 'sh.historyAction.revoked': 'Revocado', 'sh.historyAction.restored': 'Restaurado', 'sh.historyAction.created-from-duplicate': 'Creado por duplicación', 'sh.historyAction.reactivated': 'Reactivado',
     'sh.changedFields': 'Campos: {fields}', 'sh.copiedLinks': '{n} enlace(s) copiado(s)', 'sh.copyNoUrl': 'No hay enlaces copiables en la selección', 'sh.pageSizeTitle': 'Enlaces por página', 'sh.page10': '10 / página', 'sh.page25': '25 / página', 'sh.page50': '50 / página', 'sh.page100': '100 / página', 'sh.pagePrev': '← Anterior', 'sh.pageNext': 'Siguiente →', 'sh.pageLabel': '{from}–{to} de {total}', 'sh.bulkSelectPage': '☑ Seleccionar página', 'sh.bulkClearPage': '☐ Deseleccionar página',
     'sh.renameAction': '✎',
     'sh.log': '🧾 Registro',
     'sh.logTitle': 'Registro de accesos de este enlace',
     'filehist.button': '📥 Por archivo', 'filehist.title': 'Historial de descargas por archivo', 'filehist.loading': 'Cargando…', 'filehist.empty': 'No hay descargas de archivos registradas.', 'filehist.fail': 'No se pudo cargar el historial por archivo', 'filehist.transfers': '{n} transferencia(s)', 'filehist.completed': '{n} completada(s)', 'filehist.last': 'Última: {v}', 'filehist.truncated': 'Historial parcial: el registro supera la ventana leída o un ZIP contenía más de 500 elementos.',
     'recv.button': '📥 Archivos recibidos', 'recv.title': 'Archivos recibidos', 'recv.loading': 'Cargando…', 'recv.empty': 'Aún no se han recibido archivos.', 'recv.count': '{n} archivo(s)', 'recv.download': 'Descargar', 'recv.fail': 'No se pudieron cargar los archivos recibidos.',
-    'trash.open': '🗑 Papelera', 'trash.title': 'Papelera', 'trash.empty': 'La papelera está vacía.', 'trash.restore': '↩ Restaurar', 'trash.purge': 'Eliminar definitivamente', 'trash.purgeAll': 'Vaciar todo', 'trash.restoreOk': 'Compartición restaurada', 'trash.restoreFail': 'No se pudo restaurar', 'trash.purgeOk': 'Elemento eliminado definitivamente', 'trash.purgeFail': 'No se pudo eliminar definitivamente', 'trash.purgeConfirm': '¿Eliminar definitivamente «{name}»? Esta acción no se puede deshacer.', 'trash.purgeAllConfirm': '¿Vaciar definitivamente toda la papelera?', 'trash.retention': 'Retención: {n} día(s)',
-    'activity.open': '◉ Actividad en vivo', 'activity.title': 'Actividad en vivo', 'activity.clear': 'Limpiar vista', 'activity.hint': 'Envíos, descargas, OCR, antivirus, errores y acciones auditadas aparecen aquí en tiempo real.', 'activity.connected': 'Conectado · eventos en tiempo real', 'activity.reconnecting': 'Reconectando…', 'activity.empty': 'Sin actividad reciente.',
+    'trash.restoreSelected':'Restaurar selección', 'trash.restoreSelectedN':'Restaurar selección ({n})', 'trash.selected':'{n} seleccionado(s)', 'trash.select':'Seleccionar este elemento', 'trash.restoreSelectedOk':'{n} elemento(s) restaurado(s)', 'trash.restoreSelectedFail':'Fallaron {n} restauración(es)',
+    'trash.open': '🗑 Papelera', 'trash.title': 'Papelera', 'trash.empty': 'La papelera está vacía.', 'trash.restore': '↩ Restaurar', 'trash.purge': 'Eliminar definitivamente', 'trash.purgeAll': 'Eliminar todo definitivamente', 'trash.restoreOk': 'Compartición restaurada', 'trash.restoreFail': 'No se pudo restaurar', 'trash.purgeOk': 'Elemento eliminado definitivamente', 'trash.purgeFail': 'No se pudo eliminar definitivamente', 'trash.purgeConfirm': '¿Eliminar definitivamente «{name}»? Esta acción no se puede deshacer.', 'trash.purgeAllConfirm': '¿Eliminar definitivamente todos los elementos de la papelera? Esta acción es irreversible.', 'trash.retention': 'Retención: {n} día(s)',
+    'undo.open': '↶ Historial / Deshacer', 'undo.title': 'Historial de acciones', 'undo.subtitle': 'Consulta las acciones administrativas recientes y deshaz las que aún sean reversibles.', 'undo.empty': 'No hay acciones recientes.', 'undo.btn': '↶ Deshacer', 'undo.done': 'Deshecha', 'undo.unavailable': 'Ya no se puede deshacer', 'undo.ok': 'Acción deshecha', 'undo.fail': 'No se pudo deshacer', 'undo.confirm': '¿Deshacer «{label}»?', 'undo.type.settings': 'Configuración modificada', 'undo.type.stats': 'Estadísticas reiniciadas', 'undo.type.recipient': 'Destinatario eliminado', 'undo.type.ipnames': 'Apodos de cliente borrados', 'undo.type.share': 'Compartición eliminada', 'undo.reason.changed': 'El estado cambió después', 'undo.reason.restored': 'Ya restaurada', 'undo.reason.purged': 'Elemento eliminado definitivamente', 'undo.reason.legacy': 'Entrada antigua no segura', 'undo.reason.forbidden': 'Solo lectura', 'undo.reason.gone': 'La compartición ya no existe', 'undo.reason.unsupported': 'Deshacer no compatible', 'undo.reason.restoreConflict': 'Conflicto con un enlace activo', 'undo.reason.tooLarge': 'Los datos para deshacer son demasiado grandes', 'undo.loadFail': 'No se pudo cargar el historial',
+    'activity.open': '◉ Historial de actividad', 'activity.title': 'Historial de actividad', 'activity.sectionTitle': 'Actividad', 'activity.back': 'Volver a los enlaces', 'activity.sectionHint': 'Historial persistente de los eventos relevantes de Direct-Xfer.', 'activity.openFull': 'Abrir historial completo', 'activity.clear': 'Limpiar vista', 'activity.hint': 'Las transferencias relevantes, eventos de seguridad, acciones administrativas y cambios PWA se conservan aquí y se actualizan en tiempo real.', 'activity.connected': 'Historial cargado · eventos en tiempo real', 'activity.reconnecting': 'Reconectando…', 'activity.empty': 'Sin actividad registrada.', 'activity.searchPh': 'Buscar actividad…', 'activity.filtersAria': 'Filtros de actividad', 'activity.kindAria': 'Tipo de actividad', 'activity.kindAll': 'Todos los tipos', 'activity.kindTransfer': 'Transferencias', 'activity.kindAdmin': 'Administración', 'activity.kindSecurity': 'Seguridad', 'activity.kindVisitor': 'Visitantes', 'activity.kindSystem': 'Sistema', 'activity.shareAria':'Compartición', 'activity.shareAll':'Todas las comparticiones', 'activity.imagesOnly':'Solo imágenes', 'activity.pwaOnly':'Solo PWA', 'activity.hideRoutine':'Ocultar eventos rutinarios del sistema', 'activity.resetFilters': 'Limpiar filtros', 'activity.summary': '{shown} mostrada(s) de {total}', 'activity.loadFail': 'No se pudo cargar el historial de actividad.',
     'cfg.trashRetention': 'Retención de la papelera (días, 0 = conservar siempre)',
     'cfg.autoArchiveExpired': 'Archivar automáticamente enlaces caducados después de (días, 0 = desactivado)',
     'cfg.autoArchiveExpiredHint': 'Oculta los enlaces antiguos de la lista principal sin eliminar sus archivos gestionados.',
@@ -4386,8 +4460,8 @@ const I18N = {
     'cfg.expiryPresets': 'Preajustes rápidos de caducidad',
     'cfg.expiryPresetsHint': 'Duraciones separadas por comas ofrecidas en las ventanas de enlace — p. ej. 6h, 3d, 2w, 1mo. «Nunca» siempre está disponible.',
     'search.btn': '🔎 Búsqueda universal',
-    'search.ph': '🔎 Nombres, PDF/OCR, Office, texto y archivos…',
-    'search.semantic': 'Semántica', 'search.semanticBadge': 'Semántica',
+    'search.ph': '🔎 Enlaces, usuarios, registros, PDF/OCR, Office…',
+    'search.semantic': 'Semántica', 'search.semanticBadge': 'Semántica', 'search.scopeAll': 'Todo', 'search.scopeContent': 'Archivos / contenido', 'search.scopeLinks': 'Enlaces', 'search.scopeUsers': 'Usuarios', 'search.scopeLogs': 'Registros', 'search.kindUser': 'Usuario', 'search.kindLog': 'Registro', 'search.kindLink': 'Enlace',
     'search.indexLoading': 'Cargando índice…',
     'search.indexReady': 'Índice: {n} archivo(s) · {when}',
     'search.indexBuilding': 'Indexando · {n} archivo(s) disponibles',
@@ -4605,6 +4679,7 @@ const I18N = {
     'pk.hostInaccessible': 'Sistema de archivos del host inaccesible (monta /:/host:ro).',
     'pk.preview': '👁 Vista previa',
     'pk.previewUnsupported': 'Este formato no se puede previsualizar en tu navegador — el códec no es compatible.',
+    'pk.previewTruncated': 'Vista previa truncada para proteger el rendimiento. No se cargó el archivo completo.',
     'pw.title': 'Cambiar contraseña',
     'pw.firstTitle': 'Establece tu contraseña',
     'pw.firstLoginHint': 'Por seguridad, elige una nueva contraseña antes de continuar.',
@@ -4749,7 +4824,7 @@ const state = {
   historyReloadPending: false,
   photoHistoryLoadPromise: null,
   historyRenderTimer: null,
-  allShares: [], // last-rendered shares, for client-side filtering (feature 9)
+  allShares: [], // last-rendered shares, for client-side filtering
   sharePresenceCounts: Object.create(null),
   sharePresenceSource: null,
   shareFilter: uiPrefText('shareFilter'), // name/tag filter text
@@ -4760,15 +4835,17 @@ const state = {
   shareDateFrom: uiPrefText('shareDateFrom'),
   shareDateTo: uiPrefText('shareDateTo'),
   shareShowArchived: uiPrefs.shareShowArchived === true,
+  sharePinnedOnly: false,
   shareSort: uiPrefChoice('shareSort', ['new', 'old', 'name', 'downloads', 'activity', 'expiry'], 'new'), // sort order
   sharePageSize: Number(uiPrefChoice('sharePageSize', ['10','25','50','100'], '25')),
   sharePage: 0,
   sharePageIds: [],
   bulkShareBusy: false,
   shareView: uiPrefChoice('shareView', ['list', 'grid'], 'list'),
-  shareDensity: uiPrefChoice('shareDensity', ['comfortable', 'compact'], 'comfortable'), // feature: admin-table density toggle
+  shareDensity: uiPrefChoice('shareDensity', ['comfortable', 'compact'], 'comfortable'), // Admin-table density toggle
   selShares: new Set(), // selected share ids for bulk actions
   pendingShareDeletion: null, // one recoverable deletion: { id, timer, committing, promise }
+  trashSelection: new Set(),
   historyPage: 0,
   historyData: [],
   historyQuery: '',
@@ -4814,7 +4891,7 @@ const state = {
   photoExifCache: {},     // share id -> EXIF/GPS payload (loaded only on demand)
   photoSelection: new Set(), // share ids selected for bulk actions
   photoUploadBusy: false,
-  albumsData: null,       // last album-share list (feature 18)
+  albumsData: null,       // last album-share list
   lastAlbumsSig: '',      // structural signature of the albums list
   lastPhotoAlbumOptionsSig: '',
   meta: null,
@@ -4825,7 +4902,7 @@ const state = {
   idleActivityBound: false,
   idleLastReset: 0,
   settings: {}, // last settings snapshot (for the Configuration window)
-  activitySource: null, activityEvents: [],
+  activitySource: null, activityEvents: [], activityRetained: 0, activityLoading: false, activityInitialized: false,
 };
 
 const $ = (id) => document.getElementById(id);
@@ -4859,7 +4936,7 @@ function setShareView(view, persist = true) {
   if (persist) updateUiPrefs({ shareView: state.shareView });
 }
 
-// Feature — admin-table density toggle (compact / comfortable). The class lives on
+// Admin-table density toggle (compact / comfortable). The class lives on
 // the persistent #shares-list container (children are replaced on each render, the
 // element is not), so it survives re-renders like the view-list/view-grid class.
 function setShareDensity(density, persist = true) {
@@ -4901,6 +4978,8 @@ function applyUiPreferencesToControls() {
   if (customDates) customDates.classList.toggle('hidden', state.shareDate !== 'custom');
   const archivedToggle = $('shares-archived-toggle');
   if (archivedToggle) { archivedToggle.classList.toggle('active', state.shareShowArchived); archivedToggle.setAttribute('aria-pressed', state.shareShowArchived ? 'true' : 'false'); }
+  const pinnedToggle = $('shares-pinned-toggle');
+  if (pinnedToggle) { pinnedToggle.classList.toggle('active', state.sharePinnedOnly); pinnedToggle.setAttribute('aria-pressed', state.sharePinnedOnly ? 'true' : 'false'); }
 
   setControlValue('dash-direction-filter', state.dashDirection);
   setControlValue('dash-status-filter', state.dashStatus);
@@ -4934,12 +5013,25 @@ function applyUiPreferencesToControls() {
   setShareDensity(state.shareDensity, false);
   setPhotoView(state.photoView, false);
 }
-// Extensions the browser can play inline (mirrors the server's previewInfo()).
+// Safe admin-file previews. Scriptable documents are rendered as inert text,
+// never as HTML/SVG, so opening a source file cannot execute code in the admin origin.
 const PREVIEW_VIDEO_EXTS = new Set(['mp4', 'm4v', 'webm', 'ogv', 'mov', 'mkv']);
-function isPreviewableVideo(name) {
-  const ext = (String(name).split('.').pop() || '').toLowerCase();
-  return PREVIEW_VIDEO_EXTS.has(ext);
+const PREVIEW_AUDIO_EXTS = new Set(['mp3', 'ogg', 'oga', 'wav', 'flac', 'm4a', 'aac']);
+const PREVIEW_IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'avif']);
+const PREVIEW_TEXT_EXTS = new Set(['txt','md','markdown','log','csv','tsv','json','xml','yml','yaml','ini','conf','cfg','toml','js','mjs','cjs','ts','tsx','jsx','css','scss','less','html','htm','py','sh','bash','zsh','c','h','cpp','hpp','java','go','rs','rb','php','sql','lua','pl','kt','swift','r','dart','env','properties']);
+function previewFileKind(name) {
+  const raw = String(name || '');
+  const base = raw.split(/[\/]/).pop().toLowerCase();
+  const ext = (base.split('.').pop() || '').toLowerCase();
+  if (PREVIEW_VIDEO_EXTS.has(ext)) return 'video';
+  if (PREVIEW_AUDIO_EXTS.has(ext)) return 'audio';
+  if (PREVIEW_IMAGE_EXTS.has(ext)) return 'image';
+  if (ext === 'pdf') return 'pdf';
+  if (PREVIEW_TEXT_EXTS.has(ext) || ['dockerfile','makefile','gemfile','procfile','rakefile','vagrantfile','jenkinsfile'].includes(base) || base === '.env' || base.startsWith('.env.')) return 'text';
+  return '';
 }
+function isPreviewableVideo(name) { return previewFileKind(name) === 'video'; }
+function isPreviewableFile(name) { return !!previewFileKind(name); }
 const REFRESH_MS = 3000;
 const DASH_REFRESH_MS = 60000; // dashboard analytics refresh (reads the journal)
 const DASH_LIVE_REFRESH_MS = 2000; // lightweight active-transfer refresh
@@ -5221,7 +5313,7 @@ function timeAgo(ts) {
   return t('time.ago', { v });
 }
 
-// Feature 7 — localized "time remaining" for the "expire dans X" hover tooltip.
+// Localized "time remaining" for the "expire dans X" hover tooltip.
 // Mirrors timeAgo()'s day/hour/minute/second tiers but forward-looking, so a
 // multi-day expiry reads "6 j" instead of formatDuration()'s minute count.
 function timeUntil(ts) {
@@ -5251,7 +5343,7 @@ function el(tag, opts = {}) {
 }
 
 function isLoggedIn() {
-  return ['app-view', 'images-page', 'dashboards-page'].some((id) => {
+  return ['app-view', 'images-page', 'dashboards-page', 'activity-page'].some((id) => {
     const view = $(id);
     return !!view && !view.classList.contains('hidden');
   });
@@ -5353,6 +5445,8 @@ function clearAuthenticatedClientState() {
   document.querySelectorAll('.overlay').forEach((node) => node.classList.add('hidden'));
   if (state.activitySource) { try { state.activitySource.close(); } catch (_) {} state.activitySource = null; }
   state.activityEvents = [];
+  state.activityRetained = 0;
+  state.activityInitialized = false;
   state.allShares = [];
   state.photosData = [];
   state.albumsData = [];
@@ -5407,7 +5501,7 @@ function showLogin() {
     renderNotifications(); closeNotificationsMenu();
   } catch (_) {}
   placeUserMenu('admin');
-  ['images-page', 'dashboards-page'].forEach((id) => {
+  ['images-page', 'dashboards-page', 'activity-page'].forEach((id) => {
     const page = $(id);
     if (page) page.classList.add('hidden');
   });
@@ -5421,7 +5515,7 @@ function showLogin() {
 }
 function showApp() {
   $('login-view').classList.add('hidden');
-  ['images-page', 'dashboards-page'].forEach((id) => {
+  ['images-page', 'dashboards-page', 'activity-page'].forEach((id) => {
     const page = $(id);
     if (page) page.classList.add('hidden');
   });
@@ -5600,6 +5694,7 @@ function notificationTypeIcon(n) {
 }
 function notificationTitleText(n) {
   const name=n.name || (state.lang==='fr'?'Lien':state.lang==='es'?'Enlace':'Link'), count=Number(n.count)||0, threshold=Number(n.threshold)||Number(n.limit)||count;
+  if (n.type === 'security-anomaly') return state.lang === 'en' ? `Ransomware protection: ${name}` : state.lang === 'es' ? `Protección antiransomware: ${name}` : `Protection antirançongiciel : ${name}`;
   const maps={
     fr:{'image-first-view':`Première vue de « ${name} »`,'share-first-download':`Premier téléchargement de « ${name} »`,'inbox-first-deposit':`Premier dépôt sur « ${name} »`,'transfer-complete':`Transfert terminé : ${name}`,'transfer-failed':`Transfert échoué : ${name}`,'link-expired':`Lien expiré : ${name}`,'link-expiring-soon':`Lien bientôt expiré : ${name}`,'download-limit-reached':`Limite de téléchargements atteinte : ${name}`,'reception-quota-reached':`Quota de réception atteint : ${name}`,'link-new-visitor':`Nouveau visiteur sur « ${name} »`,'new-country':`Nouveau pays pour ${name}`,'view-threshold':`${threshold} vues atteintes : ${name}`,'download-threshold':`${threshold} téléchargements atteints : ${name}`,'unusual-activity':`Activité inhabituelle : ${name}`,'repeated-downloads':`Téléchargements répétés : ${name}`,'password-failures':`Échecs de mot de passe répétés : ${name}`,'link-auto-disabled':`Lien désactivé automatiquement : ${name}`,'dlp-detected':'DLP : contenu sensible détecté','dlp-blocked':'DLP : publication bloquée','ocr-failed':`Échec OCR${n.name?' : '+n.name:''}`,'index-failed':'Échec de l’indexation','pwa-device-paired':`Nouvel appareil PWA : ${n.device||''}`,'pwa-device-revoked':`Appareil PWA révoqué : ${n.device||''}`,'admin-login':`Connexion administrateur : ${n.username||''}`,'admin-login-unusual':`Connexion administrateur inhabituelle : ${n.username||''}`,'system-problem':'Problème système détecté','update-available':`Mise à jour disponible : ${n.latest||''}`,'update-installed':`Mise à jour installée : ${n.version||''}`},
     en:{'image-first-view':`First view of “${name}”`,'share-first-download':`First download of “${name}”`,'inbox-first-deposit':`First deposit on “${name}”`,'transfer-complete':`Transfer completed: ${name}`,'transfer-failed':`Transfer failed: ${name}`,'link-expired':`Link expired: ${name}`,'link-expiring-soon':`Link expiring soon: ${name}`,'download-limit-reached':`Download limit reached: ${name}`,'reception-quota-reached':`Reception quota reached: ${name}`,'link-new-visitor':`New visitor on “${name}”`,'new-country':`New country for ${name}`,'view-threshold':`${threshold} views reached: ${name}`,'download-threshold':`${threshold} downloads reached: ${name}`,'unusual-activity':`Unusual activity: ${name}`,'repeated-downloads':`Repeated downloads: ${name}`,'password-failures':`Repeated password failures: ${name}`,'link-auto-disabled':`Link automatically disabled: ${name}`,'dlp-detected':'DLP: sensitive content detected','dlp-blocked':'DLP: publication blocked','ocr-failed':`OCR failed${n.name?' : '+n.name:''}`,'index-failed':'Indexing failed','pwa-device-paired':`New PWA device: ${n.device||''}`,'pwa-device-revoked':`PWA device revoked: ${n.device||''}`,'admin-login':`Administrator login: ${n.username||''}`,'admin-login-unusual':`Unusual administrator login: ${n.username||''}`,'system-problem':'System problem detected','update-available':`Update available: ${n.latest||''}`,'update-installed':`Update installed: ${n.version||''}`},
@@ -5673,7 +5768,7 @@ function notificationMatchesFilters(n) {
   ].filter(Boolean).join(' '));
   return haystack.includes(query);
 }
-// Feature 6 — surface arrivals while the panel is closed. `seenIds` stays null
+// Surface arrivals while the panel is closed. `seenIds` stays null
 // until the first successful load so the initial backlog never toasts on login.
 let notificationsSeenIds = null;
 let notificationsSoundOn = false;
@@ -5701,17 +5796,17 @@ function announceNewNotifications(fresh) {
   if (newest) toast('🔔 ' + notificationTitleText(newest), (newest.severity === 'critical' || newest.severity === 'warning') ? 'warn' : '');
   if (notificationsSoundOn) playNotificationSound();
 }
-// Feature 12 — the panel renders a bounded page and grows on demand rather than
+// The panel renders a bounded page and grows on demand rather than
 // building up to NOTIFICATION_CENTER_MAX_PER_ACCOUNT (500) rows in one pass.
 const NOTIFICATIONS_PAGE_SIZE = 20;
 let notificationsShown = NOTIFICATIONS_PAGE_SIZE;
-// Feature 1 — the share/link/image a notification refers to, resolved from the
+// The share/link/image a notification refers to, resolved from the
 // account's currently-loaded shares so link actions never target a stale id.
 function notificationShare(n) {
   if (!n || !n.token) return null;
   return (state.allShares || []).find((s) => s && s.token === n.token) || null;
 }
-// Feature 1 — take the operator to the section a notification is about.
+// Take the operator to the section a notification is about.
 function openNotificationTarget(n) {
   closeNotificationsMenu();
   const cat = String((n && n.category) || ''), type = String((n && n.type) || '');
@@ -5723,7 +5818,7 @@ function openNotificationTarget(n) {
   if (typeof hideDashboardsView === 'function' && typeof dashboardsPageOpen === 'function' && dashboardsPageOpen()) hideDashboardsView(true);
   try { window.scrollTo(0, 0); } catch (_) {}
 }
-// Feature 9 — contextual quick actions per notification, wired to existing safe
+// Contextual quick actions per notification, wired to existing safe
 // client capabilities (copy the public link, revoke an abused link). Returns [].
 const NOTIFICATION_REVOKE_TYPES = ['link-viral','high-download-volume','simultaneous-downloads','repeated-downloads','unusual-activity','password-failures','link-new-visitor','new-country','download-limit-reached'];
 function notificationActions(n) {
@@ -5742,7 +5837,7 @@ function notificationActions(n) {
   }
   return out;
 }
-// Feature 4/1 helper — persist a single row as read without waiting for the
+// Helper — persist a single row as read without waiting for the
 // panel-open bulk mark, so a clicked/opened notification loses its unread dot.
 function markOneNotificationRead(n) {
   if (!n || !(n.unread === true || !(Number(n.readAt) > 0))) return;
@@ -5771,16 +5866,16 @@ function renderNotifications() {
     const main = el('div', { class:'notification-item-main' });
     main.appendChild(el('div', { class:'notification-item-title', text:notificationTypeIcon(n)+' '+notificationTitleText(n) }));
     const metaEl = el('div', { class:'notification-item-meta', text:notificationMetaText(n) });
-    if (n.at) metaEl.setAttribute('title', formatDate(n.at)); // absolute date on hover (feature 2)
+    if (n.at) metaEl.setAttribute('title', formatDate(n.at)); // absolute date on hover
     main.appendChild(metaEl);
-    // Feature 1 — the notification body deep-links to its section.
+    // The notification body deep-links to its section.
     main.classList.add('notification-clickable');
     main.setAttribute('role', 'button');
     main.setAttribute('tabindex', '0');
     const go = () => { markOneNotificationRead(n); openNotificationTarget(n); };
     main.addEventListener('click', go);
     main.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); go(); } });
-    // Feature 9 — contextual quick actions.
+    // Contextual quick actions.
     const actions = notificationActions(n);
     if (actions.length) {
       const actionsWrap = el('div', { class:'notification-item-actions' });
@@ -5803,7 +5898,7 @@ function renderNotifications() {
     } catch (_) { del.disabled = false; } });
     row.append(main, del); list.appendChild(row);
   });
-  // Feature 12 — reveal the next page of matches on demand.
+  // Reveal the next page of matches on demand.
   if (visibleRows.length > shown) {
     const more = el('button', { class:'btn ghost sm notification-loadmore', text:t('notifications.loadMore', { n: visibleRows.length - shown }), attrs:{ type:'button' } });
     more.addEventListener('click', (ev) => { ev.stopPropagation(); notificationsShown = shown + NOTIFICATIONS_PAGE_SIZE; renderNotifications(); if (notificationsMenuIsOpen()) void markVisibleNotificationsRead(); });
@@ -5884,7 +5979,7 @@ async function refreshNotifications(silent) {
     const data = await res.json();
     if (seq !== notificationsRequestSeq) return; // ignore an older poll that arrived late
     const incoming = (data && data.notifications) || [];
-    // Feature 6 — announce genuinely new, still-unread rows when the panel is closed.
+    // Announce genuinely new, still-unread rows when the panel is closed.
     if (notificationsSeenIds) {
       const fresh = incoming.filter((n) => n && !notificationsSeenIds.has(String(n.id)) && (n.unread === true || !(Number(n.readAt) > 0)));
       if (fresh.length && !notificationsMenuIsOpen()) announceNewNotifications(fresh);
@@ -5942,7 +6037,7 @@ if ($('notifications-search')) $('notifications-search').addEventListener('input
 if ($('notifications-btn')) $('notifications-btn').addEventListener('click', (e)=>{ e.stopPropagation(); closeUserMenu(); closeDashMenu(); const d=$('notifications-dropdown'); if(!d)return; const opening=d.classList.contains('hidden'); d.classList.toggle('hidden'); $('notifications-btn').setAttribute('aria-expanded', opening?'true':'false'); if(opening){ notificationsShown = NOTIFICATIONS_PAGE_SIZE; renderNotifications(); void markVisibleNotificationsRead(); refreshNotifications(true); } });
 if ($('notifications-clear')) $('notifications-clear').addEventListener('click', async (e)=>{ e.stopPropagation(); if(!accountNotifications.length || !confirm(t('notifications.clearConfirm')))return; await api('DELETE','/api/notifications'); notificationsRequestSeq += 1; accountNotifications=[]; renderNotifications(); if(!notificationsRequestInFlight) await refreshNotifications(true); });
 
-// Feature 6 — optional arrival sound, remembered locally (default off).
+// Optional arrival sound, remembered locally (default off).
 function updateNotificationsSoundBtn() {
   const b = $('notifications-sound'); if (!b) return;
   b.textContent = notificationsSoundOn ? '🔔' : '🔕';
@@ -5961,7 +6056,7 @@ if ($('notifications-sound')) {
   });
 }
 
-// Feature 7 — per-account category preferences. Security, Maintenance and System health stay always-on.
+// Per-account category preferences. Security, Maintenance and System health stay always-on.
 // The same account-scoped preferences are rendered both in the notification dropdown
 // and in the main Configuration window so both surfaces can never drift apart.
 const NOTIFICATION_MUTABLE_CATEGORIES = ['images','shares','receptions','transfers','search','pwa','visitors','thresholds','traffic','network','restarts','updates'];
@@ -6065,7 +6160,7 @@ async function saveNotificationPrefs() {
     if (notificationPrefsSaveQueued) { notificationPrefsSaveQueued = false; void saveNotificationPrefs(); }
   }
 }
-// Feature 31 — custom account notification rules.
+// Custom account notification rules.
 let notificationRules = [], notificationRuleTargets = [], notificationRulesLoaded = false;
 function notificationRuleMetricLabel(metric) {
   const key={views:'notifications.ruleMetricViews',downloads:'notifications.ruleMetricDownloads',bytes_served:'notifications.ruleMetricBytesServed',received_bytes:'notifications.ruleMetricReceivedBytes'}[metric];
@@ -6144,6 +6239,7 @@ function placeUserMenu(view) {
     admin: '#app-view .topbar-menus',
     images: '#images-page .topbar-menus',
     dashboards: '#dashboards-page .topbar-menus',
+    activity: '#activity-page .topbar-menus',
   };
   const target = document.querySelector(targets[view] || targets.admin);
   if (notifications && target && notifications.parentElement !== target) target.appendChild(notifications);
@@ -6167,6 +6263,60 @@ document.addEventListener('click', (e) => {
 });
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') closeUserMenu();
+});
+
+// --- Activity page — persistent full admin tab --------------------------------
+const ACTIVITY_PATH = '/activity';
+
+function activityPageOpen() {
+  const page = $('activity-page');
+  return !!page && !page.classList.contains('hidden');
+}
+function showActivityView() {
+  if (!['owner','admin','auditor',''].includes(state.role || '')) return false;
+  closeUserMenu();
+  stopDashboardAutoRefresh();
+  const imagesPage = $('images-page'); if (imagesPage) imagesPage.classList.add('hidden');
+  const dashboardsPage = $('dashboards-page'); if (dashboardsPage) dashboardsPage.classList.add('hidden');
+  $('app-view').classList.add('hidden');
+  placeUserMenu('activity');
+  $('activity-page').classList.remove('hidden');
+  document.title = t('app.name') + ' — ' + t('activity.sectionTitle');
+  renderActivity();
+  loadActivityRecent().catch(() => {});
+  ensureActivityStream();
+  window.scrollTo(0, 0);
+  return true;
+}
+function hideActivityView(showHome = true) {
+  const page = $('activity-page'); if (!page) return;
+  closeUserMenu();
+  page.classList.add('hidden');
+  if (showHome) {
+    placeUserMenu('admin');
+    $('app-view').classList.remove('hidden');
+    document.title = t('app.docTitle');
+  }
+}
+function openActivityPage() {
+  if (activityPageOpen()) return;
+  if (!showActivityView()) return;
+  try { if (location.pathname !== ACTIVITY_PATH) history.pushState({ dxView:'activity' }, '', ACTIVITY_PATH); } catch (_) {}
+}
+function closeActivityPage() {
+  if (!activityPageOpen()) return;
+  if (history.state && history.state.dxView === 'activity') history.back();
+  else {
+    hideActivityView();
+    if (location.pathname === ACTIVITY_PATH) { try { history.replaceState({ dxView:'home' }, '', '/'); } catch (_) {} }
+  }
+}
+if ($('activity-btn')) $('activity-btn').addEventListener('click', (e) => { e.stopPropagation(); openActivityPage(); });
+if ($('activity-back')) $('activity-back').addEventListener('click', closeActivityPage);
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape' || !activityPageOpen()) return;
+  if (document.querySelector('.overlay:not(.hidden)')) return;
+  closeActivityPage();
 });
 
 // --- Dashboards page — independent full admin sub-page -----------------------
@@ -6244,6 +6394,8 @@ function showDashboardsView(tab = state.dashboardTab) {
   closeUserMenu();
   const imagesPage = $('images-page');
   if (imagesPage) imagesPage.classList.add('hidden');
+  const activityPage = $('activity-page');
+  if (activityPage) activityPage.classList.add('hidden');
   $('app-view').classList.add('hidden');
   placeUserMenu('dashboards');
   $('dashboards-page').classList.remove('hidden');
@@ -6336,6 +6488,8 @@ function showImagesView() {
   stopDashboardAutoRefresh();
   const dashboardsPage = $('dashboards-page');
   if (dashboardsPage) dashboardsPage.classList.add('hidden');
+  const activityPage = $('activity-page');
+  if (activityPage) activityPage.classList.add('hidden');
   $('app-view').classList.add('hidden');
   placeUserMenu('images');
   $('images-page').classList.remove('hidden');
@@ -6381,6 +6535,10 @@ function closeImagesPage() {
 function syncAdminRouteFromUrl() {
   if (!isLoggedIn()) return;
 
+  if (location.pathname === ACTIVITY_PATH) {
+    if (showActivityView()) return;
+    try { history.replaceState({ dxView:'home' }, '', '/'); } catch (_) {}
+  }
   if (location.pathname === DASHBOARDS_PATH) {
     showDashboardsView(dashboardTabFromUrl());
     return;
@@ -6390,6 +6548,7 @@ function syncAdminRouteFromUrl() {
     return;
   }
 
+  hideActivityView(false);
   hideDashboardsView(false);
   hideImagesView(false);
   placeUserMenu('admin');
@@ -6413,7 +6572,7 @@ if ($('images-back')) $('images-back').addEventListener('click', closeImagesPage
 // shares admin page, regardless of how the current sub-page was reached.
 function goToSharesHome() {
   if (!isLoggedIn()) return;
-  if (dashboardsPageOpen() || imagesPageOpen()) {
+  if (activityPageOpen() || dashboardsPageOpen() || imagesPageOpen()) {
     try {
       if (location.pathname !== '/') history.pushState({ dxView: 'home' }, '', '/');
     } catch (_) {}
@@ -6457,7 +6616,7 @@ async function saveImageBase() {
 if ($('image-base-save')) $('image-base-save').addEventListener('click', saveImageBase);
 if ($('image-base-reset')) $('image-base-reset').addEventListener('click', () => { $('image-base').value = ''; $('image-ssl').checked = false; saveImageBase(); });
 
-// Save / reset the anti-hotlink allowlist (feature 19). The server normalizes the
+// Save / reset the anti-hotlink allowlist. The server normalizes the
 // raw comma/space list into an array of hosts and echoes it back for display.
 async function saveImageHotlink() {
   const raw = $('image-hotlink').value || '';
@@ -6952,7 +7111,7 @@ function renderDashboard() {
   if (!d || !$('dash-kpis')) return;
   const tot = d.totals || {};
 
-  renderKpis(tot);
+  renderKpis(tot, (d.storageReport && d.storageReport.disk) || d.storage || null);
   renderAutomaticAlerts('dash-alerts', 'dash-alert-count', transferAlerts(d));
   renderComparison('dash-comparison', d.comparison, 'transfer');
   renderTransferUsers(d.users || []);
@@ -6961,7 +7120,7 @@ function renderDashboard() {
   renderDashboardProxy(d.proxy, 'dash-proxy');
   renderDashboardLive();
   $('dash-activity').innerHTML = svgActivity(d.daily || []);
-  // Feature 35 — compact per-metric daily sparklines (downloads/day, deposits/day).
+  // Compact per-metric daily sparklines (downloads/day, deposits/day).
   if ($('dash-mini-downloads')) $('dash-mini-downloads').innerHTML = svgMiniTrend(d.daily || [], 'down', 'var(--accent)', t('dash.dl'));
   if ($('dash-mini-uploads')) $('dash-mini-uploads').innerHTML = svgMiniTrend(d.daily || [], 'up', 'var(--ok)', t('dash.ul'));
   $('dash-volume-trend').innerHTML = svgVolumeTrend(d.daily || []);
@@ -7381,7 +7540,7 @@ function fmtDuration(ms) {
   return h + ' h' + (rm ? ' ' + rm + ' min' : '');
 }
 
-function renderKpis(tot) {
+function renderKpis(tot, storage) {
   const okRate = tot.transfers ? Math.round((tot.completed / tot.transfers) * 100) : 0;
   const cards = [
     { icon: '📊', value: (tot.transfers || 0).toLocaleString(), label: t('dash.kpiTransfers') },
@@ -7394,6 +7553,7 @@ function renderKpis(tot) {
     { icon: '🌍', value: (tot.uniqueIps || 0).toLocaleString(), label: t('dash.kpiVisitors') },
     { icon: '🔗', value: (tot.activeShares || 0).toLocaleString(), label: t('dash.kpiShares') },
   ];
+  if (storage && Number(storage.free) >= 0) cards.push({ icon:'💽', value:formatBytes(Number(storage.free)||0), label:t('dash.kpiDiskFree') });
   $('dash-kpis').innerHTML = cards
     .map((c) => `<div class="kpi"><div class="kpi-ico">${c.icon}</div><div class="kpi-body">` +
       `<div class="kpi-val">${dashEsc(c.value)}</div><div class="kpi-lbl">${dashEsc(c.label)}</div></div></div>`)
@@ -7431,7 +7591,7 @@ function svgActivity(daily) {
     `<text x="${padL}" y="${padT + 2}" class="ax">${max}</text>${bars}${labels}</svg>`;
 }
 
-// Feature 35 — a compact single-series sparkline (area + line + peak marker) for one
+// A compact single-series sparkline (area + line + peak marker) for one
 // per-day metric ("down" = downloads/day, "up" = deposits/day). The daily buckets
 // already carry up/down counts, so this is a pure read-side visualization.
 function svgMiniTrend(daily, field, color, label) {
@@ -8104,7 +8264,7 @@ async function openConfigModal() {
   void loadNotificationPrefs();
   void loadNotificationRules();
   refreshWebPushUI(); // browser push notifications (async, updates the button/status)
-  // Notifications — expiry alert (feature 5) + periodic digest (feature 9)
+  // Notifications — expiry alert + periodic digest
   $('cfg-notify-expiring').checked = !!s.notifyExpiring;
   $('cfg-expiry-hours').value = s.expiryWarnHours || 24;
   $('cfg-expiry-hours').disabled = !s.notifyExpiring;
@@ -8117,15 +8277,20 @@ async function openConfigModal() {
   if ($('cfg-ransom-delete')) $('cfg-ransom-delete').value = s.ransomwareDeleteThreshold || 25;
   if ($('cfg-ransom-upload')) $('cfg-ransom-upload').value = s.ransomwareUploadThreshold || 120;
   if ($('cfg-ransom-block')) $('cfg-ransom-block').value = s.ransomwareBlockMinutes || 30;
-  ['cfg-ransom-delete','cfg-ransom-upload','cfg-ransom-block'].forEach((id) => { if ($(id)) $(id).disabled = s.ransomwareProtection === false; });
+  if ($('cfg-ransom-suspend-link')) $('cfg-ransom-suspend-link').checked = s.ransomwareSuspendLink !== false;
+  ['cfg-ransom-delete','cfg-ransom-upload','cfg-ransom-block','cfg-ransom-suspend-link'].forEach((id) => { if ($(id)) $(id).disabled = s.ransomwareProtection === false; });
   refreshRansomwareStatus();
   if ($('cfg-dlp-enable')) $('cfg-dlp-enable').checked = s.dlpEnabled !== false;
   if ($('cfg-dlp-mode')) $('cfg-dlp-mode').value = s.dlpMode || 'warn';
   if ($('cfg-dlp-maxfiles')) $('cfg-dlp-maxfiles').value = s.dlpMaxFiles || 100;
   if ($('cfg-dlp-maxmb')) $('cfg-dlp-maxmb').value = s.dlpMaxFileMB || 25;
   if ($('cfg-dlp-ocr')) $('cfg-dlp-ocr').checked = s.dlpScanOcr !== false;
-  ['cfg-dlp-mode','cfg-dlp-maxfiles','cfg-dlp-maxmb','cfg-dlp-ocr'].forEach((id) => { if ($(id)) $(id).disabled = s.dlpEnabled === false; });
-  // Notifications — e-mail / SMTP (feature 2)
+  if ($('cfg-dlp-rules')) $('cfg-dlp-rules').checked = s.dlpRulesEnabled === true;
+  const dlpActions = [['log',t('cfg.dlpLog')],['warn',t('cfg.dlpWarn')],['quarantine',t('cfg.dlpQuarantine')],['block',t('cfg.dlpBlock')]];
+  [['cfg-dlp-low',s.dlpActionLow||'log'],['cfg-dlp-medium',s.dlpActionMedium||'warn'],['cfg-dlp-high',s.dlpActionHigh||'quarantine'],['cfg-dlp-critical',s.dlpActionCritical||'block']].forEach(([id,val]) => { const el=$(id); if (!el) return; el.replaceChildren(...dlpActions.map(([v,label]) => { const o=document.createElement('option'); o.value=v; o.textContent=label; return o; })); el.value=val; });
+  ['cfg-dlp-mode','cfg-dlp-maxfiles','cfg-dlp-maxmb','cfg-dlp-ocr','cfg-dlp-rules','cfg-dlp-low','cfg-dlp-medium','cfg-dlp-high','cfg-dlp-critical'].forEach((id) => { if ($(id)) $(id).disabled = s.dlpEnabled === false; });
+  syncDlpConfigControls();
+  // Notifications — e-mail / SMTP
   const envMail = !!s.emailFromEnv;
   const mailAvail = s.emailAvailable !== false;
   $('cfg-email-env').classList.toggle('hidden', !envMail);
@@ -8144,6 +8309,9 @@ async function openConfigModal() {
   $('cfg-email-result').textContent = '';
   // Defaults for new links
   $('cfg-def-expiry').value = String(s.defaultExpiry || 0);
+  if ($('cfg-never-expire-new')) $('cfg-never-expire-new').checked = !!s.newSharesNeverExpire;
+  if ($('cfg-confirm-revoke')) $('cfg-confirm-revoke').checked = s.confirmShareRevoke !== false;
+  $('cfg-def-expiry').disabled = !!s.newSharesNeverExpire;
   $('cfg-def-maxdl').value = s.defaultMaxDownloads ? String(s.defaultMaxDownloads) : '';
   $('cfg-def-rate').value = s.defaultRateKBps ? String(s.defaultRateKBps) : '';
   $('cfg-def-allowzip').checked = s.defaultAllowZip !== false;
@@ -8184,17 +8352,18 @@ async function openConfigModal() {
   $('cfg-global-rate').value = s.globalRateKBps ? String(s.globalRateKBps) : '';
   $('cfg-max-upload').value = s.maxUploadBytes ? String(Math.round(s.maxUploadBytes / (1024 * 1024))) : '';
   $('cfg-max-zip').value = s.maxZipBytes ? String(Math.round(s.maxZipBytes / (1024 * 1024))) : '';
-  if ($('cfg-reception-cap')) $('cfg-reception-cap').value = s.receptionStorageCapGB ? String(s.receptionStorageCapGB) : ''; // feature 10
+  if ($('cfg-reception-cap')) $('cfg-reception-cap').value = s.receptionStorageCapGB ? String(s.receptionStorageCapGB) : '';
+  if ($('cfg-disk-warn')) $('cfg-disk-warn').value = String(s.diskFreeWarnPercent == null ? 10 : s.diskFreeWarnPercent);
   // Maintenance
   $('cfg-update-check').checked = s.updateCheck !== false;
   $('cfg-update-check').disabled = !!s.updateCheckEnv;
-  // Scheduled bandwidth cap (feature 5)
+  // Scheduled bandwidth cap
   $('cfg-sched-enable').checked = !!s.scheduleRateEnabled;
   $('cfg-sched-rate').value = s.scheduleRateKBps ? String(s.scheduleRateKBps) : '';
   $('cfg-sched-start').value = s.scheduleStart || '08:00';
   $('cfg-sched-end').value = s.scheduleEnd || '18:00';
   ['cfg-sched-rate','cfg-sched-start','cfg-sched-end'].forEach((id) => { $(id).disabled = !s.scheduleRateEnabled; });
-  // Public download protection (feature 7)
+  // Public download protection
   $('cfg-prl-enable').checked = !!s.publicRateLimit;
   $('cfg-prl-max').value = s.publicRateMax || 600;
   $('cfg-prl-window').value = s.publicRateWindowMin || 1;
@@ -8224,7 +8393,7 @@ async function openConfigModal() {
   $('cfg-accent-on').checked = hasAccent;
   $('cfg-accent').value = hasAccent ? s.accentColor : '#3b82f6';
   $('cfg-accent').disabled = !hasAccent;
-  // Public theme + mobile theme-color (features 1 & 9)
+  // Public theme + mobile theme-color
   $('cfg-public-theme').value = ['auto', 'dark', 'light'].includes(s.publicTheme) ? s.publicTheme : 'auto';
   const hasTc = !!(s.themeColor && /^#[0-9a-fA-F]{6}$/.test(s.themeColor));
   $('cfg-themecolor-on').checked = hasTc;
@@ -8234,12 +8403,12 @@ async function openConfigModal() {
   $('cfg-public-lang').value = s.publicLang || '';
   $('cfg-banner').value = s.receptionBanner || '';
   if ($('cfg-expiry-presets')) $('cfg-expiry-presets').value = s.expiryPresets || '1h,1d,7d,30d';
-  // Branding / watermark (feature 8)
+  // Branding / watermark
   cfgLogoData = (typeof s.publicLogo === 'string') ? s.publicLogo : '';
   renderLogoPreview();
   $('cfg-logo-result').textContent = '';
   $('cfg-legal').value = s.legalNotice || '';
-  if ($('cfg-announcement')) $('cfg-announcement').value = s.announcement || ''; // feature 11
+  if ($('cfg-announcement')) $('cfg-announcement').value = s.announcement || '';
   $('cfg-watermark').checked = !!s.watermarkPreviews;
   $('cfg-import-result').textContent = '';
   $('cfg-shares-import-result').textContent = '';
@@ -8267,12 +8436,13 @@ async function openConfigModal() {
   $('cfg-bk-restore-result').textContent = '';
   updateBackupDestFields();
   renderBackupStatus(s.lastBackup);
-  // At-rest encryption status (feature 6, env-controlled → read-only indicator)
+  // At-rest encryption status (env-controlled → read-only indicator)
   const enc = $('cfg-enc-status');
   enc.textContent = s.dataEncrypted ? t('cfg.encOn') : t('cfg.encOff');
   enc.className = 'muted sm' + (s.dataEncrypted ? ' cfg-ok' : '');
   $('config-error').classList.add('hidden');
   $('config-overlay').classList.remove('hidden');
+  void refreshStorageConnectors();
   // The periodic poll omits the custom logo (it can be ~256 KB) and sends only a
   // `publicLogoSet` flag. The modal is already visible, so fetch the full settings
   // in the background and refresh just the logo preview — opening never waits on
@@ -8294,16 +8464,16 @@ async function refreshRansomwareStatus() {
   list.textContent = '';
   try {
     const r = await api('GET', '/api/security/anomalies');
-    const blocks = (r && r.blocks) || [];
-    out.textContent = blocks.length ? t('cfg.ransomBlocked', { n: blocks.length }) : t('cfg.ransomNone');
-    out.className = 'sm' + (blocks.length ? ' cfg-bad' : ' cfg-ok');
-    blocks.forEach((rec) => {
+    const blocks = (r && r.blocks) || [], links = (r && r.links) || [];
+    out.textContent = (blocks.length || links.length) ? t('cfg.ransomBlocked', { n: blocks.length + links.length }) : t('cfg.ransomNone');
+    out.className = 'sm' + ((blocks.length || links.length) ? ' cfg-bad' : ' cfg-ok');
+    blocks.concat(links.map((rec) => ({ ...rec, isLink:true }))).forEach((rec) => {
       const row = el('div', { class: 'ransom-block-row' });
-      row.appendChild(el('span', { text: (rec.ip || '?') + ' · ' + (rec.reason || '') + ' · ' + new Date(rec.until).toLocaleString() }));
-      const b = el('button', { class: 'btn ghost xs', text: t('cfg.ransomUnblock') });
+      row.appendChild(el('span', { text: (rec.isLink ? (rec.shareName || rec.shareId || '?') : (rec.ip || '?')) + ' · ' + (rec.reason || '') + ' · ' + new Date(rec.until).toLocaleString() }));
+      const b = el('button', { class: 'btn ghost xs', text: t('cfg.ransomUnblock'), attrs:{ type:'button' } });
       b.addEventListener('click', async () => {
         b.disabled = true;
-        try { await api('POST', '/api/security/anomalies/unblock', { ip: rec.ip }); await refreshRansomwareStatus(); }
+        try { await api('POST', '/api/security/anomalies/unblock', rec.isLink ? { shareId:rec.shareId } : { ip:rec.ip }); await refreshRansomwareStatus(); }
         catch (_) { b.disabled = false; }
       });
       row.appendChild(b); list.appendChild(row);
@@ -8312,7 +8482,153 @@ async function refreshRansomwareStatus() {
 }
 if ($('cfg-ransom-refresh')) $('cfg-ransom-refresh').addEventListener('click', refreshRansomwareStatus);
 
-function closeConfigModal() { $('config-overlay').classList.add('hidden'); }
+// Storage connectors (rclone-backed, credentials never reach
+// the browser). Management and transfers are intentionally independent from the
+// main settings form so a connector test/import cannot accidentally save unrelated
+// fields in the long Configuration dialog.
+let storageConnectors = [];
+let connectorEditingId = null;
+let connectorRefreshTimer = null;
+function updateConnectorTransferActions() {
+  const select = $('connector-transfer-id');
+  const selected = storageConnectors.find((connector) => connector.id === (select && select.value));
+  if ($('connector-import')) $('connector-import').disabled = !selected;
+  if ($('connector-export')) $('connector-export').disabled = !selected || !!selected.readOnly;
+}
+function connectorStatus(target, key, bad) {
+  const node = $(target); if (!node) return;
+  node.textContent = key ? t(key) : '';
+  node.className = key ? ('sm ' + (bad ? 'cfg-bad' : 'cfg-ok')) : 'muted sm';
+}
+function resetConnectorEditor() {
+  connectorEditingId = null;
+  if ($('connector-name')) $('connector-name').value = '';
+  if ($('connector-type')) $('connector-type').value = 'sftp';
+  if ($('connector-remote')) $('connector-remote').value = '';
+  if ($('connector-root')) $('connector-root').value = '';
+  if ($('connector-readonly')) $('connector-readonly').checked = false;
+  if ($('connector-add')) $('connector-add').textContent = t('connector.add');
+}
+function connectorPayload() {
+  return {
+    name:$('connector-name').value.trim(), type:$('connector-type').value,
+    remote:$('connector-remote').value.trim(), root:$('connector-root').value.trim(),
+    readOnly:$('connector-readonly').checked,
+  };
+}
+function renderStorageConnectors(data) {
+  storageConnectors = Array.isArray(data && data.connectors) ? data.connectors : [];
+  const cap = $('connector-capability');
+  if (cap) {
+    const available = data && data.capabilities && data.capabilities.available;
+    cap.textContent = available
+      ? t('connector.ready', { version:data.capabilities.version || 'rclone' })
+      : t('connector.unavailable');
+    cap.className = 'sm ' + (available ? 'cfg-ok' : 'cfg-bad');
+  }
+  const datalist = $('connector-remotes');
+  if (datalist) {
+    datalist.textContent = '';
+    (Array.isArray(data && data.remotes) ? data.remotes : []).forEach((remote) => datalist.appendChild(el('option', { attrs:{ value:remote } })));
+  }
+  const select = $('connector-transfer-id');
+  if (select) {
+    const previous = select.value; select.textContent = '';
+    storageConnectors.forEach((connector) => select.appendChild(el('option', { attrs:{ value:connector.id }, text:connector.name })));
+    if (storageConnectors.some((connector) => connector.id === previous)) select.value = previous;
+    updateConnectorTransferActions();
+  }
+  const list = $('connector-list');
+  if (list) {
+    list.textContent = '';
+    if (!storageConnectors.length) list.appendChild(el('div', { class:'muted sm', text:t('connector.none') }));
+    storageConnectors.forEach((connector) => {
+      const row = el('div', { class:'connector-row' });
+      const main = el('div', { class:'connector-main' });
+      main.appendChild(el('strong', { text:connector.name }));
+      main.appendChild(el('div', { class:'connector-meta', text:`${connector.type} · ${connector.remote}:${connector.root || ''}${connector.readOnly ? ' · ' + t('connector.readOnlyShort') : ''}` }));
+      const actions = el('div', { class:'connector-actions' });
+      const testBtn = el('button', { attrs:{ type:'button' }, class:'btn ghost xs', text:t('connector.test') });
+      testBtn.addEventListener('click', async () => {
+        testBtn.disabled = true; connectorStatus('connector-editor-status', 'connector.testing');
+        try { await api('POST', `/api/storage/connectors/${encodeURIComponent(connector.id)}/test`, {}, 60000); connectorStatus('connector-editor-status', 'connector.testOk'); }
+        catch (_) { connectorStatus('connector-editor-status', 'connector.testFail', true); }
+        finally { testBtn.disabled = false; }
+      });
+      const editBtn = el('button', { attrs:{ type:'button' }, class:'btn ghost xs', text:t('connector.edit') });
+      editBtn.addEventListener('click', () => {
+        connectorEditingId = connector.id;
+        $('connector-name').value = connector.name; $('connector-type').value = connector.type;
+        $('connector-remote').value = connector.remote; $('connector-root').value = connector.root || '';
+        $('connector-readonly').checked = !!connector.readOnly; $('connector-add').textContent = t('connector.save');
+      });
+      const delBtn = el('button', { attrs:{ type:'button' }, class:'btn danger xs', text:t('connector.delete') });
+      delBtn.addEventListener('click', async () => {
+        if (!confirm(t('connector.deleteConfirm', { name:connector.name }))) return;
+        delBtn.disabled = true;
+        try { await api('DELETE', `/api/storage/connectors/${encodeURIComponent(connector.id)}`); if (connectorEditingId === connector.id) resetConnectorEditor(); await refreshStorageConnectors(); }
+        catch (_) { delBtn.disabled = false; connectorStatus('connector-editor-status', 'connector.deleteFail', true); }
+      });
+      actions.append(testBtn, editBtn, delBtn); row.append(main, actions); list.appendChild(row);
+    });
+  }
+  const jobs = $('connector-jobs');
+  if (jobs) {
+    jobs.textContent = '';
+    (Array.isArray(data && data.jobs) ? data.jobs : []).slice(0, 25).forEach((job) => {
+      const row = el('div', { class:`connector-job is-${job.status || 'queued'}` });
+      const main = el('div', { class:'connector-main' });
+      main.appendChild(el('strong', { text:`${job.direction === 'import' ? '↓' : '↑'} ${job.sourceName || '?'} → ${job.targetName || '?'}` }));
+      main.appendChild(el('div', { class:'connector-meta', text:`${job.connectorName || ''} · ${t('connector.status.' + (job.status || 'queued'))}${job.error ? ' · ' + job.error : ''}` }));
+      row.appendChild(main);
+      if (['queued','running'].includes(job.status)) {
+        const cancel = el('button', { attrs:{ type:'button' }, class:'btn danger xs', text:t('connector.cancel') });
+        cancel.addEventListener('click', async () => { cancel.disabled = true; try { await api('POST', `/api/storage/jobs/${encodeURIComponent(job.id)}/cancel`, {}); } catch (_) { cancel.disabled = false; } });
+        row.appendChild(cancel);
+      }
+      jobs.appendChild(row);
+    });
+  }
+  if (connectorRefreshTimer) { clearTimeout(connectorRefreshTimer); connectorRefreshTimer = null; }
+  if ((data && data.jobs || []).some((job) => ['queued','running'].includes(job.status)) && $('config-overlay') && !$('config-overlay').classList.contains('hidden')) {
+    connectorRefreshTimer = setTimeout(() => { connectorRefreshTimer = null; void refreshStorageConnectors(); }, 2500);
+  }
+}
+async function refreshStorageConnectors() {
+  try { renderStorageConnectors(await api('GET', '/api/storage/connectors', null, 30000)); }
+  catch (_) { connectorStatus('connector-capability', 'connector.loadFail', true); }
+}
+if ($('connector-add')) $('connector-add').addEventListener('click', async () => {
+  const payload = connectorPayload();
+  if (!payload.name || !payload.remote) return connectorStatus('connector-editor-status', 'connector.required', true);
+  $('connector-add').disabled = true;
+  try {
+    if (connectorEditingId) await api('PATCH', `/api/storage/connectors/${encodeURIComponent(connectorEditingId)}`, payload);
+    else await api('POST', '/api/storage/connectors', payload);
+    resetConnectorEditor(); connectorStatus('connector-editor-status', 'connector.saved'); await refreshStorageConnectors();
+  } catch (_) { connectorStatus('connector-editor-status', 'connector.saveFail', true); }
+  finally { $('connector-add').disabled = false; }
+});
+async function startConnectorTransfer(direction) {
+  const id = $('connector-transfer-id').value;
+  const remotePath = $('connector-remote-path').value.trim();
+  const localPath = $('connector-local-path').value.trim();
+  if (!id || !remotePath || (direction === 'export' && !localPath)) return connectorStatus('connector-transfer-status', 'connector.required', true);
+  const body = direction === 'import' ? { remotePath, target:localPath } : { source:localPath, remotePath };
+  try {
+    await api('POST', `/api/storage/connectors/${encodeURIComponent(id)}/${direction}`, body);
+    connectorStatus('connector-transfer-status', 'connector.queued'); await refreshStorageConnectors();
+  } catch (_) { connectorStatus('connector-transfer-status', 'connector.transferFail', true); }
+}
+if ($('connector-import')) $('connector-import').addEventListener('click', () => startConnectorTransfer('import'));
+if ($('connector-export')) $('connector-export').addEventListener('click', () => startConnectorTransfer('export'));
+if ($('connector-transfer-id')) $('connector-transfer-id').addEventListener('change', updateConnectorTransferActions);
+if ($('connector-refresh')) $('connector-refresh').addEventListener('click', refreshStorageConnectors);
+
+function closeConfigModal() {
+  $('config-overlay').classList.add('hidden');
+  if (connectorRefreshTimer) { clearTimeout(connectorRefreshTimer); connectorRefreshTimer = null; }
+}
 if ($('config-btn')) $('config-btn').addEventListener('click', (e) => {
   e.stopPropagation();
   closeUserMenu();
@@ -8340,7 +8656,7 @@ if ($('cfg-accent')) $('cfg-accent').addEventListener('input', () => {
 if ($('cfg-themecolor-on')) $('cfg-themecolor-on').addEventListener('change', () => {
   $('cfg-themecolor').disabled = !$('cfg-themecolor-on').checked;
 });
-// Feature 5/7 — grey out dependent fields when their master toggle is off.
+// Grey out dependent fields when their master toggle is off.
 function bindToggle(masterId, fieldIds) {
   const m = $(masterId);
   if (!m) return;
@@ -8351,12 +8667,20 @@ bindToggle('cfg-prl-enable', ['cfg-prl-max', 'cfg-prl-window']);
 bindToggle('cfg-chal-enable', ['cfg-chal-min', 'cfg-chal-bits']);
 bindToggle('cfg-leak-enable', ['cfg-leak-countries', 'cfg-leak-window']);
 bindToggle('cfg-ransom-enable', ['cfg-ransom-delete', 'cfg-ransom-upload', 'cfg-ransom-block']);
-bindToggle('cfg-dlp-enable', ['cfg-dlp-mode', 'cfg-dlp-maxfiles', 'cfg-dlp-maxmb', 'cfg-dlp-ocr']);
-// Feature 4 — download the admin audit log.
+function syncDlpConfigControls() {
+  const enabled = !$('cfg-dlp-enable') || $('cfg-dlp-enable').checked;
+  const severityRules = enabled && $('cfg-dlp-rules') && $('cfg-dlp-rules').checked;
+  ['cfg-dlp-mode', 'cfg-dlp-maxfiles', 'cfg-dlp-maxmb', 'cfg-dlp-ocr', 'cfg-dlp-rules'].forEach((id) => { if ($(id)) $(id).disabled = !enabled; });
+  ['cfg-dlp-low', 'cfg-dlp-medium', 'cfg-dlp-high', 'cfg-dlp-critical'].forEach((id) => { if ($(id)) $(id).disabled = !severityRules; });
+}
+if ($('cfg-dlp-enable')) $('cfg-dlp-enable').addEventListener('change', syncDlpConfigControls);
+if ($('cfg-dlp-rules')) $('cfg-dlp-rules').addEventListener('change', syncDlpConfigControls);
+// Download the admin audit log.
 if ($('cfg-audit-json')) $('cfg-audit-json').addEventListener('click', () => window.open('/api/audit/export?format=json', '_blank'));
 if ($('cfg-audit-csv')) $('cfg-audit-csv').addEventListener('click', () => window.open('/api/audit/export?format=csv', '_blank'));
+if ($('cfg-audit-proof')) $('cfg-audit-proof').addEventListener('click', () => window.open('/api/audit/export?format=proof', '_blank'));
 
-// Feature 18 — emergency stop: pause / resume every active link at once.
+// Emergency stop: pause / resume every active link at once.
 async function panicAction(path, key) {
   const out = $('cfg-panic-result');
   try {
@@ -8437,7 +8761,7 @@ if ($('cfg-bk-restore-file')) $('cfg-bk-restore-file').addEventListener('change'
     } else { out.textContent = t('cfg.bkRestoreFail') + (j && j.error ? ' (' + j.error + ')' : ''); out.className = 'sm cfg-bad'; }
   } catch (e) { out.textContent = t('cfg.bkRestoreFail'); out.className = 'sm cfg-bad'; }
 });
-// Feature 8 — custom logo (kept in memory as a data: URL until the form is saved).
+// Custom logo (kept in memory as a data: URL until the form is saved).
 let cfgLogoData = '';
 function renderLogoPreview() {
   const img = $('cfg-logo-preview'), clr = $('cfg-logo-clear');
@@ -8471,6 +8795,7 @@ if ($('cfg-clear-names')) $('cfg-clear-names').addEventListener('click', async (
     const r = await api('DELETE', '/api/ip-names');
     out.textContent = t('cfg.cleared', { n: (r && r.cleared) || 0 });
     out.className = 'sm cfg-ok';
+    loadUndoPreview();
   } catch (e2) { out.textContent = t('cfg.saveFail'); out.className = 'sm cfg-bad'; }
 });
 // Export the current settings as a JSON download.
@@ -8659,11 +8984,11 @@ if ($('cfg-email-test')) $('cfg-email-test').addEventListener('click', async () 
   }
 });
 
-// Export every link's configuration (feature 4).
+// Export every link's configuration.
 if ($('cfg-shares-export')) $('cfg-shares-export').addEventListener('click', () => {
   window.open('/api/shares/export', '_blank');
 });
-// Import a links-config file (feature 4). Confirms before touching existing links.
+// Import a links-config file. Confirms before touching existing links.
 if ($('cfg-shares-import')) $('cfg-shares-import').addEventListener('click', () => $('cfg-shares-import-file').click());
 if ($('cfg-shares-import-file')) $('cfg-shares-import-file').addEventListener('change', async (ev) => {
   const out = $('cfg-shares-import-result');
@@ -8705,13 +9030,21 @@ if ($('config-form')) $('config-form').addEventListener('submit', async (e) => {
     ransomwareDeleteThreshold: parseInt($('cfg-ransom-delete').value, 10) || 25,
     ransomwareUploadThreshold: parseInt($('cfg-ransom-upload').value, 10) || 120,
     ransomwareBlockMinutes: parseInt($('cfg-ransom-block').value, 10) || 30,
+    ransomwareSuspendLink: $('cfg-ransom-suspend-link') ? $('cfg-ransom-suspend-link').checked : true,
     dlpEnabled: $('cfg-dlp-enable') ? $('cfg-dlp-enable').checked : true,
     dlpMode: $('cfg-dlp-mode') ? $('cfg-dlp-mode').value : 'warn',
+    dlpRulesEnabled: $('cfg-dlp-rules') ? $('cfg-dlp-rules').checked : false,
+    dlpActionLow: $('cfg-dlp-low') ? $('cfg-dlp-low').value : 'log',
+    dlpActionMedium: $('cfg-dlp-medium') ? $('cfg-dlp-medium').value : 'warn',
+    dlpActionHigh: $('cfg-dlp-high') ? $('cfg-dlp-high').value : 'quarantine',
+    dlpActionCritical: $('cfg-dlp-critical') ? $('cfg-dlp-critical').value : 'block',
     dlpMaxFiles: $('cfg-dlp-maxfiles') ? (parseInt($('cfg-dlp-maxfiles').value, 10) || 100) : 100,
     dlpMaxFileMB: $('cfg-dlp-maxmb') ? (parseInt($('cfg-dlp-maxmb').value, 10) || 25) : 25,
     dlpScanOcr: $('cfg-dlp-ocr') ? $('cfg-dlp-ocr').checked : true,
     digestDays: parseInt($('cfg-digest-days').value, 10) || 7,
     defaultExpiry: parseInt($('cfg-def-expiry').value, 10) || 0,
+    newSharesNeverExpire: $('cfg-never-expire-new') ? $('cfg-never-expire-new').checked : false,
+    confirmShareRevoke: $('cfg-confirm-revoke') ? $('cfg-confirm-revoke').checked : true,
     defaultMaxDownloads: parseInt($('cfg-def-maxdl').value, 10) || 0,
     defaultRateKBps: parseInt($('cfg-def-rate').value, 10) || 0,
     defaultAllowZip: $('cfg-def-allowzip').checked,
@@ -8742,7 +9075,8 @@ if ($('config-form')) $('config-form').addEventListener('submit', async (e) => {
     globalRateKBps: parseInt($('cfg-global-rate').value, 10) || 0,
     maxUploadBytes: mb('cfg-max-upload'),
     maxZipBytes: mb('cfg-max-zip'),
-    receptionStorageCapGB: $('cfg-reception-cap') ? (parseFloat($('cfg-reception-cap').value) || 0) : 0, // feature 10
+    receptionStorageCapGB: $('cfg-reception-cap') ? (parseFloat($('cfg-reception-cap').value) || 0) : 0,
+    diskFreeWarnPercent: $('cfg-disk-warn') ? Math.max(0, Math.min(50, parseInt($('cfg-disk-warn').value, 10) || 0)) : 10,
     updateCheck: $('cfg-update-check').checked,
     scheduleRateEnabled: $('cfg-sched-enable').checked,
     scheduleRateKBps: parseInt($('cfg-sched-rate').value, 10) || 0,
@@ -8759,7 +9093,7 @@ if ($('config-form')) $('config-form').addEventListener('submit', async (e) => {
     leakAlertWindowHours: parseInt($('cfg-leak-window').value, 10) || 24,
     publicLogo: cfgLogoData || '',
     legalNotice: $('cfg-legal').value.trim(),
-    announcement: $('cfg-announcement') ? $('cfg-announcement').value.trim() : '', // feature 11
+    announcement: $('cfg-announcement') ? $('cfg-announcement').value.trim() : '',
     watermarkPreviews: $('cfg-watermark').checked,
     historyRetentionDays: parseInt($('cfg-retention').value, 10) || 0,
     logRetentionDays: parseInt($('cfg-log-retention').value, 10) || 0,
@@ -8833,6 +9167,7 @@ if ($('config-form')) $('config-form').addEventListener('submit', async (e) => {
   try {
     const r = await api('POST', '/api/settings', payload);
     if (r) { state.settings = r; applyBranding(r); }
+    loadUndoPreview();
     applyIdleLock(idleLockMinutes);
     closeConfigModal();
     toast(r && r.persisted === false ? t('cfg.savedTemp') : t('cfg.saved'), r && r.persisted === false ? 'warn' : 'ok');
@@ -8870,13 +9205,16 @@ function applyRole(role) {
   show('export-json-btn', isFull);
   show('history-clear-btn', isFull);
   show('live-activity-btn', isFull || role === 'auditor');
+  show('activity-btn', isFull || role === 'auditor');
+  if (isFull || role === 'auditor') { if (activityPageOpen() || !state.activityInitialized) loadActivityRecent().catch(() => {}); ensureActivityStream(); }
+  else stopActivityStream();
   show('trash-purge-all', isFull);
   show('photos-history-purge', canCreate);
   // Auditors are read-only: CSS (body[data-role="auditor"]) hides the remaining
   // mutating controls (shutdown toggle, per-link actions, tags, bulk bar).
 }
 
-// Feature 9 — build the quick expiry <option>s of the creation modals from the
+// Build the quick expiry <option>s of the creation modals from the
 // admin's presets ("1h,1d,7d,30d"). "Never" is always first; the edit modal keeps
 // its own options (it maps an existing link's absolute expiry).
 function parsePresetToken(tok) {
@@ -8911,7 +9249,7 @@ function syncSettings(settings) {
   if (!settings) return;
   state.settings = settings; // kept for the Configuration window
   applyBranding(settings);   // custom accent colour + app name
-  applyExpiryPresets(settings); // feature 9: custom quick expiry presets
+  applyExpiryPresets(settings); // custom quick expiry presets
   maybeApplyAdminLang(settings); // default admin language (only if the user never chose)
   maybeShowHttpsWarning(settings);
   maybeEnforceTwoFactor(settings); // nag to set up 2FA when the policy requires it
@@ -9071,7 +9409,7 @@ function stopPolling() {
   stopSharePresence();
 }
 
-// Feature 20 — authoritative per-link download presence. SSE updates only the
+// Authoritative per-link download presence. SSE updates only the
 // affected badges, avoiding a full list re-render that could destroy inline edits.
 function applySharePresence() {
   document.querySelectorAll('[data-share-id]').forEach((node) => {
@@ -9121,6 +9459,7 @@ async function refreshShares() {
   try {
     const data = await api('GET', '/api/shares');
     state.sharesLoaded = true;
+    const trashBadge = $('trash-count-badge'); if (trashBadge) trashBadge.textContent = String(Math.max(0, Number(data.trashCount) || 0));
     if (state.connLost) {
       state.connLost = false;
       hideBanner();
@@ -9532,7 +9871,7 @@ function toggleInlineQr(s, card, button) {
 }
 async function resetShareStats(s) {
   if (!confirm(t('sh.resetStatsConfirm', { name: s.name || '' }))) return;
-  try { await api('POST', '/api/shares/' + encodeURIComponent(s.id) + '/reset-stats', {}); toast(t('sh.statsReset'), 'ok'); refreshShares(); }
+  try { await api('POST', '/api/shares/' + encodeURIComponent(s.id) + '/reset-stats', {}); toast(t('sh.statsReset'), 'ok'); loadUndoPreview(); refreshShares(); }
   catch (_) { toast(t('sh.statsResetFail'), 'err'); }
 }
 let commentShare = null;
@@ -9580,7 +9919,7 @@ async function openShareComments(s) {
   commentShare = s; const overlay = ensureShareCommentsModal(); $('share-comments-name').textContent = s.name || ''; overlay.classList.remove('hidden'); await loadShareComments(s); setTimeout(() => { const x = $('share-comments-input'); if (x) x.focus(); }, 0);
 }
 
-// Features 28 + 38 — one per-link modal that moderates access requests (approve /
+// One per-link modal that moderates access requests (approve /
 // deny / delete) and visitor feedback (mark read / delete). Mirrors the comments modal.
 let moderationShare = null;
 function ensureModerationModal() {
@@ -9601,7 +9940,7 @@ function ensureModerationModal() {
 async function loadModeration(s) {
   const body = $('share-moderation-body'); if (!body) return;
   body.textContent = '';
-  // --- Feature 28: access requests -----------------------------------------
+  // --- Access requests -----------------------------------------
   if (s.requestAccess || s.accessRequestsCount) {
     const sec = el('div', { class: 'mod-section' });
     sec.appendChild(el('h4', { text: t('mod.accessTitle') }));
@@ -9623,7 +9962,7 @@ async function loadModeration(s) {
       });
     } catch (_) { list.appendChild(el('div', { class: 'empty sm', text: t('mod.loadFail') })); }
   }
-  // --- Feature 38: visitor feedback ----------------------------------------
+  // --- Visitor feedback ----------------------------------------
   if (s.allowFeedback || s.feedbackCount) {
     const sec = el('div', { class: 'mod-section' });
     sec.appendChild(el('h4', { text: t('mod.fbTitle') }));
@@ -9650,11 +9989,11 @@ async function openShareModeration(s) {
 }
 
 function renderShares(shares) {
-  state.allShares = shares; // keep for client-side filtering (feature 9)
+  state.allShares = shares; // keep for client-side filtering
   // Photos tab — render direct-image links in their own gallery and keep them out
   // of the main links list.
   // Galleries render first so their member lists are available to the image filters.
-  renderAlbums(shares.filter((s) => s.type === 'album')); // feature 18: image galleries
+  renderAlbums(shares.filter((s) => s.type === 'album')); // image galleries
   renderPhotos(shares.filter((s) => s.type === 'photo'));
   shares = shares.filter((s) => s.type !== 'photo' && s.type !== 'album');
   const list = $('shares-list');
@@ -9700,6 +10039,7 @@ function renderShares(shares) {
   const customTo = state.shareDateTo ? new Date(state.shareDateTo + 'T23:59:59.999').getTime() : Infinity;
   let shown = shares.filter((s) => {
     if (!!s.archived !== !!state.shareShowArchived) return false;
+    if (state.sharePinnedOnly && !s.pinned) return false;
     if (q && !((s.name || '').toLowerCase().includes(q)
         || (s.adminNote || '').toLowerCase().includes(q)
         || (s.descriptionMd || '').toLowerCase().includes(q)
@@ -9789,7 +10129,7 @@ function renderShares(shares) {
       updateBulkBar();
     });
     headline.appendChild(sel);
-    // Feature 6 — a custom per-link emoji marker replaces the generic type glyph
+    // A custom per-link emoji marker replaces the generic type glyph
     // when set (the type is still conveyed by the coloured badge below); empty → default.
     const typeIco = isInbox ? '📥' : isCollab ? '🔁' : s.type === 'folder' ? '📁' : '📄';
     const icoSpan = el('span', { class: 'ico', text: s.emoji || typeIco });
@@ -9818,7 +10158,9 @@ function renderShares(shares) {
     if (s.archived) badges.appendChild(el('span', { class: 'badge archived-badge', text: t('sh.archived') }));
     if (s.dlp && (s.dlp.count || s.dlp.incomplete)) badges.appendChild(el('span', { class: 'badge dlp-badge', text:s.dlp.incomplete && !s.dlp.count ? 'DLP ?' : t('dlp.badge', { n:s.dlp.count }), attrs:{ title:s.dlp.incomplete ? t('dlp.incompleteConfirm', { skipped:s.dlp.filesSkipped || 0, ocr:s.dlp.ocrErrors || 0, scan:s.dlp.scanErrors || 0 }) : (s.dlp.types || []).join(', ') } }));
     const totalUsage = Math.max(Number(s.views) || 0, Number(s.downloads) || 0, Number(s.stats && s.stats.count) || 0);
-    if (totalUsage === 0) badges.appendChild(el('span', { class: 'badge never-used', text: t('sh.neverUsed') }));
+    const downloadable = s.type === 'file' || s.type === 'folder';
+    if (downloadable && (Number(s.downloadsUsed) || 0) === 0) badges.appendChild(el('span', { class: 'badge never-used', text: t('sh.neverDownloaded') }));
+    else if (totalUsage === 0) badges.appendChild(el('span', { class: 'badge never-used', text: t('sh.neverUsed') }));
     else if ((Number(s.views) || 0) >= 100 || (Number(s.downloads) || 0) >= 25 || (Number(s.stats && s.stats.count) || 0) >= 50) badges.appendChild(el('span', { class: 'badge very-active', text: t('sh.veryActive') }));
     if (s.hasPassword) badges.appendChild(el('span', { class: 'badge locked', text: t('sh.protected') }));
     if (isCollab && s.collab && s.collab.allowDelete) badges.appendChild(el('span', { class: 'badge burn', text: t('sh.canDelete') }));
@@ -9831,10 +10173,11 @@ function renderShares(shares) {
     const expiryDeadline = Number(s.effectiveExpiresAt) || 0;
     const expiryRemaining = expiryDeadline ? expiryDeadline - Date.now() : 0;
     if (s.active && expiryRemaining > 0 && expiryRemaining <= 86400000) badges.appendChild(el('span', { class: 'badge expiring-soon', text: '⏳ ' + t('sh.expiringSoon'), attrs: { title: t('sh.expiresIn', { v: timeUntil(expiryDeadline) }) } }));
+    if (s.revoked) badges.appendChild(el('span', { class: 'badge expired', text: t('sh.revoke') }));
     if (s.disabled) badges.appendChild(el('span', { class: 'badge paused', text: t('sh.paused') }));
     else if (s.scheduled) badges.appendChild(el('span', { class: 'badge scheduled', text: t('sh.scheduled') }));
     else if (!s.active) badges.appendChild(el('span', { class: 'badge expired', text: t('sh.inactive') }));
-    // Owner chip (feature: per-account ownership) — shown to owner/admin only.
+    // Owner chip (per-account ownership) — shown to owner/admin only.
     const viewerRole = state.settings && state.settings.role;
     if (s.ownerName && (viewerRole === 'owner' || viewerRole === 'admin')) {
       badges.appendChild(el('span', { class: 'share-owner', text: '👤 ' + s.ownerName }));
@@ -9848,14 +10191,10 @@ function renderShares(shares) {
     card.appendChild(top);
 
     const meta = el('div', { class: 'share-meta' });
-    if (!noSize) {
-      meta.appendChild(
-        el('span', {
-          text: t('sh.sizeLabel') + ' ' + (s.type === 'file' ? formatBytes(s.size) : t('sh.folder')),
-        })
-      );
+    if (!noSize && s.logicalBytesReady !== false) {
+      meta.appendChild(el('span', { text: t('sh.totalSize') + ' ' + formatBytes(Math.max(0, Number(s.logicalBytes) || Number(s.size) || 0)) }));
     }
-    meta.appendChild(el('span', { text: t('sh.created') + ' ' + formatDate(s.createdAt), attrs: { title: t('sh.createdTip', { v: timeAgo(s.createdAt) }) } })); // feature 7 — "créé il y a X" on hover
+    meta.appendChild(el('span', { text: t('sh.created') + ' ' + formatDate(s.createdAt), attrs: { title: t('sh.createdTip', { v: timeAgo(s.createdAt) }) } })); // "créé il y a X" on hover
     if (s.lastActivityAt && s.lastActivityAt > s.createdAt) meta.appendChild(el('span', { text: '🕒 ' + timeAgo(s.lastActivityAt) }));
     meta.appendChild(
       el('span', {
@@ -9866,7 +10205,7 @@ function renderShares(shares) {
           (!noSize && s.maxDownloads ? ' / ' + s.maxDownloads : ''),
       })
     );
-    if (s.itemCount > 1) meta.appendChild(el('span', { text: t('sh.files', { n: s.itemCount }) }));
+    if (s.itemCount != null) meta.appendChild(el('span', { text: t('sh.files', { n: s.itemCount }) }));
     // Live views / unique-visitors counter (all link types), refreshed by the poll.
     meta.appendChild(el('span', {
       class: 'sh-views',
@@ -9901,7 +10240,7 @@ function renderShares(shares) {
         parts.push(t('sh.limQuota', { v: formatBytes(cb.maxTotalBytes) }) +
           ' (' + t('sh.usage', { v: formatBytes(cb.bytesReceived) }) + ')');
       }
-      if (cb.maxFilesPerUpload) parts.push(t('sh.limFilesPerUpload', { v: cb.maxFilesPerUpload })); // feature 13
+      if (cb.maxFilesPerUpload) parts.push(t('sh.limFilesPerUpload', { v: cb.maxFilesPerUpload }));
       if (cb.allowExt && cb.allowExt.length) parts.push(t('sh.limAllow', { v: cb.allowExt.join(', ') }));
       if (cb.blockExt && cb.blockExt.length) parts.push(t('sh.limBlock', { v: cb.blockExt.join(', ') }));
       const line = el('div', { class: 'share-sub' });
@@ -9928,7 +10267,7 @@ function renderShares(shares) {
         );
       }
       if (ib.maxFiles) parts.push(t('sh.limFiles', { v: ib.maxFiles }));
-      if (ib.maxFilesPerUpload) parts.push(t('sh.limFilesPerUpload', { v: ib.maxFilesPerUpload })); // feature 13
+      if (ib.maxFilesPerUpload) parts.push(t('sh.limFilesPerUpload', { v: ib.maxFilesPerUpload }));
       if (ib.allowExt && ib.allowExt.length) parts.push(t('sh.limAllow', { v: ib.allowExt.join(', ') }));
       if (ib.blockExt && ib.blockExt.length) parts.push(t('sh.limBlock', { v: ib.blockExt.join(', ') }));
       if (parts.length) {
@@ -10003,7 +10342,7 @@ function renderShares(shares) {
       s.items.forEach((it, idx) => {
         const row = el('div', { class: 'item-row' });
         row.dataset.idx = idx;
-        // Drag & drop reorder (feature 16) — only when several items exist.
+        // Drag & drop reorder — only when several items exist.
         if (many) {
           row.setAttribute('draggable', 'true');
           row.appendChild(el('span', { class: 'item-grip', text: '⠿', attrs: { title: t('sh.reorder') } }));
@@ -10041,7 +10380,7 @@ function renderShares(shares) {
 
     card.appendChild(tagsSection(s));
 
-    // Private admin note (feature 2) — click to edit; never shown to visitors.
+    // Private admin note — click to edit; never shown to visitors.
     if (s.adminNote) {
       const an = el('div', { class: 'share-adminnote', text: '📝 ' + s.adminNote, attrs: { title: t('sh.noteEditTip') } });
       an.addEventListener('click', () => openAdminNoteEditor(s, card));
@@ -10093,7 +10432,7 @@ function renderShares(shares) {
     actions.appendChild(statsBtn);
     const commentsBtn = el('button', { class: 'btn ghost sm', text: t('sh.comments') + (s.commentCount ? ' (' + s.commentCount + ')' : '') });
     commentsBtn.addEventListener('click', () => openShareComments(s)); actions.appendChild(commentsBtn);
-    // Features 28/38 — moderate access requests + visitor feedback for this link.
+    // Moderate access requests + visitor feedback for this link.
     if (s.requestAccess || s.allowFeedback || s.accessRequestsCount || s.feedbackCount) {
       const pend = (s.accessPending || 0) + (s.feedbackUnread || 0);
       const modBtn = el('button', { class: 'btn ghost sm' + (pend ? ' has-pending' : ''), text: t('sh.moderation') + (pend ? ' (' + pend + ')' : '') });
@@ -10101,11 +10440,11 @@ function renderShares(shares) {
     }
     const resetStatsBtn = el('button', { class: 'btn ghost sm', text: t('sh.resetStats') });
     resetStatsBtn.addEventListener('click', () => resetShareStats(s)); actions.appendChild(resetStatsBtn);
-    // Access log (feature 14): who / when / from where, from the transfer journal.
+    // Access log: who / when / from where, from the transfer journal.
     const logBtn = el('button', { class: 'btn ghost sm', text: t('sh.log'), attrs: { title: t('sh.logTitle') } });
     logBtn.addEventListener('click', () => openAccessLog(s));
     actions.appendChild(logBtn);
-    // Feature 15 — browse the files received on a reception/collaboration link, with
+    // Browse the files received on a reception/collaboration link, with
     // thumbnails for images.
     if (s.type === 'inbox' || s.type === 'collab') {
       const rcvBtn = el('button', { class: 'btn ghost sm', text: t('recv.button'), attrs: { title: t('recv.title') } });
@@ -10113,11 +10452,17 @@ function renderShares(shares) {
       actions.appendChild(rcvBtn);
     }
     if (['file','folder','collab'].includes(s.type)) { const fhBtn=el('button',{class:'btn ghost sm',text:t('filehist.button'),attrs:{title:t('filehist.title')}}); fhBtn.addEventListener('click',()=>openFileHistory(s)); actions.appendChild(fhBtn); }
-    // Private admin note (feature 2).
+    // Private admin note.
     const noteBtn = el('button', { class: 'btn ghost sm', text: t('sh.noteBtn'), attrs: { title: t('sh.noteTitle') } });
     noteBtn.addEventListener('click', () => openAdminNoteEditor(s, card));
     actions.appendChild(noteBtn);
-    // Pause / resume (feature 3): temporarily deactivate without deleting.
+    // 1.51.0 — a burned/legacy revoked record may be reactivated when its data is
+    // still available. Pausing remains a separate reversible lifecycle control.
+    if (s.revoked) {
+      const reactivateBtn = el('button', { class: 'btn ghost sm', text: t('sh.reactivate'), attrs: { title: t('sh.reactivateTitle') } });
+      reactivateBtn.addEventListener('click', () => reactivateShare(s, reactivateBtn));
+      actions.appendChild(reactivateBtn);
+    }
     const pauseBtn = el('button', { class: 'btn ghost sm', text: s.disabled ? t('sh.resume') : t('sh.pause'), attrs: { title: s.disabled ? t('sh.resumeTitle') : t('sh.pauseTitle') } });
     pauseBtn.addEventListener('click', () => togglePause(s));
     actions.appendChild(pauseBtn);
@@ -10132,7 +10477,7 @@ function renderShares(shares) {
     actions.appendChild(expiryQuick);
     const ex1 = el('button', { class: 'btn ghost sm', text: t('sh.extend1d') }); ex1.addEventListener('click', () => extendShare(s, 86400)); actions.appendChild(ex1);
     const ex7 = el('button', { class: 'btn ghost sm', text: t('sh.extend7d') }); ex7.addEventListener('click', () => extendShare(s, 604800)); actions.appendChild(ex7);
-    const ex30 = el('button', { class: 'btn ghost sm', text: t('sh.extend30d') }); ex30.addEventListener('click', () => extendShare(s, 2592000)); actions.appendChild(ex30); // feature 14 — +30 d one-click extension
+    const ex30 = el('button', { class: 'btn ghost sm', text: t('sh.extend30d') }); ex30.addEventListener('click', () => extendShare(s, 2592000)); actions.appendChild(ex30); // +30 d one-click extension
     const histBtn = el('button', { class: 'btn ghost sm', text: t('sh.historyBtn') + (s.changeCount ? ' (' + s.changeCount + ')' : '') });
     histBtn.addEventListener('click', () => openShareChangeHistory(s)); actions.appendChild(histBtn);
     const revokeBtn = el('button', { class: 'btn danger sm', text: t('sh.revoke') });
@@ -10148,7 +10493,7 @@ function renderShares(shares) {
   updateBulkBar();
 }
 
-// --- Feature 8: moderation queue (files awaiting approval) ---
+// --- Moderation queue (files awaiting approval) ---
 function pendingSection(s) {
   const box = el('div', { class: 'share-msgs pending-box' });
   const head = el('div', { class: 'msgs-head' });
@@ -10178,7 +10523,7 @@ async function moderate(id, action) {
   } catch (e) { toast(t('mod.fail'), 'err'); }
 }
 
-// --- Feature 9: tags + bulk actions ---
+// --- Tags + bulk actions ---
 function tagsSection(s) {
   const box = el('div', { class: 'tags-row' });
   (Array.isArray(s.tags) ? s.tags : []).forEach((tg) => {
@@ -10240,6 +10585,7 @@ async function bulkAction(action, extra) {
     toast(t('sh.bulkDone', { n: (r && r.count) || 0 }), 'ok');
     state.selShares = new Set();
     await refreshShares();
+    if (action === 'revoke') loadUndoPreview();
   } catch (e) { toast(t('sh.bulkFail'), 'err'); }
   finally { setShareBulkBusy(false); updateBulkBar(); }
 }
@@ -10281,13 +10627,20 @@ if ($('shares-archived-toggle')) $('shares-archived-toggle').addEventListener('c
   const b=$('shares-archived-toggle'); b.classList.toggle('active',state.shareShowArchived); b.setAttribute('aria-pressed',state.shareShowArchived?'true':'false');
   state.selShares = new Set(); if (state.allShares) renderShares(state.allShares);
 });
+if ($('shares-pinned-toggle')) $('shares-pinned-toggle').addEventListener('click', () => {
+  state.sharePinnedOnly = !state.sharePinnedOnly;
+  const b=$('shares-pinned-toggle'); b.classList.toggle('active',state.sharePinnedOnly); b.setAttribute('aria-pressed',state.sharePinnedOnly?'true':'false');
+  state.selShares = new Set(); state.sharePage=0; if (state.allShares) renderShares(state.allShares);
+});
 [['shares-view-list', 'list'], ['shares-view-grid', 'grid']].forEach(([id, mode]) => {
   if ($(id)) $(id).addEventListener('click', () => setShareView(mode));
 });
-// Feature — density toggle for the admin links table (compact / comfortable).
+// Density toggle for the admin links table (compact / comfortable).
 if ($('shares-density-toggle')) $('shares-density-toggle').addEventListener('click', () => setShareDensity(state.shareDensity === 'compact' ? 'comfortable' : 'compact'));
 
-// --- Feature 18: full-text content search ---
+// --- Full-text content search ---
+if ($('cfg-never-expire-new')) $('cfg-never-expire-new').addEventListener('change', (e) => { if ($('cfg-def-expiry')) $('cfg-def-expiry').disabled = !!e.target.checked; });
+
 if ($('search-toggle-btn')) $('search-toggle-btn').addEventListener('click', () => {
   const p = $('search-panel');
   const nowHidden = p.classList.toggle('hidden');
@@ -10329,7 +10682,8 @@ async function runContentSearch() {
   st.textContent = t('search.searching');
   try {
     const semantic = !!($('search-semantic') && $('search-semantic').checked);
-    const r = await api('GET', '/api/search?q=' + encodeURIComponent(q) + (semantic ? '&semantic=1' : ''));
+    const scope = ($('search-scope') && $('search-scope').value) || 'all';
+    const r = await api('GET', '/api/search?q=' + encodeURIComponent(q) + '&scope=' + encodeURIComponent(scope) + (semantic ? '&semantic=1' : ''));
     renderSearchResults(r);
   } catch (e) {
     st.textContent = (e.data && e.data.error === 'query-too-short') ? t('search.tooShort') : t('search.fail');
@@ -10346,14 +10700,17 @@ function renderSearchResults(r) {
   list.forEach((m) => {
     const row = el('div', { class: 'search-hit' });
     const head = el('div', { class: 'sh-hit-head' });
-    head.appendChild(el('span', { class: 'sh-hit-share', text: m.shareName }));
-    head.appendChild(el('span', { class: 'sh-hit-file', text: m.file + (m.line ? ' :' + m.line : '') }));
-    if (m.kind) head.appendChild(el('span', { class: 'badge', text: String(m.kind).toUpperCase() + (m.size ? ' · ' + fmtBytes(m.size) : '') }));
+    head.appendChild(el('span', { class: 'sh-hit-share', text: m.shareName || '—' }));
+    head.appendChild(el('span', { class: 'sh-hit-file', text: String(m.file || '') + (m.line ? ' :' + m.line : '') }));
+    const scopeLabel = m.scope === 'user' ? t('search.kindUser') : m.scope === 'log' ? t('search.kindLog') : m.scope === 'link' ? t('search.kindLink') : null;
+    if (scopeLabel) head.appendChild(el('span', { class: 'badge', text: scopeLabel }));
+    else if (m.kind) head.appendChild(el('span', { class: 'badge', text: String(m.kind).toUpperCase() + (m.size ? ' · ' + fmtBytes(m.size) : '') }));
     if (m.ocr) head.appendChild(el('span', { class: 'badge search-ocr-badge', text: 'T/' + t('search.ocrBadge'), attrs: { title: m.ocrSource || 'OCR' } }));
     if (m.semantic) head.appendChild(el('span', { class: 'badge semantic-badge', text: '≈ ' + t('search.semanticBadge'), attrs: { title: m.semanticScore != null ? String(m.semanticScore) : '' } }));
     if (m.matches > 1) head.appendChild(el('span', { class: 'badge', text: '×' + m.matches }));
-    const link = m.type === 'photo' ? ('/images?image=' + encodeURIComponent(m.token)) : ((prefix[m.type] || '/s/') + m.token);
-    head.appendChild(el('a', { class: 'btn ghost xs sh-hit-open', text: t('sh.open'), attrs: { href: link, target: '_blank', rel: 'noopener' } }));
+    let link = m.path || null;
+    if (!link && m.scope !== 'user' && m.scope !== 'log' && m.token) link = m.type === 'photo' ? ('/images?image=' + encodeURIComponent(m.token)) : ((prefix[m.type] || '/s/') + m.token);
+    if (link) head.appendChild(el('a', { class: 'btn ghost xs sh-hit-open', text: t('sh.open'), attrs: { href: link, target: '_blank', rel: 'noopener' } }));
     row.appendChild(head);
     row.appendChild(el('div', { class: 'sh-hit-snip', text: m.snippet }));
     out.appendChild(row);
@@ -10362,11 +10719,11 @@ function renderSearchResults(r) {
 if ($('search-run')) $('search-run').addEventListener('click', runContentSearch);
 if ($('search-input')) $('search-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); runContentSearch(); } });
 
-// Feature 8 — export the links list (state + counters) as CSV / JSON.
+// Export the links list (state + counters) as CSV / JSON.
 if ($('links-export-csv')) $('links-export-csv').addEventListener('click', () => window.open('/api/shares/list-export?format=csv', '_blank'));
 if ($('links-export-json')) $('links-export-json').addEventListener('click', () => window.open('/api/shares/list-export?format=json', '_blank'));
 
-// --- Keyboard shortcuts (feature 8) ---
+// --- Keyboard shortcuts ---
 function anyOverlayOpen() { return !!document.querySelector('.overlay:not(.hidden)'); }
 function closeKeysHelp() { const o = $('keys-overlay'); if (o) o.classList.add('hidden'); }
 function toggleKeysHelp() { const o = $('keys-overlay'); if (o) o.classList.toggle('hidden'); }
@@ -10375,6 +10732,7 @@ if ($('keys-overlay')) $('keys-overlay').addEventListener('click', (e) => { if (
 if ($('log-close')) $('log-close').addEventListener('click', closeAccessLog);
 if ($('log-overlay')) $('log-overlay').addEventListener('click', (e) => { if (e.target === $('log-overlay')) closeAccessLog(); });
 document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === 'k') { const p=$('search-panel'), input=$('search-input'); if(p&&input){e.preventDefault();p.classList.remove('hidden');input.focus();input.select();} return; }
   if (e.key === 'Escape' && $('log-overlay') && !$('log-overlay').classList.contains('hidden')) { closeAccessLog(); return; }
   if (e.key === 'Escape' && $('share-history-overlay') && !$('share-history-overlay').classList.contains('hidden')) { closeShareChangeHistory(); return; }
   if (e.key === 'Escape' && $('keys-overlay') && !$('keys-overlay').classList.contains('hidden')) { closeKeysHelp(); return; }
@@ -10391,7 +10749,7 @@ document.addEventListener('keydown', (e) => {
 });
 if ($('bulk-revoke')) $('bulk-revoke').addEventListener('click', () => {
   const n = state.selShares ? state.selShares.size : 0;
-  if (n && confirm(t('sh.bulkRevokeConfirm', { n }))) bulkAction('revoke');
+  if (n && ((!state.settings || state.settings.confirmShareRevoke !== false) ? confirm(t('sh.bulkRevokeConfirm', { n })) : true)) bulkAction('revoke');
 });
 if ($('bulk-copy')) $('bulk-copy').addEventListener('click', copySelectedLinks);
 if ($('bulk-pin')) $('bulk-pin').addEventListener('click', (e) => bulkAction(e.currentTarget.dataset.action || 'pin'));
@@ -10501,7 +10859,7 @@ async function copy(text, successMessage) {
   }
 }
 
-// Feature 25 — copy an image's actual pixels to the clipboard (paste into a chat,
+// Copy an image's actual pixels to the clipboard (paste into a chat,
 // doc or editor), mirroring the PWA. The Clipboard API only reliably accepts
 // image/png, so a non-PNG source is re-encoded through a canvas first.
 function imageBlobToPng(blob) {
@@ -10541,7 +10899,7 @@ async function copyPhotoImage(s, btn) {
   }
 }
 
-// Feature 20 — basic in-browser image editor: rotate in 90° steps, flip, and crop
+// Basic in-browser image editor: rotate in 90° steps, flip, and crop
 // (free or a locked ratio). Saving re-encodes on-device and replaces the full image
 // via /api/photos/:id/replace (the old version is archived server-side and the
 // gallery regenerates Mini/Micro from the new pixels). Same-origin /i/ source keeps
@@ -10671,17 +11029,30 @@ function openPhotoEditor(s) {
       const blob = await new Promise((resolve, reject) => out.toBlob((b) => (b ? resolve(b) : reject(new Error('encode'))), mime, isPng ? undefined : 0.92));
       const uploadName = String(s.name || 'image').replace(/\.[^.]+$/, '') + '.' + ext;
       const base = '/api/photos/' + encodeURIComponent(s.id) + '/replace?name=' + encodeURIComponent(uploadName);
-      let resp = await sendEditedPhoto(base, blob);
-      if (resp.status === 409) {
-        let warn = null; try { warn = await resp.clone().json(); } catch (_) {}
-        if (!(warn && warn.error === 'dlp-warning')) throw new Error('save');
-        if (!confirmDlpWarning(warn)) { save.disabled = false; cancel.disabled = false; save.textContent = prev; return; }
-        resp = await sendEditedPhoto(base + '&dlpOverride=1', blob);
+      let requestUrl = base, resp = await sendEditedPhoto(requestUrl, blob), duplicateApproved = false, dlpApproved = false;
+      for (let guard = 0; resp.status === 409 && guard < 3; guard++) {
+        let issue = null; try { issue = await resp.clone().json(); } catch (_) {}
+        if (issue && issue.error === 'duplicate-content' && !duplicateApproved) {
+          if (!window.confirm(t('imgDuplicateFound'))) { save.disabled = false; cancel.disabled = false; save.textContent = prev; return; }
+          duplicateApproved = true; requestUrl += '&duplicateOverride=1'; resp = await sendEditedPhoto(requestUrl, blob); continue;
+        }
+        if (issue && issue.error === 'dlp-warning' && !dlpApproved) {
+          if (!confirmDlpWarning(issue)) { save.disabled = false; cancel.disabled = false; save.textContent = prev; return; }
+          dlpApproved = true; requestUrl += '&dlpOverride=1'; resp = await sendEditedPhoto(requestUrl, blob); continue;
+        }
+        break;
       }
-      if (!resp.ok) throw new Error('save');
+      if (!resp.ok) {
+        const denied = await resp.clone().json().catch(() => ({}));
+        const err = new Error(denied.error || 'save');
+        if (denied.error === 'dlp-blocked') err.dxReason = t('dlp.blocked');
+        else if (denied.error === 'dlp-quarantined') err.dxReason = t('dlp.quarantined');
+        else if (denied.error === 'dlp-quarantine-failed') err.dxReason = t('dlp.quarantineFailed');
+        throw err;
+      }
       toast(t('photo.editSaved'), 'ok'); close(); refreshShares();
-    } catch (_) {
-      toast(t('photo.editFail'), 'err'); save.disabled = false; cancel.disabled = false; save.textContent = prev;
+    } catch (e) {
+      toast(e && e.dxReason ? e.dxReason : t('photo.editFail'), 'err'); save.disabled = false; cancel.disabled = false; save.textContent = prev;
     }
   });
   overlay.classList.remove('hidden');
@@ -10747,6 +11118,7 @@ async function commitPendingShareDeletion(id) {
       rerenderShareCollections();
       loadPhotoHistory();
       toast(t('sh.revoked'), 'ok');
+      loadUndoPreview();
       return true;
     } catch (e) {
       if (state.pendingShareDeletion === pending) state.pendingShareDeletion = null;
@@ -10760,13 +11132,26 @@ async function commitPendingShareDeletion(id) {
 
 async function revokeShare(s) {
   if (pendingShareDeletionFor(s.id)) return;
-  if (!confirm(t('sh.revokeConfirm', { name: s.name }))) return;
+  if ((!state.settings || state.settings.confirmShareRevoke !== false) && !confirm(t('sh.revokeConfirm', { name: s.name }))) return;
   // Only one share can be recoverable at once. Starting another deletion makes
   // the previous one permanent before opening a fresh five-second window.
   if (state.pendingShareDeletion) {
     await commitPendingShareDeletion(state.pendingShareDeletion.id);
   }
   beginPendingShareDeletion(s);
+}
+
+async function reactivateShare(s, button) {
+  if (!s || !s.id) return;
+  if (button) button.disabled = true;
+  try {
+    await api('POST', '/api/shares/' + encodeURIComponent(s.id) + '/reactivate', {});
+    toast(t('sh.reactivateOk'), 'ok');
+    await refreshShares();
+  } catch (e) {
+    const code = e && e.data && e.data.error;
+    toast(code === 'data-missing' ? t('sh.reactivateMissing') : t('sh.reactivateFail'), 'err');
+  } finally { if (button) button.disabled = false; }
 }
 
 // Duplicate a share's configuration into a fresh share. The server generates a
@@ -10829,7 +11214,7 @@ async function emailShare(s) {
   }
 }
 
-// Feature 11 — inline rename: turn the card's name into an input on double-click.
+// Inline rename: turn the card's name into an input on double-click.
 function startInlineRename(s, nameEl) {
   if (nameEl.querySelector('input')) return;
   const cur = s.name || '';
@@ -11097,7 +11482,7 @@ async function openDetailedStats(s) {
 }
 function closeDetailedStats() { $('stats-overlay').classList.add('hidden'); }
 
-// Feature 14 — per-link access log modal.
+// Per-link access log modal.
 async function openAccessLog(s) {
   $('log-title').textContent = s.name;
   const body = $('log-body');
@@ -11123,7 +11508,7 @@ async function openAccessLog(s) {
 }
 function closeAccessLog() { $('log-overlay').classList.add('hidden'); }
 
-// Feature 15 — received-file browser with thumbnails for reception/collab links.
+// Received-file browser with thumbnails for reception/collab links.
 // Images render a real (CSS-scaled) thumbnail via the authenticated inline route;
 // every file offers a download. The thumbnail count is capped so a folder with
 // thousands of images can't fire thousands of requests at once.
@@ -11179,24 +11564,140 @@ document.addEventListener('keydown', (e) => {
 
 
 // Recoverable trash UI.
-async function loadTrash(){const body=$('trash-body');if(!body)return;body.textContent=t('filehist.loading');try{const data=await api('GET','/api/trash');body.textContent='';if($('trash-subtitle'))$('trash-subtitle').textContent=t('trash.retention',{n:data.retentionDays||0});const items=(data&&data.items)||[];if(!items.length){body.appendChild(el('div',{class:'empty',text:t('trash.empty')}));return;}items.forEach((r)=>{const row=el('div',{class:'trash-row'}),main=el('div',{class:'trash-main'});main.appendChild(el('strong',{text:r.name||'—'}));main.appendChild(el('span',{class:'muted sm',text:[r.type||'',formatBytes(r.logicalBytes||0),r.deletedAt?timeAgo(r.deletedAt):''].filter(Boolean).join(' · ')}));if(r.deletedBy)main.appendChild(el('span',{class:'muted xs',text:r.deletedBy}));const acts=el('div',{class:'trash-actions'});const historyBtn=el('button',{class:'btn ghost sm',text:t('sh.historyBtn')});historyBtn.addEventListener('click',()=>openShareChangeHistory({id:r.shareId,name:r.name,trashId:r.id}));acts.appendChild(historyBtn);if(state.role!=='auditor'){const restore=el('button',{class:'btn sm',text:t('trash.restore')});restore.addEventListener('click',async()=>{try{await api('POST','/api/trash/'+encodeURIComponent(r.id)+'/restore',{});toast(t('trash.restoreOk'),'ok');await loadTrash();refreshShares();}catch(_){toast(t('trash.restoreFail'),'err');}});acts.appendChild(restore);}if(state.role==='owner'||state.role==='admin'){const purge=el('button',{class:'btn danger sm',text:t('trash.purge')});purge.addEventListener('click',async()=>{if(!confirm(t('trash.purgeConfirm',{name:r.name||''})))return;try{await api('DELETE','/api/trash/'+encodeURIComponent(r.id));toast(t('trash.purgeOk'),'ok');loadTrash();}catch(_){toast(t('trash.purgeFail'),'err');}});acts.appendChild(purge);}row.append(main,acts);body.appendChild(row);});}catch(_){body.textContent=t('sh.loadFail');}}
+async function loadTrash(){
+  const body=$('trash-body');if(!body)return;body.textContent=t('filehist.loading');
+  try{
+    const data=await api('GET','/api/trash'),items=(data&&data.items)||[];
+    const valid=new Set(items.map((r)=>r.id));for(const id of [...state.trashSelection])if(!valid.has(id))state.trashSelection.delete(id);
+    const badge=$('trash-count-badge');if(badge)badge.textContent=String(items.length);
+    body.textContent='';if($('trash-subtitle'))$('trash-subtitle').textContent=t('trash.retention',{n:data.retentionDays||0});
+    const updateSelected=()=>{const n=state.trashSelection.size,btn=$('trash-restore-selected'),label=$('trash-selected-count');if(btn){btn.classList.toggle('hidden',!n||state.role==='auditor');btn.disabled=!n||state.role==='auditor';btn.textContent=t('trash.restoreSelectedN',{n});}if(label)label.textContent=n?t('trash.selected',{n}):'';};
+    if(!items.length){body.appendChild(el('div',{class:'empty',text:t('trash.empty')}));updateSelected();return;}
+    items.forEach((r)=>{
+      const row=el('div',{class:'trash-row'+(state.trashSelection.has(r.id)?' selected':'')}),main=el('div',{class:'trash-main'});
+      if(state.role!=='auditor'){
+        const check=el('input',{class:'trash-select',attrs:{type:'checkbox','aria-label':t('trash.select')}});check.checked=state.trashSelection.has(r.id);
+        check.addEventListener('change',()=>{if(check.checked)state.trashSelection.add(r.id);else state.trashSelection.delete(r.id);row.classList.toggle('selected',check.checked);updateSelected();});row.appendChild(check);
+      }
+      main.appendChild(el('strong',{text:r.name||'—'}));main.appendChild(el('span',{class:'muted sm',text:[r.type||'',formatBytes(r.logicalBytes||0),r.deletedAt?timeAgo(r.deletedAt):''].filter(Boolean).join(' · ')}));if(r.deletedBy)main.appendChild(el('span',{class:'muted xs',text:r.deletedBy}));
+      const acts=el('div',{class:'trash-actions'});const historyBtn=el('button',{class:'btn ghost sm',text:t('sh.historyBtn')});historyBtn.addEventListener('click',()=>openShareChangeHistory({id:r.shareId,name:r.name,trashId:r.id}));acts.appendChild(historyBtn);
+      if(state.role!=='auditor'){const restore=el('button',{class:'btn sm',text:t('trash.restore')});restore.addEventListener('click',async()=>{try{await api('POST','/api/trash/'+encodeURIComponent(r.id)+'/restore',{});state.trashSelection.delete(r.id);toast(t('trash.restoreOk'),'ok');await loadTrash();loadUndoPreview();refreshShares();}catch(_){toast(t('trash.restoreFail'),'err');}});acts.appendChild(restore);}
+      if(state.role==='owner'||state.role==='admin'){const purge=el('button',{class:'btn danger sm',text:t('trash.purge')});purge.addEventListener('click',async()=>{if(!confirm(t('trash.purgeConfirm',{name:r.name||''})))return;try{await api('DELETE','/api/trash/'+encodeURIComponent(r.id));state.trashSelection.delete(r.id);toast(t('trash.purgeOk'),'ok');loadTrash();loadUndoPreview();refreshShares();}catch(_){toast(t('trash.purgeFail'),'err');}});acts.appendChild(purge);}
+      row.append(main,acts);body.appendChild(row);
+    });updateSelected();
+  }catch(_){
+    state.trashSelection.clear();
+    const btn=$('trash-restore-selected'),label=$('trash-selected-count');
+    if(btn){btn.classList.add('hidden');btn.disabled=true;}
+    if(label)label.textContent='';
+    body.textContent=t('sh.loadFail');
+  }
+}
+async function restoreSelectedTrash(){
+  const ids=[...state.trashSelection];if(!ids.length)return;
+  const btn=$('trash-restore-selected');if(btn)btn.disabled=true;
+  let ok=0,failed=0;
+  for(const id of ids){try{await api('POST','/api/trash/'+encodeURIComponent(id)+'/restore',{});state.trashSelection.delete(id);ok++;}catch(_){failed++;}}
+  if(ok)toast(t('trash.restoreSelectedOk',{n:ok}),'ok');if(failed)toast(t('trash.restoreSelectedFail',{n:failed}),'err');
+  await loadTrash();loadUndoPreview();refreshShares();
+}
 function openTrash(){$('trash-overlay').classList.remove('hidden');loadTrash();}function closeTrash(){$('trash-overlay').classList.add('hidden');}
-if($('trash-btn'))$('trash-btn').addEventListener('click',openTrash);if($('trash-close'))$('trash-close').addEventListener('click',closeTrash);if($('trash-overlay'))$('trash-overlay').addEventListener('click',(e)=>{if(e.target===$('trash-overlay'))closeTrash();});if($('trash-purge-all'))$('trash-purge-all').addEventListener('click',async()=>{if(!confirm(t('trash.purgeAllConfirm')))return;try{await api('DELETE','/api/trash');toast(t('trash.purgeOk'),'ok');loadTrash();}catch(_){toast(t('trash.purgeFail'),'err');}});
+if($('trash-btn'))$('trash-btn').addEventListener('click',openTrash);if($('trash-close'))$('trash-close').addEventListener('click',closeTrash);if($('trash-overlay'))$('trash-overlay').addEventListener('click',(e)=>{if(e.target===$('trash-overlay'))closeTrash();});if($('trash-restore-selected'))$('trash-restore-selected').addEventListener('click',restoreSelectedTrash);if($('trash-purge-all'))$('trash-purge-all').addEventListener('click',async()=>{if(!confirm(t('trash.purgeAllConfirm')))return;try{await api('DELETE','/api/trash');state.trashSelection.clear();toast(t('trash.purgeOk'),'ok');loadTrash();loadUndoPreview();refreshShares();}catch(_){toast(t('trash.purgeFail'),'err');}});
+
+// Undoable-action log UI (#89): visible dashboard preview + complete modal.
+const UNDO_TYPE_KEY={'settings-changed':'undo.type.settings','share-stats-reset':'undo.type.stats','recipient-removed':'undo.type.recipient','ip-names-cleared':'undo.type.ipnames','share-trashed':'undo.type.share'};
+const UNDO_REASON_KEY={'state-changed':'undo.reason.changed','already-restored':'undo.reason.restored','already-purged':'undo.reason.purged','legacy-unsafe':'undo.reason.legacy','forbidden':'undo.reason.forbidden','share-gone':'undo.reason.gone','undo-unsupported':'undo.reason.unsupported','restore-conflict':'undo.reason.restoreConflict','undo-too-large':'undo.reason.tooLarge'};
+function undoTypeLabel(e){const k=UNDO_TYPE_KEY[e.type];return k?t(k):(e.type||'');}
+function undoConfirmLabel(e){return [undoTypeLabel(e),e&&e.label||''].filter(Boolean).join(' — ');}
+function undoCanRun(e){return !!(e&&!e.undone&&e.canUndo!==false);}
+function undoStatusText(e){if(e&&e.undone)return t('undo.done');if(e&&e.canUndo===false){const k=UNDO_REASON_KEY[e.unavailableReason];return k?t(k):t('undo.unavailable');}return '';}
+function updateUndoCount(items){const node=$('undo-count');if(!node)return;node.textContent=String((items||[]).filter(undoCanRun).length);}
+function buildUndoRow(e,compact){
+  const row=el('div',{class:'trash-row undo-row'+(compact?' compact':'')+(e.undone?' is-undone':e.canUndo===false?' is-unavailable':'')});
+  const main=el('div',{class:'trash-main'});
+  main.appendChild(el('strong',{text:undoTypeLabel(e)}));
+  main.appendChild(el('span',{class:'muted sm',text:[e.label||'',e.at?timeAgo(e.at):''].filter(Boolean).join(' · ')}));
+  if(e.actor)main.appendChild(el('span',{class:'muted xs',text:e.actor}));
+  const acts=el('div',{class:'trash-actions'});
+  const status=undoStatusText(e);
+  if(status)acts.appendChild(el('span',{class:'undo-state muted sm',text:status}));
+  if(undoCanRun(e)){
+    const b=el('button',{class:'btn sm',text:t('undo.btn')});
+    b.addEventListener('click',async()=>{
+      if(!confirm(t('undo.confirm',{label:undoConfirmLabel(e)})))return;
+      b.disabled=true;
+      try{
+        await api('POST','/api/undo/'+encodeURIComponent(e.id),{});
+        toast(t('undo.ok'),'ok');
+        await Promise.all([loadUndoLog(),loadUndoPreview(),loadTrash()]);
+        refreshShares();
+      }catch(_){toast(t('undo.fail'),'err');b.disabled=false;Promise.allSettled([loadUndoLog(),loadUndoPreview()]);}
+    });
+    acts.appendChild(b);
+  }
+  row.append(main,acts);return row;
+}
+async function fetchUndoItems(){const data=await api('GET','/api/undo');return (data&&Array.isArray(data.items))?data.items:[];}
+function renderUndoPreview(items){
+  const body=$('undo-preview');if(!body)return;body.textContent='';updateUndoCount(items);
+  if(!items.length){body.appendChild(el('div',{class:'empty',text:t('undo.empty')}));return;}
+  items.slice(0,3).forEach((e)=>body.appendChild(buildUndoRow(e,true)));
+}
+async function loadUndoPreview(){
+  const body=$('undo-preview');if(!body)return;
+  try{renderUndoPreview(await fetchUndoItems());}catch(_){body.textContent=t('undo.loadFail');updateUndoCount([]);}
+}
+async function loadUndoLog(){
+  const body=$('undo-body');if(!body)return;body.textContent=t('filehist.loading');
+  try{
+    const items=await fetchUndoItems();body.textContent='';updateUndoCount(items);renderUndoPreview(items);
+    if(!items.length){body.appendChild(el('div',{class:'empty',text:t('undo.empty')}));return;}
+    items.forEach((e)=>body.appendChild(buildUndoRow(e,false)));
+  }catch(_){body.textContent=t('undo.loadFail');updateUndoCount([]);}
+}
+function openUndo(){$('undo-overlay').classList.remove('hidden');loadUndoLog();}
+function closeUndo(){$('undo-overlay').classList.add('hidden');}
+if($('undo-btn'))$('undo-btn').addEventListener('click',openUndo);
+if($('undo-preview-refresh'))$('undo-preview-refresh').addEventListener('click',loadUndoPreview);
+if($('undo-close'))$('undo-close').addEventListener('click',closeUndo);
+if($('undo-overlay'))$('undo-overlay').addEventListener('click',(e)=>{if(e.target===$('undo-overlay'))closeUndo();});
+document.addEventListener('keydown',(e)=>{if(e.key==='Escape'&&$('undo-overlay')&&!$('undo-overlay').classList.contains('hidden'))closeUndo();});
+loadUndoPreview();
 
 // Detailed per-file download history.
 async function openFileHistory(sh){$('file-history-subtitle').textContent=sh.name||'';const body=$('file-history-body');body.textContent=t('filehist.loading');$('file-history-overlay').classList.remove('hidden');try{const data=await api('GET','/api/shares/'+encodeURIComponent(sh.id)+'/file-history');body.textContent='';if(data&&(data.historyTruncated||data.zipMembersTruncated))body.appendChild(el('div',{class:'notice warn',text:t('filehist.truncated')}));const files=(data&&data.files)||[];if(!files.length){body.appendChild(el('div',{class:'empty',text:t('filehist.empty')}));return;}files.forEach((f)=>{const box=el('div',{class:'filehist-file'}),head=el('div',{class:'filehist-head'});head.appendChild(el('strong',{text:f.name||'—'}));head.appendChild(el('span',{text:t('filehist.transfers',{n:f.transfers||0})+' · '+formatBytes(f.bytes||0)}));box.appendChild(head);box.appendChild(el('div',{class:'muted sm',text:t('filehist.completed',{n:f.completed||0})+' · '+(f.lastAt?t('filehist.last',{v:timeAgo(f.lastAt)}):'—')+(f.lastIp?' · '+f.lastIp:'')+(f.lastCountry?' · '+f.lastCountry:'')}));((data&&data.events)||[]).filter((e)=>e.name===f.name).slice(0,20).forEach((e)=>{const row=el('div',{class:'filehist-event '+(e.completed?'ok':'fail')});row.appendChild(el('span',{text:e.completed?'✓':'⚠'}));row.appendChild(el('span',{text:[e.at?formatDate(e.at):'—',e.viaZip?'📦 ZIP':'',formatBytes(e.bytes||0),e.ipName||e.ip||'—',e.country||'',e.recipient?'👤 '+e.recipient:'',e.completed?'':(e.reason||'')].filter(Boolean).join(' · ')}));box.appendChild(row);});body.appendChild(box);});}catch(_){body.textContent=t('filehist.fail');}}
 function closeFileHistory(){$('file-history-overlay').classList.add('hidden');}if($('file-history-close'))$('file-history-close').addEventListener('click',closeFileHistory);if($('file-history-overlay'))$('file-history-overlay').addEventListener('click',(e)=>{if(e.target===$('file-history-overlay'))closeFileHistory();});
 
-// Real-time activity stream over SSE.
-function activityIcon(kind,status){if(kind==='transfer-start')return'⇄';if(kind==='transfer-complete')return'✓';if(kind==='transfer-error')return'⚠';if(kind==='ocr-start'||kind==='ocr-complete')return'T';if(kind==='ocr-error')return'⚠';if(kind==='antivirus')return status==='infected'?'🦠':'🛡';if(kind==='trash')return'🗑';return'•';}
-function renderActivity(){const body=$('activity-body');if(!body)return;body.textContent='';const list=state.activityEvents||[];if(!list.length){body.appendChild(el('div',{class:'empty',text:t('activity.empty')}));return;}list.slice(0,200).forEach((e)=>{const row=el('div',{class:'activity-row '+String(e.kind||'')});row.appendChild(el('span',{class:'activity-icon',text:activityIcon(e.kind,e.status)}));const main=el('div',{class:'activity-main'});main.appendChild(el('strong',{text:e.name||e.kind||'event'}));main.appendChild(el('span',{class:'muted sm',text:[e.direction==='up'?'⬆':e.direction==='down'?'⬇':'',e.bytes?formatBytes(e.bytes):'',e.status||'',e.ip||'',e.detail||''].filter(Boolean).join(' · ')}));row.append(main,el('time',{text:e.at?timeAgo(e.at):'—'}));body.appendChild(row);});}
-function addActivityEvent(e){if(!e||!e.id)return;state.activityEvents=(state.activityEvents||[]).filter((x)=>x.id!==e.id);state.activityEvents.unshift(e);if(state.activityEvents.length>300)state.activityEvents.length=300;renderActivity();}
-function openLiveActivity(){$('activity-overlay').classList.remove('hidden');if(state.activitySource){try{state.activitySource.close();}catch(_){}}$('activity-status').textContent=t('activity.reconnecting');renderActivity();const src=new EventSource('/api/activity/stream');state.activitySource=src;src.addEventListener('snapshot',(ev)=>{try{const arr=JSON.parse(ev.data);state.activityEvents=Array.isArray(arr)?arr.slice().reverse():[];renderActivity();}catch(_){}});src.addEventListener('activity',(ev)=>{try{addActivityEvent(JSON.parse(ev.data));}catch(_){}});src.onopen=()=>{$('activity-status').textContent=t('activity.connected');};src.onerror=()=>{$('activity-status').textContent=t('activity.reconnecting');};}
-function closeLiveActivity(){if(state.activitySource){try{state.activitySource.close();}catch(_){}state.activitySource=null;}$('activity-overlay').classList.add('hidden');}
-if($('live-activity-btn'))$('live-activity-btn').addEventListener('click',openLiveActivity);if($('activity-close'))$('activity-close').addEventListener('click',closeLiveActivity);if($('activity-overlay'))$('activity-overlay').addEventListener('click',(e)=>{if(e.target===$('activity-overlay'))closeLiveActivity();});if($('activity-clear'))$('activity-clear').addEventListener('click',()=>{state.activityEvents=[];renderActivity();});
-document.addEventListener('keydown',(e)=>{if(e.key!=='Escape')return;if($('trash-overlay')&&!$('trash-overlay').classList.contains('hidden'))closeTrash();if($('file-history-overlay')&&!$('file-history-overlay').classList.contains('hidden'))closeFileHistory();if($('activity-overlay')&&!$('activity-overlay').classList.contains('hidden'))closeLiveActivity();if($('received-overlay')&&!$('received-overlay').classList.contains('hidden'))closeReceivedFiles();});
+// Persistent activity history + real-time SSE stream.
+function activityIcon(kind,status){if(kind==='transfer-start')return'⇄';if(kind==='transfer-complete')return'✓';if(kind==='transfer-error')return'⚠';if(kind==='ocr-start'||kind==='ocr-complete')return'T';if(kind==='ocr-error')return'⚠';if(kind==='antivirus')return status==='infected'?'🦠':'🛡';if(kind==='trash')return'🗑';if(kind==='security')return'🔐';if(kind==='visitor')return'👥';if(kind==='system')return'⚙';if(kind==='share')return'🔗';if(kind==='audit')return'🧾';return'•';}
+function activityGroup(e){const k=String(e&&e.kind||'').toLowerCase();if(k.indexOf('transfer-')===0)return'transfer';if(k==='audit'||k==='share'||k==='trash')return'admin';if(k==='security'||k==='antivirus')return'security';if(k==='visitor')return'visitor';if(k==='system'||k.indexOf('ocr-')===0)return'system';return'admin';}
+function activitySearchText(e){return [e&&e.name,e&&e.kind,e&&e.status,e&&e.detail,e&&e.ip,e&&e.direction,e&&e.shareId,e&&e.actor,e&&e.accountId,e&&e.deviceId].filter(Boolean).join(' ').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase(LOCALES[state.lang]||'en-US');}
+function activityIsPwa(e){return !!(e&&(e.source==='pwa'||e.deviceId||/^PWA(?::|$)/i.test(String(e.actor||''))||/via PWA/i.test(String(e.detail||''))));}
+function activityIsImage(e){if(!e)return false;if(/^(photo|album)$/i.test(String(e.resourceType||e.detail||'')))return true;const sh=(state.allShares||[]).find((x)=>x&&e.shareId&&String(x.id)===String(e.shareId));return !!(sh&&(sh.type==='photo'||sh.type==='album'));}
+function activityIsRoutineSystem(e){const n=String(e&&e.name||'').toLowerCase(),k=String(e&&e.kind||'').toLowerCase();return k==='ocr-start'||k==='ocr-complete'||['server-restarted','server-shutdown'].includes(n);}
+function refreshActivityShareOptions(){const sel=$('activity-section-share');if(!sel)return;const current=sel.value;const map=new Map();(state.activityEvents||[]).forEach((e)=>{if(e&&e.shareId&&!map.has(String(e.shareId)))map.set(String(e.shareId),e.name||e.shareId);});sel.innerHTML='';sel.appendChild(el('option',{text:t('activity.shareAll'),attrs:{value:''}}));[...map.entries()].sort((a,b)=>String(a[1]).localeCompare(String(b[1]))).forEach(([id,name])=>sel.appendChild(el('option',{text:name+' · '+id.slice(0,8),attrs:{value:id}})));if([...sel.options].some((o)=>o.value===current))sel.value=current;}
+function filteredActivityEvents(){const locale=LOCALES[state.lang]||'en-US';const search=String(($('activity-section-search')&&$('activity-section-search').value)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLocaleLowerCase(locale);const kind=String(($('activity-section-kind')&&$('activity-section-kind').value)||'');const share=String(($('activity-section-share')&&$('activity-section-share').value)||'');const images=!!($('activity-images-only')&&$('activity-images-only').checked),pwa=!!($('activity-pwa-only')&&$('activity-pwa-only').checked),hideRoutine=!!($('activity-hide-routine')&&$('activity-hide-routine').checked);return (state.activityEvents||[]).filter((e)=>(!kind||activityGroup(e)===kind)&&(!share||String(e.shareId||'')===share)&&(!images||activityIsImage(e))&&(!pwa||activityIsPwa(e))&&(!hideRoutine||!activityIsRoutineSystem(e))&&(!search||activitySearchText(e).includes(search)));}
+function renderActivityRows(body,list,limit){if(!body)return;body.textContent='';const rows=(list||[]).slice(0,limit);if(!rows.length){body.appendChild(el('div',{class:'empty',text:t('activity.empty')}));return;}rows.forEach((e)=>{const row=el('div',{class:'activity-row '+String(e.kind||'')});row.appendChild(el('span',{class:'activity-icon',text:activityIcon(e.kind,e.status)}));const main=el('div',{class:'activity-main'});main.appendChild(el('strong',{text:e.name||e.kind||'event'}));main.appendChild(el('span',{class:'muted sm',text:[e.direction==='up'?'⬆':e.direction==='down'?'⬇':'',e.bytes?formatBytes(e.bytes):'',e.status||'',e.ip||'',e.detail||''].filter(Boolean).join(' · ')}));row.append(main,el('time',{attrs:{title:e.at?formatDate(e.at):''},text:e.at?timeAgo(e.at):'—'}));body.appendChild(row);});}
+function renderActivity(){refreshActivityShareOptions();renderActivityRows($('activity-body'),state.activityEvents||[],500);const filtered=filteredActivityEvents();const sectionLimit=activityPageOpen()?1000:30;renderActivityRows($('activity-section-body'),filtered,sectionLimit);const count=$('activity-section-count');if(count)count.textContent=String(state.activityRetained||state.activityEvents.length||0);const summary=$('activity-section-summary');if(summary)summary.textContent=t('activity.summary',{shown:Math.min(filtered.length,sectionLimit),total:state.activityEvents.length});}
+function mergeActivityEvents(events){const map=new Map();(state.activityEvents||[]).forEach((e)=>{if(e&&e.id)map.set(e.id,e);});(Array.isArray(events)?events:[]).forEach((e)=>{if(e&&e.id)map.set(e.id,e);});state.activityEvents=Array.from(map.values()).sort((a,b)=>(Number(b.at)||0)-(Number(a.at)||0));if(state.activityEvents.length>1000)state.activityEvents.length=1000;renderActivity();}
+function addActivityEvent(e){if(!e||!e.id)return;const existed=(state.activityEvents||[]).some((x)=>x.id===e.id);state.activityEvents=(state.activityEvents||[]).filter((x)=>x.id!==e.id);state.activityEvents.unshift(e);if(state.activityEvents.length>1000)state.activityEvents.length=1000;const retained=Number(state.activityRetained)||0;state.activityRetained=existed?Math.max(retained,state.activityEvents.length):Math.min(2000,Math.max(state.activityEvents.length,retained+1));renderActivity();}
+function setActivityConnectionStatus(key){['activity-status','activity-section-status'].forEach((id)=>{const node=$(id);if(node)node.textContent=t(key);});}
+async function loadActivityRecent(){if(state.activityLoading||!isLoggedIn()||!['owner','admin','auditor',''].includes(state.role||''))return;state.activityLoading=true;try{const data=await api('GET','/api/activity/recent?limit=1000');state.activityRetained=Math.max(0,Number(data&&data.retained)||0);state.activityEvents=Array.isArray(data&&data.events)?data.events.slice(0,1000):[];state.activityInitialized=true;renderActivity();}catch(e){const status=$('activity-section-status');if(status)status.textContent=t('activity.loadFail');throw e;}finally{state.activityLoading=false;}}
+function stopActivityStream(){if(state.activitySource){try{state.activitySource.close();}catch(_){}state.activitySource=null;}}
+function ensureActivityStream(){if(!isLoggedIn()||!['owner','admin','auditor',''].includes(state.role||''))return;if(state.activitySource)return;setActivityConnectionStatus('activity.reconnecting');const src=new EventSource('/api/activity/stream');state.activitySource=src;src.addEventListener('snapshot',(ev)=>{try{const arr=JSON.parse(ev.data);mergeActivityEvents(Array.isArray(arr)?arr:[]);}catch(_){}});src.addEventListener('activity',(ev)=>{try{addActivityEvent(JSON.parse(ev.data));}catch(_){}});src.onopen=()=>{setActivityConnectionStatus('activity.connected');};src.onerror=()=>{if(state.activitySource===src)setActivityConnectionStatus('activity.reconnecting');};}
+function openLiveActivity(){$('activity-overlay').classList.remove('hidden');renderActivity();loadActivityRecent().catch(()=>{});ensureActivityStream();}
+function closeLiveActivity(){$('activity-overlay').classList.add('hidden');}
+if($('live-activity-btn'))$('live-activity-btn').addEventListener('click',openLiveActivity);
+if($('activity-section-refresh'))$('activity-section-refresh').addEventListener('click',()=>loadActivityRecent().catch(()=>{}));
+if($('activity-section-search'))$('activity-section-search').addEventListener('input',renderActivity);
+if($('activity-section-kind'))$('activity-section-kind').addEventListener('change',renderActivity);
+['activity-section-share','activity-images-only','activity-pwa-only','activity-hide-routine'].forEach((id)=>{if($(id))$(id).addEventListener('change',()=>{if(id==='activity-hide-routine')try{localStorage.setItem('dx-activity-hide-routine',$(id).checked?'1':'0');}catch(_){}renderActivity();});});
+if($('activity-hide-routine'))try{$('activity-hide-routine').checked=localStorage.getItem('dx-activity-hide-routine')==='1';}catch(_){}
+if($('activity-section-reset'))$('activity-section-reset').addEventListener('click',()=>{if($('activity-section-search'))$('activity-section-search').value='';if($('activity-section-kind'))$('activity-section-kind').value='';if($('activity-section-share'))$('activity-section-share').value='';if($('activity-images-only'))$('activity-images-only').checked=false;if($('activity-pwa-only'))$('activity-pwa-only').checked=false;if($('activity-hide-routine'))$('activity-hide-routine').checked=false;try{localStorage.removeItem('dx-activity-hide-routine');}catch(_){}renderActivity();});
+if($('activity-close'))$('activity-close').addEventListener('click',closeLiveActivity);if($('activity-overlay'))$('activity-overlay').addEventListener('click',(e)=>{if(e.target===$('activity-overlay'))closeLiveActivity();});if($('activity-clear'))$('activity-clear').addEventListener('click',()=>{state.activityEvents=[];renderActivity();});
+document.addEventListener('keydown',(e)=>{if(e.key!=='Escape')return;if($('trash-overlay')&&!$('trash-overlay').classList.contains('hidden'))closeTrash();if($('undo-overlay')&&!$('undo-overlay').classList.contains('hidden'))closeUndo();if($('file-history-overlay')&&!$('file-history-overlay').classList.contains('hidden'))closeFileHistory();if($('activity-overlay')&&!$('activity-overlay').classList.contains('hidden'))closeLiveActivity();if($('received-overlay')&&!$('received-overlay').classList.contains('hidden'))closeReceivedFiles();});
 
-// Feature 3 — pause / resume a link (reversible deactivation, unlike revoke).
+// Pause / resume a link (reversible deactivation, unlike revoke).
 async function togglePause(s) {
   try {
     await api('PATCH', '/api/shares/' + encodeURIComponent(s.id), { disabled: !s.disabled });
@@ -11207,7 +11708,7 @@ async function togglePause(s) {
   }
 }
 
-// Feature 2 — inline editor for a link's private admin note (create or edit).
+// Inline editor for a link's private admin note (create or edit).
 function openAdminNoteEditor(s, card) {
   if (card.querySelector('.adminnote-edit')) { card.querySelector('.adminnote-input').focus(); return; }
   const existing = card.querySelector('.share-adminnote');
@@ -11260,7 +11761,7 @@ async function removeItem(s, idx) {
   }
 }
 
-// Feature 16 — which item row the cursor is currently above (for drop insertion).
+// Which item row the cursor is currently above (for drop insertion).
 function dragAfterElement(container, y) {
   const rows = [...container.querySelectorAll('.item-row:not(.dragging)')];
   let closest = null, closestOffset = -Infinity;
@@ -11286,7 +11787,7 @@ async function commitItemOrder(s, il) {
   }
 }
 
-// Feature 5 — plaintext passwords set during THIS session (create/edit), kept only
+// Plaintext passwords set during THIS session (create/edit), kept only
 // in memory so "Copy link + password" can work. The server only stores a hash and
 // never returns the password, so this is intentionally lost on reload.
 const linkPwCache = new Map(); // url -> plaintext password
@@ -11305,7 +11806,7 @@ function buildQrActions(name, url) {
     combo.addEventListener('click', () => copy(url + '\n🔑 ' + pw, t('sh.copyLinkPwDone')));
     wrap.appendChild(combo);
   }
-  // Feature 6 — client-only deep links; each opens the user's own mail/chat app.
+  // Client-only deep links; each opens the user's own mail/chat app.
   const subject = name || 'Direct-Xfer';
   const body = (name ? name + '\n' : '') + url;
   const via = [
@@ -11343,7 +11844,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !$('qr-overlay').classList.contains('hidden')) closeQr();
 });
 
-// --- Image lightbox (feature 11): click a card preview to view the image
+// --- Image lightbox: click a card preview to view the image
 // full-size, with on-screen / keyboard prev-next across the visible images. ---
 const lightbox = { list: [], idx: 0 };
 function openLightbox(token) {
@@ -11422,12 +11923,12 @@ function openInboxModal() {
   if ($('ib-expireat')) $('ib-expireat').value = '';
   if ($('ib-require-sender')) $('ib-require-sender').checked = false;
   if ($('ib-block-exec')) $('ib-block-exec').checked = false;
-  if ($('ib-tag-sender')) $('ib-tag-sender').checked = false; // feature 11
-  if ($('ib-reject-dup')) $('ib-reject-dup').checked = false; // feature 15
-  if ($('ib-maxfiles-sender')) $('ib-maxfiles-sender').value = ''; // feature 12
-  if ($('ib-maxbytes-sender')) $('ib-maxbytes-sender').value = ''; // feature 12
+  if ($('ib-tag-sender')) $('ib-tag-sender').checked = false;
+  if ($('ib-reject-dup')) $('ib-reject-dup').checked = false;
+  if ($('ib-maxfiles-sender')) $('ib-maxfiles-sender').value = '';
+  if ($('ib-maxbytes-sender')) $('ib-maxbytes-sender').value = '';
   $('inbox-error').classList.add('hidden');
-  // Feature 36 — reset then load this account's reception-link presets.
+  // Reset then load this account's reception-link presets.
   if ($('ib-preset-select')) $('ib-preset-select').value = '';
   if ($('ib-preset-del')) $('ib-preset-del').classList.add('hidden');
   loadInboxPresets();
@@ -11451,7 +11952,7 @@ $('inbox-overlay').addEventListener('click', (e) => {
   if (e.target === $('inbox-overlay')) closeInboxModal();
 });
 
-// Feature 36 — reusable reception-link presets. A preset stores the settings fields
+// Reusable reception-link presets. A preset stores the settings fields
 // (never the name or password); applying one prefills the form, saving snapshots it.
 const INBOX_PRESET_FIELDS = [
   ['ib-expiry', 'val'], ['ib-maxfiles', 'val'], ['ib-maxfiles-upload', 'val'], ['ib-maxfile', 'val'], ['ib-maxtotal', 'val'],
@@ -11525,19 +12026,19 @@ $('inbox-form').addEventListener('submit', async (e) => {
     startsAt: startsAtMs('ib-startsat'),
     password: $('ib-password').value,
     maxFiles: parseInt($('ib-maxfiles').value, 10) || 0,
-    maxFilesPerUpload: parseInt($('ib-maxfiles-upload') && $('ib-maxfiles-upload').value, 10) || 0, // feature 13
+    maxFilesPerUpload: parseInt($('ib-maxfiles-upload') && $('ib-maxfiles-upload').value, 10) || 0,
     maxFileBytes: mbToBytes($('ib-maxfile').value),
     maxTotalBytes: mbToBytes($('ib-maxtotal').value),
     allowExt: $('ib-allow').value,
     blockExt: $('ib-block').value,
     note: $('ib-note').value,
     groupBySender: $('ib-group-sender') ? $('ib-group-sender').checked : false,
-    tagBySender: $('ib-tag-sender') ? $('ib-tag-sender').checked : false, // feature 11
-    rejectDuplicates: $('ib-reject-dup') ? $('ib-reject-dup').checked : false, // feature 15
+    tagBySender: $('ib-tag-sender') ? $('ib-tag-sender').checked : false,
+    rejectDuplicates: $('ib-reject-dup') ? $('ib-reject-dup').checked : false,
     requireSenderName: $('ib-require-sender') ? $('ib-require-sender').checked : false,
     blockExecutables: $('ib-block-exec') ? $('ib-block-exec').checked : false,
-    maxFilesPerSender: parseInt($('ib-maxfiles-sender') && $('ib-maxfiles-sender').value, 10) || 0, // feature 12
-    maxBytesPerSender: $('ib-maxbytes-sender') ? mbToBytes($('ib-maxbytes-sender').value) : 0, // feature 12
+    maxFilesPerSender: parseInt($('ib-maxfiles-sender') && $('ib-maxfiles-sender').value, 10) || 0,
+    maxBytesPerSender: $('ib-maxbytes-sender') ? mbToBytes($('ib-maxbytes-sender').value) : 0,
     moderated: $('ib-moderated') ? $('ib-moderated').checked : false,
     expiresAt: expireAtMs('ib-expireat') || undefined,
     geoMode: $('ib-geomode').value, geoCountries: $('ib-geocountries').value,
@@ -11546,7 +12047,7 @@ $('inbox-form').addEventListener('submit', async (e) => {
   try {
     if (encPlan) Object.assign(payload, encPlan.payloadExtra);
     const resp = await api('POST', '/api/inbox', payload);
-    if (payload.password && resp && resp.share) rememberLinkPassword(resp.share.url, payload.password); // feature 5
+    if (payload.password && resp && resp.share) rememberLinkPassword(resp.share.url, payload.password);
     toast(t('inbox.created'), 'ok');
     closeInboxModal();
     refreshShares();
@@ -11613,7 +12114,7 @@ $('collab-form').addEventListener('submit', async (e) => {
     allowZip: $('cl-allow-zip').checked,
     maxFileBytes: mbToBytes($('cl-maxfile').value),
     maxTotalBytes: mbToBytes($('cl-maxtotal').value),
-    maxFilesPerUpload: parseInt($('cl-maxfiles-upload') && $('cl-maxfiles-upload').value, 10) || 0, // feature 13
+    maxFilesPerUpload: parseInt($('cl-maxfiles-upload') && $('cl-maxfiles-upload').value, 10) || 0,
     allowExt: $('cl-allow').value,
     blockExt: $('cl-block').value,
     note: $('cl-note').value,
@@ -11625,7 +12126,7 @@ $('collab-form').addEventListener('submit', async (e) => {
   };
   try {
     const resp = await api('POST', '/api/collab', payload);
-    if (payload.password && resp && resp.share) rememberLinkPassword(resp.share.url, payload.password); // feature 5
+    if (payload.password && resp && resp.share) rememberLinkPassword(resp.share.url, payload.password);
     toast(t('collab.created'), 'ok');
     closeCollabModal();
     refreshShares();
@@ -11735,29 +12236,78 @@ $('preview-overlay').addEventListener('click', (e) => {
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !$('preview-overlay').classList.contains('hidden')) closePreview();
 });
-$('preview-video').addEventListener('error', () => {
-  $('preview-video').classList.add('hidden');
-  $('preview-status').classList.remove('hidden');
-});
-
-// Opens the video-preview modal for a host file entry from the picker (not yet
-// shared — streamed straight from disk via the admin-only /api/preview route).
-function openPreview(entry) {
-  $('preview-title').textContent = entry.name;
-  const video = $('preview-video');
+function resetAdminPreview() {
+  ['preview-image','preview-video','preview-audio','preview-frame','preview-text'].forEach((id) => {
+    const node = $(id); if (!node) return;
+    if ((id === 'preview-video' || id === 'preview-audio') && !node.paused) try { node.pause(); } catch (_) {}
+    if ('src' in node) node.removeAttribute('src');
+    if (id === 'preview-text') node.textContent = '';
+    node.classList.add('hidden');
+  });
+  $('preview-status').textContent = t('pk.previewUnsupported');
   $('preview-status').classList.add('hidden');
-  video.classList.remove('hidden');
-  video.src = '/api/preview?path=' + encodeURIComponent(entry.path);
+}
+['preview-video','preview-audio','preview-image','preview-frame'].forEach((id) => {
+  const node = $(id); if (!node) return;
+  node.addEventListener('error', () => { node.classList.add('hidden'); $('preview-status').classList.remove('hidden'); });
+});
+function adminMediaResumeKey(entry) {
+  // Include size + mtime so replacing a host file at the same path cannot inherit
+  // the playback position of the previous content.
+  return 'dx-admin-media-v2:' + String(entry && entry.path || '') + ':' + Number(entry && entry.size || 0) + ':' + Number(entry && entry.mtimeMs || 0);
+}
+const ADMIN_MEDIA_RESUME_MAX_AGE = 90 * 24 * 60 * 60 * 1000;
+function bindAdminMediaResume(media, entry) {
+  if (!media || !entry) return;
+  const key = adminMediaResumeKey(entry);
+  const clear = () => { try { localStorage.removeItem(key); } catch (_) {} };
+  const save = (force) => {
+    const now = Date.now();
+    const current = Number(media.currentTime) || 0, duration = Number(media.duration) || 0;
+    if (current < 1 || (duration && duration - current < 5)) { clear(); return; }
+    if (!force && media.__dxSavedAt && now - media.__dxSavedAt < 2500) return;
+    media.__dxSavedAt = now;
+    try { localStorage.setItem(key, JSON.stringify({ time:current, at:now })); } catch (_) {}
+  };
+  media.onloadedmetadata = () => {
+    try {
+      const v = JSON.parse(localStorage.getItem(key) || 'null');
+      if (v && (!Number(v.at) || Date.now() - Number(v.at) > ADMIN_MEDIA_RESUME_MAX_AGE)) { clear(); return; }
+      if (v && Number(v.time) >= 5 && (!media.duration || Number(v.time) < media.duration - 8)) media.currentTime = Number(v.time);
+      else if (v && media.duration && Number(v.time) >= media.duration - 8) clear();
+    } catch (_) { clear(); }
+  };
+  media.ontimeupdate = () => save(false);
+  media.onpause = () => save(true);
+  media.onended = clear;
+}
+
+// Integrated preview for a host file selected in the admin picker. PDF stays in a
+// same-origin iframe; text/code is fetched as inert text; media is streamed with Range.
+async function openPreview(entry) {
+  $('preview-title').textContent = entry.name;
+  resetAdminPreview();
+  const kind = previewFileKind(entry.name), url = '/api/preview?path=' + encodeURIComponent(entry.path);
   $('preview-overlay').classList.remove('hidden');
-  video.load();
+  if (kind === 'text') {
+    try {
+      const r = await fetch(url, { credentials:'same-origin', cache:'no-store' });
+      if (!r.ok) throw new Error('preview');
+      $('preview-text').textContent = await r.text(); $('preview-text').classList.remove('hidden');
+      if (r.headers.get('X-Direct-Xfer-Preview-Truncated') === '1') {
+        $('preview-status').textContent = t('pk.previewTruncated');
+        $('preview-status').classList.remove('hidden');
+      }
+    } catch (_) { $('preview-status').classList.remove('hidden'); }
+    return;
+  }
+  const id = kind === 'video' ? 'preview-video' : kind === 'audio' ? 'preview-audio' : kind === 'image' ? 'preview-image' : kind === 'pdf' ? 'preview-frame' : '';
+  const node = id && $(id);
+  if (!node) { $('preview-status').classList.remove('hidden'); return; }
+  node.src = url; node.classList.remove('hidden');
+  if (kind === 'video' || kind === 'audio') { bindAdminMediaResume(node, entry); try { node.load(); } catch (_) {} }
 }
-function closePreview() {
-  $('preview-overlay').classList.add('hidden');
-  const video = $('preview-video');
-  video.pause();
-  video.removeAttribute('src');
-  video.load();
-}
+function closePreview() { $('preview-overlay').classList.add('hidden'); resetAdminPreview(); }
 
 // A datetime-local field value → epoch ms (0 when empty/invalid = "active now").
 function startsAtMs(id) {
@@ -11766,7 +12316,7 @@ function startsAtMs(id) {
   const ms = new Date(v).getTime();
   return Number.isFinite(ms) ? ms : 0;
 }
-// Feature 2 — absolute expiry date from a <input type="datetime-local">. Returns
+// Absolute expiry date from a <input type="datetime-local">. Returns
 // 0 when empty so callers can omit `expiresAt` and fall back to the duration.
 function expireAtMs(id) {
   const el = $(id);
@@ -11774,7 +12324,7 @@ function expireAtMs(id) {
   const ms = new Date(el.value).getTime();
   return Number.isFinite(ms) && ms > Date.now() ? ms : 0;
 }
-// Feature 20 — coarse password-strength estimate (0=empty … 4=strong), driving a
+// Coarse password-strength estimate (0=empty … 4=strong), driving a
 // four-segment bar. Length dominates; character-class variety refines it.
 function pwStrength(v) {
   v = String(v || '');
@@ -11787,7 +12337,7 @@ function pwStrength(v) {
   score += Math.max(0, classes - 1);
   return Math.max(1, Math.min(4, score));
 }
-// Feature 3 — a strong random password generated in the browser (crypto RNG),
+// A strong random password generated in the browser (crypto RNG),
 // omitting ambiguous glyphs (0/O, 1/l/I) so it stays easy to read aloud.
 function genPassword(len) {
   len = len || 20;
@@ -11838,7 +12388,12 @@ function openPicker() {
   state.selections = [];
   // Pre-fill with the configured defaults for new links (Configuration window).
   const s = state.settings || {};
-  $('opt-expiry').value = String(s.defaultExpiry || 0);
+  const forceNeverExpire = s.newSharesNeverExpire === true;
+  $('opt-expiry').value = forceNeverExpire ? '0' : String(s.defaultExpiry || 0);
+  $('opt-expiry').disabled = forceNeverExpire;
+  if ($('opt-expireat')) $('opt-expireat').disabled = forceNeverExpire;
+  if ($('opt-firstuse')) $('opt-firstuse').disabled = forceNeverExpire;
+  if ($('opt-inactive')) $('opt-inactive').disabled = forceNeverExpire;
   $('opt-maxdl').value = s.defaultMaxDownloads ? String(s.defaultMaxDownloads) : '';
   $('opt-rate').value = s.defaultRateKBps ? String(s.defaultRateKBps) : '';
   $('opt-allowzip').checked = s.defaultAllowZip !== false;
@@ -11861,7 +12416,7 @@ function openPicker() {
   $('opt-startsat').value = s.defaultStartDelayHours > 0
     ? toLocalDatetime(new Date(Date.now() + s.defaultStartDelayHours * 3600000))
     : '';
-  if ($('opt-expireat')) $('opt-expireat').value = ''; // feature 2 — start with no absolute date
+  if ($('opt-expireat')) $('opt-expireat').value = ''; // start with no absolute date
   $('share-options').classList.remove('hidden');
   if ($('pk-multi-hint')) $('pk-multi-hint').classList.remove('hidden');
   $('picker-title').textContent = t('pk.title');
@@ -11912,6 +12467,17 @@ function closePicker() {
   $('picker-overlay').style.zIndex = ''; // reset the folder-chooser z-index bump
 }
 
+
+async function refreshDlpQuarantine() {
+  const box=$('cfg-dlp-quarantine-list'), status=$('cfg-dlp-quarantine-status'); if (!box) return;
+  try {
+    const data=await api('GET','/api/dlp/quarantine'); const records=Array.isArray(data.records)?data.records:[];
+    box.replaceChildren(...records.slice(0,50).map((r) => { const row=document.createElement('div'); row.className='ransom-block'; const txt=document.createElement('span'); txt.textContent=`${new Date(r.at).toLocaleString()} · ${r.name||r.source||'DLP'} · ${(r.dlp&&r.dlp.highest)||''} · ${(r.dlp&&r.dlp.count)||0}`; const b=document.createElement('button'); b.type='button'; b.className='btn ghost sm'; b.textContent='×'; b.addEventListener('click',async()=>{ try{await api('DELETE','/api/dlp/quarantine/'+encodeURIComponent(r.id)); await refreshDlpQuarantine();}catch(_){}}); row.append(txt,b); return row; }));
+    if (status) status.textContent=records.length?`${records.length}`:'0';
+  } catch (_) { if (status) status.textContent='—'; }
+}
+if ($('cfg-dlp-quarantine-refresh')) $('cfg-dlp-quarantine-refresh').addEventListener('click', refreshDlpQuarantine);
+
 // --- Photos tab ---------------------------------------------------------------
 // Open the picker to create direct image links (non-images are rejected server-side).
 function openPhotosPicker() {
@@ -11942,10 +12508,17 @@ async function createPhotos(paths) {
   let r;
   try { r = await apiWithDlpOverride('POST', '/api/photos', { paths }); }
   catch (e) {
-    const errors = (e.data && Array.isArray(e.data.errors)) ? e.data.errors : [];
-    const copyFailed = errors.filter((item) => item && item.error === 'image-copy-failed').length;
-    toast(copyFailed ? t('photo.copyFailed', { n: copyFailed }) : t('photo.createFail'), 'err');
-    return;
+    if (e && e.data && e.data.error === 'duplicate-content' && window.confirm(t('imgDuplicateFound'))) {
+      try { r = await apiWithDlpOverride('POST', '/api/photos', { paths, duplicateOverride:true }); }
+      catch (retryError) { e = retryError; }
+    }
+    if (!r) {
+      const errors = (e.data && Array.isArray(e.data.errors)) ? e.data.errors : [];
+      const copyFailed = errors.filter((item) => item && item.error === 'image-copy-failed').length;
+      const dlpMessage = dlpErrorMessage(e);
+      toast(dlpMessage || (copyFailed ? t('photo.copyFailed', { n: copyFailed }) : t('photo.createFail')), 'err');
+      return;
+    }
   }
   closePicker();
   const created = (r && r.created) || [];
@@ -12541,7 +13114,7 @@ document.addEventListener('keydown', (event) => {
 });
 
 
-// Feature 18 — lazy LQIP upgrade: replace a card's micro placeholder with its
+// Lazy LQIP upgrade: replace a card's micro placeholder with its
 // sharper thumb once it scrolls into view (never eagerly, so a large gallery
 // doesn't fetch every thumbnail up front). A single shared observer unobserves
 // each card as soon as it upgrades, so the watched set only ever shrinks.
@@ -12590,7 +13163,7 @@ function buildPhotoCard(s) {
     const localMicro = '/i/' + s.token + '/micro';
     const link = el('a', { class: 'photo-thumb', attrs: { href: localFull, target: '_blank', rel: 'noopener', title: s.name } });
     const img = el('img', { attrs: { loading: 'lazy', alt: s.name } });
-    // Feature 18 — LQIP blur-up: show the tiny micro instantly (blurred), then
+    // LQIP blur-up: show the tiny micro instantly (blurred), then
     // upgrade to the sharper thumb only once the card scrolls into view. Loading
     // every thumb eagerly here would fetch the whole library on render.
     if (p.hasMicro && p.hasThumb) {
@@ -12738,13 +13311,13 @@ function buildPhotoCard(s) {
     const qrBtn = el('button', { class: 'btn ghost sm', text: t('sh.qr'), attrs: { title: t('sh.qrTitle') } });
     qrBtn.addEventListener('click', () => openQrFor(s.name, p.imgUrl));
     actions.appendChild(qrBtn);
-    // Feature 20 — basic in-browser image editor (rotate / crop), parity with the PWA.
+    // Basic in-browser image editor (rotate / crop), parity with the PWA.
     if (!s.encrypted) {
       const editBtn = el('button', { class: 'btn ghost sm', text: t('photo.edit'), attrs: { title: t('photo.editTitle') } });
       editBtn.addEventListener('click', () => openPhotoEditor(s));
       actions.appendChild(editBtn);
     }
-    // Feature 25 — copy the full image's pixels to the clipboard (hidden where the
+    // Copy the full image's pixels to the clipboard (hidden where the
     // ClipboardItem image API is unavailable, e.g. non-secure contexts / older browsers).
     if (clipboardImageSupported()) {
       const copyImgBtn = el('button', { class: 'btn ghost sm', text: t('photo.copyImage'), attrs: { title: t('photo.copyImageTitle') } });
@@ -12763,7 +13336,7 @@ function buildPhotoCard(s) {
     return card;
 }
 
-// Feature 18 — public image galleries. Renders the album shares (created from a
+// Public image galleries. Renders the album shares (created from a
 // bulk image selection) with their shareable /g/ link, view count and controls.
 function renderAlbums(albums) {
   const list = $('albums-list');
@@ -13012,14 +13585,14 @@ if ($('photos-filter-reset')) $('photos-filter-reset').addEventListener('click',
 });
 if ($('photos-export-csv')) $('photos-export-csv').addEventListener('click', () => exportPhotos('csv'));
 if ($('photos-export-json')) $('photos-export-json').addEventListener('click', () => exportPhotos('json'));
-// Feature 10: copy every visible image's full-size link (one per line).
+// Copy every visible image's full-size link (one per line).
 if ($('photos-copy-all')) $('photos-copy-all').addEventListener('click', () => {
   const urls = visiblePhotos(state.photosData || []).map((s) => (s.photo || {}).imgUrl).filter(Boolean);
   if (!urls.length) { toast(t('photo.none'), 'warn'); return; }
   copy(urls.join('\n'));
 });
 
-// --- Feature 8: drag-drop / paste / host-picker image uploads -----------------
+// --- Drag-drop / paste / host-picker image uploads -----------------
 // The privacy option is snapshotted at the start of each batch so every image in
 // that batch follows the same policy, even if the checkbox changes mid-upload.
 const PHOTO_UPLOAD_ALLOWED = /\.(jpe?g|png|gif|webp|bmp|avif)$/i;
@@ -13153,16 +13726,22 @@ async function runPhotoUploadBatch(tasks, initialSkipped = 0, stripMetadata = fa
           headers: { 'Content-Type': prepared.type || 'application/octet-stream', 'X-CSRF-Token': state.csrf || '' },
           body: prepared.blob,
         });
-        let response = await sendPhoto(uploadUrl);
-        if (response.status === 409) {
-          const warning = await response.clone().json().catch(() => ({}));
-          if (warning.error === 'dlp-warning' && confirmDlpWarning(warning)) {
-            response = await sendPhoto(uploadUrl + (uploadUrl.includes('?') ? '&' : '?') + 'dlpOverride=1');
+        let response = await sendPhoto(uploadUrl), policyUrl = uploadUrl, duplicateApproved = false, dlpApproved = false;
+        for (let guard = 0; response.status === 409 && guard < 3; guard++) {
+          const issue = await response.clone().json().catch(() => ({}));
+          if (issue.error === 'duplicate-content' && !duplicateApproved && window.confirm(t('imgDuplicateFound'))) {
+            duplicateApproved = true; policyUrl += (policyUrl.includes('?') ? '&' : '?') + 'duplicateOverride=1'; response = await sendPhoto(policyUrl); continue;
           }
+          if (issue.error === 'dlp-warning' && !dlpApproved && confirmDlpWarning(issue)) {
+            dlpApproved = true; policyUrl += (policyUrl.includes('?') ? '&' : '?') + 'dlpOverride=1'; response = await sendPhoto(policyUrl); continue;
+          }
+          break;
         }
         if (!response.ok) {
           const denied = await response.clone().json().catch(() => ({}));
-          if (denied.error === 'dlp-blocked') toast(t('dlp.blocked'), 'err');
+          if (denied.error === 'dlp-blocked' || denied.error === 'dlp-quarantined' || denied.error === 'dlp-quarantine-failed') {
+            toast(denied.error === 'dlp-quarantined' ? t('dlp.quarantined') : denied.error === 'dlp-quarantine-failed' ? t('dlp.quarantineFailed') : t('dlp.blocked'), 'err');
+          }
           throw new Error('upload');
         }
         const data = await response.json();
@@ -13234,7 +13813,7 @@ document.addEventListener('paste', (e) => {
   if (files.length) { e.preventDefault(); uploadImageFiles(files); }
 });
 
-// --- Feature 9: multi-select + bulk actions (revoke / set expiry) ---
+// --- Multi-select + bulk actions (revoke / set expiry) ---
 function updatePhotoBulkBar() {
   const bar = $('photos-bulk-bar');
   if (!bar) return;
@@ -13264,11 +13843,12 @@ async function photoBulk(action, extra) {
     state.photoSelection.clear();
     updatePhotoBulkBar();
     refreshShares();
+    if (action === 'revoke') loadUndoPreview();
   } catch (e) { toast(t('sh.bulkFail'), 'err'); }
 }
 if ($('photos-bulk-revoke')) $('photos-bulk-revoke').addEventListener('click', () => {
   const n = state.photoSelection.size;
-  if (n && confirm(t('sh.bulkRevokeConfirm', { n }))) photoBulk('revoke');
+  if (n && ((!state.settings || state.settings.confirmShareRevoke !== false) ? confirm(t('sh.bulkRevokeConfirm', { n })) : true)) photoBulk('revoke');
 });
 if ($('photos-bulk-expiry')) $('photos-bulk-expiry').addEventListener('change', (e) => {
   const v = e.target.value;
@@ -13293,7 +13873,7 @@ if ($('photos-bulk-clear')) $('photos-bulk-clear').addEventListener('click', () 
   const list = $('photos-list');
   if (list) list.querySelectorAll('.photo-select input').forEach((cb) => { cb.checked = false; cb.closest('.photo-card').classList.remove('selected'); });
 });
-// Feature 18 — turn the current image selection into a shareable public gallery.
+// Turn the current image selection into a shareable public gallery.
 if ($('photos-bulk-album')) $('photos-bulk-album').addEventListener('click', async () => {
   const ids = [...state.photoSelection];
   if (!ids.length) return;
@@ -13394,7 +13974,7 @@ function renderBrowser(data) {
       row.appendChild(el('span', { class: 'open', text: t('pk.open') }));
     } else {
       row.appendChild(el('span', { class: 'size', text: formatBytes(entry.size) }));
-      if (isPreviewableVideo(entry.name)) {
+      if (isPreviewableFile(entry.name)) {
         const previewBtn = el('span', { class: 'preview', text: t('pk.preview') });
         previewBtn.addEventListener('click', (ev) => {
           ev.stopPropagation();
@@ -13462,6 +14042,13 @@ async function apiWithDlpOverride(method, url, payload) {
     throw e;
   }
 }
+function dlpErrorMessage(error) {
+  const code = error && error.data && error.data.error;
+  if (code === 'dlp-blocked') return t('dlp.blocked');
+  if (code === 'dlp-quarantined') return t('dlp.quarantined');
+  if (code === 'dlp-quarantine-failed') return t('dlp.quarantineFailed');
+  return '';
+}
 
 $('create-share-btn').addEventListener('click', async () => {
   // Folder chooser for the "default folder" config field: take the current folder.
@@ -13484,11 +14071,11 @@ $('create-share-btn').addEventListener('click', async () => {
       closePicker();
       refreshShares();
     } catch (e) {
-      toast(t('sh.addFail', { error: (e.data && e.data.error) || e.message }), 'err');
+      toast(dlpErrorMessage(e) || t('sh.addFail', { error: (e.data && e.data.error) || e.message }), 'err');
     }
     return;
   }
-  // Feature 13 — warn if a selected path is already shared by an active link.
+  // Warn if a selected path is already shared by an active link.
   const dupes = (state.allShares || []).filter((sh) => sh.active && paths.includes(sh.hostPath)).map((sh) => sh.name);
   if (dupes.length && !confirm(t('sh.dupWarn', { names: dupes.slice(0, 5).join(', ') }))) return;
   const expiry = parseInt($('opt-expiry').value, 10) || 0;
@@ -13522,26 +14109,26 @@ $('create-share-btn').addEventListener('click', async () => {
     const resp = await apiWithDlpOverride('POST', '/api/shares', {
       paths,
       expiresInSeconds: expiry,
-      expiresAt: expireAtMs('opt-expireat') || undefined, // feature 2 — absolute date wins when set
+      expiresAt: expireAtMs('opt-expireat') || undefined, // absolute date wins when set
       startsAt,
       maxDownloads: maxdl,
       maxVisitors: parseInt($('opt-maxvisitors').value, 10) || 0,
       notifyDownloadThreshold: parseInt($('opt-dlthreshold') && $('opt-dlthreshold').value, 10) || 0, // download-goal alert
-      maxDownloadsPerIp: parseInt($('opt-maxdlperip').value, 10) || 0, // feature 24
-      maxBytesServed: Math.round((parseFloat($('opt-maxbytesserved') && $('opt-maxbytesserved').value) || 0) * 1073741824), // feature 13 (GB→bytes)
-      emoji: $('opt-emoji') ? $('opt-emoji').value : '', // feature 6
+      maxDownloadsPerIp: parseInt($('opt-maxdlperip').value, 10) || 0,
+      maxBytesServed: Math.round((parseFloat($('opt-maxbytesserved') && $('opt-maxbytesserved').value) || 0) * 1073741824), // (GB→bytes)
+      emoji: $('opt-emoji') ? $('opt-emoji').value : '',
       password,
-      pwHint: $('opt-pwhint') ? $('opt-pwhint').value : '', // feature 6
+      pwHint: $('opt-pwhint') ? $('opt-pwhint').value : '',
       rateKBps,
       allowZip,
       noPreview,
       burnAfterDownload,
-      requestAccess: $('opt-requestaccess') ? $('opt-requestaccess').checked : false, // feature 28
-      allowFeedback: $('opt-feedback') ? $('opt-feedback').checked : false, // feature 38
+      requestAccess: $('opt-requestaccess') ? $('opt-requestaccess').checked : false,
+      allowFeedback: $('opt-feedback') ? $('opt-feedback').checked : false,
       color, tags, descriptionMd, expiryReminderHours, firstUseExpirySeconds, inactiveExpirySeconds,
       note,
     });
-    if (password && resp && resp.share) rememberLinkPassword(resp.share.url, password); // feature 5
+    if (password && resp && resp.share) rememberLinkPassword(resp.share.url, password);
     toast(t('sh.created2'), 'ok');
     $('opt-maxdl').value = '';
     $('opt-maxvisitors').value = '';
@@ -13566,19 +14153,29 @@ $('create-share-btn').addEventListener('click', async () => {
     if ($('opt-note')) $('opt-note').value = '';
     $('opt-password').required = false;
     closePicker();
+    if (resp && resp.share) showCreatedShareLink(resp.share);
     refreshShares();
     // Auto-open the QR code when the default is enabled (Configuration).
     if (state.settings && state.settings.defaultShowQr && resp && resp.share && resp.share.url) {
       openQr(resp.share);
     }
   } catch (e) {
-    toast(t('sh.createFail', { error: (e.data && e.data.error) || e.message }), 'err');
+    toast(dlpErrorMessage(e) || t('sh.createFail', { error: (e.data && e.data.error) || e.message }), 'err');
   }
 });
 
 // ------------------------------------------------------------------
 // Metadata (version / year) for the footer
 // ------------------------------------------------------------------
+function showCreatedShareLink(share) {
+  const banner=$('share-created-banner'), urlNode=$('share-created-url');
+  if(!banner||!urlNode||!share||!share.url)return;
+  urlNode.textContent=share.url; banner.dataset.url=share.url; banner.classList.remove('hidden');
+  try{banner.scrollIntoView({block:'nearest',behavior:'smooth'});}catch(_){}
+}
+if($('share-created-copy'))$('share-created-copy').addEventListener('click',async()=>{const banner=$('share-created-banner');const url=banner&&banner.dataset.url;if(url){await copyText(url);toast(t('sh.copied'),'ok');}});
+if($('share-created-close'))$('share-created-close').addEventListener('click',()=>{const b=$('share-created-banner');if(b)b.classList.add('hidden');});
+
 async function loadMeta() {
   try {
     const r = await fetchWithTimeout('/api/meta', { credentials: 'same-origin' }, 10000);
@@ -13643,7 +14240,7 @@ setTheme(getTheme());
 applyUiPreferencesToControls();
 // Apply the language + load the version, then check the session.
 setLang(state.lang);
-initPasswordTools(); // feature 3/20 — password generator + strength meter
+initPasswordTools(); // password generator + strength meter
 loadMeta();
 setTimeout(loadMeta, 12000); // re-check so a freshly-started server surfaces an update
 
@@ -13810,7 +14407,7 @@ setTimeout(loadMeta, 12000); // re-check so a freshly-started server surfaces an
     });
   });
 
-  // ---------------- Burn-after-read secret note (feature 5) ----------------
+  // ---------------- Burn-after-read secret note ----------------
   function openSecretModal() {
     if (!hasCrypto) { toast(t('enc.createFail'), 'err'); return; }
     $('secret-text').value = '';
@@ -14239,14 +14836,14 @@ setTimeout(loadMeta, 12000); // re-check so a freshly-started server surfaces an
 // ------------------------------------------------------------------
 // Nominative sub-links (recipients): one token per person for a share.
 // ------------------------------------------------------------------
-// --- Edit an existing link (feature 3) ---
+// --- Edit an existing link ---
 let editShareId = null;
 function openEditModal(s) {
   editShareId = s.id;
   $('edit-name-label').textContent = s.name;
   $('edit-name').value = s.name || '';
   $('edit-expiry').value = 'keep'; // default: don't touch the expiry
-  // Feature 2 — start the exact-date field EMPTY. Prefilling it would make an
+  // Start the exact-date field EMPTY. Prefilling it would make an
   // untouched absolute date silently override the preset dropdown on save (the
   // server prefers expiresAt), so picking "Never"/"7 days" would be ignored.
   if ($('edit-expireat')) $('edit-expireat').value = '';
@@ -14254,10 +14851,10 @@ function openEditModal(s) {
   $('edit-maxdl').value = s.maxDownloads ? String(s.maxDownloads) : '';
   $('edit-maxvisitors').value = s.maxVisitors ? String(s.maxVisitors) : '';
   if ($('edit-dlthreshold')) $('edit-dlthreshold').value = s.notifyDownloadThreshold ? String(s.notifyDownloadThreshold) : ''; // download-goal alert
-  if ($('edit-maxdlperip')) $('edit-maxdlperip').value = s.maxDownloadsPerIp ? String(s.maxDownloadsPerIp) : ''; // feature 24
-  if ($('edit-maxbytesserved')) $('edit-maxbytesserved').value = s.maxBytesServed ? String(Math.round(s.maxBytesServed / 1073741824 * 100) / 100) : ''; // feature 13
-  if ($('edit-emoji')) $('edit-emoji').value = s.emoji || ''; // feature 6
-  if ($('edit-pwhint')) $('edit-pwhint').value = s.pwHint || ''; // feature 6
+  if ($('edit-maxdlperip')) $('edit-maxdlperip').value = s.maxDownloadsPerIp ? String(s.maxDownloadsPerIp) : '';
+  if ($('edit-maxbytesserved')) $('edit-maxbytesserved').value = s.maxBytesServed ? String(Math.round(s.maxBytesServed / 1073741824 * 100) / 100) : '';
+  if ($('edit-emoji')) $('edit-emoji').value = s.emoji || '';
+  if ($('edit-pwhint')) $('edit-pwhint').value = s.pwHint || '';
   $('edit-password').value = '';
   $('edit-password').placeholder = s.hasPassword ? t('ed.pwSet') : t('ed.pwPh');
   $('edit-clearpw').checked = false;
@@ -14266,21 +14863,21 @@ function openEditModal(s) {
   $('edit-allowzip').checked = s.allowZip !== false;
   $('edit-preview').checked = !s.noPreview;
   $('edit-burn').checked = !!s.burnAfterDownload;
-  // Feature 28 — the access gate applies to file + folder download links (both go
-  // through requireActiveShare). Feature 38 — the feedback form is rendered on the
+  // The access gate applies to file + folder download links (both go
+  // through requireActiveShare). The feedback form is rendered on the
   // file/collection page only, so it's offered for 'file' shares (single or bundle),
   // not folders. Hidden entirely for reception/collab/image links.
   const gateType = s.type === 'file' || s.type === 'folder';
   const fbType = s.type === 'file';
-  if ($('edit-requestaccess')) { $('edit-requestaccess').checked = !!s.requestAccess; $('edit-requestaccess').parentElement.classList.toggle('hidden', !gateType); } // feature 28
-  if ($('edit-feedback')) { $('edit-feedback').checked = !!s.allowFeedback; $('edit-feedback').parentElement.classList.toggle('hidden', !fbType); } // feature 38
+  if ($('edit-requestaccess')) { $('edit-requestaccess').checked = !!s.requestAccess; $('edit-requestaccess').parentElement.classList.toggle('hidden', !gateType); }
+  if ($('edit-feedback')) { $('edit-feedback').checked = !!s.allowFeedback; $('edit-feedback').parentElement.classList.toggle('hidden', !fbType); }
   if ($('edit-color')) $('edit-color').value = s.color || '';
   if ($('edit-tags')) $('edit-tags').value = Array.isArray(s.tags) ? s.tags.join(', ') : '';
   if ($('edit-description')) $('edit-description').value = s.descriptionMd || '';
   if ($('edit-reminder')) $('edit-reminder').value = s.expiryReminderHours == null ? '' : String(s.expiryReminderHours);
   if ($('edit-firstuse')) $('edit-firstuse').value = s.firstUseExpirySeconds ? String(Math.round((s.firstUseExpirySeconds / 3600) * 10) / 10) : '';
   if ($('edit-inactive')) $('edit-inactive').value = s.inactiveExpirySeconds ? String(Math.round((s.inactiveExpirySeconds / 86400) * 10) / 10) : '';
-  // Access rules (feature 11)
+  // Access rules
   $('edit-geomode').value = s.geoMode || 'off';
   $('edit-geocountries').value = Array.isArray(s.geoCountries) ? s.geoCountries.join(', ') : '';
   $('edit-ipmode').value = s.ipMode || 'off';
@@ -14307,16 +14904,16 @@ if ($('edit-save')) $('edit-save').addEventListener('click', async () => {
     maxDownloads: parseInt($('edit-maxdl').value, 10) || 0,
     maxVisitors: parseInt($('edit-maxvisitors').value, 10) || 0,
     notifyDownloadThreshold: parseInt($('edit-dlthreshold') && $('edit-dlthreshold').value, 10) || 0, // download-goal alert
-    maxDownloadsPerIp: parseInt($('edit-maxdlperip').value, 10) || 0, // feature 24
-    maxBytesServed: Math.round((parseFloat($('edit-maxbytesserved') && $('edit-maxbytesserved').value) || 0) * 1073741824), // feature 13 (GB→bytes)
-    emoji: $('edit-emoji') ? $('edit-emoji').value : '', // feature 6
-    pwHint: $('edit-pwhint') ? $('edit-pwhint').value : '', // feature 6
+    maxDownloadsPerIp: parseInt($('edit-maxdlperip').value, 10) || 0,
+    maxBytesServed: Math.round((parseFloat($('edit-maxbytesserved') && $('edit-maxbytesserved').value) || 0) * 1073741824), // (GB→bytes)
+    emoji: $('edit-emoji') ? $('edit-emoji').value : '',
+    pwHint: $('edit-pwhint') ? $('edit-pwhint').value : '',
     rateKBps: editRateKBps,
     allowZip: $('edit-allowzip').checked,
     noPreview: !$('edit-preview').checked,
     burnAfterDownload: $('edit-burn').checked,
-    requestAccess: $('edit-requestaccess') ? $('edit-requestaccess').checked : false, // feature 28
-    allowFeedback: $('edit-feedback') ? $('edit-feedback').checked : false, // feature 38
+    requestAccess: $('edit-requestaccess') ? $('edit-requestaccess').checked : false,
+    allowFeedback: $('edit-feedback') ? $('edit-feedback').checked : false,
     color: $('edit-color') ? $('edit-color').value.trim() : '',
     tags: $('edit-tags') ? $('edit-tags').value.split(',').map((x) => x.trim()).filter(Boolean) : [],
     descriptionMd: $('edit-description') ? $('edit-description').value : '',
@@ -14333,7 +14930,7 @@ if ($('edit-save')) $('edit-save').addEventListener('click', async () => {
   // Expiry: 'keep' leaves it untouched; any other value re-sets it (0 = never).
   const exp = $('edit-expiry').value;
   if (exp !== 'keep') payload.expiresInSeconds = parseInt(exp, 10) || 0;
-  // Feature 2 — an exact date, when provided, takes precedence over the preset.
+  // An exact date, when provided, takes precedence over the preset.
   const exAt = expireAtMs('edit-expireat');
   if (exAt) payload.expiresAt = exAt;
   // Password: "remove" wins; else a typed value sets/replaces; blank = keep.
@@ -14341,7 +14938,7 @@ if ($('edit-save')) $('edit-save').addEventListener('click', async () => {
   else { const pw = $('edit-password').value; if (pw !== '') payload.password = pw; }
   try {
     const r = await api('PATCH', '/api/shares/' + encodeURIComponent(editShareId), payload);
-    if (payload.password && r && r.share) rememberLinkPassword(r.share.url, payload.password); // feature 5
+    if (payload.password && r && r.share) rememberLinkPassword(r.share.url, payload.password);
     toast(t('ed.saved'), 'ok');
     closeEditModal();
     refreshShares();
@@ -14362,7 +14959,7 @@ function recipientsSection(s) {
   list.forEach((r) => {
     const row = el('div', { class: 'rcp-row' });
     row.appendChild(el('span', { class: 'rcp-name', text: r.name }));
-    // Read receipt: viewed / downloaded status (feature 4).
+    // Read receipt: viewed / downloaded status.
     if (r.downloads > 0) {
       row.appendChild(el('span', { class: 'badge ok-badge rcp-status', text: t('rcp.downloaded') }));
     } else if (r.viewed) {
@@ -14390,7 +14987,7 @@ function recipientsSection(s) {
       qrBtn.addEventListener('click', () => openQr({ name: s.name + ' \u2014 ' + r.name, url: r.url }));
       row.appendChild(qrBtn);
     }
-    // Per-recipient overrides (feature 16): own expiry / download cap.
+    // Per-recipient overrides: own expiry / download cap.
     const lim = [];
     if (r.maxDownloads) lim.push('\u2b07 ' + (r.downloads || 0) + '/' + r.maxDownloads);
     if (r.expiresAt) lim.push('\u23f3 ' + formatDate(r.expiresAt));
@@ -14426,7 +15023,7 @@ async function addRecipients(s, names) {
   }
 }
 
-// Feature 16 — set a recipient's own download cap and/or expiry (0/blank = inherit).
+// Set a recipient's own download cap and/or expiry (0/blank = inherit).
 async function editRecipientLimits(s, r) {
   const dl = prompt(t('rcp.maxDlPrompt', { name: r.name }), r.maxDownloads ? String(r.maxDownloads) : '');
   if (dl === null) return;
@@ -14450,6 +15047,7 @@ async function removeRecipient(s, r) {
   try {
     await api('DELETE', '/api/shares/' + encodeURIComponent(s.id) + '/recipients/' + encodeURIComponent(r.token));
     toast(t('rcp.removed'), 'ok');
+    loadUndoPreview();
     refreshShares();
   } catch (e) {
     toast(t('rcp.removeFail'), 'err');

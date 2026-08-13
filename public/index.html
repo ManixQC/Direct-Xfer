@@ -96,6 +96,12 @@
         <div class="brand admin-brand"><img class="brand-logo brand-home" src="/logo.svg" alt="" role="link" tabindex="0" data-i18n-title="menu.backToShares" title="Back to shares" /> <span class="brand-home" role="link" tabindex="0" data-i18n-title="menu.backToShares" title="Back to shares" data-i18n="app.name">Direct-Xfer</span></div>
         <div class="topbar-menus">
           <a class="pwa-cta btn ghost sm" href="/app/" data-i18n="pwa.openApp" title="Mobile send app">📱 Mobile send app</a>
+          <div class="activity-menu">
+            <button id="activity-btn" class="icon-btn user-btn activity-launch-btn" aria-label="Activity" data-i18n-aria="activity.sectionTitle" data-i18n-title="activity.sectionTitle" title="Activity" aria-controls="activity-page">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+              <span class="activity-launch-label" data-i18n="activity.sectionTitle">Activity</span>
+            </button>
+          </div>
           <div class="dash-menu">
             <button id="dash-btn" class="icon-btn user-btn" aria-label="Dashboards" data-i18n-title="dashboards.title" title="Dashboards" aria-controls="dashboards-page">
               <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
@@ -252,9 +258,24 @@
       <section class="card">
         <div class="card-head">
           <h2><span data-i18n="tr.title">Active transfers</span> <span id="transfer-count" class="count">0</span></h2>
-          <div class="card-head-actions"><button id="live-activity-btn" type="button" class="btn ghost sm" data-i18n="activity.open">◉ Live activity</button></div>
+          <div class="card-head-actions"><button id="live-activity-btn" type="button" class="btn ghost sm" data-i18n="activity.open">◉ Activity history</button></div>
         </div>
         <div id="transfers-list" class="transfers-list"></div>
+      </section>
+
+      <!-- Recent undoable actions -->
+      <section class="card undo-history-card" aria-labelledby="undo-card-title">
+        <div class="card-head undo-history-head">
+          <div>
+            <h2 id="undo-card-title" data-i18n="undo.title">Recent actions</h2>
+            <p class="muted sm" data-i18n="undo.subtitle">Undo a recent destructive action.</p>
+          </div>
+          <div class="card-head-actions">
+            <button id="undo-preview-refresh" class="btn ghost sm" type="button" data-i18n="dash.refresh">↻ Refresh</button>
+            <button id="undo-btn" class="btn sm" type="button"><span data-i18n="undo.open">↶ Undo history</span> <span id="undo-count" class="count">0</span></button>
+          </div>
+        </div>
+        <div id="undo-preview" class="undo-preview" aria-live="polite"></div>
       </section>
 
       <!-- Shares -->
@@ -263,7 +284,7 @@
           <h2 class="shares-title"><span data-i18n="sh.title">Active shares</span> <span id="share-count" class="count">0</span></h2>
           <div class="head-actions">
             <button id="search-toggle-btn" class="btn ghost sm" data-i18n="search.btn" title="Search file contents">🔎 Search contents</button>
-            <button id="trash-btn" class="btn ghost sm" type="button" data-i18n="trash.open">🗑 Trash</button>
+            <button id="trash-btn" class="btn ghost sm" type="button"><span data-i18n="trash.open">🗑 Trash</span> <span id="trash-count-badge" class="count">0</span></button>
             <button id="links-export-csv" class="btn ghost sm" data-i18n="sh.exportCsv" title="Export the links list as CSV">⬇ Links CSV</button>
             <button id="links-export-json" class="btn ghost sm" data-i18n="sh.exportJson" title="Export the links list as JSON">⬇ Links JSON</button>
             <button id="new-enc-btn" class="btn ghost sm" data-i18n="enc.newShare">🔒 Encrypted share</button>
@@ -272,6 +293,11 @@
             <button id="new-collab-btn" class="btn ghost sm" data-i18n="sh.newCollab">🔁 Collaboration link</button>
             <button id="new-share-btn" class="btn sm" data-i18n="sh.new">＋ New share</button>
           </div>
+        </div>
+
+        <div id="share-created-banner" class="share-created-banner hidden" role="status" aria-live="polite">
+          <div class="share-created-main"><strong data-i18n="sh.createdLinkReady">Lien prêt à partager</strong><code id="share-created-url"></code></div>
+          <div class="share-created-actions"><button id="share-created-copy" class="btn sm" type="button" data-i18n="sh.copyUrl">📋 Copier l’URL</button><button id="share-created-close" class="icon-btn" type="button" aria-label="Close">✕</button></div>
         </div>
 
         <label class="switch-row" for="shutdown-toggle">
@@ -289,7 +315,14 @@
         <p id="shares-summary" class="shares-summary muted sm hidden"></p>
         <div id="search-panel" class="search-panel hidden">
           <div class="search-row">
-            <input id="search-input" type="search" class="search-input" autocomplete="off" spellcheck="false" data-i18n-ph="search.ph" placeholder="🔎 Search names, PDF, Office, OCR text and archives…" />
+            <input id="search-input" type="search" class="search-input" autocomplete="off" spellcheck="false" data-i18n-ph="search.ph" placeholder="🔎 Search links, users, logs and file content…" />
+            <select id="search-scope" class="shares-select" aria-label="Search scope">
+              <option value="all" data-i18n="search.scopeAll">Everything</option>
+              <option value="content" data-i18n="search.scopeContent">Files / content</option>
+              <option value="links" data-i18n="search.scopeLinks">Links</option>
+              <option value="users" data-i18n="search.scopeUsers">Users</option>
+              <option value="logs" data-i18n="search.scopeLogs">Logs</option>
+            </select>
             <label class="search-semantic-toggle"><input id="search-semantic" type="checkbox" checked /> <span data-i18n="search.semantic">Semantic</span></label>
             <button id="search-run" class="btn sm" data-i18n="search.run">Search</button>
           </div>
@@ -347,6 +380,7 @@
             <option value="100" data-i18n="sh.page100">100 / page</option>
           </select>
           <button id="shares-archived-toggle" type="button" class="btn ghost sm" aria-pressed="false" data-i18n="sh.showArchived">🗄 Archives</button>
+          <button id="shares-pinned-toggle" type="button" class="btn ghost sm" aria-pressed="false" data-i18n="sh.pinnedOnly">★ Épinglés</button>
           <div class="ui-view-toggle" role="group" aria-label="Display mode">
             <button id="shares-view-list" class="btn ghost sm view-mode-btn active" type="button" aria-pressed="true" data-i18n-title="view.list" title="List view">☷</button>
             <button id="shares-view-grid" class="btn ghost sm view-mode-btn" type="button" aria-pressed="false" data-i18n-title="view.grid" title="Grid view">▦</button>
@@ -412,6 +446,53 @@
       </footer>
 
       <div id="live-dot" class="live-dot" data-i18n-title="live.title" title="Auto-updating">● live</div>
+    </main>
+
+    <!-- ===================== Activity (full page) ===================== -->
+    <main id="activity-page" class="app-view activity-page hidden">
+      <header class="topbar">
+        <div class="brand activity-brand">
+          <button id="activity-back" class="icon-btn" data-i18n-title="activity.back" title="Back" aria-label="Back">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M15.5 4.5 8 12l7.5 7.5 1.4-1.4L10.8 12l6.1-6.1z"/></svg>
+          </button>
+          <img class="brand-logo brand-home" src="/logo.svg" alt="" role="link" tabindex="0" data-i18n-title="menu.backToShares" title="Back to shares" />
+          <span class="brand-home" role="link" tabindex="0" data-i18n-title="menu.backToShares" title="Back to shares" data-i18n="activity.sectionTitle">Activity</span>
+        </div>
+        <div class="topbar-menus"></div>
+      </header>
+
+      <section id="activity-section" class="card activity-section-card" aria-labelledby="activity-section-title">
+        <div class="card-head activity-section-head">
+          <div>
+            <h2 id="activity-section-title"><span data-i18n="activity.sectionTitle">Activité</span> <span id="activity-section-count" class="count">0</span></h2>
+            <p class="muted sm" data-i18n="activity.sectionHint">Historique persistant des événements pertinents de Direct-Xfer.</p>
+          </div>
+          <div class="card-head-actions">
+            <span id="activity-section-status" class="muted sm" aria-live="polite"></span>
+            <button id="activity-section-refresh" class="btn ghost sm" type="button" data-i18n="dash.refresh">↻ Refresh</button>
+          </div>
+        </div>
+        <div class="activity-section-tools" role="group" data-i18n-aria="activity.filtersAria" aria-label="Filtres d’activité">
+          <input id="activity-section-search" class="activity-section-search" type="search" autocomplete="off" spellcheck="false" data-i18n-ph="activity.searchPh" placeholder="Rechercher une activité…" />
+          <select id="activity-section-kind" class="activity-section-select" data-i18n-aria="activity.kindAria" aria-label="Type d’activité">
+            <option value="" data-i18n="activity.kindAll">Tous les types</option>
+            <option value="transfer" data-i18n="activity.kindTransfer">Transferts</option>
+            <option value="admin" data-i18n="activity.kindAdmin">Administration</option>
+            <option value="security" data-i18n="activity.kindSecurity">Sécurité</option>
+            <option value="visitor" data-i18n="activity.kindVisitor">Visiteurs</option>
+            <option value="system" data-i18n="activity.kindSystem">Système</option>
+          </select>
+          <select id="activity-section-share" class="activity-section-select" data-i18n-aria="activity.shareAria" aria-label="Partage"><option value="" data-i18n="activity.shareAll">Tous les partages</option></select>
+          <label class="activity-check"><input id="activity-images-only" type="checkbox" /> <span data-i18n="activity.imagesOnly">Images seulement</span></label>
+          <label class="activity-check"><input id="activity-pwa-only" type="checkbox" /> <span data-i18n="activity.pwaOnly">PWA seulement</span></label>
+          <label class="activity-check"><input id="activity-hide-routine" type="checkbox" /> <span data-i18n="activity.hideRoutine">Masquer le système routinier</span></label>
+          <button id="activity-section-reset" class="btn ghost sm" type="button" data-i18n="activity.resetFilters">Effacer les filtres</button>
+          <span id="activity-section-summary" class="muted sm activity-section-summary" aria-live="polite"></span>
+        </div>
+        <div id="activity-section-body" class="activity-body activity-section-body" aria-live="polite"></div>
+      </section>
+
+      <footer class="app-footer">Direct-Xfer <span class="app-year"></span> · <span class="app-version"></span></footer>
     </main>
 
     <!-- ===================== Dashboards (full page) ===================== -->
@@ -1247,7 +1328,11 @@
           <button id="preview-close" class="icon-btn" aria-label="Close">✕</button>
         </div>
         <div class="preview-body">
-          <video id="preview-video" controls preload="metadata" playsinline></video>
+          <img id="preview-image" class="preview-surface hidden" alt="" />
+          <video id="preview-video" class="preview-surface hidden" data-dx-resume="1" controls preload="metadata" playsinline></video>
+          <audio id="preview-audio" class="preview-audio hidden" data-dx-resume="1" controls preload="metadata"></audio>
+          <iframe id="preview-frame" class="preview-frame hidden" title="Aperçu PDF"></iframe>
+          <pre id="preview-text" class="preview-text hidden"></pre>
           <p id="preview-status" class="muted sm hidden" data-i18n="pk.previewUnsupported">Preview unavailable.</p>
         </div>
       </div>
@@ -1977,6 +2062,7 @@
             <span data-i18n="cfg.ransomEnable">Ransomware / destructive anomaly protection</span>
           </label>
           <p class="muted sm" data-i18n="cfg.ransomHint">Blocks a public upload/delete client temporarily after mass deletion or a ransomware-like upload burst. It never deletes files automatically.</p>
+          <label class="fld opt-check"><input id="cfg-ransom-suspend-link" type="checkbox" /><span data-i18n="cfg.ransomSuspendLink">Also suspend writes on the affected reception/collaboration link</span></label>
           <div class="fld-grid" id="cfg-ransom-fields">
             <label class="fld"><span data-i18n="cfg.ransomDelete">Mass-delete threshold / 60 s</span><input id="cfg-ransom-delete" type="number" min="5" max="1000" step="1" /></label>
             <label class="fld"><span data-i18n="cfg.ransomUpload">Suspicious uploads / 120 s</span><input id="cfg-ransom-upload" type="number" min="20" max="5000" step="1" /></label>
@@ -1989,11 +2075,20 @@
           <label class="fld opt-check"><input id="cfg-dlp-enable" type="checkbox" /><span data-i18n="cfg.dlpEnable">Scan outgoing shares for sensitive data</span></label>
           <p class="muted sm" data-i18n="cfg.dlpHint">Local scan before publishing a share. Detected secrets are redacted in logs and the interface.</p>
           <div class="fld-grid" id="cfg-dlp-fields">
-            <label class="fld"><span data-i18n="cfg.dlpMode">Policy</span><select id="cfg-dlp-mode"><option value="warn" data-i18n="cfg.dlpWarn">Warn + confirm</option><option value="block" data-i18n="cfg.dlpBlock">Block</option><option value="log" data-i18n="cfg.dlpLog">Log only</option></select></label>
+            <label class="fld"><span data-i18n="cfg.dlpMode">Fallback policy</span><select id="cfg-dlp-mode"><option value="warn" data-i18n="cfg.dlpWarn">Warn + confirm</option><option value="quarantine" data-i18n="cfg.dlpQuarantine">Quarantine</option><option value="block" data-i18n="cfg.dlpBlock">Block</option><option value="log" data-i18n="cfg.dlpLog">Log only</option></select></label>
             <label class="fld"><span data-i18n="cfg.dlpMaxFiles">Max files per scan</span><input id="cfg-dlp-maxfiles" type="number" min="1" max="1000" step="1" /></label>
             <label class="fld"><span data-i18n="cfg.dlpMaxMb">Max size per file (MB)</span><input id="cfg-dlp-maxmb" type="number" min="1" max="250" step="1" /></label>
           </div>
           <label class="fld opt-check"><input id="cfg-dlp-ocr" type="checkbox" /><span data-i18n="cfg.dlpOcr">Use server OCR for images/scanned PDFs</span></label>
+          <label class="fld opt-check"><input id="cfg-dlp-rules" type="checkbox" /><span data-i18n="cfg.dlpRules">Automatic reaction by severity</span></label>
+          <div class="fld-grid" id="cfg-dlp-rule-fields">
+            <label class="fld"><span data-i18n="cfg.dlpLow">Low</span><select id="cfg-dlp-low"></select></label>
+            <label class="fld"><span data-i18n="cfg.dlpMedium">Medium</span><select id="cfg-dlp-medium"></select></label>
+            <label class="fld"><span data-i18n="cfg.dlpHigh">High</span><select id="cfg-dlp-high"></select></label>
+            <label class="fld"><span data-i18n="cfg.dlpCritical">Critical</span><select id="cfg-dlp-critical"></select></label>
+          </div>
+          <div class="cfg-test-row"><button type="button" id="cfg-dlp-quarantine-refresh" class="btn ghost sm" data-i18n="cfg.dlpQuarantineView">Quarantine</button><span id="cfg-dlp-quarantine-status" class="muted sm"></span></div>
+          <div id="cfg-dlp-quarantine-list" class="ransom-blocks"></div>
 
           <div class="cfg-section" data-i18n="notifications.settingsTitle">Centre de notifications</div>
           <p class="muted sm" data-i18n="notifications.settingsHint">Choisissez les catégories de notifications à recevoir dans le centre de notifications pour ce compte.</p>
@@ -2133,6 +2228,14 @@
             </div>
           </label>
           <p class="muted sm" data-i18n="cfg.defaultDirHint">The "New share" file picker opens here. Leave empty to reuse the last-browsed folder.</p>
+          <label class="fld opt-check">
+            <input id="cfg-never-expire-new" type="checkbox" />
+            <span data-i18n="cfg.neverExpireNew">Toujours créer les nouveaux liens sans expiration</span>
+          </label>
+          <label class="fld opt-check">
+            <input id="cfg-confirm-revoke" type="checkbox" />
+            <span data-i18n="cfg.confirmRevoke">Demander confirmation avant de révoquer un partage</span>
+          </label>
           <div class="fld-grid">
             <label class="fld">
               <span data-i18n="pk.expiration">Expiration</span>
@@ -2232,6 +2335,10 @@
             <label class="fld">
               <span data-i18n="cfg.receptionCap">Reception storage cap (GB, 0 = unlimited)</span>
               <input id="cfg-reception-cap" type="number" min="0" step="any" data-i18n-ph="pk.unlimited" placeholder="unlimited" />
+            </label>
+            <label class="fld">
+              <span data-i18n="cfg.diskWarn">Alerte si espace disque libre ≤ (%)</span>
+              <input id="cfg-disk-warn" type="number" min="0" max="50" step="1" placeholder="10" />
             </label>
           </div>
           <label class="fld opt-check">
@@ -2457,6 +2564,7 @@
           <div class="cfg-test-row">
             <button type="button" id="cfg-audit-json" class="btn ghost sm" data-i18n="cfg.auditJson">Export audit log (JSON)</button>
             <button type="button" id="cfg-audit-csv" class="btn ghost sm" data-i18n="cfg.auditCsv">Export audit log (CSV)</button>
+            <button type="button" id="cfg-audit-proof" class="btn ghost sm" data-i18n="cfg.auditProof">Export signed proof</button>
           </div>
           <p class="muted sm" data-i18n="cfg.auditHint">The admin action log (logins, link create/revoke, settings changes, alerts).</p>
 
@@ -2572,6 +2680,32 @@
           <p class="muted sm" data-i18n="cfg.bkSaveHint">Save your settings before using Backup now / Test. Restore replaces everything and cannot be undone.</p>
           <p id="cfg-enc-status" class="muted sm hidden"></p>
 
+          <div class="cfg-section" data-i18n="connector.title">Storage connectors</div>
+          <p class="muted sm" data-i18n="connector.hint">Import and export files through an rclone remote: SFTP, SMB, WebDAV, Google Drive, OneDrive, Dropbox or Box. Credentials stay in /data/rclone/rclone.conf.</p>
+          <p id="connector-capability" class="muted sm" role="status"></p>
+          <div class="connector-editor">
+            <div class="fld-grid">
+              <label class="fld"><span data-i18n="connector.name">Name</span><input id="connector-name" type="text" maxlength="80" autocomplete="off" placeholder="NAS" /></label>
+              <label class="fld"><span data-i18n="connector.type">Type</span><select id="connector-type"><option value="sftp">SFTP</option><option value="smb">SMB</option><option value="webdav">WebDAV</option><option value="google-drive">Google Drive</option><option value="onedrive">OneDrive</option><option value="dropbox">Dropbox</option><option value="box">Box</option></select></label>
+              <label class="fld"><span data-i18n="connector.remote">rclone remote</span><input id="connector-remote" type="text" maxlength="64" autocomplete="off" placeholder="myremote" list="connector-remotes" /></label>
+              <label class="fld"><span data-i18n="connector.root">Root folder (optional)</span><input id="connector-root" type="text" maxlength="4096" autocomplete="off" placeholder="Direct-Xfer" /></label>
+            </div>
+            <datalist id="connector-remotes"></datalist>
+            <label class="fld opt-check"><input id="connector-readonly" type="checkbox" /><span data-i18n="connector.readOnly">Read-only connector</span></label>
+            <div class="cfg-test-row"><button id="connector-add" type="button" class="btn ghost sm" data-i18n="connector.add">Add connector</button><span id="connector-editor-status" class="muted sm"></span></div>
+          </div>
+          <div id="connector-list" class="connector-list" aria-live="polite"></div>
+          <div class="connector-transfer">
+            <label class="fld"><span data-i18n="connector.choose">Connector</span><select id="connector-transfer-id"></select></label>
+            <div class="fld-grid">
+              <label class="fld"><span data-i18n="connector.remotePath">Remote file path</span><input id="connector-remote-path" type="text" autocomplete="off" placeholder="folder/file.bin" /></label>
+              <label class="fld"><span data-i18n="connector.localPath">Local/host file path</span><input id="connector-local-path" type="text" autocomplete="off" placeholder="/mnt/data/file.bin" /></label>
+            </div>
+            <p class="muted sm" data-i18n="connector.transferHint">For import, the local field is an optional path below /Direct-Xfer/Imports. For export, enter an existing host, reception or image path.</p>
+            <div class="cfg-test-row"><button id="connector-import" type="button" class="btn ghost sm" data-i18n="connector.import">Import</button><button id="connector-export" type="button" class="btn ghost sm" data-i18n="connector.export">Export</button><button id="connector-refresh" type="button" class="btn ghost sm" data-i18n="connector.refresh">Refresh</button><span id="connector-transfer-status" class="muted sm"></span></div>
+          </div>
+          <div id="connector-jobs" class="connector-jobs" aria-live="polite"></div>
+
           <p id="config-error" class="error hidden"></p>
           <div class="modal-foot">
             <div></div>
@@ -2630,7 +2764,7 @@
       </div>
     </div>
 
-    <!-- Per-link access log (feature 14) -->
+    <!-- Per-link access log -->
     <div id="log-overlay" class="overlay hidden">
       <div class="modal">
         <div class="modal-head">
@@ -2657,9 +2791,19 @@
       <div class="modal trash-modal" role="dialog" aria-modal="true" aria-labelledby="trash-title">
         <div class="modal-head">
           <div><h3 id="trash-title" data-i18n="trash.title">Trash</h3><p id="trash-subtitle" class="muted sm"></p></div>
-          <div class="modal-head-actions"><button id="trash-purge-all" class="btn danger sm" type="button" data-i18n="trash.purgeAll">Purge all</button><button id="trash-close" class="icon-btn" aria-label="Close">✕</button></div>
+          <div class="modal-head-actions"><span id="trash-selected-count" class="muted sm"></span><button id="trash-restore-selected" class="btn sm hidden" type="button" data-i18n="trash.restoreSelected">Restaurer la sélection</button><button id="trash-purge-all" class="btn danger sm" type="button" data-i18n="trash.purgeAll">Delete all permanently</button><button id="trash-close" class="icon-btn" aria-label="Close">✕</button></div>
         </div>
         <div id="trash-body" class="trash-body" aria-live="polite"></div>
+      </div>
+    </div>
+
+    <div id="undo-overlay" class="overlay hidden">
+      <div class="modal trash-modal" role="dialog" aria-modal="true" aria-labelledby="undo-title">
+        <div class="modal-head">
+          <div><h3 id="undo-title" data-i18n="undo.title">Recent actions</h3><p id="undo-subtitle" class="muted sm" data-i18n="undo.subtitle">Undo a recent destructive action.</p></div>
+          <div class="modal-head-actions"><button id="undo-close" class="icon-btn" aria-label="Close">✕</button></div>
+        </div>
+        <div id="undo-body" class="trash-body" aria-live="polite"></div>
       </div>
     </div>
 
@@ -2671,7 +2815,7 @@
       </div>
     </div>
 
-    <!-- Feature 15 — received-file browser with thumbnails (reception / collab) -->
+    <!-- Received-file browser with thumbnails (reception / collab) -->
     <div id="received-overlay" class="overlay hidden">
       <div class="modal received-modal" role="dialog" aria-modal="true" aria-labelledby="received-title">
         <div class="modal-head"><div><h3 id="received-title" data-i18n="recv.title">Received files</h3><p id="received-subtitle" class="muted sm"></p></div><button id="received-close" class="icon-btn" aria-label="Close">✕</button></div>
@@ -2679,11 +2823,11 @@
       </div>
     </div>
 
-    <!-- Live activity stream -->
+    <!-- Persistent activity history + live stream -->
     <div id="activity-overlay" class="overlay hidden">
       <div class="modal activity-modal" role="dialog" aria-modal="true" aria-labelledby="activity-title">
-        <div class="modal-head"><div><h3 id="activity-title" data-i18n="activity.title">Live activity</h3><p id="activity-status" class="muted sm"></p></div><button id="activity-close" class="icon-btn" aria-label="Close">✕</button></div>
-        <div class="activity-tools"><button id="activity-clear" type="button" class="btn ghost sm" data-i18n="activity.clear">Clear view</button><span class="muted sm" data-i18n="activity.hint">Uploads, downloads, OCR, antivirus, errors and audited link actions appear here in real time.</span></div>
+        <div class="modal-head"><div><h3 id="activity-title" data-i18n="activity.title">Activity history</h3><p id="activity-status" class="muted sm"></p></div><button id="activity-close" class="icon-btn" aria-label="Close">✕</button></div>
+        <div class="activity-tools"><button id="activity-clear" type="button" class="btn ghost sm" data-i18n="activity.clear">Clear view</button><span class="muted sm" data-i18n="activity.hint">Relevant transfers, security events, administrative actions and PWA changes are retained here and updated in real time.</span></div>
         <div id="activity-body" class="activity-body" aria-live="polite"></div>
       </div>
     </div>

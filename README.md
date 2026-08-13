@@ -44,6 +44,10 @@ link domain is set in the UI.
   **one-time link** (auto-revoked after the first complete download), capped to a
   **max number of unique visitors**, **paused/resumed** or **cloned** in one click,
   **e-mailed** to a recipient (SMTP), and carries an optional **password** + **QR code**.
+- **Resumable downloads** — regular shared files and files retrieved from the PWA are
+  downloaded in verified byte ranges and kept in browser storage. Closing the tab,
+  browser or installed PWA no longer discards completed chunks; changed files are
+  detected with ETag/If-Range before a clean restart.
 - **Nominative sub-links** — one link per recipient (own token) with **read receipts**
   (viewed/downloaded per person); remove one to revoke just that access.
 - **Reception** (`…/u/`) — multi-file uploads, **chunked & resumable** (a drop or reload
@@ -81,6 +85,12 @@ link domain is set in the UI.
   ciphertext. Key **in the link** (`#k=…`) or a **passphrase**; needs a secure context.
   Encrypted deposits arrive as `.dxe` files, decrypted from the admin menu.
 - **Client nicknames** — name any visitor IP; shown everywhere it appears.
+- **Storage connectors** — admin-managed imports and exports through rclone remotes:
+  SFTP, SMB, WebDAV, Google Drive, OneDrive, Dropbox and Box. Credentials remain in
+  the protected rclone configuration, outside Direct-Xfer metadata and browser APIs.
+- **Destructive-event protection & audit proofs** — ransomware-like upload bursts and
+  mass deletion suspend both the client and affected writable link. The append-only
+  HMAC audit journal can be exported as an Ed25519-signed proof for offline verification.
 
 ### Configuration (in-app ⚙, no restart)
 
@@ -159,6 +169,10 @@ compagnon installable est à `…/app`. Le domaine des liens se règle dans l'in
   URL), peut être **à usage unique** (révoqué après le 1er téléchargement complet),
   limité à un **nombre max de visiteurs uniques**, **mis en pause/réactivé** ou **cloné**
   en un clic, **envoyé par e-mail** (SMTP), avec **mot de passe** + **QR code** en option.
+- **Téléchargements avec reprise** — les fichiers partagés ordinaires et les fichiers
+  récupérés dans la PWA sont reçus par plages d’octets vérifiées et conservés dans le
+  stockage du navigateur. Fermer l’onglet, le navigateur ou la PWA installée ne perd
+  plus les morceaux terminés ; ETag/If-Range détecte un fichier remplacé avant reprise.
 - **Sous-liens nominatifs** — un lien par destinataire (token propre) avec **accusés de
   réception** (vu/téléchargé par personne) ; en supprimer un révoque ce seul accès.
 - **Réception** (`…/u/`) — envois multiples, **par morceaux avec reprise** (une coupure
@@ -197,6 +211,12 @@ compagnon installable est à `…/app`. Le domaine des liens se règle dans l'in
   texte chiffré opaque. Clé **dans le lien** (`#k=…`) ou **phrase secrète** ; contexte
   sécurisé requis. Les dépôts chiffrés arrivent en `.dxe`, déchiffrés depuis le menu admin.
 - **Surnoms de clients** — nommez n'importe quelle IP de visiteur ; affiché partout.
+- **Connecteurs de stockage** — imports et exports administrés via des destinations
+  rclone SFTP, SMB, WebDAV, Google Drive, OneDrive, Dropbox et Box. Les identifiants
+  restent dans la configuration rclone protégée, hors des métadonnées et du navigateur.
+- **Protection destructive et preuves d’audit** — les rafales typiques de rançongiciel
+  et suppressions massives suspendent le client et le lien inscriptible concerné. Le
+  journal HMAC append-only s’exporte en preuve Ed25519 vérifiable hors ligne.
 
 ### Configuration (⚙ dans l'appli, sans redémarrage)
 
@@ -272,6 +292,9 @@ está en `…/app`. El dominio de los enlaces se ajusta en la interfaz.
   puede ser de **un solo uso** (revocado tras la 1ª descarga completa), limitado a un
   **máximo de visitantes únicos**, **pausado/reanudado** o **clonado** con un clic,
   **enviado por correo** (SMTP), con **contraseña** + **código QR** opcionales.
+- **Descargas reanudables** — los archivos compartidos normales y los recuperados desde
+  la PWA se guardan por rangos verificados en el navegador. Cerrar la pestaña, el
+  navegador o la PWA no elimina los fragmentos completados; ETag/If-Range detecta cambios.
 - **Subenlaces nominativos** — un enlace por destinatario (token propio) con **acuses de
   recibo** (visto/descargado por persona); elimina uno para revocar solo ese acceso.
 - **Recepción** (`…/u/`) — subidas múltiples, **por fragmentos y reanudables** (un corte
@@ -311,6 +334,12 @@ está en `…/app`. El dominio de los enlaces se ajusta en la interfaz.
   cifrado opaco. Clave **en el enlace** (`#k=…`) o **frase de cifrado**; requiere contexto
   seguro. Los depósitos cifrados llegan como `.dxe`, descifrados desde el menú de admin.
 - **Apodos de clientes** — nombra cualquier IP de visitante; se muestra donde aparezca.
+- **Conectores de almacenamiento** — importación y exportación administradas mediante
+  rclone: SFTP, SMB, WebDAV, Google Drive, OneDrive, Dropbox y Box. Las credenciales no
+  entran en los metadatos de Direct-Xfer ni en el navegador.
+- **Protección destructiva y pruebas de auditoría** — las ráfagas de ransomware y los
+  borrados masivos suspenden al cliente y al enlace afectado. El diario HMAC append-only
+  se puede exportar como prueba Ed25519 verificable sin conexión.
 
 ### Configuración (⚙ en la app, sin reinicio)
 
@@ -417,6 +446,10 @@ window. (Shared reference — variable names are identical in every language.)
 | `PUBLIC_URL` / `PUBLIC_HOST` | *(auto)* | Base URL/host used to build share links. |
 | `DATA_KEY` | *(empty)* | Encrypt sensitive persistent metadata at rest (AES-256-GCM): `shares.json`, the universal search index and the OCR cache. Keep it **safe & stable** — if lost/changed the main store can't be read and the container won't start. It is also used to derive the audit-chain HMAC key unless `AUDIT_HMAC_KEY` is set. |
 | `AUDIT_HMAC_KEY` | *(empty)* | Optional dedicated secret for the tamper-evident audit chain. Prefer a long stable secret supplied outside `/data`; if omitted, `DATA_KEY` is used, then a local 0600 key file as fallback. **Safe automatic migration:** when an existing installation still uses `/data/audit-chain.key`, adding `AUDIT_HMAC_KEY` causes Direct-Xfer to verify the complete old chain first, transactionally re-sign it with the external key, verify it again, record `audit-key-migrated`, then retire the local key. A damaged chain is never migrated. Keep the new secret stable after migration. |
+| `AUDIT_SIGNING_PRIVATE_KEY` / `AUDIT_SIGNING_PRIVATE_KEY_FILE` | generated under `/data` | Stable Ed25519 private key (PEM text or file) used for signed audit-proof exports. For stronger separation, mount the file read-only from a secrets store outside `/data`; keep it secret and back it up. |
+| `RCLONE_CONFIG` / `RCLONE_BIN` | `/data/rclone/rclone.conf` / `rclone` | Protected rclone configuration and executable used by SFTP/SMB/WebDAV/cloud storage connectors. |
+| `CONNECTOR_IMPORT_DIR` | `/Direct-Xfer/Imports` | Confined writable destination for connector imports. Imports never overwrite an existing file. |
+| `MAX_ACTIVE_CONNECTOR_JOBS` | `4` | Maximum simultaneous connector import/export processes. |
 | `SEARCH_INDEX_MAX_DOCS` | `250000` | Maximum number of files kept in the persistent universal-search index. Raise carefully because postings and metadata are also held in memory. |
 | `SEARCH_OCR_ENABLED` | `true` | Enable server-side OCR in the full Direct-Xfer universal index for supported images and scanned PDFs. Docker includes Tesseract + Poppler; native installs need those binaries available in `PATH`. |
 | `SEARCH_OCR_LANGS` | `fra+eng` | Tesseract language set used by the server OCR (`fra`, `eng`, `spa` are bundled in the Docker image). |
@@ -452,6 +485,12 @@ window. (Shared reference — variable names are identical in every language.)
 Back up the images folder (`/Images`) separately: scheduled `.dxbackup` files contain
 metadata, not the managed image binaries.
 
+Back up `/data/rclone/rclone.conf`, `/data/audit-signing-private.pem` and the other
+`/data` contents as secrets. A signed proof stays verifiable without the private key,
+but authenticity requires retaining/pinning its public-key fingerprint independently.
+For protection against an attacker limited to the application data volume, provide both
+`AUDIT_HMAC_KEY` and a read-only `AUDIT_SIGNING_PRIVATE_KEY_FILE` outside that volume.
+
 
 ## Unraid Docker icon
 
@@ -481,6 +520,232 @@ https://raw.githubusercontent.com/ManixQC/Direct-Xfer/refs/heads/main/unraid/dir
 If an old missing icon remains cached, use the supplied XML template or remove and
 re-add the container from its saved template. Application data remains in the mapped
 `/data` and `/Direct-Xfer` host folders.
+
+
+
+## 1.55.1 — audit ultra approfondi des ajouts 1.55.x
+
+- Durcissement DLP : une analyse incomplète applique la réaction la plus stricte entre la règle de gravité et la politique de secours; les erreurs de lecture ne sont plus ignorées.
+- Quarantaine rendue transactionnelle et sûre : rollback sur erreur de persistance, nettoyage des orphelins, réconciliation au démarrage et protection contre toute injection de chemin de fichier.
+- La quarantaine physique n’accepte que des fichiers réguliers fraîchement stockés dans `Images/Full`; les requêtes clientes ne peuvent plus fournir de chemin interne.
+- Déduplication SHA-256 étendue à la corbeille, courses concurrentes verrouillées et DLP évalué avant la réponse de doublon.
+- Aperçus texte/code alignés (`.cfg` inclus), indication des aperçus tronqués et identité de reprise média renforcée.
+- Reprise audio/vidéo corrigée lors d’un retour au début, d’une lecture presque terminée, d’un état corrompu et des changements de piste.
+- Réactions DLP de la PWA alignées sur le serveur, y compris Quarantaine pour les analyses incomplètes; messages d’erreur DLP plus précis.
+- Version **1.55.1**, cache PWA **pwa263**, ressources **v249**.
+
+## 1.55.0 — aperçus multimédias, DLP automatisé et déduplication renforcée
+
+- Prévisualisation intégrée des **PDF**, fichiers **texte/code** et fichiers **audio**, dans l’administration et les parcours compatibles de la PWA.
+- Lecteurs audio/vidéo avec **reprise automatique de lecture** persistante et expiration prudente des positions anciennes.
+- Règles DLP automatiques par gravité (**faible / moyenne / élevée / critique**) avec actions **Journaliser, Avertir, Quarantaine ou Bloquer**.
+- La **PWA** permet maintenant de modifier ces réactions automatiques directement dans Réglages; le cache de politique conserve correctement `rulesEnabled`, les quatre actions et le mode Quarantaine.
+- Quarantaine DLP persistante, consultable et supprimable depuis Configuration, avec déplacement sûr des fichiers gérés même lorsque le stockage Images et DATA_DIR sont sur des volumes distincts.
+- Détection SHA-256 des doublons renforcée pour les images gérées (standard + PWA + remplacement + sélection serveur), en complément de la déduplication déjà présente sur les réceptions. Les uploads identiques concurrents sont sérialisés pour éviter les courses.
+- Les anciens médias gérés sans empreinte SHA-256 sont hachés à la demande afin de conserver la compatibilité avec les versions précédentes.
+- Version **1.55.0**, cache PWA **pwa262**, ressources **v248**.
+
+## 1.54.0 — productivité, recherche et supervision
+
+- Cartes de partage enrichies : copie d’URL immédiatement visible, dates relatives dans Activité, nombre de fichiers, taille totale, « Jamais téléchargé », protection par mot de passe et expiration imminente.
+- Activité : filtres Images/PWA/partage, masquage du système routinier et recherche plein texte dans les détails.
+- Organisation : épingles/favoris et notes privées administrateur disponibles dans les flux de gestion standard et PWA.
+- Recherche universelle étendue aux partages, images, réceptions, activité/journaux et contenu indexé.
+- Configuration : confirmation facultative avant révocation, politique globale « nouveaux liens sans expiration » et seuil configurable d’espace disque libre.
+- Dashboard/corbeille : espace disque disponible, alertes de capacité, compteur de corbeille et restauration multi-sélection.
+- PWA : icônes de plateforme et version/build observé pour chaque appareil appairé, métriques récursives de dossiers et lien créé avec copie explicite.
+- Version **1.54.0**, cache PWA **pwa260**, ressources **v246**.
+
+## 1.53.4 — parité Activité standard / PWA (build pwa259)
+
+- L’onglet **Activité** de la PWA utilise désormais le même périmètre que l’onglet Activité standard pour les appareils appairés par un propriétaire/administrateur : mêmes événements persistants, même limite de 1 000 lignes et même rétention serveur.
+- L’affichage PWA est aligné sur la version standard : mêmes groupes **Transferts / Administration / Sécurité / Visiteurs / Système**, même recherche, mêmes champs et même ordre des métadonnées.
+- L’ancien historique local des transferts de l’appareil est déplacé vers **Envoyer** afin que l’onglet Activité ne mélange plus deux historiques différents.
+- L’onglet Activité PWA se rafraîchit périodiquement lorsqu’il est visible, en plus du chargement à l’ouverture et du rafraîchissement manuel.
+- Version **1.53.4**, cache PWA **pwa259**, ressources **v245**.
+
+## 1.53.2 — activité moins bruyante + navigation PWA épurée (build pwa258)
+
+- Les événements techniques **`push-subscribed`** restent dans le journal d’audit inviolable, mais sont exclus de l’historique **Activité**, y compris les anciennes entrées persistées lors d’une mise à niveau.
+- Suppression complète de la bulle/compteur sur l’onglet **Activité** de la PWA; les autres badges de navigation restent inchangés.
+- Version **1.53.2**, cache PWA **pwa258**, ressources **v244**.
+
+## 1.53.1 — onglet Activité standard + activité serveur dans la PWA (build pwa257)
+
+- La carte **Activité** a été retirée du tableau principal standard et remplacée par un **onglet/page Activité** accessible depuis un bouton dédié dans la topbar. La page est disponible à `/activity`, fonctionne avec Retour/Forward et peut être rechargée directement.
+- La page Activité standard conserve la recherche, les filtres, le compteur, le rafraîchissement et le flux temps réel SSE, mais peut maintenant afficher jusqu’à 1 000 événements chargés au lieu d’un simple aperçu de 30 lignes.
+- Dans la PWA, l’onglet **Activité** consulte désormais le véritable historique persistant du serveur via `/app/activity/recent`; l’ancien historique local des transferts reste présent séparément.
+- Une révocation/suppression d’image depuis la PWA apparaît donc dans Activité dès que le serveur confirme l’opération; l’historique est aussi rechargé à l’ouverture de l’onglet et via un bouton de rafraîchissement.
+- Les appareils PWA appairés ne reçoivent pas des événements administratifs sans rapport : l’API limite les événements aux éléments que l’appareil peut gérer, tandis qu’une session owner/admin/auditor peut consulter l’historique complet.
+- Version **1.53.1**, cache PWA **pwa257**, ressources **v243**.
+
+
+## 1.53.0 — section Activité dans la version standard (build pwa256)
+
+- La version standard dispose maintenant d’une section **Activité** visible directement sur le tableau principal, alimentée par le même historique persistant que la vue complète.
+- La section affiche les événements récents en temps réel, le nombre d’événements retenus, une recherche plein texte et des filtres Transferts / Administration / Sécurité / Visiteurs / Système.
+- Le bouton **Ouvrir l’historique complet** conserve la vue détaillée existante; les deux vues partagent le même flux SSE et évitent les connexions en double.
+- L’historique est chargé à la connexion puis maintenu en direct; il est vidé côté client lors d’une déconnexion/changement de compte pour éviter toute fuite entre sessions.
+- Accès cohérent avec le journal d’audit : propriétaires, administrateurs et auditeurs peuvent consulter Activité; les opérateurs n’y ont pas accès.
+- Version **1.53.0**, cache PWA **pwa256**, ressources **v242**.
+
+## 1.52.2 — connexions administrateur sur appareils reconnus (build pwa255)
+
+- Les reconnexions administrateur provenant d’un **appareil déjà reconnu** ne génèrent plus la notification « Nouvelle connexion administrateur ». Cela couvre les navigateurs déjà connus et les PWA déjà appairées au même compte, même si leur User-Agent change.
+- La connexion reste consignée dans le **journal d’audit**; un appareil réellement nouveau ou non reconnu continue de déclencher les alertes de sécurité.
+- L’ancien flux **Activité en direct** est devenu un véritable **Historique d’activité persistant** : jusqu’à 2 000 événements sont conservés dans l’état, sauvegardés/restaurés avec Direct-Xfer et continuent d’être diffusés en direct dans l’interface.
+- Lors de la première migration, l’historique est automatiquement amorcé depuis les entrées d’audit et l’historique des transferts déjà présents afin de ne pas repartir avec un journal vide.
+- La couverture comprend maintenant les changements de préférences/règles de notifications, tests webhook/e-mail/digest/Push, arrêt manuel de transfert, test de port, opérations PWA sur albums/images/rétention/Push, restauration/remplacement d’image, réponses aux réceptions, demandes d’accès/feedback/messages visiteurs et événements système pertinents (redémarrage, arrêt, crash récupéré, mise à jour, erreur d’indexation).
+- Les opérations de faible valeur (lectures, marquage de notifications comme lues, miniatures/adaptatifs automatiques) restent volontairement exclues pour éviter de noyer le journal.
+- Version **1.52.2**, cache PWA **pwa255**, ressources **v241**.
+
+## 1.52.1 — audit approfondi de l’historique d’actions / Undo (build pwa254)
+
+- Durcissement des permissions : une PWA appairée sans session administrateur active ne peut plus transformer son cookie d’appareil en capacité d’Undo globale. Elle ne peut annuler que ses propres révocations récupérables; les actions d’un autre appareil et les réglages restent en lecture seule.
+- Les mutations Undo sensibles sont désormais **atomiques** avec leur entrée d’historique : configuration, surnoms IP, statistiques, destinataires et mises en corbeille ne peuvent plus être validés durablement sans leur journal d’annulation correspondant.
+- Détection des **conflits d’état** : un ancien Undo ne peut plus écraser une modification plus récente. Les entrées devenues dangereuses sont conservées et affichées comme non annulables.
+- Restauration stricte depuis la corbeille : l’Undo refuse les collisions d’identifiant/token plutôt que de restaurer silencieusement une URL différente; les éléments déjà restaurés ou purgés sont distingués.
+- Le journal chargé depuis disque ou depuis une **sauvegarde restaurée** est assaini, borné à 25 entrées et limité en taille; les snapshots Undo sont clonés pour empêcher toute mutation indirecte.
+- L’interface standard et la PWA affichent des raisons précises (*état modifié*, *déjà restauré*, *purgé*, *lecture seule*, etc.), rafraîchissent l’état après un conflit et empêchent le cache HTTP de servir un historique obsolète.
+- Version **1.52.1**, cache PWA **pwa254**, ressources **v240**.
+
+## 1.52.0 — historique d’actions avec annulation (build pwa253)
+
+- Nouveau journal chronologique des **actions administratives destructives**, avec une carte **Historique d’actions** visible dans l’interface standard : aperçu des 3 dernières actions, compteur, rafraîchissement et accès à l’historique complet pour lancer **Undo**.
+- La **PWA** dispose maintenant de la même fonctionnalité dans l’espace **Partages** : historique persistant, rafraîchissement, états *Annulée* / *Plus annulable* et bouton **Annuler** sur chaque action encore réversible. Les révocations réalisées depuis la PWA alimentent aussi ce journal unifié.
+- Sont annulables : **changement de configuration**, **réinitialisation des statistiques** d’un lien, **retrait d’un destinataire nominatif**, **effacement des surnoms client** et **suppression d’un partage** (restauré depuis la corbeille). Une entrée dont la cible a déjà été purgée reste visible mais est marquée **Plus annulable**.
+- Le journal est **borné aux 25 dernières actions**, persistant dans le store, et filtré par compte/permissions. Il complète — sans les remplacer — la corbeille récupérable et l’annulation éphémère de 5 s après révocation.
+- Version **1.52.0**, cache PWA **pwa253**, ressources **v239**.
+
+## 1.51.2 — suppression définitive depuis la corbeille PWA (build pwa251)
+
+- Ajout de **Supprimer définitivement** sur chaque élément de la corbeille PWA, avec confirmation irréversible.
+- Ajout de **Tout supprimer définitivement** pour purger la corbeille en une opération, avec confirmation explicite et résultat comptabilisé.
+- Les purges définitives PWA sont réservées aux comptes/appareils **owner/admin**; les droits de restauration existants des opérateurs ne sont pas élargis.
+- L’interface standard conserve ses fonctions de purge existantes avec le libellé harmonisé **Tout supprimer définitivement**.
+- Version **1.51.2**, cache PWA **pwa251**, ressources **v238**.
+
+## 1.51.1 — persistance de session PWA (build pwa250)
+
+- Version corrective portée à **1.51.1** sans changement fonctionnel supplémentaire.
+- Conserve le correctif empêchant une fermeture/réouverture rapide de la PWA de provoquer un verrouillage immédiat.
+- Le délai d’auto-verrouillage configuré est désormais respecté sur la durée réellement écoulée hors de l’application.
+- Cache PWA **pwa250** et ressources **v237** pour forcer le renouvellement des installations existantes.
+
+## 1.51.0 — organisation, cycle de vie et recherche globale (build pwa249)
+
+- Correctif PWA : la fermeture/réouverture ne verrouille plus immédiatement la session. Le verrouillage automatique respecte maintenant réellement le délai configuré (5/15/30/60 min).
+
+- **Couleur par lien** et **note privée administrateur** disponibles dans les flux de création/gestion, avec parité PWA pour les partages du serveur.
+- **Duplication** d’un partage depuis l’administration et la PWA, avec nouveau jeton et remise à zéro des compteurs/états d’exécution.
+- **Réactivation sûre** d’un lien révoqué lorsque ses données existent encore, sans réinitialiser expiration, quotas, mot de passe ou état de pause.
+- **Archivage/désarchivage** conservé et exposé dans la bibliothèque PWA avec filtre des archives.
+- **Corbeille globale** restaurable dans la PWA pour les éléments gérés par le compte/appareil, en complément de l’administration standard.
+- **Recherche globale** étendue aux contenus indexés, liens, utilisateurs et journaux, avec filtrage par portée et respect des droits du rôle.
+- Version **1.51.0**, cache PWA **pwa249**, ressources **v236**.
+
+## 1.50.0 — refactorisation structurelle sans changement fonctionnel (build pwa247)
+
+- Refactorisation conservatrice du backend : `server.js` reste le point d’entrée et les routes/API restent inchangées.
+- Extraction des utilitaires généraux vers `lib/core-utils.js` et des primitives de hachage d’authentification vers `lib/auth-utils.js`.
+- Extraction des helpers d’images/EXIF vers `lib/photo-utils.js`, du rendu Markdown/code vers `lib/text-render.js` et des sous-titres vers `lib/subtitle-utils.js`.
+- Extraction des lectures de fichiers/ZIP bornées vers `lib/file-content-utils.js`, des primitives de recherche sémantique vers `lib/search-utils.js` et des détecteurs DLP vers `lib/dlp-utils.js`.
+- Aucun format de données, endpoint, option, chaîne UI ou comportement utilisateur n’est volontairement modifié.
+- Version **1.50.0**, cache PWA **pwa247**, ressources **v234**.
+
+## 1.49.3 — descriptions système pleine largeur sur tablette (build pwa246)
+
+- Correction PWA tablette : les **descriptions des notifications système** utilisent maintenant toute la largeur disponible dans leur carte.
+- Le titre et l’état (dont **Toujours activée**) restent sur la première ligne, tandis que la description occupe une seconde ligne pleine largeur.
+- Conservation de la grille responsive introduite en 1.49.2 pour empêcher tout débordement horizontal du Centre de notifications.
+- Version **1.49.3**, cache PWA **pwa246**, ressources **v234**.
+
+## 1.49.2 — correction tablette du centre de notifications (build pwa244)
+
+- Correction PWA tablette : les paramètres du **Centre de notifications** ne débordent plus horizontalement de la carte ni de l'écran.
+- La section utilise maintenant une grille responsive bornée : présentation et catégories sur deux colonnes quand l'espace le permet, puis une seule colonne sur téléphone.
+- Le constructeur **Alertes personnalisées** occupe toute la largeur de la section au lieu d'être forcé à côté de la grille des catégories.
+- Les champs, libellés et descriptions de notifications sont contraints à la largeur disponible et peuvent se replier proprement.
+- Version **1.49.2**, cache PWA **pwa244**, ressources **v232**.
+
+## 1.49.1 — audit approfondi des ajouts majeurs (build pwa243)
+
+- **Téléchargements reprenables** : verrou inter-onglets avec bail renouvelé, délais
+  d'attente IndexedDB, validation stricte de `Content-Range` et de l'identifiant de
+  reprise, redémarrage sans charger une réponse complète inattendue en mémoire,
+  purge via « Effacer toutes les données locales » et détection renforcée du
+  remplacement d'un fichier (`ctime` incluse).
+- **Quotas et sécurité des reprises** : le quota par IP n'est validé qu'après la
+  réception complète, une plage HTTP nue ne contourne plus le quota, `HEAD` ne peut
+  plus créer de session persistante et un identifiant déjà finalisé n'est plus
+  réutilisable pour télécharger sans comptabilisation.
+- **Connecteurs de stockage** : chemins de réponse rclone invalides rejetés, caractères
+  de contrôle interdits, environnement enfant réduit à une liste sûre, staging
+  aléatoire isolé et nettoyage après arrêt. Les tâches interrompues sont détectées,
+  les processus récalcitrants sont forcés à s'arrêter, les sondes rclone sont mises en
+  cache et l'interface empêche l'export vers un connecteur en lecture seule.
+- **Protection antirançongiciel** : événements associés à leur lien réel, aucune
+  suspension erronée d'un second lien utilisé par la même IP, contrôle répété avant
+  publication des téléversements concurrents et normalisation IPv4/IPv6 au déblocage.
+- **Audit infalsifiable** : écriture du journal synchronisée, retour arrière après une
+  écriture partielle, refus d'ajouter à une chaîne déjà invalide, création atomique de
+  la clé Ed25519 et vérificateur hors ligne exigeant une empreinte ou clé publique de
+  confiance (sauf option explicite `--allow-embedded-key`).
+- Version **1.49.1**, cache PWA **pwa243**, ressources **v231**.
+
+## 1.49.0 — ajouts majeurs 13, 17, 30 et 33 (build pwa242)
+
+- **13 — téléchargements avec reprise** : gestionnaire partagé aux pages publiques et
+  à la PWA, morceaux de 8 Mio persistés dans IndexedDB, reprise après fermeture,
+  validation ETag/If-Range et redémarrage propre si la source change. Les plages sont
+  enregistrées côté serveur pendant 7 jours et un téléchargement repris ne produit
+  qu’un seul historique/compteur logique. Les ZIP, contenus E2E et liens à usage unique
+  conservent le téléchargement natif afin de respecter leur sémantique.
+- **17 — connecteurs de stockage** : création, modification, test, import, export,
+  annulation et suivi des tâches depuis Configuration. SFTP, SMB, WebDAV, Google Drive,
+  OneDrive, Dropbox et Box utilisent le `rclone` inclus dans l’image. Les secrets restent
+  dans `/data/rclone/rclone.conf`; les imports sont atomiques, sans écrasement, bornés à
+  `/Direct-Xfer/Imports`, protégés contre les symlinks et analysés par ClamAV lorsqu’il
+  est activé. Les exports restent confinés aux fichiers hôte, Réceptions et Images.
+- **30 — protection anti-rançongiciel** : une rafale de noms suspects, d’uploads ou de
+  suppressions bloque l’IP et suspend aussi les écritures du lien Réception/Collaboration
+  concerné. Le blocage persiste après redémarrage, produit une alerte critique et peut
+  être levé séparément pour l’IP ou le lien depuis Configuration.
+- **33 — journal d’audit infalsifiable** : la chaîne HMAC et sa tête scellée sont
+  conservées, avec export complet signé Ed25519. Un export est refusé si l’intégrité de
+  la chaîne est déjà en échec. Le paquet contient le journal, son SHA-256, la tête signée
+  et la clé publique; l’empreinte SHA-256 complète peut être épinglée séparément.
+- La version applicative reste **1.49.0**; cache PWA **pwa242**, ressources **v230**.
+
+Configurez d’abord les destinations, puis utilisez leurs noms dans Configuration →
+Connecteurs de stockage :
+
+```bash
+docker exec -it direct-xfer rclone config
+```
+
+Vérifiez une preuve téléchargée avec l’empreinte affichée par Direct-Xfer (ou avec une
+copie épinglée de la clé publique) :
+
+```bash
+node scripts/verify-audit-proof.js direct-xfer-audit-proof-AAAA-MM-JJ.json --key-id EMPREINTE_SHA256
+node scripts/verify-audit-proof.js direct-xfer-audit-proof-AAAA-MM-JJ.json --public-key audit-signing-public.pem
+```
+
+Sans `--key-id` ou `--public-key`, l’outil valide l’intégrité interne et la signature,
+mais une empreinte conservée indépendamment est nécessaire pour authentifier l’instance.
+
+
+## 1.49.0 — mise à jour de sécurité des dépendances du conteneur (build pwa241)
+
+- L’image Docker passe d’Alpine à **Debian 13 Trixie slim**, tout en conservant Node.js 22, afin d’utiliser les rétroportages de sécurité officiels de Debian pour `giflib`.
+- Le build refuse une version de `libgif7` antérieure à `5.2.2-1+deb13u1`, qui corrige CVE-2026-23868 et CVE-2026-26740.
+- Les paquets système sont mis à niveau avant l’installation de Tesseract et Poppler; les jeux de données OCR français, anglais et espagnol restent inclus hors ligne.
+- Les exécutables inutilisés `pdftocairo` et `text2image`, seuls chemins Cairo pertinents pour Direct-Xfer, sont retirés. Les commandes réellement utilisées (`tesseract`, `pdftotext`, `pdftoppm`) sont vérifiées pendant le build.
+- Le passage aux privilèges réduits utilise maintenant `gosu`; les conventions `PUID`/`PGID` et les volumes Unraid restent inchangés.
+- Un document OpenVEX décrit le statut exact des cinq alertes signalées, notamment le faux positif NSS limité à Solaris et l’outil `gif2rgb` absent de l’image.
+- Pour reconstruire avec les derniers correctifs de sécurité : `docker compose build --pull --no-cache` puis recréer le conteneur.
+- Version portée à **1.49.0**, PWA **pwa241**, ressources **v229**.
 
 
 ## 1.48.4 — correctif d’affichage biométrique (build pwa240)

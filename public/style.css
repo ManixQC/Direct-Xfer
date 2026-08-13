@@ -1405,14 +1405,14 @@ code {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
-/* Feature 9 — filter + bulk toolbar, per-link tags, selection checkbox. */
+/* Filter + bulk toolbar, per-link tags, selection checkbox. */
 .shares-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 4px 0 12px; }
 .shares-filter { flex: 1 1 220px; min-width: 160px; padding: 8px 12px; border-radius: 9px; border: 1px solid var(--border); background: var(--bg-2, #0f1220); color: var(--text); font: inherit; font-size: 0.9rem; }
 .shares-filter:focus { outline: none; border-color: var(--accent); }
 .shares-select { padding: 8px 10px; border-radius: 9px; border: 1px solid var(--border); background: var(--bg-2, #0f1220); color: var(--text); font: inherit; font-size: 0.85rem; }
 .shares-select:focus { outline: none; border-color: var(--accent); }
 .shares-bulk { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-/* Feature 18 — full-text content search */
+/* Full-text content search */
 .search-panel { margin: 4px 0 12px; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-2, #0f1220); }
 .search-row { display: flex; gap: 8px; }
 .search-input { flex: 1 1 auto; min-width: 0; padding: 8px 12px; border-radius: 9px; border: 1px solid var(--border); background: var(--card, #151a2e); color: var(--text); font: inherit; font-size: 0.9rem; }
@@ -1424,24 +1424,24 @@ code {
 .sh-hit-file { color: var(--muted); word-break: break-all; }
 .sh-hit-open { margin-left: auto; }
 .sh-hit-snip { margin-top: 5px; font-size: 0.82rem; color: var(--muted); font-family: ui-monospace, Menlo, Consolas, monospace; word-break: break-word; }
-/* Feature 11 — inline rename */
+/* Inline rename */
 .name-edit { font: inherit; font-weight: 600; padding: 2px 6px; border-radius: 6px; border: 1px solid var(--accent); background: var(--bg, #0f1220); color: var(--text); max-width: 320px; }
 .name-edit:focus { outline: none; }
-/* Feature 14 — per-link access log modal */
+/* Per-link access log modal */
 .log-body { max-height: 60vh; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
 .log-row { display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; border: 1px solid var(--border-soft, var(--border)); border-radius: 8px; background: var(--card, #151a2e); }
 .log-dir { flex: 0 0 auto; font-size: 1rem; }
 .log-main { min-width: 0; }
 .log-line1 { font-size: 0.88rem; word-break: break-all; }
 .log-line2 { margin-top: 2px; }
-/* Feature 5 — per-link usage progress bar */
+/* Per-link usage progress bar */
 .quota { display: flex; align-items: center; gap: 10px; margin: 6px 0 2px; }
 .quota-bar { flex: 1 1 auto; height: 6px; border-radius: 4px; background: var(--border-soft, #222844); overflow: hidden; }
 .quota-bar > i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), var(--accent-hover, #5b8dff)); border-radius: 4px; transition: width .3s; }
 .quota-bar.high > i { background: linear-gradient(90deg, #e0a52e, #ffd166); }
 .quota-bar.full > i { background: linear-gradient(90deg, #d1483f, #ff6b81); }
 .quota-label { flex: 0 0 auto; font-size: 0.75rem; color: var(--faint, #6b7398); font-variant-numeric: tabular-nums; }
-/* Feature 8 — keyboard shortcuts help */
+/* Keyboard shortcuts help */
 .keys-grid { display: grid; grid-template-columns: auto 1fr; gap: 10px 14px; align-items: center; padding: 4px 2px; }
 .keys-grid kbd { justify-self: start; min-width: 1.6em; text-align: center; padding: 3px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-2, #0f1220); font: inherit; font-size: 0.85rem; }
 .keys-grid span { font-size: 0.9rem; color: var(--text); }
@@ -1500,7 +1500,7 @@ body[data-role="operator"] .switch-row { display: none !important; }
   padding: 20px;
   z-index: 40;
 }
-/* Image lightbox (feature 11) */
+/* Image lightbox */
 .lightbox-overlay { background: rgba(0, 0, 0, 0.92); padding: 0; }
 .lightbox-figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 10px; max-width: 94vw; max-height: 92vh; }
 #lightbox-img { max-width: 94vw; max-height: 82vh; object-fit: contain; border-radius: 8px; box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6); background: rgba(255, 255, 255, 0.03); }
@@ -1631,13 +1631,17 @@ body[data-role="operator"] .switch-row { display: none !important; }
   align-items: center;
   margin-top: 12px;
 }
-#preview-video {
+.preview-surface, #preview-video, #preview-image {
   width: 100%;
   max-height: 70vh;
+  object-fit: contain;
   border-radius: 10px;
   background: #0d1226;
   border: 1px solid var(--border);
 }
+.preview-audio { width: min(100%, 720px); margin: 20px auto; }
+.preview-frame { width: 100%; height: min(72vh, 820px); border: 1px solid var(--border); border-radius: 10px; background: #fff; }
+.preview-text { width: 100%; max-height: 72vh; overflow: auto; margin: 0; padding: 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); color: var(--text); white-space: pre-wrap; overflow-wrap: anywhere; tab-size: 2; text-align: left; }
 .ico {
   width: 1.3em;
   text-align: center;
@@ -1722,7 +1726,7 @@ body[data-role="operator"] .switch-row { display: none !important; }
   background: rgba(255, 122, 89, 0.16);
   color: #ff7a59;
 }
-/* Recipient read-receipt status chips (feature 4). */
+/* Recipient read-receipt status chips. */
 .rcp-status.seen { background: rgba(138, 180, 255, 0.16); color: var(--accent-ink); }
 .rcp-status.pending { background: var(--card-2); color: var(--faint); }
 .rcp-when { font-size: 0.72rem; color: var(--faint); }
@@ -1866,6 +1870,12 @@ body[data-role="operator"] .switch-row { display: none !important; }
 .cfg-bk-dest-fields { border-left: 2px solid var(--border-soft); padding-left: 12px; margin: 6px 0 4px; }
 .cfg-bk-danger { color: var(--danger); border-color: var(--danger); }
 .cfg-bk-danger:hover:not(:disabled) { background: rgba(255, 107, 129, 0.08); }
+.connector-editor,.connector-transfer{border:1px solid var(--border-soft);border-radius:10px;padding:12px;margin:8px 0;background:var(--card-2)}
+.connector-list,.connector-jobs{display:flex;flex-direction:column;gap:7px;margin:8px 0}
+.connector-row,.connector-job{display:flex;align-items:center;gap:10px;justify-content:space-between;border:1px solid var(--border-soft);border-radius:9px;padding:9px 11px;background:var(--card)}
+.connector-main{min-width:0;flex:1}.connector-main strong{display:block;overflow-wrap:anywhere}.connector-meta{font-size:.78rem;color:var(--faint);overflow-wrap:anywhere}
+.connector-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.connector-job.is-failed{border-color:var(--danger)}.connector-job.is-completed{border-color:color-mix(in srgb,var(--ok) 50%,var(--border-soft))}
+@media (max-width:600px){.connector-row,.connector-job{align-items:stretch;flex-direction:column}.connector-actions{justify-content:flex-start}.connector-actions .btn{flex:1}}
 
 /* ---- Scrollable form modals -------------------------------------------- */
 /* Long form modals scroll inside the height-capped modal (max-height:88vh), with
@@ -2176,7 +2186,7 @@ body[data-role="operator"] .switch-row { display: none !important; }
 .sparkline .ax,
 .donut text.ax { fill: var(--faint); font-size: 11px; }
 
-/* Feature 35 — compact daily sparklines (downloads/day, deposits/day). */
+/* Compact daily sparklines (downloads/day, deposits/day). */
 .dash-mini-row { display: flex; flex-wrap: wrap; gap: 14px; }
 .dash-mini { flex: 1 1 180px; min-width: 0; }
 .dash-mini-title { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--faint); margin-bottom: 4px; }
@@ -2557,7 +2567,7 @@ svg {
 .item-x:hover {
   background: rgba(255, 107, 129, 0.14);
 }
-/* Drag & drop reorder (feature 16) */
+/* Drag & drop reorder */
 .item-list.reorderable .item-row { cursor: grab; }
 .item-row .item-grip {
   flex: 0 0 auto;
@@ -2609,7 +2619,7 @@ svg {
   overflow: hidden;
 }
 .photo-thumb img { width: 100%; height: 100%; object-fit: contain; object-position: center; display: block; }
-/* Feature 18 — LQIP blur-up placeholder (micro → thumb). */
+/* LQIP blur-up placeholder (micro → thumb). */
 .photo-thumb img.lqip { filter: blur(10px); transform: scale(1.06); transition: filter .45s ease, transform .45s ease; }
 .photo-thumb img.lqip.lqip-loaded { filter: blur(0); transform: none; }
 .photo-history-list .empty { grid-column: 1 / -1; }
@@ -2711,7 +2721,7 @@ svg {
 /* Bulk-action bar (shown when at least one image is selected). */
 .photos-bulk-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
 .photos-bulk-spacer { flex: 1 1 auto; }
-/* Image galleries (feature 18) */
+/* Image galleries */
 .albums-list { display: flex; flex-direction: column; gap: 10px; }
 .album-card { border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; background: var(--card-2); }
 .album-card.inactive { opacity: 0.55; }
@@ -3137,7 +3147,7 @@ body[data-role="auditor"] .share-actions .stats-btn { display: inline-flex !impo
 }
 .shares-list.view-grid > .empty { grid-column: 1 / -1; }
 
-/* Feature — admin links table density toggle. Compact tightens card padding,
+/* Admin links table density toggle. Compact tightens card padding,
    inner margins and the list gap; comfortable (no class) is the default. */
 .shares-list.density-compact { gap: 7px; }
 .shares-list.density-compact .share { padding: 9px 12px; }
@@ -3239,7 +3249,7 @@ body[data-role="auditor"] .album-url .clone-btn {
   .photo-exif-grid { grid-template-columns: 1fr; }
 }
 
-/* Features 22/25/27 — audit integrity, ransomware guard and universal search */
+/* Audit integrity, ransomware guard and universal search */
 .search-index-bar, .audit-integrity-bar {
   display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-top:8px;
 }
@@ -3347,13 +3357,13 @@ body[data-role="auditor"] .album-url .clone-btn {
 .share-comment-text{grid-column:1;white-space:pre-wrap;overflow-wrap:anywhere;font-size:.86rem}
 .share-comment-row .btn{grid-column:2;grid-row:1 / span 2;align-self:center}
 .share-comments-input{width:100%;resize:vertical}
-/* Features 28/38 — per-link moderation modal (access requests + visitor feedback). */
+/* Per-link moderation modal (access requests + visitor feedback). */
 .share-comment-row .mod-acts{grid-column:2;grid-row:1 / span 2;align-self:center;display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
 .share-comment-row.mod-unread{border-left:3px solid var(--accent,#3b82f6)}
 .mod-section{margin:2px 0 14px}
 .mod-section h4{margin:0 0 8px;font-size:.85rem}
 .btn.has-pending{color:var(--accent,#3b82f6);font-weight:600}
-/* Feature 38 — public visitor-feedback form on a shared file's page. */
+/* Public visitor-feedback form on a shared file's page. */
 .fb-card h2{margin:0 0 10px;font-size:1rem}
 .fb-card .up-msg{width:100%;margin-bottom:8px}
 .fb-thanks{color:#31b46b;font-weight:600;margin:6px 0}
@@ -3364,7 +3374,7 @@ body[data-role="auditor"] .album-url .clone-btn {
 
 /* 1.35.4 — trash, per-file history and live activity */
 .trash-body,.file-history-body,.activity-body,.received-body{display:flex;flex-direction:column;gap:9px;max-height:62vh;overflow:auto;padding-right:2px}
-/* Feature 15 — received-file browser with image thumbnails */
+/* Received-file browser with image thumbnails */
 .received-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
 .received-card{display:flex;flex-direction:column;gap:6px;padding:8px;border:1px solid var(--border);border-radius:10px;background:var(--card-2);min-width:0}
 .received-thumb{position:relative;display:flex;align-items:center;justify-content:center;height:110px;border-radius:8px;overflow:hidden;background:var(--card);border:1px solid var(--border)}
@@ -3387,12 +3397,12 @@ body[data-role="auditor"] .album-url .clone-btn {
 @media (max-width:620px){.trash-row{align-items:flex-start;flex-direction:column}.trash-actions{width:100%;justify-content:flex-start}.activity-row{grid-template-columns:26px minmax(0,1fr)}.activity-row time{grid-column:2;white-space:normal}}
 .activity-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 10px}
 
-/* 1.35.5 feature 23: compact semantic-search mode control. */
+/* Compact semantic-search mode control. */
 .search-semantic-toggle{display:inline-flex;align-items:center;gap:.35rem;white-space:nowrap;font-size:.84rem;color:var(--muted);padding:.35rem .5rem;border:1px solid var(--border);border-radius:.55rem;background:var(--surface-2)}
 .search-semantic-toggle input{margin:0}.semantic-badge{border-color:color-mix(in srgb,var(--accent) 55%,var(--border));color:var(--accent)}
 .dlp-badge{border-color:#d97706;color:#b45309}.share.inactive .dlp-badge{opacity:.8}
 
-/* Feature 3 & 20 — password generator button + strength meter. */
+/* Password generator button + strength meter. */
 .pw-tools{display:flex;align-items:center;gap:8px;margin-top:6px}
 .pw-strength{flex:1;height:6px;border-radius:4px;background:rgba(127,127,127,.22);overflow:hidden}
 .pw-strength i{display:block;height:100%;width:0;border-radius:4px;transition:width .15s ease,background .15s ease}
@@ -3402,12 +3412,12 @@ body[data-role="auditor"] .album-url .clone-btn {
 .pw-strength[data-level="3"] i{width:75%;background:#eab308}
 .pw-strength[data-level="4"] i{width:100%;background:#22c55e}
 
-/* Feature 6 — quick-share deep links inside the QR modal. */
+/* Quick-share deep links inside the QR modal. */
 .share-via{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:12px}
 .share-via .btn{flex:0 0 auto}
 .cfg-panic-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
 
-/* Feature 20 — in-browser image editor (rotate / crop). */
+/* In-browser image editor (rotate / crop). */
 .photo-editor-modal{max-width:640px;width:calc(100vw - 32px)}
 .photo-editor-stage{display:flex;align-items:center;justify-content:center;margin:10px 0;padding:8px;min-height:200px;border-radius:10px;background:repeating-conic-gradient(rgba(127,127,127,.14) 0% 25%,transparent 0% 50%) 50%/20px 20px}
 .photo-editor-canvas{max-width:100%;max-height:52vh;cursor:crosshair;touch-action:none;border-radius:6px;box-shadow:0 2px 12px rgba(0,0,0,.35)}
@@ -3415,7 +3425,7 @@ body[data-role="auditor"] .album-url .clone-btn {
 .photo-editor-tools .btn.active{background:var(--accent,#3b82f6);color:#fff;border-color:transparent}
 .photo-editor-hint{margin-top:8px}
 
-/* Feature 36 — reusable link presets (creation-form template bar). */
+/* Reusable link presets (creation-form template bar). */
 .preset-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border)}
 .preset-bar .preset-select{flex:1 1 160px;min-width:0}
 .preset-bar .btn{flex:0 0 auto}
@@ -3447,17 +3457,17 @@ body[data-role="auditor"] .album-url .clone-btn {
 .notification-item.notification-success { border-left: 3px solid var(--ok); }
 .notification-item.notification-unread { box-shadow: inset 0 0 0 1px color-mix(in srgb,var(--accent) 45%,transparent); background:color-mix(in srgb,var(--accent) 10%,var(--card)); }
 .notification-item.notification-unread .notification-item-title::after { content:' •'; color:var(--accent); font-size:1.1em; }
-/* Feature 1 — clickable notification body */
+/* Clickable notification body */
 .notification-item-main.notification-clickable { cursor:pointer; border-radius:7px; }
 .notification-item-main.notification-clickable:hover .notification-item-title { text-decoration:underline; text-underline-offset:2px; }
 .notification-item-main.notification-clickable:focus-visible { outline:2px solid color-mix(in srgb,var(--accent) 55%,transparent); outline-offset:2px; }
-/* Feature 9 — contextual quick actions */
+/* Contextual quick actions */
 .notification-item-actions { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
 .notification-action { padding:3px 9px; font-size:.72rem; height:auto; line-height:1.5; }
 .notification-action.danger { color:var(--danger); border-color:color-mix(in srgb,var(--danger) 45%,transparent); }
-/* Feature 12 — load more */
+/* Load more */
 .notification-loadmore { width:calc(100% - 8px); margin:4px 4px 2px; }
-/* Feature 6 — header action buttons + bell pulse */
+/* Header action buttons + bell pulse */
 .notification-head-actions { display:inline-flex; gap:4px; margin-left:auto; }
 .notification-head-btn { width:28px; height:28px; padding:0; display:grid; place-items:center; border-radius:7px; font-size:.9rem; line-height:1; }
 .notifications-btn.notif-pulse { animation:notif-pulse 2.6s ease; }
@@ -3470,7 +3480,7 @@ body[data-role="auditor"] .album-url .clone-btn {
   40% { transform:rotate(0); }
 }
 @media (prefers-reduced-motion: reduce) { .notifications-btn.notif-pulse { animation:none; } }
-/* Feature 7 — per-account category preferences */
+/* Per-account category preferences */
 .notification-prefs { padding:8px 6px; border-bottom:1px solid var(--border-soft); display:grid; gap:5px; }
 .notification-prefs-hint { margin-bottom:3px; }
 .notification-pref-row { display:flex; align-items:center; gap:8px; font-size:.8rem; cursor:pointer; }
@@ -3500,7 +3510,7 @@ body[data-role="auditor"] .album-url .clone-btn {
 .share-expiry-remaining{font-weight:700;color:var(--warn)}
 @media(max-width:760px){.shares-pagination{justify-content:space-between}.shares-pagination .btn{flex:1 1 120px}}
 
-/* Feature 20 — live download presence shared by standard, photo and album cards. */
+/* Live download presence shared by standard, photo and album cards. */
 .badge.download-presence-badge{
   border-color:color-mix(in srgb,var(--accent) 58%,var(--border));
   background:color-mix(in srgb,var(--accent) 14%,var(--card));
@@ -3521,7 +3531,7 @@ body[data-role="auditor"] .album-url .clone-btn {
 .notification-rule-row-actions{display:flex;gap:6px;flex:0 0 auto;}
 @media(max-width:620px){.notification-rule-fields{grid-template-columns:1fr}.notification-rule-row{align-items:flex-start;flex-direction:column}.notification-rule-row-actions{width:100%}.notification-rule-row-actions .btn{flex:1}}
 
-/* Feature 27 — two-way reception thread on the public reception page. */
+/* Two-way reception thread on the public reception page. */
 .up-thread-card { margin-top: 16px; }
 .up-thread-head h2 { margin: 0 0 2px; font-size: 1.05rem; }
 .up-thread-list { display: flex; flex-direction: column; gap: 8px; max-height: 320px; overflow-y: auto; margin: 12px 0; padding-right: 4px; }
@@ -3533,3 +3543,41 @@ body[data-role="auditor"] .album-url .clone-btn {
 .up-thread-text { white-space: pre-wrap; word-break: break-word; }
 .up-thread-form { display: flex; flex-direction: column; gap: 6px; }
 .up-thread-form .up-thread-send { align-self: flex-end; }
+
+/* 1.52.0 follow-up — visible action-history/undo dashboard. */
+.undo-history-card{border-color:color-mix(in srgb,var(--accent) 30%,var(--border))}
+.undo-history-head{align-items:flex-start}.undo-history-head h2{margin-bottom:3px}.undo-history-head p{margin:0}
+.undo-preview{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.undo-preview .trash-row{padding:8px 10px}
+.undo-row.is-undone,.undo-row.is-unavailable{opacity:.72}
+.undo-state{display:inline-flex;align-items:center;min-height:30px;padding:0 4px;font-weight:600}
+@media (max-width:620px){.undo-history-head{align-items:flex-start;flex-direction:column}.undo-history-head .card-head-actions{width:100%;justify-content:flex-start}}
+
+/* Activity history shared styling (introduced in 1.53.0; reused by the dedicated page). */
+.activity-section-card{min-width:0}
+.activity-section-head{align-items:flex-start}
+.activity-section-head>div:first-child{min-width:0}
+.activity-section-head h2{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.activity-section-head p{margin:4px 0 0}
+.activity-section-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 10px}
+.activity-section-search{flex:1 1 260px;min-width:180px}
+.activity-section-select{flex:0 1 190px;min-width:150px}
+.activity-section-summary{margin-left:auto}
+.activity-section-body{max-height:460px;overflow:auto;scrollbar-gutter:stable}
+@media (max-width:720px){.activity-section-head{align-items:stretch}.activity-section-head,.activity-section-head .card-head-actions{flex-direction:column}.activity-section-head .card-head-actions{align-items:stretch;width:100%}.activity-section-tools>*{flex:1 1 100%;min-width:0}.activity-section-summary{margin-left:0}.activity-section-body{max-height:520px}}
+
+/* 1.53.1 — Activity moved from the home dashboard to a dedicated topbar tab. */
+.activity-menu{position:relative;display:inline-flex}
+.activity-launch-btn{width:auto;min-width:104px;height:40px;padding:0 12px;gap:7px;border-radius:11px;font-weight:700}
+.activity-launch-label{font-size:.86rem;white-space:nowrap}
+.activity-page{min-height:100vh}
+.activity-page .activity-section-card{margin-top:18px}
+.activity-page .activity-section-body{max-height:calc(100vh - 255px);min-height:300px}
+@media (max-width:760px){.activity-launch-btn{min-width:42px;width:42px;padding:0}.activity-launch-label{display:none}.activity-page .activity-section-body{max-height:none;min-height:0}}
+
+/* 1.54: richer share/activity/trash affordances */
+.share-created-banner{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:12px 0;padding:12px 14px;border:1px solid var(--accent);border-radius:12px;background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.share-created-banner.hidden{display:none}.share-created-main{min-width:0;display:grid;gap:5px}.share-created-main code{max-width:min(72vw,900px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;user-select:all}.share-created-actions{display:flex;gap:8px;align-items:center;flex:0 0 auto}
+.activity-check{display:inline-flex;align-items:center;gap:6px;font-size:.84rem;white-space:nowrap}.activity-check input{accent-color:var(--accent)}
+.trash-row>.trash-select{flex:0 0 auto;align-self:center}.trash-row.selected{outline:1px solid color-mix(in srgb,var(--accent) 55%,transparent);background:color-mix(in srgb,var(--accent) 7%,transparent)}
+@media(max-width:720px){.share-created-banner{align-items:stretch;flex-direction:column}.share-created-actions{justify-content:flex-end}.share-created-main code{max-width:100%}.activity-check{width:100%}}

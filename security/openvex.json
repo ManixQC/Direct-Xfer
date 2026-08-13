@@ -1,0 +1,43 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://github.com/ManixQC/Direct-Xfer/security/openvex-1.51.2",
+  "author": "Direct-Xfer project",
+  "timestamp": "2026-08-12T00:00:00Z",
+  "version": 1,
+  "tooling": "Direct-Xfer container security review",
+  "statements": [
+    {
+      "vulnerability": { "@id": "CVE-2026-26740" },
+      "products": [{ "@id": "pkg:docker/manixqc/direct-xfer@1.51.2" }],
+      "status": "fixed",
+      "action_statement": "The image is built on Debian 13 and requires libgif7 >= 5.2.2-1+deb13u1, which contains Debian's vendor backport."
+    },
+    {
+      "vulnerability": { "@id": "CVE-2026-23868" },
+      "products": [{ "@id": "pkg:docker/manixqc/direct-xfer@1.51.2" }],
+      "status": "fixed",
+      "action_statement": "The image is built on Debian 13 and requires libgif7 >= 5.2.2-1+deb13u1, which contains Debian's vendor backport."
+    },
+    {
+      "vulnerability": { "@id": "CVE-2024-45993" },
+      "products": [{ "@id": "pkg:docker/manixqc/direct-xfer@1.51.2" }],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The issue is confined to the gif2rgb command-line utility. Direct-Xfer does not install or invoke gif2rgb."
+    },
+    {
+      "vulnerability": { "@id": "CVE-2006-5201" },
+      "products": [{ "@id": "pkg:docker/manixqc/direct-xfer@1.51.2" }],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The historical issue applies to the Solaris NSS implementation, not Debian's Mozilla NSS library."
+    },
+    {
+      "vulnerability": { "@id": "CVE-2025-50422" },
+      "products": [{ "@id": "pkg:docker/manixqc/direct-xfer@1.51.2" }],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Direct-Xfer invokes only tesseract, pdftotext and pdftoppm. The unused pdftocairo and text2image executables are removed during the image build."
+    }
+  ]
+}

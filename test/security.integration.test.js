@@ -456,7 +456,7 @@ test('PWA image management enforces duplicate, metadata, password, view-limit an
   );
   const hash = 'a'.repeat(64);
 
-  const created = await fetch(`${base}/app/image?name=managed.png&w=1&h=1&clientHash=${hash}&dlpOverride=1`, {
+  const created = await fetch(`${base}/app/image?name=managed.png&w=1&h=1&clientHash=${hash}&dlpOverride=1&duplicateOverride=1`, {
     method: 'POST', headers: { ...headers, 'Content-Type': 'image/png' }, body: png,
   });
   assert.equal(created.status, 201, JSON.stringify(await json(created.clone())));
@@ -508,7 +508,7 @@ test('PWA image management enforces duplicate, metadata, password, view-limit an
   const limited = await fetch(photo.imgUrl, { headers: { Cookie: unlockCookie }, cache: 'no-store' });
   assert.equal(limited.status, 404);
 
-  const albumImageResponse = await fetch(`${base}/app/image?name=album.png&w=1&h=1&dlpOverride=1`, {
+  const albumImageResponse = await fetch(`${base}/app/image?name=album.png&w=1&h=1&dlpOverride=1&duplicateOverride=1`, {
     method: 'POST', headers: { ...headers, 'Content-Type': 'image/png' }, body: png,
   });
   assert.equal(albumImageResponse.status, 201);
@@ -564,7 +564,7 @@ test('PWA advanced image protection enforces hotlink policy, first-view alerts a
     'base64'
   );
 
-  const created = await fetch(`${base}/app/image?name=protected-hotlink.png&w=1&h=1&dlpOverride=1`, {
+  const created = await fetch(`${base}/app/image?name=protected-hotlink.png&w=1&h=1&dlpOverride=1&duplicateOverride=1`, {
     method: 'POST',
     headers: { ...mutationHeaders, 'Content-Type': 'image/png' },
     body: png,

@@ -300,7 +300,7 @@
     }
   });
 
-  // --- Passkey (WebAuthn) sign-in (feature 8) --------------------------------
+  // --- Passkey (WebAuthn) sign-in --------------------------------
   var passkeyBtn = document.getElementById('mobile-passkey-btn');
   var biometricHint = document.getElementById('mobile-biometric-hint');
   function bufToB64u(buf) {
@@ -489,7 +489,7 @@
   // from creating a simple home-screen shortcut with no WebAPK/share-target
   // integration when the user installs before signing in.
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/direct-xfer-pwa-sw.js?v=228', { scope: '/app/' }).catch(function () {});
+    navigator.serviceWorker.register('/direct-xfer-pwa-sw.js?v=249', { scope: '/app/' }).catch(function () {});
   }
   hydrateRememberedLogin().finally(function () { ((rememberPassword.checked && password.value) ? password : user).focus(); });
 })();

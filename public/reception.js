@@ -212,7 +212,7 @@
     if (cfg.maxFileBytes > 0 && file.size > cfg.maxFileBytes) return 'tooBig';
     var acc = acceptedSoFar();
     if (cfg.maxFiles > 0 && (cfg.filesReceived || 0) + acc.count >= cfg.maxFiles) return 'maxFiles';
-    // Feature 13 — cap the number of files a visitor may queue in one deposit. This
+    // Cap the number of files a visitor may queue in one deposit. This
     // counts only files added in this page session (not the link's cumulative total),
     // guiding the visitor before they send; maxFiles / maxFilesPerSender stay the
     // server-authoritative hard caps.
@@ -222,17 +222,17 @@
     return null;
   }
 
-  // Feature 2 — optional sender name, sent with each upload so the server files
+  // Optional sender name, sent with each upload so the server files
   // the deposit under a per-sender subfolder (only when the link enables it).
   var senderEl = document.getElementById('up-sender');
   function senderParam() {
-    // Feature 9 — send the visitor's name whenever the link groups by sender OR
+    // Send the visitor's name whenever the link groups by sender OR
     // requires a name (the server rejects a required-name upload without it).
     if (!cfg.groupBySender && !cfg.requireSenderName) return '';
     var v = senderEl ? String(senderEl.value || '').trim() : '';
     return v ? '&sender=' + encodeURIComponent(v) : '';
   }
-  // Feature 9 — block sending until a required name is provided.
+  // Block sending until a required name is provided.
   function senderNameMissing() {
     if (!cfg.requireSenderName) return false;
     return !(senderEl && String(senderEl.value || '').trim());
@@ -797,7 +797,7 @@
   }
 
   sendBtn.addEventListener('click', function () {
-    // Feature 9 — a required visitor name must be filled before anything is sent.
+    // A required visitor name must be filled before anything is sent.
     if (senderNameMissing()) {
       window.alert(cfg.senderRequiredMsg || 'Please enter your name before sending.');
       if (senderEl) { try { senderEl.focus(); } catch (_) {} }
@@ -813,7 +813,7 @@
     }
   });
 
-  // Feature 27 — two-way reception thread. The visitor reads the running
+  // Two-way reception thread. The visitor reads the running
   // conversation with the link owner and posts replies. Rendered only when the
   // link enables it. Every message is inserted via textContent (never innerHTML),
   // so a message can never inject markup.

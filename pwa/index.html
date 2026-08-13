@@ -9,18 +9,19 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="DX Envoyer">
-  <link id="app-manifest" rel="manifest" href="/direct-xfer-pwa.webmanifest?v=228">
+  <link id="app-manifest" rel="manifest" href="/direct-xfer-pwa.webmanifest?v=249">
   <link rel="icon" href="/app/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" sizes="180x180" href="/app/apple-touch-icon.png">
   <!-- Shell assets carry the ?v build query so a freshly-served index.html can never be
        paired with a stale app.js/app.css from a previous version's service-worker cache
        (that mix threw on removed elements and broke the icon styling). Bump ?v in
        lock-step with sw.js VERSION on every release. -->
-  <link rel="stylesheet" href="/app/app.css?v=228">
-  <script src="/app/theme-init.js?v=228"></script>
-  <script src="/dxcrypto.js?v=228" defer></script>
-  <script src="/app/dlp-local.js?v=228" defer></script>
-  <script src="/app/app.js?v=228" defer></script>
+  <link rel="stylesheet" href="/app/app.css?v=249">
+  <script src="/app/theme-init.js?v=249"></script>
+  <script src="/dxcrypto.js?v=249" defer></script>
+  <script src="/app/dlp-local.js?v=249" defer></script>
+  <script src="/download-resume.js?v=249" defer></script>
+  <script src="/app/app.js?v=249" defer></script>
   <title>Direct-Xfer — Envoyer</title>
 </head>
 <body>
@@ -627,6 +628,14 @@
           <span data-i18n="sharesRateLimit">Débit maximal (Ko/s, 0 = illimité)</span>
           <input id="share-rate" type="number" inputmode="numeric" min="0" step="1" value="0">
         </label>
+        <label class="field" for="share-color">
+          <span data-i18n="sharesColor">Couleur de la carte (facultatif)</span>
+          <input id="share-color" type="text" maxlength="7" autocomplete="off" spellcheck="false" placeholder="#3b82f6">
+        </label>
+        <label class="field" for="share-admin-note">
+          <span data-i18n="sharesAdminNote">Note privée (facultatif)</span>
+          <textarea id="share-admin-note" maxlength="1000" rows="2" data-i18n-placeholder="sharesAdminNotePlaceholder" placeholder="Visible uniquement par les administrateurs"></textarea>
+        </label>
         <p class="muted sm" data-i18n="sharesSmartExpiryHint">Expiration intelligente : les limites actives sont combinées avec « OU »; la première atteinte désactive le lien.</p>
         <label class="field" for="share-first-use">
           <span data-i18n="sharesFirstUseExpiry">Expiration après première utilisation (heures, 0 = désactivé)</span>
@@ -642,12 +651,53 @@
           <span id="share-password-strength" class="pw-strength hidden" aria-live="polite"><span class="pw-bar"><i></i></span><span class="pw-label"></span></span>
         </label>
         <button id="share-create-btn" class="btn block" type="button" disabled data-i18n="sharesCreateBtn">Créer le lien de partage</button>
+        <div id="share-created-link" class="share-created-link hidden" role="status" aria-live="polite">
+          <span data-i18n="sharesCreatedLink">Lien prêt à partager</span>
+          <code id="share-created-url"></code>
+          <button id="share-created-copy" class="btn ghost sm" type="button" data-i18n="sharesCopy">Copier</button>
+        </div>
         <p id="share-create-status" class="dest-status muted" role="status" aria-live="polite"></p>
       </section>
 
       <section class="share-library" aria-labelledby="share-library-heading">
-        <p id="share-library-heading" class="lbl" data-i18n="sharesLibrary">Vos partages</p>
+        <div class="row wrap share-library-head">
+          <p id="share-library-heading" class="lbl" data-i18n="sharesLibrary">Vos partages</p>
+          <button id="share-archived-toggle" class="btn ghost sm push" type="button" aria-pressed="false" data-i18n="sharesShowArchived">🗄 Archives</button>
+        </div>
+        <div class="row share-search-row">
+          <input id="share-global-search" type="search" autocomplete="off" spellcheck="false" data-i18n-placeholder="sharesGlobalSearchPlaceholder" placeholder="Rechercher liens, utilisateurs, journaux et contenu…">
+          <button id="share-global-search-btn" class="btn ghost sm" type="button" data-i18n="sharesGlobalSearch">Rechercher</button>
+        </div>
+        <div id="share-global-search-results" class="share-search-results" aria-live="polite"></div>
         <div id="share-list" class="share-list" aria-live="polite"></div>
+      </section>
+
+      <section class="share-library action-history-section" aria-labelledby="action-history-heading">
+        <div class="row wrap share-library-head">
+          <div>
+            <p id="action-history-heading" class="lbl" data-i18n="actionHistoryTitle">Historique d’actions</p>
+            <p class="section-sub" data-i18n="actionHistoryHint">Consultez les dernières actions administratives et annulez celles qui sont encore réversibles.</p>
+          </div>
+          <div class="row wrap push">
+            <span id="action-history-count" class="count-badge">0</span>
+            <button id="action-history-refresh" class="btn ghost sm" type="button" data-i18n="refresh">Rafraîchir</button>
+          </div>
+        </div>
+        <div id="action-history-list" class="share-list action-history-list" aria-live="polite"></div>
+      </section>
+
+      <section class="share-library" aria-labelledby="share-trash-heading">
+        <div class="row wrap share-library-head">
+          <p id="share-trash-heading" class="lbl"><span data-i18n="sharesTrash">Corbeille globale</span> <span id="share-trash-count" class="count-badge">0</span></p>
+          <div class="row wrap push">
+            <span id="share-trash-selected-count" class="muted sm"></span>
+            <button id="share-trash-restore-selected" class="btn ghost sm hidden" type="button" data-i18n="sharesTrashRestoreSelected">Restaurer la sélection</button>
+            <button id="share-trash-purge-all" class="btn danger sm hidden" type="button" data-i18n="sharesTrashDeleteAll">Tout supprimer définitivement</button>
+            <button id="share-trash-refresh" class="btn ghost sm" type="button" data-i18n="refresh">Rafraîchir</button>
+          </div>
+        </div>
+        <p class="section-sub" data-i18n="sharesTrashHint">Images, réceptions et partages supprimés peuvent être restaurés ici tant qu’ils sont conservés.</p>
+        <div id="share-trash-list" class="share-list" aria-live="polite"></div>
       </section>
 
       <section class="share-library" aria-labelledby="reception-library-heading">
@@ -678,8 +728,39 @@
       </div>
     </section>
 
-    <details class="card details-card advanced-section" id="history-card" data-pwa-panel="activity">
-      <summary data-i18n="history">Historique local</summary>
+    <section class="card server-activity-card" id="server-activity-card" data-pwa-panel="activity">
+      <div class="server-activity-head">
+        <div>
+          <h2><span data-i18n="serverActivity">Activité Direct-Xfer</span> <span id="server-activity-count" class="count">0</span></h2>
+          <p class="muted sm" data-i18n="serverActivityHint">Actions persistantes du serveur : images, partages, sécurité, transferts et administration.</p>
+        </div>
+        <button id="server-activity-refresh" class="btn ghost sm" type="button" data-i18n="refresh">Rafraîchir</button>
+      </div>
+      <div class="server-activity-tools" role="group" data-i18n-aria="serverActivityFiltersAria" aria-label="Filtres d’activité">
+        <label class="sr-only" for="server-activity-search" data-i18n="serverActivitySearch">Rechercher dans l’activité</label>
+        <input id="server-activity-search" type="search" class="history-search" autocomplete="off" placeholder="Rechercher…" data-i18n-placeholder="serverActivitySearch">
+        <label class="sr-only" for="server-activity-kind" data-i18n="serverActivityKindAria">Type d’activité</label>
+        <select id="server-activity-kind" class="compact-select server-activity-kind" data-i18n-aria="serverActivityKindAria" aria-label="Type d’activité">
+          <option value="" data-i18n="serverActivityKindAll">Tous les types</option>
+          <option value="transfer" data-i18n="serverActivityKindTransfer">Transferts</option>
+          <option value="admin" data-i18n="serverActivityKindAdmin">Administration</option>
+          <option value="security" data-i18n="serverActivityKindSecurity">Sécurité</option>
+          <option value="visitor" data-i18n="serverActivityKindVisitor">Visiteurs</option>
+          <option value="system" data-i18n="serverActivityKindSystem">Système</option>
+        </select>
+        <select id="server-activity-share" class="compact-select server-activity-kind" aria-label="Partage"><option value="" data-i18n="serverActivityShareAll">Tous les partages</option></select>
+        <label class="activity-filter-check"><input id="server-activity-images" type="checkbox"><span data-i18n="serverActivityImagesOnly">Images seulement</span></label>
+        <label class="activity-filter-check"><input id="server-activity-pwa" type="checkbox"><span data-i18n="serverActivityPwaOnly">PWA seulement</span></label>
+        <label class="activity-filter-check"><input id="server-activity-hide-routine" type="checkbox"><span data-i18n="serverActivityHideRoutine">Masquer système routinier</span></label>
+        <button id="server-activity-reset" class="btn ghost sm" type="button" data-i18n="serverActivityReset">Effacer les filtres</button>
+        <span id="server-activity-summary" class="muted sm server-activity-summary" aria-live="polite"></span>
+      </div>
+      <p id="server-activity-status" class="muted sm" aria-live="polite"></p>
+      <div id="server-activity-list" class="history-list server-activity-list" aria-live="polite"></div>
+    </section>
+
+    <details class="card details-card advanced-section" id="history-card" data-pwa-panel="send">
+      <summary data-i18n="localTransferHistory">Historique des transferts de cet appareil</summary>
       <label class="sr-only" for="history-search" data-i18n="historySearch">Rechercher dans l’historique</label>
       <input id="history-search" type="search" class="history-search" autocomplete="off" placeholder="Rechercher…" data-i18n-placeholder="historySearch">
       <div id="history-list" class="history-list"></div>
@@ -806,10 +887,28 @@
             <p id="lifetime-stats" class="muted sm"></p>
           </div>
         </div>
-        <div class="setting-row">
-          <div>
+        <div class="setting-row dlp-settings-row">
+          <div class="dlp-settings-copy">
             <strong>DLP</strong>
             <p id="dlp-pwa-policy" class="muted sm" data-i18n="dlpPolicyLoading">Chargement de la politique DLP…</p>
+            <p id="dlp-auto-readonly" class="muted sm hidden" data-i18n="dlpAutoReadOnly">Les réactions automatiques DLP sont modifiables uniquement depuis un appareil owner/admin.</p>
+          </div>
+          <div class="dlp-auto-settings" id="dlp-auto-settings">
+            <label class="checkline dlp-auto-toggle" for="dlp-auto-rules">
+              <input id="dlp-auto-rules" type="checkbox">
+              <span data-i18n="dlpAutoRules">Réaction automatique selon la gravité</span>
+            </label>
+            <p class="muted sm dlp-auto-hint" data-i18n="dlpAutoRulesHint">Choisissez l’action appliquée automatiquement pour chaque niveau de gravité détecté.</p>
+            <div class="dlp-action-grid" id="dlp-auto-actions">
+              <label class="field compact"><span data-i18n="dlpSeverityLow">Faible</span><select id="dlp-action-low"></select></label>
+              <label class="field compact"><span data-i18n="dlpSeverityMedium">Moyenne</span><select id="dlp-action-medium"></select></label>
+              <label class="field compact"><span data-i18n="dlpSeverityHigh">Élevée</span><select id="dlp-action-high"></select></label>
+              <label class="field compact"><span data-i18n="dlpSeverityCritical">Critique</span><select id="dlp-action-critical"></select></label>
+            </div>
+            <div class="button-row compact-buttons dlp-auto-actions-row">
+              <button id="dlp-auto-save" class="btn ghost sm" type="button" data-i18n="dlpAutoSave">Enregistrer les réactions DLP</button>
+              <span id="dlp-auto-status" class="muted sm" role="status" aria-live="polite"></span>
+            </div>
           </div>
         </div>
         <div class="setting-row">
@@ -896,7 +995,7 @@
       </div>
     </details>
 
-    <p class="foot">Direct-Xfer · <span data-i18n="companionApp">application compagnon</span> · <span id="build-tag" class="muted">v1.48.4 · pwa240</span></p>
+    <p class="foot">Direct-Xfer · <span data-i18n="companionApp">application compagnon</span> · <span id="build-tag" class="muted">v1.55.1 · pwa263</span></p>
   </main>
 
   <nav id="pwa-bottom-nav" class="pwa-bottom-nav" aria-label="Navigation principale" data-i18n-aria="navMain">
@@ -918,7 +1017,6 @@
     <button class="pwa-nav-item" type="button" data-pwa-nav="activity">
       <span class="pwa-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
       <span data-i18n="navActivity">Activité</span>
-      <span id="nav-activity-badge" class="pwa-nav-badge hidden" aria-hidden="true"></span>
     </button>
     <button class="pwa-nav-item" type="button" data-pwa-nav="settings">
       <span class="pwa-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>

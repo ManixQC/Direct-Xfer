@@ -69,6 +69,16 @@ services:
       # after the old chain and the re-signed chain both verify successfully.
       # Keep this secret stable after migration.
       # AUDIT_HMAC_KEY: "a-different-long-random-secret"
+      # Optional stable Ed25519 private key for independently verifiable audit
+      # proof exports. Without it, Direct-Xfer creates a protected key pair under
+      # /data automatically. The public key can safely be distributed.
+      # AUDIT_SIGNING_PRIVATE_KEY_FILE: "/run/secrets/direct-xfer-audit-ed25519.pem"
+      # Storage connectors (SFTP, SMB, WebDAV, Google Drive, OneDrive, Dropbox,
+      # Box) use rclone. Run `docker exec -it direct-xfer rclone config` once;
+      # credentials stay in this protected file and never enter shares.json.
+      # RCLONE_CONFIG: "/data/rclone/rclone.conf"
+      # CONNECTOR_IMPORT_DIR: "/Direct-Xfer/Imports"
+      # MAX_ACTIVE_CONNECTOR_JOBS: "4"
       # Native HTTPS (so encrypted shares / secret notes / E2E reception work
       # without a reverse proxy — WebCrypto needs a secure context). Provide a
       # cert/key pair, OR set TLS_SELF_SIGNED to auto-generate one (cached in

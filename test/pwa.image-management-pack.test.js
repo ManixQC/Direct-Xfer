@@ -84,7 +84,7 @@ feature(10, 'new image links can be copied automatically', () => {
 
 feature(11, 'a favorite expiry is applied server-side and remembered', () => {
   assert.match(html, /id="img-expiry"/);
-  assert.match(js, /expiresInSeconds: Number\(\$\('img-expiry'\)/);
+  assert.match(js, /expiresInSeconds: forceNeverExpire \? 0 : \(Number\(\$\('img-expiry'\)/);
   assert.match(server, /share\.expiresAt = parseExpiry\(body\.expiresInSeconds\)/);
 });
 
@@ -118,7 +118,7 @@ feature(15, 'private notes are editable and never embedded in public image URLs'
 feature(16, 'duplicate images are detected with a local SHA-256 fingerprint', () => {
   assert.match(js, /crypto\.subtle\.digest\('SHA-256'/);
   assert.match(js, /\/app\/image\/duplicate\?hash=/);
-  assert.match(server, /clientHash === hash/);
+  assert.match(server, /item\.contentSha256[\s\S]{0,120}item\.clientHash/);
 });
 
 feature(17, 'QR codes can be exported as PNG files', () => {

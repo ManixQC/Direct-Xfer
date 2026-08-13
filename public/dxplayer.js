@@ -1,5 +1,5 @@
 'use strict';
-// Direct-Xfer — folder media player (feature 3). Plays the folder's audio/video
+// Direct-Xfer — folder media player. Plays the folder's audio/video
 // as a playlist, loads sibling subtitles for videos, and auto-advances.
 (function () {
   var cfg = window.DX_PLAYER || { items: [], strings: {} };

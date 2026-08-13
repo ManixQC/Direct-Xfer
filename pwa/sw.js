@@ -3,7 +3,7 @@
  * Shell versioning + network-aware updates. Upload/API requests are never cached.
  * Web Share Target batches are isolated so simultaneous shares cannot overwrite one another.
  */
-var VERSION = '2026.08.11-pwa240';
+var VERSION = '2026.08.13-pwa263';
 var SHELL_CACHE = 'dx-pwa-shell-' + VERSION;
 var RUNTIME_CACHE = 'dx-pwa-runtime-' + VERSION;
 var SHARE_CACHE = 'dx-share-v2';
@@ -13,11 +13,12 @@ var SHARE_CACHE = 'dx-share-v2';
 var SHELL = [
   '/app/launch',
   '/direct-xfer-pwa-shell.html',
-  '/app/app.css?v=228',
-  '/app/theme-init.js?v=228',
-  '/app/login-vault.js?v=228',
-  '/app/dlp-local.js?v=228',
-  '/app/app.js?v=228',
+  '/app/app.css?v=249',
+  '/app/theme-init.js?v=249',
+  '/app/login-vault.js?v=249',
+  '/app/dlp-local.js?v=249',
+  '/download-resume.js?v=249',
+  '/app/app.js?v=249',
   '/direct-xfer-pwa.webmanifest',
   '/direct-xfer-pwa-en.webmanifest',
   '/direct-xfer-pwa-es.webmanifest',
@@ -28,7 +29,7 @@ var SHELL = [
   '/app/icon-maskable-192.png',
   '/app/icon-maskable-512.png',
   '/app/apple-touch-icon.png',
-  '/dxcrypto.js?v=228'
+  '/dxcrypto.js?v=249'
 ];
 
 function randomId() {
@@ -84,7 +85,7 @@ self.addEventListener('message', function (event) {
   }
 });
 
-// Feature 2 — Background/Periodic Sync. The page performs every security-sensitive
+// Background/Periodic Sync. The page performs every security-sensitive
 // step first (DLP decision, image transformation and optional encryption), persists
 // the resulting upload bytes, then marks the queue record `backgroundReady`. The
 // worker only transports those already-approved bytes; it never owns a passphrase,
@@ -358,7 +359,7 @@ self.addEventListener('notificationclick', function (event) {
     else if (action === 'resend-last') url = '/app/?action=resend-last';
     else url = '/app/?action=send';
   } else if (data.openCenter) {
-    // Feature 14 — a cold start lands on the panel and opens the notification center.
+    // A cold start lands on the panel and opens the notification center.
     url = '/app/?opencenter=1' + (data.panel ? ('&panel=' + encodeURIComponent(data.panel)) : '');
   }
   event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (clients) {

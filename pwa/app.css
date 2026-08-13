@@ -574,6 +574,17 @@ html.pwa-standalone #install-btn { display: none !important; }
 .settings-grid { display: grid; gap: 14px; margin-top: 14px; }
 .setting-row { display: flex; align-items: center; gap: 12px; justify-content: space-between; border-top: 1px solid var(--border-soft); padding-top: 13px; }
 .setting-row p { margin: 4px 0 0; }
+.dlp-settings-row{align-items:flex-start;display:grid;grid-template-columns:minmax(180px,.75fr) minmax(280px,1.25fr);}
+.dlp-settings-copy,.dlp-auto-settings{min-width:0;}
+.dlp-auto-settings{width:100%;display:grid;gap:9px;}
+.dlp-auto-toggle{margin:0;}
+.dlp-auto-hint{margin-top:-3px!important;}
+.dlp-action-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;}
+.dlp-action-grid .field{min-width:0;}
+.dlp-auto-actions-row{align-items:center;justify-content:flex-start;}
+#dlp-auto-status{min-height:1.2em;}
+@media (max-width:720px){.dlp-settings-row{grid-template-columns:1fr;}.dlp-action-grid{grid-template-columns:1fr 1fr;}}
+@media (max-width:440px){.dlp-action-grid{grid-template-columns:1fr;}.dlp-auto-actions-row .btn{width:100%;}}
 .compact-buttons { justify-content: flex-end; flex-wrap: wrap; }
 .biometric-setting {
   flex-direction: column;
@@ -1014,7 +1025,7 @@ body > *,
 }
 
 /* ========================================================================
-   Added features: batch reset, pending counter, quota bars, master-select,
+   Batch reset, pending counter, quota bars, master-select,
    undo, accent picker, image lightbox.
    ======================================================================== */
 .count-badge { flex: 0 0 auto; align-self: center; font-size: .72rem; font-weight: 800; color: var(--accent-2); background: var(--panel-2); border: 1px solid var(--border-soft); border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
@@ -1553,7 +1564,7 @@ input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; a
 }
 .share-link-main { flex: 1; min-width: 0; }
 .share-link-main strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* Feature 20 — live "downloading now" presence badge. */
+/* Live "downloading now" presence badge. */
 .share-live-badge {
   display: inline-block; margin-top: 4px; padding: 1px 9px; border-radius: 999px;
   font-size: 0.72rem; font-weight: 700; line-height: 1.5; color: #fff;
@@ -1777,48 +1788,55 @@ input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; a
 /* Notification Lu/Non-lu */
 .pwa-notification-item.notification-unread{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 45%,transparent);background:color-mix(in srgb,var(--accent) 10%,var(--card));}
 .pwa-notification-item.notification-unread .pwa-notification-title::after{content:' •';color:var(--accent);font-size:1.1em;}
-/* Feature 1 — clickable notification body */
+/* Clickable notification body */
 .pwa-notification-main.notification-clickable{cursor:pointer;border-radius:8px;}
 .pwa-notification-main.notification-clickable:focus-visible{outline:2px solid color-mix(in srgb,var(--accent) 55%,transparent);outline-offset:2px;}
-/* Feature 9 — contextual quick actions */
+/* Contextual quick actions */
 .pwa-notification-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
 .pwa-notification-action{padding:3px 10px;font-size:.72rem;height:auto;line-height:1.5;}
-/* Feature 12 — load more */
+/* Load more */
 .pwa-notification-loadmore{width:100%;margin-top:4px;}
-/* Feature 6 — header buttons + bell pulse */
+/* Header buttons + bell pulse */
 .pwa-notification-head-actions{display:inline-flex;gap:4px;margin-left:auto;}
 .pwa-notification-head-btn{width:30px;height:30px;min-width:30px;min-height:30px;padding:0;display:grid;place-items:center;border-radius:8px;font-size:.95rem;line-height:1;}
 .pwa-notifications-btn.notif-pulse{animation:pwa-notif-pulse 2.6s ease;}
 @keyframes pwa-notif-pulse{0%,100%{transform:none;}8%{transform:rotate(-14deg);}16%{transform:rotate(12deg);}24%{transform:rotate(-9deg);}32%{transform:rotate(6deg);}40%{transform:rotate(0);}}
 @media (prefers-reduced-motion: reduce){.pwa-notifications-btn.notif-pulse{animation:none;}}
-/* Feature 7 — per-account category preferences */
+/* Per-account category preferences */
 .notification-prefs{padding:8px 2px 10px;border-bottom:1px solid var(--border-soft);display:grid;gap:6px;}
 .notification-prefs-hint{margin-bottom:2px;}
 .notification-pref-row{display:flex;align-items:center;gap:9px;font-size:.8rem;cursor:pointer;}
 .notification-pref-row input{width:17px;height:17px;accent-color:var(--accent);}
 
-/* Notification-center category choices in Settings. */
-.notification-center-settings-row{align-items:flex-start;}
-.notification-center-settings-copy{min-width:min(240px,100%);flex:1 1 240px;}
-.notification-settings-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;flex:1 1 360px;min-width:min(360px,100%);}
-.notification-settings-grid .notification-pref-row{min-height:40px;padding:8px 9px;border:1px solid var(--border-soft);border-radius:10px;background:color-mix(in srgb,var(--card) 88%,transparent);}
-.notification-settings-grid .notification-pref-row{align-items:flex-start;}
-.notification-settings-grid .notification-pref-row input{margin-top:2px;flex:0 0 auto;}
-.notification-pref-copy{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1;}
-.notification-pref-title{font-weight:650;line-height:1.25;}
-.notification-pref-description{font-size:.72rem;line-height:1.35;}
-.notification-settings-grid .notification-pref-required-label{margin-top:1px;}
+/* Notification-center category choices in Settings.
+   This row used to remain a three-item flex row above 620px. On tablets that put the
+   intro, the two-column preference grid AND the custom-alert builder side-by-side,
+   making their combined intrinsic width wider than the settings card. Use an explicit
+   two-column grid instead and let the alert builder span the full row. */
+.notification-center-settings-row{display:grid;grid-template-columns:minmax(0,.72fr) minmax(0,1.28fr);align-items:start;gap:12px;min-width:0;width:100%;max-width:100%;}
+.notification-center-settings-copy{min-width:0;width:100%;max-width:100%;}
+.notification-settings-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;min-width:0;width:100%;max-width:100%;}
+.notification-settings-grid .notification-pref-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-rows:auto auto;column-gap:9px;row-gap:3px;align-items:start;min-width:0;max-width:100%;min-height:40px;padding:8px 9px;border:1px solid var(--border-soft);border-radius:10px;background:color-mix(in srgb,var(--card) 88%,transparent);}
+.notification-settings-grid .notification-pref-row input{grid-column:1;grid-row:1;margin-top:2px;flex:0 0 auto;}
+.notification-pref-copy{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1;overflow-wrap:anywhere;}
+.notification-settings-grid .notification-pref-copy{display:contents;}
+.notification-pref-title{font-weight:650;line-height:1.25;overflow-wrap:anywhere;}
+.notification-settings-grid .notification-pref-title{grid-column:2;grid-row:1;min-width:0;}
+.notification-pref-description{font-size:.72rem;line-height:1.35;overflow-wrap:anywhere;}
+.notification-settings-grid .notification-pref-description{grid-column:1 / -1;grid-row:2;display:block;min-width:0;width:100%;max-width:100%;margin-top:1px;}
+.notification-settings-grid .notification-pref-required-label{grid-column:3;grid-row:1;margin-top:1px;}
 .notification-settings-grid .notification-pref-required{cursor:default;opacity:.84;}
-.notification-pref-required-label{margin-left:auto;white-space:nowrap;font-size:.68rem;}
-.notification-settings-required-hint{grid-column:1 / -1;margin-top:2px;}
+.notification-pref-required-label{margin-left:auto;white-space:nowrap;font-size:.68rem;flex:0 0 auto;}
+.notification-settings-required-hint{grid-column:1 / -1;margin-top:2px;overflow-wrap:anywhere;}
 .notification-settings-status{min-height:1.2em;}
 .notification-settings-status.setting-ok{color:var(--ok);}
 .notification-settings-status.setting-error{color:var(--danger);}
-@media (max-width:620px){.notification-settings-grid{grid-template-columns:1fr;min-width:0;width:100%;}.notification-center-settings-row{display:block;}.notification-center-settings-copy{margin-bottom:10px;}}
+@media (max-width:620px){.notification-center-settings-row{grid-template-columns:minmax(0,1fr);gap:10px;}.notification-settings-grid{grid-template-columns:1fr;}.notification-center-settings-copy{margin-bottom:0;}}
 
-.notification-rule-builder{margin-top:14px;padding:12px;border:1px solid var(--border-soft);border-radius:10px;background:color-mix(in srgb,var(--card) 92%,transparent);}
+.notification-rule-builder{grid-column:1 / -1;min-width:0;width:100%;max-width:100%;box-sizing:border-box;margin-top:2px;padding:12px;border:1px solid var(--border-soft);border-radius:10px;background:color-mix(in srgb,var(--card) 92%,transparent);overflow:hidden;}
 .notification-rule-builder>strong{display:block;margin-bottom:4px;}
-.notification-rule-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0;}
+.notification-rule-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0;min-width:0;width:100%;}
+.notification-rule-fields .field,.notification-rule-fields input,.notification-rule-fields select{min-width:0;width:100%;max-width:100%;box-sizing:border-box;}
 .notification-rule-list{display:grid;gap:7px;margin-top:10px;}
 .notification-rule-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px;border:1px solid var(--border-soft);border-radius:9px;}
 .notification-rule-row-main{min-width:0;display:grid;gap:2px;}
@@ -1826,7 +1844,7 @@ input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; a
 .notification-rule-row-actions{display:flex;gap:6px;flex:0 0 auto;}
 @media(max-width:620px){.notification-rule-fields{grid-template-columns:1fr}.notification-rule-row{align-items:flex-start;flex-direction:column}.notification-rule-row-actions{width:100%}.notification-rule-row-actions .btn{flex:1}}
 
-/* Feature 27 — two-way reception thread (owner-side modal + reception-row badge). */
+/* Two-way reception thread (owner-side modal + reception-row badge). */
 .reception-thread-btn.has-unread { color: #fff; background: #16a34a; border-color: #16a34a; font-weight: 700; }
 .thread-overlay { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center; padding: 12px; background: rgba(3, 8, 20, .9); }
 .thread-modal { width: 100%; max-width: 460px; max-height: 86dvh; display: flex; flex-direction: column; gap: 10px; padding: 14px; border: 1px solid var(--border); border-radius: 14px; background: var(--panel); }
@@ -1842,3 +1860,42 @@ input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; a
 .thread-form { display: flex; flex-direction: column; gap: 6px; }
 .thread-form textarea { width: 100%; resize: vertical; padding: 8px; border-radius: 10px; border: 1px solid var(--border); background: var(--panel-2); color: var(--text); font: inherit; }
 .thread-form .btn { align-self: flex-end; }
+
+/* Persistent download manager shared with public pages. */
+.dx-resume-panel{position:fixed;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:120;width:min(390px,calc(100vw - 24px));max-height:65dvh;overflow:auto;background:var(--panel);border:1px solid var(--border);border-radius:13px;box-shadow:0 18px 55px rgba(0,0,0,.5);padding:10px}
+.dx-resume-panel[hidden]{display:none}.dx-resume-head{font-weight:700;padding:3px 4px 8px}.dx-resume-list{display:flex;flex-direction:column;gap:8px}.dx-resume-row{display:grid;grid-template-columns:1fr auto;gap:5px 10px;padding:9px;border:1px solid var(--border);border-radius:9px;background:var(--panel-2)}
+.dx-resume-row strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.dx-resume-meta{font-size:.72rem;color:var(--muted);grid-column:1/-1}.dx-resume-row progress{width:100%;height:7px;grid-column:1/-1;accent-color:var(--accent)}.dx-resume-actions{display:flex;gap:6px;grid-column:1/-1}.dx-resume-actions .btn{margin:0;padding:6px 10px;font-size:.75rem}
+
+/* 1.51.0 — share lifecycle/search additions */
+.share-library-head{align-items:center;margin-bottom:6px}.share-library-head .lbl{margin:0}.share-search-row{align-items:stretch;margin:8px 0}.share-search-row input{min-width:0;flex:1}.share-search-results{display:flex;flex-direction:column;gap:6px;margin:8px 0 10px}.share-search-hit{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 8px;align-items:center;padding:8px 10px;border:1px solid var(--border);border-radius:10px}.share-search-hit strong,.share-search-hit span{min-width:0;overflow-wrap:anywhere}.share-search-hit span{grid-column:1/-1}.share-search-hit .btn{grid-column:2;grid-row:1}.share-private-note{margin-top:4px;overflow-wrap:anywhere}.share-link-row{border-left:1px solid var(--border)}
+@media(max-width:760px){.share-search-row{flex-wrap:wrap}.share-search-row .btn{width:100%}.share-search-hit{grid-template-columns:minmax(0,1fr)}.share-search-hit .btn{grid-column:1;grid-row:auto;justify-self:start}}
+
+/* 1.52.0 follow-up — unified action history / Undo in the Shares workspace. */
+.action-history-section{margin-top:14px;padding-top:14px;border-top:1px solid var(--border-soft)}
+.action-history-section .share-library-head>div:first-child{min-width:0;flex:1}
+.action-history-section .section-sub{margin:3px 0 0}
+.action-history-row.is-undone,.action-history-row.is-unavailable{opacity:.72}
+.action-history-state{display:inline-flex;align-items:center;min-height:30px;font-weight:700}
+@media(max-width:760px){.action-history-section .share-library-head{align-items:flex-start}.action-history-section .share-library-head>.push{margin-left:0;width:100%;justify-content:flex-start}.action-history-row{align-items:flex-start}.action-history-row .share-link-actions{width:100%}}
+
+/* 1.53.1 — persistent server activity inside the PWA Activity tab. */
+.server-activity-card{min-width:0}
+.server-activity-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
+.server-activity-head h2{margin:0;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.server-activity-head p{margin:4px 0 0}
+.server-activity-tools{display:grid;grid-template-columns:minmax(180px,1fr) minmax(150px,220px) auto auto;gap:8px;align-items:center;margin:10px 0}
+.server-activity-tools .history-search{margin:0;min-width:0}
+.server-activity-kind{width:100%;min-width:0}
+.server-activity-summary{justify-self:end;white-space:nowrap}
+.server-activity-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px}
+.server-activity-row time{white-space:nowrap}
+.server-activity-list{max-height:440px;overflow:auto;scrollbar-gutter:stable}
+.server-activity-row{grid-template-columns:30px minmax(0,1fr);align-items:flex-start}
+.server-activity-icon{font-size:1rem;line-height:1.35;text-align:center}
+@media (max-width:620px){.server-activity-head{flex-direction:column}.server-activity-head .btn{width:100%}.server-activity-tools{grid-template-columns:1fr}.server-activity-summary{justify-self:start}.server-activity-list{max-height:none}.server-activity-row{grid-template-columns:auto minmax(0,1fr)}.server-activity-row time{grid-column:2}}
+.activity-filter-check{display:inline-flex;align-items:center;gap:6px;font-size:.82rem;white-space:nowrap}.activity-filter-check input{accent-color:var(--accent)}
+@media(max-width:700px){.activity-filter-check{width:100%}}
+
+.share-created-link{display:flex;align-items:center;gap:.55rem;flex-wrap:wrap;margin-top:.65rem;padding:.65rem .75rem;border:1px solid var(--border);border-radius:12px;background:var(--surface-2)}
+.share-created-link code{flex:1;min-width:12rem;overflow-wrap:anywhere;word-break:break-word}
+.share-created-link.hidden{display:none}

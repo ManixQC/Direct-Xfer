@@ -9,8 +9,8 @@
 (function () {
   // Build tag, shown in the footer so a user can confirm at a glance which version
   // is actually running after an update. Keep it in lock-step with sw.js VERSION.
-  var APP_VERSION = '1.48.4';
-  var APP_BUILD = '2026.08.11-pwa240';
+  var APP_VERSION = '1.55.1';
+  var APP_BUILD = '2026.08.13-pwa263';
   // Upload blocks are deliberately small on mobile. A number of reverse proxies
   // still default to a 1 MiB request-body limit; an 8 MiB first block can therefore
   // be rejected before the browser emits any useful progress event, which looks like
@@ -62,7 +62,7 @@
   var launchParams = new URLSearchParams(location.search);
   var launchAction = launchParams.get('action') || '';
   var launchDestinationUrl = launchParams.get('dest') || '';
-  var launchOpenCenter = launchParams.get('opencenter') === '1'; // feature 14 cold start
+  var launchOpenCenter = launchParams.get('opencenter') === '1'; // cold start
   var launchCenterPanel = launchParams.get('panel') || '';
   var pairedClaim = launchParams.get('paired') === '1';
   var $ = function (id) { return document.getElementById(id); };
@@ -82,7 +82,7 @@
     fr: {
       imgEditUploaded: 'Modifier avec l’éditeur photo', imgEditUploadedDone: 'Image modifiée, URL conservée ✓',
       notificationsTitle: 'Notifications', notificationsLoading: 'Chargement…', notificationsEmpty: 'Aucune notification.', notificationsFirstView: 'Première vue de « {name} »', notificationsDelete: 'Supprimer cette notification', notificationsClearAll: 'Tout supprimer', notificationsClearConfirm: 'Supprimer toutes les notifications ?', notificationsLoadMore: 'Afficher plus ({n})', notificationsLinkCopied: 'Lien copié ✓', notificationsSound: 'Son à la réception', notificationsSoundOn: 'Son activé', notificationsSoundOff: 'Son désactivé', notificationsPrefs: 'Préférences', notificationsPrefsHint: 'Décochez une catégorie pour ne plus créer ses notifications.', notificationsPrefsSaved: 'Préférences enregistrées ✓', notificationsSettingsTitle: 'Centre de notifications', notificationsSettingsHint: 'Choisissez les catégories de notifications à recevoir dans le centre de notifications pour ce compte.', notificationsSettingsRequired: 'Toujours activée', notificationsSettingsRequiredHint: 'Les notifications Sécurité, Maintenance et Santé système restent toujours activées.', notificationsSettingsSaving: 'Enregistrement…', notificationsSettingsError: 'Impossible d’enregistrer les préférences.', notificationsRulesTitle: 'Alertes personnalisées', notificationsRulesHint: 'Créez jusqu’à 50 règles qui déclenchent une notification lorsqu’un seuil est atteint.', notificationsRuleMetric: 'Mesure', notificationsRuleTarget: 'Lien', notificationsRuleThreshold: 'Seuil', notificationsRuleLabel: 'Nom (facultatif)', notificationsRuleAdd: 'Ajouter la règle', notificationsRuleAllTargets: 'Tous mes liens compatibles', notificationsRuleTargetUnavailable: 'Lien indisponible ou supprimé', notificationsRuleEmpty: 'Aucune règle personnalisée.', notificationsRuleSaved: 'Règle enregistrée ✓', notificationsRuleDeleted: 'Règle supprimée', notificationsRuleError: 'Impossible d’enregistrer la règle.', notificationsRuleEnable: 'Activer', notificationsRuleDisable: 'Désactiver', notificationsRuleDelete: 'Supprimer', notificationsRuleMetricViews: 'Vues', notificationsRuleMetricDownloads: 'Téléchargements', notificationsRuleMetricBytesServed: 'Données servies (Go)', notificationsRuleMetricReceivedBytes: 'Données reçues (Go)', notificationsRuleCustomTitle: 'Alerte personnalisée : {name}', notificationsTimeAgo: 'il y a {v}', notificationsCount: '{n} notification(s)', notificationsFilteredCount: '{shown} / {total} notification(s)', notificationsNoMatch: 'Aucune notification ne correspond aux filtres.', notificationsFilters: 'Filtres de notifications', notificationsCategoryFilter: 'Filtrer par catégorie', notificationsSeverityFilter: 'Filtrer par gravité', notificationsAllCategories: 'Toutes les catégories', notificationsAllSeverities: 'Toutes les gravités', notificationsSearch: 'Rechercher…', notificationsSearchAria: 'Rechercher dans les notifications', notificationsCategoryActivity: 'Activité', notificationsCategoryVisitors: 'Visiteurs', notificationsCategoryThresholds: 'Seuils', notificationsCategoryTraffic: 'Trafic', notificationsCategoryImages: 'Images', notificationsCategoryPwa: 'PWA', notificationsCategoryReceptions: 'Réceptions', notificationsCategorySearch: 'Recherche / OCR', notificationsCategorySecurity: 'Sécurité', notificationsCategoryShares: 'Partages', notificationsCategorySystemHealth: 'Santé système', notificationsCategoryMaintenance: 'Maintenance', notificationsCategoryNetwork: 'Réseau', notificationsCategoryRestarts: 'Redémarrages', notificationsCategoryUpdates: 'Mises à jour', notificationsCategoryTransfers: 'Transferts', notificationsCategoryDescShares: 'Téléchargements, expiration, limites et changements concernant les liens de partage.', notificationsCategoryDescReceptions: 'Dépôts reçus, fichiers disponibles et quotas des liens de réception.', notificationsCategoryDescImages: 'Premières vues, remplacements d’images et régénération des variantes.', notificationsCategoryDescTransfers: 'Transferts terminés ou échoués, abandons et reprises impossibles.', notificationsCategoryDescVisitors: 'Nouveaux pays et nouveaux navigateurs ou appareils visiteurs.', notificationsCategoryDescThresholds: 'Seuils de vues et de téléchargements atteints sur vos liens.', notificationsCategoryDescTraffic: 'Volume de téléchargement inhabituel et liens devenant viraux.', notificationsCategoryDescSearch: 'Échecs OCR et problèmes d’indexation pour la recherche.', notificationsCategoryDescPwa: 'Appareils PWA, abonnements Push et permissions de notifications.', notificationsCategoryDescSecurity: 'Connexions inhabituelles, mots de passe, DLP et autres alertes de sécurité.', notificationsCategoryDescSystemHealth: 'Pannes de service, erreurs de configuration et problèmes système importants.', notificationsCategoryDescMaintenance: 'Nettoyages automatiques et suppressions de fichiers selon les règles de rétention.', notificationsCategoryDescNetwork: 'Changements d’adresse IP publique et événements réseau du service.', notificationsCategoryDescRestarts: 'Redémarrages détectés de Direct-Xfer, avec durée d’indisponibilité lorsque disponible.', notificationsCategoryDescUpdates: 'Mises à jour disponibles et confirmation après installation.', notificationsSeverityInfo: 'Information', notificationsSeveritySuccess: 'Succès', notificationsSeverityWarning: 'Avertissement', notificationsSeverityCritical: 'Critique',
-      title: 'Envoyer', navMain: 'Navigation principale', navSend: 'Envoyer', navSendHint: 'Préparer et envoyer des fichiers vers une destination.', navImages: 'Images', navImagesHint: 'Créer, gérer et suivre vos liens d’image.', navActivity: 'Activité', navActivityHint: 'Consulter l’historique local des transferts.', navSettings: 'Réglages', navSettingsHint: 'Configurer la PWA, la sécurité et le stockage.', navShares: 'Partages', navSharesHint: 'Créer des liens de partage depuis les fichiers du serveur.', sharesTitle: 'Partager des fichiers du serveur', sharesHint: 'Parcourez les fichiers de votre serveur et créez des liens de partage directs.', sharesAdminRequired: 'Connectez-vous avec un compte administrateur pour parcourir les fichiers du serveur.', sharesSignIn: 'Se connecter en administrateur', sharesBrowse: 'Fichiers du serveur', sharesUp: 'Dossier parent', sharesCreate: 'Créer le partage', sharesNoneSelected: 'Aucun fichier sélectionné.', sharesSelected: '{n} élément(s) sélectionné(s)', sharesExpiry: 'Expiration', sharesExpiryNever: 'Jamais', sharesExpiry1h: '1 heure', sharesExpiry1d: '1 jour', sharesExpiry7d: '7 jours', sharesExpiry30d: '30 jours', sharesMaxDownloads: 'Téléchargements max (0 = illimité)', sharesRateLimit: 'Débit maximal (Ko/s, 0 = illimité)', sharesRateEdit: 'Débit', sharesRatePrompt: 'Débit maximal en Ko/s (0 = illimité) :', sharesRateSaved: 'Débit mis à jour ✓', sharesRateFail: 'Impossible de modifier le débit', sharesPassword: 'Mot de passe (facultatif)', sharesPasswordPlaceholder: '—', sharesCreateBtn: 'Créer le lien de partage', sharesCreating: 'Création…', sharesCreated: 'Partage créé ✓', sharesCreateFail: 'Échec de la création du partage', sharesDlpWarning: 'DLP : {n} détection(s) sensible(s) ({level}). Publier quand même ?', sharesDlpBlocked: 'Publication bloquée par la politique DLP.', dlpTest: 'Tester DLP', dlpTestQueue: '🛡 Tester DLP', dlpTestSelected: '🛡 Tester DLP', dlpTesting: 'Analyse DLP…', dlpSafe: 'DLP ✓ aucun contenu sensible détecté', dlpFound: 'DLP : {n} détection(s) ({level})', dlpLocalBlocked: 'Envoi bloqué par la politique DLP avant transfert.', dlpLocalConfirm: 'DLP a détecté {n} élément(s) sensible(s) ({level}) dans {files} fichier(s). Envoyer quand même ?', dlpScanSkipped: 'DLP : {n} fichier(s) trop volumineux/non analysé(s)', dlpScanFailed: 'Test DLP impossible : {error}', dlpOcrIncomplete: 'DLP incomplet : OCR impossible pour {n} fichier(s)', dlpPolicyLoading: 'Chargement de la politique DLP…', dlpPolicyDisabled: 'DLP désactivé sur le serveur', dlpPolicyText: 'Politique {mode} · {mb} Mo/fichier · OCR {ocr}', dlpModeWarn: 'Avertir', dlpModeBlock: 'Bloquer', dlpModeLog: 'Journaliser', dlpOcrOn: 'activé', dlpOcrOff: 'désactivé', dlpIncompleteBlocked: 'Envoi bloqué : l’analyse DLP est incomplète.', dlpIncompleteConfirm: 'L’analyse DLP est incomplète pour {files} fichier(s) et a trouvé {n} détection(s). Envoyer quand même ?', dlpPolicyUnavailable: 'Politique DLP indisponible : envoi suspendu par sécurité.', dlpScanIncomplete: 'DLP incomplet : {n} élément(s) non analysé(s)', sharesLibrary: 'Vos partages', sharesEmpty: 'Aucun partage pour l’instant.', sharesBrowseFail: 'Impossible de lire ce dossier.', sharesLoginNeeded: 'Connexion administrateur requise.', sharesOpen: 'Ouvrir', sharesCopy: 'Copier', sharesRevoke: 'Révoquer', sharesRevoked: 'Partage révoqué ✓', sharesRevokeFail: 'Échec de la révocation', sharesRevokeConfirm: 'Révoquer ce partage ? Le lien cessera de fonctionner.', sharesItems: '{n} élément(s)', sharesReceptions: 'Liens de réception', sharesReceptionsEmpty: 'Aucun lien de réception.', sharesReceived: '{bytes} reçus', sharesDownloadingNow: '{n} téléchargement(s) en cours', threadTitle: 'Discussion', threadEmpty: 'Aucun message.', threadReplyPh: 'Répondre au visiteur…', threadSend: 'Envoyer', threadSending: 'Envoi…', threadError: 'Envoi impossible, réessayez.', threadYou: 'Vous', threadVisitor: 'Visiteur', openAdmin: "Ouvrir l'administration", language: 'Langue', theme: 'Thème', copyLink: 'Copier le lien', pasteLink: 'Coller un lien', editDestination: 'Modifier la destination', addDestination: 'Ajouter une destination', passwordPlaceholder: 'Mot de passe du lien', destinationPlaceholder: 'Lien ou jeton de réception', destinationNamePlaceholder: 'Nom facultatif de la destination', senderPlaceholder: 'Nom demandé par ce lien', globalProgress: 'Progression globale', keyPlaceholder: 'Clé de chiffrement du lien', titlePlaceholder: 'Contenu partagé', themeDark: 'Sombre', themeLight: 'Clair', themeAuto: 'Auto', install: 'Installer', installIosHint: 'Pour installer Direct-Xfer : touchez le bouton Partager du navigateur, puis « Sur l’écran d’accueil ».', installBrowserHint: 'Chrome n’a pas encore validé l’installation complète. Ne choisissez pas un simple raccourci : utilisez une adresse HTTPS avec certificat reconnu, touchez la page et gardez-la ouverte quelques instants.', installHttpsRequired: 'Installation complète impossible depuis cette adresse HTTP ou ce certificat non reconnu. Android ne peut créer qu’un raccourci. Ouvrez Direct-Xfer en HTTPS avec un certificat valide.', installSecurePending: 'Installation en préparation. Dans Chrome, touchez la page et gardez-la ouverte environ 30 secondes. Si le logo n’apparaît pas, vérifiez que le certificat HTTPS est reconnu par Android.', installOpenHttps: 'Ouvrir en HTTPS',
+      title: 'Envoyer', navMain: 'Navigation principale', navSend: 'Envoyer', navSendHint: 'Préparer et envoyer des fichiers vers une destination.', navImages: 'Images', navImagesHint: 'Créer, gérer et suivre vos liens d’image.', navActivity: 'Activité', navActivityHint: 'Consulter le même historique d’activité persistant que dans Direct-Xfer standard.', serverActivity: 'Activité', serverActivityHint: 'Historique persistant des événements pertinents de Direct-Xfer.', serverActivitySearch: 'Rechercher une activité…', serverActivityLoading: 'Chargement de l’activité…', serverActivityEmpty: 'Aucune activité enregistrée.', serverActivityLoadFail: 'Impossible de charger l’historique d’activité.', serverActivityFiltersAria: 'Filtres d’activité', serverActivityKindAria: 'Type d’activité', serverActivityKindAll: 'Tous les types', serverActivityKindTransfer: 'Transferts', serverActivityKindAdmin: 'Administration', serverActivityKindSecurity: 'Sécurité', serverActivityKindVisitor: 'Visiteurs', serverActivityKindSystem: 'Système', serverActivityShareAll:'Tous les partages', serverActivityImagesOnly:'Images seulement', serverActivityPwaOnly:'PWA seulement', serverActivityHideRoutine:'Masquer système routinier', serverActivityReset: 'Effacer les filtres', serverActivitySummary: '{shown} affichée(s) sur {total}', localTransferHistory: 'Historique des transferts de cet appareil', activityImageDeleted: 'Image supprimée : {name}', activityShareDeleted: 'Partage supprimé : {name}', activityImagePurged: 'Image supprimée définitivement : {name}', activitySharePurged: 'Partage supprimé définitivement : {name}', activityImageRestored: 'Image restaurée : {name}', activityShareRestored: 'Partage restauré : {name}', activityTransferDone: 'Transfert terminé : {name}', activityTransferFailed: 'Transfert interrompu : {name}', navSettings: 'Réglages', navSettingsHint: 'Configurer la PWA, la sécurité et le stockage.', navShares: 'Partages', navSharesHint: 'Créer des liens de partage depuis les fichiers du serveur.', sharesTitle: 'Partager des fichiers du serveur', sharesHint: 'Parcourez les fichiers de votre serveur et créez des liens de partage directs.', sharesAdminRequired: 'Connectez-vous avec un compte administrateur pour parcourir les fichiers du serveur.', sharesSignIn: 'Se connecter en administrateur', sharesBrowse: 'Fichiers du serveur', sharesUp: 'Dossier parent', sharesCreate: 'Créer le partage', sharesNoneSelected: 'Aucun fichier sélectionné.', sharesSelected: '{n} élément(s) sélectionné(s)', sharesExpiry: 'Expiration', sharesExpiryNever: 'Jamais', sharesExpiry1h: '1 heure', sharesExpiry1d: '1 jour', sharesExpiry7d: '7 jours', sharesExpiry30d: '30 jours', sharesExpiryForcedNever: 'L’administrateur a configuré les nouveaux partages pour ne jamais expirer.', sharesMaxDownloads: 'Téléchargements max (0 = illimité)', sharesRateLimit: 'Débit maximal (Ko/s, 0 = illimité)', sharesRateEdit: 'Débit', sharesRatePrompt: 'Débit maximal en Ko/s (0 = illimité) :', sharesRateSaved: 'Débit mis à jour ✓', sharesRateFail: 'Impossible de modifier le débit', sharesPassword: 'Mot de passe (facultatif)', sharesPasswordPlaceholder: '—', sharesCreateBtn: 'Créer le lien de partage', sharesCreating: 'Création…', sharesCreated: 'Partage créé ✓', sharesCreatedLink:'Lien prêt à partager', sharesCreateFail: 'Échec de la création du partage', sharesDlpWarning: 'DLP : {n} détection(s) sensible(s) ({level}). Publier quand même ?', sharesDlpBlocked: 'Publication bloquée par la politique DLP.', dlpTest: 'Tester DLP', dlpTestQueue: '🛡 Tester DLP', dlpTestSelected: '🛡 Tester DLP', dlpTesting: 'Analyse DLP…', dlpSafe: 'DLP ✓ aucun contenu sensible détecté', dlpFound: 'DLP : {n} détection(s) ({level})', dlpLocalBlocked: 'Envoi bloqué par la politique DLP avant transfert.', dlpLocalConfirm: 'DLP a détecté {n} élément(s) sensible(s) ({level}) dans {files} fichier(s). Envoyer quand même ?', dlpScanSkipped: 'DLP : {n} fichier(s) trop volumineux/non analysé(s)', dlpScanFailed: 'Test DLP impossible : {error}', dlpOcrIncomplete: 'DLP incomplet : OCR impossible pour {n} fichier(s)', dlpPolicyLoading: 'Chargement de la politique DLP…', dlpPolicyDisabled: 'DLP désactivé sur le serveur', dlpPolicyText: 'Politique {mode} · {mb} Mo/fichier · OCR {ocr}', dlpAutoRules:'Réaction automatique selon la gravité', dlpAutoRulesHint:'Choisissez l’action appliquée automatiquement pour chaque niveau de gravité détecté.', dlpAutoReadOnly:'Les réactions automatiques DLP sont modifiables uniquement depuis un appareil owner/admin.', dlpSeverityLow:'Faible', dlpSeverityMedium:'Moyenne', dlpSeverityHigh:'Élevée', dlpSeverityCritical:'Critique', dlpAutoSave:'Enregistrer les réactions DLP', dlpAutoSaved:'Réactions DLP enregistrées ✓', dlpAutoSaveFail:'Impossible d’enregistrer les réactions DLP', dlpModeWarn: 'Avertir', dlpModeBlock: 'Bloquer', dlpModeQuarantine:'Quarantaine', dlpModeLog: 'Journaliser', dlpLocalQuarantined:'Envoi retenu par la politique de quarantaine DLP ; aucun octet n’a été envoyé.', dlpIncompleteQuarantined:'Envoi retenu : l’analyse DLP est incomplète et la politique impose la quarantaine.', dlpServerQuarantined:'Contenu placé en quarantaine par la politique DLP.', dlpQuarantineFailed:'La mise en quarantaine DLP a échoué; aucun contenu n’a été publié.', dlpOcrOn: 'activé', dlpOcrOff: 'désactivé', dlpIncompleteBlocked: 'Envoi bloqué : l’analyse DLP est incomplète.', dlpIncompleteConfirm: 'L’analyse DLP est incomplète pour {files} fichier(s) et a trouvé {n} détection(s). Envoyer quand même ?', dlpPolicyUnavailable: 'Politique DLP indisponible : envoi suspendu par sécurité.', dlpScanIncomplete: 'DLP incomplet : {n} élément(s) non analysé(s)', sharesLibrary: 'Vos partages', sharesEmpty: 'Aucun partage pour l’instant.', sharesBrowseFail: 'Impossible de lire ce dossier.', sharesLoginNeeded: 'Connexion administrateur requise.', sharesOpen: 'Ouvrir', sharesCopy: 'Copier', sharesRevoke: 'Révoquer', sharesRevoked: 'Partage révoqué ✓', sharesRevokeFail: 'Échec de la révocation', sharesRevokeConfirm: 'Révoquer ce partage ? Le lien cessera de fonctionner.', sharesColor: 'Couleur de la carte (facultatif)', sharesAdminNote: 'Note privée (facultatif)', sharesAdminNotePlaceholder: 'Visible uniquement par les administrateurs', sharesEditMeta: 'Couleur / note', sharesArchive: 'Archiver', sharesUnarchive: 'Désarchiver', sharesShowArchived: '🗄 Archives', sharesDuplicate: 'Dupliquer', sharesDuplicatePrompt: 'Nom du partage dupliqué :', sharesDuplicated: 'Partage dupliqué ✓', sharesDuplicateFail: 'Duplication impossible', sharesReactivate: 'Réactiver', sharesReactivated: 'Lien réactivé ✓', sharesReactivateMissing: 'Les données du lien ne sont plus disponibles', sharesTrash: 'Corbeille globale', sharesTrashHint: 'Images, réceptions et partages supprimés peuvent être restaurés ici tant qu’ils sont conservés.', sharesTrashEmpty: 'La corbeille est vide.', sharesTrashRestore: 'Restaurer', sharesTrashRestoreSelected:'Restaurer la sélection', sharesTrashSelected:'{n} sélectionné(s)', sharesTrashRestoreSelectedOk:'{n} élément(s) restauré(s) ✓', sharesTrashRestored: 'Élément restauré ✓', sharesTrashDelete: 'Supprimer définitivement', sharesTrashDeleteAll: 'Tout supprimer définitivement', sharesTrashDeleteConfirm: 'Supprimer définitivement « {name} » ? Cette action est irréversible.', sharesTrashDeleteAllConfirm: 'Supprimer définitivement tous les éléments de la corbeille ? Cette action est irréversible.', sharesTrashDeleted: 'Élément supprimé définitivement ✓', sharesTrashAllDeleted: '{n} élément(s) supprimé(s) définitivement ✓', sharesTrashDeleteFail: 'Suppression définitive impossible', sharesGlobalSearch: 'Rechercher', sharesGlobalSearchPlaceholder: 'Rechercher liens, utilisateurs, journaux et contenu…', sharesGlobalSearchEmpty: 'Aucun résultat.', sharesGlobalSearchFail: 'Recherche impossible', sharesArchivedBadge: 'Archivé', sharesPinnedBadge:'Épinglé', sharesPin:'Épingler', sharesUnpin:'Désépingler', sharesNeverDownloaded:'Jamais téléchargé', sharesPasswordProtected:'Mot de passe', sharesExpiresSoon:'Expire bientôt', sharesTotalSize:'Taille totale : {size}', sharesRevokedBadge: 'Révoqué', sharesItems: '{n} élément(s)', sharesReceptions: 'Liens de réception', sharesReceptionsEmpty: 'Aucun lien de réception.', sharesReceived: '{bytes} reçus', sharesDownloadingNow: '{n} téléchargement(s) en cours', threadTitle: 'Discussion', threadEmpty: 'Aucun message.', threadReplyPh: 'Répondre au visiteur…', threadSend: 'Envoyer', threadSending: 'Envoi…', threadError: 'Envoi impossible, réessayez.', threadYou: 'Vous', threadVisitor: 'Visiteur', openAdmin: "Ouvrir l'administration", language: 'Langue', theme: 'Thème', copyLink: 'Copier le lien', pasteLink: 'Coller un lien', editDestination: 'Modifier la destination', addDestination: 'Ajouter une destination', passwordPlaceholder: 'Mot de passe du lien', destinationPlaceholder: 'Lien ou jeton de réception', destinationNamePlaceholder: 'Nom facultatif de la destination', senderPlaceholder: 'Nom demandé par ce lien', globalProgress: 'Progression globale', keyPlaceholder: 'Clé de chiffrement du lien', titlePlaceholder: 'Contenu partagé', themeDark: 'Sombre', themeLight: 'Clair', themeAuto: 'Auto', install: 'Installer', installIosHint: 'Pour installer Direct-Xfer : touchez le bouton Partager du navigateur, puis « Sur l’écran d’accueil ».', installBrowserHint: 'Chrome n’a pas encore validé l’installation complète. Ne choisissez pas un simple raccourci : utilisez une adresse HTTPS avec certificat reconnu, touchez la page et gardez-la ouverte quelques instants.', installHttpsRequired: 'Installation complète impossible depuis cette adresse HTTP ou ce certificat non reconnu. Android ne peut créer qu’un raccourci. Ouvrez Direct-Xfer en HTTPS avec un certificat valide.', installSecurePending: 'Installation en préparation. Dans Chrome, touchez la page et gardez-la ouverte environ 30 secondes. Si le logo n’apparaît pas, vérifiez que le certificat HTTPS est reconnu par Android.', installOpenHttps: 'Ouvrir en HTTPS',
       offline: 'Hors ligne — les envois reprendront à la reconnexion.', updateReady: 'Une nouvelle version est disponible.', updateNow: 'Actualiser', pullToRefresh: 'Glissez vers le bas pour actualiser', releaseToRefresh: 'Relâchez pour actualiser', refreshing: 'Actualisation…', backExit: 'Appuyez à nouveau pour quitter',
       destination: 'Destination', destinationHint: 'Un lien de réception Direct-Xfer de cette instance.', linkOrToken: 'Lien ou jeton', displayName: 'Nom affiché',
       rememberDestination: 'Mémoriser cette destination sur cet appareil', rememberKey: 'Mémoriser aussi la clé secrète sur cet appareil', scanQr: '📷 Scanner un QR', saveDestination: 'Ajouter', updateDestination: 'Enregistrer', createLinkTitle: 'Créer un lien de réception', newLink: 'Nouveau', createLinkName: 'Nom du nouveau lien', createLinkPlaceholder: 'Ex. Photos vacances', createLinkHint: 'Un nouveau lien de réception sera créé et ajouté à vos destinations. Partagez-le pour recevoir des fichiers.', createDo: 'Créer le lien', creating: 'Création…', createOk: 'Lien créé ✓', createFail: 'Création du lien impossible',
@@ -115,7 +115,7 @@
       storageUsage: '{used} utilisés sur {quota}', storageProtected: 'Stockage persistant accordé', storageDenied: 'Le navigateur n’a pas accordé le stockage persistant',
       deviceAdmin: 'Session administrateur active. Vous pouvez associer cet appareil avec un accès limité à la PWA.', devicePaired: 'Cet appareil possède un jeton limité à /app.',
       deviceUnpaired: 'Non associé. Une connexion administrateur est nécessaire une fois.', devicePairedOk: 'Appareil appairé ✓', deviceRevoked: 'Accès de l’appareil révoqué',
-      devicePairFailed: 'Association impossible', deviceRevokeFailed: 'Révocation impossible', deviceCurrent: 'cet appareil', deviceLast: 'Dernière utilisation {date}',
+      devicePairFailed: 'Association impossible', deviceRevokeFailed: 'Révocation impossible', deviceCurrent: 'cet appareil', deviceLast: 'Dernière utilisation {date}', devicePlatformOther:'Autre', deviceVersionUnknown:'Version PWA inconnue',
       renameDevice: 'Renommer', renameDevicePrompt: 'Nouveau nom de l’appareil :', deviceRenamed: 'Appareil renommé ✓', deviceRenameFailed: 'Renommage impossible',
       localCleared: 'Données locales effacées', sharedTextName: 'partage.txt', sharedReceived: '{n} élément(s) partagé(s) ajouté(s) ✓',
       resumedQueue: 'File restaurée : {n} fichier(s)', optimizeFallback: 'Cette image ne peut pas être convertie ici; l’original sera envoyé.',
@@ -199,7 +199,7 @@
     en: {
       imgEditUploaded: 'Edit with the photo editor', imgEditUploadedDone: 'Image edited, URL preserved ✓',
       notificationsTitle: 'Notifications', notificationsLoading: 'Loading…', notificationsEmpty: 'No notifications.', notificationsFirstView: 'First view of “{name}”', notificationsDelete: 'Delete this notification', notificationsClearAll: 'Delete all', notificationsClearConfirm: 'Delete all notifications?', notificationsLoadMore: 'Show more ({n})', notificationsLinkCopied: 'Link copied ✓', notificationsSound: 'Sound on arrival', notificationsSoundOn: 'Sound on', notificationsSoundOff: 'Sound off', notificationsPrefs: 'Preferences', notificationsPrefsHint: 'Uncheck a category to stop creating its notifications.', notificationsPrefsSaved: 'Preferences saved ✓', notificationsSettingsTitle: 'Notification center', notificationsSettingsHint: 'Choose which notification categories this account receives in the notification center.', notificationsSettingsRequired: 'Always on', notificationsSettingsRequiredHint: 'Security, Maintenance and System health notifications always remain enabled.', notificationsSettingsSaving: 'Saving…', notificationsSettingsError: 'Could not save notification preferences.', notificationsRulesTitle: 'Custom alerts', notificationsRulesHint: 'Create up to 50 rules that trigger a notification when a threshold is reached.', notificationsRuleMetric: 'Metric', notificationsRuleTarget: 'Link', notificationsRuleThreshold: 'Threshold', notificationsRuleLabel: 'Name (optional)', notificationsRuleAdd: 'Add rule', notificationsRuleAllTargets: 'All my compatible links', notificationsRuleTargetUnavailable: 'Link unavailable or deleted', notificationsRuleEmpty: 'No custom rules.', notificationsRuleSaved: 'Rule saved ✓', notificationsRuleDeleted: 'Rule deleted', notificationsRuleError: 'Could not save the rule.', notificationsRuleEnable: 'Enable', notificationsRuleDisable: 'Disable', notificationsRuleDelete: 'Delete', notificationsRuleMetricViews: 'Views', notificationsRuleMetricDownloads: 'Downloads', notificationsRuleMetricBytesServed: 'Data served (GB)', notificationsRuleMetricReceivedBytes: 'Data received (GB)', notificationsRuleCustomTitle: 'Custom alert: {name}', notificationsTimeAgo: '{v} ago', notificationsCount: '{n} notification(s)', notificationsFilteredCount: '{shown} / {total} notification(s)', notificationsNoMatch: 'No notifications match the filters.', notificationsFilters: 'Notification filters', notificationsCategoryFilter: 'Filter by category', notificationsSeverityFilter: 'Filter by severity', notificationsAllCategories: 'All categories', notificationsAllSeverities: 'All severities', notificationsSearch: 'Search…', notificationsSearchAria: 'Search notifications', notificationsCategoryActivity: 'Activity', notificationsCategoryVisitors: 'Visitors', notificationsCategoryThresholds: 'Thresholds', notificationsCategoryTraffic: 'Traffic', notificationsCategoryImages: 'Images', notificationsCategoryPwa: 'PWA', notificationsCategoryReceptions: 'Receptions', notificationsCategorySearch: 'Search / OCR', notificationsCategorySecurity: 'Security', notificationsCategoryShares: 'Shares', notificationsCategorySystemHealth: 'System health', notificationsCategoryMaintenance: 'Maintenance', notificationsCategoryNetwork: 'Network', notificationsCategoryRestarts: 'Restarts', notificationsCategoryUpdates: 'Updates', notificationsCategoryTransfers: 'Transfers', notificationsCategoryDescShares: 'Downloads, expiry, limits and changes affecting shared links.', notificationsCategoryDescReceptions: 'Received deposits, available files and reception-link quotas.', notificationsCategoryDescImages: 'First views, image replacements and variant regeneration.', notificationsCategoryDescTransfers: 'Completed or failed transfers, abandoned transfers and impossible resumes.', notificationsCategoryDescVisitors: 'New countries and new visitor browsers or devices.', notificationsCategoryDescThresholds: 'View and download thresholds reached on your links.', notificationsCategoryDescTraffic: 'Unusually high download volume and links becoming viral.', notificationsCategoryDescSearch: 'OCR failures and search-indexing problems.', notificationsCategoryDescPwa: 'PWA devices, Push subscriptions and notification permissions.', notificationsCategoryDescSecurity: 'Unusual logins, password events, DLP and other security alerts.', notificationsCategoryDescSystemHealth: 'Service outages, configuration errors and important system problems.', notificationsCategoryDescMaintenance: 'Automatic cleanups and file removals performed by retention rules.', notificationsCategoryDescNetwork: 'Public IP address changes and service network events.', notificationsCategoryDescRestarts: 'Detected Direct-Xfer restarts, including downtime when available.', notificationsCategoryDescUpdates: 'Available updates and confirmation after installation.', notificationsSeverityInfo: 'Information', notificationsSeveritySuccess: 'Success', notificationsSeverityWarning: 'Warning', notificationsSeverityCritical: 'Critical',
-      title: 'Send', navMain: 'Main navigation', navSend: 'Send', navSendHint: 'Prepare and send files to a destination.', navImages: 'Images', navImagesHint: 'Create, manage and monitor image links.', navActivity: 'Activity', navActivityHint: 'Review the local transfer history.', navSettings: 'Settings', navSettingsHint: 'Configure the PWA, security and storage.', navShares: 'Shares', navSharesHint: 'Create share links from files on your server.', sharesTitle: 'Share server files', sharesHint: 'Browse the files on your server and create direct share links.', sharesAdminRequired: 'Sign in with an administrator account to browse server files.', sharesSignIn: 'Sign in as administrator', sharesBrowse: 'Server files', sharesUp: 'Parent folder', sharesCreate: 'Create the share', sharesNoneSelected: 'No file selected.', sharesSelected: '{n} item(s) selected', sharesExpiry: 'Expiry', sharesExpiryNever: 'Never', sharesExpiry1h: '1 hour', sharesExpiry1d: '1 day', sharesExpiry7d: '7 days', sharesExpiry30d: '30 days', sharesMaxDownloads: 'Max downloads (0 = unlimited)', sharesRateLimit: 'Maximum rate (KB/s, 0 = unlimited)', sharesRateEdit: 'Rate', sharesRatePrompt: 'Maximum rate in KB/s (0 = unlimited):', sharesRateSaved: 'Rate updated ✓', sharesRateFail: 'Could not update the rate', sharesPassword: 'Password (optional)', sharesPasswordPlaceholder: '—', sharesCreateBtn: 'Create share link', sharesCreating: 'Creating…', sharesCreated: 'Share created ✓', sharesCreateFail: 'Could not create the share', sharesDlpWarning: 'DLP: {n} sensitive finding(s) ({level}). Publish anyway?', sharesDlpBlocked: 'Publishing blocked by the DLP policy.', dlpTest: 'Test DLP', dlpTestQueue: '🛡 Test DLP', dlpTestSelected: '🛡 Test DLP', dlpTesting: 'DLP scan…', dlpSafe: 'DLP ✓ no sensitive content detected', dlpFound: 'DLP: {n} finding(s) ({level})', dlpLocalBlocked: 'Upload blocked by the DLP policy before transfer.', dlpLocalConfirm: 'DLP found {n} sensitive item(s) ({level}) in {files} file(s). Send anyway?', dlpScanSkipped: 'DLP: {n} file(s) too large/not scanned', dlpScanFailed: 'DLP test failed: {error}', dlpOcrIncomplete: 'DLP incomplete: OCR failed for {n} file(s)', dlpPolicyLoading: 'Loading DLP policy…', dlpPolicyDisabled: 'DLP disabled on the server', dlpPolicyText: '{mode} policy · {mb} MB/file · OCR {ocr}', dlpModeWarn: 'Warn', dlpModeBlock: 'Block', dlpModeLog: 'Log', dlpOcrOn: 'enabled', dlpOcrOff: 'disabled', dlpIncompleteBlocked: 'Upload blocked: the DLP scan is incomplete.', dlpIncompleteConfirm: 'The DLP scan is incomplete for {files} file(s) and found {n} finding(s). Send anyway?', dlpPolicyUnavailable: 'DLP policy unavailable: upload paused for safety.', dlpScanIncomplete: 'DLP incomplete: {n} item(s) not scanned', sharesLibrary: 'Your shares', sharesEmpty: 'No shares yet.', sharesBrowseFail: 'Could not read this folder.', sharesLoginNeeded: 'Administrator login required.', sharesOpen: 'Open', sharesCopy: 'Copy', sharesRevoke: 'Revoke', sharesRevoked: 'Share revoked ✓', sharesRevokeFail: 'Could not revoke', sharesRevokeConfirm: 'Revoke this share? The link will stop working.', sharesItems: '{n} item(s)', sharesReceptions: 'Reception links', sharesReceptionsEmpty: 'No reception links.', sharesReceived: '{bytes} received', sharesDownloadingNow: '{n} download(s) in progress', threadTitle: 'Conversation', threadEmpty: 'No messages.', threadReplyPh: 'Reply to the visitor…', threadSend: 'Send', threadSending: 'Sending…', threadError: 'Could not send, try again.', threadYou: 'You', threadVisitor: 'Visitor', openAdmin: 'Open administration', language: 'Language', theme: 'Theme', copyLink: 'Copy link', pasteLink: 'Paste link', editDestination: 'Edit destination', addDestination: 'Add destination', passwordPlaceholder: 'Link password', destinationPlaceholder: 'Reception link or token', destinationNamePlaceholder: 'Optional destination name', senderPlaceholder: 'Name required by this link', globalProgress: 'Overall progress', keyPlaceholder: 'Link encryption key', titlePlaceholder: 'Shared content', themeDark: 'Dark', themeLight: 'Light', themeAuto: 'Auto', install: 'Install', installIosHint: 'To install Direct-Xfer, tap the browser Share button, then “Add to Home Screen”.', installBrowserHint: 'Chrome has not validated full installation yet. Do not choose a simple shortcut: use a trusted HTTPS address, interact with the page, and keep it open briefly.', installHttpsRequired: 'Full installation is impossible from this HTTP address or untrusted certificate. Android can only create a shortcut. Open Direct-Xfer over HTTPS with a valid certificate.', installSecurePending: 'Installation is being prepared. In Chrome, interact with the page and keep it open for about 30 seconds. If the logo does not appear, verify that Android trusts the HTTPS certificate.', installOpenHttps: 'Open HTTPS version',
+      title: 'Send', navMain: 'Main navigation', navSend: 'Send', navSendHint: 'Prepare and send files to a destination.', navImages: 'Images', navImagesHint: 'Create, manage and monitor image links.', navActivity: 'Activity', navActivityHint: 'View the same persistent activity history as in standard Direct-Xfer.', serverActivity: 'Activity', serverActivityHint: 'Persistent history of relevant Direct-Xfer events.', serverActivitySearch: 'Search activity…', serverActivityLoading: 'Loading activity…', serverActivityEmpty: 'No recorded activity.', serverActivityLoadFail: 'Could not load activity history.', serverActivityFiltersAria: 'Activity filters', serverActivityKindAria: 'Activity type', serverActivityKindAll: 'All types', serverActivityKindTransfer: 'Transfers', serverActivityKindAdmin: 'Administration', serverActivityKindSecurity: 'Security', serverActivityKindVisitor: 'Visitors', serverActivityKindSystem: 'System', serverActivityShareAll:'All shares', serverActivityImagesOnly:'Images only', serverActivityPwaOnly:'PWA only', serverActivityHideRoutine:'Hide routine system events', serverActivityReset: 'Clear filters', serverActivitySummary: '{shown} shown of {total}', localTransferHistory: 'Transfer history on this device', activityImageDeleted: 'Image deleted: {name}', activityShareDeleted: 'Share deleted: {name}', activityImagePurged: 'Image permanently deleted: {name}', activitySharePurged: 'Share permanently deleted: {name}', activityImageRestored: 'Image restored: {name}', activityShareRestored: 'Share restored: {name}', activityTransferDone: 'Transfer completed: {name}', activityTransferFailed: 'Transfer interrupted: {name}', navSettings: 'Settings', navSettingsHint: 'Configure the PWA, security and storage.', navShares: 'Shares', navSharesHint: 'Create share links from files on your server.', sharesTitle: 'Share server files', sharesHint: 'Browse the files on your server and create direct share links.', sharesAdminRequired: 'Sign in with an administrator account to browse server files.', sharesSignIn: 'Sign in as administrator', sharesBrowse: 'Server files', sharesUp: 'Parent folder', sharesCreate: 'Create the share', sharesNoneSelected: 'No file selected.', sharesSelected: '{n} item(s) selected', sharesExpiry: 'Expiry', sharesExpiryNever: 'Never', sharesExpiry1h: '1 hour', sharesExpiry1d: '1 day', sharesExpiry7d: '7 days', sharesExpiry30d: '30 days', sharesExpiryForcedNever: 'The administrator configured new shares to never expire.', sharesMaxDownloads: 'Max downloads (0 = unlimited)', sharesRateLimit: 'Maximum rate (KB/s, 0 = unlimited)', sharesRateEdit: 'Rate', sharesRatePrompt: 'Maximum rate in KB/s (0 = unlimited):', sharesRateSaved: 'Rate updated ✓', sharesRateFail: 'Could not update the rate', sharesPassword: 'Password (optional)', sharesPasswordPlaceholder: '—', sharesCreateBtn: 'Create share link', sharesCreating: 'Creating…', sharesCreated: 'Share created ✓', sharesCreatedLink:'Link ready to share', sharesCreateFail: 'Could not create the share', sharesDlpWarning: 'DLP: {n} sensitive finding(s) ({level}). Publish anyway?', sharesDlpBlocked: 'Publishing blocked by the DLP policy.', dlpTest: 'Test DLP', dlpTestQueue: '🛡 Test DLP', dlpTestSelected: '🛡 Test DLP', dlpTesting: 'DLP scan…', dlpSafe: 'DLP ✓ no sensitive content detected', dlpFound: 'DLP: {n} finding(s) ({level})', dlpLocalBlocked: 'Upload blocked by the DLP policy before transfer.', dlpLocalConfirm: 'DLP found {n} sensitive item(s) ({level}) in {files} file(s). Send anyway?', dlpScanSkipped: 'DLP: {n} file(s) too large/not scanned', dlpScanFailed: 'DLP test failed: {error}', dlpOcrIncomplete: 'DLP incomplete: OCR failed for {n} file(s)', dlpPolicyLoading: 'Loading DLP policy…', dlpPolicyDisabled: 'DLP disabled on the server', dlpPolicyText: '{mode} policy · {mb} MB/file · OCR {ocr}', dlpAutoRules:'Automatic reaction by severity', dlpAutoRulesHint:'Choose the action automatically applied for each detected severity level.', dlpAutoReadOnly:'Automatic DLP reactions can only be changed from an owner/admin device.', dlpSeverityLow:'Low', dlpSeverityMedium:'Medium', dlpSeverityHigh:'High', dlpSeverityCritical:'Critical', dlpAutoSave:'Save DLP reactions', dlpAutoSaved:'DLP reactions saved ✓', dlpAutoSaveFail:'Could not save DLP reactions', dlpModeWarn: 'Warn', dlpModeBlock: 'Block', dlpModeQuarantine:'Quarantine', dlpModeLog: 'Log', dlpLocalQuarantined:'Upload held by the DLP quarantine policy; no bytes were sent.', dlpIncompleteQuarantined:'Upload held: the DLP scan is incomplete and policy requires quarantine.', dlpServerQuarantined:'Content was quarantined by DLP policy.', dlpQuarantineFailed:'DLP quarantine failed; no content was published.', dlpOcrOn: 'enabled', dlpOcrOff: 'disabled', dlpIncompleteBlocked: 'Upload blocked: the DLP scan is incomplete.', dlpIncompleteConfirm: 'The DLP scan is incomplete for {files} file(s) and found {n} finding(s). Send anyway?', dlpPolicyUnavailable: 'DLP policy unavailable: upload paused for safety.', dlpScanIncomplete: 'DLP incomplete: {n} item(s) not scanned', sharesLibrary: 'Your shares', sharesEmpty: 'No shares yet.', sharesBrowseFail: 'Could not read this folder.', sharesLoginNeeded: 'Administrator login required.', sharesOpen: 'Open', sharesCopy: 'Copy', sharesRevoke: 'Revoke', sharesRevoked: 'Share revoked ✓', sharesRevokeFail: 'Could not revoke', sharesRevokeConfirm: 'Revoke this share? The link will stop working.', sharesColor: 'Card color (optional)', sharesAdminNote: 'Private note (optional)', sharesAdminNotePlaceholder: 'Visible to administrators only', sharesEditMeta: 'Color / note', sharesArchive: 'Archive', sharesUnarchive: 'Unarchive', sharesShowArchived: '🗄 Archives', sharesDuplicate: 'Duplicate', sharesDuplicatePrompt: 'Name of the duplicated share:', sharesDuplicated: 'Share duplicated ✓', sharesDuplicateFail: 'Could not duplicate', sharesReactivate: 'Reactivate', sharesReactivated: 'Link reactivated ✓', sharesReactivateMissing: 'The link data is no longer available', sharesTrash: 'Global trash', sharesTrashHint: 'Deleted images, receptions and shares can be restored here while retained.', sharesTrashEmpty: 'Trash is empty.', sharesTrashRestore: 'Restore', sharesTrashRestoreSelected:'Restore selected', sharesTrashSelected:'{n} selected', sharesTrashRestoreSelectedOk:'{n} item(s) restored ✓', sharesTrashRestored: 'Item restored ✓', sharesTrashDelete: 'Delete permanently', sharesTrashDeleteAll: 'Delete all permanently', sharesTrashDeleteConfirm: 'Permanently delete “{name}”? This action cannot be undone.', sharesTrashDeleteAllConfirm: 'Permanently delete every item in the trash? This action cannot be undone.', sharesTrashDeleted: 'Item permanently deleted ✓', sharesTrashAllDeleted: '{n} item(s) permanently deleted ✓', sharesTrashDeleteFail: 'Permanent deletion failed', sharesGlobalSearch: 'Search', sharesGlobalSearchPlaceholder: 'Search links, users, logs and content…', sharesGlobalSearchEmpty: 'No results.', sharesGlobalSearchFail: 'Search failed', sharesArchivedBadge: 'Archived', sharesPinnedBadge:'Pinned', sharesPin:'Pin', sharesUnpin:'Unpin', sharesNeverDownloaded:'Never downloaded', sharesPasswordProtected:'Password protected', sharesExpiresSoon:'Expires soon', sharesTotalSize:'Total size: {size}', sharesRevokedBadge: 'Revoked', sharesItems: '{n} item(s)', sharesReceptions: 'Reception links', sharesReceptionsEmpty: 'No reception links.', sharesReceived: '{bytes} received', sharesDownloadingNow: '{n} download(s) in progress', threadTitle: 'Conversation', threadEmpty: 'No messages.', threadReplyPh: 'Reply to the visitor…', threadSend: 'Send', threadSending: 'Sending…', threadError: 'Could not send, try again.', threadYou: 'You', threadVisitor: 'Visitor', openAdmin: 'Open administration', language: 'Language', theme: 'Theme', copyLink: 'Copy link', pasteLink: 'Paste link', editDestination: 'Edit destination', addDestination: 'Add destination', passwordPlaceholder: 'Link password', destinationPlaceholder: 'Reception link or token', destinationNamePlaceholder: 'Optional destination name', senderPlaceholder: 'Name required by this link', globalProgress: 'Overall progress', keyPlaceholder: 'Link encryption key', titlePlaceholder: 'Shared content', themeDark: 'Dark', themeLight: 'Light', themeAuto: 'Auto', install: 'Install', installIosHint: 'To install Direct-Xfer, tap the browser Share button, then “Add to Home Screen”.', installBrowserHint: 'Chrome has not validated full installation yet. Do not choose a simple shortcut: use a trusted HTTPS address, interact with the page, and keep it open briefly.', installHttpsRequired: 'Full installation is impossible from this HTTP address or untrusted certificate. Android can only create a shortcut. Open Direct-Xfer over HTTPS with a valid certificate.', installSecurePending: 'Installation is being prepared. In Chrome, interact with the page and keep it open for about 30 seconds. If the logo does not appear, verify that Android trusts the HTTPS certificate.', installOpenHttps: 'Open HTTPS version',
       offline: 'Offline — uploads will resume when the connection returns.', updateReady: 'A new version is available.', updateNow: 'Update', pullToRefresh: 'Pull down to refresh', releaseToRefresh: 'Release to refresh', refreshing: 'Refreshing…', backExit: 'Press back again to exit',
       destination: 'Destination', destinationHint: 'A Direct-Xfer reception link from this instance.', linkOrToken: 'Link or token', displayName: 'Display name',
       rememberDestination: 'Remember this destination on this device', rememberKey: 'Also remember the secret key on this device', scanQr: '📷 Scan QR', saveDestination: 'Add', updateDestination: 'Save', removeDestination: 'Remove', createLinkTitle: 'Create a reception link', newLink: 'New', createLinkName: 'New link name', createLinkPlaceholder: 'e.g. Holiday photos', createLinkHint: 'A new reception link will be created and added to your destinations. Share it to receive files.', createDo: 'Create link', creating: 'Creating…', createOk: 'Link created ✓', createFail: 'Could not create the link',
@@ -227,7 +227,7 @@
       queueSummary: '{waiting} waiting · {size}', queueErrors: '{n} failed', queuePaused: '{n} paused', storageUnknown: 'Estimate unavailable', storageUsage: '{used} used of {quota}',
       storageProtected: 'Persistent storage granted', storageDenied: 'Persistent storage was not granted', deviceAdmin: 'Admin session active. You can pair this device with PWA-only access.',
       devicePaired: 'This device has a token limited to /app.', deviceUnpaired: 'Not paired. One admin sign-in is required.', devicePairedOk: 'Device paired ✓', deviceRevoked: 'Device access revoked',
-      devicePairFailed: 'Pairing failed', deviceRevokeFailed: 'Revocation failed', deviceCurrent: 'this device', deviceLast: 'Last used {date}', localCleared: 'Local data cleared',
+      devicePairFailed: 'Pairing failed', deviceRevokeFailed: 'Revocation failed', deviceCurrent: 'this device', deviceLast: 'Last used {date}', devicePlatformOther:'Other', deviceVersionUnknown:'PWA version unknown', localCleared: 'Local data cleared',
       renameDevice: 'Rename', renameDevicePrompt: 'New device name:', deviceRenamed: 'Device renamed ✓', deviceRenameFailed: 'Rename failed',
       sharedTextName: 'shared.txt', sharedReceived: '{n} shared item(s) added ✓', resumedQueue: 'Queue restored: {n} file(s)', optimizeFallback: 'This image cannot be converted here; the original will be sent.',
       heicFallback: 'HEIC conversion depends on this browser’s decoder.', renameLocked: 'The name is locked once uploading starts.', noPending: 'No file to send.',
@@ -309,7 +309,7 @@
     es: {
       imgEditUploaded: 'Modificar con el editor de fotos', imgEditUploadedDone: 'Imagen modificada, URL conservada ✓',
       notificationsTitle: 'Notificaciones', notificationsLoading: 'Cargando…', notificationsEmpty: 'No hay notificaciones.', notificationsFirstView: 'Primera vista de «{name}»', notificationsDelete: 'Eliminar esta notificación', notificationsClearAll: 'Eliminar todas', notificationsClearConfirm: '¿Eliminar todas las notificaciones?', notificationsLoadMore: 'Mostrar más ({n})', notificationsLinkCopied: 'Enlace copiado ✓', notificationsSound: 'Sonido al recibir', notificationsSoundOn: 'Sonido activado', notificationsSoundOff: 'Sonido desactivado', notificationsPrefs: 'Preferencias', notificationsPrefsHint: 'Desmarca una categoría para dejar de crear sus notificaciones.', notificationsPrefsSaved: 'Preferencias guardadas ✓', notificationsSettingsTitle: 'Centro de notificaciones', notificationsSettingsHint: 'Elige qué categorías de notificaciones recibirá esta cuenta en el centro de notificaciones.', notificationsSettingsRequired: 'Siempre activada', notificationsSettingsRequiredHint: 'Las notificaciones de Seguridad, Mantenimiento y Salud del sistema permanecen siempre activadas.', notificationsSettingsSaving: 'Guardando…', notificationsSettingsError: 'No se pudieron guardar las preferencias de notificación.', notificationsRulesTitle: 'Alertas personalizadas', notificationsRulesHint: 'Crea hasta 50 reglas que generan una notificación al alcanzar un umbral.', notificationsRuleMetric: 'Métrica', notificationsRuleTarget: 'Enlace', notificationsRuleThreshold: 'Umbral', notificationsRuleLabel: 'Nombre (opcional)', notificationsRuleAdd: 'Añadir regla', notificationsRuleAllTargets: 'Todos mis enlaces compatibles', notificationsRuleTargetUnavailable: 'Enlace no disponible o eliminado', notificationsRuleEmpty: 'No hay reglas personalizadas.', notificationsRuleSaved: 'Regla guardada ✓', notificationsRuleDeleted: 'Regla eliminada', notificationsRuleError: 'No se pudo guardar la regla.', notificationsRuleEnable: 'Activar', notificationsRuleDisable: 'Desactivar', notificationsRuleDelete: 'Eliminar', notificationsRuleMetricViews: 'Vistas', notificationsRuleMetricDownloads: 'Descargas', notificationsRuleMetricBytesServed: 'Datos servidos (GB)', notificationsRuleMetricReceivedBytes: 'Datos recibidos (GB)', notificationsRuleCustomTitle: 'Alerta personalizada: {name}', notificationsTimeAgo: 'hace {v}', notificationsCount: '{n} notificación(es)', notificationsFilteredCount: '{shown} / {total} notificación(es)', notificationsNoMatch: 'Ninguna notificación coincide con los filtros.', notificationsFilters: 'Filtros de notificaciones', notificationsCategoryFilter: 'Filtrar por categoría', notificationsSeverityFilter: 'Filtrar por gravedad', notificationsAllCategories: 'Todas las categorías', notificationsAllSeverities: 'Todas las gravedades', notificationsSearch: 'Buscar…', notificationsSearchAria: 'Buscar en las notificaciones', notificationsCategoryActivity: 'Actividad', notificationsCategoryVisitors: 'Visitantes', notificationsCategoryThresholds: 'Umbrales', notificationsCategoryTraffic: 'Tráfico', notificationsCategoryImages: 'Imágenes', notificationsCategoryPwa: 'PWA', notificationsCategoryReceptions: 'Recepciones', notificationsCategorySearch: 'Búsqueda / OCR', notificationsCategorySecurity: 'Seguridad', notificationsCategoryShares: 'Compartidos', notificationsCategorySystemHealth: 'Salud del sistema', notificationsCategoryMaintenance: 'Mantenimiento', notificationsCategoryNetwork: 'Red', notificationsCategoryRestarts: 'Reinicios', notificationsCategoryUpdates: 'Actualizaciones', notificationsCategoryTransfers: 'Transferencias', notificationsCategoryDescShares: 'Descargas, caducidad, límites y cambios relacionados con los enlaces compartidos.', notificationsCategoryDescReceptions: 'Depósitos recibidos, archivos disponibles y cuotas de los enlaces de recepción.', notificationsCategoryDescImages: 'Primeras vistas, reemplazos de imágenes y regeneración de variantes.', notificationsCategoryDescTransfers: 'Transferencias completadas o fallidas, abandonos y reanudaciones imposibles.', notificationsCategoryDescVisitors: 'Nuevos países y nuevos navegadores o dispositivos visitantes.', notificationsCategoryDescThresholds: 'Umbrales de vistas y descargas alcanzados en tus enlaces.', notificationsCategoryDescTraffic: 'Volumen de descarga inusualmente alto y enlaces que se vuelven virales.', notificationsCategoryDescSearch: 'Fallos de OCR y problemas de indexación para la búsqueda.', notificationsCategoryDescPwa: 'Dispositivos PWA, suscripciones Push y permisos de notificaciones.', notificationsCategoryDescSecurity: 'Inicios de sesión inusuales, contraseñas, DLP y otras alertas de seguridad.', notificationsCategoryDescSystemHealth: 'Caídas de servicio, errores de configuración y problemas importantes del sistema.', notificationsCategoryDescMaintenance: 'Limpiezas automáticas y eliminaciones de archivos según las reglas de retención.', notificationsCategoryDescNetwork: 'Cambios de la dirección IP pública y eventos de red del servicio.', notificationsCategoryDescRestarts: 'Reinicios detectados de Direct-Xfer, incluida la indisponibilidad cuando está disponible.', notificationsCategoryDescUpdates: 'Actualizaciones disponibles y confirmación después de la instalación.', notificationsSeverityInfo: 'Información', notificationsSeveritySuccess: 'Éxito', notificationsSeverityWarning: 'Advertencia', notificationsSeverityCritical: 'Crítica',
-      title: 'Enviar', navMain: 'Navegación principal', navSend: 'Enviar', navSendHint: 'Preparar y enviar archivos a un destino.', navImages: 'Imágenes', navImagesHint: 'Crear, gestionar y supervisar enlaces de imagen.', navActivity: 'Actividad', navActivityHint: 'Consultar el historial local de transferencias.', navSettings: 'Ajustes', navSettingsHint: 'Configurar la PWA, la seguridad y el almacenamiento.', navShares: 'Compartir', navSharesHint: 'Crear enlaces para compartir desde archivos de tu servidor.', sharesTitle: 'Compartir archivos del servidor', sharesHint: 'Explora los archivos de tu servidor y crea enlaces directos para compartir.', sharesAdminRequired: 'Inicia sesión con una cuenta de administrador para explorar los archivos del servidor.', sharesSignIn: 'Iniciar sesión como administrador', sharesBrowse: 'Archivos del servidor', sharesUp: 'Carpeta superior', sharesCreate: 'Crear el recurso compartido', sharesNoneSelected: 'Ningún archivo seleccionado.', sharesSelected: '{n} elemento(s) seleccionado(s)', sharesExpiry: 'Caducidad', sharesExpiryNever: 'Nunca', sharesExpiry1h: '1 hora', sharesExpiry1d: '1 día', sharesExpiry7d: '7 días', sharesExpiry30d: '30 días', sharesMaxDownloads: 'Descargas máx. (0 = ilimitado)', sharesRateLimit: 'Velocidad máxima (KB/s, 0 = ilimitado)', sharesRateEdit: 'Velocidad', sharesRatePrompt: 'Velocidad máxima en KB/s (0 = ilimitado):', sharesRateSaved: 'Velocidad actualizada ✓', sharesRateFail: 'No se pudo modificar la velocidad', sharesPassword: 'Contraseña (opcional)', sharesPasswordPlaceholder: '—', sharesCreateBtn: 'Crear enlace para compartir', sharesCreating: 'Creando…', sharesCreated: 'Recurso creado ✓', sharesCreateFail: 'No se pudo crear el recurso', sharesDlpWarning: 'DLP: {n} detección(es) sensible(s) ({level}). ¿Publicar de todos modos?', sharesDlpBlocked: 'Publicación bloqueada por la política DLP.', dlpTest: 'Probar DLP', dlpTestQueue: '🛡 Probar DLP', dlpTestSelected: '🛡 Probar DLP', dlpTesting: 'Análisis DLP…', dlpSafe: 'DLP ✓ no se detectó contenido sensible', dlpFound: 'DLP: {n} detección(es) ({level})', dlpLocalBlocked: 'Carga bloqueada por la política DLP antes de transferir.', dlpLocalConfirm: 'DLP detectó {n} elemento(s) sensible(s) ({level}) en {files} archivo(s). ¿Enviar igualmente?', dlpScanSkipped: 'DLP: {n} archivo(s) demasiado grandes/no analizados', dlpScanFailed: 'No se pudo ejecutar DLP: {error}', dlpOcrIncomplete: 'DLP incompleto: OCR falló para {n} archivo(s)', dlpPolicyLoading: 'Cargando política DLP…', dlpPolicyDisabled: 'DLP desactivado en el servidor', dlpPolicyText: 'Política {mode} · {mb} MB/archivo · OCR {ocr}', dlpModeWarn: 'Avisar', dlpModeBlock: 'Bloquear', dlpModeLog: 'Registrar', dlpOcrOn: 'activado', dlpOcrOff: 'desactivado', dlpIncompleteBlocked: 'Carga bloqueada: el análisis DLP está incompleto.', dlpIncompleteConfirm: 'El análisis DLP está incompleto para {files} archivo(s) y encontró {n} detección(es). ¿Enviar igualmente?', dlpPolicyUnavailable: 'Política DLP no disponible: carga suspendida por seguridad.', dlpScanIncomplete: 'DLP incompleto: {n} elemento(s) sin analizar', sharesLibrary: 'Tus recursos compartidos', sharesEmpty: 'Aún no hay recursos compartidos.', sharesBrowseFail: 'No se pudo leer esta carpeta.', sharesLoginNeeded: 'Se requiere inicio de sesión de administrador.', sharesOpen: 'Abrir', sharesCopy: 'Copiar', sharesRevoke: 'Revocar', sharesRevoked: 'Recurso revocado ✓', sharesRevokeFail: 'No se pudo revocar', sharesRevokeConfirm: '¿Revocar este recurso compartido? El enlace dejará de funcionar.', sharesItems: '{n} elemento(s)', sharesReceptions: 'Enlaces de recepción', sharesReceptionsEmpty: 'No hay enlaces de recepción.', sharesReceived: '{bytes} recibidos', sharesDownloadingNow: '{n} descarga(s) en curso', threadTitle: 'Conversación', threadEmpty: 'Sin mensajes.', threadReplyPh: 'Responder al visitante…', threadSend: 'Enviar', threadSending: 'Enviando…', threadError: 'No se pudo enviar, inténtalo de nuevo.', threadYou: 'Tú', threadVisitor: 'Visitante', openAdmin: 'Abrir la administración', language: 'Idioma', theme: 'Tema', copyLink: 'Copiar enlace', pasteLink: 'Pegar enlace', editDestination: 'Editar destino', addDestination: 'Añadir destino', passwordPlaceholder: 'Contraseña del enlace', destinationPlaceholder: 'Enlace o token de recepción', destinationNamePlaceholder: 'Nombre opcional del destino', senderPlaceholder: 'Nombre solicitado por este enlace', globalProgress: 'Progreso global', keyPlaceholder: 'Clave de cifrado del enlace', titlePlaceholder: 'Contenido compartido', themeDark: 'Oscuro', themeLight: 'Claro', themeAuto: 'Auto', install: 'Instalar', installIosHint: 'Para instalar Direct-Xfer, toca el botón Compartir del navegador y luego «Añadir a pantalla de inicio».', installBrowserHint: 'Chrome todavía no ha validado la instalación completa. No elijas un simple acceso directo: usa una dirección HTTPS de confianza, interactúa con la página y mantenla abierta unos instantes.', installHttpsRequired: 'La instalación completa no es posible desde esta dirección HTTP o certificado no confiable. Android solo puede crear un acceso directo. Abre Direct-Xfer mediante HTTPS con un certificado válido.', installSecurePending: 'La instalación se está preparando. En Chrome, interactúa con la página y mantenla abierta unos 30 segundos. Si el logotipo no aparece, verifica que Android confíe en el certificado HTTPS.', installOpenHttps: 'Abrir en HTTPS',
+      title: 'Enviar', navMain: 'Navegación principal', navSend: 'Enviar', navSendHint: 'Preparar y enviar archivos a un destino.', navImages: 'Imágenes', navImagesHint: 'Crear, gestionar y supervisar enlaces de imagen.', navActivity: 'Actividad', navActivityHint: 'Consultar el mismo historial de actividad persistente que en Direct-Xfer estándar.', serverActivity: 'Actividad', serverActivityHint: 'Historial persistente de los eventos relevantes de Direct-Xfer.', serverActivitySearch: 'Buscar actividad…', serverActivityLoading: 'Cargando actividad…', serverActivityEmpty: 'Sin actividad registrada.', serverActivityLoadFail: 'No se pudo cargar el historial de actividad.', serverActivityFiltersAria: 'Filtros de actividad', serverActivityKindAria: 'Tipo de actividad', serverActivityKindAll: 'Todos los tipos', serverActivityKindTransfer: 'Transferencias', serverActivityKindAdmin: 'Administración', serverActivityKindSecurity: 'Seguridad', serverActivityKindVisitor: 'Visitantes', serverActivityKindSystem: 'Sistema', serverActivityShareAll:'Todas las comparticiones', serverActivityImagesOnly:'Solo imágenes', serverActivityPwaOnly:'Solo PWA', serverActivityHideRoutine:'Ocultar sistema rutinario', serverActivityReset: 'Limpiar filtros', serverActivitySummary: '{shown} mostrada(s) de {total}', localTransferHistory: 'Historial de transferencias de este dispositivo', activityImageDeleted: 'Imagen eliminada: {name}', activityShareDeleted: 'Enlace eliminado: {name}', activityImagePurged: 'Imagen eliminada definitivamente: {name}', activitySharePurged: 'Enlace eliminado definitivamente: {name}', activityImageRestored: 'Imagen restaurada: {name}', activityShareRestored: 'Enlace restaurado: {name}', activityTransferDone: 'Transferencia completada: {name}', activityTransferFailed: 'Transferencia interrumpida: {name}', navSettings: 'Ajustes', navSettingsHint: 'Configurar la PWA, la seguridad y el almacenamiento.', navShares: 'Compartir', navSharesHint: 'Crear enlaces para compartir desde archivos de tu servidor.', sharesTitle: 'Compartir archivos del servidor', sharesHint: 'Explora los archivos de tu servidor y crea enlaces directos para compartir.', sharesAdminRequired: 'Inicia sesión con una cuenta de administrador para explorar los archivos del servidor.', sharesSignIn: 'Iniciar sesión como administrador', sharesBrowse: 'Archivos del servidor', sharesUp: 'Carpeta superior', sharesCreate: 'Crear el recurso compartido', sharesNoneSelected: 'Ningún archivo seleccionado.', sharesSelected: '{n} elemento(s) seleccionado(s)', sharesExpiry: 'Caducidad', sharesExpiryNever: 'Nunca', sharesExpiry1h: '1 hora', sharesExpiry1d: '1 día', sharesExpiry7d: '7 días', sharesExpiry30d: '30 días', sharesExpiryForcedNever: 'El administrador configuró los nuevos recursos para que no caduquen.', sharesMaxDownloads: 'Descargas máx. (0 = ilimitado)', sharesRateLimit: 'Velocidad máxima (KB/s, 0 = ilimitado)', sharesRateEdit: 'Velocidad', sharesRatePrompt: 'Velocidad máxima en KB/s (0 = ilimitado):', sharesRateSaved: 'Velocidad actualizada ✓', sharesRateFail: 'No se pudo modificar la velocidad', sharesPassword: 'Contraseña (opcional)', sharesPasswordPlaceholder: '—', sharesCreateBtn: 'Crear enlace para compartir', sharesCreating: 'Creando…', sharesCreated: 'Recurso creado ✓', sharesCreatedLink:'Enlace listo para compartir', sharesCreateFail: 'No se pudo crear el recurso', sharesDlpWarning: 'DLP: {n} detección(es) sensible(s) ({level}). ¿Publicar de todos modos?', sharesDlpBlocked: 'Publicación bloqueada por la política DLP.', dlpTest: 'Probar DLP', dlpTestQueue: '🛡 Probar DLP', dlpTestSelected: '🛡 Probar DLP', dlpTesting: 'Análisis DLP…', dlpSafe: 'DLP ✓ no se detectó contenido sensible', dlpFound: 'DLP: {n} detección(es) ({level})', dlpLocalBlocked: 'Carga bloqueada por la política DLP antes de transferir.', dlpLocalConfirm: 'DLP detectó {n} elemento(s) sensible(s) ({level}) en {files} archivo(s). ¿Enviar igualmente?', dlpScanSkipped: 'DLP: {n} archivo(s) demasiado grandes/no analizados', dlpScanFailed: 'No se pudo ejecutar DLP: {error}', dlpOcrIncomplete: 'DLP incompleto: OCR falló para {n} archivo(s)', dlpPolicyLoading: 'Cargando política DLP…', dlpPolicyDisabled: 'DLP desactivado en el servidor', dlpPolicyText: 'Política {mode} · {mb} MB/archivo · OCR {ocr}', dlpAutoRules:'Reacción automática por gravedad', dlpAutoRulesHint:'Elige la acción que se aplica automáticamente para cada nivel de gravedad detectado.', dlpAutoReadOnly:'Las reacciones DLP automáticas solo se pueden cambiar desde un dispositivo owner/admin.', dlpSeverityLow:'Baja', dlpSeverityMedium:'Media', dlpSeverityHigh:'Alta', dlpSeverityCritical:'Crítica', dlpAutoSave:'Guardar reacciones DLP', dlpAutoSaved:'Reacciones DLP guardadas ✓', dlpAutoSaveFail:'No se pudieron guardar las reacciones DLP', dlpModeWarn: 'Avisar', dlpModeBlock: 'Bloquear', dlpModeQuarantine:'Cuarentena', dlpModeLog: 'Registrar', dlpLocalQuarantined:'Envío retenido por la política de cuarentena DLP; no se enviaron bytes.', dlpIncompleteQuarantined:'Envío retenido: el análisis DLP está incompleto y la política exige cuarentena.', dlpServerQuarantined:'El contenido fue puesto en cuarentena por la política DLP.', dlpQuarantineFailed:'Falló la cuarentena DLP; no se publicó ningún contenido.', dlpOcrOn: 'activado', dlpOcrOff: 'desactivado', dlpIncompleteBlocked: 'Carga bloqueada: el análisis DLP está incompleto.', dlpIncompleteConfirm: 'El análisis DLP está incompleto para {files} archivo(s) y encontró {n} detección(es). ¿Enviar igualmente?', dlpPolicyUnavailable: 'Política DLP no disponible: carga suspendida por seguridad.', dlpScanIncomplete: 'DLP incompleto: {n} elemento(s) sin analizar', sharesLibrary: 'Tus recursos compartidos', sharesEmpty: 'Aún no hay recursos compartidos.', sharesBrowseFail: 'No se pudo leer esta carpeta.', sharesLoginNeeded: 'Se requiere inicio de sesión de administrador.', sharesOpen: 'Abrir', sharesCopy: 'Copiar', sharesRevoke: 'Revocar', sharesRevoked: 'Recurso revocado ✓', sharesRevokeFail: 'No se pudo revocar', sharesRevokeConfirm: '¿Revocar este recurso compartido? El enlace dejará de funcionar.', sharesColor: 'Color de la tarjeta (opcional)', sharesAdminNote: 'Nota privada (opcional)', sharesAdminNotePlaceholder: 'Visible solo para administradores', sharesEditMeta: 'Color / nota', sharesArchive: 'Archivar', sharesUnarchive: 'Desarchivar', sharesShowArchived: '🗄 Archivos', sharesDuplicate: 'Duplicar', sharesDuplicatePrompt: 'Nombre del recurso duplicado:', sharesDuplicated: 'Recurso duplicado ✓', sharesDuplicateFail: 'No se pudo duplicar', sharesReactivate: 'Reactivar', sharesReactivated: 'Enlace reactivado ✓', sharesReactivateMissing: 'Los datos del enlace ya no están disponibles', sharesTrash: 'Papelera global', sharesTrashHint: 'Las imágenes, recepciones y recursos eliminados pueden restaurarse aquí mientras se conserven.', sharesTrashEmpty: 'La papelera está vacía.', sharesTrashRestore: 'Restaurar', sharesTrashRestoreSelected:'Restaurar selección', sharesTrashSelected:'{n} seleccionado(s)', sharesTrashRestoreSelectedOk:'{n} elemento(s) restaurado(s) ✓', sharesTrashRestored: 'Elemento restaurado ✓', sharesTrashDelete: 'Eliminar definitivamente', sharesTrashDeleteAll: 'Eliminar todo definitivamente', sharesTrashDeleteConfirm: '¿Eliminar definitivamente «{name}»? Esta acción es irreversible.', sharesTrashDeleteAllConfirm: '¿Eliminar definitivamente todos los elementos de la papelera? Esta acción es irreversible.', sharesTrashDeleted: 'Elemento eliminado definitivamente ✓', sharesTrashAllDeleted: '{n} elemento(s) eliminado(s) definitivamente ✓', sharesTrashDeleteFail: 'No se pudo eliminar definitivamente', sharesGlobalSearch: 'Buscar', sharesGlobalSearchPlaceholder: 'Buscar enlaces, usuarios, registros y contenido…', sharesGlobalSearchEmpty: 'Sin resultados.', sharesGlobalSearchFail: 'No se pudo buscar', sharesArchivedBadge: 'Archivado', sharesPinnedBadge:'Fijado', sharesPin:'Fijar', sharesUnpin:'Desfijar', sharesNeverDownloaded:'Nunca descargado', sharesPasswordProtected:'Con contraseña', sharesExpiresSoon:'Caduca pronto', sharesTotalSize:'Tamaño total: {size}', sharesRevokedBadge: 'Revocado', sharesItems: '{n} elemento(s)', sharesReceptions: 'Enlaces de recepción', sharesReceptionsEmpty: 'No hay enlaces de recepción.', sharesReceived: '{bytes} recibidos', sharesDownloadingNow: '{n} descarga(s) en curso', threadTitle: 'Conversación', threadEmpty: 'Sin mensajes.', threadReplyPh: 'Responder al visitante…', threadSend: 'Enviar', threadSending: 'Enviando…', threadError: 'No se pudo enviar, inténtalo de nuevo.', threadYou: 'Tú', threadVisitor: 'Visitante', openAdmin: 'Abrir la administración', language: 'Idioma', theme: 'Tema', copyLink: 'Copiar enlace', pasteLink: 'Pegar enlace', editDestination: 'Editar destino', addDestination: 'Añadir destino', passwordPlaceholder: 'Contraseña del enlace', destinationPlaceholder: 'Enlace o token de recepción', destinationNamePlaceholder: 'Nombre opcional del destino', senderPlaceholder: 'Nombre solicitado por este enlace', globalProgress: 'Progreso global', keyPlaceholder: 'Clave de cifrado del enlace', titlePlaceholder: 'Contenido compartido', themeDark: 'Oscuro', themeLight: 'Claro', themeAuto: 'Auto', install: 'Instalar', installIosHint: 'Para instalar Direct-Xfer, toca el botón Compartir del navegador y luego «Añadir a pantalla de inicio».', installBrowserHint: 'Chrome todavía no ha validado la instalación completa. No elijas un simple acceso directo: usa una dirección HTTPS de confianza, interactúa con la página y mantenla abierta unos instantes.', installHttpsRequired: 'La instalación completa no es posible desde esta dirección HTTP o certificado no confiable. Android solo puede crear un acceso directo. Abre Direct-Xfer mediante HTTPS con un certificado válido.', installSecurePending: 'La instalación se está preparando. En Chrome, interactúa con la página y mantenla abierta unos 30 segundos. Si el logotipo no aparece, verifica que Android confíe en el certificado HTTPS.', installOpenHttps: 'Abrir en HTTPS',
       offline: 'Sin conexión — los envíos continuarán al reconectarse.', updateReady: 'Hay una nueva versión disponible.', updateNow: 'Actualizar', pullToRefresh: 'Desliza hacia abajo para actualizar', releaseToRefresh: 'Suelta para actualizar', refreshing: 'Actualizando…', backExit: 'Pulsa de nuevo para salir', destination: 'Destino',
       destinationHint: 'Un enlace de recepción Direct-Xfer de esta instancia.', linkOrToken: 'Enlace o token', displayName: 'Nombre visible', rememberDestination: 'Recordar este destino en el dispositivo', rememberKey: 'Recordar también la clave secreta en este dispositivo',
       scanQr: '📷 Escanear QR', saveDestination: 'Añadir', updateDestination: 'Guardar', removeDestination: 'Quitar', cancel: 'Cancelar', createLinkTitle: 'Crear un enlace de recepción', newLink: 'Nuevo', createLinkName: 'Nombre del nuevo enlace', createLinkPlaceholder: 'ej. Fotos vacaciones', createLinkHint: 'Se creará un nuevo enlace de recepción y se añadirá a tus destinos. Compártelo para recibir archivos.', createDo: 'Crear enlace', creating: 'Creando…', createOk: 'Enlace creado ✓', createFail: 'No se pudo crear el enlace',
@@ -338,7 +338,7 @@
       storageUnknown: 'Estimación no disponible', storageUsage: '{used} usados de {quota}', storageProtected: 'Almacenamiento persistente concedido', storageDenied: 'No se concedió almacenamiento persistente',
       deviceAdmin: 'Sesión de administrador activa. Puedes vincular el dispositivo con acceso solo a la PWA.', devicePaired: 'Este dispositivo tiene un token limitado a /app.',
       deviceUnpaired: 'No vinculado. Se necesita una sesión de administrador una vez.', devicePairedOk: 'Dispositivo vinculado ✓', deviceRevoked: 'Acceso revocado', devicePairFailed: 'No se pudo vincular',
-      deviceRevokeFailed: 'No se pudo revocar', deviceCurrent: 'este dispositivo', deviceLast: 'Último uso {date}', localCleared: 'Datos locales borrados', sharedTextName: 'compartido.txt',
+      deviceRevokeFailed: 'No se pudo revocar', deviceCurrent: 'este dispositivo', deviceLast: 'Último uso {date}', devicePlatformOther:'Otro', deviceVersionUnknown:'Versión PWA desconocida', localCleared: 'Datos locales borrados', sharedTextName: 'compartido.txt',
       renameDevice: 'Renombrar', renameDevicePrompt: 'Nuevo nombre del dispositivo:', deviceRenamed: 'Dispositivo renombrado ✓', deviceRenameFailed: 'No se pudo renombrar',
       sharedReceived: '{n} elemento(s) compartido(s) añadido(s) ✓', resumedQueue: 'Cola restaurada: {n} archivo(s)', optimizeFallback: 'No se puede convertir esta imagen; se enviará el original.',
       heicFallback: 'La conversión HEIC depende del navegador.', renameLocked: 'El nombre se bloquea al empezar el envío.', noPending: 'No hay archivos para enviar.',
@@ -441,6 +441,86 @@
     biometricServerRejected: 'El servidor rechazó la identificación creada. Vuelve a abrir los ajustes e inténtalo de nuevo.'
   });
 
+  // 1.52.1 follow-up — unified server-side action history + Undo in the PWA.
+  Object.assign(STRINGS.fr, {
+    actionHistoryTitle: 'Historique d’actions',
+    actionHistoryHint: 'Consultez les dernières actions administratives et annulez celles qui sont encore réversibles.',
+    actionHistoryEmpty: 'Aucune action récente.',
+    actionHistoryUndo: '↶ Annuler',
+    actionHistoryUndone: 'Annulée',
+    actionHistoryUnavailable: 'Plus annulable',
+    actionHistoryConfirm: 'Annuler « {label} » ?',
+    actionHistorySuccess: 'Action annulée ✓',
+    actionHistoryFail: 'Impossible d’annuler cette action.',
+    actionHistorySettings: 'Configuration modifiée',
+    actionHistoryStats: 'Statistiques réinitialisées',
+    actionHistoryRecipient: 'Destinataire retiré',
+    actionHistoryIpNames: 'Surnoms client effacés',
+    actionHistoryShare: 'Partage supprimé',
+    actionHistoryLoadFail: 'Impossible de charger l’historique.',
+    actionHistoryChanged: 'État modifié depuis',
+    actionHistoryRestored: 'Déjà restaurée',
+    actionHistoryPurged: 'Élément supprimé définitivement',
+    actionHistoryLegacy: 'Ancienne entrée non sûre',
+    actionHistoryForbidden: 'Lecture seule',
+    actionHistoryGone: 'Partage introuvable',
+    actionHistoryUnsupported: 'Annulation non prise en charge',
+    actionHistoryRestoreConflict: 'Conflit avec un lien actif',
+      actionHistoryTooLarge: 'Données d’annulation trop volumineuses'
+  });
+  Object.assign(STRINGS.en, {
+    actionHistoryTitle: 'Action history',
+    actionHistoryHint: 'Review recent administrative actions and undo the ones that are still reversible.',
+    actionHistoryEmpty: 'No recent actions.',
+    actionHistoryUndo: '↶ Undo',
+    actionHistoryUndone: 'Undone',
+    actionHistoryUnavailable: 'No longer undoable',
+    actionHistoryConfirm: 'Undo “{label}”?',
+    actionHistorySuccess: 'Action undone ✓',
+    actionHistoryFail: 'Could not undo this action.',
+    actionHistorySettings: 'Settings changed',
+    actionHistoryStats: 'Stats reset',
+    actionHistoryRecipient: 'Recipient removed',
+    actionHistoryIpNames: 'Client nicknames cleared',
+    actionHistoryShare: 'Share deleted',
+    actionHistoryLoadFail: 'Could not load action history.',
+    actionHistoryChanged: 'State changed since',
+    actionHistoryRestored: 'Already restored',
+    actionHistoryPurged: 'Item permanently deleted',
+    actionHistoryLegacy: 'Legacy entry is unsafe',
+    actionHistoryForbidden: 'Read-only',
+    actionHistoryGone: 'Share no longer exists',
+    actionHistoryUnsupported: 'Undo not supported',
+    actionHistoryRestoreConflict: 'Conflicts with an active link',
+      actionHistoryTooLarge: 'Undo data is too large'
+  });
+  Object.assign(STRINGS.es, {
+    actionHistoryTitle: 'Historial de acciones',
+    actionHistoryHint: 'Consulta las acciones administrativas recientes y deshaz las que aún sean reversibles.',
+    actionHistoryEmpty: 'No hay acciones recientes.',
+    actionHistoryUndo: '↶ Deshacer',
+    actionHistoryUndone: 'Deshecha',
+    actionHistoryUnavailable: 'Ya no se puede deshacer',
+    actionHistoryConfirm: '¿Deshacer « {label} »?',
+    actionHistorySuccess: 'Acción deshecha ✓',
+    actionHistoryFail: 'No se pudo deshacer esta acción.',
+    actionHistorySettings: 'Configuración modificada',
+    actionHistoryStats: 'Estadísticas reiniciadas',
+    actionHistoryRecipient: 'Destinatario eliminado',
+    actionHistoryIpNames: 'Apodos de cliente borrados',
+    actionHistoryShare: 'Compartición eliminada',
+    actionHistoryLoadFail: 'No se pudo cargar el historial.',
+    actionHistoryChanged: 'El estado cambió después',
+    actionHistoryRestored: 'Ya restaurada',
+    actionHistoryPurged: 'Elemento eliminado definitivamente',
+    actionHistoryLegacy: 'Entrada antigua no segura',
+    actionHistoryForbidden: 'Solo lectura',
+    actionHistoryGone: 'La compartición ya no existe',
+    actionHistoryUnsupported: 'Deshacer no compatible',
+    actionHistoryRestoreConflict: 'Conflicto con un enlace activo',
+      actionHistoryTooLarge: 'Los datos para deshacer son demasiado grandes'
+  });
+
   var lang = 'fr';
   function detectLang() {
     var saved = '';
@@ -466,18 +546,22 @@
       });
     });
     var manifest = document.getElementById('app-manifest');
-    if (manifest) manifest.href = (lang === 'fr' ? '/direct-xfer-pwa.webmanifest' : '/direct-xfer-pwa-' + lang + '.webmanifest') + '?v=228';
+    if (manifest) manifest.href = (lang === 'fr' ? '/direct-xfer-pwa.webmanifest' : '/direct-xfer-pwa-' + lang + '.webmanifest') + '?v=249';
     $('lang-select').value = lang;
     $('dest-save-btn').textContent = editingToken ? t('updateDestination') : t('saveDestination');
     renderDests(); renderQueue(); renderHistory(); renderDeviceStatus();
+    if (typeof renderPwaServerActivity === 'function') renderPwaServerActivity();
     if (notificationPrefsLoaded) renderPwaNotificationPrefs();
     if (typeof updateSessionStats === 'function') updateSessionStats();
     if (typeof updateSendBtn === 'function') updateSendBtn();
     if (typeof activatePwaPanel === 'function') activatePwaPanel(activePwaPanel, { keepScroll: true, instant: true });
-    if (typeof sendLangToSw === 'function') sendLangToSw(); // feature 2 — keep the SW's resume prompt localized
+    if (typeof sendLangToSw === 'function') sendLangToSw(); // keep the SW's resume prompt localized
   }
 
   var activePwaPanel = 'send';
+  var serverActivityEvents = [];
+  var serverActivityRetained = 0;
+  var serverActivityLoading = false;
   var PWA_PANEL_KEYS = {
     send: { label: 'navSend', hint: 'navSendHint' },
     images: { label: 'navImages', hint: 'navImagesHint' },
@@ -489,12 +573,10 @@
   function updatePwaNavBadges() {
     var sendCount = items ? items.filter(function (item) { return item && item.status !== 'done'; }).length : 0;
     var imageCount = document.querySelectorAll('#imglink-list .imglink-row').length;
-    var historyCount = historyEntries ? historyEntries.length : 0;
     [
       ['nav-send-badge', sendCount],
       ['nav-images-badge', imageCount],
-      ['nav-shares-badge', activeShareCount],
-      ['nav-activity-badge', historyCount]
+      ['nav-shares-badge', activeShareCount]
     ].forEach(function (entry) {
       var badge = $(entry[0]);
       if (!badge) return;
@@ -524,7 +606,7 @@
     var meta = PWA_PANEL_KEYS[panel];
     if ($('pwa-panel-kicker')) $('pwa-panel-kicker').textContent = t(meta.label);
     if ($('pwa-panel-summary')) $('pwa-panel-summary').textContent = t(meta.hint);
-    if (panel === 'activity' && $('history-card')) $('history-card').open = true;
+    if (panel === 'activity') { loadPwaServerActivity(false).catch(function () {}); startPwaActivityRefresh(); } else stopPwaActivityRefresh();
     if (panel === 'settings' && $('settings-card')) { $('settings-card').open = true; if (!notificationPrefsLoaded) loadPwaNotificationPrefs(); else renderPwaNotificationPrefs(); if(!notificationRulesLoaded)loadPwaNotificationRules(); else renderPwaNotificationRules(); }
     if (panel === 'images') {
       refreshImageStats(false).catch(function () {});
@@ -543,7 +625,7 @@
     document.querySelectorAll('[data-pwa-nav]').forEach(function (button) {
       button.addEventListener('click', function () { activatePwaPanel(button.getAttribute('data-pwa-nav')); });
     });
-    ['up-list', 'imglink-list', 'history-list'].forEach(function (id) {
+    ['up-list', 'imglink-list', 'history-list', 'server-activity-list'].forEach(function (id) {
       var target = $(id);
       if (target && 'MutationObserver' in window) {
         new MutationObserver(updatePwaNavBadges).observe(target, { childList: true, subtree: true });
@@ -785,13 +867,13 @@
   var notificationRequestSeq = 0;
   var notificationRequestInFlight = false;
   var notificationRequestController = null;
-  // Feature 6/12 — arrival detection + on-demand paging state.
+  // Arrival detection + on-demand paging state.
   var notificationSeenIds = null; // null until first load so the backlog never toasts
   var notificationSoundOn = false;
   try { notificationSoundOn = localStorage.getItem('dx-notif-sound') === '1'; } catch (_) {}
   var NOTIFICATIONS_PAGE_SIZE = 20;
   var notificationsShown = NOTIFICATIONS_PAGE_SIZE;
-  // Feature 7 — category opt-outs (Security/System health are always-on server-side).
+  // Category opt-outs (Security/System health are always-on server-side).
   var NOTIFICATION_MUTABLE_CATEGORIES = ['images','shares','receptions','transfers','search','pwa','visitors','thresholds','traffic','network','restarts','updates'];
   var NOTIFICATION_REQUIRED_CATEGORIES = ['security','maintenance','system_health'];
   var NOTIFICATION_SETTINGS_CATEGORIES = ['shares','receptions','images','transfers','visitors','thresholds','traffic','search','pwa','network','restarts','updates','maintenance','security','system_health'];
@@ -803,7 +885,7 @@
     if (v === 'thumb') return 'Mini'; if (v === 'micro') return 'Micro';
     return lang === 'fr' ? 'Pleine' : lang === 'es' ? 'Completa' : 'Full';
   }
-  // Feature 2 — relative timestamp; the absolute date is the row's hover tooltip.
+  // Relative timestamp; the absolute date is the row's hover tooltip.
   function pwaTimeAgo(ts) {
     var s = Math.floor((Date.now() - Number(ts || 0)) / 1000); if (s < 0) s = 0;
     var v;
@@ -818,6 +900,7 @@
   }
   function pwaNotificationTitle(n) {
     var name=n.name || (lang==='fr'?'Lien':lang==='es'?'Enlace':'Link'), count=Number(n.count)||0, threshold=Number(n.threshold)||Number(n.limit)||count;
+    if(n.type==='security-anomaly')return lang==='en'?'Ransomware protection: '+name:lang==='es'?'Protección antiransomware: '+name:'Protection antirançongiciel : '+name;
     var maps={
       fr:{'image-first-view':'Première vue de « '+name+' »','share-first-download':'Premier téléchargement de « '+name+' »','inbox-first-deposit':'Premier dépôt sur « '+name+' »','transfer-complete':'Transfert terminé : '+name,'transfer-failed':'Transfert échoué : '+name,'link-expired':'Lien expiré : '+name,'link-expiring-soon':'Lien bientôt expiré : '+name,'download-limit-reached':'Limite de téléchargements atteinte : '+name,'reception-quota-reached':'Quota de réception atteint : '+name,'link-new-visitor':'Nouveau visiteur sur « '+name+' »','new-country':'Nouveau pays pour '+name,'view-threshold':threshold+' vues atteintes : '+name,'download-threshold':threshold+' téléchargements atteints : '+name,'unusual-activity':'Activité inhabituelle : '+name,'repeated-downloads':'Téléchargements répétés : '+name,'password-failures':'Échecs de mot de passe répétés : '+name,'link-auto-disabled':'Lien désactivé automatiquement : '+name,'dlp-detected':'DLP : contenu sensible détecté','dlp-blocked':'DLP : publication bloquée','ocr-failed':'Échec OCR'+(n.name?' : '+n.name:''),'index-failed':'Échec de l’indexation','pwa-device-paired':'Nouvel appareil PWA : '+(n.device||''),'pwa-device-revoked':'Appareil PWA révoqué : '+(n.device||''),'admin-login':'Connexion administrateur : '+(n.username||''),'admin-login-unusual':'Connexion administrateur inhabituelle : '+(n.username||''),'system-problem':'Problème système détecté','update-available':'Mise à jour disponible : '+(n.latest||''),'update-installed':'Mise à jour installée : '+(n.version||'')},
       en:{'image-first-view':'First view of “'+name+'”','share-first-download':'First download of “'+name+'”','inbox-first-deposit':'First deposit on “'+name+'”','transfer-complete':'Transfer completed: '+name,'transfer-failed':'Transfer failed: '+name,'link-expired':'Link expired: '+name,'link-expiring-soon':'Link expiring soon: '+name,'download-limit-reached':'Download limit reached: '+name,'reception-quota-reached':'Reception quota reached: '+name,'link-new-visitor':'New visitor on “'+name+'”','new-country':'New country for '+name,'view-threshold':threshold+' views reached: '+name,'download-threshold':threshold+' downloads reached: '+name,'unusual-activity':'Unusual activity: '+name,'repeated-downloads':'Repeated downloads: '+name,'password-failures':'Repeated password failures: '+name,'link-auto-disabled':'Link automatically disabled: '+name,'dlp-detected':'DLP: sensitive content detected','dlp-blocked':'DLP: publication blocked','ocr-failed':'OCR failed'+(n.name?' : '+n.name:''),'index-failed':'Indexing failed','pwa-device-paired':'New PWA device: '+(n.device||''),'pwa-device-revoked':'PWA device revoked: '+(n.device||''),'admin-login':'Administrator login: '+(n.username||''),'admin-login-unusual':'Unusual administrator login: '+(n.username||''),'system-problem':'System problem detected','update-available':'Update available: '+(n.latest||''),'update-installed':'Update installed: '+(n.version||'')},
@@ -861,7 +944,7 @@
     var haystack=normalizePwaNotificationSearch([n&&n.type,n&&n.category,n&&n.severity,pwaNotificationCategorySearchLabel(n&&n.category),pwaNotificationSeveritySearchLabel(n&&n.severity),pwaNotificationTitle(n||{}),pwaNotificationMeta(n||{}),n&&n.name,n&&n.detail,n&&n.reason,n&&n.sender,n&&n.device,n&&n.username,n&&n.source].filter(Boolean).join(' '));
     return haystack.indexOf(query)!==-1;
   }
-  // Feature 1 — deep-link a notification to its bottom-nav panel.
+  // Deep-link a notification to its bottom-nav panel.
   function pwaNotificationPanel(n){
     var cat=String(n&&n.category||''), type=String(n&&n.type||'');
     if(cat==='images'||type.indexOf('image')===0||type==='ocr-failed') return 'images';
@@ -870,7 +953,7 @@
     return 'activity';
   }
   function openPwaNotificationTarget(n){ closePwaNotifications(); activatePwaPanel(pwaNotificationPanel(n)); }
-  // Feature 9 — public link for a notification's share, by category (download /s/,
+  // Public link for a notification's share, by category (download /s/,
   // reception /u/, image /i/). Only shown when a token is present.
   function pwaNotificationLink(n){
     // The server resolves this against the CURRENT managed share and configured
@@ -891,7 +974,7 @@
     renderPwaNotifications();
     appMutate('/app/notifications/read','application/json',JSON.stringify({ids:[String(n.id)]})).catch(function(){});
   }
-  // Feature 6 — optional arrival sound + bell pulse.
+  // Optional arrival sound + bell pulse.
   function playPwaNotificationSound(){
     try{
       var AC=window.AudioContext||window.webkitAudioContext; if(!AC) return;
@@ -993,7 +1076,7 @@
       var d=await r.json();
       if(seq!==notificationRequestSeq)return; // ignore an older poll that arrived late
       var incoming=(d&&d.notifications)||[];
-      // Feature 6 — announce new, still-unread rows when the panel is closed.
+      // Announce new, still-unread rows when the panel is closed.
       if(notificationSeenIds){var fresh=incoming.filter(function(n){return n&&!notificationSeenIds.has(String(n.id))&&(n.unread===true||!(Number(n.readAt)>0));});if(fresh.length&&!pwaNotificationsOpen())announcePwaNotifications(fresh);}
       notificationSeenIds=new Set(incoming.map(function(n){return String(n&&n.id);}));
       accountNotifications=incoming; renderPwaNotifications(); if(pwaNotificationsOpen())void markPwaNotificationsRead();
@@ -1002,7 +1085,7 @@
     finally { if(timer)clearTimeout(timer); if(notificationRequestController===ctrl)notificationRequestController=null; notificationRequestInFlight=false; }
   }
   function closePwaNotifications(){var d=$('pwa-notifications-dropdown'),b=$('pwa-notifications-btn');if(d)d.classList.add('hidden');if(b)b.setAttribute('aria-expanded','false');}
-  // Feature 14 — a push tap (or ?opencenter=1 cold start) lands on the right panel
+  // A push tap (or ?opencenter=1 cold start) lands on the right panel
   // and opens the notification center so the matching alert is right there.
   function openPwaNotificationCenter(panel){
     if(panel)activatePwaPanel(panel);
@@ -1013,7 +1096,7 @@
     renderPwaNotifications(); void markPwaNotificationsRead(); refreshPwaNotifications();
   }
   function startNotificationPolling(){ if(notificationPollTimer)return; refreshPwaNotifications(); notificationPollTimer=setInterval(function(){if(!document.hidden)refreshPwaNotifications();},4000); }
-  // Feature 6 — optional arrival sound toggle, remembered locally (default off).
+  // Optional arrival sound toggle, remembered locally (default off).
   function updatePwaNotificationsSoundBtn(){
     var b=$('pwa-notifications-sound'); if(!b) return;
     b.textContent=notificationSoundOn?'🔔':'🔕';
@@ -1021,7 +1104,7 @@
     var label=t('notificationsSound')+' — '+(notificationSoundOn?t('notificationsSoundOn'):t('notificationsSoundOff'));
     b.title=label; b.setAttribute('aria-label',label);
   }
-  // Feature 7 — per-account category opt-outs. The dropdown and Settings panel
+  // Per-account category opt-outs. The dropdown and Settings panel
   // intentionally share one state/store so changing either surface immediately updates
   // the other. Security/System are always enabled by the server and shown read-only.
   function pwaNotificationCategoryLabel(cat){
@@ -1104,7 +1187,7 @@
     finally{notificationPrefsSaving=false;if(notificationPrefsSaveQueued){notificationPrefsSaveQueued=false;savePwaNotificationPrefs();}}
   }
 
-  // Feature 31 — custom notification threshold rules, shared with the standard UI.
+  // Custom notification threshold rules, shared with the standard UI.
   var notificationRules=[], notificationRuleTargets=[], notificationRulesLoaded=false, notificationRulesRequestSeq=0, notificationRuleMutationBusy=false;
   function pwaRuleMetricLabel(metric){var key={views:'notificationsRuleMetricViews',downloads:'notificationsRuleMetricDownloads',bytes_served:'notificationsRuleMetricBytesServed',received_bytes:'notificationsRuleMetricReceivedBytes'}[metric];return key?t(key):metric;}
   function pwaRuleIsBytes(metric){return metric==='bytes_served'||metric==='received_bytes';}
@@ -1568,7 +1651,7 @@
   function activeToken() {
     try { return sessionStorage.getItem('dx-active-dest') || ''; } catch (_) { return ''; }
   }
-  // Last destination remembered PERSISTENTLY across visits (feature 8). The session
+  // Last destination remembered PERSISTENTLY across visits. The session
   // token above still wins within a session; this is the cross-session fallback.
   function persistentLastDest() {
     try { return localStorage.getItem('dx-pwa-last-dest') || ''; } catch (_) { return ''; }
@@ -1676,7 +1759,7 @@
     if (cfg && cfg.maxFileBytes > 0) parts.push(t('maxFile', { size: fmtBytes(cfg.maxFileBytes) }));
     $('dest-limits').textContent = parts.length ? '📊 ' + parts.join(' · ') : '';
     $('dest-limits').classList.toggle('hidden', !parts.length);
-    // Visual remaining-quota bars (feature 11): a coloured gauge per limited axis.
+    // Visual remaining-quota bars: a coloured gauge per limited axis.
     var bars = $('dest-limit-bars');
     if (bars) {
       bars.innerHTML = '';
@@ -1701,7 +1784,7 @@
         wrap.appendChild(lab); wrap.appendChild(pr); bars.appendChild(wrap);
       });
       bars.classList.toggle('hidden', rows.length === 0);
-      // Warn once per destination when any axis crosses 85 % (feature 13); clear the
+      // Warn once per destination when any axis crosses 85 %; clear the
       // latch again if usage drops back below the threshold so it can re-fire later.
       var maxFrac = rows.reduce(function (m, r) { return Math.max(m, r.max > 0 ? r.value / r.max : 0); }, 0);
       if (currentDest) {
@@ -1862,7 +1945,7 @@
   var onlineWaiters = [];
   var wakeLock = null;
   var persistTimers = new Map();
-  // Session-only counters (feature: session stats) and a persisted average upload
+  // Session-only counters (session stats) and a persisted average upload
   // rate used to estimate the time of a batch BEFORE it starts sending.
   var sessionFiles = 0, sessionBytes = 0;
   var avgRate = 0;
@@ -2197,7 +2280,7 @@
     if (/^(txt|md|log)$/.test(e) || /^text\//.test(type)) return '📃';
     return '📄';
   }
-  // Coarse type bucket for the "sort by type" mode (feature 2); the numeric prefix
+  // Coarse type bucket for the "sort by type" mode; the numeric prefix
   // groups images, then video/audio, documents, sheets, archives, then others.
   function fileTypeKey(it) {
     var e = extOf(it.name), ty = it.type || '';
@@ -2387,7 +2470,7 @@
     } catch (_) {}
   }
   async function removeItem(it, offerUndo) {
-    // Snapshot enough to rebuild the row if the user taps "Undo" (feature 10). Only
+    // Snapshot enough to rebuild the row if the user taps "Undo". Only
     // offered for single, user-initiated removals — never bulk/clear sweeps.
     if (offerUndo && it.file && it.state !== 'done') {
       lastRemoved = {
@@ -2555,7 +2638,7 @@
     // Always send a valid JSON document. Some reverse proxies reject a POST that
     // advertises application/json with a zero-length body before Express sees it.
     return appMutate('/app/share/' + encodeURIComponent(token) + '/revoke', 'application/json', '{}')
-      .then(function (r) { return r.ok; }).catch(function () { return false; });
+      .then(function (r) { if (r.ok) { try { setTimeout(loadPwaTrash, 0); setTimeout(loadPwaActionHistory, 0); setTimeout(function(){ loadPwaServerActivity(true).catch(function(){}); }, 0); } catch (_) {} } return r.ok; }).catch(function () { return false; });
   }
 
   // ---- Server-file shares (standard Direct-Xfer function) ------------------
@@ -2566,7 +2649,10 @@
   var shareSelected = Object.create(null); // hostPath -> { name, size }
   var sharesInitialised = false;
   var sharesWired = false;
+  var hostSharesCache = [];
+  var shareShowArchived = false;
   var activeShareCount = 0; // active file/folder share links, shown as the Partages nav badge
+  var pwaTrashSelection = Object.create(null);
 
   function onSharesPanelShown() {
     initShares();
@@ -2576,6 +2662,8 @@
     sharesBrowse(sharesInitialised ? shareCwd : '/');
     loadHostShares();
     loadReceptions();
+    loadPwaTrash();
+    loadPwaActionHistory();
     sharesInitialised = true;
   }
 
@@ -2585,8 +2673,16 @@
       var parent = $('share-up').getAttribute('data-parent');
       if (parent) sharesBrowse(parent);
     });
-    if ($('share-refresh')) $('share-refresh').addEventListener('click', function () { sharesBrowse(shareCwd); loadHostShares(); loadReceptions(); });
+    if ($('share-refresh')) $('share-refresh').addEventListener('click', function () { sharesBrowse(shareCwd); loadHostShares(); loadReceptions(); loadPwaTrash(); loadPwaActionHistory(); });
     if ($('share-create-btn')) $('share-create-btn').addEventListener('click', createHostShare);
+  if ($('share-created-copy')) $('share-created-copy').addEventListener('click', function () { var box=$('share-created-link'), url=box&&box.dataset.url; if(url) copyText(url).then(function(){toast(t('copied'),'ok');}); });
+    if ($('share-archived-toggle')) $('share-archived-toggle').addEventListener('click', function () { shareShowArchived=!shareShowArchived; this.classList.toggle('active',shareShowArchived); this.setAttribute('aria-pressed',shareShowArchived?'true':'false'); renderHostShares(hostSharesCache); });
+    if ($('share-trash-refresh')) $('share-trash-refresh').addEventListener('click', loadPwaTrash);
+    if ($('share-trash-restore-selected')) $('share-trash-restore-selected').addEventListener('click', restoreSelectedPwaTrash);
+    if ($('action-history-refresh')) $('action-history-refresh').addEventListener('click', loadPwaActionHistory);
+    if ($('share-trash-purge-all')) $('share-trash-purge-all').addEventListener('click', purgeAllPwaTrash);
+    if ($('share-global-search-btn')) $('share-global-search-btn').addEventListener('click', runPwaGlobalSearch);
+    if ($('share-global-search')) $('share-global-search').addEventListener('keydown', function(e){if(e.key==='Enter'){e.preventDefault();runPwaGlobalSearch();}});
     updateShareSelection();
   }
 
@@ -2674,7 +2770,9 @@
       rateKBps: rateValue,
       firstUseExpirySeconds: Math.max(0, Math.round((Number($('share-first-use') && $('share-first-use').value) || 0) * 3600)),
       burnAfterDownload: !!($('share-one-time') && $('share-one-time').checked),
-      password: ($('share-password') && $('share-password').value) || ''
+      password: ($('share-password') && $('share-password').value) || '',
+      color: String($('share-color') && $('share-color').value || '').trim(),
+      adminNote: String($('share-admin-note') && $('share-admin-note').value || '')
     };
     try {
       var r = await appMutate('/app/host/shares', 'application/json', JSON.stringify(payload));
@@ -2687,8 +2785,11 @@
       }
       if (!r.ok) {
         var denied = await r.clone().json().catch(function () { return {}; });
-        if (denied.error === 'dlp-blocked' && status) { status.textContent = t('sharesDlpBlocked'); status.className = 'dest-status err'; }
-        throw new Error('create ' + r.status);
+        var createFailure = new Error('create ' + r.status);
+        if (denied.error === 'dlp-blocked') createFailure.dxReason = t('sharesDlpBlocked');
+        else if (denied.error === 'dlp-quarantined') createFailure.dxReason = t('dlpServerQuarantined');
+        else if (denied.error === 'dlp-quarantine-failed') createFailure.dxReason = t('dlpQuarantineFailed');
+        throw createFailure;
       }
       var data = await r.json();
       var url = data.share && data.share.url;
@@ -2696,19 +2797,26 @@
       if ($('share-password')) $('share-password').value = '';
       if ($('share-first-use')) $('share-first-use').value = '0';
       if ($('share-rate')) $('share-rate').value = '0';
+      if ($('share-color')) $('share-color').value = '';
+      if ($('share-admin-note')) $('share-admin-note').value = '';
       if ($('share-one-time')) $('share-one-time').checked = false;
       sharesBrowse(shareCwd);
-      if (url) { try { await copyText(url); } catch (_) {} }
+      if (url) {
+        var created=$('share-created-link'), createdUrl=$('share-created-url');
+        if(created&&createdUrl){createdUrl.textContent=url;created.dataset.url=url;created.classList.remove('hidden');}
+        try { await copyText(url); } catch (_) {}
+      }
       if (status) { status.textContent = t('sharesCreated'); status.className = 'dest-status ok'; }
       toast(t('sharesCreated'), 'ok');
       loadHostShares();
-    } catch (_) {
-      if (status) { status.textContent = t('sharesCreateFail'); status.className = 'dest-status err'; }
-      toast(t('sharesCreateFail'), 'err');
+    } catch (e) {
+      var createMessage = e && e.dxReason ? e.dxReason : t('sharesCreateFail');
+      if (status) { status.textContent = createMessage; status.className = 'dest-status err'; }
+      toast(createMessage, 'err');
     } finally { btn.textContent = prev; btn.disabled = selectedSharePaths().length === 0; }
   }
 
-  // Feature 20 — live "downloading now" presence. A single SSE stream, open only
+  // Live "downloading now" presence. A single SSE stream, open only
   // while the Shares panel is visible, reports how many downloads are in progress
   // on each of the viewer's links. The payload is authoritative full state, so any
   // link absent from `counts` is cleared.
@@ -2753,6 +2861,7 @@
     applyPresenceToCards();
   }
 
+  var hostShareMetricsTimer = null;
   async function loadHostShares() {
     try {
       var r = await fetch('/app/host/shares', { credentials: 'same-origin', cache: 'no-store' });
@@ -2762,6 +2871,8 @@
       if (!r.ok) throw new Error('list');
       var data = await r.json();
       var shares = data.shares || [];
+      hostSharesCache = shares;
+      if (data.metricsPending && !hostShareMetricsTimer) hostShareMetricsTimer = setTimeout(function () { hostShareMetricsTimer = null; loadHostShares(); }, 900);
       // Badge count = active share links only (an expired / disabled link is not "active").
       activeShareCount = shares.filter(function (s) { return s && s.active !== false; }).length;
       updatePwaNavBadges();
@@ -2771,22 +2882,32 @@
 
   function renderHostShares(list) {
     var listEl = $('share-list'); listEl.textContent = '';
-    if (!list.length) { var em = document.createElement('p'); em.className = 'muted sm'; em.textContent = t('sharesEmpty'); listEl.appendChild(em); return; }
-    list.forEach(function (s) {
+    var visible=(list||[]).filter(function(s){return shareShowArchived||!s.archived;});
+    if (!visible.length) { var em = document.createElement('p'); em.className = 'muted sm'; em.textContent = t('sharesEmpty'); listEl.appendChild(em); return; }
+    visible.forEach(function (s) {
       var row = document.createElement('div'); row.className = 'share-link-row';
+      if(/^#[0-9a-f]{6}$/i.test(String(s.color||''))){row.style.borderLeftColor=s.color;row.style.borderLeftWidth='4px';}
       var main = document.createElement('div'); main.className = 'share-link-main';
       var strong = document.createElement('strong'); strong.textContent = s.name || s.token; main.appendChild(strong);
       var meta = document.createElement('div'); meta.className = 'muted sm';
       var bits = [];
       if (s.type === 'folder') bits.push('📁');
       if (s.type === 'collab') bits.push('🔁');
-      if (s.collection && s.itemCount) bits.push(t('sharesItems', { n: s.itemCount }));
-      else if (s.size != null) bits.push(fmtBytes(s.size));
+      if (s.itemCount != null) bits.push(t('sharesItems', { n: s.itemCount }));
+      var totalBytes = Number(s.logicalBytes);
+      if (s.logicalBytesReady !== false && Number.isFinite(totalBytes) && totalBytes >= 0) bits.push(t('sharesTotalSize', { size: fmtBytes(totalBytes) }));
+      else if (s.logicalBytesReady !== false && s.size != null) bits.push(t('sharesTotalSize', { size: fmtBytes(s.size) }));
+      if ((s.type === 'file' || s.type === 'folder') && (Number(s.downloadsUsed) || 0) === 0) bits.push('◌ ' + t('sharesNeverDownloaded'));
+      if (s.hasPassword) bits.push('🔒 ' + t('sharesPasswordProtected'));
+      var expiry = Number(s.effectiveExpiresAt) || 0;
+      if (expiry > Date.now() && expiry - Date.now() <= 86400000) bits.push('⏳ ' + t('sharesExpiresSoon'));
       if (Number(s.rateKBps) > 0) bits.push('⚡ ' + Number(s.rateKBps) + ' KB/s');
+      if(s.pinned)bits.push('📌 '+t('sharesPinnedBadge'));
+      if(s.archived)bits.push('🗄 '+t('sharesArchivedBadge'));
+      if(s.revoked)bits.push('⛔ '+t('sharesRevokedBadge'));
       bits.push(fmtDate(s.createdAt));
       meta.textContent = bits.join(' · '); main.appendChild(meta);
-      // Feature 20 — live "downloading now" badge, hidden until the presence stream
-      // reports an active download for this link.
+      if(s.adminNote){var note=document.createElement('div');note.className='muted sm share-private-note';note.textContent='📝 '+s.adminNote;main.appendChild(note);}
       if (s.id) {
         var live = document.createElement('span');
         live.className = 'share-live-badge hidden';
@@ -2797,21 +2918,137 @@
       row.appendChild(main);
       var actions = document.createElement('div'); actions.className = 'share-link-actions';
       var copy = document.createElement('button'); copy.type = 'button'; copy.className = 'btn ghost sm'; copy.textContent = '🔗 ' + t('sharesCopy');
-      copy.addEventListener('click', function () { if (s.url) copyText(s.url).then(function () { toast(t('copied'), 'ok'); }); });
-      actions.appendChild(copy);
+      copy.addEventListener('click', function () { if (s.url) copyText(s.url).then(function () { toast(t('copied'), 'ok'); }); }); actions.appendChild(copy);
       var open = document.createElement('button'); open.type = 'button'; open.className = 'btn ghost sm'; open.textContent = t('sharesOpen');
-      open.addEventListener('click', function () { if (s.url) window.open(s.url, '_blank', 'noopener'); });
-      actions.appendChild(open);
+      open.addEventListener('click', function () { if (s.url) window.open(s.url, '_blank', 'noopener'); }); actions.appendChild(open);
+      var metaBtn=document.createElement('button');metaBtn.type='button';metaBtn.className='btn ghost sm';metaBtn.textContent=t('sharesEditMeta');metaBtn.addEventListener('click',function(){editHostShareMeta(s);});actions.appendChild(metaBtn);
+      var clone=document.createElement('button');clone.type='button';clone.className='btn ghost sm';clone.textContent=t('sharesDuplicate');clone.addEventListener('click',function(){cloneHostShare(s);});actions.appendChild(clone);
+      var pin=document.createElement('button');pin.type='button';pin.className='btn ghost sm';pin.textContent=t(s.pinned?'sharesUnpin':'sharesPin');pin.addEventListener('click',function(){toggleHostSharePin(s);});actions.appendChild(pin);
+      var archive=document.createElement('button');archive.type='button';archive.className='btn ghost sm';archive.textContent=t(s.archived?'sharesUnarchive':'sharesArchive');archive.addEventListener('click',function(){toggleHostShareArchive(s);});actions.appendChild(archive);
+      if(s.revoked){var react=document.createElement('button');react.type='button';react.className='btn ghost sm';react.textContent=t('sharesReactivate');react.addEventListener('click',function(){reactivateHostShare(s);});actions.appendChild(react);}
       if (s.type === 'file' || s.type === 'folder') {
         var rate = document.createElement('button'); rate.type='button'; rate.className='btn ghost sm'; rate.textContent='⚡ '+t('sharesRateEdit');
         rate.addEventListener('click', function(){ editHostShareRate(s); }); actions.appendChild(rate);
       }
       var rev = document.createElement('button'); rev.type = 'button'; rev.className = 'btn danger sm'; rev.textContent = t('sharesRevoke');
-      rev.addEventListener('click', function () { revokeHostShare(s.token); });
-      actions.appendChild(rev);
-      row.appendChild(actions);
-      listEl.appendChild(row);
+      rev.addEventListener('click', function () { revokeHostShare(s.token); }); actions.appendChild(rev);
+      row.appendChild(actions); listEl.appendChild(row);
     });
+  }
+
+  async function editHostShareMeta(share){
+    var color=window.prompt(t('sharesColor'),String(share&&share.color||''));if(color===null)return;
+    var note=window.prompt(t('sharesAdminNote'),String(share&&share.adminNote||''));if(note===null)return;
+    try{var r=await appMutate('/app/host/shares/'+encodeURIComponent(share.token)+'/meta','application/json',JSON.stringify({color:String(color).trim(),adminNote:String(note)}));if(!r.ok)throw new Error('meta');await loadHostShares();}
+    catch(_){toast(t('sharesCreateFail'),'err');}
+  }
+  async function toggleHostShareArchive(share){
+    try{var r=await appMutate('/app/host/shares/'+encodeURIComponent(share.token)+'/meta','application/json',JSON.stringify({archived:!share.archived}));if(!r.ok)throw new Error('archive');await loadHostShares();}
+    catch(_){toast(t('sharesCreateFail'),'err');}
+  }
+  async function toggleHostSharePin(share){
+    try{var r=await appMutate('/app/host/shares/'+encodeURIComponent(share.token)+'/meta','application/json',JSON.stringify({pinned:!share.pinned}));if(!r.ok)throw new Error('pin');await loadHostShares();}
+    catch(_){toast(t('sharesCreateFail'),'err');}
+  }
+  async function cloneHostShare(share){
+    var name=window.prompt(t('sharesDuplicatePrompt'),String((share&&share.name)||'Share')+' (copy)');if(name===null)return;name=String(name).trim();if(!name)return;
+    try{var r=await appMutate('/app/host/shares/'+encodeURIComponent(share.token)+'/clone','application/json',JSON.stringify({name:name}));if(!r.ok)throw new Error('clone');toast(t('sharesDuplicated'),'ok');await loadHostShares();}
+    catch(_){toast(t('sharesDuplicateFail'),'err');}
+  }
+  async function reactivateHostShare(share){
+    try{var r=await appMutate('/app/host/shares/'+encodeURIComponent(share.token)+'/reactivate','application/json','{}');if(!r.ok){var d=await r.clone().json().catch(function(){return{};});if(d.error==='data-missing')throw Object.assign(new Error('missing'),{missing:true});throw new Error('reactivate');}toast(t('sharesReactivated'),'ok');await loadHostShares();}
+    catch(e){toast(e&&e.missing?t('sharesReactivateMissing'):t('sharesRevokeFail'),'err');}
+  }
+
+  function updatePwaTrashSelectionUi(){
+    var ids=Object.keys(pwaTrashSelection), btn=$('share-trash-restore-selected'), label=$('share-trash-selected-count');
+    if(btn){btn.classList.toggle('hidden',!ids.length);btn.disabled=!ids.length;}
+    if(label)label.textContent=ids.length?t('sharesTrashSelected',{n:ids.length}):'';
+  }
+  async function loadPwaTrash(){
+    var box=$('share-trash-list'),purgeAll=$('share-trash-purge-all');if(!box)return;box.textContent='…';if(purgeAll)purgeAll.classList.add('hidden');
+    try{
+      var r=await fetch('/app/trash',{credentials:'same-origin',cache:'no-store'});if(!r.ok)throw new Error('trash');var data=await r.json();var items=data.items||[],canPurge=!!data.canPurge;box.textContent='';
+      var count=$('share-trash-count');if(count)count.textContent=String(items.length);
+      var liveIds=Object.create(null);items.forEach(function(item){liveIds[item.id]=true;});Object.keys(pwaTrashSelection).forEach(function(id){if(!liveIds[id])delete pwaTrashSelection[id];});updatePwaTrashSelectionUi();
+      if(purgeAll)purgeAll.classList.toggle('hidden',!canPurge||!items.length);if(!items.length){var em=document.createElement('p');em.className='muted sm';em.textContent=t('sharesTrashEmpty');box.appendChild(em);return;}
+      items.forEach(function(item){var row=document.createElement('div');row.className='share-link-row';var main=document.createElement('div');main.className='share-link-main';
+        var select=document.createElement('label');select.className='trash-select';var cb=document.createElement('input');cb.type='checkbox';cb.checked=!!pwaTrashSelection[item.id];cb.setAttribute('aria-label',t('sharesTrashRestore')+' '+(item.name||item.shareId));cb.addEventListener('change',function(){if(cb.checked)pwaTrashSelection[item.id]=true;else delete pwaTrashSelection[item.id];updatePwaTrashSelectionUi();});select.appendChild(cb);main.appendChild(select);
+        var strong=document.createElement('strong');strong.textContent=item.name||item.shareId;var meta=document.createElement('div');meta.className='muted sm';meta.textContent=[item.type||'',fmtBytes(item.logicalBytes||0),fmtDate(item.deletedAt)].filter(Boolean).join(' · ');main.appendChild(strong);main.appendChild(meta);var actions=document.createElement('div');actions.className='share-link-actions';var restore=document.createElement('button');restore.type='button';restore.className='btn ghost sm';restore.textContent=t('sharesTrashRestore');restore.addEventListener('click',function(){restorePwaTrash(item.id);});actions.appendChild(restore);if(canPurge){var purge=document.createElement('button');purge.type='button';purge.className='btn danger sm';purge.textContent=t('sharesTrashDelete');purge.addEventListener('click',function(){purgePwaTrash(item.id,item.name||item.shareId);});actions.appendChild(purge);}row.appendChild(main);row.appendChild(actions);box.appendChild(row);});
+    }catch(_){
+      if(purgeAll)purgeAll.classList.add('hidden');
+      Object.keys(pwaTrashSelection).forEach(function(id){delete pwaTrashSelection[id];});
+      updatePwaTrashSelectionUi();
+      if($('share-trash-count'))$('share-trash-count').textContent='—';
+      box.textContent=t('sharesTrashEmpty');
+    }
+  }
+  async function restoreSelectedPwaTrash(){
+    var ids=Object.keys(pwaTrashSelection);if(!ids.length)return;var btn=$('share-trash-restore-selected');if(btn)btn.disabled=true;var ok=0,fail=0;
+    try{
+      for(var i=0;i<ids.length;i++){try{var r=await appMutate('/app/trash/'+encodeURIComponent(ids[i])+'/restore','application/json','{}');if(!r.ok)throw new Error('restore');delete pwaTrashSelection[ids[i]];ok++;}catch(_){fail++;}}
+      if(ok)toast(t('sharesTrashRestoreSelectedOk',{n:ok}),fail?'warn':'ok');else if(fail)toast(t('sharesRevokeFail'),'err');
+      await Promise.all([loadPwaTrash(),loadPwaActionHistory(),loadHostShares(),loadReceptions(),refreshImageStats(true)]);
+    }finally{if(btn)btn.disabled=false;}
+  }
+  var PWA_ACTION_HISTORY_TYPES = {
+    'settings-changed':'actionHistorySettings',
+    'share-stats-reset':'actionHistoryStats',
+    'recipient-removed':'actionHistoryRecipient',
+    'ip-names-cleared':'actionHistoryIpNames',
+    'share-trashed':'actionHistoryShare'
+  };
+  var PWA_ACTION_HISTORY_REASONS = {
+    'state-changed':'actionHistoryChanged',
+    'already-restored':'actionHistoryRestored',
+    'already-purged':'actionHistoryPurged',
+    'legacy-unsafe':'actionHistoryLegacy',
+    'forbidden':'actionHistoryForbidden',
+    'share-gone':'actionHistoryGone',
+    'undo-unsupported':'actionHistoryUnsupported',
+    'restore-conflict':'actionHistoryRestoreConflict',
+    'undo-too-large':'actionHistoryTooLarge'
+  };
+  function pwaActionHistoryLabel(entry){var key=entry&&PWA_ACTION_HISTORY_TYPES[entry.type];return key?t(key):String(entry&&entry.type||'—');}
+  function pwaActionConfirmLabel(entry){return [pwaActionHistoryLabel(entry),entry&&entry.label||''].filter(Boolean).join(' — ');}
+  function pwaActionStatus(entry){if(entry&&entry.undone)return t('actionHistoryUndone');var key=entry&&PWA_ACTION_HISTORY_REASONS[entry.unavailableReason];return key?t(key):t('actionHistoryUnavailable');}
+  function pwaActionCanUndo(entry){return !!(entry&&!entry.undone&&entry.canUndo!==false);}
+  async function loadPwaActionHistory(){
+    var box=$('action-history-list'),count=$('action-history-count');if(!box)return;box.textContent='…';
+    try{
+      var r=await fetch('/app/undo',{credentials:'same-origin',cache:'no-store'});if(!r.ok)throw new Error('undo-history');
+      var data=await r.json(),items=Array.isArray(data.items)?data.items:[];box.textContent='';if(count)count.textContent=String(items.filter(pwaActionCanUndo).length);
+      if(!items.length){var empty=document.createElement('p');empty.className='muted sm';empty.textContent=t('actionHistoryEmpty');box.appendChild(empty);return;}
+      items.forEach(function(entry){
+        var row=document.createElement('div');row.className='share-link-row action-history-row'+(entry.undone?' is-undone':entry.canUndo===false?' is-unavailable':'');
+        var main=document.createElement('div');main.className='share-link-main';
+        var strong=document.createElement('strong');strong.textContent=pwaActionHistoryLabel(entry);main.appendChild(strong);
+        var meta=document.createElement('div');meta.className='muted sm';meta.textContent=[entry.label||'',entry.at?fmtDate(entry.at):'',entry.actor||''].filter(Boolean).join(' · ');main.appendChild(meta);
+        var actions=document.createElement('div');actions.className='share-link-actions';
+        if(entry.undone||entry.canUndo===false){var state=document.createElement('span');state.className='muted sm action-history-state';state.textContent=pwaActionStatus(entry);actions.appendChild(state);}
+        if(pwaActionCanUndo(entry)){var undo=document.createElement('button');undo.type='button';undo.className='btn sm';undo.textContent=t('actionHistoryUndo');undo.addEventListener('click',function(){undoPwaAction(entry,undo);});actions.appendChild(undo);}
+        row.appendChild(main);row.appendChild(actions);box.appendChild(row);
+      });
+    }catch(_){box.textContent=t('actionHistoryLoadFail');if(count)count.textContent='0';}
+  }
+  async function undoPwaAction(entry,button){
+    var label=pwaActionConfirmLabel(entry);if(!window.confirm(t('actionHistoryConfirm',{label:label})))return;if(button)button.disabled=true;
+    try{
+      var r=await appMutate('/app/undo/'+encodeURIComponent(entry.id),'application/json','{}');
+      if(!r.ok)throw new Error('undo-'+r.status);
+      toast(t('actionHistorySuccess'),'ok');
+      await Promise.all([loadPwaActionHistory(),loadPwaTrash(),loadHostShares(),loadReceptions(),refreshImageStats(true)]);
+    }catch(_){toast(t('actionHistoryFail'),'err');if(button)button.disabled=false;loadPwaActionHistory();}
+  }
+
+  async function restorePwaTrash(id){try{var r=await appMutate('/app/trash/'+encodeURIComponent(id)+'/restore','application/json','{}');if(!r.ok)throw new Error('restore');toast(t('sharesTrashRestored'),'ok');await Promise.all([loadPwaTrash(),loadPwaActionHistory(),loadHostShares(),loadReceptions(),refreshImageStats(true)]);}catch(_){toast(t('sharesRevokeFail'),'err');}}
+  async function appDeleteMutate(url){if(!deviceInfo)await fetchDeviceStatus();var r=await fetch(url,{method:'DELETE',credentials:'same-origin',cache:'no-store',headers:appMutationHeaders()});if(r.status===403){var e=await r.clone().json().catch(function(){return{};});if(e.error==='invalid-csrf'){await fetchDeviceStatus();r=await fetch(url,{method:'DELETE',credentials:'same-origin',cache:'no-store',headers:appMutationHeaders()});}}return r;}
+  async function purgePwaTrash(id,name){if(!window.confirm(t('sharesTrashDeleteConfirm',{name:name||''})))return;try{var r=await appDeleteMutate('/app/trash/'+encodeURIComponent(id));if(!r.ok)throw new Error('purge');toast(t('sharesTrashDeleted'),'ok');await Promise.all([loadPwaTrash(),loadPwaActionHistory(),loadHostShares(),loadReceptions(),refreshImageStats(true)]);}catch(_){toast(t('sharesTrashDeleteFail'),'err');}}
+  async function purgeAllPwaTrash(){if(!window.confirm(t('sharesTrashDeleteAllConfirm')))return;var btn=$('share-trash-purge-all'),label=btn&&btn.textContent;if(btn)btn.disabled=true;try{var r=await appDeleteMutate('/app/trash');if(!r.ok&&r.status!==207)throw new Error('purge-all');var data=await r.json().catch(function(){return{};});toast(t('sharesTrashAllDeleted',{n:Number(data.count)||0}),data.failed?'warn':'ok');await Promise.all([loadPwaTrash(),loadPwaActionHistory(),loadHostShares(),loadReceptions(),refreshImageStats(true)]);}catch(_){toast(t('sharesTrashDeleteFail'),'err');}finally{if(btn){btn.disabled=false;if(label)btn.textContent=label;}}}
+  async function runPwaGlobalSearch(){
+    var input=$('share-global-search'),box=$('share-global-search-results');if(!input||!box)return;var q=String(input.value||'').trim();box.textContent='';if(q.length<2)return;
+    try{var r=await fetch('/app/search?q='+encodeURIComponent(q)+'&semantic=1',{credentials:'same-origin',cache:'no-store'});if(!r.ok)throw new Error('search');var data=await r.json();var results=data.results||[];if(!results.length){box.textContent=t('sharesGlobalSearchEmpty');return;}results.slice(0,60).forEach(function(m){var row=document.createElement('div');row.className='share-search-hit';var title=document.createElement('strong');title.textContent=(m.scope==='user'?'👤 ':m.scope==='log'?'📜 ':m.scope==='link'?'🔗 ':'📄 ')+(m.shareName||m.file||'—');var meta=document.createElement('span');meta.className='muted sm';meta.textContent=[m.file,m.type,m.snippet].filter(Boolean).join(' · ');row.appendChild(title);row.appendChild(meta);if(m.path||m.token){var open=document.createElement('button');open.type='button';open.className='btn ghost xs';open.textContent=t('sharesOpen');open.addEventListener('click',function(){var path=m.path||(m.type==='photo'?('/images?image='+encodeURIComponent(m.token)):('/s/'+encodeURIComponent(m.token)));window.open(path,'_blank','noopener');});row.appendChild(open);}box.appendChild(row);});}
+    catch(_){box.textContent=t('sharesGlobalSearchFail');}
   }
 
   async function editHostShareRate(share) {
@@ -2908,7 +3145,7 @@
       var open = document.createElement('button'); open.type = 'button'; open.className = 'btn ghost sm'; open.textContent = t('sharesOpen');
       open.addEventListener('click', function () { if (s.url) window.open(s.url, '_blank', 'noopener'); });
       actions.appendChild(open);
-      // Feature 27 — open the two-way conversation with this link's visitors.
+      // Open the two-way conversation with this link's visitors.
       var chat = document.createElement('button'); chat.type = 'button'; chat.className = 'btn ghost sm reception-thread-btn';
       chat.textContent = '💬' + (Number(s.threadUnread) > 0 ? ' ' + s.threadUnread : '');
       if (Number(s.threadUnread) > 0) chat.classList.add('has-unread');
@@ -2930,7 +3167,7 @@
     else toast(t('sharesRevokeFail'), 'err');
   }
 
-  // Feature 27 — owner-side reception thread modal. Reads the conversation, lets
+  // Owner-side reception thread modal. Reads the conversation, lets
   // the owner reply, and clears the unread flag. Text is inserted via textContent
   // only, so a visitor message can never inject markup.
   function openReceptionThread(s) {
@@ -3100,8 +3337,9 @@
     clearInterval(imageCountdownTimer); imageCountdownTimer = setInterval(updateExpiryCountdowns, 1000); updateExpiryCountdowns();
   }
   function imageOptionsFromUi() {
+    var forceNeverExpire = !!(deviceInfo && deviceInfo.shareDefaults && deviceInfo.shareDefaults.newSharesNeverExpire);
     return {
-      expiresInSeconds: Number($('img-expiry') && $('img-expiry').value) || 0,
+      expiresInSeconds: forceNeverExpire ? 0 : (Number($('img-expiry') && $('img-expiry').value) || 0),
       maxViews: Number($('img-max-views') && $('img-max-views').value) || 0,
       password: $('img-password') ? $('img-password').value : '',
       hotlinkHosts: $('img-hotlink-hosts') ? $('img-hotlink-hosts').value : '',
@@ -3509,6 +3747,7 @@
     deleteCachedImageRecords(set);
     recordImageAction('revoked', { name: tokens.length + ' images' });
     refreshCopyAll(); updateImageBulkBar();
+    try { setTimeout(loadPwaTrash, 0); setTimeout(loadPwaActionHistory, 0); } catch (_) {}
     toast(t('revokeSuccess'), 'ok');
   }
   async function editAlbum(album) {
@@ -4106,6 +4345,8 @@
       var replaceErr = null; try { replaceErr = await response.clone().json(); } catch (_) {}
       var replaceFailure = new Error('http ' + response.status);
       if (replaceErr && replaceErr.error === 'dlp-blocked') replaceFailure.dxReason = t('sharesDlpBlocked');
+      else if (replaceErr && replaceErr.error === 'dlp-quarantined') replaceFailure.dxReason = t('dlpServerQuarantined');
+      else if (replaceErr && replaceErr.error === 'dlp-quarantine-failed') replaceFailure.dxReason = t('dlpQuarantineFailed');
       throw replaceFailure;
     }
     var responseData = await response.json();
@@ -4527,6 +4768,8 @@
         var uploadErr = null; try { uploadErr = await r.clone().json(); } catch (_) {}
         var uploadFailure = new Error('http ' + r.status);
         if (uploadErr && uploadErr.error === 'dlp-blocked') uploadFailure.dxReason = t('sharesDlpBlocked');
+        else if (uploadErr && uploadErr.error === 'dlp-quarantined') uploadFailure.dxReason = t('dlpServerQuarantined');
+        else if (uploadErr && uploadErr.error === 'dlp-quarantine-failed') uploadFailure.dxReason = t('dlpQuarantineFailed');
         throw uploadFailure;
       }
       var data = await r.json();
@@ -5516,7 +5759,7 @@
     var workers = [];
     for (var w = 0; w < Math.min(concurrency, candidates.length); w++) workers.push(worker());
     await Promise.all(workers);
-    // Learn the average rate for future pre-send estimates (feature: estimated time).
+    // Learn the average rate for future pre-send estimates (estimated time).
     var learned = emaRate(globalRate, batchTotal);
     await rememberLastBatch(candidates, ok, fail);
     if (learned > 0) { avgRate = avgRate > 0 ? avgRate * 0.5 + learned * 0.5 : learned; try { localStorage.setItem('dx-pwa-avg-rate', String(Math.round(avgRate))); } catch (_) {} }
@@ -5672,6 +5915,98 @@
   // re-add files. The sent bytes are not retained, so this restores the target and
   // settings, not the files. Matches by stored token, falling back to the saved
   // destination name for entries created before destToken existed.
+  function pwaServerActivityIcon(e) {
+    var kind = String(e && e.kind || '');
+    var status = String(e && e.status || '');
+    if (kind === 'transfer-start') return '⇄';
+    if (kind === 'transfer-complete') return '✓';
+    if (kind === 'transfer-error') return '⚠';
+    if (kind === 'ocr-start' || kind === 'ocr-complete') return 'T';
+    if (kind === 'ocr-error') return '⚠';
+    if (kind === 'antivirus') return status === 'infected' ? '🦠' : '🛡';
+    if (kind === 'trash') return '🗑';
+    if (kind === 'security') return '🔐';
+    if (kind === 'visitor') return '👥';
+    if (kind === 'system') return '⚙';
+    if (kind === 'share') return '🔗';
+    if (kind === 'audit') return '🧾';
+    return '•';
+  }
+  function pwaServerActivityGroup(e) {
+    var kind = String(e && e.kind || '').toLowerCase();
+    if (kind.indexOf('transfer-') === 0) return 'transfer';
+    if (kind === 'audit' || kind === 'share' || kind === 'trash') return 'admin';
+    if (kind === 'security' || kind === 'antivirus') return 'security';
+    if (kind === 'visitor') return 'visitor';
+    if (kind === 'system' || kind.indexOf('ocr-') === 0) return 'system';
+    return 'admin';
+  }
+  function pwaServerActivitySearchText(e) {
+    return [e && e.name,e && e.kind,e && e.status,e && e.detail,e && e.ip,e && e.direction,e && e.shareId,e && e.actor,e && e.accountId,e && e.deviceId].filter(Boolean).join(' ').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase(lang === 'fr' ? 'fr-CA' : lang === 'es' ? 'es-ES' : 'en-US');
+  }
+  function pwaServerActivityIsRoutine(e){var n=String(e&&e.name||'').toLowerCase(),k=String(e&&e.kind||'').toLowerCase();return k==='ocr-start'||k==='ocr-complete'||n==='server-restarted'||n==='server-shutdown';}
+  function refreshPwaActivityShareOptions(){var sel=$('server-activity-share');if(!sel)return;var current=sel.value,map={};serverActivityEvents.forEach(function(e){if(e&&e.shareId&&!map[e.shareId])map[e.shareId]=e.name||e.shareId;});sel.innerHTML='';var all=document.createElement('option');all.value='';all.textContent=t('serverActivityShareAll');sel.appendChild(all);Object.keys(map).sort(function(a,b){return String(map[a]).localeCompare(String(map[b]));}).forEach(function(id){var o=document.createElement('option');o.value=id;o.textContent=map[id]+' · '+id.slice(0,8);sel.appendChild(o);});if([].slice.call(sel.options).some(function(o){return o.value===current;}))sel.value=current;}
+  function renderPwaServerActivity() {
+    var list = $('server-activity-list'); if (!list) return;
+    refreshPwaActivityShareOptions(); list.innerHTML = '';
+    var locale = lang === 'fr' ? 'fr-CA' : lang === 'es' ? 'es-ES' : 'en-US';
+    var q = String($('server-activity-search') && $('server-activity-search').value || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLocaleLowerCase(locale);
+    var kind = String($('server-activity-kind') && $('server-activity-kind').value || '');
+    var share = String($('server-activity-share') && $('server-activity-share').value || '');
+    var imagesOnly=!!($('server-activity-images')&&$('server-activity-images').checked), pwaOnly=!!($('server-activity-pwa')&&$('server-activity-pwa').checked), hideRoutine=!!($('server-activity-hide-routine')&&$('server-activity-hide-routine').checked);
+    var rows = serverActivityEvents.filter(function (e) { return (!kind || pwaServerActivityGroup(e) === kind) && (!share || String(e.shareId||'')===share) && (!imagesOnly || /^(photo|album)$/i.test(String(e.resourceType||''))) && (!pwaOnly || e.source==='pwa') && (!hideRoutine || !pwaServerActivityIsRoutine(e)) && (!q || pwaServerActivitySearchText(e).indexOf(q) !== -1); });
+    if (!rows.length) { var empty = document.createElement('p'); empty.className = 'muted sm'; empty.textContent = t('serverActivityEmpty'); list.appendChild(empty); }
+    rows.slice(0, 1000).forEach(function (e) {
+      var row = document.createElement('div'); row.className = 'history-row server-activity-row ' + String(e.kind || '');
+      var icon = document.createElement('span'); icon.className = 'server-activity-icon'; icon.textContent = pwaServerActivityIcon(e); row.appendChild(icon);
+      var main = document.createElement('div'); main.className = 'history-main';
+      var strong = document.createElement('strong'); strong.textContent = String(e.name || e.kind || 'event'); main.appendChild(strong);
+      var metaParts = [];
+      if (e.direction === 'up') metaParts.push('⬆'); else if (e.direction === 'down') metaParts.push('⬇');
+      if (e.bytes) metaParts.push(fmtBytes(e.bytes));
+      if (e.status) metaParts.push(e.status);
+      if (e.ip) metaParts.push(e.ip);
+      if (e.detail) metaParts.push(e.detail);
+      var meta = document.createElement('div'); meta.className = 'history-meta'; meta.textContent = metaParts.filter(Boolean).join(' · '); main.appendChild(meta);
+      row.appendChild(main);
+      var time = document.createElement('time');
+      if (e.at) { time.textContent = fmtRelative(e.at); try { time.title = new Date(Number(e.at)).toLocaleString(locale); } catch (_) {} } else time.textContent = '—';
+      row.appendChild(time);
+      list.appendChild(row);
+    });
+    var count = $('server-activity-count'); if (count) count.textContent = String(Number(serverActivityRetained) || serverActivityEvents.length || 0);
+    var summary = $('server-activity-summary'); if (summary) summary.textContent = t('serverActivitySummary', { shown: Math.min(rows.length, 1000), total: serverActivityEvents.length });
+    updatePwaNavBadges();
+  }
+  async function loadPwaServerActivity(force) {
+    if (serverActivityLoading && !force) return;
+    serverActivityLoading = true;
+    var status = $('server-activity-status'); if (status) status.textContent = t('serverActivityLoading');
+    try {
+      var r = await fetch('/app/activity/recent?limit=1000', { credentials:'same-origin', cache:'no-store' });
+      if (!r.ok) throw new Error('activity-' + r.status);
+      var data = await r.json();
+      serverActivityEvents = Array.isArray(data.events) ? data.events.slice(0, 1000) : [];
+      serverActivityRetained = Math.max(0, Number(data.retained) || serverActivityEvents.length);
+      if (status) status.textContent = '';
+      renderPwaServerActivity();
+    } catch (_) {
+      if (status) status.textContent = t('serverActivityLoadFail');
+      if (!serverActivityEvents.length) renderPwaServerActivity();
+    } finally { serverActivityLoading = false; }
+  }
+  var pwaActivityRefreshTimer = null;
+  function startPwaActivityRefresh() {
+    if (pwaActivityRefreshTimer) return;
+    pwaActivityRefreshTimer = setInterval(function () {
+      if (activePwaPanel === 'activity' && document.visibilityState !== 'hidden') loadPwaServerActivity(false).catch(function () {});
+    }, 10000);
+  }
+  function stopPwaActivityRefresh() {
+    if (!pwaActivityRefreshTimer) return;
+    clearInterval(pwaActivityRefreshTimer); pwaActivityRefreshTimer = null;
+  }
+
   function resendFromHistory(h) {
     var dest = (h.destToken && findDest(h.destToken)) ||
       (h.destination && allDests().find(function (d) { return (d.name || '') === h.destination; })) || null;
@@ -5830,15 +6165,36 @@
   // Device pairing -----------------------------------------------------------
   var deviceInfo = null, deviceStatusPromise = null;
   var DLP_POLICY_CACHE_KEY = 'dx-pwa-dlp-policy-v1';
+  function sanitizePwaDlpAction(value, fallback) {
+    return ['log','warn','quarantine','block'].indexOf(String(value || '').toLowerCase()) !== -1 ? String(value).toLowerCase() : fallback;
+  }
   function sanitizePwaDlpPolicy(d) {
     if (!d || typeof d !== 'object') return null;
-    return { enabled:d.enabled !== false, mode:['warn','block','log'].indexOf(d.mode) !== -1 ? d.mode : 'warn', maxFiles:Math.max(1, Number(d.maxFiles) || 100), maxFileMB:Math.max(1, Number(d.maxFileMB) || 25), scanOcr:d.scanOcr !== false };
+    var actions = d.actions && typeof d.actions === 'object' ? d.actions : {};
+    return {
+      enabled:d.enabled !== false,
+      mode:['warn','block','log','quarantine'].indexOf(String(d.mode || '').toLowerCase()) !== -1 ? String(d.mode).toLowerCase() : 'warn',
+      rulesEnabled:d.rulesEnabled === true,
+      actions:{
+        low:sanitizePwaDlpAction(actions.low,'log'),
+        medium:sanitizePwaDlpAction(actions.medium,'warn'),
+        high:sanitizePwaDlpAction(actions.high,'quarantine'),
+        critical:sanitizePwaDlpAction(actions.critical,'block')
+      },
+      maxFiles:Math.max(1, Number(d.maxFiles) || 100),
+      maxFileMB:Math.max(1, Number(d.maxFileMB) || 25),
+      scanOcr:d.scanOcr !== false,
+      editable:d.editable === true
+    };
   }
   function cachedPwaDlpPolicy() {
     try { return sanitizePwaDlpPolicy(JSON.parse(localStorage.getItem(DLP_POLICY_CACHE_KEY) || 'null')); } catch (_) { return null; }
   }
   function cachePwaDlpPolicy(d) {
     var clean = sanitizePwaDlpPolicy(d); if (!clean) return;
+    // A cached policy is context only. Never persist edit authority across an
+    // offline/revoked session; the current server status must grant it again.
+    clean.editable = false;
     try { localStorage.setItem(DLP_POLICY_CACHE_KEY, JSON.stringify(clean)); } catch (_) {}
   }
   function appMutationHeaders(contentType) {
@@ -5854,7 +6210,7 @@
     if (deviceStatusPromise) return deviceStatusPromise;
     deviceStatusPromise = (async function () {
       try {
-        var r = await fetchWithTimeout('/app/device/status', { credentials: 'same-origin', cache: 'no-store' }, 10000);
+        var r = await fetchWithTimeout('/app/device/status?version=' + encodeURIComponent(APP_VERSION) + '&build=' + encodeURIComponent(APP_BUILD), { credentials: 'same-origin', cache: 'no-store' }, 10000);
         if (r.status === 401 || r.status === 403) { accountNotifications = []; renderPwaNotifications(); }
         if (!r.ok) throw new Error('status');
         deviceInfo = await r.json();
@@ -5900,13 +6256,21 @@
     return t('sharesDlpWarning', { n:d && d.count || 0, level:d && d.highest || '—' });
   }
   async function imageDlpMutate(url, contentType, body) {
-    var r = await appMutate(url, contentType, body);
-    if (r.status !== 409) return r;
-    var warning = null; try { warning = await r.clone().json(); } catch (_) {}
-    if (!warning || warning.error !== 'dlp-warning' || !warning.dlp) return r;
-    if (!window.confirm(pwaServerDlpWarningText(warning.dlp))) return null;
-    var retryUrl = url + (url.indexOf('?') >= 0 ? '&' : '?') + 'dlpOverride=1';
-    return appMutate(retryUrl, contentType, body);
+    var requestUrl = url, duplicateApproved = false, dlpApproved = false;
+    var r = await appMutate(requestUrl, contentType, body);
+    for (var guard = 0; r && r.status === 409 && guard < 3; guard++) {
+      var issue = null; try { issue = await r.clone().json(); } catch (_) {}
+      if (issue && issue.error === 'duplicate-content' && !duplicateApproved) {
+        if (!askConfirmation('replace', t('imgDuplicateFound'))) return null;
+        duplicateApproved = true; requestUrl += (requestUrl.indexOf('?') >= 0 ? '&' : '?') + 'duplicateOverride=1'; r = await appMutate(requestUrl, contentType, body); continue;
+      }
+      if (issue && issue.error === 'dlp-warning' && issue.dlp && !dlpApproved) {
+        if (!window.confirm(pwaServerDlpWarningText(issue.dlp))) return null;
+        dlpApproved = true; requestUrl += (requestUrl.indexOf('?') >= 0 ? '&' : '?') + 'dlpOverride=1'; r = await appMutate(requestUrl, contentType, body); continue;
+      }
+      break;
+    }
+    return r;
   }
 
   // PWA main-queue DLP -------------------------------------------------------
@@ -5921,20 +6285,97 @@
       enabled: !d || d.enabled !== false,
       // Unknown/unreachable policy is deliberately fail-closed. A cached policy may be
       // shown for context, but it is never trusted to authorize a new upload.
-      mode: d && ['warn','block','log'].indexOf(d.mode) !== -1 ? d.mode : 'block',
+      mode: d && ['warn','block','log','quarantine'].indexOf(d.mode) !== -1 ? d.mode : 'block',
+      rulesEnabled: !!(d && d.rulesEnabled),
+      actions: d && d.actions ? d.actions : { low:'log', medium:'warn', high:'quarantine', critical:'block' },
       maxFiles: Math.max(1, Number(d && d.maxFiles) || 100),
       maxFileMB: Math.max(1, Number(d && d.maxFileMB) || 25),
-      scanOcr: !d || d.scanOcr !== false
+      scanOcr: !d || d.scanOcr !== false,
+      editable: !!(d && d.editable) && !(deviceInfo && deviceInfo.unavailable)
     };
+  }
+  function pwaDlpEffectiveAction(policy, result) {
+    if (!policy) policy = pwaDlpPolicy();
+    var fallback = ['log','warn','quarantine','block'].indexOf(policy.mode) >= 0 ? policy.mode : 'warn';
+    var action = fallback;
+    if (policy.rulesEnabled && result && result.count) {
+      var level = ['low','medium','high','critical'].indexOf(String(result.highest || '').toLowerCase()) >= 0 ? String(result.highest).toLowerCase() : 'medium';
+      var configured = policy.actions && policy.actions[level];
+      if (['log','warn','quarantine','block'].indexOf(configured) >= 0) action = configured;
+    }
+    if (result && pwaDlpIncomplete(result)) {
+      var rank = { log:0, warn:1, quarantine:2, block:3 };
+      return rank[action] >= rank[fallback] ? action : fallback;
+    }
+    return action;
+  }
+  var dlpAutoSaveBusy = false;
+  function pwaDlpActionOptions(select, value) {
+    if (!select) return;
+    var actions = [
+      ['log', t('dlpModeLog')],
+      ['warn', t('dlpModeWarn')],
+      ['quarantine', t('dlpModeQuarantine')],
+      ['block', t('dlpModeBlock')]
+    ];
+    select.textContent = '';
+    actions.forEach(function (entry) { var option = document.createElement('option'); option.value = entry[0]; option.textContent = entry[1]; select.appendChild(option); });
+    select.value = sanitizePwaDlpAction(value, 'warn');
+  }
+  function syncPwaDlpAutoControls(policy) {
+    policy = policy || pwaDlpPolicy();
+    var enabled = !!(policy.known && policy.editable) && !dlpAutoSaveBusy;
+    var rules = $('dlp-auto-rules');
+    var selectIds = ['dlp-action-low','dlp-action-medium','dlp-action-high','dlp-action-critical'];
+    if (rules) rules.disabled = !enabled;
+    var severityEnabled = enabled && !!(rules && rules.checked);
+    selectIds.forEach(function (id) { if ($(id)) $(id).disabled = !severityEnabled; });
+    if ($('dlp-auto-save')) $('dlp-auto-save').disabled = !enabled;
+    if ($('dlp-auto-readonly')) $('dlp-auto-readonly').classList.toggle('hidden', !policy.known || policy.editable);
   }
   function renderPwaDlpPolicy() {
     var el = $('dlp-pwa-policy'); if (!el) return;
     var p = pwaDlpPolicy();
+    var actionValues = p.actions || { low:'log', medium:'warn', high:'quarantine', critical:'block' };
+    pwaDlpActionOptions($('dlp-action-low'), actionValues.low);
+    pwaDlpActionOptions($('dlp-action-medium'), actionValues.medium);
+    pwaDlpActionOptions($('dlp-action-high'), actionValues.high);
+    pwaDlpActionOptions($('dlp-action-critical'), actionValues.critical);
+    if ($('dlp-auto-rules')) $('dlp-auto-rules').checked = !!p.rulesEnabled;
+    syncPwaDlpAutoControls(p);
     if (!p.known) { el.textContent = deviceInfo && deviceInfo.unavailable ? t('dlpPolicyUnavailable') : t('dlpPolicyLoading'); return; }
     if (!p.enabled) { el.textContent = t('dlpPolicyDisabled'); return; }
-    var modeKey = p.mode === 'block' ? 'dlpModeBlock' : p.mode === 'log' ? 'dlpModeLog' : 'dlpModeWarn';
+    var modeKey = p.mode === 'block' ? 'dlpModeBlock' : p.mode === 'quarantine' ? 'dlpModeQuarantine' : p.mode === 'log' ? 'dlpModeLog' : 'dlpModeWarn';
     el.textContent = t('dlpPolicyText', { mode:t(modeKey), mb:p.maxFileMB, ocr:t(p.scanOcr ? 'dlpOcrOn' : 'dlpOcrOff') });
   }
+  async function savePwaDlpAutomaticRules() {
+    var policy = pwaDlpPolicy(), status = $('dlp-auto-status');
+    if (!policy.known || !policy.editable || dlpAutoSaveBusy) return;
+    var payload = {
+      dlpRulesEnabled: !!($('dlp-auto-rules') && $('dlp-auto-rules').checked),
+      dlpActionLow: $('dlp-action-low') ? $('dlp-action-low').value : 'log',
+      dlpActionMedium: $('dlp-action-medium') ? $('dlp-action-medium').value : 'warn',
+      dlpActionHigh: $('dlp-action-high') ? $('dlp-action-high').value : 'quarantine',
+      dlpActionCritical: $('dlp-action-critical') ? $('dlp-action-critical').value : 'block'
+    };
+    dlpAutoSaveBusy = true; syncPwaDlpAutoControls(policy); if (status) status.textContent = '';
+    try {
+      var response = await appMutate('/app/dlp/settings', 'application/json', JSON.stringify(payload));
+      var data = await response.json().catch(function () { return {}; });
+      if (!response.ok) throw new Error(data.error || 'save');
+      if (deviceInfo && data.dlp) { deviceInfo.dlp = sanitizePwaDlpPolicy(data.dlp); cachePwaDlpPolicy(deviceInfo.dlp); }
+      if (status) status.textContent = t('dlpAutoSaved');
+      toast(t('dlpAutoSaved'), 'ok');
+    } catch (_) {
+      if (status) status.textContent = t('dlpAutoSaveFail');
+      toast(t('dlpAutoSaveFail'), 'err');
+    } finally {
+      dlpAutoSaveBusy = false;
+      renderPwaDlpPolicy();
+    }
+  }
+  if ($('dlp-auto-rules')) $('dlp-auto-rules').addEventListener('change', function () { syncPwaDlpAutoControls(pwaDlpPolicy()); });
+  if ($('dlp-auto-save')) $('dlp-auto-save').addEventListener('click', savePwaDlpAutomaticRules);
   function pwaDlpFingerprint(it, policy) {
     policy = policy || pwaDlpPolicy();
     var engine = window.DirectXferDlp && window.DirectXferDlp.version || '0';
@@ -6073,10 +6514,12 @@
     if (!window.DirectXferDlp) { toast(t('dlpScanFailed', { error:'module' }), 'err'); return false; }
     var result = await runPwaDlpForItems(candidates, { toast:false });
     var incomplete = pwaDlpIncomplete(result);
-    if (result.count) toast(t('dlpFound', { n:result.count, level:result.highest || '—' }), policy.mode === 'block' ? 'err' : 'warn');
-    if (incomplete) toast(t('dlpScanIncomplete', { n:Math.max(1, (Number(result.filesSkipped)||0) + (Number(result.ocrErrors)||0) + (Number(result.scanErrors)||0) + (Number(result.incompleteEntries)||0)) }), policy.mode === 'block' ? 'err' : 'warn');
-    if (policy.mode === 'block' && (result.count || incomplete)) { toast(incomplete ? t('dlpIncompleteBlocked') : t('dlpLocalBlocked'), 'err'); renderQueue(); return false; }
-    if (policy.mode === 'log') return true;
+    var action = pwaDlpEffectiveAction(policy, result);
+    if (result.count) toast(t('dlpFound', { n:result.count, level:result.highest || '—' }), (action === 'block' || action === 'quarantine') ? 'err' : 'warn');
+    if (incomplete) toast(t('dlpScanIncomplete', { n:Math.max(1, (Number(result.filesSkipped)||0) + (Number(result.ocrErrors)||0) + (Number(result.scanErrors)||0) + (Number(result.incompleteEntries)||0)) }), action === 'block' ? 'err' : 'warn');
+    if (action === 'quarantine' && (result.count || incomplete)) { toast(incomplete ? t('dlpIncompleteQuarantined') : t('dlpLocalQuarantined'), 'err'); renderQueue(); return false; }
+    if (action === 'block' && (result.count || incomplete)) { toast(incomplete ? t('dlpIncompleteBlocked') : t('dlpLocalBlocked'), 'err'); renderQueue(); return false; }
+    if (action === 'log') return true;
     if (!result.count && !incomplete) return true;
     var needsApproval = candidates.filter(function (it) { return it.dlpLocal && (it.dlpLocal.count || pwaDlpIncomplete(it.dlpLocal)) && it.dlpApprovedFingerprint !== it.dlpLocal.fingerprint; });
     if (!needsApproval.length) return true;
@@ -6109,14 +6552,27 @@
     $('device-status').textContent = deviceInfo.unavailable ? t('deviceStatusUnavailable')
       : paired ? (currentName ? currentName + ' · ' + t('devicePaired') : t('devicePaired'))
       : deviceInfo.adminSession ? t('deviceAdmin') : t('deviceUnpaired');
+    var forceNeverExpire = !!(deviceInfo.shareDefaults && deviceInfo.shareDefaults.newSharesNeverExpire);
+    if ($('share-expiry')) {
+      if (forceNeverExpire) $('share-expiry').value = '0';
+      $('share-expiry').disabled = forceNeverExpire;
+      $('share-expiry').title = forceNeverExpire ? t('sharesExpiryForcedNever') : '';
+    }
+    if ($('share-first-use')) { if (forceNeverExpire) $('share-first-use').value = '0'; $('share-first-use').disabled = forceNeverExpire; $('share-first-use').title = forceNeverExpire ? t('sharesExpiryForcedNever') : ''; }
+    if ($('img-expiry')) { if (forceNeverExpire) $('img-expiry').value = '0'; $('img-expiry').disabled = forceNeverExpire; $('img-expiry').title = forceNeverExpire ? t('sharesExpiryForcedNever') : ''; }
     var devices = Array.isArray(deviceInfo.devices) ? deviceInfo.devices : [];
     $('device-list-wrap').classList.toggle('hidden', !devices.length);
     var list = $('device-list'); list.innerHTML = '';
     devices.forEach(function (d) {
       var row = document.createElement('div'); row.className = 'device-row';
       var main = document.createElement('div'); main.className = 'device-main';
-      var strong = document.createElement('strong'); strong.textContent = d.name + (d.current ? ' · ' + t('deviceCurrent') : ''); main.appendChild(strong);
-      var meta = document.createElement('div'); meta.className = 'device-meta'; meta.textContent = t('deviceLast', { date: fmtDate(d.lastUsedAt || d.createdAt) }); main.appendChild(meta); row.appendChild(main);
+      var platformIcons = { android:'🤖', ios:'', windows:'⊞', macos:'', linux:'🐧', other:'📱' };
+      var platformLabels = { android:'Android', ios:'iOS', windows:'Windows', macos:'macOS', linux:'Linux', other:t('devicePlatformOther') };
+      var platform = String(d.platform || 'other');
+      var strong = document.createElement('strong'); strong.textContent = (platformIcons[platform] || '📱') + ' ' + d.name + (d.current ? ' · ' + t('deviceCurrent') : ''); main.appendChild(strong);
+      var meta = document.createElement('div'); meta.className = 'device-meta';
+      var versionText = d.appVersion ? ('Direct-Xfer ' + d.appVersion + (d.appBuild ? ' · ' + d.appBuild.replace(/^.*-/, '') : '')) : t('deviceVersionUnknown');
+      meta.textContent = (platformLabels[platform] || platformLabels.other) + ' · ' + versionText + ' · ' + t('deviceLast', { date: fmtDate(d.lastUsedAt || d.createdAt) }); main.appendChild(meta); row.appendChild(main);
       // The current device already has the primary Rename action above in
       // "Accès de cet appareil". Keep list actions only for OTHER devices so the
       // settings panel never shows two Rename buttons for the same device.
@@ -6661,7 +7117,7 @@
     $('diag-status').textContent = lastDiag ? (lastDiag.badge || '') + (lastDiag.name ? ' · ' + lastDiag.name : '') : t('diagNone');
   }
 
-  // Manual update check (feature: "Check for an update"). Calls reg.update() and
+  // Manual update check ("Check for an update"). Calls reg.update() and
   // adopts a waiting worker if one appears.
   async function checkForUpdate() {
     var btn = $('check-update-btn'); if (!btn) return;
@@ -7714,7 +8170,9 @@
     await Promise.all(oldItems.map(cancelPartial)).catch(function () {});
     sending = false; paused = false;
     var resume = resumeWaiters.splice(0); resume.forEach(function (resolve) { resolve(); });
-    await Promise.all([idbClear(QUEUE_STORE), idbClear(DEST_STORE), idbClear(META_STORE), idbClear(HISTORY_STORE), idbClear(IMAGE_STORE), idbClear(OCR_INDEX_STORE), purgeDirectXferCaches(), purgeOpfsQueue()]).catch(function () {});
+    var clearDownloads = window.DirectXferDownloads && typeof window.DirectXferDownloads.clearAll === 'function'
+      ? window.DirectXferDownloads.clearAll() : Promise.resolve();
+    await Promise.all([idbClear(QUEUE_STORE), idbClear(DEST_STORE), idbClear(META_STORE), idbClear(HISTORY_STORE), idbClear(IMAGE_STORE), idbClear(OCR_INDEX_STORE), purgeDirectXferCaches(), purgeOpfsQueue(), clearDownloads]).catch(function () {});
     persistentDests = []; sessionDests = []; serverReceptions = []; persistSessionDests(); items = []; historyEntries = [];
     sessionFiles = 0; sessionBytes = 0; lifetimeFiles = 0; lifetimeBytes = 0; imageLinkUrls = []; imageRowsByToken.clear(); imageRecordsByToken.clear(); selectedImageTokens.clear(); imageActionHistory = []; tagColorMap = {}; pinnedAlbumTokens.clear(); lastDiag = null; avgRate = 0; historyFilter = '';
     lastBatchRecord = null; lastBatchSummary = null; ocrIndexRecords = []; renderOcrIndex(); privacyNames = false; document.body.classList.remove('privacy-names');
@@ -7773,7 +8231,14 @@
       var nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
       navType = nav && nav.type || '';
     } catch (_) {}
-    return autoLockMinutes() > 0 && navType !== 'reload' && closedAt > 0 && Date.now() - closedAt < 7 * 86400000;
+    var minutes = autoLockMinutes();
+    if (!minutes || navType === 'reload' || closedAt <= 0) return false;
+    // Closing/backgrounding the installed PWA must not be treated as an immediate
+    // logout. Honour the configured auto-lock delay exactly: a 15-minute setting
+    // keeps a quick close/reopen authenticated, and only requires authentication
+    // again once the app has actually remained away for at least 15 minutes.
+    var elapsed = Date.now() - closedAt;
+    return elapsed >= minutes * 60000;
   }
   async function lockSessionAutomatically(reason) {
     if (autoLockInProgress || logoutInProgress) return false;
@@ -7809,7 +8274,7 @@
   async function closeSession() {
     if (logoutInProgress || !confirm(t('closeSessionConfirm'))) return;
     logoutInProgress = true;
-    stopSharesPresence(); // feature 20 — never let the presence stream outlive the session
+    stopSharesPresence(); // never let the presence stream outlive the session
     var button = $('logout-session-btn');
     var originalLabel = button ? button.textContent : '';
     if (button) {
@@ -8032,7 +8497,7 @@
   function registerServiceWorker() {
     if (!navigator.serviceWorker || typeof navigator.serviceWorker.register !== 'function') return;
     navigator.serviceWorker.addEventListener('controllerchange', refreshToNewVersion);
-    var registrationPromise = navigator.serviceWorker.register('/direct-xfer-pwa-sw.js?v=228', { scope: '/app/' }).then(function (reg) {
+    var registrationPromise = navigator.serviceWorker.register('/direct-xfer-pwa-sw.js?v=249', { scope: '/app/' }).then(function (reg) {
       swReg = reg;
       navigator.serviceWorker.ready.then(function () {
         swReadyForInstall = true;
@@ -8068,7 +8533,7 @@
       else if (e.data && e.data.type === 'NOTIFICATION_ACTION') handleNotificationAction(e.data.action || 'open', e.data);
       else if (e.data && e.data.type === 'OPEN_NOTIFICATION_CENTER') openPwaNotificationCenter(e.data.panel || '');
       else if (e.data && e.data.type === 'PUSH_RECEIVED') notePushReceipt(e.data);
-      // Feature 2 — a Background Sync fired (connectivity returned while the app was
+      // A Background Sync fired (connectivity returned while the app was
       // backgrounded/closed): resume anything still pending.
       else if (e.data && e.data.type === 'RESUME_TRANSFERS') maybeAutoResume();
     });
@@ -8076,7 +8541,7 @@
     return registrationPromise;
   }
 
-  // Feature 2 — register both one-shot Background Sync and Periodic Sync. The
+  // Register both one-shot Background Sync and Periodic Sync. The
   // one-shot handles a disconnect/close promptly; Periodic Sync is a recovery path
   // when Android consumed the one-shot while a window was still alive. Unsupported
   // APIs or denied permissions remain harmless no-ops.
@@ -8100,8 +8565,7 @@
     } catch (_) {}
   }
 
-  // --- Added features ---------------------------------------------------------
-  // Per-file percentage helper (feature 5).
+  // Per-file percentage helper.
   function pctText(sent, total) { total = Number(total) || 0; return (total > 0 ? Math.min(100, Math.round((Number(sent) || 0) / total * 100)) : 0) + '%'; }
 
   // Theme selection is handled by the explicit dropdown at the top of Settings.
@@ -8114,8 +8578,8 @@
     if ($('theme-select')) $('theme-select').value = v;
   }
 
-  // Copy just the raw token, not the whole URL (feature 2).
-  // Pin / unpin a destination as a favourite (feature 12).
+  // Copy just the raw token, not the whole URL.
+  // Pin / unpin a destination as a favourite.
   function togglePin(token) {
     var d = findDest(token); if (!d) return;
     d.pinned = !d.pinned;
@@ -8130,7 +8594,7 @@
     if (d) btn.textContent = d.pinned ? t('unpinDestination') : t('pinDestination');
   }
 
-  // Reset the batch-scoped options (note, expiry, image/optimization) in one tap (feature 1).
+  // Reset the batch-scoped options (note, expiry, image/optimization) in one tap.
   function resetBatch() {
     if ($('batch-note')) $('batch-note').value = '';
     if ($('expire-select')) { $('expire-select').value = '0'; try { localStorage.setItem('dx-pwa-expire', '0'); } catch (_) {} }
@@ -8153,7 +8617,7 @@
     el.classList.toggle('hidden', live.length === 0);
   }
 
-  // Master "select all / none" for the queue (feature 3).
+  // Master "select all / none" for the queue.
   function toggleMasterSelect(checked) {
     sortedItems().forEach(function (it) { if (checked) selectedIds.add(it.id); else selectedIds.delete(it.id); });
     renderQueue();
@@ -8263,7 +8727,7 @@
     copyText(names.join('\n')).then(function () { toast(t('queueNamesCopied', { n: names.length }), 'ok'); }, function () { toast(t('copyFailed'), 'err'); });
   }
 
-  // Bulk rename selected files with a shared prefix + auto numbering (feature 13).
+  // Bulk rename selected files with a shared prefix + auto numbering.
   function bulkRename() {
     var targets = selectedItems();
     if (!targets.length) { toast(t('noPending'), 'warn'); return; }
@@ -8737,8 +9201,37 @@
     await idbClear(OCR_INDEX_STORE).catch(function () {}); ocrIndexRecords=[]; renderOcrIndex();
   }
 
-  // Local preview for images, video, audio, PDF and text before sending.
-  var lightboxUrl = '', lightboxPrevFocus = null;
+  // Local preview for images, video, audio, PDF and text/code before sending.
+  // Audio/video positions are persisted by file identity so reopening the PWA or
+  // closing the preview resumes near the last position instead of starting over.
+  var lightboxUrl = '', lightboxPrevFocus = null, previewResumeMedia = null, previewResumeKey = '';
+  var PWA_MEDIA_RESUME_MAX_AGE = 90 * 24 * 60 * 60 * 1000;
+  function pwaPreviewResumeKey(it) {
+    var f = it && it.file;
+    return 'dx-pwa-media-v1:' + [String(it && it.contentHash || ''), String(it && it.name || f && f.name || ''), Number(f && f.size || 0), Number(f && f.lastModified || 0)].join(':');
+  }
+  function savePwaPreviewResume(force) {
+    var m = previewResumeMedia, key = previewResumeKey; if (!m || !key) return;
+    var now = Date.now(), t0 = Number(m.currentTime) || 0, d = Number(m.duration) || 0;
+    if (t0 < 1 || (d && d - t0 < 5)) { try { localStorage.removeItem(key); } catch (_) {} return; }
+    if (!force && m.__dxSavedAt && now - m.__dxSavedAt < 2500) return;
+    m.__dxSavedAt = now;
+    try { localStorage.setItem(key, JSON.stringify({time:t0,at:now})); } catch (_) {}
+  }
+  function bindPwaPreviewResume(media, it) {
+    previewResumeMedia = media; previewResumeKey = pwaPreviewResumeKey(it);
+    media.onloadedmetadata = function () {
+      try {
+        var v=JSON.parse(localStorage.getItem(previewResumeKey)||'null'), d=Number(media.duration)||0;
+        if(v&&(!Number(v.at)||Date.now()-Number(v.at)>PWA_MEDIA_RESUME_MAX_AGE)){localStorage.removeItem(previewResumeKey);return;}
+        if(v&&Number(v.time)>=5&&(!d||Number(v.time)<d-8)) media.currentTime=Number(v.time);
+        else if(v&&d&&Number(v.time)>=d-8) localStorage.removeItem(previewResumeKey);
+      } catch (_) { try { localStorage.removeItem(previewResumeKey); } catch (__) {} }
+    };
+    media.ontimeupdate = function () { savePwaPreviewResume(false); };
+    media.onpause = function () { savePwaPreviewResume(true); };
+    media.onended = function () { try { localStorage.removeItem(previewResumeKey); } catch (_) {} };
+  }
   function resetPreviewElements() {
     ['lightbox-img', 'preview-video', 'preview-audio', 'preview-frame', 'preview-text', 'preview-generic'].forEach(function (id) {
       var el = $(id); if (!el) return; el.classList.add('hidden');
@@ -8757,15 +9250,15 @@
     $('preview-name').textContent = displayFileName(it, idx);
     var type = String(it.type || file.type || '').toLowerCase(), ext = extOf(it.name);
     try {
-      if (/^text\//.test(type) || /^(txt|md|csv|tsv|log|json|xml|html|css|js)$/.test(ext)) {
+      if (/^text\//.test(type) || /^(txt|md|markdown|csv|tsv|log|json|xml|yml|yaml|ini|conf|cfg|toml|html|htm|css|scss|less|js|mjs|cjs|ts|tsx|jsx|py|sh|bash|zsh|c|h|cpp|hpp|java|go|rs|rb|php|sql|lua|pl|kt|swift|r|dart|env|properties)$/.test(ext)) {
         var txt = await file.slice(0, 1024 * 1024).text();
         $('preview-text').textContent = txt + (file.size > 1024 * 1024 ? '\n\n…' : '');
         $('preview-text').classList.remove('hidden');
       } else {
         lightboxUrl = URL.createObjectURL(file);
         if (/^image\//.test(type)) { $('lightbox-img').src = lightboxUrl; $('lightbox-img').classList.remove('hidden'); }
-        else if (/^video\//.test(type)) { $('preview-video').src = lightboxUrl; $('preview-video').classList.remove('hidden'); }
-        else if (/^audio\//.test(type)) { $('preview-audio').src = lightboxUrl; $('preview-audio').classList.remove('hidden'); }
+        else if (/^video\//.test(type)) { $('preview-video').src = lightboxUrl; $('preview-video').classList.remove('hidden'); bindPwaPreviewResume($('preview-video'), it); }
+        else if (/^audio\//.test(type)) { $('preview-audio').src = lightboxUrl; $('preview-audio').classList.remove('hidden'); bindPwaPreviewResume($('preview-audio'), it); }
         else if (type === 'application/pdf' || ext === 'pdf') { $('preview-frame').src = lightboxUrl; $('preview-frame').classList.remove('hidden'); }
         else { $('preview-generic').textContent = fileIcon(it.name, it.type) + '  ' + fmtBytes(file.size); $('preview-generic').classList.remove('hidden'); }
       }
@@ -8824,13 +9317,14 @@
     comparePrevFocus = null;
   }
   function closeLightbox(restoreFocus) {
+    savePwaPreviewResume(true); previewResumeMedia = null; previewResumeKey = '';
     $('lightbox-overlay').classList.add('hidden'); resetPreviewElements();
     if (lightboxUrl) { URL.revokeObjectURL(lightboxUrl); lightboxUrl = ''; }
     if (restoreFocus !== false && lightboxPrevFocus && lightboxPrevFocus.focus) lightboxPrevFocus.focus();
     lightboxPrevFocus = null;
   }
 
-  // SHA-256 fingerprint of a file, copied to the clipboard (feature 16).
+  // SHA-256 fingerprint of a file, copied to the clipboard.
   async function copyFileHash(it) {
     var src = it.file || it.preparedBlob;
     if (!src || !(window.crypto && crypto.subtle)) { toast(t('hashFail'), 'err'); return; }
@@ -8845,7 +9339,7 @@
     } catch (_) { toast(t('hashFail'), 'err'); }
   }
 
-  // Export / import the local app settings as JSON (feature 17).
+  // Export / import the local app settings as JSON.
   function collectSettingKeys() {
     var keys = [];
     try { for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k && k !== IMAGE_BACKUP_KEY && (k.indexOf('dx-') === 0 || k === 'dx_sender')) keys.push(k); } } catch (_) {}
@@ -8870,7 +9364,7 @@
     } catch (_) { toast(t('settingsImportFail'), 'err'); }
   }
 
-  // Custom accent colour via a CSS variable (feature 18).
+  // Custom accent colour via a CSS variable.
   function applyAccent(color) {
     if (!/^#[0-9a-fA-F]{6}$/.test(String(color || ''))) return;
     document.documentElement.style.setProperty('--accent', color);
@@ -8885,7 +9379,7 @@
     if ($('accent-color')) $('accent-color').value = '#3b6ef6';
   }
 
-  // Capture a screen frame via getDisplayMedia and queue it as a PNG (feature 19).
+  // Capture a screen frame via getDisplayMedia and queue it as a PNG.
   async function captureScreen() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) { toast(t('captureFailed'), 'warn'); return; }
     var stream;
@@ -8905,7 +9399,7 @@
     finally { try { stream.getTracks().forEach(function (tr) { tr.stop(); }); } catch (_) {} }
   }
 
-  // Undo the last single file removed from the queue (feature 10).
+  // Undo the last single file removed from the queue.
   var lastRemoved = null, undoTimer = null, undoAction = null;
   function showUndo(name, action, customText) {
     var bar = $('undo-bar'); if (!bar) return;
@@ -8926,8 +9420,7 @@
     toast(t('fileRestored'), 'ok');
   }
 
-  // --- Added features (batch 2) ----------------------------------------------
-  // Live character counter for a length-limited input (feature 1).
+  // Live character counter for a length-limited input.
   function updateCharCount(input, counter, max) {
     if (!input || !counter) return;
     var n = (input.value || '').length;
@@ -8935,7 +9428,7 @@
     counter.classList.toggle('near', n >= max * 0.9);
   }
 
-  // Invert the current multi-selection (feature 4).
+  // Invert the current multi-selection.
   function invertSelection() {
     sortedItems().forEach(function (it) { if (selectedIds.has(it.id)) selectedIds.delete(it.id); else selectedIds.add(it.id); });
     renderQueue();
@@ -9001,7 +9494,7 @@
   }
   function clearEstimates() { items.forEach(function (it) { it.estSize = null; }); updateOptimizationEstimate(); }
 
-  // Rotate a queued image 90° clockwise before sending (feature 11).
+  // Rotate a queued image 90° clockwise before sending.
   async function rotateItem(it) {
     if (!it.file || !/^image\//.test(it.type) || /svg/i.test(it.type)) return;
     try {
@@ -9018,7 +9511,7 @@
     } catch (_) { toast(t('error'), 'err'); }
   }
 
-  // Sender-name address book: remember names used and offer them as autocomplete (feature 12).
+  // Sender-name address book: remember names used and offer them as autocomplete.
   function loadSenders() { try { var l = JSON.parse(localStorage.getItem('dx-pwa-senders') || '[]'); return Array.isArray(l) ? l : []; } catch (_) { return []; } }
   function rememberSender(name) {
     name = String(name || '').trim(); if (!name) return;
@@ -9033,7 +9526,7 @@
     loadSenders().forEach(function (n) { var o = document.createElement('option'); o.value = n; dl.appendChild(o); });
   }
 
-  // One QR encoding every image link of the session (feature 14).
+  // One QR encoding every image link of the session.
   function qrAllImageLinks() {
     if (!imageLinkUrls.length) { toast(t('noImgLinks'), 'warn'); return; }
     var text = imageLinkUrls.map(function (o) { return o.url; }).join('\n');
@@ -9041,7 +9534,7 @@
     showQrOverlay(text, t('imgQrAll').replace(/^▦\s*/, ''));
   }
 
-  // Share the selected files through the OS share sheet (feature 15).
+  // Share the selected files through the OS share sheet.
   async function shareSelection() {
     var files = selectedItems().map(function (it) { return it.file; }).filter(Boolean);
     if (!files.length) return;
@@ -9049,7 +9542,7 @@
     try { await navigator.share({ files: files }); } catch (_) {}
   }
 
-  // Per-destination presets: remember expiry + note for each link (feature 16).
+  // Per-destination presets: remember expiry + note for each link.
   function applyDestPreset(dest) {
     if (!dest || !dest.preset) return;
     if ($('expire-select') && dest.preset.expire != null) $('expire-select').value = String(dest.preset.expire);
@@ -9093,7 +9586,7 @@
     handle.addEventListener('pointercancel', finish);
   }
 
-  // Drag-to-reorder the queue in "order added" mode (feature 17). We rewrite each
+  // Drag-to-reorder the queue in "order added" mode. We rewrite each
   // item's createdAt to the new position so the ordering persists in IndexedDB.
   function reorderQueue(fromId, toId) {
     if (!fromId || fromId === toId) return;
@@ -9323,6 +9816,12 @@
     if ($('received-close')) $('received-close').addEventListener('click', closeReceivedDialog);
     if ($('received-refresh-btn')) $('received-refresh-btn').addEventListener('click', function () { var tk = $('dest-select').value; if (tk) loadReceivedFiles(tk); });
     if ($('help-close')) $('help-close').addEventListener('click', closeHelp);
+    if ($('server-activity-refresh')) $('server-activity-refresh').addEventListener('click', function () { loadPwaServerActivity(true).catch(function () {}); });
+    if ($('server-activity-search')) $('server-activity-search').addEventListener('input', renderPwaServerActivity);
+    if ($('server-activity-kind')) $('server-activity-kind').addEventListener('change', renderPwaServerActivity);
+    ['server-activity-share','server-activity-images','server-activity-pwa','server-activity-hide-routine'].forEach(function(id){if($(id))$(id).addEventListener('change',function(){if(id==='server-activity-hide-routine')try{localStorage.setItem('dxpwa-activity-hide-routine',this.checked?'1':'0');}catch(_){}renderPwaServerActivity();});});
+    if($('server-activity-hide-routine'))try{$('server-activity-hide-routine').checked=localStorage.getItem('dxpwa-activity-hide-routine')==='1';}catch(_){}
+    if ($('server-activity-reset')) $('server-activity-reset').addEventListener('click', function () { if ($('server-activity-search')) $('server-activity-search').value = ''; if ($('server-activity-kind')) $('server-activity-kind').value = ''; if($('server-activity-share'))$('server-activity-share').value=''; if($('server-activity-images'))$('server-activity-images').checked=false;if($('server-activity-pwa'))$('server-activity-pwa').checked=false;if($('server-activity-hide-routine'))$('server-activity-hide-routine').checked=false;try{localStorage.removeItem('dxpwa-activity-hide-routine');}catch(_){}renderPwaServerActivity(); });
     if ($('history-search')) $('history-search').addEventListener('input', function () { historyFilter = this.value || ''; renderHistory(); });
     if ($('check-update-btn')) $('check-update-btn').addEventListener('click', checkForUpdate);
     if ($('copy-diag-btn')) $('copy-diag-btn').addEventListener('click', copyDiagnostic);
@@ -9647,7 +10146,7 @@
       if (!anyOverlay && !e.ctrlKey && !e.metaKey && !e.altKey && /^[1-5]$/.test(e.key)) {
         e.preventDefault(); activatePwaPanel(['send', 'images', 'shares', 'activity', 'settings'][Number(e.key) - 1]); return;
       }
-      // Ctrl/Cmd+A selects the whole queue (feature 5) when it isn't empty.
+      // Ctrl/Cmd+A selects the whole queue when it isn't empty.
       if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A') && !anyOverlay && sortedItems().length) { e.preventDefault(); toggleMasterSelect(true); return; }
       // Enter sends the queue when it is ready and nothing modal is open.
       if (e.key === 'Enter' && !$('send-btn').disabled && !anyOverlay) { e.preventDefault(); startBatch(); }
@@ -9718,10 +10217,10 @@
       var dens = localStorage.getItem('dx-pwa-density') || 'normal';
       if ($('density-select')) $('density-select').value = dens; applyDensity(dens);
       if ($('share-app-btn')) $('share-app-btn').classList.toggle('hidden', !navigator.share);
-      // Custom accent colour (feature 18).
+      // Custom accent colour.
       var accent = localStorage.getItem('dx-accent') || '';
       if (accent) applyAccent(accent); else if ($('accent-color')) $('accent-color').value = '#3b6ef6';
-      // Remember which cards were left open (feature 9), and keep the expand/collapse label in sync.
+      // Remember which cards were left open, and keep the expand/collapse label in sync.
       ['history-card', 'settings-card'].forEach(function (id) {
         var el = $(id); if (!el) return;
         var key = id === 'history-card' ? 'dx-pwa-history-open' : 'dx-pwa-settings-open';
@@ -9729,10 +10228,10 @@
         el.addEventListener('toggle', function () { try { localStorage.setItem(key, el.open ? '1' : '0'); } catch (_) {} });
       });
       applyAdvancedAccordion(false); startExpiryCountdowns(); renderTagColorManager();
-      // Screen capture is desktop-only; reveal the tile only when supported (feature 19).
+      // Screen capture is desktop-only; reveal the tile only when supported.
       if ($('pick-screen') && navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) $('pick-screen').classList.remove('hidden');
-      // Restore the queue sort mode (feature 3), populate the sender address book (feature 12),
-      // reveal "Share selection" when the OS supports file sharing (feature 15).
+      // Restore the queue sort mode, populate the sender address book,
+      // reveal "Share selection" when the OS supports file sharing.
       if ($('sort-select')) { sortMode = localStorage.getItem('dx-pwa-sort') || 'added'; $('sort-select').value = sortMode; }
       queueKindFilter = localStorage.getItem('dx-pwa-queue-kind') || 'all';
       if (['all', 'images', 'videos', 'documents', 'waiting', 'done', 'errors'].indexOf(queueKindFilter) === -1) queueKindFilter = 'all';
@@ -9853,7 +10352,7 @@
     else if (launchAction === 'copy-link') { setTimeout(function () { handleNotificationAction('copy-link', { destinationUrl: launchDestinationUrl }); }, 150); }
     else if (launchAction === 'resend-last') { setTimeout(function () { handleNotificationAction('resend-last', {}); }, 150); }
     else if (launchAction === 'send') { activatePwaPanel('send', { instant: true }); }
-    if (launchOpenCenter) { setTimeout(function () { openPwaNotificationCenter(launchCenterPanel); }, 250); } // feature 14 cold start
+    if (launchOpenCenter) { setTimeout(function () { openPwaNotificationCenter(launchCenterPanel); }, 250); } // cold start
     // OS "Open with Direct-Xfer" (manifest file_handlers): receive the launched files.
     if ('launchQueue' in window && window.launchQueue && window.launchQueue.setConsumer) {
       window.launchQueue.setConsumer(function (params) {

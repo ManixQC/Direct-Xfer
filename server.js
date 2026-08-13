@@ -2,8 +2,8 @@
 
 /*
  * Direct-Xfer — direct HTTP file sharing, single server.
- * The whole backend lives in this file (config, settings, network, auth, routes).
- * The static web interface is served from ./public.
+ * Backend entry point (config, state, routes and feature orchestration).
+ * Reusable stateless helpers live under ./lib; the static web interface is served from ./public.
  */
 
 const fs = require('fs');
@@ -14,10 +14,31 @@ const net = require('net');
 const https = require('https');
 const zlib = require('zlib');
 const { execFile } = require('child_process');
+const {
+  StorageConnectorService,
+  normalizeConnector,
+  cleanRelativePath: cleanConnectorPath,
+} = require('./lib/storage-connectors');
+const {
+  int, bool, parseTrustProxy, compareSemver, isPrivateIp, ipToInt, intToIp, maskToPrefix,
+  parseIpList, ipInList, isLoopback, flagFromCode, timingSafeEqualStr, esc, jsonForScript,
+  csvField, formatBytes, encodePath,
+} = require('./lib/core-utils');
+const { hashPassword, parseHash, verifyPassword } = require('./lib/auth-utils');
+const { previewInfo, imageContentType, photoExt, imageDimensions, parseExifTiff, readPhotoMetadata } = require('./lib/photo-utils');
+const { SUBTITLE_MAX_BYTES, srtToVtt, subtitleTracksFor } = require('./lib/subtitle-utils');
+const { readZipEntries, readFileCapped } = require('./lib/file-content-utils');
+const { renderKind, highlightCode, renderMarkdown } = require('./lib/text-render');
+const { SEMANTIC_GROUPS, normalizeSearchText, searchTokens, semanticStem, semanticTerms } = require('./lib/search-utils');
+const {
+  dlpLuhnValid, dlpIbanValid, dlpRedact, dlpFinding, detectDlpFindings,
+  dlpSeverityRank, dlpPublicSummary, mergeDlpSummaries,
+} = require('./lib/dlp-utils');
 // selfsigned is optional: only needed to auto-generate a self-signed TLS cert.
 let selfsigned = null;
 try { selfsigned = require('selfsigned'); } catch (_) { selfsigned = null; }
 const { EventEmitter } = require('events');
+const { isDeepStrictEqual } = require('util');
 const { AsyncLocalStorage } = require('async_hooks');
 const { Readable, Transform } = require('stream');
 const express = require('express');
@@ -60,18 +81,10 @@ const RELEASE_DATE = (() => {
 //  CONFIGURATION (environment variables)
 // ===================================================================
 
-function int(value, def) {
-  const n = parseInt(value, 10);
-  return Number.isFinite(n) ? n : def;
-}
-function bool(value) {
-  return /^(1|true|yes|on)$/i.test(String(value || '').trim());
-}
-
 const PORT = int(process.env.PORT, 55750);
 const BIND = process.env.BIND || '0.0.0.0';
 
-// Native HTTPS (feature: serve TLS directly, so secure-context features — the
+// Native HTTPS (serve TLS directly, so secure-context features — the
 // WebCrypto used by encrypted shares, secret notes and E2E reception — work
 // without a reverse proxy). Priority: a provided cert/key (TLS_CERT + TLS_KEY) >
 // an auto-generated self-signed cert (TLS_SELF_SIGNED=true, cached under DATA_DIR).
@@ -143,13 +156,6 @@ const LOCAL_IP = (() => {
 })();
 
 // trust proxy: "true"/"1" => 1 hop (NPM), an integer => n hops, otherwise false.
-function parseTrustProxy(v) {
-  const s = String(v || '').trim().toLowerCase();
-  if (!s || ['false', '0', 'no', 'off'].includes(s)) return false;
-  if (['true', 'yes', 'on'].includes(s)) return 1;
-  const n = parseInt(s, 10);
-  return Number.isFinite(n) && n > 0 ? n : false;
-}
 const TRUST_PROXY = parseTrustProxy(process.env.TRUST_PROXY);
 
 // Initial value of auto-shutdown (then controlled from the admin interface).
@@ -168,6 +174,17 @@ const DATA_KEY = (process.env.DATA_KEY || '').trim();
 // Destination folder for incoming files (reception links).
 // Mount a WRITABLE host folder here in the container (e.g. -v /path/incoming:/Direct-Xfer).
 const INBOX_DIR = path.resolve(process.env.INBOX_DIR || '/Direct-Xfer');
+const CONNECTOR_IMPORT_DIR = path.resolve(process.env.CONNECTOR_IMPORT_DIR || path.join(INBOX_DIR, 'Imports'));
+const RCLONE_CONFIG = path.resolve(process.env.RCLONE_CONFIG || path.join(DATA_DIR, 'rclone', 'rclone.conf'));
+const storageConnectorService = new StorageConnectorService({
+  bin:process.env.RCLONE_BIN || 'rclone',
+  configPath:RCLONE_CONFIG,
+  importRoot:CONNECTOR_IMPORT_DIR,
+});
+const connectorStartupCleanup = storageConnectorService.cleanupStaleImports().then(() => true).catch((error) => {
+  console.error('[connector] stale import cleanup failed:', error.message);
+  return false;
+});
 const MAX_UPLOAD_BYTES = int(process.env.MAX_UPLOAD_BYTES, 10 * 1024 ** 3); // 10 GiB; set 0 to disable
 const MAX_CONCURRENT_UPLOADS = Math.max(1, int(process.env.MAX_CONCURRENT_UPLOADS, 8));
 const UPLOAD_IDLE_TIMEOUT_MS = Math.max(15000, int(process.env.UPLOAD_IDLE_TIMEOUT_SECONDS, 120) * 1000);
@@ -175,7 +192,7 @@ const UPLOAD_IDLE_TIMEOUT_MS = Math.max(15000, int(process.env.UPLOAD_IDLE_TIMEO
 // never holds the key). Lives under DATA_DIR so the existing volume/permissions apply.
 const ENC_DIR = path.join(DATA_DIR, 'enc');
 try { fs.mkdirSync(ENC_DIR, { recursive: true }); } catch (_) {}
-// Feature 5 — burn-after-read secret notes: opaque ciphertext blobs (the server
+// Burn-after-read secret notes: opaque ciphertext blobs (the server
 // never holds the key), deleted on first read. Kept under DATA_DIR.
 const SECRETS_DIR = path.join(DATA_DIR, 'secrets');
 try { fs.mkdirSync(SECRETS_DIR, { recursive: true }); } catch (_) {}
@@ -190,11 +207,12 @@ const MICROS_DIR = path.join(IMAGE_STORE_DIR, 'Micro');
 const PHOTO_HISTORY_DIR = path.join(IMAGE_STORE_DIR, 'History');
 const PHOTO_VERSIONS_DIR = path.join(IMAGE_STORE_DIR, 'Versions');
 const ADAPTIVE_IMAGES_DIR = path.join(IMAGE_STORE_DIR, 'Adaptive');
+const DLP_QUARANTINE_DIR = path.join(DATA_DIR, 'dlp-quarantine');
 const LEGACY_IMAGES_DIR = path.join(DATA_DIR, 'images');
 const LEGACY_THUMBS_DIR = path.join(DATA_DIR, 'thumbs');
 const LEGACY_MICROS_DIR = path.join(DATA_DIR, 'micros');
 const LEGACY_PHOTO_HISTORY_DIR = path.join(DATA_DIR, 'photo-history');
-for (const dir of [IMAGE_STORE_DIR, FULL_IMAGES_DIR, THUMBS_DIR, MICROS_DIR, PHOTO_HISTORY_DIR, PHOTO_VERSIONS_DIR, ADAPTIVE_IMAGES_DIR]) {
+for (const dir of [IMAGE_STORE_DIR, FULL_IMAGES_DIR, THUMBS_DIR, MICROS_DIR, PHOTO_HISTORY_DIR, PHOTO_VERSIONS_DIR, ADAPTIVE_IMAGES_DIR, DLP_QUARANTINE_DIR]) {
   try { fs.mkdirSync(dir, { recursive: true }); } catch (_) {}
 }
 
@@ -281,7 +299,7 @@ const IMAGE_MAX_BYTES = 40 * 1024 * 1024; // per uploaded image (PWA image links
 const THUMB_MAX_BYTES = 2 * 1024 * 1024;  // per client-generated thumbnail
 const MICRO_MAX_BYTES = 1024 * 1024;       // per client-generated micro image
 
-// Feature 2 — optional antivirus scan of received files via a co-located clamd
+// Optional antivirus scan of received files via a co-located clamd
 // (ClamAV daemon). Enabled by setting CLAMAV_HOST (e.g. "clamav"). Infected
 // uploads are quarantined and never delivered; a security alert is dispatched.
 const CLAMAV_HOST = (process.env.CLAMAV_HOST || '').trim();
@@ -336,31 +354,6 @@ try {
 // --- Admin password hashing (scrypt via built-in crypto; no plaintext at rest) ---
 // The password file only ever holds a salted hash: "scrypt$<saltB64>$<hashB64>".
 // The password is verified, never recovered.
-function hashPassword(plain) {
-  const salt = crypto.randomBytes(16);
-  const hash = crypto.scryptSync(String(plain), salt, 64);
-  return 'scrypt$' + salt.toString('base64') + '$' + hash.toString('base64');
-}
-function parseHash(stored) {
-  const m = /^scrypt\$([^$]+)\$([^$]+)$/.exec(String(stored || '').trim());
-  if (!m) return null;
-  try {
-    return { salt: Buffer.from(m[1], 'base64'), hash: Buffer.from(m[2], 'base64') };
-  } catch (_) {
-    return null;
-  }
-}
-function verifyPassword(plain, rec) {
-  if (!rec || !rec.hash || !rec.hash.length) return false;
-  let cand;
-  try {
-    cand = crypto.scryptSync(String(plain), rec.salt, rec.hash.length);
-  } catch (_) {
-    return false;
-  }
-  return cand.length === rec.hash.length && crypto.timingSafeEqual(cand, rec.hash);
-}
-
 // ---- Admin accounts (multi-account: one 'owner' + any number of 'admin') ------
 // Accounts live in the persisted store: state.meta.accounts = [ {
 //   id, username, ah:"scrypt$..", role:'owner'|'admin', totp:{…}|null,
@@ -573,18 +566,6 @@ async function fetchJson(url, opts = {}, timeoutMs = 7000) {
 let updateState = { current: APP_VERSION, latest: null, available: false, checkedAt: 0, error: null };
 
 // Compares two "x.y.z" versions -> -1 | 0 | 1 (missing parts count as 0).
-function compareSemver(a, b) {
-  const pa = String(a).replace(/^v/, '').split('.');
-  const pb = String(b).replace(/^v/, '').split('.');
-  for (let i = 0; i < 3; i++) {
-    const d = (parseInt(pa[i], 10) || 0) - (parseInt(pb[i], 10) || 0);
-    if (d !== 0) return d < 0 ? -1 : 1;
-  }
-  return 0;
-}
-
-// Resolves the newest published version. Prefers the version tag that shares the
-// reference tag's digest ("what latest points to"), else the highest semver tag.
 // Non-fatal: on any failure the previous state is kept.
 async function checkForUpdate() {
   if (!updateCheckEnabled()) return;
@@ -722,35 +703,6 @@ async function checkPort(ip, port) {
 const geoCache = new Map(); // ip -> { country, countryCode, flag, at }
 const GEO_TTL = 60 * 60 * 1000;
 
-function isPrivateIp(ip) {
-  const v = String(ip || '').replace(/^::ffff:/i, '');
-  if (!v || v === '127.0.0.1' || v === '::1') return true;
-  if (/^10\./.test(v)) return true;
-  if (/^192\.168\./.test(v)) return true;
-  if (/^172\.(1[6-9]|2\d|3[01])\./.test(v)) return true;
-  if (/^169\.254\./.test(v)) return true;
-  if (/^f[cd]/i.test(v)) return true; // IPv6 unique local
-  return false;
-}
-
-// --- Server local network (auto-detection of subnets) ---
-function ipToInt(ip) {
-  const p = String(ip).split('.');
-  if (p.length !== 4) return null;
-  const n = ((parseInt(p[0], 10) << 24) | (parseInt(p[1], 10) << 16) | (parseInt(p[2], 10) << 8) | parseInt(p[3], 10)) >>> 0;
-  return Number.isFinite(n) ? n : null;
-}
-function intToIp(n) {
-  return [(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255].join('.');
-}
-function maskToPrefix(mask) {
-  const m = ipToInt(mask);
-  if (m == null) return null;
-  let count = 0, x = m >>> 0;
-  for (let i = 0; i < 32; i++) { if ((x >>> 31) & 1) count++; x = (x << 1) >>> 0; }
-  return count;
-}
-
 let localNetsCache = null;
 function getLocalNets() {
   if (localNetsCache) return localNetsCache;
@@ -797,40 +749,6 @@ function isLocalNetwork(ip) {
 }
 
 // --- IP allowlist for the admin (IPv4 IP or CIDR) ---
-function parseIpList(str) {
-  const out = [];
-  for (const raw of String(str || '').split(/[\s,]+/)) {
-    const item = raw.trim();
-    if (!item) continue;
-    const slash = item.indexOf('/');
-    const base = ipToInt(slash === -1 ? item : item.slice(0, slash));
-    if (base == null) continue; // invalid entry -> ignored
-    let prefix = slash === -1 ? 32 : parseInt(item.slice(slash + 1), 10);
-    if (!Number.isFinite(prefix) || prefix < 0 || prefix > 32) prefix = 32;
-    const mask = prefix === 0 ? 0 : (0xffffffff << (32 - prefix)) >>> 0;
-    out.push({ base: (base & mask) >>> 0, mask });
-  }
-  return out;
-}
-function ipInList(ip, list) {
-  const n = ipToInt(String(ip || '').replace(/^::ffff:/i, ''));
-  if (n == null) return false;
-  for (const net of list) if (((n & net.mask) >>> 0) === net.base) return true;
-  return false;
-}
-function isLoopback(ip) {
-  const v = String(ip || '').replace(/^::ffff:/i, '');
-  return v === '::1' || v.startsWith('127.');
-}
-
-// Emoji flag from the ISO-3166 country code (regional indicators).
-function flagFromCode(cc) {
-  const c = String(cc || '').toUpperCase().replace(/[^A-Z]/g, '');
-  if (c.length !== 2) return '🌐';
-  const base = 0x1f1e6;
-  return c.split('').map((ch) => String.fromCodePoint(base + ch.charCodeAt(0) - 65)).join('');
-}
-
 async function geolocate(ip) {
   const clean = String(ip || '').replace(/^::ffff:/i, '');
   if (isPrivateIp(clean)) return { country: 'Local network', countryCode: null, flag: '🏠' };
@@ -878,6 +796,8 @@ const activeTransfers = new Map(); // id -> transfer
 const TRANSFER_STALL_MS = Math.max(15000, Math.min(10 * 60 * 1000, Number(process.env.TRANSFER_STALL_MS) || 45000));
 const HISTORY_MAX = 2000; // persistent transfer history kept in shares.json
 const AUDIT_MAX = 500;  // most recent admin audit entries kept (state.audit, shares.json)
+const UNDO_LOG_MAX = 25; // most recent undoable admin actions kept (state.undoLog, shares.json)
+const UNDO_DESCRIPTOR_MAX_BYTES = 256 * 1024; // hard cap per serialized reversal snapshot
 let historyViewRevision = 0; // IP labels/privacy settings that affect rendered records
 
 // Country from the cache (no network call), otherwise null.
@@ -888,7 +808,7 @@ function geoSync(ip) {
   return c && Date.now() - c.at < GEO_TTL ? c : null;
 }
 
-// --- Feature 11: per-link geo/IP access rules -------------------------------
+// --- Per-link geo/IP access rules -------------------------------
 // A share may allow/deny access by country (ISO codes) and/or by IP/CIDR. IP
 // rules are the hard boundary (synchronous). Country allowlists fail closed when
 // a public IP cannot be located; denylists remain best-effort. Local addresses are
@@ -992,7 +912,7 @@ function startTransfer(req, meta, expectedBytes) {
   if (rc && rc.recipient) { t.recipientToken = rc.recipient.token; t.recipientName = rc.recipient.name; }
   activeTransfers.set(id, t);
   emitLiveActivity('transfer-start', { shareId:t.shareId, name:t.name, direction:t.direction, bytes:0, ip:pubIp(t.ip || ''), status:'active' });
-  schedulePresenceBroadcast(); // feature 20 — a new download may have started
+  schedulePresenceBroadcast(); // a new download may have started
   return t;
 }
 
@@ -1048,7 +968,7 @@ function notifyEnabled(kind) {
   return true;
 }
 
-// Feature 28 — optional anti-spam aggregation. When notifyAggregateSeconds > 0,
+// Optional anti-spam aggregation. When notifyAggregateSeconds > 0,
 // received/downloaded events for the SAME link within a rolling window are coalesced
 // into ONE "N files received/downloaded" notification instead of one per event.
 // Unique messages and other kinds are never batched. In-memory only (like the leak
@@ -1110,7 +1030,7 @@ function emitNotify(kind, info) {
   } else {
     const label = kind === 'received' ? 'File received' : 'File downloaded';
     const icon = kind === 'received' ? '📥' : '⬇️';
-    const from = (kind === 'received' && info.sender) ? ` — from ${info.sender}` : ''; // feature 9
+    const from = (kind === 'received' && info.sender) ? ` — from ${info.sender}` : '';
     subject = `${APP_NAME} — ${label}: ${info.name}`;
     message = `${icon} ${APP_NAME} — ${label}: "${info.name}" (${formatBytes(info.bytes)})${from} — ${info.ip}${where}`;
   }
@@ -1120,7 +1040,7 @@ function emitNotify(kind, info) {
   }); // fire-and-forget
 }
 
-// Feature 4 — "link likely leaked" detection. Per share, keep an in-memory rolling
+// "link likely leaked" detection. Per share, keep an in-memory rolling
 // window of completed-download signals; when the distinct-country count crosses
 // the configured threshold, fire ONE alert (then a cooldown of the same window).
 // In-memory only (a live heuristic) — resets on restart, never bloats shares.json.
@@ -1381,7 +1301,7 @@ async function sendWebPushAwaited(kind, title, body, payload, sub) {
 
 const DAY_MS = 86400000;
 
-// Feature 5 — proactive "link expiring soon" alerts. Once per link, within the
+// Proactive "link expiring soon" alerts. Once per link, within the
 // configured window before expiry, sends one webhook and stamps the share
 // (expiryWarnedAt) so the warning is never repeated.
 function checkExpiringShares() {
@@ -1448,7 +1368,7 @@ function aggregateJournalSince(sinceTs) {
   return out;
 }
 
-// Feature 9 — periodic activity digest. Sends a recap over the webhook every
+// Periodic activity digest. Sends a recap over the webhook every
 // `digestDays` days (cadence tracked in state.meta.lastDigestAt). `force` bypasses
 // both the enabled flag and the cadence (used by the "send now" test button).
 function maybeSendDigest(force) {
@@ -1561,7 +1481,7 @@ function recordStat(t, completed) {
   }
 }
 
-// Feature 4 — records that a recipient opened their nominative link (a "read
+// Records that a recipient opened their nominative link (a "read
 // receipt"): first-seen + last-seen timestamps and where from. Called on the
 // landing page GET; downloads are tracked separately via recordStat().
 function recordRecipientView(req) {
@@ -1586,7 +1506,7 @@ function recordRecipientView(req) {
 function endTransfer(t, completed, reason = null) {
   if (!t) return;
   activeTransfers.delete(t.id);
-  schedulePresenceBroadcast(); // feature 20 — a download in progress just ended
+  schedulePresenceBroadcast(); // a download in progress just ended
   const endedAt = Date.now();
   const durationMs = endedAt - t.startedAt;
   const record = {
@@ -1595,7 +1515,7 @@ function endTransfer(t, completed, reason = null) {
     ownerId: t.ownerId || null,
     ownerName: t.ownerName || null,
     recipientName: t.recipientName || null,
-    sender: t.sender || null, // feature 9 — visitor-supplied name on a reception deposit
+    sender: t.sender || null, // visitor-supplied name on a reception deposit
     name: t.name,
     type: t.type,
     isZip: !!t.isZip,
@@ -1681,7 +1601,7 @@ function endTransfer(t, completed, reason = null) {
       name: t.name, ip: t.ip, country: t.country, bytes: t.bytes, sender: t.sender || null, shareId: t.shareId || null,
     });
   }
-  if (completed && (t.direction || 'down') === 'down') noteLeakSignal(t); // feature 4
+  if (completed && (t.direction || 'down') === 'down') noteLeakSignal(t);
   // Reinforced one-time link: only the transfer that owns the per-share claim may
   // consume the link. Concurrent full downloads are refused before streaming; an
   // interrupted claimant releases the lease so the visitor can retry.
@@ -1823,7 +1743,7 @@ const STORE_TMP = STORE_FILE + '.tmp';
 // Persistent, exportable transfer journal (append-only JSONL).
 const LOG_FILE = path.join(DATA_DIR, 'transfers.log');
 
-// Feature 22 — cryptographically chained audit journal. The append-only JSONL
+// Cryptographically chained audit journal. The append-only JSONL
 // chain is kept outside shares.json so a modified/deleted state entry is detectable.
 // For stronger separation, AUDIT_HMAC_KEY (or DATA_KEY) keeps the signing secret
 // outside DATA_DIR. Without either, a random 0600 local key is generated as a
@@ -1834,6 +1754,10 @@ const AUDIT_HEAD_FILE = path.join(DATA_DIR, 'audit-chain-head.json');
 const AUDIT_KEY_MIGRATION_FILE = path.join(DATA_DIR, 'audit-key-migration.json');
 const AUDIT_KEY_MIGRATION_CHAIN_BACKUP = path.join(DATA_DIR, 'audit-chain.log.pre-key-migration');
 const AUDIT_KEY_MIGRATION_HEAD_BACKUP = path.join(DATA_DIR, 'audit-chain-head.json.pre-key-migration');
+const AUDIT_SIGNING_PRIVATE_FILE = path.join(DATA_DIR, 'audit-signing-private.pem');
+const AUDIT_SIGNING_PUBLIC_FILE = path.join(DATA_DIR, 'audit-signing-public.pem');
+const AUDIT_SIGNING_PRIVATE_ENV = String(process.env.AUDIT_SIGNING_PRIVATE_KEY || '').replace(/\\n/g, '\n').trim();
+const AUDIT_SIGNING_PRIVATE_PATH = String(process.env.AUDIT_SIGNING_PRIVATE_KEY_FILE || '').trim();
 const AUDIT_HMAC_ENV_SECRET = String(process.env.AUDIT_HMAC_KEY || '').trim();
 const AUDIT_HMAC_SECRET = String(AUDIT_HMAC_ENV_SECRET || DATA_KEY || '').trim();
 const AUDIT_KEY_MODE = AUDIT_HMAC_SECRET ? (AUDIT_HMAC_ENV_SECRET ? 'env' : 'data-key') : 'local-file';
@@ -1842,6 +1766,8 @@ let auditChainKey = null;
 let auditKeyMigrationStatus = null;
 let auditChainHead = { seq: 0, hash: '' };
 let auditIntegrityStatus = { ok: true, reason: null, entries: 0, headSeq: 0, headHash: '', checkedAt: 0 };
+let auditProofPrivateKey = null;
+let auditProofPublicKey = null;
 
 const DEFAULT_SETTINGS = {
   shutdownAfterDownload: !!SHUTDOWN_AFTER_DOWNLOAD,
@@ -1850,34 +1776,42 @@ const DEFAULT_SETTINGS = {
   imageHotlinkHosts: [], // anti-hotlink allowlist of referring hosts; [] = allow any site
   pwChanged: false, // set to true after the mandatory password change on first login
   idleLockMinutes: 0, // auto-lock the admin UI after N minutes of inactivity (0 = off)
-  announcement: '', // feature 11 — global banner shown on every public page ('' = none)
+  announcement: '', // global banner shown on every public page ('' = none)
   // Notifications (webhook). The WEBHOOK_URL env var, when set, overrides webhookUrl.
   webhookUrl: '',
   webhookFormat: '', // '' = auto-detect from the URL
   notifyDownloads: true,
   notifyUploads: true,
   notifyMessages: true,
-  // Feature 28 — anti-spam: coalesce received/downloaded notifications for the same
+  // Anti-spam: coalesce received/downloaded notifications for the same
   // link within this many seconds into one digest (0 = off, send each immediately).
   notifyAggregateSeconds: 0,
-  // Proactive "link expiring soon" alert (feature 5). Fires once per link, this
+  // Proactive "link expiring soon" alert. Fires once per link, this
   // many hours before its expiry, over the effective webhook.
   notifyExpiring: false,
   expiryWarnHours: 24,
   notifySecurity: false, // alert on sensitive events (login, lockout, settings change, …)
-  // Feature 25 — ransomware/anomaly guard for writable public links.
+  // Ransomware/anomaly guard for writable public links.
   ransomwareProtection: true,
   ransomwareDeleteThreshold: 25, // file deletions within 60 s before the client is blocked
   ransomwareUploadThreshold: 120, // suspicious high-volume uploads within 120 s
   ransomwareBlockMinutes: 30,
-  // Feature 21 — local Data Loss Prevention (DLP) before an outgoing share is published.
+  ransomwareSuspendLink: true, // freeze writes on the affected link as well as the attacking IP
+  // Local Data Loss Prevention (DLP) before an outgoing share is published.
   // warn = require an explicit admin override, block = refuse, log = audit only.
   dlpEnabled: true,
   dlpMode: 'warn',
+  // Optional severity-based automatic reactions. Legacy dlpMode remains the
+  // fallback for incomplete scans and installations upgraded from older builds.
+  dlpRulesEnabled: false,
+  dlpActionLow: 'log',
+  dlpActionMedium: 'warn',
+  dlpActionHigh: 'quarantine',
+  dlpActionCritical: 'block',
   dlpMaxFiles: 100,
   dlpMaxFileMB: 25,
   dlpScanOcr: true,
-  // Periodic activity digest (feature 9): a recap sent every N days over the
+  // Periodic activity digest: a recap sent every N days over the
   // webhook (volume transferred, links nearing expiry, per-link activity).
   digestEnabled: false,
   digestDays: 7,
@@ -1893,6 +1827,7 @@ const DEFAULT_SETTINGS = {
   smtpTo: '',
   // Defaults pre-filled into the "new share" picker.
   defaultExpiry: 0, // seconds (0 = never)
+  newSharesNeverExpire: false, // force newly-created links to ignore expiry values
   defaultMaxDownloads: 0, // 0 = unlimited
   defaultRateKBps: 0, // 0 = unlimited
   defaultAllowZip: true,
@@ -1927,9 +1862,10 @@ const DEFAULT_SETTINGS = {
   globalRateKBps: 0, // hard server-wide download cap (0 = unlimited)
   maxUploadBytes: 0, // per received file cap (0 = use MAX_UPLOAD_BYTES env default)
   maxZipBytes: 0, // cap on a folder .zip download (0 = use MAX_ZIP_BYTES env default)
-  // Feature 10 — server-wide cap on the TOTAL bytes received across every
+  // Server-wide cap on the TOTAL bytes received across every
   // reception/collaboration link (protects the /Direct-Xfer volume). 0 = unlimited.
   receptionStorageCapGB: 0,
+  diskFreeWarnPercent: 10, // warn when free disk space falls to/below this percentage (0 = off)
   // Maintenance.
   updateCheck: true, // check for a newer version at startup (UPDATE_CHECK env can force off)
   // History / privacy.
@@ -1942,6 +1878,7 @@ const DEFAULT_SETTINGS = {
   anonymizeIps: false, // mask the last octet/hextet of IPs shown to the admin
   keepIpNames: true, // store per-IP visitor nicknames
   // Interface.
+  confirmShareRevoke: true, // ask before revoking a share from the standard admin UI
   brandName: '', // '' = the built-in app name
   accentColor: '', // '' = default accent (#3b82f6)
   adminLang: '', // default admin UI language ('' = browser)
@@ -1949,7 +1886,7 @@ const DEFAULT_SETTINGS = {
   receptionBanner: '', // default note/banner pre-filled on new reception links
   // Privacy: geolocate visitor IPs (external lookups). Off = no external calls.
   geoLookup: false,
-  // Feature 5 — bandwidth cap by time-of-day window. When enabled, downloads are
+  // Bandwidth cap by time-of-day window. When enabled, downloads are
   // additionally throttled to scheduleRateKBps (tighter of this / per-link /
   // global cap) while the local time is inside [scheduleStart, scheduleEnd).
   // The window may wrap past midnight (e.g. 08:00 → 02:00 = daytime + evening).
@@ -1957,25 +1894,25 @@ const DEFAULT_SETTINGS = {
   scheduleRateKBps: 0, // cap inside the window (0 = unlimited inside the window)
   scheduleStart: '08:00', // HH:MM (24h, server-local time)
   scheduleEnd: '18:00', // HH:MM; outside the window only the global/per-link caps apply
-  // Feature 7 — anti-abuse on public download endpoints.
+  // Anti-abuse on public download endpoints.
   publicRateLimit: true, // per-IP request rate limit on public download routes
   publicRateMax: 600, // high enough for chunked uploads while limiting floods
   publicRateWindowMin: 1, // sliding window length (minutes)
   challengeEnabled: false, // require a solved proof-of-work before large downloads
   challengeMinMB: 200, // files at least this large trigger the challenge (MB)
   challengeBits: 16, // proof-of-work difficulty (leading zero bits, 8–24)
-  // Feature 4 — "link likely leaked" alert: fires a one-shot notification when a
+  // "link likely leaked" alert: fires a one-shot notification when a
   // single link is downloaded from at least N distinct countries within a window.
   leakAlertEnabled: false,
   leakAlertCountries: 3, // distinct countries within the window that trigger the alert
   leakAlertWindowHours: 24, // rolling window + re-alert cooldown
-  // Feature 8 — custom branding / watermark on public pages.
+  // Custom branding / watermark on public pages.
   publicLogo: '', // data: URL of a custom logo (replaces the built-in mark); '' = default
   legalNotice: '', // confidentiality/legal banner shown on every public page
   watermarkPreviews: false, // overlay the visitor IP / recipient name on image & video previews
   publicTheme: 'dark', // default public-page theme: 'dark', or 'auto' (follow the device) / 'light'
   themeColor: '', // mobile browser UI color (<meta name=theme-color>); '' = derive from accent/bg
-  // Feature 9 — quick expiry presets offered in the link modals (comma list of
+  // Quick expiry presets offered in the link modals (comma list of
   // durations like "1h,6h,1d,7d,30d"). "Never" is always offered first.
   expiryPresets: '1h,1d,7d,30d',
   // Scheduled full backup + one-click restore. A backup bundles the whole store
@@ -2003,11 +1940,120 @@ const DEFAULT_SETTINGS = {
 // keyed by share id -> { name, type, count, bytes, up, down, completed,
 // interrupted, lastAt }. Cheap to keep and always available for per-link stats,
 // while the full journal lives in transfers.log.
-let state = { version: 1, shares: [], trash: [], settings: { ...DEFAULT_SETTINGS }, history: [], photoHistory: [], stats: {}, meta: {}, audit: [], ipNames: {} };
+let state = { version: 1, shares: [], trash: [], settings: { ...DEFAULT_SETTINGS }, history: [], photoHistory: [], stats: {}, meta: {}, audit: [], ipNames: {}, undoLog: [], activityLog: [] };
 
 // Live activity feed (SSE): short in-memory ring + connected admin clients.
 const LIVE_ACTIVITY_MAX = 300;
+const ACTIVITY_HISTORY_MAX = 2000;
+// Some low-value audit events are intentionally retained in the tamper-evident
+// audit chain but omitted from the user-facing Activity history. Push
+// subscription refreshes happen automatically on browsers/PWAs and otherwise
+// drown out meaningful actions.
+const ACTIVITY_IGNORED_AUDIT_ACTIONS = new Set(['push-subscribed']);
+function activityAuditAction(event) {
+  if (!event || String(event.kind || '') !== 'audit') return '';
+  return String(event.status || event.name || '').trim();
+}
+function activityEventVisible(event) {
+  return !ACTIVITY_IGNORED_AUDIT_ACTIONS.has(activityAuditAction(event));
+}
 const liveActivityEvents = [];
+function sanitizeActivityEvent(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const at = Number(raw.at);
+  const event = {
+    id: /^[A-Za-z0-9_-]{4,64}$/.test(String(raw.id || '')) ? String(raw.id) : crypto.randomBytes(6).toString('hex'),
+    at: Number.isFinite(at) && at > 0 ? Math.floor(at) : Date.now(),
+    kind: String(raw.kind || 'event').replace(/[\r\n\t]+/g, ' ').slice(0, 40),
+    shareId: raw.shareId ? String(raw.shareId).slice(0, 128) : null,
+    name: raw.name ? String(raw.name).replace(/[\r\n\t]+/g, ' ').slice(0, 220) : null,
+    direction: raw.direction === 'up' ? 'up' : raw.direction === 'down' ? 'down' : null,
+    bytes: Math.max(0, Number(raw.bytes) || 0),
+    status: raw.status ? String(raw.status).replace(/[\r\n\t]+/g, ' ').slice(0, 40) : null,
+    detail: raw.detail != null ? String(raw.detail).replace(/[\r\n\t]+/g, ' ').slice(0, 300) : null,
+    ip: raw.ip ? String(raw.ip).replace(/[\r\n\t]+/g, ' ').slice(0, 100) : null,
+    actor: raw.actor ? String(raw.actor).replace(/[\r\n\t]+/g, ' ').slice(0, 120) : null,
+    accountId: raw.accountId ? String(raw.accountId).slice(0, 120) : null,
+    deviceId: raw.deviceId ? String(raw.deviceId).slice(0, 120) : null,
+  };
+  return event;
+}
+function activityEventForClient(event) {
+  if (!event) return event;
+  let share = null;
+  if (event.shareId) {
+    share = getById(String(event.shareId));
+    if (!share) { const rec = trashItems().find((r) => r && r.share && String(r.share.id) === String(event.shareId)); share = rec && rec.share; }
+  }
+  const detailType = /^(file|folder|inbox|collab|photo|album|secret)$/i.test(String(event.detail || '')) ? String(event.detail).toLowerCase() : null;
+  // Audit events do not always carry a share id (for example image-created or
+  // album-created). Infer only from well-known action prefixes so the Activity
+  // resource filters stay complete without guessing from arbitrary filenames.
+  let auditType = null;
+  if (String(event.kind || '') === 'audit') {
+    const action = String(event.status || event.name || '').toLowerCase();
+    if (/^album-/.test(action)) auditType = 'album';
+    else if (/^(?:image|photo|photos)-/.test(action)) auditType = 'photo';
+    else if (/^(?:inbox|reception)-/.test(action)) auditType = 'inbox';
+    else if (/^collab-/.test(action)) auditType = 'collab';
+  }
+  const resourceType = event.resourceType || (share && share.type) || detailType || auditType || null;
+  const source = event.source || (event.deviceId || /^PWA(?::|$)/i.test(String(event.actor || '')) || /via PWA/i.test(String(event.detail || '')) ? 'pwa' : 'standard');
+  return { ...event, resourceType, source };
+}
+function sanitizeActivityLog(raw) {
+  if (!Array.isArray(raw)) return [];
+  const out = [], seen = new Set();
+  for (const row of raw) {
+    const event = sanitizeActivityEvent(row);
+    if (!event || !activityEventVisible(event) || seen.has(event.id)) continue;
+    seen.add(event.id); out.push(event);
+    if (out.length >= ACTIVITY_HISTORY_MAX) break;
+  }
+  return out;
+}
+function syncLiveActivityCache() {
+  liveActivityEvents.splice(0, liveActivityEvents.length, ...sanitizeActivityLog(state && state.activityLog).slice(0, LIVE_ACTIVITY_MAX));
+}
+function buildLegacyActivityLog(auditRows, transferRows) {
+  const rows = [];
+  for (const e of Array.isArray(auditRows) ? auditRows : []) {
+    if (!e || !e.action) continue;
+    rows.push(sanitizeActivityEvent({
+      id:'legacy-a-' + String(e.seq || crypto.createHash('sha1').update(JSON.stringify([e.at,e.action,e.actor,e.detail])).digest('hex').slice(0,16)),
+      at:e.at, kind:'audit', name:e.action, status:e.action, detail:e.detail,
+      ip:e.ip ? pubIp(e.ip) : null, actor:e.actor || null, accountId:e.actorId || null,
+    }));
+  }
+  for (const t of Array.isArray(transferRows) ? transferRows : []) {
+    if (!t || !t.shareId) continue;
+    const completed = t.completed !== false;
+    rows.push(sanitizeActivityEvent({
+      id:'legacy-t-' + String(t.id || crypto.createHash('sha1').update(JSON.stringify([t.shareId,t.endedAt,t.name,t.bytes])).digest('hex').slice(0,16)),
+      at:t.endedAt || t.startedAt, kind:completed ? 'transfer-complete' : 'transfer-error',
+      shareId:t.shareId, name:t.name || t.shareName || t.shareId, direction:t.direction,
+      bytes:t.bytes, status:completed ? 'completed' : 'interrupted',
+      detail:completed ? (t.sender ? 'from ' + t.sender : null) : (t.reason || t.failureReason || 'interrupted'),
+      ip:t.ip ? pubIp(t.ip) : null,
+    }));
+  }
+  return sanitizeActivityLog(rows.filter(Boolean).sort((a,b)=>(b.at||0)-(a.at||0)));
+}
+function pwaActivityActor(req) {
+  return (req && req.pwaSession && req.pwaSession.username) || (req && req.pwaDevice ? 'PWA: ' + req.pwaDevice.name : 'PWA');
+}
+function activityPrincipal(req) {
+  return {
+    actor: pwaActivityActor(req),
+    accountId: (req && req.pwaSession && req.pwaSession.accountId) || null,
+    deviceId: (req && req.pwaDevice && req.pwaDevice.id) || null,
+  };
+}
+function pwaAuditReq(req, action, detail) {
+  const account = req && req.pwaSession && req.pwaSession.accountId ? getAccountById(req.pwaSession.accountId)
+    : (req && req.pwaDevice ? pwaDeviceCreatorAccount(req.pwaDevice) : null);
+  return logAudit(action, { account, username:pwaActivityActor(req), ip:clientIp(req), detail });
+}
 // Each SSE client keeps the session id that authorized the stream. A long-lived
 // EventSource must not outlive an admin logout/session expiry: normal Express
 // middleware only runs when the connection is opened, so we re-check the backing
@@ -2026,17 +2072,19 @@ function dropLiveActivityClient(client) {
 }
 function emitLiveActivity(kind, data) {
   const payload = data && typeof data === 'object' ? data : {};
-  const event = {
-    id: crypto.randomBytes(6).toString('hex'), at: Date.now(), kind: String(kind || 'event').slice(0, 40),
-    shareId: payload.shareId ? String(payload.shareId).slice(0, 128) : null,
-    name: payload.name ? String(payload.name).replace(/[\r\n\t]+/g, ' ').slice(0, 220) : null,
-    direction: payload.direction === 'up' ? 'up' : payload.direction === 'down' ? 'down' : null,
-    bytes: Math.max(0, Number(payload.bytes) || 0), status: payload.status ? String(payload.status).slice(0, 40) : null,
-    detail: payload.detail != null ? String(payload.detail).replace(/[\r\n\t]+/g, ' ').slice(0, 300) : null,
-    ip: payload.ip ? String(payload.ip).slice(0, 100) : null,
-  };
+  const event = sanitizeActivityEvent({
+    id: crypto.randomBytes(6).toString('hex'), at: Date.now(), kind,
+    shareId: payload.shareId, name: payload.name, direction: payload.direction,
+    bytes: payload.bytes, status: payload.status, detail: payload.detail, ip: payload.ip,
+    actor: payload.actor, accountId: payload.accountId, deviceId: payload.deviceId,
+  });
+  if (!Array.isArray(state.activityLog)) state.activityLog = [];
+  state.activityLog.unshift(event); if (state.activityLog.length > ACTIVITY_HISTORY_MAX) state.activityLog.length = ACTIVITY_HISTORY_MAX;
   liveActivityEvents.unshift(event); if (liveActivityEvents.length > LIVE_ACTIVITY_MAX) liveActivityEvents.length = LIVE_ACTIVITY_MAX;
-  const line = `id: ${event.id}\nevent: activity\ndata: ${JSON.stringify(event)}\n\n`;
+  // Activity history is intentionally durable. scheduleFlush is deferred/coalesced,
+  // so even busy transfer bursts do not force a synchronous disk write per event.
+  scheduleFlush();
+  const line = `id: ${event.id}\nevent: activity\ndata: ${JSON.stringify(activityEventForClient(event))}\n\n`;
   for (const client of [...liveActivityClients]) {
     if (!liveActivityClientAuthorized(client)) { dropLiveActivityClient(client); continue; }
     try { client.res.write(line); } catch (_) { dropLiveActivityClient(client); }
@@ -2045,7 +2093,7 @@ function emitLiveActivity(kind, data) {
 }
 
 // ===================================================================
-//  LIVE DOWNLOAD PRESENCE (feature 20)
+//  LIVE DOWNLOAD PRESENCE
 //  A lightweight SSE channel that tells owners, in real time, how many
 //  downloads are in progress on each of their links ("downloading now").
 //  Reuses the active-transfer table; only real (notify) down-transfers count,
@@ -2268,6 +2316,7 @@ function deserializeStore(raw) {
 }
 
 function storeLoad() {
+  let activityMigrated = false;
   try {
     const raw = fs.readFileSync(STORE_FILE, 'utf8');
     const parsed = deserializeStore(raw);
@@ -2285,7 +2334,11 @@ function storeLoad() {
       meta: parsed.meta && typeof parsed.meta === 'object' ? parsed.meta : {},
       audit: Array.isArray(parsed.audit) ? parsed.audit.slice(0, AUDIT_MAX) : [],
       ipNames: parsed.ipNames && typeof parsed.ipNames === 'object' ? parsed.ipNames : {},
+      undoLog: sanitizeUndoLog(parsed.undoLog),
+      activityLog: sanitizeActivityLog(parsed.activityLog),
     };
+    if (!Array.isArray(parsed.activityLog)) { state.activityLog = buildLegacyActivityLog(state.audit, state.history); activityMigrated = true; }
+    syncLiveActivityCache();
   } catch (e) {
     // Encrypted store that can't be opened: abort instead of starting empty and
     // overwriting it on the first write (which would destroy all shares/settings).
@@ -2303,8 +2356,16 @@ function storeLoad() {
     }
   }
   const lifecycleMigrated = migrateLegacyFirstUseExpiryState();
+  const quarantineStateMigrated = sanitizeDlpQuarantineState();
+  const quarantineFilesMigrated = reconcileDlpQuarantineFiles();
+  const quarantineMigrated = quarantineStateMigrated || quarantineFilesMigrated;
   reindex();
-  if (lifecycleMigrated) persistNow();
+  let migrationsPersisted = true;
+  if (lifecycleMigrated || activityMigrated || quarantineMigrated) migrationsPersisted = persistNow();
+  // Quarantine is an internal managed directory. Once metadata has been loaded
+  // (and any sanitization was durably saved), remove files that no longer have a
+  // record — including leftovers from an interrupted delete or an older >200 cap.
+  if (migrationsPersisted) cleanupDlpQuarantineOrphans();
 }
 
 function persist() {
@@ -2424,7 +2485,7 @@ function linkPrefix(s) {
   if (s.type === 'inbox') return '/u/';
   if (s.type === 'collab') return '/c/';
   if (s.type === 'photo') return '/i/'; // direct image link (Photos tab)
-  if (s.type === 'album') return '/g/'; // public image gallery (feature 18)
+  if (s.type === 'album') return '/g/'; // public image gallery
   return '/s/';
 }
 
@@ -2505,6 +2566,16 @@ function shareLogicalBytes(s) {
   if (items && items.length) return items.reduce((n, it) => n + Math.max(0, Number(it && it.size) || 0), 0);
   return Math.max(0, Number(s && s.size) || 0);
 }
+function shareLogicalFileCount(s) {
+  if (!s || s.type === 'inbox' || s.type === 'collab' || s.type === 'photo' || s.type === 'album') return null;
+  const cached = shareLogicalBytesCache.get(s.id);
+  if (cached && Number.isFinite(cached.files)) return Math.max(0, Math.floor(cached.files));
+  if (s.type === 'folder') return null; // populated asynchronously by the recursive metrics scan
+  const items = shareItems(s);
+  if (items && items.length && !items.some((it) => it && it.type === 'folder')) return items.length;
+  if (s.type === 'file' && !items) return 1;
+  return null;
+}
 function shareNeedsLogicalBytesScan(s) {
   if (!s || s.type === 'inbox' || s.type === 'collab' || s.type === 'photo' || s.type === 'album') return false;
   if (s.type === 'folder') return true;
@@ -2516,21 +2587,22 @@ async function refreshShareLogicalBytes(s, force = false, expectedGeneration = n
   const now = Date.now();
   const cached = shareLogicalBytesCache.get(s.id);
   if (!force && cached && now - cached.at < SHARE_LOGICAL_BYTES_CACHE_MS) return cached.bytes;
-  let total = 0;
+  let total = 0, files = 0;
   const items = s.type === 'folder'
     ? [{ hostPath: s.hostPath, type: 'folder', size: null }]
     : (shareItems(s) || []);
   for (const item of items) {
     if (!item) continue;
-    if (item.type !== 'folder') { total += Math.max(0, Number(item.size) || 0); continue; }
+    if (item.type !== 'folder') { total += Math.max(0, Number(item.size) || 0); files += 1; continue; }
     try {
       const abs = hostToContainer(item.hostPath);
       await assertRealWithin(HOST_ROOT, abs);
-      total += await folderBytes(abs);
+      const metrics = await folderMetrics(abs);
+      total += metrics.bytes; files += metrics.files;
     } catch (_) {}
   }
   if (expectedGeneration == null || (shareLogicalBytesGeneration.get(s.id) || 0) === expectedGeneration) {
-    shareLogicalBytesCache.set(s.id, { at: now, bytes: total });
+    shareLogicalBytesCache.set(s.id, { at: now, bytes: total, files });
   }
   return total;
 }
@@ -2897,7 +2969,7 @@ function attachActiveShareExact(sh) {
   byId.set(sh.id, sh); byToken.set(sh.token, sh); indexRecipients(sh); invalidateShareLogicalBytes(sh.id);
   return true;
 }
-function softDeleteShare(id, req, persistAfter=true) {
+function softDeleteShare(id, req, persistAfter=true, undoSpec=null) {
   const sh=getById(id); if(!sh)return null;
   const beforeHistory=Array.isArray(sh.changeHistory)?JSON.parse(JSON.stringify(sh.changeHistory)):null;
   recordShareChange(sh, req, 'revoked', [], null);
@@ -2905,17 +2977,364 @@ function softDeleteShare(id, req, persistAfter=true) {
   const deletedBy=(req&&req.session&&req.session.username)||(req&&req.pwaSession&&req.pwaSession.username)||(req&&req.pwaDevice&&('PWA: '+req.pwaDevice.name))||'system';
   const rec={id:crypto.randomBytes(8).toString('hex'),deletedAt:Date.now(),deletedBy,ownerId:sh.ownerId||null,ownerName:sh.ownerName||null,share:sh};
   trashItems().unshift(rec);
+  const undoEntry = undoSpec && undoSpec.type
+    ? recordUndoable(req, undoSpec.type, undoSpec.label || ((sh.type||'share')+' '+(sh.name||'')), {kind:'restore-trash',trashId:rec.id,shareId:sh.id})
+    : null;
   if(persistAfter && !persistNow()) {
+    rollbackRecordedUndo(undoEntry);
     const i=trashItems().findIndex((row)=>row&&row.id===rec.id); if(i>=0)trashItems().splice(i,1);
     if(beforeHistory)sh.changeHistory=beforeHistory; else delete sh.changeHistory;
     attachActiveShareExact(sh); reindex(); shareLogicalBytesCache.clear();
     return false;
   }
-  if(persistAfter) emitLiveActivity('trash',{shareId:sh.id,name:sh.name,status:'deleted',detail:sh.type||'share'});
+  if(persistAfter) emitLiveActivity('trash',{shareId:sh.id,name:sh.name,status:'deleted',detail:sh.type||'share',...activityPrincipal(req)});
   try{scheduleSearchReindex();}catch(_){} return rec;
 }
 function trashRecordVisible(req,rec){ if(!rec||!rec.share)return false; return req.session.role!=='operator'||(!!rec.share.ownerId&&rec.share.ownerId===req.session.accountId); }
 function trashPublicRecord(rec){ const sh=rec.share||{}; return {id:rec.id,deletedAt:rec.deletedAt||0,deletedBy:rec.deletedBy||null,shareId:sh.id,name:sh.name||'',type:sh.type||'',ownerName:sh.ownerName||null,createdAt:sh.createdAt||0,logicalBytes:shareLogicalBytes(sh),expiresAt:shareEffectiveExpiry(sh)||null,restorable:true}; }
+
+// --- Undoable action log (#89). A bounded, persisted, chronological record of the
+// most recent destructive admin actions, each carrying a serializable descriptor
+// that performUndo() can reverse. Complements (does not replace) the recoverable
+// trash and the ephemeral post-revoke toast: this log is durable, unified across
+// action types, and reversible in one click from the admin UI.
+function sanitizeUndoLog(raw) {
+  if (!Array.isArray(raw)) return [];
+  const out = [], seen = new Set();
+  for (const row of raw) {
+    if (out.length >= UNDO_LOG_MAX) break;
+    if (!row || typeof row !== 'object') continue;
+    const id = String(row.id || '');
+    if (!/^[a-f0-9]{16}$/i.test(id) || seen.has(id)) continue;
+    let undo = cloneUndoDescriptor(row.undo);
+    if (!undo || typeof undo !== 'object' || typeof undo.kind !== 'string') continue;
+    let bytes = Infinity;
+    try { bytes = Buffer.byteLength(JSON.stringify(undo)); } catch (_) {}
+    // Keep the action visible even when a legacy/imported descriptor is too large
+    // to retain safely. Dropping the whole row made the history silently incomplete.
+    if (bytes > UNDO_DESCRIPTOR_MAX_BYTES) undo = { kind:'unavailable', reason:'undo-too-large' };
+    seen.add(id);
+    out.push({
+      id,
+      at: Math.max(0, Number(row.at) || 0),
+      type: String(row.type || 'action').slice(0, 60),
+      label: String(row.label == null ? '' : row.label).slice(0, 200),
+      actor: String(row.actor || 'system').slice(0, 120),
+      accountId: row.accountId == null ? null : String(row.accountId).slice(0, 120),
+      deviceId: row.deviceId == null ? null : String(row.deviceId).slice(0, 120),
+      undo,
+      undone: !!row.undone,
+      undoneAt: Math.max(0, Number(row.undoneAt) || 0),
+    });
+  }
+  return out;
+}
+function undoLogItems() { if (!Array.isArray(state.undoLog)) state.undoLog = []; return state.undoLog; }
+function undoRequestAccount(req) {
+  if (!req) return null;
+  if (req.session) return (req.session.accountId && getAccountById(req.session.accountId)) || findAccountByName(req.session.username || '') || null;
+  if (req.pwaSession) return (req.pwaSession.accountId && getAccountById(req.pwaSession.accountId)) || findAccountByName(req.pwaSession.username || '') || null;
+  if (req.pwaDevice) return pwaDeviceResolvedAccount(req.pwaDevice) || null;
+  return null;
+}
+function undoActor(req) {
+  return (req && req.session && req.session.username)
+      || (req && req.pwaSession && req.pwaSession.username)
+      || (req && req.pwaDevice && ('PWA: ' + req.pwaDevice.name))
+      || 'system';
+}
+function cloneUndoDescriptor(value) {
+  try { return JSON.parse(JSON.stringify(value)); }
+  catch (_) { return null; }
+}
+function rollbackRecordedUndo(entry) {
+  if (!entry) return;
+  const list = undoLogItems();
+  const i = list.findIndex((row) => row && row.id === entry.id);
+  if (i >= 0) list.splice(i, 1);
+  if (entry.__evictedUndo && list.length < UNDO_LOG_MAX) list.push(entry.__evictedUndo);
+}
+// Record a reversible action. `undo` is a plain descriptor consumed by performUndo:
+//   { kind:'settings', before:{...}, after:{...} } current values must still match `after`
+//   { kind:'ip-names', before:{...}, after:{} }    restoring cannot overwrite newer nicknames
+//   { kind:'share-assign', shareId, set, unset, expect } only touched fields are conflict-checked
+//   { kind:'restore-trash', trashId, shareId }      restore a soft-deleted share from trash
+function recordUndoable(req, type, label, undo) {
+  if (!undo || !undo.kind) return null;
+  // Always detach the history snapshot from live state. Without this clone, restoring
+  // an object (notably ipNames) could make later edits mutate the stored Undo payload.
+  let descriptor = cloneUndoDescriptor(undo);
+  if (!descriptor || !descriptor.kind) return null;
+  try {
+    if (Buffer.byteLength(JSON.stringify(descriptor)) > UNDO_DESCRIPTOR_MAX_BYTES) descriptor = { kind:'unavailable', reason:'undo-too-large' };
+  } catch (_) { return null; }
+  const account = undoRequestAccount(req);
+  const entry = {
+    id: crypto.randomBytes(8).toString('hex'),
+    at: Date.now(),
+    type: String(type || 'action').slice(0, 60),
+    label: String(label == null ? '' : label).slice(0, 200),
+    actor: undoActor(req),
+    accountId: account ? account.id : null,
+    // Device ownership is intentionally recorded separately from account ownership.
+    // A durable paired-device cookie is a narrower capability than an admin session.
+    deviceId: req && req.pwaDevice && req.pwaDevice.id ? String(req.pwaDevice.id) : null,
+    undo: descriptor,
+    undone: false, undoneAt: 0,
+  };
+  const list = undoLogItems();
+  const evicted = list.length >= UNDO_LOG_MAX ? list[list.length - 1] : null;
+  list.unshift(entry);
+  if (list.length > UNDO_LOG_MAX) list.length = UNDO_LOG_MAX;
+  if (evicted) Object.defineProperty(entry, '__evictedUndo', { value: evicted, enumerable: false, configurable: true });
+  return entry;
+}
+function undoRequestSession(req) {
+  return (req && req.session) || (req && req.pwaSession) || null;
+}
+// A real admin session retains the standard role semantics. A bare paired PWA
+// device may only see actions that exact device recorded; account ownership alone
+// must never turn the durable device cookie into a full administrator capability.
+function undoEntryVisible(req, entry) {
+  if (!entry) return false;
+  const account = undoRequestAccount(req);
+  const session = undoRequestSession(req);
+  const role = (session && session.role) || '';
+  if (role === 'owner' || role === 'admin') return true;
+  if (session) return !!(account && entry.accountId && String(entry.accountId) === String(account.id));
+  const device = req && req.pwaDevice;
+  if (!device || !account) return false;
+  // Owner/admin paired devices already have global PWA link-management visibility;
+  // keep the history equally informative, while undoEntryExecutable() below still
+  // prevents this durable device capability from becoming a settings rollback API.
+  if (account.role === 'owner' || account.role === 'admin') return true;
+  return !!(entry.accountId && String(entry.accountId) === String(account.id));
+}
+function undoValuesMatch(actual, expected) { return isDeepStrictEqual(actual, expected); }
+function undoAvailability(entry) {
+  if (!entry || entry.undone) return { canUndo: false, reason: entry && entry.undone ? 'already-undone' : 'not-found' };
+  const u = entry.undo || {};
+  if (u.kind === 'settings') {
+    // 1.52.0 entries did not store the post-action snapshot. Replaying one after a
+    // newer edit could silently clobber that newer configuration, so fail closed.
+    if (!u.after || typeof u.after !== 'object') return { canUndo: false, reason: 'legacy-unsafe' };
+    const current = getSettings();
+    for (const key of Object.keys(u.after)) if (!undoValuesMatch(current[key], u.after[key])) return { canUndo: false, reason: 'state-changed' };
+    return { canUndo: true, reason: '' };
+  }
+  if (u.kind === 'ip-names') {
+    const expected = (u.after && typeof u.after === 'object') ? u.after : {};
+    return undoValuesMatch(state.ipNames || {}, expected)
+      ? { canUndo: true, reason: '' }
+      : { canUndo: false, reason: 'state-changed' };
+  }
+  if (u.kind === 'share-assign') {
+    const live = getById(u.shareId);
+    if (!live) return { canUndo: false, reason: 'share-gone' };
+    if (!u.expect || typeof u.expect !== 'object') return { canUndo: false, reason: 'legacy-unsafe' };
+    for (const key of Object.keys(u.expect)) if (!undoValuesMatch(live[key], u.expect[key])) return { canUndo: false, reason: 'state-changed' };
+    if (Array.isArray(u.expectUnset)) for (const key of u.expectUnset) if (Object.prototype.hasOwnProperty.call(live, key)) return { canUndo: false, reason: 'state-changed' };
+    return { canUndo: true, reason: '' };
+  }
+  if (u.kind === 'unavailable') return { canUndo:false, reason:String(u.reason || 'undo-unsupported') };
+  if (u.kind === 'restore-trash') {
+    const rec = trashItems().find((r) => r && r.id === u.trashId);
+    if (rec && rec.share) {
+      const sh = rec.share;
+      const idConflict = !!(sh.id && byId.has(sh.id));
+      const tokenConflict = !!(sh.token && byToken.has(sh.token));
+      const recipientConflict = Array.isArray(sh.recipients) && sh.recipients.some((r) => r && r.token && byToken.has(r.token));
+      // restoreTrashRecord() can generate replacement ids/tokens for a manual
+      // restore. Undo must be stricter: silently changing the original URL is not
+      // a faithful reversal, so surface the collision instead.
+      if (idConflict || tokenConflict || recipientConflict) return { canUndo: false, reason: 'restore-conflict' };
+      return { canUndo: true, reason: '' };
+    }
+    if (u.shareId && getById(u.shareId)) return { canUndo: false, reason: 'already-restored' };
+    return { canUndo: false, reason: 'already-purged' };
+  }
+  return { canUndo: false, reason: 'undo-unsupported' };
+}
+function undoEntryExecutable(req, entry) {
+  if (!undoEntryVisible(req, entry)) return false;
+  const session = undoRequestSession(req);
+  const role = session && session.role || '';
+  const account = undoRequestAccount(req);
+  const u = entry && entry.undo || {};
+  if (role === 'owner' || role === 'admin') return true;
+  if (role === 'auditor') return false;
+  if (role === 'operator') {
+    // A demoted account must not retain the ability to roll back global settings
+    // merely because it created that history entry while it used to be an admin.
+    if (u.kind === 'restore-trash') {
+      const rec = trashItems().find((row) => row && row.id === u.trashId);
+      if (!rec) return true;
+      return !!(rec.share && account && rec.share.ownerId && String(rec.share.ownerId) === String(account.id));
+    }
+    if (u.kind === 'share-assign') {
+      const live = getById(u.shareId);
+      if (!live) return true;
+      return !!(account && live.ownerId && String(live.ownerId) === String(account.id));
+    }
+    return false;
+  }
+  // Device-only PWA authentication is deliberately narrow. Its own recoverable
+  // revocation may be restored, but it cannot roll back settings, another device's
+  // history, or other admin data. The account id is intentionally insufficient here:
+  // the durable PWA cookie is a per-device bearer capability, not an admin session.
+  if (!(req && req.pwaDevice) || u.kind !== 'restore-trash') return false;
+  if (!entry.deviceId || String(entry.deviceId) !== String(req.pwaDevice.id || '')) return false;
+  const rec = trashItems().find((row) => row && row.id === u.trashId);
+  // If the target was already restored/purged, let performUndo return the precise
+  // 410/409 state instead of disguising it as an authorization failure.
+  if (!rec) return true;
+  return !!(rec.share && canManagePwaImage(req, rec.share));
+}
+function undoPublicEntry(entry, req) {
+  const availability = undoAvailability(entry);
+  const executable = !req || undoEntryExecutable(req, entry);
+  const canUndo = availability.canUndo && executable;
+  const reason = availability.reason || (canUndo ? '' : executable ? '' : 'forbidden');
+  return { id: entry.id, at: entry.at || 0, type: entry.type, label: entry.label || '', actor: entry.actor || '', undone: !!entry.undone, undoneAt: entry.undoneAt || 0, canUndo, unavailableReason: reason };
+}
+function undoUnavailableStatus(reason) {
+  if (reason === 'already-purged' || reason === 'already-restored' || reason === 'share-gone') return 410;
+  if (reason === 'restore-conflict' || reason === 'state-changed') return 409;
+  if (reason === 'undo-unsupported' || reason === 'legacy-unsafe' || reason === 'undo-too-large') return 422;
+  return 409;
+}
+// Reverse a recorded action. The `undone` flag is flipped before the durable write
+// so it commits atomically with the reversal, and rolled back on any failure.
+function performUndo(entry, req) {
+  if (!entry) return { ok: false, error: 'not-found', status: 404 };
+  const availability = undoAvailability(entry);
+  if (!availability.canUndo) return { ok: false, error: availability.reason || 'unavailable', status: undoUnavailableStatus(availability.reason) };
+  const u = entry.undo || {};
+  entry.undone = true; entry.undoneAt = Date.now();
+  const fail = (error, status) => { entry.undone = false; entry.undoneAt = 0; return { ok: false, error, status }; };
+  try {
+    if (u.kind === 'settings') {
+      if (!u.before || typeof u.before !== 'object') return fail('undo-corrupt', 422);
+      const keys = Object.keys(u.before);
+      const settingsBefore = state.settings;
+      const historyBefore = Array.isArray(state.history) ? state.history.slice() : [];
+      state.settings = { ...state.settings, ...cloneUndoDescriptor(u.before) };
+      mailerCache = null;
+      if (keys.includes('historyRetentionDays')) pruneHistory();
+      if (!persistNow()) {
+        state.settings = settingsBefore;
+        state.history = historyBefore;
+        mailerCache = null;
+        return fail('write-error', 503);
+      }
+      if (keys.includes('anonymizeIps') || keys.includes('keepIpNames')) historyViewRevision++;
+    } else if (u.kind === 'ip-names') {
+      const before = state.ipNames || {};
+      state.ipNames = (u.before && typeof u.before === 'object') ? cloneUndoDescriptor(u.before) : {};
+      if (!persistNow()) { state.ipNames = before; return fail('write-error', 503); }
+      historyViewRevision++;
+    } else if (u.kind === 'share-assign') {
+      const live = getById(u.shareId);
+      if (!live) return fail('share-gone', 410);
+      const rollback = JSON.parse(JSON.stringify(live));
+      if (u.set && typeof u.set === 'object') for (const k of Object.keys(u.set)) live[k] = cloneUndoDescriptor(u.set[k]);
+      if (Array.isArray(u.unset)) for (const k of u.unset) delete live[k];
+      if (!persistNow()) { restorePlainObject(live, rollback); reindex(); return fail('write-error', 503); }
+      reindex();
+    } else if (u.kind === 'restore-trash') {
+      const list = trashItems();
+      const i = list.findIndex((r) => r && r.id === u.trashId);
+      if (i < 0) return fail(u.shareId && getById(u.shareId) ? 'already-restored' : 'already-purged', 410);
+      const original = JSON.parse(JSON.stringify(list[i]));
+      const rec = list.splice(i, 1)[0];
+      const sh = restoreTrashRecord(rec);
+      if (!sh) { list.splice(Math.min(i, list.length), 0, original); return fail('undo-corrupt', 422); }
+      recordShareChange(sh, req, 'restored', [], null);
+      if (!persistNow()) { detachActiveShare(sh); list.splice(Math.min(i, list.length), 0, original); reindex(); shareLogicalBytesCache.clear(); return fail('write-error', 503); }
+      try { scheduleSearchReindex(); } catch (_) {}
+      emitLiveActivity('trash', { shareId:sh.id, name:sh.name, status:'restored', detail:'undo' });
+    } else {
+      return fail('undo-unsupported', 422);
+    }
+  } catch (e) {
+    console.error('[undo] failed:', e && e.message);
+    return fail('undo-failed', 500);
+  }
+  return { ok: true };
+}
+
+// 1.51.0 — a one-time/legacy revoked link can be reactivated only while its
+// backing data is still present. Reactivation deliberately does NOT reset expiry,
+// quotas, counters, passwords or pause state; those are independent lifecycle
+// controls and keeping them avoids silently weakening the link configuration.
+async function shareReactivationAvailability(sh) {
+  if (!sh) return { available:false, reason:'not-found' };
+  try {
+    if (sh.encrypted && sh.encPath) {
+      const st = await fs.promises.stat(sh.encPath);
+      return { available:st.isFile(), reason:st.isFile() ? null : 'data-missing' };
+    }
+    if (sh.type === 'photo') {
+      let abs = firstExistingPhotoFile(photoOriginalPaths(sh));
+      if (!abs && sh.hostPath) {
+        const candidate = hostToContainer(sh.hostPath);
+        await assertRealWithin(HOST_ROOT, candidate);
+        const st = await fs.promises.stat(candidate);
+        if (st.isFile()) abs = candidate;
+      }
+      return { available:!!abs, reason:abs ? null : 'data-missing' };
+    }
+    if (sh.type === 'file' || sh.type === 'folder') {
+      const items = sh.type === 'folder'
+        ? [{ hostPath:sh.hostPath, type:'folder' }]
+        : (shareItems(sh) || []);
+      if (!items.length) return { available:false, reason:'data-missing' };
+      for (const item of items) {
+        if (!item || !item.hostPath) return { available:false, reason:'data-missing' };
+        const abs = hostToContainer(item.hostPath);
+        await assertRealWithin(HOST_ROOT, abs);
+        const st = await fs.promises.stat(abs);
+        if ((item.type === 'folder' && !st.isDirectory()) || (item.type !== 'folder' && !st.isFile())) return { available:false, reason:'data-missing' };
+      }
+      return { available:true, reason:null };
+    }
+    if (sh.type === 'inbox' || sh.type === 'collab') {
+      if (!sh.relDir) return { available:false, reason:'data-missing' };
+      const root = resolveWithin(INBOX_DIR, sh.relDir);
+      await assertRealWithin(INBOX_DIR, root);
+      const st = await fs.promises.stat(root);
+      return { available:st.isDirectory(), reason:st.isDirectory() ? null : 'data-missing' };
+    }
+    if (sh.type === 'album') {
+      const members = Array.isArray(sh.members) ? sh.members : [];
+      for (const token of members) {
+        const photo = getByToken(token);
+        if (!photo || photo.type !== 'photo') continue;
+        const availability = await shareReactivationAvailability(photo);
+        if (availability.available) return { available:true, reason:null };
+      }
+      return { available:false, reason:'data-missing' };
+    }
+    // Secret notes and metadata-only link types keep their payload in the store.
+    return { available:true, reason:null };
+  } catch (_) {
+    return { available:false, reason:'data-missing' };
+  }
+}
+async function reactivateRevokedShare(sh, req) {
+  if (!sh) return { ok:false, status:404, error:'not-found' };
+  if (!sh.revoked) return { ok:false, status:409, error:'not-revoked' };
+  const availability = await shareReactivationAvailability(sh);
+  if (!availability.available) return { ok:false, status:409, error:availability.reason || 'data-missing' };
+  const beforeFull = JSON.parse(JSON.stringify(sh));
+  const before = shareChangeSnapshot(sh);
+  sh.revoked = false;
+  delete sh.burnedAt; delete sh.burnedReason;
+  recordShareChange(sh, req, 'reactivated', ['revoked'], before);
+  if (!persistNow()) { restorePlainObject(sh, beforeFull); return { ok:false, status:503, error:'write-error' }; }
+  scheduleSearchReindex();
+  return { ok:true, share:sh };
+}
 function ensureRestoreTokensFree(sh){ if(!sh)return; if(!sh.token||byToken.has(sh.token))sh.token=newToken(); if(Array.isArray(sh.recipients))for(const r of sh.recipients)if(r&&(!r.token||byToken.has(r.token)))r.token=newToken(); }
 function restoreTrashRecord(rec){ if(!rec||!rec.share)return null; const sh=rec.share; if(byId.has(sh.id))sh.id=crypto.randomBytes(8).toString('hex'); ensureRestoreTokensFree(sh); state.shares.push(sh); byId.set(sh.id,sh);byToken.set(sh.token,sh);indexRecipients(sh);invalidateShareLogicalBytes(sh.id);return sh; }
 function managedInboxDirStillReferenced(sh) {
@@ -3324,6 +3743,7 @@ function settingsForClient(req, lite) {
 
 storeLoad();
 initAuditChain();
+ensureAuditProofKeys();
 initAccounts();
 trimLogIfNeeded();
 pruneHistory();
@@ -3388,15 +3808,6 @@ function clientIp(req) {
   return (req.socket && req.socket.remoteAddress) || 'unknown';
 }
 
-function timingSafeEqualStr(a, b) {
-  const ba = Buffer.from(String(a));
-  const bb = Buffer.from(String(b));
-  if (ba.length !== bb.length) {
-    crypto.timingSafeEqual(ba, ba);
-    return false;
-  }
-  return crypto.timingSafeEqual(ba, bb);
-}
 
 function parseCookies(req) {
   const header = req.headers.cookie || '';
@@ -3420,15 +3831,15 @@ function makeSharePassword(pw) {
   // scrypt hash (salt embedded in the string); no separate pwSalt needed.
   return { pwHash: hashPassword(pw) };
 }
-// Feature 6 — optional single-line hint shown on the public unlock page.
+// Optional single-line hint shown on the public unlock page.
 function normalizePwHint(v) {
   return typeof v === 'string' ? v.replace(/[\r\n\t]+/g, ' ').trim().slice(0, 200) : '';
 }
-// Feature 24 — per-visitor (per-IP) download quota. 0 / absent = unlimited.
+// Per-visitor (per-IP) download quota. 0 / absent = unlimited.
 function parseMaxDownloadsPerIp(v) {
   return Math.max(0, Math.min(1000000, Math.floor(Number(v) || 0)));
 }
-// Feature 6 — optional 1–2 code-point emoji marker for the admin links list.
+// Optional 1–2 code-point emoji marker for the admin links list.
 function normalizeShareEmoji(v) {
   const s = String(v || '').replace(/[\r\n\t]/g, '').trim();
   if (!s) return '';
@@ -3441,13 +3852,13 @@ function normalizeShareEmoji(v) {
     return [...s].slice(0, 8).join(''); // fallback: allow enough code points to keep one emoji intact
   }
 }
-// Feature 13 — total bytes-served cap per link (0 = unlimited). The UI collects GB
+// Total bytes-served cap per link (0 = unlimited). The UI collects GB
 // and converts to bytes client-side, so the value arrives (and is stored) in bytes.
 function parseMaxBytesServed(v) {
   const n = Math.floor(Number(v) || 0);
   return Number.isFinite(n) && n > 0 ? Math.min(Number.MAX_SAFE_INTEGER, n) : 0;
 }
-// Feature 35 — strict, shared parser for per-link throughput caps. The old
+// Strict, shared parser for per-link throughput caps. The old
 // routes mixed parseInt()/Number() and silently converted malformed or negative
 // values to 0 (unlimited), so an invalid edit could accidentally remove a cap.
 // Keep the accepted range huge without ever overflowing the stored bytes/s value.
@@ -3488,14 +3899,14 @@ function setUnlockCookie(req, res, s) {
   );
 }
 
-// --- Feature 28: "request access" gate --------------------------------------
+// --- "request access" gate --------------------------------------
 // A locked link shows a request form instead of the content. The visitor's
 // browser gets a per-link cookie (dxreq_<token>) tying it to their pending
 // request; once an admin approves that request, the same browser is let in
 // automatically on its next visit — no e-mail round-trip required.
 const ACCESS_REQUESTS_MAX = 200; // per-link cap so a spammed form can't bloat shares.json
-const VISITOR_FEEDBACK_MAX = 200; // feature 38 — same cap for moderated visitor feedback
-// Feature 27 — two-way reception thread: a running conversation between the link
+const VISITOR_FEEDBACK_MAX = 200; // same cap for moderated visitor feedback
+// Two-way reception thread: a running conversation between the link
 // owner and its visitors, scoped to one reception (inbox) link. Bounded so a
 // spammed thread can't bloat shares.json.
 const RECEPTION_THREAD_MAX = 200;
@@ -3528,7 +3939,7 @@ function setAccessRequestCookie(req, res, s, id) {
   res.setHeader('Set-Cookie', `${accessRequestCookieName(s)}=${id}; HttpOnly; SameSite=Lax; Path=${rel}; Max-Age=2592000${secureCookie(req)}`);
 }
 
-// --- Feature 7: anti-abuse on public download endpoints ---
+// --- Anti-abuse on public download endpoints ---
 
 // Per-IP sliding-window rate limiter for public download requests. Each entry is
 // the list of recent request timestamps (ms) for that IP; pruned lazily on read
@@ -3672,7 +4083,7 @@ function challengeGateZip(req, res) {
   return false;
 }
 
-// Feature 22 — remember the devices (hash of User-Agent + login IP) an account has
+// Remember the devices (hash of User-Agent + login IP) an account has
 // signed in from, so a login from an unrecognized one can be flagged. Bounded.
 const KNOWN_DEVICES_MAX = 50;
 function loginDeviceKey(req, ip) {
@@ -3743,6 +4154,117 @@ function ensureAuditChainKey() {
     } else console.error('[audit] could not persist audit-chain key:', e.message);
   }
   return auditChainKey;
+}
+
+// Detached Ed25519 proof key. The live journal remains HMAC-chained for fast
+// append/verification, while exported proof bundles are signed asymmetrically so
+// a third party can verify them without receiving a secret capable of forgery.
+function ensureAuditProofKeys() {
+  if (auditProofPrivateKey && auditProofPublicKey) return { privateKey:auditProofPrivateKey, publicKey:auditProofPublicKey };
+  const externalKeyConfigured = !!(AUDIT_SIGNING_PRIVATE_ENV || AUDIT_SIGNING_PRIVATE_PATH);
+  let privatePem = AUDIT_SIGNING_PRIVATE_ENV;
+  let localKeyLoaded = false;
+  if (!privatePem && AUDIT_SIGNING_PRIVATE_PATH) {
+    try { privatePem = fs.readFileSync(path.resolve(AUDIT_SIGNING_PRIVATE_PATH), 'utf8'); }
+    catch (error) {
+      console.error('[audit] could not read AUDIT_SIGNING_PRIVATE_KEY_FILE:', error.message);
+      throw Object.assign(new Error('audit-signing-key-unreadable'), { code:'audit-signing-key-invalid' });
+    }
+  }
+  if (!privatePem) {
+    try { privatePem = fs.readFileSync(AUDIT_SIGNING_PRIVATE_FILE, 'utf8'); localKeyLoaded = true; } catch (_) {}
+  }
+  try {
+    if (privatePem) auditProofPrivateKey = crypto.createPrivateKey(privatePem);
+  } catch (error) {
+    console.error('[audit] invalid Ed25519 signing key:', error.message);
+    auditProofPrivateKey = null;
+    if (externalKeyConfigured || localKeyLoaded) throw Object.assign(new Error('audit-signing-key-invalid'), { code:'audit-signing-key-invalid' });
+  }
+  if (auditProofPrivateKey && auditProofPrivateKey.asymmetricKeyType !== 'ed25519') {
+    auditProofPrivateKey = null;
+    if (externalKeyConfigured || localKeyLoaded) throw Object.assign(new Error('audit-signing-key-not-ed25519'), { code:'audit-signing-key-invalid' });
+  }
+  if (!auditProofPrivateKey) {
+    const pair = crypto.generateKeyPairSync('ed25519');
+    auditProofPrivateKey = pair.privateKey;
+    privatePem = pair.privateKey.export({ type:'pkcs8', format:'pem' });
+    if (!AUDIT_SIGNING_PRIVATE_ENV && !AUDIT_SIGNING_PRIVATE_PATH) {
+      try {
+        // Exclusive creation prevents two containers sharing /data from silently
+        // replacing one another's proof identity during their first export.
+        durableAuditCreateSync(AUDIT_SIGNING_PRIVATE_FILE, privatePem);
+        fs.chmodSync(AUDIT_SIGNING_PRIVATE_FILE, 0o600);
+      } catch (error) {
+        if (error && error.code === 'EEXIST') {
+          try {
+            auditProofPrivateKey = crypto.createPrivateKey(fs.readFileSync(AUDIT_SIGNING_PRIVATE_FILE, 'utf8'));
+            if (auditProofPrivateKey.asymmetricKeyType !== 'ed25519') throw new Error('not-ed25519');
+          } catch (readError) {
+            auditProofPrivateKey = null;
+            throw Object.assign(new Error('audit-signing-key-invalid'), { code:'audit-signing-key-invalid', cause:readError });
+          }
+        } else {
+          console.error('[audit] could not persist Ed25519 signing key:', error.message);
+          auditProofPrivateKey = null;
+          throw Object.assign(new Error('audit-signing-key-persist-failed'), { code:'audit-signing-key-persist-failed' });
+        }
+      }
+    }
+  }
+  auditProofPublicKey = crypto.createPublicKey(auditProofPrivateKey);
+  const publicPem = auditProofPublicKey.export({ type:'spki', format:'pem' });
+  try { fs.writeFileSync(AUDIT_SIGNING_PUBLIC_FILE, publicPem, { mode:0o644 }); } catch (_) {}
+  return { privateKey:auditProofPrivateKey, publicKey:auditProofPublicKey };
+}
+function auditProofKeyId(publicKey) {
+  const der = publicKey.export({ type:'spki', format:'der' });
+  return crypto.createHash('sha256').update(der).digest('hex');
+}
+function auditProofEntryDigest(entries) {
+  const hash = crypto.createHash('sha256');
+  for (const entry of entries || []) hash.update(JSON.stringify(entry) + '\n');
+  return hash.digest('hex');
+}
+function auditProofPayload(proof) {
+  return JSON.stringify([
+    Number(proof.proofVersion) || 0, String(proof.app || ''), String(proof.appVersion || ''),
+    Number(proof.exportedAt) || 0, Number(proof.entryCount) || 0, String(proof.entriesSha256 || ''),
+    Number(proof.head && proof.head.seq) || 0, String(proof.head && proof.head.hash || ''),
+    String(proof.hmacKeyId || ''), String(proof.publicKeyId || ''),
+  ]);
+}
+function buildAuditProof(entries, integrity) {
+  const keys = ensureAuditProofKeys();
+  const publicKeyPem = keys.publicKey.export({ type:'spki', format:'pem' }).toString();
+  const proof = {
+    proofVersion:1, app:APP_NAME, appVersion:APP_VERSION, exportedAt:Date.now(),
+    entryCount:entries.length, entriesSha256:auditProofEntryDigest(entries),
+    head:{ seq:Number(integrity.headSeq) || 0, hash:String(integrity.headHash || '') },
+    hmacKeyId:integrity.keyId || null, publicKeyId:auditProofKeyId(keys.publicKey),
+    publicKey:publicKeyPem, algorithm:'Ed25519', entries,
+  };
+  proof.signature = crypto.sign(null, Buffer.from(auditProofPayload(proof)), keys.privateKey).toString('base64');
+  return proof;
+}
+function verifyAuditProofBundle(proof) {
+  try {
+    if (!proof || proof.proofVersion !== 1 || proof.algorithm !== 'Ed25519' || !Array.isArray(proof.entries) || proof.entryCount !== proof.entries.length) return { ok:false, reason:'malformed-proof' };
+    if (!timingSafeEqualStr(String(proof.entriesSha256 || ''), auditProofEntryDigest(proof.entries))) return { ok:false, reason:'entry-digest-mismatch' };
+    const publicKey = crypto.createPublicKey(String(proof.publicKey || ''));
+    if (publicKey.asymmetricKeyType !== 'ed25519') return { ok:false, reason:'public-key-not-ed25519' };
+    if (auditProofKeyId(publicKey) !== proof.publicKeyId) return { ok:false, reason:'public-key-id-mismatch' };
+    let previous = '', sequence = 0;
+    for (const entry of proof.entries) {
+      if (!entry || entry.seq !== sequence + 1 || String(entry.prevHash || '') !== previous || !/^[a-f0-9]{64}$/.test(String(entry.hash || ''))) {
+        return { ok:false, reason:'chain-structure-invalid' };
+      }
+      sequence = entry.seq; previous = entry.hash;
+    }
+    if (Number(proof.head && proof.head.seq) !== sequence || String(proof.head && proof.head.hash || '') !== previous) return { ok:false, reason:'signed-head-mismatch' };
+    const ok = crypto.verify(null, Buffer.from(auditProofPayload(proof)), publicKey, Buffer.from(String(proof.signature || ''), 'base64'));
+    return { ok, reason:ok ? null : 'signature-invalid', keyId:proof.publicKeyId, entries:proof.entries.length };
+  } catch (error) { return { ok:false, reason:'unreadable-proof', error:error.message }; }
 }
 
 function auditChainPayload(entry) {
@@ -3844,6 +4366,11 @@ function verifyAuditBackupWithKey(key) {
 }
 function durableAuditWriteSync(file, data) {
   const fd = fs.openSync(file, 'w', 0o600);
+  try { fs.writeFileSync(fd, data); fs.fsyncSync(fd); }
+  finally { fs.closeSync(fd); }
+}
+function durableAuditCreateSync(file, data) {
+  const fd = fs.openSync(file, 'wx', 0o600);
   try { fs.writeFileSync(fd, data); fs.fsyncSync(fd); }
   finally { fs.closeSync(fd); }
 }
@@ -3998,17 +4525,53 @@ function verifyAuditChain() {
   return auditIntegrityStatus;
 }
 function appendAuditChainEntry(entry) {
+  // Once the journal is known to be corrupt, appending to the last valid prefix
+  // would create a fork and destroy forensic evidence. Remain fail-closed until a
+  // successful explicit verification/repair re-establishes integrity.
+  if (auditIntegrityStatus.checkedAt && !auditIntegrityStatus.ok) {
+    console.error('[audit] append refused while journal integrity is invalid:', auditIntegrityStatus.reason || 'unknown');
+    return null;
+  }
+  const previousHead = { ...auditChainHead };
   entry.seq = auditChainHead.seq + 1;
   entry.prevHash = auditChainHead.hash || '';
   entry.hash = auditChainHash(entry);
+  let originalSize = 0;
+  try { originalSize = fs.statSync(AUDIT_CHAIN_FILE).size; }
+  catch (error) {
+    if (!error || error.code !== 'ENOENT') {
+      console.error('[audit] could not inspect append-only chain:', error.message);
+      auditIntegrityStatus = { ...auditIntegrityStatus, ok:false, reason:'chain-unreadable', error:error.message, checkedAt:Date.now() };
+      return null;
+    }
+  }
   try {
-    fs.appendFileSync(AUDIT_CHAIN_FILE, JSON.stringify(entry) + '\n', { mode: 0o600 });
+    const fd = fs.openSync(AUDIT_CHAIN_FILE, 'a', 0o600);
+    try { fs.writeFileSync(fd, JSON.stringify(entry) + '\n'); fs.fsyncSync(fd); }
+    finally { fs.closeSync(fd); }
     writeAuditHeadSync(entry.seq, entry.hash);
+    syncAuditDataDir();
     auditChainHead = { seq: entry.seq, hash: entry.hash };
     auditIntegrityStatus = { ok: true, reason: null, entries: entry.seq, validEntries: entry.seq, headSeq: entry.seq, headHash: entry.hash, checkedAt: Date.now(), keyId: auditKeyId(ensureAuditChainKey()), keyMode: auditActiveKeyMode, migration: auditKeyMigrationStatus };
   } catch (e) {
     console.error('[audit] append-only chain write failed:', e.message);
-    auditIntegrityStatus = { ...auditIntegrityStatus, ok: false, reason: 'chain-write-failed', error: e.message, checkedAt: Date.now() };
+    let rollbackOk = false;
+    try {
+      fs.truncateSync(AUDIT_CHAIN_FILE, originalSize);
+      const fd = fs.openSync(AUDIT_CHAIN_FILE, 'r');
+      try { fs.fsyncSync(fd); } finally { fs.closeSync(fd); }
+      try { fs.unlinkSync(AUDIT_HEAD_FILE + '.tmp-' + process.pid); } catch (_) {}
+      const verified = verifyAuditChainWithKey(ensureAuditChainKey(), { checkRemembered:false });
+      rollbackOk = !!verified.ok;
+      if (rollbackOk) {
+        auditChainHead = previousHead;
+        auditIntegrityStatus = { ...verified, keyMode:auditActiveKeyMode, migration:auditKeyMigrationStatus, writeError:e.message };
+      }
+    } catch (rollbackError) {
+      console.error('[audit] failed to roll back partial append:', rollbackError.message);
+    }
+    if (!rollbackOk) auditIntegrityStatus = { ...auditIntegrityStatus, ok:false, reason:'chain-write-failed', error:e.message, checkedAt:Date.now() };
+    return null;
   }
   return entry;
 }
@@ -4074,18 +4637,23 @@ function logAudit(action, opts) {
     ip: opts.ip || null,
     detail: opts.detail != null ? String(opts.detail).slice(0, 300) : null,
   };
-  appendAuditChainEntry(entry);
+  if (!appendAuditChainEntry(entry)) return null;
   if (!Array.isArray(state.audit)) state.audit = [];
   state.audit.unshift(entry);
   if (state.audit.length > AUDIT_MAX) state.audit.length = AUDIT_MAX;
   scheduleFlush();
-  maybeSecurityAlert(entry); // Feature 4: notify on sensitive events (opt-in)
-  emitLiveActivity('audit', { name:entry.action, detail:entry.detail, ip:entry.ip ? pubIp(entry.ip) : null, status:entry.action });
+  if (!opts.suppressSecurityAlert) maybeSecurityAlert(entry); // notify on sensitive events (opt-in)
+  // Keep automatic Push subscription bookkeeping in the security audit, but do
+  // not surface it as Activity. sanitizeActivityLog() also removes historical
+  // copies from installations upgraded from <= 1.53.1.
+  if (!ACTIVITY_IGNORED_AUDIT_ACTIONS.has(String(entry.action || ''))) {
+    emitLiveActivity('audit', { name:entry.action, detail:entry.detail, ip:entry.ip ? pubIp(entry.ip) : null, status:entry.action, actor:entry.actor, accountId:entry.actorId });
+  }
   if (/share|inbox|collab|photo|upload|delete|revok|restore/i.test(String(action || ''))) { try { scheduleSearchReindex(); } catch (_) {} }
   return entry;
 }
 
-// Feature 4 — admin security alerts. Notifies (webhook + e-mail) on a handful of
+// Admin security alerts. Notifies (webhook + e-mail) on a handful of
 // sensitive audited events when settings.notifySecurity is on. Best-effort and
 // wrapped in try/catch so a notification failure never breaks the audited action.
 function maybeSecurityAlert(entry) {
@@ -4206,11 +4774,25 @@ function attemptLogin(req, res, username, password, totp) {
   acc.lastLoginAt = now;
   scheduleFlush();
   const sess = createSession(req, res, acc);
-  const newDevice = isNewLoginDevice(acc, loginDeviceKey(req, ip)); // feature 22
-  logAudit('login', { account: acc, ip, detail: newDevice ? 'new device' : null });
+  const deviceKey = loginDeviceKey(req, ip);
+  const knownLoginDevice = Array.isArray(acc.knownDevices) && acc.knownDevices.includes(deviceKey);
+  // A re-login from an already paired PWA is also one of the account's own
+  // devices, even if its IP or User-Agent changed since the previous login.
+  // The durable dxpwa credential is verified cryptographically before its owner
+  // is compared with the account that just authenticated. A stale device cookie
+  // from another account never suppresses security notifications.
+  const pairedLoginDevice = getPwaDevice(req, false, true);
+  const pairedLoginOwner = pairedLoginDevice ? pwaDeviceResolvedAccount(pairedLoginDevice) : null;
+  const ownPairedDevice = !!(pairedLoginOwner && String(pairedLoginOwner.id) === String(acc.id));
+  const recognizedOwnDevice = knownLoginDevice || ownPairedDevice;
+  const newDevice = isNewLoginDevice(acc, deviceKey);
+  // Always keep the login in the tamper-evident audit trail, but don't notify the
+  // administrator about their own recognized device. Notifications remain enabled
+  // for genuinely new/unrecognized devices.
+  logAudit('login', { account: acc, ip, detail: newDevice ? (ownPairedDevice ? 'paired device' : 'new device') : 'known device', suppressSecurityAlert: recognizedOwnDevice });
   const loginGeo = geoSync(ip) || {};
-  const loginCenterNote = addCenterNotification(acc.id, 'admin-login', { username:acc.username || '', ip:pubIp(ip), country:loginGeo.country || null, flag:loginGeo.flag || flagFromCode(loginGeo.countryCode) || '🌐', reason:newDevice ? 'new-device' : 'known-device' });
-  const unusualCenterNote = newDevice ? addCenterNotification(acc.id, 'admin-login-unusual', { username:acc.username || '', ip:pubIp(ip), country:loginGeo.country || null, flag:loginGeo.flag || flagFromCode(loginGeo.countryCode) || '🌐', reason:'new-device', dedupeKey:`unusual-login:${acc.id}:${loginDeviceKey(req, ip)}`, dedupeWindowMs:30*24*3600*1000 }) : null;
+  const loginCenterNote = recognizedOwnDevice ? null : addCenterNotification(acc.id, 'admin-login', { username:acc.username || '', ip:pubIp(ip), country:loginGeo.country || null, flag:loginGeo.flag || flagFromCode(loginGeo.countryCode) || '🌐', reason:newDevice ? 'new-device' : 'known-device' });
+  const unusualCenterNote = (!recognizedOwnDevice && newDevice) ? addCenterNotification(acc.id, 'admin-login-unusual', { username:acc.username || '', ip:pubIp(ip), country:loginGeo.country || null, flag:loginGeo.flag || flagFromCode(loginGeo.countryCode) || '🌐', reason:'new-device', dedupeKey:`unusual-login:${acc.id}:${deviceKey}`, dedupeWindowMs:30*24*3600*1000 }) : null;
   // A cold GeoIP cache used to leave login notifications permanently without a
   // country/flag. Enrich the exact records asynchronously, without recreating a
   // notification the user deleted while the lookup was in flight.
@@ -4392,52 +4974,6 @@ if (authCleanup.unref) authCleanup.unref();
 //  RENDERING of public pages (systematic HTML escaping)
 // ===================================================================
 
-function esc(s) {
-  return String(s == null ? '' : s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-// Serializes an object for embedding inside an inline <script> tag. Escapes `<`
-// (and the U+2028/U+2029 line separators) so a value containing `</script>` — e.g.
-// an uploaded/host file name — can't break out of the script element. The strict
-// CSP already blocks inline execution, but this keeps the embed safe on its own.
-function jsonForScript(obj) {
-  return JSON.stringify(obj)
-    .replace(/</g, '\\u003c')
-    .replace(/\u2028/g, '\\u2028')
-    .replace(/\u2029/g, '\\u2029');
-}
-
-// One CSV cell: RFC-4180 quoting AND spreadsheet formula-injection defense. A cell
-// starting with = + - @ (or a control char Excel treats as a formula lead) is
-// prefixed with an apostrophe, because journal/audit fields include untrusted
-// uploader-supplied filenames \u2014 a name like =HYPERLINK(...) must not execute when
-// the admin opens the export in Excel/LibreOffice.
-function csvField(v) {
-  let s = v == null ? '' : String(v);
-  if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
-  return /[",\n\r;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
-}
-
-function formatBytes(bytes) {
-  if (bytes == null || isNaN(bytes)) return '—';
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  let n = Number(bytes);
-  let u = 0;
-  while (n >= 1024 && u < units.length - 1) {
-    n /= 1024;
-    u++;
-  }
-  return `${n.toFixed(u === 0 ? 0 : 1)} ${units[u]}`;
-}
-
-function encodePath(p) {
-  return String(p).split('/').map(encodeURIComponent).join('/');
-}
 
 const PAGE_STYLE = `
 :root{color-scheme:light dark}
@@ -4531,6 +5067,9 @@ pre.code code{font:inherit;color:inherit;background:none;padding:0}
 .dxp-ico{flex:none}
 .dxp-name{word-break:break-all;font-size:.92rem}
 .file-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.dx-resume-panel{position:fixed;right:14px;bottom:14px;z-index:30;width:min(390px,calc(100vw - 28px));max-height:min(65vh,560px);overflow:auto;background:#151a2e;border:1px solid #33406b;border-radius:13px;box-shadow:0 18px 55px rgba(0,0,0,.5);padding:10px}
+.dx-resume-panel[hidden]{display:none}.dx-resume-head{font-weight:700;padding:3px 4px 8px}.dx-resume-list{display:flex;flex-direction:column;gap:8px}
+.dx-resume-row{display:grid;grid-template-columns:1fr auto;gap:5px 10px;padding:9px;border:1px solid #2a3050;border-radius:9px;background:#0f1220}.dx-resume-row strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.dx-resume-meta{font-size:.78rem;color:#9aa3c7;grid-column:1/-1}.dx-resume-row progress{width:100%;height:7px;grid-column:1/-1;accent-color:#3b6ef6}.dx-resume-actions{display:flex;gap:6px;grid-column:1/-1}.dx-resume-actions .btn{margin:0;padding:6px 10px;font-size:.78rem;cursor:pointer}
 .pw-hint{margin:0 0 12px;padding:8px 12px;border-radius:8px;background:rgba(250,204,21,.12);border:1px solid rgba(250,204,21,.3);color:#eab308;font-size:.92rem;word-break:break-word}
 .pw-hint .ico{margin-right:6px}
 .dl-eta{font-size:.86rem;margin:2px 0 6px}
@@ -5089,26 +5628,26 @@ function accentStyleVar() {
   const c = getSettings().accentColor;
   return (typeof c === 'string' && /^#[0-9a-fA-F]{6}$/.test(c.trim())) ? c.trim() : '';
 }
-// Feature 8 — custom logo (data: URL) for the public brand bar, falling back to
+// Custom logo (data: URL) for the public brand bar, falling back to
 // the built-in mark. Validated the same way as on save.
 function publicLogoSrc() {
   const v = getSettings().publicLogo;
   return (typeof v === 'string' && /^data:image\/(png|jpeg|gif|webp|svg\+xml);base64,[A-Za-z0-9+/=]+$/.test(v.trim()))
     ? v.trim() : '/logo.svg';
 }
-// Feature 8 — confidentiality/legal banner shown on every public page.
+// Confidentiality/legal banner shown on every public page.
 function legalNoticeHtml() {
   const v = getSettings().legalNotice;
   if (typeof v !== 'string' || !v.trim()) return '';
   return `<div class="legal-banner"><span class="legal-ico" aria-hidden="true">⚠️</span><span>${esc(v.trim())}</span></div>`;
 }
-// Feature 11 — global announcement banner shown on every public page.
+// Global announcement banner shown on every public page.
 function announcementHtml() {
   const v = getSettings().announcement;
   if (typeof v !== 'string' || !v.trim()) return '';
   return `<div class="dx-announce" role="status"><span class="dx-announce-ico" aria-hidden="true">📢</span><span>${esc(v.trim())}</span></div>`;
 }
-// Feature 8 — text to overlay on image/video previews (visitor IP, or the
+// Text to overlay on image/video previews (visitor IP, or the
 // recipient's name for a nominative sub-link). '' when watermarking is off.
 function previewWatermark(req, tk) {
   if (!getSettings().watermarkPreviews) return '';
@@ -5128,7 +5667,7 @@ function watermarkOverlay(text) {
   return `<span class="wm-overlay" aria-hidden="true" style="background-image:url('${uri}')"></span>`;
 }
 
-// Feature 1 — public-page theme. The stylesheet's neutral palette is remapped to
+// Public-page theme. The stylesheet's neutral palette is remapped to
 // CSS variables so a light set can override it; 'auto' follows the device via
 // prefers-color-scheme, 'dark'/'light' force one. Accent + semantic colors are
 // untouched (they read on both). Built once per request (cheap string work).
@@ -5167,7 +5706,7 @@ function publicStyleBlock() {
     + '@media (prefers-color-scheme:light){:root[data-theme="auto"]{' + lightInner + '}}';
   return theme + acDecl + css;
 }
-// Feature 9 — mobile browser UI color: an explicit themeColor, else the accent,
+// Mobile browser UI color: an explicit themeColor, else the accent,
 // else the page background (per current theme).
 function themeColorValue() {
   const t = String(getSettings().themeColor || '').trim();
@@ -5252,7 +5791,7 @@ ${announcementHtml()}${legalNoticeHtml()}
     document.documentElement.setAttribute('data-theme', v);
   });
 })();
-// Feature 16 — live expiry countdown. No-op on pages without a .dl-expiry element.
+// Live expiry countdown. No-op on pages without a .dl-expiry element.
 (function () {
   var els = [].slice.call(document.querySelectorAll('.dl-expiry[data-dx-expires]'));
   if (!els.length) return;
@@ -5274,6 +5813,8 @@ ${announcementHtml()}${legalNoticeHtml()}
   tick(); setInterval(tick, 1000);
 })();
 </script>
+<script${nonceAttr} src="/download-resume.js" defer></script>
+<script${nonceAttr} src="/media-resume.js" defer></script>
 </body></html>`;
 }
 
@@ -5318,7 +5859,7 @@ const SEARCH_SCRIPT = `<script>(function(){
   }
   input.addEventListener('input', apply);
 })();</script>`;
-// Feature 6 — selective multi-file download. Adds a checkbox to each row and a
+// Selective multi-file download. Adds a checkbox to each row and a
 // "download selection (.zip)" toolbar that POSTs the picked items to the
 // share's zip-select endpoint (a hidden form → a normal browser download).
 const SELECT_SCRIPT = `<script>(function(){
@@ -5359,7 +5900,7 @@ function viewToggle(L) {
     + `<button type="button" class="vt-btn" data-view="gallery">${esc(L.viewGallery)}</button>`
     + `</div>`;
 }
-// Selection toolbar (feature 6): hidden until at least one row is ticked.
+// Selection toolbar: hidden until at least one row is ticked.
 function selectBar(L) {
   return `<div class="sel-bar" style="display:none"><span class="sel-count">0</span> ${esc(L.selectedWord)}`
     + ` <button type="button" class="btn ghost sm sel-all">${esc(L.selectAll || 'All')}</button>`
@@ -5406,7 +5947,7 @@ function shareNoteHtml(share) {
   return note + description;
 }
 
-// Feature 28 — a per-type emoji for public folder/collection listings.
+// A per-type emoji for public folder/collection listings.
 const FILE_TYPE_ICONS = (() => {
   const m = {};
   const set = (icon, exts) => exts.forEach((e) => { m[e] = icon; });
@@ -5444,7 +5985,7 @@ function humanizeDurationShort(secs, unitsCsv, maxParts) {
   return out.length ? out.join(' ') : ('0' + u[3]);
 }
 
-// Feature 17 — server-rendered download-time estimate at two reference speeds.
+// Server-rendered download-time estimate at two reference speeds.
 function downloadEtaHtml(bytes, L) {
   const b = Number(bytes) || 0;
   if (b < 1024 * 1024) return ''; // not worth showing for < 1 MB
@@ -5482,7 +6023,7 @@ function zipEstHtml(items, L) {
   return ` <span class="zip-est muted" title="${esc(L.zipEstTitle)}">(${approx ? '≈ ' : ''}${esc(formatBytes(bytes))})</span>`;
 }
 
-// Feature 16 — a live expiry countdown element (COUNTDOWN_SCRIPT in pageShell
+// A live expiry countdown element (COUNTDOWN_SCRIPT in pageShell
 // updates it every second). Absent when the link has no effective deadline.
 function expiryCountdownHtml(share, L) {
   const at = shareEffectiveExpiry(share);
@@ -5539,7 +6080,7 @@ function collectionPage(lang, share, items, tk, wm) {
   <div class="list-view"><table class="filelist"><tbody>${rows}</tbody></table></div>
   ${hasSearch ? `<p class="fl-noresult muted" style="display:none">${esc(L.noResult)}</p>` : ''}
 </div>${hasGallery ? GALLERY_SCRIPT : ''}${hasSearch ? SEARCH_SCRIPT : ''}${hasSelect ? SELECT_SCRIPT : ''}`;
-  return pageShell(lang, share.name, body + feedbackSection(lang, share, tk)); // feature 38
+  return pageShell(lang, share.name, body + feedbackSection(lang, share, tk));
 }
 
 function filePage(lang, share, downloadUrl, tk, wm) {
@@ -5552,9 +6093,11 @@ function filePage(lang, share, downloadUrl, tk, wm) {
   if (info && info.kind === 'image') {
     preview = `<div class="preview"><img src="${esc(viewUrl)}" alt="${esc(share.name)}" loading="lazy">${wmHtml}</div>`;
   } else if (info && info.kind === 'video') {
-    preview = `<div class="preview"><video src="${esc(viewUrl)}" controls preload="metadata" playsinline onerror="this.style.display='none';var f=this.parentNode.querySelector('.vfallback');if(f)f.style.display='block';"></video>${wmHtml}<p class="vfallback muted" style="display:none">${esc(L.vidUnsupported)} <a href="${esc(downloadUrl)}" download>${esc(L.download)}</a></p></div>`;
+    preview = `<div class="preview"><video src="${esc(viewUrl)}" data-dx-resume="1" controls preload="metadata" playsinline onerror="this.style.display='none';var f=this.parentNode.querySelector('.vfallback');if(f)f.style.display='block';"></video>${wmHtml}<p class="vfallback muted" style="display:none">${esc(L.vidUnsupported)} <a href="${esc(downloadUrl)}" download>${esc(L.download)}</a></p></div>`;
   } else if (info && info.kind === 'audio') {
-    preview = `<div class="preview preview-audio"><audio src="${esc(viewUrl)}" controls preload="metadata"></audio></div>`;
+    preview = `<div class="preview preview-audio"><audio src="${esc(viewUrl)}" data-dx-resume="1" controls preload="metadata"></audio></div>`;
+  } else if (info && info.kind === 'pdf') {
+    preview = `<div class="pdf-preview-shell"><iframe class="pdf-preview-frame" src="${esc(viewUrl)}" title="${esc(share.name)}"></iframe></div>`;
   }
   const rk = share.noPreview ? null : renderKind(share.name);
   const openBtn = rk
@@ -5574,7 +6117,7 @@ function filePage(lang, share, downloadUrl, tk, wm) {
   <div class="file-actions">${openBtn}<a class="btn" href="${esc(downloadUrl)}" download rel="noopener">${esc(L.download)}</a></div>
   <p class="file-sums"><a class="row-act" href="/s/${tk}/sha256">${esc(L.checksums)}</a></p>
 </div>`;
-  return pageShell(lang, share.name, body + feedbackSection(lang, share, tk)); // feature 38
+  return pageShell(lang, share.name, body + feedbackSection(lang, share, tk));
 }
 
 // Public page for an end-to-end-encrypted download share: the ciphertext is
@@ -5608,7 +6151,7 @@ function encDecryptPage(lang, share, token) {
   return pageShell(lang, share.name, body);
 }
 
-// Feature 5 — burn-after-read secret page. The ciphertext is fetched once (which
+// Burn-after-read secret page. The ciphertext is fetched once (which
 // burns it server-side) and decrypted entirely in the browser (dxsecret.js).
 function secretPage(lang, token, mode) {
   const L = PUB[lang] || PUB.en;
@@ -5730,7 +6273,7 @@ function errorPage(lang, code, message) {
   return pageShell(lang, String(code), body);
 }
 
-// Public image gallery (feature 18): a lightweight, theme-aware grid of an
+// Public image gallery: a lightweight, theme-aware grid of an
 // album's member images. Each thumbnail links to the full-size image. All URLs
 // are same-origin (/i/<token>…) so they always load and stay hotlink-safe.
 function albumPage(lang, album, members, req) {
@@ -5780,13 +6323,13 @@ function inboxLimitsText(L, s) {
     const txt = L.limitFiles.replace('{v}', Math.max(0, s.maxFiles - (s.downloads || 0))).replace('{t}', s.maxFiles);
     parts.push(`<span id="up-limit-files">${esc(txt)}</span>`);
   }
-  if (s.maxFilesPerUpload > 0) parts.push(esc(L.limitFilesPerUpload.replace('{v}', s.maxFilesPerUpload))); // feature 13
+  if (s.maxFilesPerUpload > 0) parts.push(esc(L.limitFilesPerUpload.replace('{v}', s.maxFilesPerUpload)));
   if (Array.isArray(s.allowExt) && s.allowExt.length) parts.push(esc(L.limitAllow.replace('{v}', s.allowExt.join(', '))));
   if (Array.isArray(s.blockExt) && s.blockExt.length) parts.push(esc(L.limitBlock.replace('{v}', s.blockExt.join(', '))));
   return parts.join(' · ');
 }
 
-// Feature 3 — playlist player for the audio/video files of a folder. Auto-loads
+// Playlist player for the audio/video files of a folder. Auto-loads
 // sibling subtitles (.vtt/.srt) for videos and auto-advances through the list.
 function mediaPlayerPage(lang, share, entries, links, wm) {
   const L = PUB[lang] || PUB.en;
@@ -5817,7 +6360,7 @@ function mediaPlayerPage(lang, share, entries, links, wm) {
 <div class="card render-card">
   <h1><span class="ico">▶</span>${esc(share.name)}</h1>
   <div class="dxp-stage">
-    <video id="dxp-video" controls playsinline preload="metadata"></video>
+    <video id="dxp-video" data-dx-resume="1" controls playsinline preload="metadata"></video>
     ${watermarkOverlay(wm)}
   </div>
   <p id="dxp-now" class="muted dxp-now"></p>
@@ -5834,7 +6377,7 @@ function inboxPage(lang, share) {
   const L = PUB[lang] || PUB.en;
   const cfg = {
     maxFiles: share.maxFiles || 0,
-    maxFilesPerUpload: share.maxFilesPerUpload || 0, // feature 13 — per-deposit file-count cap
+    maxFilesPerUpload: share.maxFilesPerUpload || 0, // per-deposit file-count cap
     maxFileBytes: share.maxFileBytes || 0,
     maxTotalBytes: share.maxTotalBytes || 0,
     bytesReceived: share.bytesReceived || 0,
@@ -5848,15 +6391,15 @@ function inboxPage(lang, share) {
     enc: share.encrypted ? { on: true, mode: share.encMode || 'key' } : null,
     encStrings: share.encrypted ? { encrypting: L.encEncrypting, passRequired: L.encPassRequired, keyMissing: L.encKeyMissing } : null,
     groupBySender: !!share.groupBySender, // ask the visitor for a name → per-sender subfolder
-    requireSenderName: !!share.requireSenderName, // feature 9 — the name is mandatory
+    requireSenderName: !!share.requireSenderName, // the name is mandatory
     senderRequiredMsg: L.senderRequired,
     folderStrings: {
       prompt: L.newFolderPrompt, created: L.folderCreated, fail: L.folderCreateFail,
       invalid: L.folderInvalid, exists: L.folderExists, busy: L.folderBusy,
       destination: L.uploadDestination,
     },
-    token: share.token,                        // feature 27 — reception thread endpoint
-    threadEnabled: receptionThreadEnabled(share), // feature 27 — two-way conversation
+    token: share.token,                        // reception thread endpoint
+    threadEnabled: receptionThreadEnabled(share), // two-way conversation
   };
   const accept = cfg.allowExt.length ? ` accept="${esc(cfg.allowExt.map((e) => '.' + e).join(','))}"` : '';
   const limits = inboxLimitsText(L, share);
@@ -5927,7 +6470,7 @@ function collabPage(lang, share) {
     maxFileBytes: share.maxFileBytes || 0,
     maxTotalBytes: share.maxTotalBytes || 0,
     maxFiles: share.maxFiles || 0,
-    maxFilesPerUpload: share.maxFilesPerUpload || 0, // feature 13 — per-deposit file-count cap
+    maxFilesPerUpload: share.maxFilesPerUpload || 0, // per-deposit file-count cap
     allowExt: Array.isArray(share.allowExt) ? share.allowExt : [],
     blockExt: Array.isArray(share.blockExt) ? share.blockExt : [],
     strings: {
@@ -5939,7 +6482,7 @@ function collabPage(lang, share) {
       folderPrompt: L.newFolderPrompt, folderCreated: L.folderCreated,
       folderFail: L.folderCreateFail, folderInvalid: L.folderInvalid,
       folderExists: L.folderExists, folderBusy: L.folderBusy,
-      perUploadLimit: L.limitFilesPerUpload, // feature 13 — per-deposit file-count cap
+      perUploadLimit: L.limitFilesPerUpload, // per-deposit file-count cap
     },
   };
   const accept = cfg.allowExt.length ? ` accept="${esc(cfg.allowExt.map((e) => '.' + e).join(','))}"` : '';
@@ -6003,7 +6546,7 @@ function passwordPage(lang, s, error, token) {
   return pageShell(lang, s.name, body);
 }
 
-// Feature 28 — the public "request access" page: a form for a fresh visitor, or a
+// The public "request access" page: a form for a fresh visitor, or a
 // pending / denied status for a browser that already submitted (matched by cookie).
 function accessRequestPage(lang, s, token, existing) {
   const L = PUB[lang] || PUB.en;
@@ -6032,7 +6575,7 @@ function accessRequestPage(lang, s, token, existing) {
   return pageShell(lang, s.name, `<div class="card">${inner}</div>${auto}`);
 }
 
-// Feature 38 — a moderated visitor-feedback form appended to a shared file's page.
+// A moderated visitor-feedback form appended to a shared file's page.
 // Submissions are private to the admin (never shown to other visitors). It is a
 // plain <form> POST + redirect, so it works without JavaScript.
 function feedbackSection(lang, share, tk) {
@@ -6052,7 +6595,7 @@ function feedbackSection(lang, share, tk) {
 </div>`;
 }
 
-// Feature 7 — interstitial shown before a large download when the visitor has no
+// Interstitial shown before a large download when the visitor has no
 // valid proof-of-work pass. /dxpow.js solves the challenge in the browser and
 // reloads the page (the pass rides in a cookie), continuing to the download.
 function challengePage(lang) {
@@ -6088,7 +6631,7 @@ downloadRouter.use((req, res, next) => {
   next();
 });
 
-// Feature 7 — per-IP rate limit on actual transfer requests (downloads, uploads,
+// Per-IP rate limit on actual transfer requests (downloads, uploads,
 // zips). Landing pages and inline previews (/view, thumbnails) are not counted so
 // browsing a gallery never trips it; the proof-of-work endpoints are exempt too.
 downloadRouter.use((req, res, next) => {
@@ -6115,7 +6658,7 @@ downloadRouter.use((req, res, next) => {
   return res.status(429).type('html').send(errorPage(lang, 429, L.tooManyReq));
 });
 
-// Feature 11 — per-link geo/IP access rules, enforced centrally for every /s, /u
+// Per-link geo/IP access rules, enforced centrally for every /s, /u
 // and /c sub-path so a download/upload endpoint can't be hit directly to bypass it.
 downloadRouter.use(async (req, res, next) => {
   const m = /^\/(s|u|c)\/([^/]+)/.exec(req.path);
@@ -6135,7 +6678,7 @@ downloadRouter.use(async (req, res, next) => {
   return res.status(403).type('html').send(errorPage(lang, 403, L.accessDenied || 'Access denied.'));
 });
 
-// Feature 7 — proof-of-work endpoints (public, no token). GET issues a signed
+// Proof-of-work endpoints (public, no token). GET issues a signed
 // challenge; POST verifies the browser's solution and sets the short-lived pass
 // cookie. Registered before /s and /u so they never shadow these.
 const powJsonParser = express.json({ limit: '4kb' });
@@ -6182,31 +6725,31 @@ function requireActiveShare(req, res, opts) {
     res.status(401).type('html').send(passwordPage(pickLang(req), s, false, req.params.token));
     return null;
   }
-  // Feature 28 — access-request gate: an un-approved visitor sees the request
+  // Access-request gate: an un-approved visitor sees the request
   // form instead of the content (parallel to the password gate above). Placed
   // before the visitor-cap so a pending requester doesn't consume a visitor slot.
   if (s.requestAccess && !isAccessApproved(req, s)) {
     res.status(401).type('html').send(accessRequestPage(pickLang(req), s, req.params.token, pendingAccessRequest(req, s)));
     return null;
   }
-  if (!recordAndCheckVisitor(s, req)) { // feature 5: N-distinct-visitor cap reached
+  if (!recordAndCheckVisitor(s, req)) { // N-distinct-visitor cap reached
     sendError(req, res, 404, 'shareGone');
     return null;
   }
-  // Feature 24 — per-IP download quota, only on the actual download routes
+  // Per-IP download quota, only on the actual download routes
   // (they pass { countDownload:true }); views/previews never consume the quota.
   if (opts && opts.countDownload && ipDownloadQuotaBlocked(s, req)) {
     const lang = pickLang(req);
     res.status(429).type('html').send(errorPage(lang, 429, (PUB[lang] || PUB.en).quotaReached || 'Download limit reached.'));
     return null;
   }
-  // Feature 13 — total bandwidth cap: revoke + refuse once the link has served
+  // Total bandwidth cap: revoke + refuse once the link has served
   // its configured volume.
   if (opts && opts.countDownload && bandwidthCapReached(s)) {
     sendError(req, res, 404, 'shareGone');
     return null;
   }
-  // Feature 16 — per-recipient overrides on a nominative sub-link (own expiry /
+  // Per-recipient overrides on a nominative sub-link (own expiry /
   // download cap, on top of the share's). Only applies when visited via a
   // recipient token.
   const rc = recipientByToken.get(req.params.token);
@@ -6218,7 +6761,7 @@ function requireActiveShare(req, res, opts) {
   return s;
 }
 
-// Feature 5 — track distinct (masked) visitor IPs and enforce a per-link cap.
+// Track distinct (masked) visitor IPs and enforce a per-link cap.
 // Returns false (and revokes the share) once a NEW visitor arrives beyond the
 // limit; an IP already counted always passes, so a visitor keeps their access.
 function recordAndCheckVisitor(s, req) {
@@ -6254,43 +6797,52 @@ function recordVisitorIp(s, ip) {
   s.visitors.push(ip);
   return true;
 }
-// Feature 24 — per-IP download quota. Counts each download from one masked IP and
+// Per-IP download quota. Counts each download from one masked IP and
 // refuses further downloads once the cap is reached; the link stays live for
 // everyone else. The per-IP map is bounded like the visitor list so a scraped
 // link can't grow shares.json without limit.
 function ipDownloadQuotaBlocked(s, req) {
   const cap = Math.max(0, Math.floor(Number(s.maxDownloadsPerIp) || 0));
   if (cap <= 0) return false; // unlimited
-  // Mirror streamFile's accounting: HEAD probes and byte-range CONTINUATIONS
-  // (a resumed or seeked transfer sends `Range: bytes=N-` with N>0) must never
-  // consume the quota — otherwise a single interrupted download of a large file
-  // could never be resumed once the cap is 1. Checked BEFORE the cap test so a
-  // resume is always allowed even when the initial request already spent the quota.
+  const resumeId = validDownloadResumeId(req.headers['x-direct-xfer-resume-id']);
+  const resumeSession = resumeId && pruneDownloadResumeSessions()[resumeId];
+  if (resumeSession && String(resumeSession.shareId) === String(s.id) && !resumeSession.finalized) return false;
+  // HEAD probes never consume quota. Managed downloads defer the increment until
+  // every byte has actually been delivered, so cancelling the first chunk does not
+  // spend a download. A bare Range header is not trusted as proof of a continuation:
+  // otherwise `Range: bytes=1-` bypasses the per-IP cap almost completely.
   if (req.method === 'HEAD') return false;
-  const rangeStart = /^bytes=(\d+)-/.exec(String(req.headers['range'] || ''));
-  if (rangeStart && Number(rangeStart[1]) > 0) return false;
   const ip = maskIp(clientIp(req));
   if (!s.ipDownloads || typeof s.ipDownloads !== 'object') s.ipDownloads = {};
   const used = Math.max(0, Number(s.ipDownloads[ip]) || 0);
   if (used >= cap) return true; // this IP has spent its quota
+  if (resumeId) return false; // completeManagedDownload commits it exactly once
   const isNewIp = s.ipDownloads[ip] === undefined;
   if (isNewIp && Object.keys(s.ipDownloads).length >= VISITORS_MAX) return false; // map full → fail open
   s.ipDownloads[ip] = used + 1;
   scheduleFlush();
   return false;
 }
-// Feature 13 — running total of bytes served on a link, updated on each completed
+function commitManagedIpDownload(s, ip) {
+  const cap = Math.max(0, Math.floor(Number(s && s.maxDownloadsPerIp) || 0));
+  const key = String(ip || '');
+  if (!s || cap <= 0 || !key) return;
+  if (!s.ipDownloads || typeof s.ipDownloads !== 'object') s.ipDownloads = {};
+  if (s.ipDownloads[key] === undefined && Object.keys(s.ipDownloads).length >= VISITORS_MAX) return;
+  s.ipDownloads[key] = Math.max(0, Number(s.ipDownloads[key]) || 0) + 1;
+}
+// Running total of bytes served on a link, updated on each completed
 // download.
 function noteBytesServed(shareId, bytes) {
   const sh = getById(shareId); if (!sh) return;
   sh.bytesServed = (sh.bytesServed || 0) + Math.max(0, Number(bytes) || 0);
   evaluateCustomNotificationRulesForShare(sh);
   scheduleFlush();
-  // Feature 13 — auto-revoke as soon as the cap is crossed, on ANY download path
+  // Auto-revoke as soon as the cap is crossed, on ANY download path
   // (single file, folder ZIP, selection ZIP), even routes that don't pre-check it.
   bandwidthCapReached(sh);
 }
-// Feature 13 — total-bytes-served cap. Once the link has served its cap it
+// Total-bytes-served cap. Once the link has served its cap it
 // auto-revokes (mirrors the unique-visitor cap); one download may cross the line.
 function bandwidthCapReached(s) {
   const cap = Math.max(0, Number(s.maxBytesServed) || 0);
@@ -6359,459 +6911,11 @@ function bumpViews(s, req) {
 
 // Safe in-browser preview: maps a file extension to a renderable kind + MIME.
 // Excludes anything scriptable (html, svg, ...) — those stay download-only.
-function previewInfo(filename) {
-  const ext = (String(filename).split('.').pop() || '').toLowerCase();
-  const images = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', bmp: 'image/bmp', avif: 'image/avif' };
-  const videos = { mp4: 'video/mp4', m4v: 'video/mp4', webm: 'video/webm', ogv: 'video/ogg', mov: 'video/quicktime', mkv: 'video/x-matroska' };
-  const audios = { mp3: 'audio/mpeg', ogg: 'audio/ogg', oga: 'audio/ogg', wav: 'audio/wav', flac: 'audio/flac', m4a: 'audio/mp4', aac: 'audio/aac' };
-  const texts = ['txt', 'md', 'log', 'csv', 'tsv', 'json', 'xml', 'yml', 'yaml', 'ini', 'conf', 'js', 'mjs', 'cjs', 'ts', 'css', 'py', 'sh', 'bash', 'c', 'h', 'cpp', 'hpp', 'cc', 'java', 'go', 'rs', 'rb', 'php', 'sql', 'toml'];
-  if (images[ext]) return { kind: 'image', contentType: images[ext] };
-  if (videos[ext]) return { kind: 'video', contentType: videos[ext] };
-  if (audios[ext]) return { kind: 'audio', contentType: audios[ext] };
-  if (ext === 'pdf') return { kind: 'pdf', contentType: 'application/pdf' };
-  if (texts.includes(ext)) return { kind: 'text', contentType: 'text/plain; charset=utf-8' };
-  return null;
-}
-
-// Photos tab helpers. An image content type (or null if the file isn't a
-// supported image), and a clean lowercase extension for the direct /i/<token>.ext
-// URL (jpeg → jpg; unknown → jpg).
-function imageContentType(filename) {
-  const info = previewInfo(filename);
-  return info && info.kind === 'image' ? info.contentType : null;
-}
-function photoExt(s) {
-  const e = (String((s && s.name) || '').split('.').pop() || '').toLowerCase();
-  if (e === 'jpeg') return 'jpg';
-  return /^(jpg|png|gif|webp|bmp|avif)$/.test(e) ? e : 'jpg';
-}
-
-// Reads pixel dimensions from an image file's header — no image library needed.
-// Supports PNG, JPEG, GIF, WEBP and BMP; returns { w, h } or null (e.g. AVIF).
-function imageDimensions(filePath) {
-  let fd;
-  try {
-    fd = fs.openSync(filePath, 'r');
-    const buf = Buffer.alloc(65536);
-    const n = fs.readSync(fd, buf, 0, buf.length, 0);
-    if (n < 24) return null;
-    const b = buf.subarray(0, n);
-    // PNG: 8-byte signature, then IHDR width/height (big-endian uint32) at 16/20.
-    if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) {
-      return { w: b.readUInt32BE(16), h: b.readUInt32BE(20) };
-    }
-    // GIF: "GIF8", logical screen width/height (little-endian uint16) at 6/8.
-    if (b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x38) {
-      return { w: b.readUInt16LE(6), h: b.readUInt16LE(8) };
-    }
-    // BMP: "BM", 32-bit width/height at 18/22 (height may be stored negative).
-    if (b[0] === 0x42 && b[1] === 0x4d) {
-      return { w: Math.abs(b.readInt32LE(18)), h: Math.abs(b.readInt32LE(22)) };
-    }
-    // WEBP: "RIFF"...."WEBP" then a VP8 / VP8L / VP8X chunk.
-    if (b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 &&
-        b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50) {
-      const fmt = b.toString('ascii', 12, 16);
-      if (fmt === 'VP8 ' && n >= 30) return { w: b.readUInt16LE(26) & 0x3fff, h: b.readUInt16LE(28) & 0x3fff };
-      if (fmt === 'VP8L' && n >= 25) {
-        const bits = b[21] | (b[22] << 8) | (b[23] << 16) | (b[24] << 24);
-        return { w: (bits & 0x3fff) + 1, h: ((bits >> 14) & 0x3fff) + 1 };
-      }
-      if (fmt === 'VP8X' && n >= 30) {
-        return { w: 1 + (b[24] | (b[25] << 8) | (b[26] << 16)), h: 1 + (b[27] | (b[28] << 8) | (b[29] << 16)) };
-      }
-      return null;
-    }
-    // JPEG: walk the segment markers to a Start-Of-Frame; dims are big-endian at +5/+7.
-    if (b[0] === 0xff && b[1] === 0xd8) {
-      let o = 2;
-      while (o + 9 < n) {
-        if (b[o] !== 0xff) { o++; continue; }
-        let marker = b[o + 1];
-        while (marker === 0xff && o + 1 < n) { o++; marker = b[o + 1]; }
-        if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
-          return { h: b.readUInt16BE(o + 5), w: b.readUInt16BE(o + 7) };
-        }
-        const len = b.readUInt16BE(o + 2);
-        if (len < 2) return null;
-        o += 2 + len;
-      }
-      return null;
-    }
-    return null;
-  } catch (_) { return null; }
-  finally { if (fd !== undefined) { try { fs.closeSync(fd); } catch (_) {} } }
-}
-
-// Reads a privacy-conscious subset of EXIF/GPS metadata without an image library.
-// The parser is deliberately bounded and defensive: only TIFF data embedded in
-// JPEG APP1, PNG eXIf or WEBP EXIF chunks is inspected, and malformed offsets are
-// ignored instead of escaping the file buffer.
-function parseExifTiff(tiff) {
-  if (!Buffer.isBuffer(tiff) || tiff.length < 8) return null;
-  const little = tiff.toString('ascii', 0, 2) === 'II';
-  const big = tiff.toString('ascii', 0, 2) === 'MM';
-  if (!little && !big) return null;
-  const u16 = (o) => {
-    if (o < 0 || o + 2 > tiff.length) return null;
-    return little ? tiff.readUInt16LE(o) : tiff.readUInt16BE(o);
-  };
-  const i32 = (o) => {
-    if (o < 0 || o + 4 > tiff.length) return null;
-    return little ? tiff.readInt32LE(o) : tiff.readInt32BE(o);
-  };
-  const u32 = (o) => {
-    if (o < 0 || o + 4 > tiff.length) return null;
-    return little ? tiff.readUInt32LE(o) : tiff.readUInt32BE(o);
-  };
-  if (u16(2) !== 42) return null;
-
-  const typeSize = { 1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 7: 1, 9: 4, 10: 8 };
-  const groups = { root: {}, exif: {}, gps: {} };
-  const seen = new Set();
-
-  function readValue(entry, type, count) {
-    const unit = typeSize[type];
-    if (!unit || !Number.isFinite(count) || count < 0 || count > 4096) return null;
-    const bytes = unit * count;
-    const valueOffset = bytes <= 4 ? entry + 8 : u32(entry + 8);
-    if (valueOffset === null || valueOffset < 0 || valueOffset + bytes > tiff.length) return null;
-    if (type === 2) return tiff.toString('utf8', valueOffset, valueOffset + bytes).replace(/\0+$/g, '').trim();
-    const out = [];
-    for (let i = 0; i < count; i += 1) {
-      const o = valueOffset + i * unit;
-      let value = null;
-      if (type === 1 || type === 7) value = tiff[o];
-      else if (type === 3) value = u16(o);
-      else if (type === 4) value = u32(o);
-      else if (type === 9) value = i32(o);
-      else if (type === 5 || type === 10) {
-        const n = type === 10 ? i32(o) : u32(o);
-        const d = type === 10 ? i32(o + 4) : u32(o + 4);
-        value = n === null || d === null || d === 0 ? null : n / d;
-      }
-      out.push(value);
-    }
-    return count === 1 ? out[0] : out;
-  }
-
-  function readIfd(offset, groupName, depth) {
-    if (!Number.isFinite(offset) || offset < 8 || offset + 2 > tiff.length || depth > 4) return;
-    const key = groupName + ':' + offset;
-    if (seen.has(key)) return;
-    seen.add(key);
-    const count = u16(offset);
-    if (count === null || count > 512 || offset + 2 + count * 12 > tiff.length) return;
-    const group = groups[groupName];
-    for (let i = 0; i < count; i += 1) {
-      const entry = offset + 2 + i * 12;
-      const tag = u16(entry), type = u16(entry + 2), valueCount = u32(entry + 4);
-      if (tag === null || type === null || valueCount === null) continue;
-      const value = readValue(entry, type, valueCount);
-      group[tag] = value;
-      if (groupName === 'root' && tag === 0x8769 && Number.isFinite(value)) readIfd(value, 'exif', depth + 1);
-      if (groupName === 'root' && tag === 0x8825 && Number.isFinite(value)) readIfd(value, 'gps', depth + 1);
-    }
-  }
-
-  readIfd(u32(4), 'root', 0);
-  const root = groups.root, exif = groups.exif, gps = groups.gps;
-  const str = (value) => typeof value === 'string' && value ? value : null;
-  const num = (value) => Number.isFinite(value) ? value : null;
-  const first = (value) => Array.isArray(value) ? value[0] : value;
-  const coord = (parts, ref) => {
-    if (!Array.isArray(parts) || parts.length < 3 || !parts.slice(0, 3).every(Number.isFinite)) return null;
-    let value = parts[0] + parts[1] / 60 + parts[2] / 3600;
-    if (/^[SW]$/i.test(String(ref || ''))) value *= -1;
-    return Number(value.toFixed(7));
-  };
-  const lat = coord(gps[0x0002], first(gps[0x0001]));
-  const lon = coord(gps[0x0004], first(gps[0x0003]));
-  let altitude = num(gps[0x0006]);
-  if (altitude !== null && Number(first(gps[0x0005])) === 1) altitude *= -1;
-  const gpsTime = Array.isArray(gps[0x0007]) && gps[0x0007].length >= 3
-    ? gps[0x0007].slice(0, 3).map((v) => Number.isFinite(v) ? String(Math.floor(v)).padStart(2, '0') : '00').join(':')
-    : null;
-  const gpsDate = str(gps[0x001d]);
-
-  const result = {
-    camera: {
-      make: str(root[0x010f]), model: str(root[0x0110]), lensMake: str(exif[0xa433]),
-      lensModel: str(exif[0xa434]), software: str(root[0x0131]),
-    },
-    capture: {
-      dateTimeOriginal: str(exif[0x9003]) || str(exif[0x9004]) || str(root[0x0132]),
-      exposureTime: num(exif[0x829a]), fNumber: num(exif[0x829d]), iso: num(first(exif[0x8827])),
-      focalLength: num(exif[0x920a]), focalLength35mm: num(exif[0xa405]),
-      exposureBias: num(exif[0x9204]), flash: num(exif[0x9209]), orientation: num(root[0x0112]),
-      width: num(exif[0xa002]), height: num(exif[0xa003]), whiteBalance: num(exif[0xa403]),
-      exposureMode: num(exif[0xa402]), sceneType: num(exif[0xa406]),
-      description: str(root[0x010e]), artist: str(root[0x013b]), copyright: str(root[0x8298]),
-    },
-    gps: lat !== null && lon !== null ? {
-      latitude: lat, longitude: lon, altitude: altitude === null ? null : Number(altitude.toFixed(2)),
-      direction: num(gps[0x0011]), directionRef: str(gps[0x0010]),
-      dateTimeUtc: gpsDate ? gpsDate.replace(/:/g, '-') + (gpsTime ? ' ' + gpsTime + ' UTC' : '') : gpsTime,
-    } : null,
-  };
-  const hasCamera = Object.values(result.camera).some((v) => v !== null);
-  const hasCapture = Object.values(result.capture).some((v) => v !== null);
-  return hasCamera || hasCapture || result.gps ? result : null;
-}
-
-function readPhotoMetadata(filePath) {
-  let fd;
-  try {
-    fd = fs.openSync(filePath, 'r');
-    const stat = fs.fstatSync(fd);
-    const max = Math.min(stat.size, 4 * 1024 * 1024);
-    if (max < 8) return { found: false, format: null, camera: {}, capture: {}, gps: null };
-    const buf = Buffer.alloc(max);
-    const n = fs.readSync(fd, buf, 0, max, 0);
-    const b = buf.subarray(0, n);
-    let tiff = null, format = null;
-
-    if (b[0] === 0xff && b[1] === 0xd8) {
-      format = 'JPEG';
-      let o = 2;
-      while (o + 4 <= b.length) {
-        if (b[o] !== 0xff) { o += 1; continue; }
-        const marker = b[o + 1];
-        if (marker === 0xda || marker === 0xd9) break;
-        if (marker === 0x00 || marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) { o += 2; continue; }
-        const len = b.readUInt16BE(o + 2);
-        if (len < 2 || o + 2 + len > b.length) break;
-        const start = o + 4, end = o + 2 + len;
-        if (marker === 0xe1 && end - start >= 6 && b.toString('ascii', start, start + 6) === 'Exif\0\0') {
-          tiff = b.subarray(start + 6, end); break;
-        }
-        o += 2 + len;
-      }
-    } else if (b.length >= 12 && b.toString('ascii', 0, 4) === 'RIFF' && b.toString('ascii', 8, 12) === 'WEBP') {
-      format = 'WEBP';
-      let o = 12;
-      while (o + 8 <= b.length) {
-        const kind = b.toString('ascii', o, o + 4);
-        const size = b.readUInt32LE(o + 4);
-        const start = o + 8, end = start + size;
-        if (end > b.length) break;
-        if (kind === 'EXIF') {
-          tiff = b.subarray(start, end);
-          if (tiff.length >= 6 && tiff.toString('ascii', 0, 6) === 'Exif\0\0') tiff = tiff.subarray(6);
-          break;
-        }
-        o = end + (size % 2);
-      }
-    } else if (b.length >= 8 && b[0] === 0x89 && b.toString('ascii', 1, 4) === 'PNG') {
-      format = 'PNG';
-      let o = 8;
-      while (o + 12 <= b.length) {
-        const size = b.readUInt32BE(o);
-        const kind = b.toString('ascii', o + 4, o + 8);
-        const start = o + 8, end = start + size;
-        if (end + 4 > b.length) break;
-        if (kind === 'eXIf') { tiff = b.subarray(start, end); break; }
-        o = end + 4;
-      }
-    } else if (b.toString('ascii', 0, 2) === 'II' || b.toString('ascii', 0, 2) === 'MM') {
-      format = 'TIFF'; tiff = b;
-    }
-
-    const parsed = tiff ? parseExifTiff(tiff) : null;
-    return parsed
-      ? { found: true, format, camera: parsed.camera, capture: parsed.capture, gps: parsed.gps }
-      : { found: false, format, camera: {}, capture: {}, gps: null };
-  } catch (_) {
-    return { found: false, format: null, camera: {}, capture: {}, gps: null };
-  } finally {
-    if (fd !== undefined) { try { fs.closeSync(fd); } catch (_) {} }
-  }
-}
-
-// Feature 3 — subtitles. Converts SubRip (.srt) to WebVTT (what <track> needs);
-// .vtt is already fine. Cheap text transform, no dependency.
-const SUBTITLE_MAX_BYTES = 4 * 1024 * 1024;
-function srtToVtt(src) {
-  const body = String(src)
-    .replace(/\r+/g, '')
-    .replace(/^\uFEFF/, '')
-    .replace(/(\d\d:\d\d:\d\d),(\d\d\d)/g, '$1.$2'); // comma → dot in timecodes
-  return /^WEBVTT/.test(body.trim()) ? body : 'WEBVTT\n\n' + body;
-}
-// Given a media filename and the sibling directory listing, find matching subtitle
-// files: <base>.vtt / <base>.srt, optionally with a language tag (<base>.en.srt).
-function subtitleTracksFor(mediaName, entries) {
-  const dot = mediaName.lastIndexOf('.');
-  const base = (dot > 0 ? mediaName.slice(0, dot) : mediaName).toLowerCase();
-  const out = [];
-  for (const e of entries) {
-    if (e.isDir) continue;
-    const n = String(e.name);
-    const m = /^(.*)\.(vtt|srt)$/i.exec(n);
-    if (!m) continue;
-    const stem = m[1].toLowerCase();
-    if (stem === base) { out.push({ name: n, lang: '', label: m[2].toUpperCase() }); continue; }
-    // <base>.<lang> form (e.g. movie.en.srt)
-    if (stem.startsWith(base + '.')) {
-      const lang = stem.slice(base.length + 1);
-      if (/^[a-z]{2,3}([-_][a-z]{2,4})?$/i.test(lang)) out.push({ name: n, lang, label: lang.toUpperCase() });
-    }
-  }
-  return out;
-}
-
-// Feature 6 — richer, server-rendered previews (Markdown, highlighted code, ZIP
+// Richer, server-rendered previews (Markdown, highlighted code, ZIP
 // listing). Kept separate from previewInfo (which drives raw inline serving via
 // /view); this decides which files get a rendered /render page instead.
-const CODE_EXTS = ['js', 'mjs', 'cjs', 'ts', 'tsx', 'jsx', 'css', 'scss', 'less', 'py', 'sh', 'bash', 'zsh',
-  'c', 'h', 'cpp', 'hpp', 'cc', 'cxx', 'java', 'go', 'rs', 'rb', 'php', 'sql', 'toml', 'ini', 'conf',
-  'yml', 'yaml', 'json', 'xml', 'html', 'htm', 'lua', 'pl', 'kt', 'swift', 'r', 'dart'];
-function renderKind(filename) {
-  const ext = (String(filename).split('.').pop() || '').toLowerCase();
-  if (ext === 'pdf') return 'pdf';
-  if (ext === 'zip') return 'archive';
-  if (ext === 'md' || ext === 'markdown') return 'markdown';
-  if (CODE_EXTS.includes(ext)) return 'code';
-  const name = String(filename);
-  if (/(^|\/)(dockerfile|makefile)$/i.test(name)) return 'code';
-  return null;
-}
-
-// A cross-language keyword set — enough for a lightweight, grammar-free highlight
-// that colors keywords/strings/comments/numbers without pulling in a big lib.
-const CODE_KEYWORDS = new Set(('await async function return if else for while do switch case break continue ' +
-  'const let var new class extends super this import from export default try catch finally throw typeof ' +
-  'instanceof in of void delete yield public private protected static get set interface enum implements ' +
-  'package def elif except with as pass lambda global nonlocal print None True False and or not is ' +
-  'struct impl fn mut pub use mod match trait where self crate func type map range chan go defer select ' +
-  'end then begin nil echo require include namespace foreach elseif fun val when object override ' +
-  'int float double char bool boolean string void long short unsigned signed enum union sizeof').split(/\s+/));
-
-// Escape then tokenize the ESCAPED text in a single left-to-right pass, so span
-// wrapping never breaks HTML and strings correctly swallow their contents (a
-// `//` inside a quote is not mistaken for a comment). Grammar-free but effective.
-// Groups: 1 block comment, 2 line comment, 3 string, 4 number, 5 word.
-const CODE_TOKEN_RE = /(\/\*[\s\S]*?\*\/)|(\/\/[^\n]*|#[^\n]*)|(&quot;(?:[^&\n]|&(?!quot;))*?&quot;|&#39;(?:[^&\n]|&(?!#39;))*?&#39;|`(?:[^`\\]|\\.)*`)|(\b\d[\d_]*\.?\d*(?:[eE][+-]?\d+)?\b)|(\b[A-Za-z_]\w*\b)/g;
-function highlightCode(text) {
-  return esc(text).replace(CODE_TOKEN_RE, (m, c1, c2, c3, c4, c5) => {
-    if (c1 || c2) return `<span class="tok-c">${m}</span>`;
-    if (c3) return `<span class="tok-s">${m}</span>`;
-    if (c4) return `<span class="tok-n">${m}</span>`;
-    if (c5) return CODE_KEYWORDS.has(c5) ? `<span class="tok-k">${m}</span>` : m;
-    return m;
-  });
-}
-
-// Minimal, safe Markdown → HTML. Everything is HTML-escaped first; only a known
-// set of inline/block constructs is then re-introduced. No raw HTML passthrough.
-function renderMarkdown(src) {
-  const lines = String(src).replace(/\r\n?/g, '\n').split('\n');
-  const inline = (s) => esc(s)
-    .replace(/`([^`]+)`/g, (m, c) => `<code>${c}</code>`)
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    .replace(/(^|[^*])\*([^*]+)\*/g, '$1<em>$2</em>')
-    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (m, t, u) => `<a href="${esc(u)}" target="_blank" rel="noopener nofollow">${t}</a>`);
-  const out = [];
-  let inCode = false, codeBuf = [], listType = null;
-  const closeList = () => { if (listType) { out.push(`</${listType}>`); listType = null; } };
-  for (let raw of lines) {
-    const fence = /^```/.test(raw);
-    if (fence) {
-      if (inCode) { out.push(`<pre class="code">${esc(codeBuf.join('\n'))}</pre>`); codeBuf = []; inCode = false; }
-      else { closeList(); inCode = true; }
-      continue;
-    }
-    if (inCode) { codeBuf.push(raw); continue; }
-    if (/^\s*$/.test(raw)) { closeList(); continue; }
-    let m;
-    if ((m = /^(#{1,6})\s+(.*)$/.exec(raw))) { closeList(); const n = m[1].length; out.push(`<h${n}>${inline(m[2])}</h${n}>`); continue; }
-    if (/^\s*([-*_])\s*\1\s*\1[\s\1]*$/.test(raw)) { closeList(); out.push('<hr>'); continue; }
-    if ((m = /^\s*>\s?(.*)$/.exec(raw))) { closeList(); out.push(`<blockquote>${inline(m[1])}</blockquote>`); continue; }
-    if ((m = /^\s*[-*+]\s+(.*)$/.exec(raw))) { if (listType !== 'ul') { closeList(); out.push('<ul>'); listType = 'ul'; } out.push(`<li>${inline(m[1])}</li>`); continue; }
-    if ((m = /^\s*\d+\.\s+(.*)$/.exec(raw))) { if (listType !== 'ol') { closeList(); out.push('<ol>'); listType = 'ol'; } out.push(`<li>${inline(m[1])}</li>`); continue; }
-    closeList();
-    out.push(`<p>${inline(raw)}</p>`);
-  }
-  if (inCode) out.push(`<pre class="code">${esc(codeBuf.join('\n'))}</pre>`);
-  closeList();
-  return out.join('\n');
-}
-
-// Feature 6 — list a ZIP's entries by parsing its End-Of-Central-Directory record
-// and central directory, without extracting anything (no external dependency).
 // Returns { entries: [{name, size, dir}], truncated } or null if not a valid ZIP.
-async function readZipEntries(absPath, maxEntries = 2000) {
-  let fh;
-  try {
-    fh = await fs.promises.open(absPath, 'r');
-    const st = await fh.stat();
-    const size = st.size;
-    if (size < 22) return null;
-    // EOCD is in the last 64KB (comment can push it up, but never beyond 65557 B).
-    const tailLen = Math.min(size, 65557);
-    const tail = Buffer.alloc(tailLen);
-    await fh.read(tail, 0, tailLen, size - tailLen);
-    let eocd = -1;
-    for (let i = tail.length - 22; i >= 0; i--) {
-      if (tail.readUInt32LE(i) === 0x06054b50) { eocd = i; break; }
-    }
-    if (eocd < 0) return null;
-    const total = tail.readUInt16LE(eocd + 10);
-    const cdSize = tail.readUInt32LE(eocd + 12);
-    const cdOffset = tail.readUInt32LE(eocd + 16);
-    if (cdOffset === 0xffffffff) return null; // ZIP64 not supported by this lightweight parser
-    // Cap the central-directory read: a crafted/corrupt EOCD can declare a bogus
-    // 4 GB cdSize, and Buffer.alloc(cdSize) would try to grab it all. 16 MB holds
-    // tens of thousands of entries — far past the maxEntries we actually list.
-    const allocSize = Math.min(cdSize, Math.max(0, size - cdOffset), 16 * 1024 * 1024);
-    if (allocSize <= 0) return null;
-    const cd = Buffer.alloc(allocSize);
-    await fh.read(cd, 0, allocSize, cdOffset);
-    const entries = [];
-    let p = 0, truncated = false;
-    for (let n = 0; n < total && p + 46 <= cd.length; n++) {
-      if (cd.readUInt32LE(p) !== 0x02014b50) break;
-      const uncomp = cd.readUInt32LE(p + 24);
-      const nameLen = cd.readUInt16LE(p + 28);
-      const extraLen = cd.readUInt16LE(p + 30);
-      const commentLen = cd.readUInt16LE(p + 32);
-      const name = cd.toString('utf8', p + 46, p + 46 + nameLen);
-      const dir = name.endsWith('/');
-      if (entries.length < maxEntries) entries.push({ name, size: dir ? 0 : uncomp, dir });
-      else { truncated = true; }
-      p += 46 + nameLen + extraLen + commentLen;
-    }
-    return { entries, truncated, count: total };
-  } catch (_) {
-    return null;
-  } finally {
-    if (fh) try { await fh.close(); } catch (_) {}
-  }
-}
-
-// Reads at most maxBytes from a file WITHOUT loading the whole thing into memory.
-// Shared host files can be arbitrarily large, so the text-preview features must
-// never `readFile()` them whole. Returns { buf, truncated }.
-async function readFileCapped(abs, maxBytes) {
-  let fh;
-  try {
-    fh = await fs.promises.open(abs, 'r');
-    const size = (await fh.stat()).size;
-    const want = Math.min(size, maxBytes);
-    const buf = Buffer.alloc(want);
-    let off = 0;
-    while (off < want) {
-      const { bytesRead } = await fh.read(buf, off, want - off, off);
-      if (!bytesRead) break;
-      off += bytesRead;
-    }
-    return { buf: off === want ? buf : buf.subarray(0, off), truncated: size > maxBytes };
-  } finally {
-    if (fh) try { await fh.close(); } catch (_) {}
-  }
-}
-
-// --- Feature 18: full-text search across shared / received text files ---------
+// --- Full-text search across shared / received text files ---------
 // On-demand and bounded (no background index): each search walks the files behind
 // the active links and greps text files for the query, with hard caps on files,
 // results, per-file bytes and total time so it can never runaway.
@@ -6880,7 +6984,7 @@ async function grepFile(abs, rel, needle, meta, results) {
 }
 
 
-// --- Feature 27: persistent universal server search index --------------------
+// --- Persistent universal server search index --------------------
 // The former /api/search walked every text file for every query. This index is
 // rebuilt in the background and persisted under DATA_DIR, so queries are served
 // from memory immediately. It covers names/paths/metadata, text/code, searchable
@@ -6922,88 +7026,6 @@ let searchIndexError = null;
 let searchIndexTimer = null;
 let searchIndexRebuildPromise = null;
 
-function normalizeSearchText(v) {
-  return String(v == null ? '' : v).normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\u0000/g, ' ');
-}
-function searchTokens(v) {
-  // Keep filename/e-mail punctuation *inside* tokens, but never let sentence
-  // punctuation at the right edge become part of the posting key (e.g. `word.`).
-  // Otherwise a query for `word` misses content ending a sentence with `word.`.
-  const raw = normalizeSearchText(v).match(/[a-z0-9][a-z0-9._@+-]{0,63}/g) || [];
-  const out = raw.map((tok) => tok.replace(/[._@+-]+$/g, '')).filter((tok) => tok.length >= 2);
-  return [...new Set(out.slice(0, 20000))];
-}
-
-// Feature 23 — local semantic search.  This deliberately avoids a cloud model:
-// Direct-Xfer expands common French/English/Spanish concepts, applies a tiny
-// language-agnostic stemmer, then ranks documents by weighted concept overlap.
-// It is not an LLM embedding service, but it provides semantic recall for common
-// document intents (invoice/bill/relevé, contract/agreement, electricity/hydro,
-// receipts, identity, banking, etc.) while keeping indexed content on the server.
-const SEMANTIC_GROUPS = {
-  invoice:['invoice','bill','billing','facture','facturation','releve','statement','recibo','factura'],
-  receipt:['receipt','recu','reçu','ticket','proof','preuve','comprobante'],
-  contract:['contract','agreement','contrat','entente','convention','acuerdo','contrato'],
-  signed:['signed','signature','signe','signé','signee','signée','firmado','firma'],
-  electricity:['electricity','electric','hydro','power','energie','énergie','electricite','électricité','electrique','électrique','energia','energía'],
-  water:['water','eau','aqueduc','agua'],
-  internet:['internet','telecom','télécom','wifi','broadband','fibre','fiber'],
-  phone:['phone','telephone','téléphone','mobile','cellulaire','celular'],
-  bank:['bank','banking','banque','bancaire','banco'],
-  tax:['tax','taxes','impot','impôt','fiscal','revenue','revenu','impuesto'],
-  insurance:['insurance','assurance','policy','police','seguro'],
-  medical:['medical','health','sante','santé','clinique','hospital','hôpital','medico','médico','salud'],
-  identity:['identity','identite','identité','passport','passeport','license','licence','permis','id','identidad','pasaporte'],
-  salary:['salary','payroll','paystub','salaire','paie','paye','nomina','nómina'],
-  photo:['photo','image','picture','image','photographie','foto'],
-  video:['video','vidéo','movie','film'],
-  archive:['archive','zip','compressed','compresse','compressé'],
-  project:['project','projet','proyecto'],
-  report:['report','rapport','compte-rendu','informe'],
-  july:['july','juillet','julio'], january:['january','janvier','enero'], february:['february','fevrier','février','febrero'],
-  march:['march','mars','marzo'], april:['april','avril','abril'], may:['may','mai','mayo'], june:['june','juin','junio'],
-  august:['august','aout','août','agosto'], september:['september','septembre','septiembre'], october:['october','octobre','octubre'],
-  november:['november','novembre','noviembre'], december:['december','decembre','décembre','diciembre'],
-};
-const SEMANTIC_ALIAS = (() => {
-  const m = new Map();
-  for (const [canon, aliases] of Object.entries(SEMANTIC_GROUPS)) {
-    m.set(normalizeSearchText(canon), canon);
-    for (const a of aliases) m.set(normalizeSearchText(a), canon);
-  }
-  return m;
-})();
-function semanticStem(tok) {
-  tok = normalizeSearchText(tok).replace(/[^a-z0-9]/g, '');
-  if (tok.length <= 4) return tok;
-  for (const suf of ['ements','ement','ations','ation','ments','ment','iques','ique','ingly','ingly','ing','ées','ees','ée','ee','ados','adas','ado','ada','idos','idas','ido','ida','es','s']) {
-    if (tok.length > suf.length + 3 && tok.endsWith(suf)) { tok = tok.slice(0, -suf.length); break; }
-  }
-  return tok;
-}
-function semanticTerms(v) {
-  const raw = normalizeSearchText(v).match(/[a-z0-9][a-z0-9._@+-]{0,63}/g) || [];
-  const out = [];
-  for (let tok of raw.slice(0, 30000)) {
-    tok = tok.replace(/[._@+-]+$/g, ''); if (tok.length < 2) continue;
-    const canonical = SEMANTIC_ALIAS.get(tok);
-    // Known synonyms collapse to one language-neutral concept. Keeping both the
-    // alias stem and the canonical term would dilute cross-language coverage
-    // (e.g. `facture` vs `bill`) even though they mean the same thing. Unknown
-    // terms still get a light stem so names and domain-specific words remain useful.
-    if (canonical) out.push(canonical);
-    else {
-      const stem = semanticStem(tok);
-      // Inflected aliases such as `factures`, `contrats` or `receipts` must be
-      // canonicalized *after* stemming too. Previously they became `facture`,
-      // `contrat`, etc. and no longer matched the cross-language concept key.
-      const stemCanonical = stem ? SEMANTIC_ALIAS.get(stem) : null;
-      if (stemCanonical) out.push(stemCanonical);
-      else if (stem && stem.length >= 2) out.push(stem);
-    }
-  }
-  return [...new Set(out)].slice(0, 4096);
-}
 function rebuildSearchPostings() {
   universalSearchDocs = new Map(); universalSearchPostings = new Map(); universalSemanticPostings = new Map();
   for (const doc of universalSearchIndex.docs || []) {
@@ -7365,107 +7387,9 @@ async function extractUniversalSearchContent(abs, name) {
   } catch (_) {}
   return { kind:'metadata', text:'' };
 }
-// Feature 21 — local DLP scanner -------------------------------------------------
+// Local DLP scanner -------------------------------------------------
 // Findings intentionally expose only redacted samples. The complete secret/card/key
 // never goes to the browser, audit log or shares.json.
-function dlpLuhnValid(value) {
-  const digits = String(value || '').replace(/\D/g, '');
-  if (digits.length < 9) return false;
-  let sum = 0, alt = false;
-  for (let i = digits.length - 1; i >= 0; i--) {
-    let n = Number(digits[i]); if (alt) { n *= 2; if (n > 9) n -= 9; }
-    sum += n; alt = !alt;
-  }
-  return sum % 10 === 0;
-}
-function dlpIbanValid(value) {
-  const iban = String(value || '').replace(/\s+/g, '').toUpperCase();
-  if (!/^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/.test(iban)) return false;
-  const moved = iban.slice(4) + iban.slice(0, 4);
-  let rem = 0;
-  for (const ch of moved) {
-    const chunk = /[A-Z]/.test(ch) ? String(ch.charCodeAt(0) - 55) : ch;
-    for (const d of chunk) rem = (rem * 10 + Number(d)) % 97;
-  }
-  return rem === 1;
-}
-function dlpRedact(value) {
-  const s = String(value || '').replace(/[\r\n\t]+/g, ' ').trim();
-  if (!s) return '';
-  if (s.length <= 8) return s.slice(0, 2) + '…';
-  return s.slice(0, 4) + '…' + s.slice(-4);
-}
-function dlpFinding(type, severity, file, sample, detail) {
-  return { type, severity, file:String(file || '').slice(0, 512), sample:dlpRedact(sample), detail:String(detail || '').slice(0, 180) };
-}
-function detectDlpFindings(text, file) {
-  text = String(text || '');
-  const findings = [], seen = new Set();
-  const add = (type, severity, sample, detail) => {
-    const key = type + ':' + dlpRedact(sample); if (seen.has(key) || findings.length >= 100) return;
-    seen.add(key); findings.push(dlpFinding(type, severity, file, sample, detail));
-  };
-  let m;
-  const privateKey = /-----BEGIN (?:RSA |EC |OPENSSH |DSA |ENCRYPTED )?PRIVATE KEY-----/gi;
-  while ((m = privateKey.exec(text))) add('private-key','critical',m[0],'Private key material');
-  const aws = /\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/g; while ((m = aws.exec(text))) add('aws-access-key','critical',m[0],'AWS access key identifier');
-  const github = /\b(?:gh[pousr]_[A-Za-z0-9_]{20,255}|github_pat_[A-Za-z0-9_]{20,255})\b/g; while ((m = github.exec(text))) add('github-token','critical',m[0],'GitHub token');
-  const slack = /\bxox[baprs]-[A-Za-z0-9-]{10,200}\b/g; while ((m = slack.exec(text))) add('slack-token','critical',m[0],'Slack token');
-  const jwt = /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/g; while ((m = jwt.exec(text))) add('jwt','high',m[0],'JSON Web Token');
-  const password = /(?:password|passwd|pwd|mot\s+de\s+passe|passphrase|contrase(?:n|ñ)a)\s*[:=]\s*([^\s'";,]{6,128})/gi;
-  while ((m = password.exec(text))) add('password','high',m[1],'Password-like assignment');
-  const api = /(?:api[_ -]?key|secret[_ -]?key|access[_ -]?token|client[_ -]?secret|bearer)\s*[:=]?\s*['"]?([A-Za-z0-9_\-\/+=]{16,160})/gi;
-  while ((m = api.exec(text))) add('api-secret','high',m[1],'API/token secret');
-  const cards = /\b(?:\d[ -]*?){13,19}\b/g;
-  while ((m = cards.exec(text))) {
-    const digits = m[0].replace(/\D/g,'');
-    if (digits.length >= 13 && digits.length <= 19 && dlpLuhnValid(digits)) add('payment-card','high',m[0],'Payment-card number (Luhn valid)');
-  }
-  const sinContext = /(?:\bSIN\b|\bNAS\b|social\s+insurance|assurance\s+sociale|numero\s+d['’]?assurance\s+sociale)[^\d]{0,30}(\d{3}[ -]?\d{3}[ -]?\d{3})/gi;
-  while ((m = sinContext.exec(text))) if (dlpLuhnValid(m[1])) add('canadian-sin','high',m[1],'Canadian SIN/NAS (Luhn valid)');
-  const iban = /\b[A-Z]{2}\d{2}(?:\s?[A-Z0-9]){11,30}\b/gi;
-  while ((m = iban.exec(text))) if (dlpIbanValid(m[0])) add('iban','high',m[0],'IBAN (mod-97 valid)');
-  const identity = /(?:passport|passeport|driver(?:'s)?\s+licen[cs]e|permis\s+de\s+conduire|pasaporte)[^A-Za-z0-9]{0,20}([A-Z0-9-]{5,24})/gi;
-  while ((m = identity.exec(text))) add('identity-document','medium',m[1],'Identity-document number with context');
-  const confidential = /\b(?:strictly\s+confidential|confidential|confidentiel|confidentielle|restricted|hautement\s+confidentiel|confidencial)\b/gi;
-  while ((m = confidential.exec(text))) add('confidential-marker','medium',m[0],'Confidentiality marker');
-  return findings;
-}
-function dlpSeverityRank(v) { return ({ low:1, medium:2, high:3, critical:4 })[String(v || '').toLowerCase()] || 0; }
-function dlpPublicSummary(scan) {
-  const findings = Array.isArray(scan && scan.findings) ? scan.findings : [];
-  const filesScanned = Number(scan && scan.filesScanned) || 0;
-  const filesSkipped = Number(scan && scan.filesSkipped) || 0;
-  const ocrErrors = Number(scan && scan.ocrErrors) || 0;
-  const scanErrors = Number(scan && scan.scanErrors) || 0;
-  const incompleteEntries = Number(scan && scan.incompleteEntries) || 0;
-  const truncated = !!(scan && scan.truncated);
-  const ocrUnavailable = !!(scan && scan.ocrUnavailable);
-  return {
-    filesScanned, filesSkipped, ocrErrors, scanErrors, incompleteEntries, truncated, ocrUnavailable, incomplete:!!(filesSkipped || ocrErrors || scanErrors || incompleteEntries || truncated || ocrUnavailable),
-    findings:findings.slice(0, 50).map((f) => ({ type:f.type, severity:f.severity, file:f.file, sample:f.sample, detail:f.detail })),
-    count:findings.length,
-    highest:findings.reduce((best, f) => dlpSeverityRank(f.severity) > dlpSeverityRank(best) ? f.severity : best, ''),
-    types:[...new Set(findings.map((f) => f.type))].slice(0, 30),
-  };
-}
-function mergeDlpSummaries(scans, extraSkipped) {
-  const list = (scans || []).filter(Boolean);
-  const findings = []; const types = new Set();
-  let filesScanned = 0, filesSkipped = Math.max(0, Number(extraSkipped) || 0), ocrErrors = 0, scanErrors = 0, incompleteEntries = 0, count = 0, highest = '', truncated = filesSkipped > 0, ocrUnavailable = false;
-  for (const scan of list) {
-    filesScanned += Number(scan.filesScanned) || 0;
-    filesSkipped += Number(scan.filesSkipped) || 0;
-    ocrErrors += Number(scan.ocrErrors) || 0;
-    scanErrors += Number(scan.scanErrors) || 0;
-    incompleteEntries += Number(scan.incompleteEntries) || 0;
-    count += Number(scan.count) || 0; truncated = truncated || !!scan.truncated; ocrUnavailable = ocrUnavailable || !!scan.ocrUnavailable;
-    if (dlpSeverityRank(scan.highest) > dlpSeverityRank(highest)) highest = scan.highest;
-    for (const type of (scan.types || [])) types.add(type);
-    for (const f of (scan.findings || [])) if (findings.length < 50) findings.push(f);
-  }
-  return { filesScanned, filesSkipped, ocrErrors, scanErrors, incompleteEntries, truncated, ocrUnavailable, incomplete:!!(filesSkipped || ocrErrors || scanErrors || incompleteEntries || truncated || ocrUnavailable), findings, count, highest, types:[...types].slice(0, 30) };
-}
 
 async function dlpScanOneFile(abs, rel, ctx) {
   let st; try { st = await fs.promises.stat(abs); if (!st.isFile()) { ctx.scanErrors++; return; } } catch (_) { ctx.scanErrors++; return; }
@@ -7508,7 +7432,7 @@ async function dlpScanResolvedItems(resolved) {
     maxBytes:Math.max(1024*1024, (Number(settings.dlpMaxFileMB) || 25) * 1024 * 1024), scanOcr:settings.dlpScanOcr !== false, truncated:false };
   const walk = async (abs, rel) => {
     if (ctx.filesScanned + ctx.filesSkipped >= ctx.maxFiles) { ctx.truncated = true; return; }
-    let ents; try { ents = await fs.promises.readdir(abs, { withFileTypes:true }); } catch (_) { return; }
+    let ents; try { ents = await fs.promises.readdir(abs, { withFileTypes:true }); } catch (_) { ctx.scanErrors++; return; }
     for (const e of ents) {
       if (ctx.filesScanned + ctx.filesSkipped >= ctx.maxFiles) { ctx.truncated = true; return; }
       if (e.name === '.dxparts' || e.name === '.pending' || e.name.startsWith('.dx')) continue;
@@ -7519,7 +7443,7 @@ async function dlpScanResolvedItems(resolved) {
   };
   for (const item of (resolved || [])) {
     if (ctx.filesScanned + ctx.filesSkipped >= ctx.maxFiles || ctx.findings.length >= 100) { ctx.truncated = true; break; }
-    let abs; try { abs = hostToContainer(item.hostPath); await assertRealWithin(HOST_ROOT, abs); } catch (_) { continue; }
+    let abs; try { abs = hostToContainer(item.hostPath); await assertRealWithin(HOST_ROOT, abs); } catch (_) { ctx.scanErrors++; continue; }
     if (item.type === 'folder') await walk(abs, item.name || ''); else await dlpScanOneFile(abs, item.name || path.basename(abs), ctx);
   }
   return dlpPublicSummary(ctx);
@@ -7542,7 +7466,130 @@ function noteDlpOcrUnavailable(detail) {
   try { logAudit('dlp-ocr-unavailable', { detail }); } catch (_) {}
   try { addAdminCenterNotification('ocr-failed', { detail:String(detail || 'OCR unavailable').slice(0,300), source:'DLP', dedupeKey:'ocr-failed:dlp-unavailable', dedupeWindowMs:6*3600*1000 }); } catch (_) {}
 }
-function dlpDecision(req, res, body, scan, source) {
+const DLP_ACTIONS = new Set(['log','warn','quarantine','block']);
+const DLP_ACTION_RANK = { log:0, warn:1, quarantine:2, block:3 };
+function stricterDlpAction(a, b) {
+  const aa = DLP_ACTIONS.has(String(a || '').toLowerCase()) ? String(a).toLowerCase() : 'warn';
+  const bb = DLP_ACTIONS.has(String(b || '').toLowerCase()) ? String(b).toLowerCase() : 'warn';
+  return DLP_ACTION_RANK[aa] >= DLP_ACTION_RANK[bb] ? aa : bb;
+}
+function dlpEffectiveAction(settings, scan) {
+  const fallback = DLP_ACTIONS.has(String(settings.dlpMode || '').toLowerCase()) ? String(settings.dlpMode).toLowerCase() : 'warn';
+  if (!settings.dlpRulesEnabled || !scan || !scan.count) return fallback;
+  const severity = ['low','medium','high','critical'].includes(String(scan.highest || '').toLowerCase()) ? String(scan.highest).toLowerCase() : 'medium';
+  const key = 'dlpAction' + severity[0].toUpperCase() + severity.slice(1);
+  const configured = String(settings[key] || '').toLowerCase();
+  const action = DLP_ACTIONS.has(configured) ? configured : fallback;
+  // A severity rule describes what to do with what we DID inspect; it must not
+  // weaken the fail-closed fallback for content we could NOT inspect.
+  const incomplete = !!(scan.incomplete || scan.filesSkipped || scan.ocrErrors || scan.ocrUnavailable || scan.scanErrors || scan.incompleteEntries || scan.truncated);
+  return incomplete ? stricterDlpAction(action, fallback) : action;
+}
+function sanitizeDlpQuarantineState() {
+  if (!state.meta || typeof state.meta !== 'object') state.meta = {};
+  const raw = Array.isArray(state.meta.dlpQuarantine) ? state.meta.dlpQuarantine : [];
+  const valid = raw.filter((r) => r && r.id && Number.isFinite(Number(r.at))).slice(-200);
+  const changed = !Array.isArray(state.meta.dlpQuarantine) || valid.length !== raw.length || valid.some((r, i) => r !== raw[Math.max(0, raw.length - valid.length) + i]);
+  state.meta.dlpQuarantine = valid;
+  return changed;
+}
+function dlpQuarantineRecords() {
+  sanitizeDlpQuarantineState();
+  return state.meta.dlpQuarantine;
+}
+function reconcileDlpQuarantineFiles() {
+  let changed = false;
+  for (const rec of dlpQuarantineRecords()) {
+    if (!rec || !rec.file) continue;
+    const file = dlpQuarantineFilePath(rec.file);
+    let exists = false;
+    try { exists = !!file && fs.statSync(file).isFile(); } catch (_) {}
+    if (!exists) { rec.file = null; rec.fileMissing = true; changed = true; }
+    else if (rec.fileMissing) { delete rec.fileMissing; changed = true; }
+  }
+  return changed;
+}
+function dlpQuarantineFilePath(file) {
+  const base = path.basename(String(file || ''));
+  if (!base || base !== String(file || '')) return null;
+  return path.join(DLP_QUARANTINE_DIR, base);
+}
+function removeDlpQuarantineFile(rec) {
+  const file = rec && rec.file ? dlpQuarantineFilePath(rec.file) : null;
+  if (!file) return;
+  try { fs.unlinkSync(file); } catch (e) { if (!e || e.code !== 'ENOENT') console.error('[dlp] quarantine cleanup failed:', e && e.message); }
+}
+function cleanupDlpQuarantineOrphans() {
+  const keep = new Set(dlpQuarantineRecords().map((r) => r && r.file ? path.basename(String(r.file)) : '').filter(Boolean));
+  let entries = [];
+  try { entries = fs.readdirSync(DLP_QUARANTINE_DIR, { withFileTypes:true }); } catch (_) { return; }
+  for (const entry of entries) {
+    if (!entry.isFile() || keep.has(entry.name)) continue;
+    try { fs.unlinkSync(path.join(DLP_QUARANTINE_DIR, entry.name)); }
+    catch (e) { if (!e || e.code !== 'ENOENT') console.error('[dlp] orphan quarantine cleanup failed:', e && e.message); }
+  }
+}
+function moveFileToDlpQuarantine(src, dst) {
+  try { fs.renameSync(src, dst); return; }
+  catch (e) {
+    if (!e || e.code !== 'EXDEV') throw e;
+    // IMAGE_STORE_DIR may be mounted on another filesystem than DATA_DIR. Copy,
+    // fsync, then unlink so quarantine remains durable across mount boundaries.
+    fs.copyFileSync(src, dst, fs.constants.COPYFILE_EXCL);
+    try { const fd = fs.openSync(dst, 'r'); try { fs.fsyncSync(fd); } finally { fs.closeSync(fd); } }
+    catch (syncErr) { try { fs.unlinkSync(dst); } catch (_) {} throw syncErr; }
+    try { fs.unlinkSync(src); }
+    catch (unlinkErr) { try { fs.unlinkSync(dst); } catch (_) {} throw unlinkErr; }
+  }
+}
+function recordDlpQuarantine(req, scan, source, inputPath, displayName) {
+  const id = Date.now().toString(36) + '-' + crypto.randomBytes(6).toString('hex');
+  const session = req && (req.session || req.pwaSession);
+  const rec = {
+    id, at:Date.now(), source:String(source || 'share').slice(0,80),
+    name:String(displayName || '').replace(/[\r\n\t]+/g,' ').slice(0,160),
+    username:session && session.username ? String(session.username).slice(0,80) : (req && req.pwaDevice && req.pwaDevice.name ? ('PWA: ' + String(req.pwaDevice.name)).slice(0,80) : null),
+    deviceId:req && req.pwaDevice && req.pwaDevice.id ? String(req.pwaDevice.id).slice(0,120) : null,
+    ip:req ? maskIp(clientIp(req)) : null,
+    dlp:scan ? { count:Number(scan.count)||0, highest:scan.highest||null, types:Array.isArray(scan.types)?scan.types.slice(0,30):[], incomplete:!!scan.incomplete } : null,
+    file:null,
+  };
+  let src = null, dst = null;
+  if (inputPath) {
+    src = path.resolve(inputPath);
+    // Physical quarantine is an internal-only operation for freshly uploaded
+    // managed image bytes. Never allow this helper to become a generic server
+    // file mover if a future caller accidentally forwards client-controlled data.
+    const managedRoot = path.resolve(FULL_IMAGES_DIR);
+    const rel = path.relative(managedRoot, src);
+    let regular = false; try { regular = fs.lstatSync(src).isFile(); } catch (_) {}
+    if (!regular || rel === '..' || rel.startsWith('..' + path.sep) || path.isAbsolute(rel)) {
+      const err = new Error('dlp-quarantine-source-invalid'); err.code = 'DLP_QUARANTINE_SOURCE_INVALID'; throw err;
+    }
+    const ext = path.extname(String(displayName || src)).replace(/[^.a-z0-9]/gi,'').slice(0,12);
+    dst = path.join(DLP_QUARANTINE_DIR, id + ext);
+    try { moveFileToDlpQuarantine(src, dst); rec.file = path.basename(dst); }
+    catch (e) {
+      const err = new Error('dlp-quarantine-move-failed'); err.code = 'DLP_QUARANTINE_MOVE_FAILED'; err.cause = e; throw err;
+    }
+  }
+  const list = dlpQuarantineRecords();
+  const before = list.slice();
+  const evicted = [];
+  list.push(rec); while (list.length > 200) evicted.push(list.shift());
+  if (!persistNow()) {
+    state.meta.dlpQuarantine = before;
+    if (dst && src) {
+      try { moveFileToDlpQuarantine(dst, src); }
+      catch (e) { console.error('[dlp] quarantine rollback failed:', e && e.message); }
+    }
+    const err = new Error('dlp-quarantine-persist-failed'); err.code = 'DLP_QUARANTINE_PERSIST_FAILED'; throw err;
+  }
+  for (const old of evicted) removeDlpQuarantineFile(old);
+  try { auditReq(req, 'dlp-quarantined', `${rec.source}: ${rec.name || 'content'} · ${rec.dlp && rec.dlp.highest || 'unknown'} · ${rec.dlp && rec.dlp.count || 0} finding(s)`); } catch (_) {}
+  return rec;
+}
+function dlpDecision(req, res, body, scan, source, quarantine) {
   const settings = getSettings();
   if (settings.dlpEnabled === false || !scan) return false;
   const ocrUnavailable = !!scan.ocrUnavailable;
@@ -7551,7 +7598,7 @@ function dlpDecision(req, res, body, scan, source) {
   const otherIncomplete = !!(scan.filesSkipped || scan.ocrErrors || scan.scanErrors || scan.incompleteEntries || scan.truncated);
   const incomplete = otherIncomplete || ocrUnavailable;
   if (!scan.count && !incomplete) return false;
-  const mode = ['warn','block','log'].includes(settings.dlpMode) ? settings.dlpMode : 'warn';
+  const mode = dlpEffectiveAction(settings, scan);
   const override = !!(body && body.dlpOverride === true);
   const detail = `${source || 'share'}: ${scan.count || 0} finding(s), incomplete=${incomplete ? 'yes' : 'no'}, skipped=${scan.filesSkipped || 0}, ocrErrors=${scan.ocrErrors || 0}, ocrUnavailable=${ocrUnavailable ? 'yes' : 'no'}, scanErrors=${scan.scanErrors || 0}, archiveIncomplete=${scan.incompleteEntries || 0} — ${(scan.types || []).join(', ')}`;
   if (scan.count) {
@@ -7574,6 +7621,18 @@ function dlpDecision(req, res, body, scan, source) {
     addRequestCenterNotification(req, 'dlp-blocked', { count:scan.count || 0, detail:`${source || 'share'} · ${(scan.types || []).join(', ') || 'sensitive'}`, source:source || 'share', dedupeKey:`dlp-blocked:${source || 'share'}:${maskIp(clientIp(req))}:${Math.floor(Date.now()/60000)}`, dedupeWindowMs:2*60000 });
     auditReq(req, 'dlp-blocked', detail);
     res.status(403).json({ error:'dlp-blocked', dlp:scan }); return true;
+  }
+  if (mode === 'quarantine') {
+    let q;
+    try { q = recordDlpQuarantine(req, scan, source, quarantine && quarantine.file, quarantine && quarantine.name); }
+    catch (e) {
+      const failure = `${source || 'share'}: ${String(e && e.code || 'quarantine-failed')}`;
+      try { auditReq(req, 'dlp-quarantine-failed', failure); } catch (_) {}
+      try { addRequestCenterNotification(req, 'dlp-blocked', { count:scan.count || 0, detail:`${source || 'share'} · quarantine failed`, source:source || 'share', dedupeKey:`dlp-quarantine-failed:${source || 'share'}:${maskIp(clientIp(req))}:${Math.floor(Date.now()/60000)}`, dedupeWindowMs:2*60000 }); } catch (_) {}
+      res.status(503).json({ error:'dlp-quarantine-failed', dlp:scan }); return true;
+    }
+    addRequestCenterNotification(req, 'dlp-blocked', { count:scan.count || 0, detail:`${source || 'share'} · quarantined · ${(scan.types || []).join(', ') || 'sensitive'}`, source:source || 'share', dedupeKey:`dlp-quarantine:${source || 'share'}:${maskIp(clientIp(req))}:${Math.floor(Date.now()/60000)}`, dedupeWindowMs:2*60000 });
+    res.status(423).json({ error:'dlp-quarantined', quarantineId:q.id, dlp:scan }); return true;
   }
   if (mode === 'warn' && !override) {
     auditReq(req, 'dlp-warning', detail);
@@ -7671,7 +7730,7 @@ async function buildUniversalSearchIndex() {
     persistSearchOcrCacheSync(ocrCtx.usedCacheKeys);
     persistSearchIndexSync(next); universalSearchIndex = next; rebuildSearchPostings(); syncOcrStats();
     return next;
-  })().catch((e) => { searchIndexError = String((e && e.message) || e); console.error('[search-index] rebuild failed:', searchIndexError); addAdminCenterNotification('index-failed', { detail:searchIndexError.slice(0,400), source:'universal-search', dedupeKey:`index-failed:${searchIndexError.slice(0,120)}`, dedupeWindowMs:6*3600*1000 }); throw e; })
+  })().catch((e) => { searchIndexError = String((e && e.message) || e); console.error('[search-index] rebuild failed:', searchIndexError); addAdminCenterNotification('index-failed', { detail:searchIndexError.slice(0,400), source:'universal-search', dedupeKey:`index-failed:${searchIndexError.slice(0,120)}`, dedupeWindowMs:6*3600*1000 }); emitLiveActivity('system', { name:'index-failed', status:'error', detail:searchIndexError.slice(0,300) }); throw e; })
     .finally(() => { searchIndexBuilding = false; searchIndexRebuildPromise = null; });
   return searchIndexRebuildPromise;
 }
@@ -7795,6 +7854,96 @@ function universalSemanticSearchQuery(q, req, limit, options) {
   scored.sort((a,b) => b.score - a.score || String(a.result.file).localeCompare(String(b.result.file)));
   return scored.slice(0, limit).map((x) => x.result);
 }
+
+// 1.51.0 — global metadata search complements the file-content index with
+// links, accounts and operational logs. Sensitive account fields are never
+// exposed; operators remain scoped to their own links and activity.
+function globalSearchText(value) { return normalizeSearchText(String(value == null ? '' : value)); }
+function globalSearchMatch(hay, needle) {
+  const text = globalSearchText(hay), q = globalSearchText(needle).trim();
+  if (!q) return null;
+  const pos = text.indexOf(q); if (pos < 0) return null;
+  let score = 10;
+  if (pos === 0) score += 8;
+  if (text === q) score += 12;
+  const start = Math.max(0, pos - 70), end = Math.min(text.length, pos + q.length + 150);
+  return { score, snippet:(start > 0 ? '…' : '') + text.slice(start, end).replace(/\s+/g, ' ').trim() + (end < text.length ? '…' : '') };
+}
+function globalMetadataSearch(q, req, limit, options) {
+  options = options && typeof options === 'object' ? options : {};
+  const max = Math.max(1, Math.min(200, Number(limit) || 100));
+  const canShare = typeof options.canShare === 'function' ? options.canShare : (s) => ownsShare(req, s);
+  const role = options.role || (req && req.session && req.session.role) || (req && req.pwaSession && req.pwaSession.role) || '';
+  const username = options.username || (req && req.session && req.session.username) || (req && req.pwaSession && req.pwaSession.username) || '';
+  const includeAdminMeta = options.includeAdminMeta != null ? !!options.includeAdminMeta : ['owner','admin','auditor'].includes(role);
+  const scopes = new Set(Array.isArray(options.scopes) ? options.scopes : ['links','users','logs']);
+  const rows = [];
+  const push = (score, row) => { rows.push({ score:Number(score) || 0, row }); };
+
+  if (scopes.has('links')) {
+    const seen = new Set();
+    const linkRows = [];
+    for (const sh of state.shares || []) if (sh) linkRows.push({ sh, trashed:false, trashId:null });
+    for (const rec of trashItems()) if (rec && rec.share) linkRows.push({ sh:rec.share, trashed:true, trashId:rec.id });
+    for (const item of linkRows) {
+      const sh = item.sh; if (!sh || seen.has((item.trashed ? 'trash:' : 'live:') + sh.id) || !canShare(sh, item)) continue;
+      seen.add((item.trashed ? 'trash:' : 'live:') + sh.id);
+      const hay = [sh.name, sh.type, sh.token, sh.ownerName, sh.adminNote, sh.note, sh.descriptionMd, Array.isArray(sh.tags) ? sh.tags.join(' ') : '', item.trashed ? 'trash deleted revoked corbeille supprimé' : '', sh.archived ? 'archive archived archivé' : ''].filter(Boolean).join(' · ');
+      const hit = globalSearchMatch(hay, q); if (!hit) continue;
+      const pathName = item.trashed ? 'Corbeille' : (sh.archived ? 'Archive' : 'Partage');
+      push(hit.score + (globalSearchText(sh.name) === globalSearchText(q).trim() ? 20 : 0), {
+        scope:'link', kind:'link', shareId:sh.id, shareName:sh.name || sh.id, type:sh.type || 'share', token:sh.token || '', file:pathName,
+        snippet:hit.snippet, archived:!!sh.archived, revoked:!!sh.revoked, trashed:!!item.trashed, trashId:item.trashId || null,
+        path:item.trashed ? null : linkPrefix(sh) + sh.token,
+      });
+    }
+  }
+
+  if (scopes.has('users') && includeAdminMeta) {
+    for (const acc of accountList()) {
+      if (!acc) continue;
+      const hay = [acc.username, acc.role, acc.lastLoginAt ? new Date(acc.lastLoginAt).toISOString() : '', acc.createdAt ? new Date(acc.createdAt).toISOString() : ''].filter(Boolean).join(' · ');
+      const hit = globalSearchMatch(hay, q); if (!hit) continue;
+      push(hit.score + (globalSearchText(acc.username) === globalSearchText(q).trim() ? 20 : 0), {
+        scope:'user', kind:'user', shareId:null, shareName:acc.username || 'user', type:'user', token:'', file:acc.role || 'user',
+        snippet:hit.snippet, accountId:acc.id || null, username:acc.username || '', role:acc.role || '', lastLoginAt:Number(acc.lastLoginAt) || null,
+      });
+    }
+  }
+
+  if (scopes.has('logs')) {
+    const visibleShareIds = new Set((state.shares || []).filter((sh) => sh && canShare(sh)).map((sh) => sh.id));
+    for (const rec of trashItems()) if (rec && rec.share && canShare(rec.share, rec)) visibleShareIds.add(rec.share.id);
+    const canSeeGlobalLogs = includeAdminMeta;
+    for (const e of (state.audit || []).slice(0, 500)) {
+      if (!e) continue;
+      if (!canSeeGlobalLogs && username && normUsername(e.actor || e.username || '') !== normUsername(username)) continue;
+      const hay = [e.action, e.actor || e.username, e.role, e.ip, e.detail, e.at ? new Date(e.at).toISOString() : ''].filter(Boolean).join(' · ');
+      const hit = globalSearchMatch(hay, q); if (!hit) continue;
+      push(hit.score, { scope:'log', kind:'audit', shareId:null, shareName:e.action || 'audit', type:'log', token:'', file:(e.actor || e.username || 'system'), snippet:hit.snippet, at:Number(e.at) || null, action:e.action || '', actor:e.actor || e.username || '' });
+    }
+    for (const h of (state.history || []).slice(0, 1000)) {
+      if (!h) continue;
+      if (!canSeeGlobalLogs && (!h.shareId || !visibleShareIds.has(h.shareId))) continue;
+      const hay = [h.name, h.shareId, h.direction, h.status, h.failureReason, h.sender, h.ip, h.country, h.at ? new Date(h.at).toISOString() : ''].filter(Boolean).join(' · ');
+      const hit = globalSearchMatch(hay, q); if (!hit) continue;
+      const sh = h.shareId ? getById(h.shareId) : null;
+      push(hit.score - 1, { scope:'log', kind:'transfer', shareId:h.shareId || null, shareName:(sh && sh.name) || h.name || 'transfer', type:'log', token:sh && sh.token || '', file:h.direction === 'up' ? 'Upload' : 'Download', snippet:hit.snippet, at:Number(h.at) || null, path:sh ? linkPrefix(sh) + sh.token : null });
+    }
+    for (const e of (state.activityLog || []).slice(0, 1000)) {
+      if (!e || e.kind === 'audit') continue; // audit rows above already cover mirrored audit activity
+      if (!canSeeGlobalLogs && (!e.shareId || !visibleShareIds.has(e.shareId))) continue;
+      const hay = [e.name,e.kind,e.status,e.detail,e.ip,e.actor,e.accountId,e.deviceId,e.shareId,e.direction,e.at ? new Date(e.at).toISOString() : ''].filter(Boolean).join(' · ');
+      const hit = globalSearchMatch(hay, q); if (!hit) continue;
+      const sh = e.shareId ? getById(e.shareId) : null;
+      push(hit.score - 0.5, { scope:'log', kind:'activity', shareId:e.shareId || null, shareName:(sh && sh.name) || e.name || 'activity', type:'log', token:sh && sh.token || '', file:'Activity', snippet:hit.snippet, at:Number(e.at) || null, path:sh ? linkPrefix(sh) + sh.token : null });
+    }
+  }
+
+  rows.sort((a,b) => b.score - a.score || String(a.row.shareName || '').localeCompare(String(b.row.shareName || '')));
+  return rows.slice(0, max).map((x) => x.row);
+}
+
 function initUniversalSearchIndex() {
   loadSearchOcrCache();
   loadSearchIndex();
@@ -7804,7 +7953,7 @@ function initUniversalSearchIndex() {
   if (timer.unref) timer.unref();
 }
 
-// Feature 6 — build the full rendered-preview page (Markdown / highlighted code /
+// Build the full rendered-preview page (Markdown / highlighted code /
 // ZIP listing) for a file. `downloadUrl` powers the download button; `viewUrl`,
 // when given, offers a "raw" fallback link. Text content is capped at 2 MB.
 const RENDER_MAX_BYTES = 2 * 1024 * 1024;
@@ -7836,6 +7985,7 @@ async function buildRenderPage(lang, title, name, abs, kind, downloadUrl, viewUr
     const text = capped.buf.toString('utf8');
     const note = tooBig ? `<p class="muted sm">${esc(L.previewTruncated)}</p>` : '';
     if (kind === 'markdown') inner = `<div class="md-body">${renderMarkdown(text)}</div>${note}`;
+    else if (kind === 'text') inner = `<pre class="code text-preview"><code>${esc(text)}</code></pre>${note}`;
     else inner = `<pre class="code hl"><code>${highlightCode(text)}</code></pre>${note}`;
   }
   const body = `
@@ -7919,7 +8069,7 @@ class Throttle extends Transform {
   }
 }
 
-// Feature 5 — bandwidth cap tied to a time-of-day window. Returns the cap in
+// Bandwidth cap tied to a time-of-day window. Returns the cap in
 // bytes/s that currently applies from the schedule (0 = no schedule cap right
 // now), handling windows that wrap past midnight (start > end).
 function scheduleRateBps(now = new Date()) {
@@ -7958,18 +8108,135 @@ function rateForMeta(meta) {
   return constraints.length ? Math.min(...constraints.map((c) => c.bps)) : 0;
 }
 
+// Resumable browser downloads. Each managed Range response
+// carries a random browser-generated id. The server records only completed byte
+// intervals; a client cannot mark a download complete without actually receiving
+// every range. Session metadata is persisted (without file bytes) so browser/PWA
+// and server restarts can both resume safely.
+const RESUME_DOWNLOAD_TTL_MS = 7 * 86400000;
+const RESUME_DOWNLOAD_MAX = 500;
+function downloadResumeStore() {
+  if (!state.meta || typeof state.meta !== 'object') state.meta = {};
+  if (!state.meta.downloadResumeSessions || typeof state.meta.downloadResumeSessions !== 'object' || Array.isArray(state.meta.downloadResumeSessions)) {
+    state.meta.downloadResumeSessions = {};
+  }
+  return state.meta.downloadResumeSessions;
+}
+function validDownloadResumeId(value) {
+  const id = String(value || '').trim().toLowerCase();
+  return /^[a-f0-9]{32,64}$/.test(id) ? id : null;
+}
+function downloadFileFingerprint(absPath, stat, shareId) {
+  return crypto.createHash('sha256').update([
+    'direct-xfer-resume-v1', String(shareId || ''), path.resolve(absPath),
+    String(stat.size), String(Math.trunc(stat.mtimeMs || 0)), String(Math.trunc(stat.ctimeMs || 0)), String(stat.ino || 0),
+  ].join('\0')).digest('hex');
+}
+function downloadFileEtag(stat) {
+  const raw = `${Number(stat.size) || 0}-${Math.trunc(Number(stat.mtimeMs) || 0)}-${Math.trunc(Number(stat.ctimeMs) || 0)}-${Number(stat.ino) || 0}`;
+  return `"dx-${crypto.createHash('sha256').update(raw).digest('base64url').slice(0, 24)}"`;
+}
+function pruneDownloadResumeSessions(now = Date.now()) {
+  const store = downloadResumeStore();
+  const rows = Object.entries(store);
+  let changed = false;
+  for (const [id, session] of rows) {
+    const ttl = session && session.finalized ? Math.min(RESUME_DOWNLOAD_TTL_MS, 86400000) : RESUME_DOWNLOAD_TTL_MS;
+    if (!session || now - Number(session.updatedAt || session.createdAt || 0) > ttl) {
+      delete store[id]; changed = true;
+    }
+  }
+  const remaining = Object.entries(store).sort((a, b) => Number(b[1].updatedAt || 0) - Number(a[1].updatedAt || 0));
+  for (const [id] of remaining.slice(RESUME_DOWNLOAD_MAX)) { delete store[id]; changed = true; }
+  if (changed) scheduleFlush();
+  return store;
+}
+function mergeDownloadRanges(ranges, start, end) {
+  const all = (Array.isArray(ranges) ? ranges : [])
+    .concat([[Math.max(0, Number(start) || 0), Math.max(0, Number(end) || 0)]])
+    .filter((row) => Array.isArray(row) && Number.isSafeInteger(row[0]) && Number.isSafeInteger(row[1]) && row[0] <= row[1])
+    .sort((a, b) => a[0] - b[0]);
+  const merged = [];
+  for (const row of all) {
+    const last = merged[merged.length - 1];
+    if (last && row[0] <= last[1] + 1) last[1] = Math.max(last[1], row[1]);
+    else merged.push([row[0], row[1]]);
+  }
+  return merged.slice(0, 2048);
+}
+function downloadRangesComplete(ranges, total) {
+  return total === 0 || (Array.isArray(ranges) && ranges.length === 1 && ranges[0][0] === 0 && ranges[0][1] >= total - 1);
+}
+function getDownloadResumeSession(req, absPath, stat, transferMeta, filename, resumeScope) {
+  const id = validDownloadResumeId(req.headers['x-direct-xfer-resume-id']);
+  const scope = String((transferMeta && transferMeta.shareId) || resumeScope || '').trim().slice(0, 240);
+  if (!id || !scope) return { id:null, session:null };
+  const share = transferMeta && transferMeta.shareId ? getById(transferMeta.shareId) : null;
+  if (share && share.burnAfterDownload) return { id, error:'resume-unavailable-one-time' };
+  const store = pruneDownloadResumeSessions();
+  const fingerprint = downloadFileFingerprint(absPath, stat, scope);
+  let session = store[id];
+  if (session && (session.fingerprint !== fingerprint || String(session.scope || session.shareId || '') !== scope)) {
+    return { id, error:'resume-id-conflict' };
+  }
+  if (session && session.finalized) return { id, error:'resume-already-complete' };
+  if (!session) {
+    session = store[id] = {
+      id, fingerprint, scope, shareId:(transferMeta && transferMeta.shareId) || null, filename:String(filename || '').slice(0, 240),
+      total:stat.size, ranges:[], quotaIp:(transferMeta && transferMeta.shareId) ? maskIp(clientIp(req)) : null,
+      createdAt:Date.now(), updatedAt:Date.now(), finalized:false,
+    };
+    scheduleFlush();
+  } else {
+    // Never trust malformed/out-of-bounds interval metadata loaded from disk.
+    // Resetting forces the bytes to be served again instead of falsely completing.
+    const validRanges = Array.isArray(session.ranges) && session.ranges.every((row) =>
+      Array.isArray(row) && Number.isSafeInteger(row[0]) && Number.isSafeInteger(row[1]) &&
+      row[0] >= 0 && row[0] <= row[1] && row[1] < stat.size
+    );
+    if (!validRanges) { session.ranges = []; session.updatedAt = Date.now(); scheduleFlush(); }
+  }
+  return { id, session };
+}
+function completeManagedDownload(req, session, onServed, transferMeta, total, filename) {
+  if (!session || session.finalized) return false;
+  session.finalized = true; session.completedAt = Date.now(); session.updatedAt = Date.now();
+  if (onServed) onServed();
+  if (transferMeta) {
+    if (transferMeta.shareId) commitManagedIpDownload(getById(transferMeta.shareId), session.quotaIp);
+    onDownloadComplete({ type:'file', name:filename });
+    if (transferMeta.shareId) noteBytesServed(transferMeta.shareId, total);
+    const logical = startTransfer(req, { ...transferMeta, resumed:true }, total);
+    logical.bytes = total; logical.notify = true; logical.resumed = true;
+    noteCenterConcurrentDownloadStart(logical);
+    endTransfer(logical, true, null);
+  }
+  // Completion changes quotas, notifications and the durable resume receipt.
+  // Persist synchronously to avoid double accounting after an immediate restart.
+  if (!persistNow()) scheduleFlush();
+  return true;
+}
+
 function streamFile(req, res, absPath, filename, onServed, transferMeta, serveOpts = {}) {
   fs.stat(absPath, (err, st) => {
     if (err || !st.isFile()) return sendError(req, res, 404, 'fileNotFound');
 
     const total = st.size;
+    const etag = downloadFileEtag(st);
     if (transferMeta && transferMeta.shareId) { const sigShare=getById(transferMeta.shareId); if (sigShare) noteCenterSharedFileSignature(sigShare, absPath, filename, st); }
-    // Feature 7 — gate large downloads behind a proof-of-work challenge. Only for
+    // Gate large downloads behind a proof-of-work challenge. Only for
     // real download requests (serveOpts.challenge), never inline previews, and
     // only on the initial GET (a solved pass rides in a cookie thereafter).
     if (serveOpts.challenge && req.method === 'GET' && challengeRequired(total) && !hasValidPow(req)) {
       return res.status(200).type('html').send(challengePage(pickLang(req)));
     }
+    res.setHeader('ETag', etag);
+    res.setHeader('Last-Modified', st.mtime.toUTCString());
+    const resumableAllowed = !!(
+      (transferMeta && transferMeta.shareId && !(getById(transferMeta.shareId) || {}).burnAfterDownload)
+      || serveOpts.resumable
+    );
+    res.setHeader('X-Direct-Xfer-Resumable', resumableAllowed ? '1' : '0');
     res.setHeader('Accept-Ranges', 'bytes');
     const inline = !!serveOpts.inline;
     res.setHeader('Content-Type', inline && serveOpts.contentType ? serveOpts.contentType : 'application/octet-stream');
@@ -7986,7 +8253,10 @@ function streamFile(req, res, absPath, filename, onServed, transferMeta, serveOp
     let end = total - 1;
     let status = 200;
 
-    const range = req.headers.range;
+    // If-Range protects a resumed task from silently stitching together two
+    // different versions of a file. A changed validator forces a clean 200.
+    const ifRange = String(req.headers['if-range'] || '').trim();
+    const range = ifRange && ifRange !== etag && ifRange !== st.mtime.toUTCString() ? null : req.headers.range;
     if (range) {
       const m = /^bytes=(\d*)-(\d*)$/.exec(range.trim());
       if (m && !(m[1] === '' && m[2] === '')) {
@@ -8010,10 +8280,21 @@ function streamFile(req, res, absPath, filename, onServed, transferMeta, serveOp
     res.status(status);
     res.setHeader('Content-Length', end - start + 1);
 
+    // HEAD is a metadata probe only. Letting a forged resume header create a
+    // durable session here allowed cheap exhaustion of the persisted session cap.
+    const managedResume = req.method === 'GET'
+      ? getDownloadResumeSession(req, absPath, st, transferMeta, filename, resumableAllowed ? serveOpts.resumeScope : null)
+      : { id:null, session:null };
+    if (managedResume.error) {
+      for (const header of ['Content-Range','Content-Length','Content-Disposition','Content-Type']) res.removeHeader(header);
+      return res.status(409).json({ error:managedResume.error });
+    }
+    if (managedResume.id) res.setHeader('X-Direct-Xfer-Resume-Id', managedResume.id);
+
     // Is the WHOLE file delivered in a single GET response? Quotas, notifications
     // and auto-shutdown are committed only after the response finishes cleanly.
     // HEAD, byte ranges and interrupted responses must never consume a download.
-    const isFullGet = req.method === 'GET' && start === 0 && end >= total - 1;
+    const isFullGet = !managedResume.session && req.method === 'GET' && start === 0 && end >= total - 1;
     let burnClaim = null;
     if (isFullGet && !inline && transferMeta && transferMeta.shareId) {
       const claimed = claimOneTimeDownload(transferMeta.shareId);
@@ -8027,7 +8308,7 @@ function streamFile(req, res, absPath, filename, onServed, transferMeta, serveOp
         if (onServed) onServed();
         if (!inline) {
           onDownloadComplete({ type: 'file', name: filename });
-          if (transferMeta && transferMeta.shareId) noteBytesServed(transferMeta.shareId, total); // feature 13
+          if (transferMeta && transferMeta.shareId) noteBytesServed(transferMeta.shareId, total);
         }
       });
     }
@@ -8061,7 +8342,10 @@ function streamFile(req, res, absPath, filename, onServed, transferMeta, serveOp
       highWaterMark: rateBps > 0 ? Math.min(256 * 1024, Math.max(1024, Math.floor(rateBps / 10))) : undefined,
     });
     const throttle = rateBps > 0 ? new Throttle(() => rateConstraintsForMeta(transferMeta)) : null;
-    const transfer = transferMeta ? startTransfer(req, transferMeta, end - start + 1) : null;
+    // Managed chunks are physical fragments of one logical download. Recording
+    // each fragment as a transfer would pollute history and per-link counters;
+    // completeManagedDownload() writes the single logical transfer instead.
+    const transfer = transferMeta && !managedResume.session ? startTransfer(req, transferMeta, end - start + 1) : null;
     if (transfer) {
       transfer.notify = isFullGet; // only notify a complete download
       if (burnClaim) transfer.burnClaim = burnClaim;
@@ -8076,6 +8360,16 @@ function streamFile(req, res, absPath, filename, onServed, transferMeta, serveOp
       if (!res.headersSent) sendError(req, res, 500, 'readError');
       else res.destroy();
     });
+    if (managedResume.session && req.method === 'GET') {
+      res.on('finish', () => {
+        const session = managedResume.session;
+        if (session.finalized) return;
+        session.ranges = mergeDownloadRanges(session.ranges, start, end);
+        session.updatedAt = Date.now();
+        if (downloadRangesComplete(session.ranges, total)) completeManagedDownload(req, session, onServed, transferMeta, total, filename);
+        else scheduleFlush();
+      });
+    }
     // 'close' always fires at the end; res.writableFinished distinguishes completed/interrupted.
     res.on('close', () => {
       stream.destroy();
@@ -8226,7 +8520,7 @@ async function streamZip(req, res, absDir, zipName, onServed, transferMeta) {
   res.on('finish', () => {
     if (onServed) onServed();
     onDownloadComplete({ type: 'folder-zip', name: zipName });
-    if (transferMeta && transferMeta.shareId) noteBytesServed(transferMeta.shareId, transfer ? transfer.bytes : 0); // feature 13 — count ZIP bytes toward the cap
+    if (transferMeta && transferMeta.shareId) noteBytesServed(transferMeta.shareId, transfer ? transfer.bytes : 0); // count ZIP bytes toward the cap
   });
   if (throttle) archive.pipe(throttle).pipe(res);
   else archive.pipe(res);
@@ -8300,7 +8594,7 @@ async function streamZipFiles(req, res, items, zipName, onServed, transferMeta) 
   res.on('finish', () => {
     if (onServed) onServed();
     onDownloadComplete({ type: 'collection-zip', name: zipName });
-    if (transferMeta && transferMeta.shareId) noteBytesServed(transferMeta.shareId, transfer ? transfer.bytes : 0); // feature 13 — count ZIP bytes toward the cap
+    if (transferMeta && transferMeta.shareId) noteBytesServed(transferMeta.shareId, transfer ? transfer.bytes : 0); // count ZIP bytes toward the cap
   });
   if (throttle) archive.pipe(throttle).pipe(res);
   else archive.pipe(res);
@@ -8472,7 +8766,7 @@ downloadRouter.get('/s/:token/view', async (req, res) => {
 // cache for hotlink performance without leaving revoked images cached for a year.
 const PHOTO_PUBLIC_CACHE = 'public, max-age=3600';
 
-// --- Anti-hotlink (feature 19) ---------------------------------------------
+// --- Anti-hotlink ---------------------------------------------
 // When imageHotlinkHosts is non-empty, only requests whose Referer host matches
 // the allowlist (or the server's own host, or that carry no Referer at all —
 // i.e. a direct visit) are served. Subdomains of a listed host are allowed too.
@@ -8606,7 +8900,7 @@ downloadRouter.get('/i/:token/thumb', (req, res) => servePhoto(req, res, 'thumb'
 downloadRouter.get('/i/:token/micro', (req, res) => servePhoto(req, res, 'micro'));
 downloadRouter.get('/i/:token', (req, res) => servePhoto(req, res, null));
 
-// Public image gallery (feature 18): renders an album's still-active members.
+// Public image gallery: renders an album's still-active members.
 downloadRouter.get('/g/:token', (req, res) => {
   const lang = pickLang(req);
   const s = getByToken(String(req.params.token || ''));
@@ -8721,7 +9015,7 @@ downloadRouter.post('/g/:token/c/:secret/remove/:imageToken', async (req, res) =
   res.json({ ok: true, persisted:true });
 });
 
-// Feature 6 — rendered preview (Markdown, highlighted code, ZIP listing) for an
+// Rendered preview (Markdown, highlighted code, ZIP listing) for an
 // indexed item of a file/collection share. Falls back to the raw /view otherwise.
 downloadRouter.get('/s/:token/render', async (req, res) => {
   const s = requireActiveShare(req, res);
@@ -8788,7 +9082,7 @@ async function serveFolderBrowse(req, res, s, folderRoot, sub, base, label) {
   const withRel = entries.map((e) => ({ ...e, rel: joinRel(e.name) }));
   const view = label && label !== s.name ? { ...s, name: label } : s;
   const wm = previewWatermark(req, req.params.token);
-  // Feature 3 — ?player=1 opens a playlist player for the audio/video in this folder.
+  // ?player=1 opens a playlist player for the audio/video in this folder.
   if (req.query.player && !s.noPreview) {
     return res.type('html').send(mediaPlayerPage(pickLang(req), view, withRel, links, wm));
   }
@@ -8811,7 +9105,7 @@ async function serveFolderFile(req, res, s, folderRoot, sub) {
   const abs = resolveWithin(folderRoot, sub);
   await assertRealWithin(folderRoot, abs);
   const name = path.basename(abs);
-  // Feature 3 — ?vtt=1 serves a sibling subtitle as WebVTT (converting .srt).
+  // ?vtt=1 serves a sibling subtitle as WebVTT (converting .srt).
   if (req.query.vtt) {
     const ext = (name.split('.').pop() || '').toLowerCase();
     if (ext === 'vtt' || ext === 'srt') {
@@ -8863,7 +9157,7 @@ async function serveFolderZip(req, res, s, folderRoot, sub, label) {
   });
 }
 
-// --- Feature 7: SHA-256 integrity manifests ---------------------------------
+// --- SHA-256 integrity manifests ---------------------------------
 // Streaming SHA-256 of one file (no size limit, constant memory).
 function sha256File(abs) {
   return new Promise((resolve, reject) => {
@@ -8928,7 +9222,7 @@ async function shareManifestFiles(s, folderRoot, sub) {
   return files;
 }
 
-// Feature 6 — turns a list of selected relative paths (under folderRoot) into
+// Turns a list of selected relative paths (under folderRoot) into
 // zip items. Each path is validated to stay within the root; missing entries are
 // silently skipped. Capped to avoid abuse.
 async function selectionToItems(folderRoot, rels) {
@@ -9014,9 +9308,9 @@ downloadRouter.get(['/s/:token/sha256', '/s/:token/sha256/*'], async (req, res) 
   }
 });
 
-// Feature 6 — download a selection of files as one .zip (folder or collection).
+// Download a selection of files as one .zip (folder or collection).
 downloadRouter.post('/s/:token/zip-select', selParser, async (req, res) => {
-  const s = requireActiveShare(req, res, { countDownload: true }); // features 13/24 — ZIP-of-selection is a real download
+  const s = requireActiveShare(req, res, { countDownload: true }); // ZIP-of-selection is a real download
   if (!s) return;
   if (!zipAllowed(s)) return sendError(req, res, 404, 'notFound');
   let items = [];
@@ -9061,7 +9355,7 @@ downloadRouter.get('/s/:token/item/:idx/file/*', async (req, res) => {
 });
 
 downloadRouter.get(['/s/:token/item/:idx/zip', '/s/:token/item/:idx/zip/*'], async (req, res) => {
-  const s = requireActiveShare(req, res, { countDownload: true }); // features 13/24 — item folder ZIP is a real download
+  const s = requireActiveShare(req, res, { countDownload: true }); // item folder ZIP is a real download
   if (!s) return; // requireActiveShare already sent the response
   if (s.type !== 'file') return sendError(req, res, 404, 'notFound');
   if (!zipAllowed(s)) return sendError(req, res, 404, 'notFound');
@@ -9111,13 +9405,13 @@ function fileExt(name) {
 
 // Reception-link quota/filter gate. Returns null when allowed, otherwise an
 // error code. sizeHint is the announced size (Content-Length); 0 if unknown.
-// Feature 9 — sanitized visitor name for a reception deposit. Reused for the
+// Sanitized visitor name for a reception deposit. Reused for the
 // optional per-sender subfolder AND the "require a name" gate.
 function cleanSenderName(req) {
   return String((req && req.query && req.query.sender) || '')
     .replace(/[^\p{L}\p{N} _.-]/gu, '_').replace(/^\.+/, '').trim().slice(0, 60);
 }
-// Feature 11 — leading-byte content sniff. Detects native executables (Windows
+// Leading-byte content sniff. Detects native executables (Windows
 // PE, ELF, Mach-O / Java class / universal binaries) and shell shebangs so a link
 // with `blockExecutables` refuses a disguised binary even when the extension
 // filter would accept it (e.g. malware renamed to .jpg).
@@ -9142,7 +9436,7 @@ async function inboxContentReason(s, absPath) {
   finally { if (fd) try { await fd.close(); } catch (_) {} }
   return null;
 }
-// Feature 10 — server-wide reception storage cap. Per-link quotas (maxTotalBytes)
+// Server-wide reception storage cap. Per-link quotas (maxTotalBytes)
 // already exist; this bounds the TOTAL bytes received across every reception /
 // collaboration link, protecting the writable /Direct-Xfer volume. 0 = unlimited.
 function receptionStorageCapBytes() {
@@ -9277,7 +9571,7 @@ function inboxRejectReason(s, name, sizeHint, opts = {}) {
     if (usedBytes >= Number(s.maxTotalBytes)) maybeCenterReceptionQuota(s);
     return 'quota-full';
   }
-  if (receptionCapExceeded(sizeHint, opts.excludePendingId || null)) return 'storage-cap'; // feature 10 — global cap
+  if (receptionCapExceeded(sizeHint, opts.excludePendingId || null)) return 'storage-cap'; // global cap
   return null;
 }
 
@@ -9290,7 +9584,7 @@ function inboxRejectStatus(reason) {
   return 400;
 }
 
-// Feature 15 — per-link content-hash memory so a reception link can refuse a file
+// Per-link content-hash memory so a reception link can refuse a file
 // whose bytes already arrived. Bounded so a scraped link can't grow shares.json.
 const RECEPTION_HASH_MAX = 20000;
 function receptionHashSeen(s, sha) {
@@ -9349,7 +9643,7 @@ function safeUploadParentSegments(rel) {
   return parts;
 }
 
-// Feature 2 — when a reception link groups by sender, received files land in a
+// When a reception link groups by sender, received files land in a
 // <sender>/<YYYY-MM-DD>/ subfolder. Returns those path segments (or [] when off).
 // The sender name comes from the visitor (?sender=), sanitized to one safe
 // segment; empty falls back to "anonymous".
@@ -9361,14 +9655,14 @@ function senderSubdirSegs(s, req) {
   return [sender, date];
 }
 
-// Feature 11 — prefix the stored filename with the sanitized sender name (keeping
+// Prefix the stored filename with the sanitized sender name (keeping
 // the original extension so download-filters still match). "Alice - report.pdf".
 function senderTaggedName(senderName, filename) {
   const tag = String(senderName || '').replace(/[\/\\\r\n\t<>:"|?*\x00-\x1f]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 40);
   return tag ? (tag + ' - ' + filename) : filename;
 }
 
-// Feature 12 — per-sender upload quota. Keyed by the declared name when present,
+// Per-sender upload quota. Keyed by the declared name when present,
 // else the masked IP so anonymous uploads are still bounded. Soft (a visitor can
 // retype another name), like every self-declared-sender feature.
 const SENDER_STATS_MAX = 5000;
@@ -9449,7 +9743,7 @@ async function withShareUploadLock(shareId, fn) {
 
 // --- Resumable uploads: one .part file per upload, keyed by a client-supplied id ---
 const PARTS_DIR = path.join(INBOX_DIR, '.dxparts');
-// Feature 8 — moderation queue: files uploaded to a moderated link wait here
+// Moderation queue: files uploaded to a moderated link wait here
 // until an admin approves (moved to the target folder) or rejects (deleted).
 const PENDING_DIR = path.join(INBOX_DIR, '.dxpending');
 
@@ -9686,7 +9980,7 @@ function finalizePendingModerationApproval(s, row, outcome) {
   }
 }
 
-// Feature 2 — scans a file via clamd's INSTREAM protocol. Resolves
+// Scans a file via clamd's INSTREAM protocol. Resolves
 // { infected, virus } | { infected:false } | { error }. Fails open (returns
 // { error }) so a scanner outage never silently drops uploads — the caller
 // decides what to do on error (here: let the file through, but log it).
@@ -9760,7 +10054,7 @@ setInterval(() => {
   });
 }, 3600 * 1000).unref();
 
-// Feature 1 — chunked uploads: all chunk requests of one upload share a SINGLE
+// Chunked uploads: all chunk requests of one upload share a SINGLE
 // transfer (keyed by upload id) so the admin live view / history show one
 // advancing row instead of one per chunk. `stoppedUploads` blocks further chunks
 // after an admin stop (so the client can't silently restart the upload).
@@ -9834,8 +10128,8 @@ setInterval(() => {
   for (const [id, exp] of stoppedUploads) if (exp < now) stoppedUploads.delete(id);
 }, 60 * 1000).unref();
 
-// Hourly webhook housekeeping: proactive expiry alerts (feature 5) and the
-// periodic activity digest (feature 9). Both are no-ops unless enabled + a
+// Hourly webhook housekeeping: proactive expiry alerts and the
+// periodic activity digest. Both are no-ops unless enabled + a
 // webhook is configured. Runs once shortly after boot, then every hour.
 function webhookHousekeeping() {
   try { checkExpiringShares(); } catch (e) { console.error('[expiry-alert]', e.message); }
@@ -10200,9 +10494,15 @@ function applyRestore(bundle) {
       meta: (p.meta && typeof p.meta === 'object') ? p.meta : {},
       audit: [],
       ipNames: (p.ipNames && typeof p.ipNames === 'object') ? p.ipNames : {},
+      undoLog: sanitizeUndoLog(p.undoLog),
+      activityLog: sanitizeActivityLog(p.activityLog),
     };
+    sanitizeDlpQuarantineState();
+    reconcileDlpQuarantineFiles();
+    syncLiveActivityCache();
     const signedAudit = replaceAuditChainForRestore(auditEntries);
     state.audit = signedAudit.slice(-AUDIT_MAX).reverse();
+    if (!Array.isArray(p.activityLog)) { state.activityLog = buildLegacyActivityLog(state.audit, state.history); syncLiveActivityCache(); }
     historyViewRevision++;
     migrateLegacyFirstUseExpiryState();
     reindex();
@@ -10210,6 +10510,7 @@ function applyRestore(bundle) {
     if (!persistNow()) throw new Error('restore-store-write-failed');
     fs.renameSync(journalStage, LOG_FILE);
     finalizeRestoreSecrets(secretSwap);
+    cleanupDlpQuarantineOrphans();
     setImmediate(() => migrateLegacyPhotoStorage().catch((e) => console.error('[images] restore migration failed:', e.message)));
     return true;
   } catch (e) {
@@ -10219,6 +10520,7 @@ function applyRestore(bundle) {
     try { restoreFileSnapshot(LOG_FILE, journalSnapshot); } catch (re) { console.error('[restore] journal rollback failed:', re.message); }
     try { fs.unlinkSync(journalStage); } catch (_) {}
     state = previousState;
+    syncLiveActivityCache();
     historyViewRevision = previousHistoryRevision;
     try {
       restoreFileSnapshot(AUDIT_CHAIN_FILE, auditChainSnapshot);
@@ -10233,7 +10535,7 @@ function applyRestore(bundle) {
 }
 
 
-// Feature 5 — drop secret notes whose expiry has passed (unread ones).
+// Drop secret notes whose expiry has passed (unread ones).
 function purgeExpiredSecrets() {
   const m = state.meta && state.meta.secrets;
   if (!m) return;
@@ -10335,7 +10637,7 @@ function purgeOldInbox() {
       // Never let general retention enter resumable-upload or moderation staging.
       // Those areas have their own lifecycle and metadata; deleting them here can
       // strand an in-progress upload or a moderator-visible pending row.
-      if (top && (e.name === '.dxparts' || e.name === '.dxpending')) continue;
+      if (e.name === '.dxparts' || e.name === '.dxpending' || e.name.startsWith('.dx')) continue;
       const p = path.join(dir, e.name);
       if (e.isDirectory()) {
         walk(p, false);
@@ -10441,7 +10743,7 @@ function purgeExpiredFiles() {
 
 
 
-// --- Feature 25: ransomware / destructive anomaly protection ----------------
+// --- Ransomware / destructive anomaly protection ----------------
 // Direct-Xfer only writes inside reception/collaboration roots, so the strongest
 // useful signals are mass deletion and bursts of ransomware-like filenames. The
 // guard never deletes/quarantines user data by itself: it blocks the client IP for
@@ -10459,6 +10761,18 @@ function ransomwareBlocks() {
   if (!state.meta || typeof state.meta !== 'object') state.meta = {};
   if (!state.meta.ransomwareBlocks || typeof state.meta.ransomwareBlocks !== 'object') state.meta.ransomwareBlocks = {};
   return state.meta.ransomwareBlocks;
+}
+function ransomwareShareBlocks() {
+  if (!state.meta || typeof state.meta !== 'object') state.meta = {};
+  if (!state.meta.ransomwareShareBlocks || typeof state.meta.ransomwareShareBlocks !== 'object') state.meta.ransomwareShareBlocks = {};
+  return state.meta.ransomwareShareBlocks;
+}
+function ransomwareShareBlocked(shareId) {
+  const id = String(shareId || ''); if (!id || getSettings().ransomwareProtection === false) return null;
+  const blocks = ransomwareShareBlocks(), rec = blocks[id];
+  if (!rec) return null;
+  if (!rec.until || rec.until <= Date.now()) { delete blocks[id]; scheduleFlush(); return null; }
+  return rec;
 }
 function ransomwareBlocked(ip) {
   const clean = String(ip || '').replace(/^::ffff:/i, '');
@@ -10479,11 +10793,28 @@ function pruneAnomalyEvents(ip, now) {
   if (keep.length) anomalyWindows.set(ip, keep); else anomalyWindows.delete(ip);
   return keep;
 }
-function blockRansomwareClient(req, reason, detail) {
+function blockRansomwareClient(req, reason, detail, affectedShareIds) {
   const ip = anomalyClientIp(req);
   if (!ip || isLoopback(ip)) return null;
   const mins = Math.max(1, Number(getSettings().ransomwareBlockMinutes) || 30);
   const rec = { ip, at: Date.now(), until: Date.now() + mins * 60000, reason, detail: String(detail || '').slice(0, 240) };
+  const ids = [...new Set((Array.isArray(affectedShareIds) ? affectedShareIds : []).map(String).filter(Boolean))];
+  const affectedShares = ids.map(getById).filter((share) => acceptsUpload(share));
+  if (affectedShares.length && getSettings().ransomwareSuspendLink !== false) {
+    rec.shareIds = affectedShares.map((share) => share.id);
+    rec.shareId = rec.shareIds[0];
+    rec.shareName = String(affectedShares[0].name || affectedShares[0].id).slice(0, 160);
+    for (const affected of affectedShares) {
+      ransomwareShareBlocks()[affected.id] = {
+        shareId:affected.id, shareName:String(affected.name || affected.id).slice(0, 160), at:rec.at, until:rec.until,
+        reason, detail:rec.detail, sourceIp:ip,
+      };
+      addShareCenterNotification(affected, 'security-anomaly', {
+        severity:'critical', reason, detail:rec.detail, ip,
+        dedupeKey:`ransomware:${affected.id}:${Math.floor(rec.at / 60000)}`,
+      });
+    }
+  }
   ransomwareBlocks()[ip] = rec;
   anomalyRecent.unshift(rec);
   if (anomalyRecent.length > ANOMALY_RECENT_MAX) anomalyRecent.length = ANOMALY_RECENT_MAX;
@@ -10493,6 +10824,13 @@ function blockRansomwareClient(req, reason, detail) {
   return rec;
 }
 function ransomwareGate(req, res) {
+  const share = getByToken(req && req.params && req.params.token);
+  const linkRec = share && ransomwareShareBlocked(share.id);
+  if (linkRec) {
+    res.setHeader('Retry-After', String(Math.max(1, Math.ceil((linkRec.until - Date.now()) / 1000))));
+    res.status(423).json({ error:'security-link-suspended', reason:linkRec.reason, until:linkRec.until });
+    return false;
+  }
   const rec = ransomwareBlocked(clientIp(req));
   if (!rec) return true;
   res.setHeader('Retry-After', String(Math.max(1, Math.ceil((rec.until - Date.now()) / 1000))));
@@ -10505,20 +10843,42 @@ function recordRansomwareEvent(req, kind, name, count) {
   if (!ip || isLoopback(ip)) return null;
   const now = Date.now();
   const arr = pruneAnomalyEvents(ip, now);
-  const event = { at: now, kind, count: Math.max(1, Number(count) || 1), suspicious: suspiciousRansomwareName(name), name: String(name || '').slice(0, 180) };
+  const affected = getByToken(req && req.params && req.params.token);
+  const shareId = acceptsUpload(affected) ? affected.id : null;
+  const event = { at: now, kind, shareId, count: Math.max(1, Number(count) || 1), suspicious: suspiciousRansomwareName(name), name: String(name || '').slice(0, 180) };
   arr.push(event); anomalyWindows.set(ip, arr);
   const deletes60 = arr.filter((e) => e.kind === 'delete' && now - e.at <= 60000).reduce((n, e) => n + e.count, 0);
   const uploads120 = arr.filter((e) => e.kind === 'upload').reduce((n, e) => n + e.count, 0);
   const suspicious120 = arr.filter((e) => e.kind === 'upload' && e.suspicious).reduce((n, e) => n + e.count, 0);
   const cfg = getSettings();
-  if (deletes60 >= (Number(cfg.ransomwareDeleteThreshold) || 25)) return blockRansomwareClient(req, 'mass-delete', `${deletes60} file(s) / 60 s`);
+  const deleteThreshold = Number(cfg.ransomwareDeleteThreshold) || 25;
+  const shareDeletes60 = shareId ? arr.filter((e) => e.shareId === shareId && e.kind === 'delete' && now - e.at <= 60000).reduce((n, e) => n + e.count, 0) : 0;
+  if (deletes60 >= deleteThreshold) {
+    return blockRansomwareClient(req, 'mass-delete', `${deletes60} file(s) / 60 s`, shareDeletes60 >= deleteThreshold ? [shareId] : []);
+  }
   // A plain bulk upload is normal for Direct-Xfer. Require ransomware-like names
   // before blocking on upload volume, avoiding false positives on photo backups.
   const upThreshold = Number(cfg.ransomwareUploadThreshold) || 120;
   if (uploads120 >= upThreshold && suspicious120 >= Math.max(12, Math.floor(uploads120 / 2))) {
-    return blockRansomwareClient(req, 'suspicious-upload-burst', `${uploads120} upload(s), ${suspicious120} ransomware-like name(s) / 120 s`);
+    const shareUploads = shareId ? arr.filter((e) => e.shareId === shareId && e.kind === 'upload') : [];
+    const shareUploadCount = shareUploads.reduce((n, e) => n + e.count, 0);
+    const shareSuspiciousCount = shareUploads.filter((e) => e.suspicious).reduce((n, e) => n + e.count, 0);
+    const suspend = shareUploadCount >= upThreshold && shareSuspiciousCount >= Math.max(12, Math.floor(shareUploadCount / 2));
+    return blockRansomwareClient(req, 'suspicious-upload-burst', `${uploads120} upload(s), ${suspicious120} ransomware-like name(s) / 120 s`, suspend ? [shareId] : []);
   }
   return null;
+}
+async function rejectSuspendedUploadFinalize(s, file, transfer, res) {
+  const blocked = ransomwareShareBlocked(s && s.id);
+  if (!blocked) return false;
+  try { await fs.promises.unlink(file); } catch (_) {}
+  if (transfer && transfer.uploadId) uploadTransfers.delete(transfer.uploadId);
+  endTransfer(transfer, false, 'security-link-suspended');
+  if (!res.headersSent) {
+    res.setHeader('Retry-After', String(Math.max(1, Math.ceil((blocked.until - Date.now()) / 1000))));
+    res.status(423).json({ error:'security-link-suspended', reason:blocked.reason, until:blocked.until });
+  }
+  return true;
 }
 async function folderFileCountCapped(dir, cap) {
   let count = 0;
@@ -10555,19 +10915,20 @@ function collabRoot(s) { return resolveWithin(INBOX_DIR, s.relDir || ''); }
 
 // Recursively sums the byte size of a folder (best-effort; used to keep the
 // soft quota counter honest when a visitor deletes a subfolder).
-async function folderBytes(dir) {
-  let total = 0;
+async function folderMetrics(dir) {
+  let bytes = 0, files = 0;
   let ents;
-  try { ents = await fs.promises.readdir(dir, { withFileTypes: true }); } catch (_) { return 0; }
+  try { ents = await fs.promises.readdir(dir, { withFileTypes: true }); } catch (_) { return { bytes:0, files:0 }; }
   for (const e of ents) {
     const p = path.join(dir, e.name);
     try {
-      if (e.isDirectory()) total += await folderBytes(p);
-      else if (e.isFile()) total += (await fs.promises.stat(p)).size;
+      if (e.isDirectory()) { const nested = await folderMetrics(p); bytes += nested.bytes; files += nested.files; }
+      else if (e.isFile()) { bytes += (await fs.promises.stat(p)).size; files += 1; }
     } catch (_) {}
   }
-  return total;
+  return { bytes, files };
 }
+async function folderBytes(dir) { return (await folderMetrics(dir)).bytes; }
 
 // Resolves an active, unlocked collab share for the current request, or sends the
 // appropriate page/error and returns null.
@@ -10647,7 +11008,7 @@ downloadRouter.post('/c/:token/zip-select', selParser, async (req, res) => {
     { shareId: s.id, name: `${s.name || 'selection'} (${items.length} selected)`, type: 'collection-zip' });
 });
 
-// --- Feature 5: burn-after-read secret notes (/x/:token) --------------------
+// --- Burn-after-read secret notes (/x/:token) --------------------
 // Returns the live metadata for a secret, lazily purging it if expired.
 function secretMeta(token) {
   const m = state.meta && state.meta.secrets;
@@ -10907,7 +11268,7 @@ async function materializeDedupe(req, res, s, body, sha, size, source) {
   if (!parsed) return res.status(400).json({ error: 'invalid-name' });
   const relForCheck = [...parsed.dirSegs, parsed.filename].join('/');
   // Dedupe reuses the visitor's declared name (query + body) exactly like /upload,
-  // so the per-sender caps and running totals apply to the same identity (feature 12).
+  // so the per-sender caps and running totals apply to the same identity.
   const senderName = cleanSenderName(req);
   const gate = inboxRejectReason(s, relForCheck, size) || perSenderRejectReason(s, req, senderName, size);
   if (gate) return res.status(inboxRejectStatus(gate)).json({ error: gate });
@@ -10945,7 +11306,7 @@ async function materializeDedupe(req, res, s, body, sha, size, source) {
   if (clamavEnabled() && !(await scanGate(outcome.target, parsed.filename, s, req))) {
     return res.status(422).json({ error: 'infected' });
   }
-  // Feature 11 — a disguised executable must be refused here too; otherwise dedupe
+  // A disguised executable must be refused here too; otherwise dedupe
   // would smuggle a blocked binary into a share whenever an identical copy already
   // exists server-side (e.g. an image folder that never enforced the executable ban).
   if (await inboxContentReason(s, outcome.target)) {
@@ -10955,13 +11316,13 @@ async function materializeDedupe(req, res, s, body, sha, size, source) {
   const committed = await withShareUploadLock(s.id, async () => {
     const reason = inboxRejectReason(s, relForCheck, size) || perSenderRejectReason(s, req, senderName, size);
     if (reason) return { error: reason };
-    // Feature 15 — refuse a byte-for-byte duplicate already received on this link.
+    // Refuse a byte-for-byte duplicate already received on this link.
     // The sha is proof-verified above (it matches the copied source), so pass it
     // straight through instead of re-hashing the freshly materialized file.
     const dupReason = await receptionDuplicateReason(s, outcome.target, sha);
     if (dupReason) return { error: dupReason };
     s.bytesReceived = (s.bytesReceived || 0) + size;
-    bumpSenderStat(s, req, senderName, size); // feature 12 — per-sender running total
+    bumpSenderStat(s, req, senderName, size); // per-sender running total
     incrementDownloads(s.id);
     return { ok: true };
   });
@@ -11101,14 +11462,14 @@ async function handleUpload(req, res) {
   const s = getByToken(req.params.token);
   if (!acceptsUpload(s) || !isActive(s)) return res.status(403).json({ error: 'revoked' });
   if (s.pwHash && !isUnlocked(req, s)) return res.status(401).json({ error: 'locked' });
-  // Feature 9 — some links require the visitor to identify themselves.
+  // Some links require the visitor to identify themselves.
   const senderName = cleanSenderName(req);
   if (s.requireSenderName && !senderName) { req.resume(); return res.status(400).json({ error: 'sender-required' }); }
 
   const relRaw = req.query.path != null ? req.query.path : req.query.name;
   const parsed = safeUploadRelPath(relRaw) || { dirSegs: [], filename: 'file' };
   const relForCheck = [...parsed.dirSegs, parsed.filename].join('/');
-  const senderSegs = senderSubdirSegs(s, req); // Feature 2: <sender>/<date>/ prefix (or [])
+  const senderSegs = senderSubdirSegs(s, req); // <sender>/<date>/ prefix (or [])
 
   const declared = parseInt(req.query.size, 10);
   const clen = parseInt(req.headers['content-length'], 10);
@@ -11134,7 +11495,7 @@ async function handleUpload(req, res) {
   // Quota / filter gate (uses the announced total size).
   const reason = inboxRejectReason(s, relForCheck, total);
   if (reason) { req.resume(); return res.status(inboxRejectStatus(reason)).json({ error: reason }); }
-  // Feature 12 — per-sender quota (announced size; re-checked with the real size below).
+  // Per-sender quota (announced size; re-checked with the real size below).
   const senderReason = perSenderRejectReason(s, req, senderName, total);
   if (senderReason) { req.resume(); return res.status(inboxRejectStatus(senderReason)).json({ error: senderReason }); }
   if (!beginPublicUpload(req, res)) return;
@@ -11145,14 +11506,14 @@ async function handleUpload(req, res) {
   // Moves a completed .part into the destination tree, updates counters, replies.
   const finalize = async (part, transfer) => {
     uploadsInFlight.delete(uploadId); // append is done; release the per-id chunk lock
-    // Antivirus (feature 2): scan before anything is delivered or queued.
+    // Antivirus: scan before anything is delivered or queued.
     if (clamavEnabled() && !(await scanGate(part, parsed.filename, s, req))) {
       if (transfer && transfer.uploadId) uploadTransfers.delete(transfer.uploadId);
       endTransfer(transfer, false, 'infected');
       if (!res.headersSent) res.status(422).json({ error: 'infected' });
       return;
     }
-    // Feature 11 — reject a disguised executable regardless of its extension.
+    // Reject a disguised executable regardless of its extension.
     if (await inboxContentReason(s, part)) {
       try { await fs.promises.unlink(part); } catch (_) {}
       if (transfer && transfer.uploadId) uploadTransfers.delete(transfer.uploadId);
@@ -11160,6 +11521,10 @@ async function handleUpload(req, res) {
       if (!res.headersSent) res.status(415).json({ error: 'content-blocked' });
       return;
     }
+    // A different concurrent upload may have triggered protection while this
+    // payload was still transferring/scanning. Never publish it after the link
+    // has entered the suspended state.
+    if (await rejectSuspendedUploadFinalize(s, part, transfer, res)) return;
     // Moderation queue: divert to the pending area instead of the target folder.
     // Keep the same destination/sender/expiry/dedupe semantics a normal reception
     // would apply after the file is approved.
@@ -11198,12 +11563,13 @@ async function handleUpload(req, res) {
     }
     const beforeShare = JSON.parse(JSON.stringify(s));
     const outcome = await withShareUploadLock(s.id, async () => {
+      if (ransomwareShareBlocked(s.id)) return { error:'security-link-suspended' };
       let size = 0;
       try { size = (await fs.promises.stat(part)).size; }
       catch (_) { return { error: 'write-error' }; }
       const finalReason = inboxRejectReason(s, relForCheck, size) || perSenderRejectReason(s, req, senderName, size);
       if (finalReason) return { error: finalReason };
-      // Feature 11 — optionally tag the stored filename with the sender name.
+      // Optionally tag the stored filename with the sender name.
       const storeName = (s.tagBySender && senderName) ? senderTaggedName(senderName, parsed.filename) : parsed.filename;
       let target;
       try { target = await reserveUniqueUploadPath(dir, storeName); }
@@ -11217,7 +11583,7 @@ async function handleUpload(req, res) {
           return { error: 'write-error' };
         }
       }
-      // Feature 15 — refuse a byte-for-byte duplicate already received on this link.
+      // Refuse a byte-for-byte duplicate already received on this link.
       const dupReason = await receptionDuplicateReason(s, target, clientSha256);
       if (dupReason) { try { await fs.promises.unlink(target); } catch (_) {} return { error: dupReason }; }
       const accounting = applyReceptionAccountingState(s, {
@@ -11230,7 +11596,11 @@ async function handleUpload(req, res) {
       try { await fs.promises.unlink(part); } catch (_) {}
       if (transfer && transfer.uploadId) uploadTransfers.delete(transfer.uploadId);
       endTransfer(transfer, false, outcome.error);
-      if (!res.headersSent) res.status(outcome.error === 'write-error' ? 500 : inboxRejectStatus(outcome.error)).json({ error: outcome.error });
+      if (!res.headersSent) {
+        const securityBlock = outcome.error === 'security-link-suspended' ? ransomwareShareBlocked(s.id) : null;
+        if (securityBlock) res.setHeader('Retry-After', String(Math.max(1, Math.ceil((securityBlock.until - Date.now()) / 1000))));
+        res.status(outcome.error === 'security-link-suspended' ? 423 : outcome.error === 'write-error' ? 500 : inboxRejectStatus(outcome.error)).json({ error: outcome.error });
+      }
       return;
     }
     const target = outcome.target;
@@ -11246,7 +11616,7 @@ async function handleUpload(req, res) {
     if (clientSha256) verifyAndRememberDedupe(target);
     recordRansomwareEvent(req, 'upload', displayName, 1);
     scheduleSearchReindex();
-    if (transfer) transfer.sender = senderName || null; // feature 9 — record the visitor's name
+    if (transfer) transfer.sender = senderName || null; // record the visitor's name
     if (s.type === 'inbox') { try { emitInboxEvent(s, { type: 'received', name: path.basename(target), dest: s.name || '', at: Date.now(), sender: senderName || undefined }); } catch (_) {} }
     endTransfer(transfer, true);
     if (!res.headersSent) {
@@ -11351,7 +11721,7 @@ async function handleUpload(req, res) {
       dir = resolveWithin(INBOX_DIR, [s.relDir || '', ...senderSegs, ...parsed.dirSegs].join('/'));
       await fs.promises.mkdir(dir, { recursive: true });
     } catch (e) { return res.status(500).json({ error: 'inbox-dir' }); }
-    // Feature 11 — optionally tag the stored filename with the sender name.
+    // Optionally tag the stored filename with the sender name.
     const storeName = (s.tagBySender && senderName) ? senderTaggedName(senderName, parsed.filename) : parsed.filename;
     try { target = await reserveUniqueUploadPath(dir, storeName); }
     catch (_) { return res.status(500).json({ error: 'write-error' }); }
@@ -11383,13 +11753,13 @@ async function handleUpload(req, res) {
   ws.on('error', () => fail('write-error'));
   ws.on('finish', async () => {
     if (failed) return;
-    // Antivirus (feature 2): scan the finished file before delivering/queuing it.
+    // Antivirus: scan the finished file before delivering/queuing it.
     if (clamavEnabled() && !(await scanGate(target, finalName, s, req))) {
       endTransfer(transfer, false, 'infected');
       if (!res.headersSent) res.status(422).json({ error: 'infected' });
       return;
     }
-    // Feature 11 — reject a disguised executable regardless of its extension.
+    // Reject a disguised executable regardless of its extension.
     if (await inboxContentReason(s, target)) {
       failed = true;
       fs.unlink(target, () => {});
@@ -11397,6 +11767,7 @@ async function handleUpload(req, res) {
       if (!res.headersSent) res.status(415).json({ error: 'content-blocked' });
       return;
     }
+    if (await rejectSuspendedUploadFinalize(s, target, transfer, res)) { failed = true; return; }
     if (moderated) {
       // Legacy single-shot uploads must use the same moderation semantics as the
       // resumable path. stashPending returns { ok, error }, not a boolean; treating
@@ -11427,9 +11798,10 @@ async function handleUpload(req, res) {
     }
     const beforeShare = JSON.parse(JSON.stringify(s));
     const accepted = await withShareUploadLock(s.id, async () => {
+      if (ransomwareShareBlocked(s.id)) return { error:'security-link-suspended' };
       const reason3 = inboxRejectReason(s, relForCheck, transfer.bytes) || perSenderRejectReason(s, req, senderName, transfer.bytes);
       if (reason3) return { error:reason3 };
-      // Feature 15 — refuse a byte-for-byte duplicate already received on this link.
+      // Refuse a byte-for-byte duplicate already received on this link.
       const dupReason = await receptionDuplicateReason(s, target, clientSha256);
       if (dupReason) return { error:dupReason }; // the outer handler unlinks `target`
       const accounting = applyReceptionAccountingState(s, {
@@ -11442,7 +11814,11 @@ async function handleUpload(req, res) {
       failed = true;
       fs.unlink(target, () => {});
       endTransfer(transfer, false, accepted.error);
-      if (!res.headersSent) res.status(inboxRejectStatus(accepted.error)).json({ error: accepted.error });
+      if (!res.headersSent) {
+        const securityBlock = accepted.error === 'security-link-suspended' ? ransomwareShareBlocked(s.id) : null;
+        if (securityBlock) res.setHeader('Retry-After', String(Math.max(1, Math.ceil((securityBlock.until - Date.now()) / 1000))));
+        res.status(accepted.error === 'security-link-suspended' ? 423 : inboxRejectStatus(accepted.error)).json({ error: accepted.error });
+      }
       return;
     }
     if (!persistNow()) {
@@ -11457,7 +11833,7 @@ async function handleUpload(req, res) {
     if (clientSha256) verifyAndRememberDedupe(target);
     recordRansomwareEvent(req, 'upload', displayName2, 1);
     scheduleSearchReindex();
-    transfer.sender = senderName || null; // feature 9 — record the visitor's name
+    transfer.sender = senderName || null; // record the visitor's name
     if (s.type === 'inbox') { try { emitInboxEvent(s, { type: 'received', name: finalName, dest: s.name || '', at: Date.now(), sender: senderName || undefined }); } catch (_) {} }
     endTransfer(transfer, true);
     if (!res.headersSent) {
@@ -11562,11 +11938,12 @@ downloadRouter.post('/u/:token/message', messageParser, (req, res) => {
     return res.status(503).json({ error:'write-error' });
   }
   geolocate(ip).catch(() => {}); // warm the cache for the admin view
+  emitLiveActivity('visitor', { shareId:s.id, name:s.name, status:'message', detail:file ? 'visitor message · file=' + String(file).slice(0,120) : 'visitor message', ip:pubIp(ip) });
   if (decision.notify) notify('message', { name: s.name, shareId: s.id, ip, country: geo.country, text, file: file || null });
   res.json({ ok: true, notified: decision.notify });
 });
 
-// Feature 27 — two-way reception thread (visitor side). The visitor can read the
+// Two-way reception thread (visitor side). The visitor can read the
 // running conversation and post replies the owner sees in real time.
 const threadParser = express.json({ limit: '8kb' });
 function receptionThreadVisitorGate(req, res, s) {
@@ -11605,6 +11982,7 @@ downloadRouter.post('/u/:token/thread', threadParser, (req, res) => {
       return res.status(503).json({ error: 'write-error' });
     }
     geolocate(ip).catch(() => {});
+    emitLiveActivity('visitor', { shareId:s.id, name:s.name, status:'thread-reply', detail:name ? 'visitor thread reply · ' + name : 'visitor thread reply', ip:pubIp(ip) });
     // Consistent with visitor feedback/messages: notify over webhook/e-mail. The
     // owner's live awareness is the unread badge on the reception link (see the
     // thread unread count exposed to the PWA / admin listings).
@@ -11614,7 +11992,7 @@ downloadRouter.post('/u/:token/thread', threadParser, (req, res) => {
   res.json({ ok: true, messages: receptionThreadArray(s).map(publicThreadMessage) });
 });
 
-// Feature 28 — a visitor submits the access-request form on a locked link. Creates
+// A visitor submits the access-request form on a locked link. Creates
 // one pending request per browser (tracked by cookie) and pings the admin. Plain
 // form POST + redirect, so it works without JavaScript.
 const requestAccessParser = express.urlencoded({ extended: false, limit: '8kb' });
@@ -11658,11 +12036,12 @@ downloadRouter.post('/s/:token/request-access', requestAccessParser, (req, res) 
   }
   geolocate(ip).catch(() => {});
   setAccessRequestCookie(req, res, s, id);
+  emitLiveActivity('visitor', { shareId:s.id, name:s.name, status:'access-request', detail:'access request submitted', ip:pubIp(ip) });
   if (decision.notify) notify('message', { name: s.name, shareId: s.id, ip, country: geo.country, text: `Access request — ${name}${email ? ` <${email}>` : ''}${message ? `: ${message}` : ''}`, file: null });
   res.redirect(302, rel);
 });
 
-// Feature 38 — a visitor leaves moderated feedback on a shared file. Private to the
+// A visitor leaves moderated feedback on a shared file. Private to the
 // admin (never shown to other visitors). Plain form POST + redirect (no JS needed).
 const feedbackParser = express.urlencoded({ extended: false, limit: '8kb' });
 downloadRouter.post('/s/:token/feedback', feedbackParser, (req, res) => {
@@ -11697,6 +12076,7 @@ downloadRouter.post('/s/:token/feedback', feedbackParser, (req, res) => {
       return res.status(503).type('html').send(errorPage(pickLang(req), 503, 'Unable to save this feedback. Please retry.'));
     }
     geolocate(ip).catch(() => {});
+    emitLiveActivity('visitor', { shareId:s.id, name:s.name, status:'feedback', detail:name ? 'feedback submitted · ' + name : 'feedback submitted', ip:pubIp(ip) });
     if (decision.notify) notify('message', { name: s.name, shareId: s.id, ip, country: geo.country, text: `Feedback${name ? ` — ${name}` : ''}: ${body}`, file: null });
   }
   res.redirect(302, back + (back.includes('?') ? '&' : '?') + 'feedback=sent');
@@ -11868,7 +12248,7 @@ function decorateShare(s, req) {
     maxDownloads: s.maxDownloads,
     downloadsUsed: s.downloads || 0, // raw quota counter; dashboard stats may have a reset baseline
     downloads: Math.max(0, (s.downloads || 0) - shareStatsBaseline(s).downloads),
-    maxVisitors: s.maxVisitors || 0, // 0 = unlimited (feature 5)
+    maxVisitors: s.maxVisitors || 0, // 0 = unlimited
     notifyDownloadThreshold: s.notifyDownloadThreshold || 0, // download-goal alert (0 = off)
     downloadThresholdReached: !!s.downloadThresholdNotifiedAt,
     uniqueVisitorsUsed: Array.isArray(s.visitors) ? s.visitors.length : 0,
@@ -11877,6 +12257,8 @@ function decorateShare(s, req) {
     pinned: !!s.pinned,
     archived: !!s.archived,
     logicalBytes: shareLogicalBytes(s),
+    logicalBytesReady: !shareNeedsLogicalBytesScan(s) || !!shareLogicalBytesCache.get(s.id),
+    itemCount: shareLogicalFileCount(s),
     lastActivityAt: shareActivityAt(s),
     lastUseAt: shareLastUseAt(s),
     lastDownload: s.lastDownload ? { ...s.lastDownload, ip: pubIp(s.lastDownload.ip) } : null,
@@ -11892,7 +12274,7 @@ function decorateShare(s, req) {
     descriptionMd: s.descriptionMd || '',
     commentCount: Array.isArray(s.adminComments) ? s.adminComments.length : 0,
     lastComment: Array.isArray(s.adminComments) && s.adminComments.length ? s.adminComments[0] : null,
-    // Feature 28 — access-request gate + pending count. Feature 38 — feedback counts.
+    // Access-request gate + pending count. feedback counts.
     requestAccess: !!s.requestAccess,
     accessPending: Array.isArray(s.accessRequests) ? s.accessRequests.filter((r) => r && r.status === 'pending').length : 0,
     accessRequestsCount: Array.isArray(s.accessRequests) ? s.accessRequests.length : 0,
@@ -11927,7 +12309,7 @@ function decorateShare(s, req) {
         metadataRemoved: !!s.metadataRemoved,
       };
     })() : null,
-    // Shareable image gallery (feature 18): a public /g/<token> page over member images.
+    // Shareable image gallery: a public /g/<token> page over member images.
     album: s.type === 'album' ? (() => {
       const ib = getSettings().imageBase || base;
       return {
@@ -11936,28 +12318,28 @@ function decorateShare(s, req) {
         url: ib ? ib + '/g/' + s.token : ('/g/' + s.token),
       };
     })() : null,
-    itemCount: items ? items.length : null,
     items: items ? items.map((it) => ({ name: it.name, size: it.size, type: it.type })) : null,
     collection: !!s.collection, // true = a genuine multi-file bundle (keep listing its files even at 1)
     adminNote: s.adminNote || null, // private admin comment (never sent to visitors)
     disabled: !!s.disabled, // manually paused (reversible) — active is false while paused
+    revoked: !!s.revoked, // retained revoked/burned record; can be safely reactivated while backing data exists
 
     active,
     scheduled: isScheduled(s),
     hasPassword: !!s.pwHash,
-    pwHint: s.pwHash ? (s.pwHint || '') : '', // feature 6 — only meaningful with a password
-    maxDownloadsPerIp: Math.max(0, Number(s.maxDownloadsPerIp) || 0), // feature 24 — 0 = unlimited
-    emoji: s.emoji || '', // feature 6 — link marker
-    maxBytesServed: Math.max(0, Number(s.maxBytesServed) || 0), // feature 13 — 0 = unlimited
-    bytesServed: Math.max(0, Number(s.bytesServed) || 0), // feature 13 — running total
+    pwHint: s.pwHash ? (s.pwHint || '') : '', // only meaningful with a password
+    maxDownloadsPerIp: Math.max(0, Number(s.maxDownloadsPerIp) || 0), // 0 = unlimited
+    emoji: s.emoji || '', // link marker
+    maxBytesServed: Math.max(0, Number(s.maxBytesServed) || 0), // 0 = unlimited
+    bytesServed: Math.max(0, Number(s.bytesServed) || 0), // running total
     encrypted: !!s.encrypted, // end-to-end encrypted (server holds only ciphertext)
     encMode: s.encrypted ? (s.encMode || 'key') : null,
     allowZip: s.allowZip !== false, // false = "download all as .zip" disabled
     noPreview: !!s.noPreview, // true = in-browser preview disabled
     burnAfterDownload: !!s.burnAfterDownload, // one-time link (revokes after 1st complete DL)
     burnedAt: s.burnedAt || null, // when a one-time link actually burned
-    tags: Array.isArray(s.tags) ? s.tags : [], // feature 9: admin labels for grouping/filtering
-    // Feature 11 — geo/IP access rules.
+    tags: Array.isArray(s.tags) ? s.tags : [], // admin labels for grouping/filtering
+    // Geo/IP access rules.
     geoMode: s.geoMode || null,
     geoCountries: Array.isArray(s.geoCountries) ? s.geoCountries : [],
     ipMode: s.ipMode || null,
@@ -11979,13 +12361,13 @@ function decorateShare(s, req) {
       note: s.note || '',
       messages: Array.isArray(s.messages) ? s.messages : [],
       groupBySender: !!s.groupBySender,
-      tagBySender: !!s.tagBySender, // feature 11
-      rejectDuplicates: !!s.rejectDuplicates, // feature 15
-      requireSenderName: !!s.requireSenderName, // feature 9
-      blockExecutables: !!s.blockExecutables, // feature 11
-      maxFilesPerSender: s.maxFilesPerSender || 0, // feature 12
-      maxBytesPerSender: s.maxBytesPerSender || 0, // feature 12
-      maxFilesPerUpload: s.maxFilesPerUpload || 0, // feature 13
+      tagBySender: !!s.tagBySender,
+      rejectDuplicates: !!s.rejectDuplicates,
+      requireSenderName: !!s.requireSenderName,
+      blockExecutables: !!s.blockExecutables,
+      maxFilesPerSender: s.maxFilesPerSender || 0,
+      maxBytesPerSender: s.maxBytesPerSender || 0,
+      maxFilesPerUpload: s.maxFilesPerUpload || 0,
       moderated: !!s.moderated,
       encrypted: !!s.encrypted,
       encMode: s.encrypted ? (s.encMode || 'key') : null,
@@ -12001,15 +12383,15 @@ function decorateShare(s, req) {
       maxFileBytes: s.maxFileBytes || 0,
       maxTotalBytes: s.maxTotalBytes || 0,
       maxFiles: s.maxFiles || 0,
-      maxFilesPerUpload: s.maxFilesPerUpload || 0, // feature 13
+      maxFilesPerUpload: s.maxFilesPerUpload || 0,
       bytesReceived: s.bytesReceived || 0,
       allowExt: Array.isArray(s.allowExt) ? s.allowExt : [],
       blockExt: Array.isArray(s.blockExt) ? s.blockExt : [],
       note: s.note || '',
-      blockExecutables: !!s.blockExecutables, // feature 11
+      blockExecutables: !!s.blockExecutables,
       moderated: !!s.moderated,
     } : undefined,
-    // Feature 8: files awaiting moderation for this link (id, name, size, ip, at).
+    // Files awaiting moderation for this link (id, name, size, ip, at).
     pending: (Array.isArray(state.meta && state.meta.pending) ? state.meta.pending : [])
       .filter((p) => p.shareId === s.id)
       .map((p) => ({ id: p.id, name: p.name, size: p.size, ip: p.ip, at: p.at })),
@@ -12021,10 +12403,10 @@ function decorateShare(s, req) {
       url: base ? base + '/s/' + r.token : null,
       downloads: (r.stats && r.stats.completed) || 0,
       stats: r.stats || null,
-      // Per-recipient overrides (feature 16) — null = inherit the share's.
+      // Per-recipient overrides — null = inherit the share's.
       expiresAt: r.expiresAt || null,
       maxDownloads: r.maxDownloads || null,
-      // Read-receipt fields (feature 4).
+      // Read-receipt fields.
       viewed: !!r.viewedAt,
       viewedAt: r.viewedAt || null,
       lastViewAt: r.lastViewAt || null,
@@ -12093,7 +12475,7 @@ adminRouter.delete('/notifications', (req, res) => {
   if (removed === null) return res.status(503).json({ error:'write-error' });
   res.json({ ok: true, removed });
 });
-// Feature 7 — per-account category opt-outs (Security/System health stay always-on).
+// Per-account category opt-outs (Security/System health stay always-on).
 adminRouter.get('/notifications/prefs', (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   res.json({ mutedCategories: accountMutedNotificationCategories(req.session.accountId), mutable: NOTIFICATION_MUTABLE_CATEGORIES });
@@ -12101,10 +12483,11 @@ adminRouter.get('/notifications/prefs', (req, res) => {
 adminRouter.post('/notifications/prefs', (req, res) => {
   const muted = setAccountMutedNotificationCategories(req.session.accountId, (req.body && req.body.mutedCategories) || []);
   if (!muted) return res.status(503).json({ error:'write-error' });
+  auditReq(req, 'notification-prefs-changed', muted.length ? muted.join(', ') : 'none muted');
   res.json({ ok: true, mutedCategories: muted });
 });
 
-// Feature 31 — custom threshold rules for the current account.
+// Custom threshold rules for the current account.
 adminRouter.get('/notification-rules', (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   res.json({ rules:accountCustomNotificationRules(req.session.accountId).map(publicCustomNotificationRule), targets:customNotificationRuleTargets(req.session.accountId), metrics:CUSTOM_NOTIFICATION_RULE_METRICS });
@@ -12112,11 +12495,14 @@ adminRouter.get('/notification-rules', (req, res) => {
 adminRouter.post('/notification-rules', (req, res) => {
   const result = upsertCustomNotificationRule(req.session.accountId, req.body || {});
   if (result.error) return res.status(result.error === 'write-error' ? 503 : result.error === 'too-many-rules' ? 409 : result.error === 'rule-not-found' ? 404 : 400).json(result);
+  const rule = result.rule || {};
+  auditReq(req, result.duplicate ? 'notification-rule-reused' : ((req.body && req.body.id) ? 'notification-rule-updated' : 'notification-rule-created'), `${rule.metric || 'rule'} >= ${rule.threshold || 0}${rule.shareId ? ' · share=' + rule.shareId : ''}`);
   res.json({ ok:true, ...result });
 });
 adminRouter.delete('/notification-rules/:id', (req, res) => {
   const removed = deleteCustomNotificationRule(req.session.accountId, req.params.id);
   if (removed === null) return res.status(503).json({ error:'write-error' });
+  if (removed) auditReq(req, 'notification-rule-deleted', String(req.params.id || '').slice(0,64));
   res.json({ ok:true, removed });
 });
 
@@ -12368,7 +12754,7 @@ adminRouter.delete('/accounts/:id', requireOwner, (req, res) => {
   clearNotificationsForAccount(acc.id, false);
   clearNotificationDedupeForAccount(acc.id);
   if (!persistNow()) {
-    state = beforeState; reindex(); shareLogicalBytesCache.clear();
+    state = beforeState; syncLiveActivityCache(); reindex(); shareLogicalBytesCache.clear();
     pwaPairTickets.clear(); for (const [ticket,meta] of beforeTickets) pwaPairTickets.set(ticket,meta);
     return res.status(503).json({ error:'write-error' });
   }
@@ -12376,27 +12762,35 @@ adminRouter.delete('/accounts/:id', requireOwner, (req, res) => {
   auditReq(req, 'account-deleted', `user=${acc.username}; transferredShares=${transferredShares}; pwaDevices=${pwaRevoked.devices}; push=${pwaRevoked.push}; pairingTickets=${pwaRevoked.tickets}`);
   res.json({ ok: true });
 });
-// Feature 25 — inspect and clear active anomaly blocks. Auditors may inspect;
+// Inspect and clear active anomaly blocks. Auditors may inspect;
 // only owner/admin can unblock a client early.
 adminRouter.get('/security/anomalies', requireAuditAccess, (req, res) => {
-  const now = Date.now(), blocks = ransomwareBlocks();
-  for (const [ip, rec] of Object.entries(blocks)) if (!rec || rec.until <= now) delete blocks[ip];
-  res.json({ enabled: getSettings().ransomwareProtection !== false, blocks: Object.values(blocks), recent: anomalyRecent.slice(0, 50) });
+  const now = Date.now(), blocks = ransomwareBlocks(), linkBlocks = ransomwareShareBlocks();
+  let changed = false;
+  for (const [ip, rec] of Object.entries(blocks)) if (!rec || rec.until <= now) { delete blocks[ip]; changed = true; }
+  for (const [id, rec] of Object.entries(linkBlocks)) if (!rec || rec.until <= now) { delete linkBlocks[id]; changed = true; }
+  if (changed) scheduleFlush();
+  res.json({ enabled: getSettings().ransomwareProtection !== false, blocks: Object.values(blocks), links:Object.values(linkBlocks), recent: anomalyRecent.slice(0, 50) });
 });
 adminRouter.post('/security/anomalies/unblock', requireFullAdmin, (req, res) => {
-  const ip = String((req.body && req.body.ip) || '').trim();
-  if (!ip) return res.status(400).json({ error: 'missing-ip' });
+  const ip = String((req.body && req.body.ip) || '').trim().replace(/^::ffff:/i, '');
+  const shareId = String((req.body && req.body.shareId) || '').trim();
+  if (!ip && !shareId) return res.status(400).json({ error: 'missing-target' });
   const blocks = ransomwareBlocks(), existed = !!blocks[ip];
+  const shareBlocks = ransomwareShareBlocks(), linkExisted = !!shareBlocks[shareId];
   const previousBlock = existed ? JSON.parse(JSON.stringify(blocks[ip])) : null;
+  const previousLinkBlock = linkExisted ? JSON.parse(JSON.stringify(shareBlocks[shareId])) : null;
   const hadWindow = anomalyWindows.has(ip), previousWindow = hadWindow ? anomalyWindows.get(ip) : null;
-  delete blocks[ip]; anomalyWindows.delete(ip);
+  if (ip) { delete blocks[ip]; anomalyWindows.delete(ip); }
+  if (shareId) delete shareBlocks[shareId];
   if (!persistNow()) {
     if (existed) blocks[ip] = previousBlock;
+    if (linkExisted) shareBlocks[shareId] = previousLinkBlock;
     if (hadWindow) anomalyWindows.set(ip, previousWindow);
     return res.status(503).json({ error:'write-error' });
   }
-  if (existed) auditReq(req, 'ransomware-unblocked', ip);
-  res.json({ ok: true, unblocked: existed });
+  if (existed || linkExisted) auditReq(req, 'ransomware-unblocked', [ip, shareId].filter(Boolean).join(' / '));
+  res.json({ ok: true, unblocked: existed || linkExisted });
 });
 
 // Recent audit entries (any authenticated admin may read).
@@ -12405,11 +12799,28 @@ adminRouter.get('/audit', requireAuditAccess, (req, res) => {
   res.json({ entries: (state.audit || []).slice(0, limit), integrity: verifyAuditChain() });
 });
 adminRouter.get('/audit/verify', requireAuditAccess, (req, res) => {
-  res.json({ integrity: verifyAuditChain() });
+  const keys = ensureAuditProofKeys();
+  res.json({ integrity: verifyAuditChain(), proof:{ algorithm:'Ed25519', publicKeyId:auditProofKeyId(keys.publicKey) } });
+});
+adminRouter.get('/audit/public-key', requireAuditAccess, (req, res) => {
+  const keys = ensureAuditProofKeys();
+  res.json({ algorithm:'Ed25519', publicKeyId:auditProofKeyId(keys.publicKey), publicKey:keys.publicKey.export({ type:'spki', format:'pem' }).toString() });
 });
 
-// Feature 4 — export the full admin audit log (JSON or CSV) for archival / SIEM.
+// Export the full admin audit log (JSON or CSV) for archival / SIEM.
 adminRouter.get('/audit/export', requireAuditAccess, (req, res) => {
+  const requested = String(req.query.format || 'json').toLowerCase();
+  const fmt = ['csv','proof'].includes(requested) ? requested : 'json';
+  // Never place a valid Ed25519 signature on a journal whose HMAC chain or
+  // separately sealed head is already invalid. That would turn corruption into
+  // an apparently authentic export.
+  if (fmt === 'proof') {
+    const before = verifyAuditChain();
+    if (!before.ok) return res.status(409).json({ error:'audit-integrity-failed', reason:before.reason });
+  }
+  // Record the export before taking the snapshot so the exported head is the
+  // exact signed head at response time and includes its own export event.
+  auditReq(req, 'audit-exported', `full journal as ${fmt}`);
   // Export the append-only chain itself, not state.audit (which intentionally
   // keeps only AUDIT_MAX recent rows for the admin dashboard).
   let entries = [];
@@ -12417,8 +12828,6 @@ adminRouter.get('/audit/export', requireAuditAccess, (req, res) => {
   try { entries = parseAuditChainFile().entries; }
   catch (_) { entries = (state.audit || []).slice().reverse(); }
   const stamp = new Date().toISOString().slice(0, 10);
-  const fmt = String(req.query.format || 'json').toLowerCase() === 'csv' ? 'csv' : 'json';
-  auditReq(req, 'audit-exported', `${entries.length} entr(y/ies) as ${fmt}`);
   if (fmt === 'csv') {
     const rows = [['seq', 'at', 'iso', 'action', 'actor', 'role', 'ip', 'detail', 'prevHash', 'hash'].join(',')];
     for (const e of entries) {
@@ -12428,9 +12837,277 @@ adminRouter.get('/audit/export', requireAuditAccess, (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename="direct-xfer-audit-${stamp}.csv"`);
     return res.send('﻿' + rows.join('\r\n')); // BOM so Excel reads UTF-8
   }
+  if (fmt === 'proof') {
+    if (!integrity.ok) return res.status(409).json({ error:'audit-integrity-failed', reason:integrity.reason });
+    const proof = buildAuditProof(entries, integrity);
+    const checked = verifyAuditProofBundle(proof);
+    if (!checked.ok) return res.status(500).json({ error:'audit-proof-failed', reason:checked.reason });
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="direct-xfer-audit-proof-${stamp}.json"`);
+    return res.send(JSON.stringify(proof, null, 2));
+  }
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="direct-xfer-audit-${stamp}.json"`);
   res.send(JSON.stringify({ app: APP_NAME, exportedAt: Date.now(), integrity, entries }, null, 2));
+});
+
+// ---------------------------------------------------------------------------
+// Bidirectional storage connectors.
+//
+// Direct-Xfer stores only connector metadata (name/type/rclone remote/root).
+// OAuth tokens, passwords and private keys stay in /data/rclone/rclone.conf,
+// which can be created with `rclone config` and must remain mode 0600. This keeps
+// secrets out of shares.json, API responses, audit text and the browser.
+const activeConnectorJobs = new Map(); // job id -> AbortController
+const MAX_ACTIVE_CONNECTOR_JOBS = Math.min(64, Math.max(1, int(process.env.MAX_ACTIVE_CONNECTOR_JOBS, 4)));
+const MAX_STORAGE_CONNECTORS = 100;
+const CONNECTOR_PROBE_CACHE_MS = 15000;
+let connectorProbeCache = { at:0, value:null, pending:null };
+async function connectorProbeSnapshot() {
+  const now = Date.now();
+  if (connectorProbeCache.value && now - connectorProbeCache.at < CONNECTOR_PROBE_CACHE_MS) {
+    return connectorProbeCache.value;
+  }
+  if (connectorProbeCache.pending) return connectorProbeCache.pending;
+  connectorProbeCache.pending = (async () => {
+    const capabilities = await storageConnectorService.capabilities();
+    let remotes = [];
+    if (capabilities.available) {
+      try { remotes = await storageConnectorService.configuredRemotes(); } catch (_) {}
+    }
+    const value = { capabilities, remotes };
+    connectorProbeCache = { at:Date.now(), value, pending:null };
+    return value;
+  })().catch((error) => {
+    connectorProbeCache.pending = null;
+    throw error;
+  });
+  return connectorProbeCache.pending;
+}
+function connectorStore() {
+  if (!state.meta || typeof state.meta !== 'object') state.meta = {};
+  if (!Array.isArray(state.meta.storageConnectors)) state.meta.storageConnectors = [];
+  return state.meta.storageConnectors;
+}
+function connectorJobStore() {
+  if (!state.meta || typeof state.meta !== 'object') state.meta = {};
+  if (!Array.isArray(state.meta.storageConnectorJobs)) state.meta.storageConnectorJobs = [];
+  return state.meta.storageConnectorJobs;
+}
+function publicConnector(connector) {
+  return {
+    id:connector.id, name:connector.name, type:connector.type, remote:connector.remote,
+    root:connector.root || '', readOnly:!!connector.readOnly,
+    createdAt:connector.createdAt || 0, updatedAt:connector.updatedAt || 0,
+  };
+}
+function getStorageConnector(id) {
+  return connectorStore().find((item) => item && item.id === String(id || '')) || null;
+}
+function publicConnectorJob(job) {
+  return {
+    id:job.id, connectorId:job.connectorId, connectorName:job.connectorName,
+    direction:job.direction, status:job.status, sourceName:job.sourceName,
+    targetName:job.targetName, size:Math.max(0, Number(job.size) || 0),
+    createdAt:job.createdAt, startedAt:job.startedAt || null, finishedAt:job.finishedAt || null,
+    error:job.error || null,
+  };
+}
+function pruneConnectorJobs() {
+  const jobs = connectorJobStore();
+  const keepAfter = Date.now() - 30 * 86400000;
+  let changed = false;
+  for (const job of jobs) {
+    // A queued/running job that is absent from the in-memory controller map can
+    // only belong to a previous process. New jobs enter the map synchronously.
+    if (job && ['queued','running'].includes(job.status) && !activeConnectorJobs.has(job.id)) {
+      job.status = 'failed'; job.error = 'server-restarted'; job.finishedAt = Date.now();
+      changed = true;
+    }
+  }
+  const kept = jobs.filter((job) => job && (activeConnectorJobs.has(job.id) || Number(job.createdAt) >= keepAfter)).slice(0, 200);
+  if (kept.length !== jobs.length) { state.meta.storageConnectorJobs = kept; changed = true; }
+  if (changed) scheduleFlush();
+  return state.meta.storageConnectorJobs;
+}
+async function connectorExportSource(raw) {
+  const value = String(raw || '').trim();
+  if (!value || value.includes('\0')) throw Object.assign(new Error('invalid-source'), { code:'invalid-source' });
+  const resolved = path.resolve(value);
+  if (withinRoot(INBOX_DIR, resolved)) {
+    const segments = path.relative(INBOX_DIR, resolved).split(path.sep).filter(Boolean);
+    if (segments.some((segment) => segment.startsWith('.dx'))) {
+      throw Object.assign(new Error('invalid-source'), { code:'invalid-source' });
+    }
+    return assertRealWithin(INBOX_DIR, resolved);
+  }
+  if (withinRoot(IMAGE_STORE_DIR, resolved)) return assertRealWithin(IMAGE_STORE_DIR, resolved);
+  // Paths outside managed writable storage use the same host-path convention as
+  // normal Direct-Xfer shares and remain confined to the read-only HOST_ROOT.
+  return assertRealWithin(HOST_ROOT, hostToContainer(value));
+}
+function connectorErrorCode(error) {
+  const code = String(error && error.code || 'connector-failed');
+  return [
+    'rclone-unavailable','remote-not-found','connector-failed','connector-cancelled',
+    'connector-terminated','connector-timeout','connector-staging-unavailable',
+    'read-only','not-file','invalid-source','name-exhausted','infected','server-restarted',
+  ].includes(code) ? code : 'connector-failed';
+}
+function queueStorageConnectorJob(req, connector, direction, input) {
+  if (activeConnectorJobs.size >= MAX_ACTIVE_CONNECTOR_JOBS) {
+    throw Object.assign(new Error('too-many-connector-jobs'), { code:'connector-capacity' });
+  }
+  const controller = new AbortController();
+  const requestIp = clientIp(req);
+  const jobRequest = { socket:{ remoteAddress:requestIp } };
+  const job = {
+    id:crypto.randomBytes(16).toString('hex'), connectorId:connector.id,
+    connectorName:connector.name, direction, status:'queued',
+    sourceName:path.basename(String(input.source || input.remotePath || '')),
+    targetName:path.basename(String(input.target || input.remotePath || '')),
+    size:0, createdAt:Date.now(), startedAt:0, finishedAt:0, error:null,
+    actorId:req.session.accountId || null, actor:req.session.username || null,
+    ip:requestIp,
+  };
+  const jobs = connectorJobStore();
+  jobs.unshift(job); pruneConnectorJobs();
+  if (!persistNow()) { jobs.splice(jobs.indexOf(job), 1); throw Object.assign(new Error('write-error'), { code:'write-error' }); }
+  activeConnectorJobs.set(job.id, controller);
+
+  setImmediate(async () => {
+    job.status = 'running'; job.startedAt = Date.now(); persist();
+    try {
+      if (!(await connectorStartupCleanup)) {
+        throw Object.assign(new Error('connector-staging-unavailable'), { code:'connector-staging-unavailable' });
+      }
+      let result;
+      if (direction === 'import') {
+        const remotePath = cleanConnectorPath(input.remotePath, false);
+        if (remotePath === null) throw Object.assign(new Error('invalid-remote-path'), { code:'invalid-source' });
+        const target = cleanConnectorPath(input.target || path.posix.basename(remotePath), false);
+        if (target === null) throw Object.assign(new Error('invalid-local-path'), { code:'invalid-source' });
+        result = await storageConnectorService.importFile(connector, remotePath, target, {
+          signal:controller.signal,
+          beforePublish:clamavEnabled() ? async (temporary) => {
+            const scan = await scanFile(temporary);
+            if (scan.infected) {
+              await quarantineFile(temporary, path.basename(target), { id:`connector:${connector.id}`, name:connector.name }, scan.virus, jobRequest);
+              throw Object.assign(new Error('infected'), { code:'infected' });
+            }
+            if (scan.error) console.warn('[connector] ClamAV scan error; import retained:', scan.error);
+          } : null,
+        });
+        job.sourceName = path.posix.basename(remotePath); job.targetName = path.basename(result.target);
+      } else {
+        const local = await connectorExportSource(input.source);
+        const remotePath = cleanConnectorPath(input.remotePath || path.basename(local), false);
+        if (remotePath === null) throw Object.assign(new Error('invalid-remote-path'), { code:'invalid-source' });
+        result = await storageConnectorService.exportFile(connector, local, remotePath, { signal:controller.signal });
+        job.sourceName = path.basename(local); job.targetName = path.posix.basename(remotePath);
+      }
+      job.size = Math.max(0, Number(result.size) || 0); job.status = 'completed';
+      logAudit(`storage-connector-${direction}`, {
+        username:job.actor || 'system', account:job.actorId ? getAccountById(job.actorId) : null,
+        ip:job.ip,
+        detail:`${connector.name}: ${job.sourceName} -> ${job.targetName} (${job.size} bytes)`,
+      });
+      try { scheduleSearchReindex(); } catch (_) {}
+    } catch (error) {
+      job.status = controller.signal.aborted ? 'cancelled' : 'failed';
+      job.error = connectorErrorCode(error);
+      logAudit(`storage-connector-${job.status}`, {
+        username:job.actor || 'system', account:job.actorId ? getAccountById(job.actorId) : null,
+        ip:job.ip,
+        detail:`${connector.name}: ${direction}; ${job.error}`,
+      });
+    } finally {
+      job.finishedAt = Date.now(); activeConnectorJobs.delete(job.id); pruneConnectorJobs(); persistNow();
+    }
+  });
+  return job;
+}
+
+adminRouter.get('/storage/connectors', requireFullAdmin, async (req, res) => {
+  const { capabilities, remotes } = await connectorProbeSnapshot();
+  res.json({
+    connectors:connectorStore().map(publicConnector),
+    jobs:pruneConnectorJobs().map(publicConnectorJob), capabilities, remotes,
+    importRoot:CONNECTOR_IMPORT_DIR,
+  });
+});
+adminRouter.post('/storage/connectors', requireFullAdmin, (req, res) => {
+  if (connectorStore().length >= MAX_STORAGE_CONNECTORS) return res.status(409).json({ error:'too-many-connectors' });
+  let connector;
+  try {
+    connector = normalizeConnector(req.body || {});
+    connector.id = crypto.randomBytes(12).toString('hex');
+  } catch (error) { return res.status(400).json({ error:error.message || 'invalid-connector' }); }
+  const list = connectorStore(); list.push(connector);
+  if (!persistNow()) { list.pop(); return res.status(503).json({ error:'write-error' }); }
+  auditReq(req, 'storage-connector-created', `${connector.name} (${connector.type}/${connector.remote})`);
+  res.status(201).json({ connector:publicConnector(connector) });
+});
+adminRouter.patch('/storage/connectors/:id', requireFullAdmin, (req, res) => {
+  const current = getStorageConnector(req.params.id);
+  if (!current) return res.status(404).json({ error:'not-found' });
+  let next;
+  try { next = normalizeConnector(req.body || {}, current); }
+  catch (error) { return res.status(400).json({ error:error.message || 'invalid-connector' }); }
+  const before = { ...current }; Object.assign(current, next, { id:before.id, createdAt:before.createdAt });
+  if (!persistNow()) { Object.assign(current, before); return res.status(503).json({ error:'write-error' }); }
+  auditReq(req, 'storage-connector-updated', `${current.name} (${current.type}/${current.remote})`);
+  res.json({ connector:publicConnector(current) });
+});
+adminRouter.delete('/storage/connectors/:id', requireFullAdmin, (req, res) => {
+  const list = connectorStore(), index = list.findIndex((item) => item && item.id === req.params.id);
+  if (index < 0) return res.status(404).json({ error:'not-found' });
+  if (connectorJobStore().some((job) => job && job.connectorId === req.params.id && activeConnectorJobs.has(job.id))) {
+    return res.status(409).json({ error:'connector-busy' });
+  }
+  const [removed] = list.splice(index, 1);
+  if (!persistNow()) { list.splice(index, 0, removed); return res.status(503).json({ error:'write-error' }); }
+  auditReq(req, 'storage-connector-deleted', `${removed.name} (${removed.type}/${removed.remote})`);
+  res.json({ ok:true });
+});
+adminRouter.post('/storage/connectors/:id/test', requireFullAdmin, async (req, res) => {
+  const connector = getStorageConnector(req.params.id);
+  if (!connector) return res.status(404).json({ error:'not-found' });
+  try {
+    const result = await storageConnectorService.test(connector);
+    auditReq(req, 'storage-connector-tested', `${connector.name}: ok`);
+    res.json(result);
+  } catch (error) {
+    auditReq(req, 'storage-connector-tested', `${connector.name}: ${connectorErrorCode(error)}`);
+    res.status(502).json({ error:connectorErrorCode(error), detail:String(error.message || '').slice(0, 300) });
+  }
+});
+adminRouter.get('/storage/connectors/:id/list', requireFullAdmin, async (req, res) => {
+  const connector = getStorageConnector(req.params.id);
+  if (!connector) return res.status(404).json({ error:'not-found' });
+  const relative = cleanConnectorPath(req.query.path || '');
+  if (relative === null) return res.status(400).json({ error:'invalid-remote-path' });
+  try { res.json({ path:relative, entries:await storageConnectorService.list(connector, relative) }); }
+  catch (error) { res.status(502).json({ error:connectorErrorCode(error), detail:String(error.message || '').slice(0, 300) }); }
+});
+adminRouter.post('/storage/connectors/:id/import', requireFullAdmin, (req, res) => {
+  const connector = getStorageConnector(req.params.id);
+  if (!connector) return res.status(404).json({ error:'not-found' });
+  try { res.status(202).json({ job:publicConnectorJob(queueStorageConnectorJob(req, connector, 'import', req.body || {})) }); }
+  catch (error) { res.status(error.code === 'write-error' ? 503 : error.code === 'connector-capacity' ? 429 : 400).json({ error:error.code || 'invalid-job' }); }
+});
+adminRouter.post('/storage/connectors/:id/export', requireFullAdmin, (req, res) => {
+  const connector = getStorageConnector(req.params.id);
+  if (!connector) return res.status(404).json({ error:'not-found' });
+  if (connector.readOnly) return res.status(403).json({ error:'read-only' });
+  try { res.status(202).json({ job:publicConnectorJob(queueStorageConnectorJob(req, connector, 'export', req.body || {})) }); }
+  catch (error) { res.status(error.code === 'write-error' ? 503 : error.code === 'connector-capacity' ? 429 : 400).json({ error:error.code || 'invalid-job' }); }
+});
+adminRouter.post('/storage/jobs/:id/cancel', requireFullAdmin, (req, res) => {
+  const controller = activeConnectorJobs.get(req.params.id);
+  if (!controller) return res.status(404).json({ error:'not-found' });
+  controller.abort(); auditReq(req, 'storage-connector-cancelled', req.params.id);
+  res.json({ ok:true });
 });
 
 adminRouter.get('/shares', async (req, res) => {
@@ -12453,6 +13130,7 @@ adminRouter.get('/shares', async (req, res) => {
     transfers: listTransfers(allowedShareIds),
     historyMeta: historyMeta(allowedShareIds),
     photoHistoryMeta: photoHistoryMeta(req),
+    trashCount: trashItems().filter((r) => trashRecordVisible(req, r)).length,
   });
 });
 
@@ -12880,8 +13558,9 @@ adminRouter.get('/photos/dashboard', async (req, res) => {
   const alerts = [];
   if (storage && storage.total > 0) {
     const usedPct = Math.round((storage.used / storage.total) * 100);
-    if (usedPct >= 90) alerts.push({ level: 'critical', code: 'image-disk-critical', params: { pct: usedPct, free: formatBytes(storage.free) } });
-    else if (usedPct >= 80) alerts.push({ level: 'warning', code: 'image-disk-warning', params: { pct: usedPct, free: formatBytes(storage.free) } });
+    const freePct = Math.max(0, 100 - usedPct), diskLimits = diskFreeThresholds();
+    if (diskLimits.warn > 0 && freePct <= diskLimits.critical) alerts.push({ level: 'critical', code: 'image-disk-critical', params: { pct: usedPct, free: formatBytes(storage.free) } });
+    else if (diskLimits.warn > 0 && freePct <= diskLimits.warn) alerts.push({ level: 'warning', code: 'image-disk-warning', params: { pct: usedPct, free: formatBytes(storage.free) } });
   }
   if (duplicates.groupCount > 0) alerts.push({
     level: duplicates.reclaimableBytes >= 100 * 1024 * 1024 ? 'warning' : 'info',
@@ -12975,13 +13654,14 @@ adminRouter.delete('/ip-names', (req, res) => {
   const n = state.ipNames ? Object.keys(state.ipNames).length : 0;
   const before = state.ipNames || {};
   state.ipNames = {};
-  if (!persistNow()) { state.ipNames = before; return res.status(503).json({ error:'write-error' }); }
+  const undoEntry = n ? recordUndoable(req, 'ip-names-cleared', n + ' nickname(s)', { kind: 'ip-names', before, after: {} }) : null;
+  if (!persistNow()) { state.ipNames = before; rollbackRecordedUndo(undoEntry); return res.status(503).json({ error:'write-error' }); }
   historyViewRevision++;
   auditReq(req, 'ip-names-cleared', n + ' nickname(s)');
   res.json({ ok: true, cleared: n });
 });
 
-// Feature 36 — reusable link presets (templates). Per-account named snapshots of a
+// Reusable link presets (templates). Per-account named snapshots of a
 // creation form's settings, applied when making a new link. Stored in state.meta,
 // bounded per account, and deliberately never carry a password or a specific name.
 const PRESET_TYPES = new Set(['inbox', 'collab', 'file', 'folder']);
@@ -13100,8 +13780,8 @@ function computeSettingsPatch(body) {
   if (typeof body.notifyDownloads === 'boolean') patch.notifyDownloads = body.notifyDownloads;
   if (typeof body.notifyUploads === 'boolean') patch.notifyUploads = body.notifyUploads;
   if (typeof body.notifyMessages === 'boolean') patch.notifyMessages = body.notifyMessages;
-  if (body.notifyAggregateSeconds !== undefined) patch.notifyAggregateSeconds = clampNum(body.notifyAggregateSeconds, 0, 3600, 0); // feature 28: 0 = off, else 1s–1h window
-  // Proactive expiry alerts (feature 5) and periodic digest (feature 9).
+  if (body.notifyAggregateSeconds !== undefined) patch.notifyAggregateSeconds = clampNum(body.notifyAggregateSeconds, 0, 3600, 0); // 0 = off, else 1s–1h window
+  // Proactive expiry alerts and periodic digest.
   if (typeof body.notifyExpiring === 'boolean') patch.notifyExpiring = body.notifyExpiring;
   if (body.expiryWarnHours !== undefined) patch.expiryWarnHours = clampNum(body.expiryWarnHours, 1, 8760, 24); // cap 1y
   if (typeof body.digestEnabled === 'boolean') patch.digestEnabled = body.digestEnabled;
@@ -13111,16 +13791,25 @@ function computeSettingsPatch(body) {
   if (body.ransomwareDeleteThreshold !== undefined) patch.ransomwareDeleteThreshold = clampNum(body.ransomwareDeleteThreshold, 5, 1000, 25);
   if (body.ransomwareUploadThreshold !== undefined) patch.ransomwareUploadThreshold = clampNum(body.ransomwareUploadThreshold, 20, 5000, 120);
   if (body.ransomwareBlockMinutes !== undefined) patch.ransomwareBlockMinutes = clampNum(body.ransomwareBlockMinutes, 1, 1440, 30);
+  if (typeof body.ransomwareSuspendLink === 'boolean') patch.ransomwareSuspendLink = body.ransomwareSuspendLink;
   if (typeof body.dlpEnabled === 'boolean') patch.dlpEnabled = body.dlpEnabled;
   if (body.dlpMode !== undefined) {
     const mode = String(body.dlpMode || '').toLowerCase();
-    if (!['warn','block','log'].includes(mode)) return { error: 'invalid-dlp-mode' };
+    if (!['warn','block','log','quarantine'].includes(mode)) return { error: 'invalid-dlp-mode' };
     patch.dlpMode = mode;
+  }
+  if (typeof body.dlpRulesEnabled === 'boolean') patch.dlpRulesEnabled = body.dlpRulesEnabled;
+  for (const [field, key] of [['dlpActionLow','dlpActionLow'],['dlpActionMedium','dlpActionMedium'],['dlpActionHigh','dlpActionHigh'],['dlpActionCritical','dlpActionCritical']]) {
+    if (body[field] !== undefined) {
+      const action = String(body[field] || '').toLowerCase();
+      if (!['log','warn','quarantine','block'].includes(action)) return { error:'invalid-dlp-action' };
+      patch[key] = action;
+    }
   }
   if (body.dlpMaxFiles !== undefined) patch.dlpMaxFiles = clampNum(body.dlpMaxFiles, 1, 1000, 100);
   if (body.dlpMaxFileMB !== undefined) patch.dlpMaxFileMB = clampNum(body.dlpMaxFileMB, 1, 250, 25);
   if (typeof body.dlpScanOcr === 'boolean') patch.dlpScanOcr = body.dlpScanOcr;
-  // E-mail (SMTP) notifications (feature 2). Ignored while SMTP_URL is set by env.
+  // E-mail (SMTP) notifications. Ignored while SMTP_URL is set by env.
   const emailStr = (v, max) => String(v).replace(/[\r\n\t]+/g, ' ').trim().slice(0, max);
   if (typeof body.emailEnabled === 'boolean') patch.emailEnabled = body.emailEnabled;
   if (typeof body.smtpHost === 'string') patch.smtpHost = emailStr(body.smtpHost, 200);
@@ -13132,6 +13821,7 @@ function computeSettingsPatch(body) {
   if (typeof body.smtpTo === 'string') patch.smtpTo = emailStr(body.smtpTo, 400);
   // Defaults for new links.
   if (body.defaultExpiry !== undefined) { const n=nonNegativeInt(body.defaultExpiry); if(n===null)return {error:'invalid-limit'}; patch.defaultExpiry=n; }
+  if (typeof body.newSharesNeverExpire === 'boolean') patch.newSharesNeverExpire = body.newSharesNeverExpire;
   if (body.defaultMaxDownloads !== undefined) { const n=nonNegativeInt(body.defaultMaxDownloads); if(n===null)return {error:'invalid-limit'}; patch.defaultMaxDownloads=n; }
   if (body.defaultRateKBps !== undefined) { const n=nonNegativeInt(body.defaultRateKBps); if(n===null)return {error:'invalid-limit'}; patch.defaultRateKBps=n; }
   if (typeof body.defaultAllowZip === 'boolean') patch.defaultAllowZip = body.defaultAllowZip;
@@ -13158,7 +13848,7 @@ function computeSettingsPatch(body) {
     if (!Number.isFinite(n) || n < 0) return { error: 'invalid-duration' };
     patch.defaultInactiveExpiryDays = Math.min(3650, Math.round(n * 10) / 10);
   }
-  // Link lifecycle automation (features 22/23). Both are opt-in; permanent
+  // Link lifecycle automation. Both are opt-in; permanent
   // cleanup stays disabled by default because it may delete managed inbox/photo bytes.
   if (body.autoArchiveExpiredDays !== undefined) patch.autoArchiveExpiredDays = clampNum(body.autoArchiveExpiredDays, 0, 3650, 0);
   if (body.expiredDataRetentionDays !== undefined) patch.expiredDataRetentionDays = clampNum(body.expiredDataRetentionDays, 0, 3650, 0);
@@ -13196,11 +13886,12 @@ function computeSettingsPatch(body) {
   if (body.globalRateKBps !== undefined) { const n=nonNegativeInt(body.globalRateKBps); if(n===null)return {error:'invalid-limit'}; patch.globalRateKBps=n; }
   if (body.maxUploadBytes !== undefined) { const n=nonNegativeInt(body.maxUploadBytes); if(n===null)return {error:'invalid-limit'}; patch.maxUploadBytes=n; }
   if (body.maxZipBytes !== undefined) { const n=nonNegativeInt(body.maxZipBytes); if(n===null)return {error:'invalid-limit'}; patch.maxZipBytes=n; }
-  if (body.receptionStorageCapGB !== undefined) { // feature 10 — fractional GB allowed
+  if (body.receptionStorageCapGB !== undefined) { // fractional GB allowed
     const capGb = Number(body.receptionStorageCapGB);
     if (!Number.isFinite(capGb) || capGb < 0) return { error:'invalid-limit' };
     patch.receptionStorageCapGB = capGb > 0 ? Math.min(1048576, capGb) : 0;
   }
+  if (body.diskFreeWarnPercent !== undefined) patch.diskFreeWarnPercent = clampNum(body.diskFreeWarnPercent, 0, 50, 10);
   // Maintenance.
   if (typeof body.updateCheck === 'boolean') patch.updateCheck = body.updateCheck;
   // History / privacy.
@@ -13211,6 +13902,7 @@ function computeSettingsPatch(body) {
   if (typeof body.anonymizeIps === 'boolean') patch.anonymizeIps = body.anonymizeIps;
   if (typeof body.keepIpNames === 'boolean') patch.keepIpNames = body.keepIpNames;
   // Interface.
+  if (typeof body.confirmShareRevoke === 'boolean') patch.confirmShareRevoke = body.confirmShareRevoke;
   if (typeof body.brandName === 'string') patch.brandName = body.brandName.replace(/[\r\n\t]+/g, ' ').trim().slice(0, 40);
   if (typeof body.accentColor === 'string') {
     const c = body.accentColor.trim();
@@ -13223,7 +13915,7 @@ function computeSettingsPatch(body) {
   if (typeof body.receptionBanner === 'string') patch.receptionBanner = body.receptionBanner.replace(/\r\n/g, '\n').trim().slice(0, 2000);
   // Privacy.
   if (typeof body.geoLookup === 'boolean') patch.geoLookup = body.geoLookup;
-  // Feature 5 — scheduled bandwidth cap.
+  // Scheduled bandwidth cap.
   if (typeof body.scheduleRateEnabled === 'boolean') patch.scheduleRateEnabled = body.scheduleRateEnabled;
   if (body.scheduleRateKBps !== undefined) { const n=nonNegativeInt(body.scheduleRateKBps); if(n===null)return {error:'invalid-limit'}; patch.scheduleRateKBps=n; }
   const hhmm = (v, dflt) => {
@@ -13235,7 +13927,7 @@ function computeSettingsPatch(body) {
   };
   if (body.scheduleStart !== undefined) patch.scheduleStart = hhmm(body.scheduleStart, '08:00');
   if (body.scheduleEnd !== undefined) patch.scheduleEnd = hhmm(body.scheduleEnd, '18:00');
-  // Feature 7 — anti-abuse.
+  // Anti-abuse.
   if (typeof body.publicRateLimit === 'boolean') patch.publicRateLimit = body.publicRateLimit;
   if (body.publicRateMax !== undefined) patch.publicRateMax = clampNum(body.publicRateMax, 1, 100000, 600);
   if (body.publicRateWindowMin !== undefined) patch.publicRateWindowMin = clampNum(body.publicRateWindowMin, 1, 1440, 1);
@@ -13245,7 +13937,7 @@ function computeSettingsPatch(body) {
   if (typeof body.leakAlertEnabled === 'boolean') patch.leakAlertEnabled = body.leakAlertEnabled;
   if (body.leakAlertCountries !== undefined) patch.leakAlertCountries = clampNum(body.leakAlertCountries, 2, 100, 3);
   if (body.leakAlertWindowHours !== undefined) patch.leakAlertWindowHours = clampNum(body.leakAlertWindowHours, 1, 720, 24);
-  // Feature 8 — branding / watermark.
+  // Branding / watermark.
   if (typeof body.publicLogo === 'string') {
     const v = body.publicLogo.trim();
     if (v && !/^data:image\/(png|jpeg|gif|webp|svg\+xml);base64,[A-Za-z0-9+/=]+$/.test(v)) return { error: 'invalid-logo' };
@@ -13253,7 +13945,7 @@ function computeSettingsPatch(body) {
     patch.publicLogo = v;
   }
   if (typeof body.legalNotice === 'string') patch.legalNotice = body.legalNotice.replace(/[\r\n\t]+/g, ' ').trim().slice(0, 500);
-  if (typeof body.announcement === 'string') patch.announcement = body.announcement.replace(/[\r\n\t]+/g, ' ').trim().slice(0, 500); // feature 11
+  if (typeof body.announcement === 'string') patch.announcement = body.announcement.replace(/[\r\n\t]+/g, ' ').trim().slice(0, 500);
   if (typeof body.watermarkPreviews === 'boolean') patch.watermarkPreviews = body.watermarkPreviews;
   if (typeof body.publicTheme === 'string') patch.publicTheme = ['auto', 'dark', 'light'].includes(body.publicTheme) ? body.publicTheme : 'dark';
   if (typeof body.themeColor === 'string') {
@@ -13261,7 +13953,7 @@ function computeSettingsPatch(body) {
     if (c && !/^#[0-9a-fA-F]{6}$/.test(c)) return { error: 'invalid-color' };
     patch.themeColor = c;
   }
-  // Feature 9 — expiry presets: keep only well-formed duration tokens (Nh/Nd/Nw/Nmo),
+  // Expiry presets: keep only well-formed duration tokens (Nh/Nd/Nw/Nmo),
   // de-duplicated, max 8. Empty falls back to the default set client-side.
   if (typeof body.expiryPresets === 'string') {
     const seen = new Set();
@@ -13302,12 +13994,29 @@ adminRouter.post('/settings', (req, res) => {
   const r = computeSettingsPatch(req.body || {});
   if (r.error) return res.status(400).json({ error: r.error });
   const patch = r.patch;
-  if (!setSettingsDurable(patch)) {
+  const prevSettings = getSettings();
+  const undoBefore = {}; for (const k of Object.keys(patch)) undoBefore[k] = prevSettings[k];
+  // Record before the durable settings write so the state mutation and its Undo
+  // descriptor land in the same atomic store replacement. Oversized snapshots
+  // (notably a custom logo data URL) stay applied but deliberately non-undoable.
+  let undoEntry = null;
+  if (Object.keys(patch).length && JSON.stringify(undoBefore).length <= 65536) {
+    undoEntry = recordUndoable(req, 'settings-changed', Object.keys(patch).join(', '), { kind: 'settings', before: undoBefore, after: patch });
+  }
+  const settingsStateBefore = state.settings;
+  const historyBefore = Array.isArray(state.history) ? state.history.slice() : [];
+  state.settings = { ...state.settings, ...patch };
+  mailerCache = null;
+  if (patch.historyRetentionDays !== undefined) pruneHistory();
+  if (!persistNow()) {
+    state.settings = settingsStateBefore;
+    state.history = historyBefore;
+    mailerCache = null;
+    rollbackRecordedUndo(undoEntry);
     addCenterNotification(req.session.accountId,'config-save-failed',{detail:'Configuration non enregistrée: écriture durable impossible',dedupeKey:`config-save-failed:${Math.floor(Date.now()/3600000)}`,dedupeWindowMs:3600000});
     return res.status(503).json({ error:'write-error', persisted:false });
   }
   if (patch.anonymizeIps !== undefined || patch.keepIpNames !== undefined) historyViewRevision++;
-  if (patch.historyRetentionDays !== undefined) pruneHistory();
   auditReq(req, 'settings-changed', Object.keys(patch).join(', '));
   res.json({ ...settingsForClient(req), persisted: true });
 });
@@ -13351,22 +14060,25 @@ adminRouter.post('/webhook-test', async (req, res) => {
   if (!/^https?:\/\//i.test(url)) return res.status(400).json({ error: 'invalid-webhook' });
   const format = WEBHOOK_URL ? eff.format : (String(body.format || '') || autoWebhookFormat(url));
   const result = await sendWebhook(url, format === 'auto' ? '' : format, `✅ ${APP_NAME} — webhook test OK`, 'test', {});
+  auditReq(req, 'webhook-tested', result && result.ok ? 'ok' : 'failed');
   res.json(result);
 });
 
-// Sends the periodic digest immediately (feature 9), ignoring the schedule and
+// Sends the periodic digest immediately, ignoring the schedule and
 // the enabled flag — used by the "Send digest now" button to preview it.
 adminRouter.post('/digest-test', (req, res) => {
   const r = maybeSendDigest(true);
-  if (r && r.skipped === 'no-channel') return res.status(400).json({ error: 'no-channel' });
+  if (r && r.skipped === 'no-channel') { auditReq(req, 'digest-tested', 'no-channel'); return res.status(400).json({ error: 'no-channel' }); }
+  auditReq(req, 'digest-tested', r && r.ok === false ? 'failed' : 'ok');
   res.json(r || { ok: true });
 });
 
-// Sends a test e-mail to verify the SMTP configuration (feature 2).
+// Sends a test e-mail to verify the SMTP configuration.
 adminRouter.post('/email-test', async (req, res) => {
   if (!nodemailer) return res.status(400).json({ error: 'no-module' });
   if (!emailConfigured()) return res.status(400).json({ error: 'not-configured' });
   const r = await sendMail(`${APP_NAME} — e-mail test OK`, `✅ ${APP_NAME}: your SMTP notification settings work.`);
+  auditReq(req, 'email-tested', r && r.ok ? 'ok' : String(r && r.error || 'send-failed').slice(0,120));
   if (r && r.ok) res.json({ ok: true });
   else res.status(400).json({ error: r && r.error ? r.error : 'send-failed' });
 });
@@ -13425,6 +14137,7 @@ adminRouter.post('/push/test', (req, res) => {
   const mine = pushSubscriptionsForAccountIds([req.session.accountId]);
   if (!mine.length) return res.status(400).json({ error: 'no-subscription' });
   const sent = sendWebPush('test', `${APP_NAME} — test`, '🔔 Web Push notifications are working.', null, mine);
+  auditReq(req, 'push-tested', `sent=${sent}`);
   res.json({ ok: true, sent });
 });
 
@@ -13511,7 +14224,7 @@ adminRouter.post('/restore', requireOwner, (req, res) => {
   req.on('error', () => { if (!res.headersSent) res.status(400).json({ error: 'read-error' }); });
 });
 
-// Feature 4 — export every link's configuration (paths, quotas, expiries,
+// Export every link's configuration (paths, quotas, expiries,
 // passwords, recipients — NOT the files themselves) as a JSON file, for backup
 // or migrating links to another instance.
 adminRouter.get('/shares/export', requireFullAdmin, (req, res) => {
@@ -13523,7 +14236,7 @@ adminRouter.get('/shares/export', requireFullAdmin, (req, res) => {
   res.send(JSON.stringify({ app: APP_NAME, exportedAt: Date.now(), shares }, null, 2));
 });
 
-// Feature 8 — export the CURRENT links list with their live state & counters (name,
+// Export the CURRENT links list with their live state & counters (name,
 // type, URL, dates, downloads, visitors, tags…) as CSV or JSON. Distinct from the
 // config export above (which is for migrating link definitions).
 adminRouter.get('/shares/list-export', (req, res) => {
@@ -13571,6 +14284,22 @@ adminRouter.post('/trash/:id/restore',(req,res)=>{
 });
 adminRouter.delete('/trash/:id',requireFullAdmin,async(req,res)=>{try{const rec=await purgeTrashRecordById(req.params.id,req);if(!rec)return res.status(404).json({error:'not-found'});if(!persistNow())return res.status(503).json({error:'write-error',persisted:false});scheduleSearchReindex();auditReq(req,'trash-purged',rec.share?rec.share.name:req.params.id);res.json({ok:true,persisted:true});}catch(e){console.error('[trash] purge failed:',e&&e.message);res.status(500).json({error:'delete-failed'});}});
 adminRouter.delete('/trash',requireFullAdmin,async(req,res)=>{const ids=trashItems().filter((r)=>trashRecordVisible(req,r)).map((r)=>r.id);let count=0,failed=0;for(const id of ids){try{if(await purgeTrashRecordById(id,req))count++;}catch(e){failed++;console.error('[trash] purge failed:',id,e&&e.message);}}let persisted=true;if(count){persisted=persistNow();if(persisted){scheduleSearchReindex();auditReq(req,'trash-purged-all',`${count}; failed=${failed}`);}}if(!persisted)return res.status(503).json({ok:false,error:'write-error',persisted:false,count,failed});res.status(failed?207:200).json({ok:failed===0,count,failed,persisted:true});});
+
+// Undoable-action log (#89): list recent destructive actions and reverse one.
+adminRouter.get('/undo', (req, res) => {
+  const items = undoLogItems().filter((e) => undoEntryVisible(req, e)).map((entry) => undoPublicEntry(entry, req));
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ items, max: UNDO_LOG_MAX });
+});
+adminRouter.post('/undo/:id', (req, res) => {
+  const entry = undoLogItems().find((e) => e && e.id === req.params.id);
+  if (!entry || !undoEntryVisible(req, entry)) return res.status(404).json({ error: 'not-found' });
+  if (!undoEntryExecutable(req, entry)) return res.status(403).json({ error: 'forbidden' });
+  const r = performUndo(entry, req);
+  if (!r.ok) return res.status(r.status || 400).json({ error: r.error });
+  auditReq(req, 'action-undone', entry.type + (entry.label ? ': ' + entry.label : ''));
+  res.json({ ok: true, entry: undoPublicEntry(entry, req) });
+});
 
 // Detailed statistics for one active share or shared image. The response combines
 // persistent aggregates with the retained transfer history, live activity and,
@@ -13775,7 +14504,7 @@ adminRouter.get('/shares/:id/stats-detail', async (req, res) => {
   });
 });
 
-// Feature 14 — per-link access log: the recent transfer-journal entries for one
+// Per-link access log: the recent transfer-journal entries for one
 // link (who / when / from where), newest first. Owner-scoped, bounded.
 adminRouter.get('/shares/:id/log', async (req, res) => {
   const s = getById(req.params.id);
@@ -13827,7 +14556,7 @@ function safeReceivedFilePath(share, rel) {
   } catch (_) { return null; }
 }
 
-// Feature 15 — received-file browser for the admin dashboard (reception & collab
+// Received-file browser for the admin dashboard (reception & collab
 // links). Lists the files that landed on the link (flagging images), and serves
 // each one for download or — images only — inline so the dashboard can render real
 // thumbnails. Server-backed like the PWA's /app/inbox view, so it survives any
@@ -13869,7 +14598,7 @@ adminRouter.get('/shares/:id/received-file', (req, res) => {
   stream.pipe(res);
 });
 
-// Feature 4 — import a shares-config file produced by /shares/export. Each record
+// Import a shares-config file produced by /shares/export. Each record
 // gets a fresh id; its token is kept when free (so existing links keep working)
 // or regenerated on collision. mode:'replace' clears current links first, else
 // records are merged in. Files/ciphertext blobs are NOT transferred.
@@ -13932,6 +14661,7 @@ adminRouter.post('/shares/import', (req, res) => {
   reindex();
   if (!persistNow()) {
     state = beforeState;
+    syncLiveActivityCache();
     reindex();
     shareLogicalBytesCache.clear();
     return res.status(503).json({ error: 'write-error' });
@@ -13989,7 +14719,7 @@ adminRouter.post('/shares', async (req, res) => {
     name: first.name || first.hostPath || 'share',
     size: type === 'file' ? first.size : null,
     startsAt: parseStartsAt(body.startsAt),
-    expiresAt: resolveExpiry(body), // feature 2: absolute date or relative duration
+    expiresAt: resolveNewShareExpiry(body), // instance policy + absolute/relative expiry
     maxDownloads: parseMaxDownloads(body.maxDownloads),
   };
   if (share.expiresAt) share.expirySetAt = Date.now();
@@ -14001,8 +14731,9 @@ adminRouter.post('/shares', async (req, res) => {
   if (body.expiryReminderHours !== undefined && body.expiryReminderHours !== null && body.expiryReminderHours !== '') {
     const h = Number(body.expiryReminderHours); if (!Number.isFinite(h) || h < 0 || h > 8760) return res.status(400).json({ error: 'invalid-reminder' }); share.expiryReminderHours = Math.round(h * 10) / 10;
   }
-  const firstUseExpirySeconds = boundedSeconds(body.firstUseExpirySeconds); if (firstUseExpirySeconds) share.firstUseExpirySeconds = firstUseExpirySeconds;
-  const inactiveExpirySeconds = boundedSeconds(body.inactiveExpirySeconds); if (inactiveExpirySeconds) share.inactiveExpirySeconds = inactiveExpirySeconds;
+  const forceNeverExpire = getSettings().newSharesNeverExpire === true;
+  const firstUseExpirySeconds = forceNeverExpire ? 0 : boundedSeconds(body.firstUseExpirySeconds); if (firstUseExpirySeconds) share.firstUseExpirySeconds = firstUseExpirySeconds;
+  const inactiveExpirySeconds = forceNeverExpire ? 0 : boundedSeconds(body.inactiveExpirySeconds); if (inactiveExpirySeconds) share.inactiveExpirySeconds = inactiveExpirySeconds;
   if (type === 'file') share.items = resolved.map((it) => ({ hostPath: it.hostPath, name: it.name, size: it.size, type: it.type }));
   // Mark a genuine multi-file bundle so the admin keeps showing its file list even
   // after it is whittled down to a single remaining item (a plain single-file share
@@ -14014,12 +14745,12 @@ adminRouter.post('/shares', async (req, res) => {
   // of `password`, not `password` or any client-controlled keys) — there is no
   // attacker-controlled key set here, so no mass-assignment / exfiltration path.
   if (password) Object.assign(share, makeSharePassword(password));
-  // Feature 6 — a password hint is only meaningful alongside a password.
+  // A password hint is only meaningful alongside a password.
   if (password) { const hint = normalizePwHint(body.pwHint); if (hint) share.pwHint = hint; }
-  // Feature 24 — optional per-IP download quota.
+  // Optional per-IP download quota.
   const maxDlPerIp = parseMaxDownloadsPerIp(body.maxDownloadsPerIp); if (maxDlPerIp) share.maxDownloadsPerIp = maxDlPerIp;
-  const shareEmoji = normalizeShareEmoji(body.emoji); if (shareEmoji) share.emoji = shareEmoji; // feature 6
-  const maxBytesServed = parseMaxBytesServed(body.maxBytesServed); if (maxBytesServed) share.maxBytesServed = maxBytesServed; // feature 13
+  const shareEmoji = normalizeShareEmoji(body.emoji); if (shareEmoji) share.emoji = shareEmoji;
+  const maxBytesServed = parseMaxBytesServed(body.maxBytesServed); if (maxBytesServed) share.maxBytesServed = maxBytesServed;
   const parsedRate = parseLinkRateKBps(body.rateKBps, { optional:true }); // per-link download cap (KB/s)
   if (!parsedRate.ok) return res.status(400).json({ error:'invalid-rate' });
   const rateKBps = parsedRate.value;
@@ -14035,15 +14766,15 @@ adminRouter.post('/shares', async (req, res) => {
     const note = body.note.replace(/\r\n/g, '\n').trim().slice(0, 2000);
     if (note) share.note = note;
   }
-  // Feature 5 — auto-revoke after N distinct visitors (0 / absent = unlimited).
+  // Auto-revoke after N distinct visitors (0 / absent = unlimited).
   const maxVisitors = Math.max(0, parseInt(body.maxVisitors, 10) || 0);
   if (maxVisitors > 0) share.maxVisitors = maxVisitors;
   // Download-goal alert — notify once when completed downloads reach N (0 = off).
   const dlThreshold = Math.max(0, Math.floor(Number(body.notifyDownloadThreshold) || 0));
   if (dlThreshold > 0) share.notifyDownloadThreshold = dlThreshold;
-  if (body.requestAccess === true) share.requestAccess = true; // feature 28 — locked-until-approved gate
-  if (body.allowFeedback === true) share.allowFeedback = true; // feature 38 — moderated visitor feedback
-  applyAccessRules(share, body); // feature 11 — geo/IP rules
+  if (body.requestAccess === true) share.requestAccess = true; // locked-until-approved gate
+  if (body.allowFeedback === true) share.allowFeedback = true; // moderated visitor feedback
+  applyAccessRules(share, body); // geo/IP rules
 
   let dlpScan = null;
   if (getSettings().dlpEnabled !== false) {
@@ -14077,6 +14808,8 @@ adminRouter.post('/photos', async (req, res) => {
     items.push({ path:p, item });
   }
   if (!items.length) return res.status(400).json({ error:(errors[0] && errors[0].error) || 'no-images', errors });
+  // DLP always runs before duplicate detection. A duplicate response must never
+  // become a side channel that skips the configured security reaction/logging.
   let dlpScan = null;
   if (getSettings().dlpEnabled !== false) {
     // Scan photos independently so a sensitive image does not incorrectly put the
@@ -14091,12 +14824,41 @@ adminRouter.post('/photos', async (req, res) => {
     dlpScan = mergeDlpSummaries(scans, Math.max(0, items.length - cap));
     if (dlpDecision(req, res, body, dlpScan, 'photos-create')) return;
   }
+
+  // Hash the source before copying it into managed storage. This both prevents a
+  // needless second stored copy and seeds hashes for future duplicate checks.
+  // Acquire every content-hash lock in sorted order before checking existing
+  // photos. The deterministic order avoids deadlocks when two batch requests
+  // contain the same hashes in a different file order, while holding the locks
+  // through the durable create window closes the concurrent-import race.
+  for (const entry of items) {
+    try {
+      const abs = hostToContainer(entry.item.hostPath); await assertRealWithin(HOST_ROOT, abs);
+      entry.sha256 = await hashFileSha256(abs);
+    } catch (e) { if (e && e.code === 'outside-root') return res.status(400).json({ error:'invalid-path' }); }
+  }
+  const duplicateOverride = body.duplicateOverride === true || /^(1|true|yes|on)$/i.test(String(body.duplicateOverride || ''));
+  const uniqueHashes = Array.from(new Set(items.map((entry) => String(entry.sha256 || '').toLowerCase()).filter(validSha256))).sort();
+  for (const sha256 of uniqueHashes) {
+    const hashLock = await acquireManagedPhotoHashResponseLock(res, sha256);
+    if (!hashLock) return;
+  }
+  const seenBatchHashes = new Map();
+  for (const entry of items) {
+    const batchDuplicate = seenBatchHashes.get(String(entry.sha256 || '').toLowerCase()) || null;
+    if (batchDuplicate && !duplicateOverride) {
+      return res.status(409).json({ error:'duplicate-content', duplicate:null, sha256:entry.sha256, name:entry.item.name, duplicateName:batchDuplicate.item.name });
+    }
+    const duplicate = await findManagedPhotoDuplicateDeep(req, entry.sha256, entry.item.size, { pwa:false });
+    if (duplicate && !duplicateOverride) return res.status(409).json({ error:'duplicate-content', duplicate:duplicatePhotoPayload(duplicate,req,false), sha256:entry.sha256, name:entry.item.name });
+    seenBatchHashes.set(String(entry.sha256 || '').toLowerCase(), entry);
+  }
   for (const entry of items) {
     const p = entry.path, item = entry.item;
     let imgPath;
     try { imgPath = await copyHostPhotoToStore(item); }
     catch (_) { errors.push({ path:p, error:'image-copy-failed' }); continue; }
-    const share = { type:'photo', hostPath:item.hostPath, imgPath, name:item.name, size:item.size, expiresAt:parseExpiry(body.expiresInSeconds) };
+    const share = { type:'photo', hostPath:item.hostPath, imgPath, name:item.name, size:item.size, contentSha256:entry.sha256 || null, expiresAt:parseNewShareExpiry(body.expiresInSeconds) };
     applyDlpSummary(share, entry.dlpScan || null);
     stampPhotoUploadDevice(share, req, 'host'); stampOwner(share, req);
     try {
@@ -14194,7 +14956,7 @@ adminRouter.post('/photos/:id/micro', (req, res) => {
   return handleAdminPhotoVariantUpload(req,res,s,'micro',MICRO_MAX_BYTES);
 });
 
-// Feature 20 — replace a photo's full-resolution pixels with an edited version
+// Replace a photo's full-resolution pixels with an edited version
 // (rotate / crop from the standard-admin image editor, parity with the PWA). The
 // current version is archived first, the variant files/flags are cleared so the
 // gallery lazily regenerates Mini/Micro, and the new bytes are DLP-scanned exactly
@@ -14215,19 +14977,22 @@ adminRouter.post('/photos/:id/replace', (req, res) => {
   if (!PWA_IMG_EXT.test(ext)) { req.resume(); return res.status(400).json({ error: 'not-image' }); }
   const fname = crypto.randomBytes(12).toString('hex') + '.' + ext;
   const dest = path.join(FULL_IMAGES_DIR, fname);
-  streamToFileBounded(req, res, dest, IMAGE_MAX_BYTES, (size) => {
+  streamToFileBounded(req, res, dest, IMAGE_MAX_BYTES, (size, sha256) => {
     (async () => {
       let scan = null;
       if (getSettings().dlpEnabled !== false) {
         scan = await dlpScanStoredFile(dest, s.name);
-        const pseudoBody = { dlpOverride:/^(1|true|yes|on)$/i.test(String(req.query.dlpOverride || '')) };
-        if (dlpDecision(req, res, pseudoBody, scan, 'photo-edit')) { fs.unlink(dest, () => {}); return; }
+        const dlpBody = { dlpOverride:/^(1|true|yes|on)$/i.test(String(req.query.dlpOverride || '')) };
+        if (dlpDecision(req, res, dlpBody, scan, 'photo-edit', { file:dest, name:s.name })) { fs.unlink(dest, () => {}); return; }
       }
+      const hashLock = await acquireManagedPhotoHashResponseLock(res, sha256); if (!hashLock) { fs.unlink(dest, () => {}); return; }
+      const duplicate = await findManagedPhotoDuplicateDeep(req, sha256, size, { pwa:false, excludeId:s.id });
+      if (duplicate && !/^(1|true|yes|on)$/i.test(String(req.query.duplicateOverride || ''))) { fs.unlink(dest, () => {}); return res.status(409).json({ error:'duplicate-content', duplicate:duplicatePhotoPayload(duplicate,req,false), sha256 }); }
       const before = JSON.parse(JSON.stringify(s));
       const oldManagedPaths = [...photoOriginalPaths(s), ...photoVariantPaths(s.token, 'thumb'), ...photoVariantPaths(s.token, 'micro'), photoAdaptivePath(s.token, 'webp'), photoAdaptivePath(s.token, 'avif')];
       let archivedVersion = null;
       try { archivedVersion = archiveCurrentPhotoVersion(s); } catch (e) { fs.unlink(dest, () => {}); return res.status(500).json({ error: 'archive-failed' }); }
-      s.imgPath = fname; s.ext = ext; s.size = size;
+      s.imgPath = fname; s.ext = ext; s.size = size; s.contentSha256 = sha256;
       if (String(req.query.metadataRemoved || '') === '1') s.metadataRemoved = true;
       const dims = imageDimensions(dest); if (dims && dims.w > 0 && dims.h > 0) { s.w = dims.w; s.h = dims.h; }
       delete s.thumb; delete s.micro; delete s.adaptiveWebp; delete s.adaptiveAvif; delete s.thumbSize; delete s.microSize; delete s.thumbW; delete s.thumbH; delete s.microW; delete s.microH; delete s.thumbMetaMtimeMs; delete s.microMetaMtimeMs;
@@ -14248,6 +15013,41 @@ adminRouter.post('/photos/:id/replace', (req, res) => {
 
 // Streams one image selected in the authenticated host-file picker back to the
 // admin browser so it can be re-encoded locally before sharing. This endpoint is
+adminRouter.get('/dlp/quarantine', (req, res) => {
+  const records = dlpQuarantineRecords().slice().reverse().map((r) => ({ ...r, file: r.file ? true : false }));
+  res.setHeader('Cache-Control','no-store');
+  res.json({ records });
+});
+adminRouter.delete('/dlp/quarantine/:id', (req, res) => {
+  const list = dlpQuarantineRecords(); const idx = list.findIndex((r) => r.id === String(req.params.id || ''));
+  if (idx < 0) return res.status(404).json({ error:'not-found' });
+  const rec = list[idx];
+  let staged = null, original = null;
+  if (rec.file) {
+    original = dlpQuarantineFilePath(rec.file);
+    if (!original) { rec.file = null; rec.fileMissing = true; }
+    else staged = original + '.delete-' + crypto.randomBytes(5).toString('hex');
+    try { if (staged) fs.renameSync(original, staged); }
+    catch (e) { if (e.code === 'ENOENT') { staged = null; original = null; } else return res.status(500).json({ error:'delete-failed' }); }
+  }
+  list.splice(idx,1);
+  if (!persistNow()) {
+    list.splice(Math.min(idx,list.length),0,rec);
+    if (staged && original) {
+      try { fs.renameSync(staged, original); }
+      catch (e) {
+        rec.file = path.basename(staged);
+        schedulePersistRetry();
+        console.error('[dlp] quarantine delete rollback failed:', e && e.message);
+      }
+    }
+    return res.status(503).json({ error:'write-error' });
+  }
+  if (staged) { try { fs.unlinkSync(staged); } catch (e) { console.error('[dlp] quarantined file cleanup failed:', e && e.message); } }
+  auditReq(req,'dlp-quarantine-deleted', String(rec.name || rec.id));
+  res.json({ ok:true });
+});
+
 // used only when the Images-page EXIF/GPS cleaning option is enabled: the source
 // file remains untouched and no public link exists until the cleaned bytes return.
 adminRouter.post('/photos/source', async (req, res) => {
@@ -14290,16 +15090,19 @@ adminRouter.post('/photos/upload', (req, res) => {
   if (!PWA_IMG_EXT.test(ext)) return res.status(400).json({ error:'not-image' });
   const fname = crypto.randomBytes(12).toString('hex') + '.' + ext;
   const dest = path.join(FULL_IMAGES_DIR, fname);
-  streamToFileBounded(req, res, dest, IMAGE_MAX_BYTES, (size) => {
+  streamToFileBounded(req, res, dest, IMAGE_MAX_BYTES, (size, sha256) => {
     (async () => {
       const name = String(req.query.name || '').replace(/[\r\n\t/\\]+/g, ' ').trim().slice(0, 120) || ('image.' + ext);
       let scan = null;
       if (getSettings().dlpEnabled !== false) {
         scan = await dlpScanStoredFile(dest, name);
-        const pseudoBody = { dlpOverride:/^(1|true|yes|on)$/i.test(String(req.query.dlpOverride || '')) };
-        if (dlpDecision(req, res, pseudoBody, scan, 'photo-upload')) { fs.unlink(dest, () => {}); return; }
+        const dlpBody = { dlpOverride:/^(1|true|yes|on)$/i.test(String(req.query.dlpOverride || '')) };
+        if (dlpDecision(req, res, dlpBody, scan, 'photo-upload', { file:dest, name })) { fs.unlink(dest, () => {}); return; }
       }
-      const share = { type:'photo', name, imgPath:fname, ext, size };
+      const hashLock = await acquireManagedPhotoHashResponseLock(res, sha256); if (!hashLock) { fs.unlink(dest, () => {}); return; }
+      const duplicate = await findManagedPhotoDuplicateDeep(req, sha256, size, { pwa:false });
+      if (duplicate && !/^(1|true|yes|on)$/i.test(String(req.query.duplicateOverride || ''))) { fs.unlink(dest, () => {}); return res.status(409).json({ error:'duplicate-content', duplicate:duplicatePhotoPayload(duplicate,req,false), sha256 }); }
+      const share = { type:'photo', name, imgPath:fname, ext, size, contentSha256:sha256 };
       if (String(req.query.metadataRemoved || '') === '1') share.metadataRemoved = true;
       applyDlpSummary(share, scan);
       stampPhotoUploadDevice(share, req, 'web'); stampOwner(share, req);
@@ -14312,7 +15115,7 @@ adminRouter.post('/photos/upload', (req, res) => {
   });
 });
 
-// Create a shareable image gallery (feature 18) from selected image links. Stores
+// Create a shareable image gallery from selected image links. Stores
 // the member image tokens; the public /g/<token> page renders the live ones.
 adminRouter.post('/photos/album', (req, res) => {
   const ids = Array.isArray(req.body.ids) ? req.body.ids : [];
@@ -14324,7 +15127,7 @@ adminRouter.post('/photos/album', (req, res) => {
     if (members.length >= 500) break; // sanity cap
   }
   if (!members.length) return res.status(400).json({ error: 'no-images' });
-  const share = { type: 'album', name, members, expiresAt: parseExpiry(req.body.expiresInSeconds) };
+  const share = { type: 'album', name, members, expiresAt: parseNewShareExpiry(req.body.expiresInSeconds) };
   stampOwner(share, req);
   const rec = addShareDurable(share, req);
   if (!rec) return res.status(503).json({ error:'write-error' });
@@ -14441,13 +15244,27 @@ adminRouter.get('/photos/:id/metadata', async (req, res) => {
 
 adminRouter.delete('/shares/:id', (req, res) => {
   const sh=getById(req.params.id); if(!sh||!ownsShare(req,sh))return res.status(404).json({error:'not-found'});
-  const rec=softDeleteShare(req.params.id,req,true);
+  const undoLabel=(sh.type||'share')+' '+(sh.name||'');
+  const rec=softDeleteShare(req.params.id,req,true,{type:'share-trashed',label:undoLabel});
   if(rec===false)return res.status(503).json({error:'write-error'});
   if(!rec)return res.status(404).json({error:'not-found'});
-  auditReq(req,'share-trashed',(sh.type||'share')+' '+(sh.name||'')); res.json({ok:true,trashId:rec.id,recoverable:true});
+  auditReq(req,'share-trashed',undoLabel);
+  res.json({ok:true,trashId:rec.id,recoverable:true});
 });
 
-// Feature 18 — emergency "cut all public access". Pauses every currently-active
+// 1.51.0 — reactivate a still-backed revoked link (for example a burned
+// one-time link) without resetting its independent expiry/quota configuration.
+adminRouter.post('/shares/:id/reactivate', async (req, res) => {
+  const sh = getById(req.params.id);
+  if (!sh || !ownsShare(req, sh)) return res.status(404).json({ error:'not-found' });
+  const result = await reactivateRevokedShare(sh, req);
+  if (!result.ok) return res.status(result.status || 400).json({ error:result.error || 'reactivate-failed' });
+  auditReq(req, 'share-reactivated', (sh.type || 'share') + ' ' + (sh.name || ''));
+  emitLiveActivity('share', { shareId:sh.id, name:sh.name, status:'reactivated', detail:sh.type || 'share' });
+  res.json({ ok:true, share:decorateShare(sh, req) });
+});
+
+// Emergency "cut all public access". Pauses every currently-active
 // link at once (reversible, unlike revoke/delete): no files are touched and each
 // link can be resumed individually or all together. Owner/admin only.
 adminRouter.post('/shares/pause-all', requireFullAdmin, (req, res) => {
@@ -14589,6 +15406,7 @@ adminRouter.post('/shares/:id/clone', async (req, res) => {
     }
 
     stampOwner(clone, req);
+    applyNewShareLifetimePolicy(clone);
     const record = addShare(clone, req, { action: 'created-from-duplicate', fields: ['name'], before: { name: source.name || '' } }, false);
     if (!persistNow()) { detachActiveShare(record); const e = new Error('write-error'); e.code = 'WRITE_ERROR'; throw e; }
     auditReq(req, 'share-cloned', (source.name || source.id) + ' → ' + record.id);
@@ -14639,7 +15457,11 @@ adminRouter.post('/shares/:id/reset-stats', (req, res) => {
     count: Math.max(0, Number(raw.count) || 0), bytes: Math.max(0, Number(raw.bytes) || 0), up: Math.max(0, Number(raw.up) || 0), down: Math.max(0, Number(raw.down) || 0),
     completed: Math.max(0, Number(raw.completed) || 0), interrupted: Math.max(0, Number(raw.interrupted) || 0),
   };
-  if (!persistNow()) { if (beforeBaseline) sh.statsBaseline = beforeBaseline; else delete sh.statsBaseline; return res.status(503).json({ error:'write-error' }); }
+  const expectedBaseline = JSON.parse(JSON.stringify(sh.statsBaseline));
+  const undoEntry = recordUndoable(req, 'share-stats-reset', sh.name || sh.id, beforeBaseline
+    ? { kind: 'share-assign', shareId: sh.id, set: { statsBaseline: beforeBaseline }, expect: { statsBaseline: expectedBaseline } }
+    : { kind: 'share-assign', shareId: sh.id, unset: ['statsBaseline'], expect: { statsBaseline: expectedBaseline } });
+  if (!persistNow()) { if (beforeBaseline) sh.statsBaseline = beforeBaseline; else delete sh.statsBaseline; rollbackRecordedUndo(undoEntry); return res.status(503).json({ error:'write-error' }); }
   auditReq(req, 'share-stats-reset', sh.name || sh.id);
   res.json({ share: decorateShare(sh, req) });
 });
@@ -14677,7 +15499,7 @@ adminRouter.delete('/shares/:id/comments/:cid', (req, res) => {
   res.json({ ok: true, count: sh.adminComments.length });
 });
 
-// Feature 27 — two-way reception thread (owner side, standard admin). Same store
+// Two-way reception thread (owner side, standard admin). Same store
 // as the visitor endpoints; posting also clears the unread flag on prior replies.
 adminRouter.get('/shares/:id/thread', (req, res) => {
   const sh = getById(req.params.id);
@@ -14718,7 +15540,7 @@ adminRouter.delete('/shares/:id/thread', (req, res) => {
   res.json({ ok: true, cleared: count });
 });
 
-// Feature 28 — access-request moderation. Requests live on each share; this
+// Access-request moderation. Requests live on each share; this
 // aggregates those the caller owns; approve/deny/delete act on a single one.
 adminRouter.get('/access-requests', (req, res) => {
   const out = [];
@@ -14767,7 +15589,7 @@ adminRouter.delete('/shares/:id/access-requests/:rid', (req, res) => {
   res.json({ ok: true });
 });
 
-// Feature 38 — moderated visitor feedback (private to the admin, never public).
+// Moderated visitor feedback (private to the admin, never public).
 adminRouter.get('/shares/:id/feedback', (req, res) => {
   const sh = getById(req.params.id);
   if (!sh || !ownsShare(req, sh)) return res.status(404).json({ error: 'not-found' });
@@ -14804,7 +15626,7 @@ adminRouter.get('/shares/:id/change-history', (req, res) => {
   res.json({ id: s.id, name: s.name || '', entries: Array.isArray(s.changeHistory) ? s.changeHistory.slice(0, SHARE_CHANGE_HISTORY_MAX) : [] });
 });
 
-// Feature 3 — edit an existing link in place (without recreating it / changing its
+// Edit an existing link in place (without recreating it / changing its
 // URL): extend or change the expiry, password, quota, speed, .zip/preview toggles,
 // deferred start, one-time flag and name. Only provided fields are touched.
 adminRouter.patch('/shares/:id', (req, res) => {
@@ -14822,7 +15644,7 @@ adminRouter.patch('/shares/:id', (req, res) => {
     if (nm && nm !== s.name) { s.name = nm; changed.push('name'); }
   }
   if (body.expiresAt !== undefined) {
-    // Feature 2 — absolute expiry timestamp (empty/past = never). Takes precedence.
+    // Absolute expiry timestamp (empty/past = never). Takes precedence.
     const next = parseExpiryAt(body.expiresAt);
     if (next !== s.expiresAt) {
       s.expiresAt = next;
@@ -14906,24 +15728,24 @@ adminRouter.patch('/shares/:id', (req, res) => {
       changed.push('password-set');
     }
   }
-  // Feature 6 — password hint (kept only while the link actually has a password).
+  // Password hint (kept only while the link actually has a password).
   if (typeof body.pwHint === 'string') {
     const hint = normalizePwHint(body.pwHint);
     const next = hint && s.pwHash ? hint : '';
     if (next !== (s.pwHint || '')) { if (next) s.pwHint = next; else delete s.pwHint; changed.push('pwHint'); }
   }
-  // Feature 24 — per-IP download quota (0 = unlimited).
+  // Per-IP download quota (0 = unlimited).
   if (body.maxDownloadsPerIp !== undefined) {
     const n = parseMaxDownloadsPerIp(body.maxDownloadsPerIp);
     const current = Math.max(0, Number(s.maxDownloadsPerIp) || 0);
     if (n !== current) { if (n > 0) s.maxDownloadsPerIp = n; else delete s.maxDownloadsPerIp; changed.push('maxDownloadsPerIp'); }
   }
-  // Feature 6 — emoji marker (1–2 code points; empty clears it).
+  // Emoji marker (1–2 code points; empty clears it).
   if (typeof body.emoji === 'string') {
     const em = normalizeShareEmoji(body.emoji);
     if (em !== (s.emoji || '')) { if (em) s.emoji = em; else delete s.emoji; changed.push('emoji'); }
   }
-  // Feature 13 — total bytes-served cap (0 = unlimited).
+  // Total bytes-served cap (0 = unlimited).
   if (body.maxBytesServed !== undefined) {
     const n = parseMaxBytesServed(body.maxBytesServed);
     const current = Math.max(0, Number(s.maxBytesServed) || 0);
@@ -15003,12 +15825,12 @@ adminRouter.patch('/shares/:id', (req, res) => {
     delete s.panicPaused; // a manual pause/resume takes the link out of panic-button scope
     changed.push(body.disabled ? 'disabled' : 'enabled');
   }
-  // Feature 28 — toggle the access-request gate.
+  // Toggle the access-request gate.
   if (typeof body.requestAccess === 'boolean' && body.requestAccess !== !!s.requestAccess) {
     if (body.requestAccess) s.requestAccess = true; else delete s.requestAccess;
     changed.push(body.requestAccess ? 'requestAccess' : 'requestAccessOff');
   }
-  // Feature 38 — toggle the moderated visitor-feedback form.
+  // Toggle the moderated visitor-feedback form.
   if (typeof body.allowFeedback === 'boolean' && body.allowFeedback !== !!s.allowFeedback) {
     if (body.allowFeedback) s.allowFeedback = true; else delete s.allowFeedback;
     changed.push(body.allowFeedback ? 'allowFeedback' : 'allowFeedbackOff');
@@ -15027,7 +15849,7 @@ adminRouter.patch('/shares/:id', (req, res) => {
 
   if (body.geoMode !== undefined || body.ipMode !== undefined) {
     const accessBefore = shareChangeSnapshot(s);
-    applyAccessRules(s, body); // feature 11 — geo/IP rules
+    applyAccessRules(s, body); // geo/IP rules
     const accessAfter = shareChangeSnapshot(s);
     for (const key of ['geoMode', 'geoCountries', 'ipMode', 'ipList']) {
       if (JSON.stringify(accessBefore[key]) !== JSON.stringify(accessAfter[key])) changed.push(key);
@@ -15077,7 +15899,7 @@ function normalizeTags(v) {
   return out;
 }
 
-// Feature 9 — bulk actions on several links at once: revoke, extend/replace the
+// Bulk actions on several links at once: revoke, extend/replace the
 // expiry, or add/remove a tag. Body: { ids:[...], action, expiresInSeconds?, tag? }.
 adminRouter.post('/shares/bulk', (req, res) => {
   const b = req.body || {};
@@ -15087,11 +15909,14 @@ adminRouter.post('/shares/bulk', (req, res) => {
   const action = String(b.action || '');
   if (!ids.length) return res.status(400).json({ error: 'empty' });
   const beforeState = JSON.parse(JSON.stringify(state));
-  const rollbackBulk = () => { state = beforeState; reindex(); shareLogicalBytesCache.clear(); };
+  const rollbackBulk = () => { state = beforeState; syncLiveActivityCache(); reindex(); shareLogicalBytesCache.clear(); };
   const commitBulk = () => { if (persistNow()) return true; rollbackBulk(); return false; };
   let count = 0;
   if (action === 'revoke') {
-    for (const id of ids) { if (softDeleteShare(id, req, false)) count += 1; }
+    for (const id of ids) {
+      const share = getById(id);
+      if (share && softDeleteShare(id, req, false, { type:'share-trashed', label:(share.type||'share')+' '+(share.name||'') })) count += 1;
+    }
     if (count && !commitBulk()) return res.status(503).json({ error:'write-error' });
   } else if (action === 'extend' || action === 'extend-by') {
     const rawExpiry = action === 'extend' ? Number(b.expiresInSeconds) : null;
@@ -15214,7 +16039,7 @@ adminRouter.delete('/shares/:id/items/:idx', (req, res) => {
   res.json({ share:decorateShare(live,req) });
 });
 
-// Feature 16 — reorder a collection's items (drag & drop). `order` is a permutation
+// Reorder a collection's items (drag & drop). `order` is a permutation
 // of the current indices. Only the display/listing order changes; the link's name
 // and URL are untouched.
 adminRouter.patch('/shares/:id/items/order', (req, res) => {
@@ -15229,7 +16054,7 @@ adminRouter.patch('/shares/:id/items/order', (req, res) => {
   auditReq(req,'items-reordered',live.name||live.id); res.json({share:decorateShare(live,req)});
 });
 
-// Feature 27 — indexed universal search. Queries no longer walk the filesystem;
+// Indexed universal search. Queries no longer walk the filesystem;
 // they hit the persistent in-memory inverted index and are filtered by share ownership.
 adminRouter.get('/search/status', (req, res) => res.json(universalSearchStatus()));
 adminRouter.post('/search/reindex', requireFullAdmin, (req, res) => {
@@ -15247,13 +16072,25 @@ adminRouter.get('/search', async (req, res) => {
   const requestedType = String(req.query.type || '').trim().toLowerCase();
   const type = ['file','folder','inbox','collab','photo'].includes(requestedType) ? requestedType : '';
   const semantic = /^(1|true|yes|on)$/i.test(String(req.query.semantic || ''));
-  const results = semantic ? universalSemanticSearchQuery(q, req, limit, { type }) : universalSearchQuery(q, req, limit, { type });
+  const requestedScope = String(req.query.scope || '').trim().toLowerCase();
+  const scope = ['all','content','links','users','logs'].includes(requestedScope) ? requestedScope : (type ? 'content' : 'all');
+  let contentResults = [];
+  if (scope === 'all' || scope === 'content') {
+    contentResults = semantic
+      ? universalSemanticSearchQuery(q, req, limit, { type }).map((r) => ({ ...r, scope:'content' }))
+      : universalSearchQuery(q, req, limit, { type }).map((r) => ({ ...r, scope:'content' }));
+  }
+  const metadataScopes = scope === 'all' ? ['links','users','logs'] : (scope === 'content' ? [] : [scope]);
+  const metadataResults = metadataScopes.length ? globalMetadataSearch(q, req, limit, { scopes:metadataScopes }) : [];
+  // Metadata hits are cheap and highly actionable, so surface them first; content
+  // hits keep their indexed/semantic ordering after them.
+  const results = metadataResults.concat(contentResults).slice(0, limit);
   const visibleCount = (universalSearchIndex.docs || []).reduce((n, d) => {
     const share = getById(d.shareId);
     const typeOk = !type || String((share && share.type) || d.type || '').toLowerCase() === type;
     return n + (typeOk && universalSearchShareEligible(share) && ownsShare(req, share) ? 1 : 0);
   }, 0);
-  res.json({ query:q, results, semantic, scanned:visibleCount, indexed:visibleCount, builtAt:universalSearchIndex.builtAt || 0,
+  res.json({ query:q, results, semantic, scope, scanned:visibleCount, indexed:visibleCount, builtAt:universalSearchIndex.builtAt || 0,
     building:searchIndexBuilding, truncated:results.length >= limit || !!universalSearchIndex.truncated, indexError:searchIndexError });
 });
 
@@ -15279,11 +16116,13 @@ adminRouter.delete('/shares/:id/recipients/:rtoken', (req, res) => {
   const live=getById(req.params.id); if(!live||!Array.isArray(live.recipients))return res.status(404).json({error:'not-found'});
   const i=live.recipients.findIndex((r)=>r.token===req.params.rtoken); if(i===-1)return res.status(404).json({error:'not-found'});
   const before=JSON.parse(JSON.stringify(live)), r=live.recipients[i]; live.recipients.splice(i,1);
-  if(!persistNow()){restorePlainObject(live,before);return res.status(503).json({error:'write-error'});} reindex();
-  auditReq(req,'recipient-removed',(live.name||live.id)+': '+(r.name||'')); res.json({share:decorateShare(live,req)});
+  const undoEntry=recordUndoable(req,'recipient-removed',(live.name||live.id)+': '+(r.name||''),{kind:'share-assign',shareId:live.id,set:{recipients:before.recipients},expect:{recipients:JSON.parse(JSON.stringify(live.recipients))}});
+  if(!persistNow()){restorePlainObject(live,before);rollbackRecordedUndo(undoEntry);return res.status(503).json({error:'write-error'});} reindex();
+  auditReq(req,'recipient-removed',(live.name||live.id)+': '+(r.name||''));
+  res.json({share:decorateShare(live,req)});
 });
 
-// Feature 16 — per-recipient overrides on a nominative sub-link: its own expiry
+// Per-recipient overrides on a nominative sub-link: its own expiry
 // and/or download cap (on top of the parent share's limits).
 adminRouter.patch('/shares/:id/recipients/:rtoken', (req, res) => {
   const live=getById(req.params.id); if(!live||!Array.isArray(live.recipients))return res.status(404).json({error:'not-found'});
@@ -15328,21 +16167,21 @@ adminRouter.post('/inbox', (req, res) => {
     name,
     relDir,
     startsAt: parseStartsAt(body.startsAt),
-    expiresAt: resolveExpiry(body), // feature 2: absolute date or relative duration
+    expiresAt: resolveNewShareExpiry(body), // instance policy + absolute/relative expiry
     maxFiles: nn(body.maxFiles),
     maxFileBytes: nn(body.maxFileBytes),
     maxTotalBytes: nn(body.maxTotalBytes),
     allowExt: normExtList(body.allowExt),
     blockExt: normExtList(body.blockExt),
     groupBySender: !!body.groupBySender, // file uploads into <sender>/<date>/ subfolders
-    tagBySender: !!body.tagBySender, // feature 11: prefix stored filenames with the sender name
-    rejectDuplicates: !!body.rejectDuplicates, // feature 15: refuse a byte-for-byte duplicate
-    requireSenderName: !!body.requireSenderName, // feature 9: visitor must enter a name
-    blockExecutables: !!body.blockExecutables, // feature 11: reject sniffed executables
-    maxFilesPerSender: nn(body.maxFilesPerSender), // feature 12: per-sender file cap (0 = unlimited)
-    maxBytesPerSender: nn(body.maxBytesPerSender), // feature 12: per-sender byte cap (0 = unlimited)
-    maxFilesPerUpload: nn(body.maxFilesPerUpload), // feature 13: max files a visitor may queue in one deposit (0 = unlimited)
-    moderated: !!body.moderated, // feature 8: uploads wait for admin approval
+    tagBySender: !!body.tagBySender, // prefix stored filenames with the sender name
+    rejectDuplicates: !!body.rejectDuplicates, // refuse a byte-for-byte duplicate
+    requireSenderName: !!body.requireSenderName, // visitor must enter a name
+    blockExecutables: !!body.blockExecutables, // reject sniffed executables
+    maxFilesPerSender: nn(body.maxFilesPerSender), // per-sender file cap (0 = unlimited)
+    maxBytesPerSender: nn(body.maxBytesPerSender), // per-sender byte cap (0 = unlimited)
+    maxFilesPerUpload: nn(body.maxFilesPerUpload), // max files a visitor may queue in one deposit (0 = unlimited)
+    moderated: !!body.moderated, // uploads wait for admin approval
     bytesReceived: 0,
   };
   // Instructions shown to visitors; falls back to the configured default banner.
@@ -15361,7 +16200,7 @@ adminRouter.post('/inbox', (req, res) => {
   // nosemgrep: javascript.express.security.express-data-exfiltration.express-data-exfiltration
   // Same fixed-shape { pwHash } object as above — no client-controlled keys.
   if (password) Object.assign(inbox, makeSharePassword(password));
-  applyAccessRules(inbox, body); // feature 11 — geo/IP rules
+  applyAccessRules(inbox, body); // geo/IP rules
   stampOwner(inbox, req);
   const rec = addShareDurable(inbox, req);
   if (!rec) return res.status(503).json({ error:'write-error' });
@@ -15369,7 +16208,7 @@ adminRouter.post('/inbox', (req, res) => {
   res.status(201).json({ share: decorateShare(rec, req) });
 });
 
-// Feature 8 — moderation queue. Approve moves a pending upload into the link's
+// Moderation queue. Approve moves a pending upload into the link's
 // target folder (counting it); reject deletes it. Pending metadata lives in
 // state.meta.pending; the files themselves under PENDING_DIR.
 adminRouter.post('/pending/:id/approve', async (req, res) => {
@@ -15456,7 +16295,7 @@ adminRouter.post('/collab', (req, res) => {
     name,
     relDir,
     startsAt: parseStartsAt(body.startsAt),
-    expiresAt: resolveExpiry(body), // feature 2: absolute date or relative duration
+    expiresAt: resolveNewShareExpiry(body), // instance policy + absolute/relative expiry
     // Visitor deletion is only allowed on a password-protected link (it lets an
     // unauthenticated visitor remove files) — mirrors the greyed-out UI checkbox.
     allowDelete: !!body.allowDelete && !!password,
@@ -15465,13 +16304,13 @@ adminRouter.post('/collab', (req, res) => {
     maxTotalBytes: nn(body.maxTotalBytes),
     allowExt: normExtList(body.allowExt),
     blockExt: normExtList(body.blockExt),
-    tagBySender: !!body.tagBySender, // feature 11: prefix stored filenames with the sender name
-    rejectDuplicates: !!body.rejectDuplicates, // feature 15: refuse a byte-for-byte duplicate
-    blockExecutables: !!body.blockExecutables, // feature 11: reject sniffed executables
-    maxFilesPerSender: nn(body.maxFilesPerSender), // feature 12: per-sender file cap (0 = unlimited)
-    maxBytesPerSender: nn(body.maxBytesPerSender), // feature 12: per-sender byte cap (0 = unlimited)
-    maxFilesPerUpload: nn(body.maxFilesPerUpload), // feature 13: max files a visitor may queue in one deposit (0 = unlimited)
-    moderated: !!body.moderated, // feature 8: uploads wait for admin approval
+    tagBySender: !!body.tagBySender, // prefix stored filenames with the sender name
+    rejectDuplicates: !!body.rejectDuplicates, // refuse a byte-for-byte duplicate
+    blockExecutables: !!body.blockExecutables, // reject sniffed executables
+    maxFilesPerSender: nn(body.maxFilesPerSender), // per-sender file cap (0 = unlimited)
+    maxBytesPerSender: nn(body.maxBytesPerSender), // per-sender byte cap (0 = unlimited)
+    maxFilesPerUpload: nn(body.maxFilesPerUpload), // max files a visitor may queue in one deposit (0 = unlimited)
+    moderated: !!body.moderated, // uploads wait for admin approval
     bytesReceived: 0,
   };
   if (body.allowZip === false) collab.allowZip = false; // "download all as .zip" (default on)
@@ -15481,7 +16320,7 @@ adminRouter.post('/collab', (req, res) => {
   // nosemgrep: javascript.express.security.express-data-exfiltration.express-data-exfiltration
   // Same fixed-shape { pwHash } object as elsewhere — no client-controlled keys.
   if (password) Object.assign(collab, makeSharePassword(password));
-  applyAccessRules(collab, body); // feature 11 — geo/IP rules
+  applyAccessRules(collab, body); // geo/IP rules
   try { fs.mkdirSync(collabRoot(collab), { recursive: true }); } catch (_) {}
   stampOwner(collab, req);
   const rec = addShareDurable(collab, req);
@@ -15527,7 +16366,7 @@ adminRouter.post('/enc-share', (req, res) => {
       encMode: mode,
       encPath: dest,
       startsAt: parseStartsAt(req.query.startsAt),
-      expiresAt: parseExpiry(req.query.expiresInSeconds),
+      expiresAt: parseNewShareExpiry(req.query.expiresInSeconds),
       maxDownloads: parseMaxDownloads(req.query.maxDownloads),
     };
     stampOwner(share, req);
@@ -15539,7 +16378,7 @@ adminRouter.post('/enc-share', (req, res) => {
   req.pipe(ws);
 });
 
-// Feature 5 — store a burn-after-read secret note. The body is the opaque DXE
+// Store a burn-after-read secret note. The body is the opaque DXE
 // ciphertext (built in the admin's browser); the server never sees the key or
 // the plaintext. Metadata travels as query params. Returns a one-time token.
 adminRouter.post('/secret', (req, res) => {
@@ -15565,7 +16404,7 @@ adminRouter.post('/secret', (req, res) => {
     if (!state.meta.secrets || typeof state.meta.secrets !== 'object') state.meta.secrets = {};
     state.meta.secrets[token] = {
       mode, size, createdAt: Date.now(),
-      expiresAt: parseExpiry(req.query.expiresInSeconds),
+      expiresAt: parseNewShareExpiry(req.query.expiresInSeconds),
     };
     if (!persistNow()) {
       delete state.meta.secrets[token];
@@ -15611,6 +16450,7 @@ adminRouter.post('/transfers/:id/stop', (req, res) => {
   if (typeof t.abort === 'function') {
     try { t.abort(); } catch (_) {}
   }
+  auditReq(req, 'transfer-stopped', `${t.name || t.shareId || t.id} · ${t.direction || 'transfer'}`);
   res.json({ ok: true });
 });
 
@@ -15675,7 +16515,7 @@ function photoMatchesDashboardFilters(s, filters, now) {
   return true;
 }
 
-// Features 23/24 — shared file-category and storage accounting helpers. The
+// Shared file-category and storage accounting helpers. The
 // categories intentionally stay broad so the dashboard remains useful instead of
 // turning into a long extension list.
 const FILE_CATEGORY_ORDER = ['image', 'video', 'audio', 'document', 'archive', 'code', 'other'];
@@ -15828,10 +16668,10 @@ async function scanReceptionStorage() {
 }
 
 // Server-Sent Events activity stream (owner/admin/auditor).
-adminRouter.get('/activity/stream',requireAuditAccess,(req,res)=>{res.status(200);res.setHeader('Content-Type','text/event-stream; charset=utf-8');res.setHeader('Cache-Control','no-cache, no-transform');res.setHeader('Connection','keep-alive');res.setHeader('X-Accel-Buffering','no');if(res.flushHeaders)res.flushHeaders();res.write(`event: snapshot\ndata: ${JSON.stringify(liveActivityEvents.slice(0,100).reverse())}\n\n`);const client={res,sid:req.session.sid};liveActivityClients.add(client);const heartbeat=setInterval(()=>{if(!liveActivityClientAuthorized(client)){clearInterval(heartbeat);dropLiveActivityClient(client);return;}try{res.write(': heartbeat\n\n');}catch(_){clearInterval(heartbeat);dropLiveActivityClient(client);}},20000);if(heartbeat.unref)heartbeat.unref();res.on('close',()=>{clearInterval(heartbeat);liveActivityClients.delete(client);});});
-adminRouter.get('/activity/recent',requireAuditAccess,(req,res)=>res.json({events:liveActivityEvents.slice(0,200)}));
+adminRouter.get('/activity/stream',requireAuditAccess,(req,res)=>{res.status(200);res.setHeader('Content-Type','text/event-stream; charset=utf-8');res.setHeader('Cache-Control','no-cache, no-transform');res.setHeader('Connection','keep-alive');res.setHeader('X-Accel-Buffering','no');if(res.flushHeaders)res.flushHeaders();const snapshot=(Array.isArray(state.activityLog)?state.activityLog:[]).slice(0,500).map(activityEventForClient).reverse();res.write(`event: snapshot\ndata: ${JSON.stringify(snapshot)}\n\n`);const client={res,sid:req.session.sid};liveActivityClients.add(client);const heartbeat=setInterval(()=>{if(!liveActivityClientAuthorized(client)){clearInterval(heartbeat);dropLiveActivityClient(client);return;}try{res.write(': heartbeat\n\n');}catch(_){clearInterval(heartbeat);dropLiveActivityClient(client);}},20000);if(heartbeat.unref)heartbeat.unref();res.on('close',()=>{clearInterval(heartbeat);liveActivityClients.delete(client);});});
+adminRouter.get('/activity/recent',requireAuditAccess,(req,res)=>{const limit=Math.max(1,Math.min(1000,Number(req.query.limit)||500));res.json({events:(Array.isArray(state.activityLog)?state.activityLog:[]).slice(0,limit).map(activityEventForClient),retained:Array.isArray(state.activityLog)?state.activityLog.length:0,max:ACTIVITY_HISTORY_MAX});});
 
-// Feature 20 — live "downloading now" presence. Shared SSE wiring used by both the
+// Live "downloading now" presence. Shared SSE wiring used by both the
 // standard admin (/api, sid session) and the PWA (/app, device-capable). The
 // `scope` fixes visibility (seeAll or own links); `validate` re-authorizes on every
 // push so a stream never outlives its principal.
@@ -16165,8 +17005,9 @@ adminRouter.get('/dashboard', async (req, res) => {
   const alerts = [];
   if (storage && storage.total > 0) {
     const usedPct = Math.round((storage.used / storage.total) * 100);
-    if (usedPct >= 90) alerts.push({ level: 'critical', code: 'disk-critical', params: { pct: usedPct, free: formatBytes(storage.free) } });
-    else if (usedPct >= 80) alerts.push({ level: 'warning', code: 'disk-warning', params: { pct: usedPct, free: formatBytes(storage.free) } });
+    const freePct = Math.max(0, 100 - usedPct), diskLimits = diskFreeThresholds();
+    if (diskLimits.warn > 0 && freePct <= diskLimits.critical) alerts.push({ level: 'critical', code: 'disk-critical', params: { pct: usedPct, free: formatBytes(storage.free) } });
+    else if (diskLimits.warn > 0 && freePct <= diskLimits.warn) alerts.push({ level: 'warning', code: 'disk-warning', params: { pct: usedPct, free: formatBytes(storage.free) } });
   }
   const failureRate = totals.transfers ? Math.round((totals.interrupted / totals.transfers) * 100) : 0;
   if (totals.transfers >= 5 && failureRate >= 25) alerts.push({ level: failureRate >= 50 ? 'critical' : 'warning', code: 'failure-rate', params: { pct: failureRate, n: totals.interrupted } });
@@ -16345,7 +17186,9 @@ adminRouter.get('/browse', async (req, res) => {
     try {
       // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal,javascript.express.security.audit.express-path-join-resolve-traversal.express-path-join-resolve-traversal
       // e.name likewise comes from fs.readdir(), not from the request.
-      e.size = (await fs.promises.stat(path.join(absDir, e.name))).size;
+      const fileStat = await fs.promises.stat(path.join(absDir, e.name));
+      e.size = fileStat.size;
+      e.mtimeMs = Math.floor(fileStat.mtimeMs || 0);
     } catch (_) {}
   });
   entries.forEach((e) => delete e.isFile);
@@ -16386,13 +17229,27 @@ adminRouter.get('/preview', async (req, res) => {
   if (!st.isFile()) return res.status(400).json({ error: 'not-a-file' });
   const name = path.basename(absFile);
   const info = previewInfo(name);
-  if (!info || (info.kind !== 'video' && info.kind !== 'image' && info.kind !== 'audio')) {
-    return res.status(415).json({ error: 'unsupported' });
+  const rendered = renderKind(name);
+  // Text/code is always returned as inert text/plain. In particular HTML/XML is
+  // never served with a scriptable MIME type inside the authenticated admin origin.
+  if (rendered === 'text' || rendered === 'code' || rendered === 'markdown') {
+    let capped; try { capped = await readFileCapped(absFile, RENDER_MAX_BYTES); } catch (_) { return res.status(500).json({ error:'read-error' }); }
+    if (!looksLikeTextBuffer(capped.buf)) return res.status(415).json({ error:'unsupported' });
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Cache-Control', 'no-store');
+    if (capped.truncated) res.setHeader('X-Direct-Xfer-Preview-Truncated', '1');
+    return res.send(capped.buf);
+  }
+  if (!info || !['video','image','audio','pdf'].includes(info.kind)) return res.status(415).json({ error: 'unsupported' });
+  if (info.kind === 'pdf') {
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('Content-Security-Policy', "frame-ancestors 'self'");
   }
   streamFile(req, res, absFile, name, null, null, { inline: true, contentType: info.contentType });
 });
 
-// Feature 30 — integrated diagnostics. It performs bounded, read-mostly checks;
+// Integrated diagnostics. It performs bounded, read-mostly checks;
 // the only filesystem mutation is a tiny create/delete probe in writable volumes.
 async function diagnosticWritable(dir) {
   const probe = path.join(dir, `.dx-diagnostic-${process.pid}-${crypto.randomBytes(4).toString('hex')}.tmp`);
@@ -16416,7 +17273,7 @@ adminRouter.post('/diagnostics/run', requireFullAdmin, async (req, res) => {
   let storageReport = null; try { storageReport = await buildGlobalStorageReport(); } catch (_) {}
   if (storageReport && storageReport.disk && storageReport.disk.total) {
     const pct = Math.round((storageReport.disk.used / storageReport.disk.total) * 100);
-    add('disk-space', 'storage', pct >= 90 ? 'bad' : pct >= 80 ? 'warn' : 'ok', { pct, free:storageReport.disk.free, total:storageReport.disk.total });
+    { const freePct=Math.max(0,100-pct), limits=diskFreeThresholds(); add('disk-space', 'storage', limits.warn>0 && freePct<=limits.critical ? 'bad' : limits.warn>0 && freePct<=limits.warn ? 'warn' : 'ok', { pct, free:storageReport.disk.free, total:storageReport.disk.total, warnFreePercent:limits.warn }); }
   } else add('disk-space', 'storage', 'warn', { error:'unavailable' });
   add('storage-mounts', 'storage', (STORAGE_SETUP.inboxUnconfigured || STORAGE_SETUP.imagesUnconfigured) ? 'warn' : 'ok', { inboxUnconfigured:!!STORAGE_SETUP.inboxUnconfigured, imagesUnconfigured:!!STORAGE_SETUP.imagesUnconfigured });
 
@@ -16487,6 +17344,7 @@ adminRouter.post('/network/port-check', async (req, res) => {
   }
   if (!host) return res.json({ open: null, error: 'unknown-target', host: null, port, label: null });
   const result = await checkPort(host, port);
+  auditReq(req, 'network-port-tested', `${label || host + ':' + port} · ${result && result.open === true ? 'open' : result && result.open === false ? 'closed' : 'unknown'}`);
   res.json({ ...result, host, port, label });
 });
 
@@ -16587,7 +17445,7 @@ function parseExpiry(seconds) {
   if (!Number.isFinite(n) || n <= 0) return null;
   return Date.now() + n * 1000;
 }
-// Feature 2 — accept an absolute expiry (epoch ms) as an alternative to a relative
+// Accept an absolute expiry (epoch ms) as an alternative to a relative
 // duration. A past/invalid value means "no fixed expiry" → null. Capped ~20 years.
 function parseExpiryAt(v) {
   const n = parseInt(v, 10);
@@ -16598,6 +17456,21 @@ function parseExpiryAt(v) {
 function resolveExpiry(body) {
   if (body && body.expiresAt !== undefined && body.expiresAt !== null && body.expiresAt !== '') return parseExpiryAt(body.expiresAt);
   return parseExpiry(body && body.expiresInSeconds);
+}
+// Instance policy for newly-created links. Editing an existing link still uses
+// resolveExpiry()/parseExpiry() directly so administrators can explicitly set an expiry later.
+function resolveNewShareExpiry(body) { return getSettings().newSharesNeverExpire ? null : resolveExpiry(body); }
+function parseNewShareExpiry(seconds) { return getSettings().newSharesNeverExpire ? null : parseExpiry(seconds); }
+function applyNewShareLifetimePolicy(share) {
+  if (!share || !getSettings().newSharesNeverExpire) return share;
+  // A duplicate is still a newly-created link. Do not let fixed or dynamic
+  // deadlines copied from the source bypass the instance-wide creation policy.
+  for (const key of [
+    'expiresAt', 'expirySetAt', 'expiryWarnedAt',
+    'firstUseExpirySeconds', 'firstUseExpiresAt', 'firstUseExpiryWarnedDeadline',
+    'inactiveExpirySeconds', 'inactiveExpiryWarnedDeadline',
+  ]) delete share[key];
+  return share;
 }
 // Deferred activation: absolute epoch-ms start time. A past/invalid value means
 // "active now" (no deferral) → null. Capped at ~2 years out.
@@ -16705,17 +17578,22 @@ app.get('/dxdecrypt.js', (req, res) => {
   res.setHeader('Cache-Control', 'no-cache');
   res.sendFile(path.join(__dirname, 'public', 'dxdecrypt.js'));
 });
-// Feature 7 — proof-of-work solver for the download challenge interstitial.
+// Proof-of-work solver for the download challenge interstitial.
 app.get('/dxpow.js', (req, res) => {
   res.type('text/javascript');
   res.setHeader('Cache-Control', 'no-cache');
   res.sendFile(path.join(__dirname, 'public', 'dxpow.js'));
 });
-// Feature 3 — playlist media player driver.
+// Playlist media player driver.
 app.get('/dxplayer.js', (req, res) => {
   res.type('text/javascript');
   res.setHeader('Cache-Control', 'no-cache');
   res.sendFile(path.join(__dirname, 'public', 'dxplayer.js'));
+});
+app.get('/media-resume.js', (req, res) => {
+  res.type('text/javascript');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.sendFile(path.join(__dirname, 'public', 'media-resume.js'));
 });
 // Public drivers for burn-after-read secret notes and collaboration links.
 // They must stay outside adminGuard because remote visitors load them directly.
@@ -16994,6 +17872,7 @@ function issuePwaDevice(req, res, name, createdBy) {
   const issued = createPwaDevice(name, createdBy);
   if (!issued) return null;
   setPwaDeviceCookie(req, res, issued.device.id, issued.secret);
+  if (req) { issued.device.platform = detectClientPlatform(req.headers && req.headers['user-agent']); issued.device.userAgent = String(req.headers && req.headers['user-agent'] || '').slice(0, 500); scheduleFlush(); }
   const creator = pwaDeviceCreatorAccount(issued.device) || findAccountByName(createdBy || '');
   if (creator && creator.id) addCenterNotification(creator.id, 'pwa-device-paired', { device:issued.device.name, username:creator.username || createdBy || '', ip:req ? pubIp(clientIp(req)) : null, dedupeKey:`pwa-device-paired:${issued.device.id}` });
   return issued.device;
@@ -17280,7 +18159,7 @@ app.post('/app/login', adminGuard, appLoginParser, (req, res) => {
 });
 
 // ===================================================================
-//  WEBAUTHN / PASSKEYS (feature 8)
+//  WEBAUTHN / PASSKEYS
 //  Dependency-free FIDO2: register a passkey while signed in, then sign in (or
 //  unlock) with it via the platform biometric. Attestation is not verified
 //  (attestation:'none' — the account creating the passkey is already trusted),
@@ -17719,7 +18598,7 @@ app.post('/app/notifications/clear', pwaJsonParser, (req, res) => {
   if (removed === null) return res.status(503).json({ error:'write-error' });
   res.json({ ok: true, removed });
 });
-// Feature 7 — category opt-outs, shared store with the standard admin UI.
+// Category opt-outs, shared store with the standard admin UI.
 app.get('/app/notifications/prefs', (req, res) => {
   const accountId = pwaNotificationAccountId(req);
   if (!accountId) return res.status(403).json({ error: 'owner-unresolved' });
@@ -17731,6 +18610,7 @@ app.post('/app/notifications/prefs', pwaJsonParser, (req, res) => {
   if (!accountId) return res.status(403).json({ error: 'owner-unresolved' });
   const muted = setAccountMutedNotificationCategories(accountId, (req.body && req.body.mutedCategories) || []);
   if (!muted) return res.status(503).json({ error:'write-error' });
+  pwaAuditReq(req, 'notification-prefs-changed', `via PWA — ${muted.length ? muted.join(', ') : 'none muted'}`);
   res.json({ ok: true, mutedCategories: muted });
 });
 
@@ -17745,6 +18625,8 @@ app.post('/app/notification-rules', pwaJsonParser, (req, res) => {
   if (!accountId) return res.status(403).json({ error:'owner-unresolved' });
   const result = upsertCustomNotificationRule(accountId, req.body || {});
   if (result.error) return res.status(result.error === 'write-error' ? 503 : result.error === 'too-many-rules' ? 409 : result.error === 'rule-not-found' ? 404 : 400).json(result);
+  const rule = result.rule || {};
+  pwaAuditReq(req, result.duplicate ? 'notification-rule-reused' : ((req.body && req.body.id) ? 'notification-rule-updated' : 'notification-rule-created'), `via PWA — ${rule.metric || 'rule'} >= ${rule.threshold || 0}${rule.shareId ? ' · share=' + rule.shareId : ''}`);
   res.json({ ok:true, ...result });
 });
 app.post('/app/notification-rules/delete', pwaJsonParser, (req, res) => {
@@ -17753,6 +18635,7 @@ app.post('/app/notification-rules/delete', pwaJsonParser, (req, res) => {
   const id = String(req.body && req.body.id || ''); if (!id) return res.status(400).json({ error:'missing-id' });
   const removed = deleteCustomNotificationRule(accountId, id);
   if (removed === null) return res.status(503).json({ error:'write-error' });
+  if (removed) pwaAuditReq(req, 'notification-rule-deleted', 'via PWA — ' + id.slice(0,64));
   res.json({ ok:true, removed });
 });
 
@@ -18061,7 +18944,7 @@ function centerNotificationDefaults(type) {
     'service-unavailable':['system_health','warning'], 'service-restored':['system_health','success'], 'config-save-failed':['system_health','critical'],
     'server-restarted':['restarts','info'], 'server-clean-shutdown':['restarts','info'], 'server-crash-recovered':['system_health','critical'],
     'public-ip-changed':['network','warning'], 'push-subscription-expired':['pwa','warning'], 'push-subscription-repaired':['pwa','success'],
-    'push-permission-revoked':['pwa','warning'],
+    'push-permission-revoked':['pwa','warning'], 'security-anomaly':['security','critical'],
   };
   return map[type] || ['system_health','info'];
 }
@@ -18111,7 +18994,7 @@ function enrichCenterNotificationGeo(accountId, id, rawIp, geo) {
   if (changed) scheduleFlush();
   return changed;
 }
-// Feature 7 — categories an account may opt out of. Security, Maintenance and System health are
+// Categories an account may opt out of. Security, Maintenance and System health are
 // deliberately excluded: critical security/maintenance/system-health alerts are never silenceable.
 const NOTIFICATION_ACTIVITY_SPLIT_CATEGORIES = ['visitors','thresholds','traffic'];
 const NOTIFICATION_MUTABLE_CATEGORIES = ['images','shares','receptions','transfers','search','pwa','visitors','thresholds','traffic','network','restarts','updates'];
@@ -18151,7 +19034,7 @@ function setAccountMutedNotificationCategories(accountId, list) {
   return null;
 }
 
-// Feature 31 — account-scoped custom notification rules. Rules can target one
+// Account-scoped custom notification rules. Rules can target one
 // owned link or every owned compatible link and fire once per link when the
 // configured threshold is crossed. Runtime trigger state is kept on the account
 // so restarts do not re-notify the same threshold.
@@ -18327,7 +19210,7 @@ function addCenterNotification(accountId, type, data = {}) {
   if (!accountId || !type) return null;
   const [defaultCategory, defaultSeverity] = centerNotificationDefaults(type);
   const category = String(data.category || defaultCategory).slice(0, 40);
-  // Feature 7 — respect the account's per-category opt-outs. The check runs before
+  // Respect the account's per-category opt-outs. The check runs before
   // the dedupe ledger is touched so a muted category never leaves suppression state
   // behind that would swallow the first alert after it is re-enabled.
   if (notificationCategoryMuted(accountId, category)) return null;
@@ -18751,6 +19634,10 @@ function purgeDeprecatedAuditKeyRecommendation() {
   if (removed) persist();
   return removed;
 }
+function diskFreeThresholds() {
+  const warn = Math.max(0, Math.min(50, Math.floor(Number(getSettings().diskFreeWarnPercent) || 0)));
+  return { warn, critical: warn > 0 ? Math.max(1, Math.floor(warn / 2)) : 0 };
+}
 function checkCenterSystemHealth() {
   // 1.40.3+: the built-in /data/audit-chain.key is sufficient and must not
   // produce a warning. Remove stale recommendations created by older builds.
@@ -18762,7 +19649,7 @@ function checkCenterSystemHealth() {
   try {
     if (typeof fs.statfsSync === 'function') {
       const st = fs.statfsSync(DATA_DIR), total=Number(st.blocks)*Number(st.bsize), free=Number(st.bavail)*Number(st.bsize);
-      if (total > 0) { const pct=Math.round((free/total)*100); if (pct <= 5) warn('disk-critical', `Espace disque libre ${pct}%`, 'critical'); else if (pct <= 10) warn('disk-low', `Espace disque libre ${pct}%`, 'warning'); }
+      if (total > 0) { const pct=Math.round((free/total)*100), limits=diskFreeThresholds(); if (limits.warn > 0 && pct <= limits.critical) warn('disk-critical', `Espace disque libre ${pct}% (seuil ${limits.warn}%)`, 'critical'); else if (limits.warn > 0 && pct <= limits.warn) warn('disk-low', `Espace disque libre ${pct}% (seuil ${limits.warn}%)`, 'warning'); }
     }
   } catch (_) {}
   if (searchIndexError) warn('search-index', `Index de recherche: ${String(searchIndexError).slice(0,220)}`, 'critical');
@@ -18784,10 +19671,12 @@ function noteCenterLifecycleStart() {
     if (prev.clean) {
       const downtime=Math.max(0, now-Math.max(Number(prev.shutdownAt)||Number(prev.startedAt)||now,0));
       addAdminCenterNotification('server-restarted',{version:APP_VERSION,durationMs:downtime,detail:`Redémarrage détecté · indisponibilité ~${Math.round(downtime/1000)} s`,dedupeKey:`restart:${now}`});
+      emitLiveActivity('system', { name:'server-restarted', status:'restarted', detail:`v${APP_VERSION} · downtime ~${Math.round(downtime/1000)} s` });
     } else {
       // An unclean stop has no shutdown timestamp, so downtime is unknowable.
       // Do not mislabel the previous process uptime as an outage duration.
       addAdminCenterNotification('server-crash-recovered',{version:APP_VERSION,detail:'Le démarrage précédent ne s’est pas terminé proprement',dedupeKey:`crash-recovered:${Number(prev.startedAt)||0}`});
+      emitLiveActivity('system', { name:'server-crash-recovered', status:'recovered', detail:`v${APP_VERSION}` });
     }
   }
   state.meta.notificationRuntime={startedAt:now,clean:false,version:APP_VERSION};
@@ -18802,12 +19691,13 @@ function noteCenterCleanShutdown(signal) {
   // Emitting both produced two Restart notifications for one intentional restart.
   const prev=state.meta.notificationRuntime||{};
   state.meta.notificationRuntime={...prev,startedAt:Number(prev.startedAt)||now,clean:true,shutdownAt:now,shutdownSignal:String(signal||'shutdown').slice(0,40),version:APP_VERSION};
+  emitLiveActivity('system', { name:'server-shutdown', status:'clean', detail:String(signal || 'shutdown').slice(0,40) });
   persistNow();
 }
 function noteCenterInstalledVersion() {
   if (!state.meta || typeof state.meta !== 'object') state.meta = {};
   const previous = state.meta.notificationLastAppVersion ? String(state.meta.notificationLastAppVersion) : '';
-  if (previous && previous !== APP_VERSION) addAdminCenterNotification('update-installed', { version:APP_VERSION, detail:`${previous} → ${APP_VERSION}`, dedupeKey:`installed:${APP_VERSION}` });
+  if (previous && previous !== APP_VERSION) { addAdminCenterNotification('update-installed', { version:APP_VERSION, detail:`${previous} → ${APP_VERSION}`, dedupeKey:`installed:${APP_VERSION}` }); emitLiveActivity('system', { name:'update-installed', status:'updated', detail:`${previous} → ${APP_VERSION}` }); }
   if (previous !== APP_VERSION) { state.meta.notificationLastAppVersion = APP_VERSION; persist(); }
 }
 function notificationLinkUrlForRequest(n, req, accountId) {
@@ -18997,7 +19887,7 @@ async function deliverPendingFirstViewPush(s) {
       country: pending.country || null,
       url: '/app/#images',
       token: s.token || null,
-      // Feature 14 — tapping the push opens the Images panel with the center open.
+      // Tapping the push opens the Images panel with the center open.
       openCenter: true,
       panel: 'images',
     });
@@ -19156,6 +20046,7 @@ app.post('/app/push/subscribe', pwaJsonParser, async (req, res) => {
     addAdminCenterNotification('push-subscription-repaired',{device:req.pwaDevice&&req.pwaDevice.name||rec.ua,detail:'Abonnement Push recréé automatiquement',dedupeKey:`push-repaired:${req.pwaDevice&&req.pwaDevice.id||keys.join(',')}:${Math.floor(Date.now()/3600000)}`,dedupeWindowMs:3600000},ids);
   }
   const pendingFlushed = await flushPendingFirstViewPushForKeys(keys);
+  pwaAuditReq(req, 'push-subscribed', `via PWA — ${priorForDevice.length ? 'repaired' : 'registered'}${pendingFlushed ? ' · pending=' + pendingFlushed : ''}`);
   res.json({ ok: true, pendingFlushed });
 });
 app.post('/app/push/unsubscribe', pwaJsonParser, (req, res) => {
@@ -19164,7 +20055,7 @@ app.post('/app/push/unsubscribe', pwaJsonParser, (req, res) => {
   const ownerKeys = pwaOwnerKeys(req), subs = pushSubs();
   const i = subs.findIndex((sub) => sub && sub.endpoint === endpoint && Array.isArray(sub.ownerKeys) && sub.ownerKeys.some((key) => ownerKeys.includes(key)));
   const removed = i >= 0;
-  if (removed) { subs.splice(i, 1); persist(); }
+  if (removed) { subs.splice(i, 1); persist(); pwaAuditReq(req, 'push-unsubscribed', 'via PWA'); }
   res.json({ ok: true, removed });
 });
 app.post('/app/push/permission-state', pwaJsonParser, (req, res) => {
@@ -19184,6 +20075,7 @@ app.post('/app/push/permission-state', pwaJsonParser, (req, res) => {
     notified = true;
   }
   if (device || removed) persist();
+  if (previous !== permission || removed) pwaAuditReq(req, 'push-permission-changed', `via PWA — ${previous} → ${permission}${removed ? ' · subscriptions removed=' + removed : ''}`);
   res.json({ ok:true, notified, removed });
 });
 
@@ -19200,6 +20092,7 @@ app.post('/app/push/test', pwaJsonParser, async (req, res) => {
   const testId = String((req.body && req.body.testId) || '').trim().slice(0, 96);
   const testMessage = localizedPwaPush({ kind: 'test' }, sub.lang);
   const result = await sendWebPushAwaited('test', testMessage.title, testMessage.body, { url: '/app/#settings', testId }, sub);
+  pwaAuditReq(req, 'push-tested', `via PWA — ${result.ok ? 'ok' : String(result.error || 'send-failed').slice(0,80)}`);
   if (result.ok) return res.json({ ok: true, sent: 1, pushStatus: result.statusCode, testId, sentAt: result.sentAt || Date.now() });
   const httpStatus = result.error === 'stale-subscription' ? 410 : 502;
   return res.status(httpStatus).json({ error: result.error || 'send-failed', pushStatus: result.statusCode || 0 });
@@ -19597,6 +20490,41 @@ function pwaImagesForRequest(req, { limit = 200, offset = 0, includeInactive = f
   return inventory.slice(boundedOffset, boundedOffset + boundedLimit).map((share) => pwaPhotoPayload(req, share));
 }
 
+function pwaActivityShareForId(shareId) {
+  if (!shareId) return null;
+  const active = getById(String(shareId));
+  if (active) return active;
+  const trashed = trashItems().find((row) => row && row.share && String(row.share.id) === String(shareId));
+  return trashed ? trashed.share : null;
+}
+function pwaCanSeeActivityEvent(req, event) {
+  if (!event) return false;
+  const session = req.pwaSession || null;
+  // Activity parity: an owner/admin's paired PWA represents that administrator's
+  // own workspace and therefore sees the exact same persistent Activity journal
+  // as the standard admin UI. Auditor sessions keep the same read-only visibility.
+  if (pwaViewerIsAdmin(req) || (session && session.role === 'auditor')) return true;
+  if (session && event.accountId && session.accountId && String(event.accountId) === String(session.accountId)) return true;
+  // Device identity is retained on activity events so actions such as a permanent
+  // purge remain visible even after the referenced share no longer exists in the
+  // active list or trash. Match only the exact paired device to avoid widening
+  // the bare-device view to unrelated administrative activity.
+  if (req.pwaDevice && event.deviceId && String(event.deviceId) === String(req.pwaDevice.id)) return true;
+  if (event.shareId) {
+    const share = pwaActivityShareForId(event.shareId);
+    if (share && canManagePwaImage(req, share)) return true;
+  }
+  // A bare paired device must not receive unrelated audit/security/system rows.
+  // Its activity view is deliberately scoped to records it can manage.
+  return false;
+}
+app.get('/app/activity/recent', (req, res) => {
+  const limit = Math.max(1, Math.min(1000, parseInt(req.query.limit, 10) || 500));
+  const visible = (Array.isArray(state.activityLog) ? state.activityLog : []).filter((event) => pwaCanSeeActivityEvent(req, event));
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ events: visible.slice(0, limit).map(activityEventForClient), retained: visible.length, max: ACTIVITY_HISTORY_MAX });
+});
+
 app.get('/app/images', (req, res) => {
   const limit = Math.max(1, Math.min(500, parseInt(req.query.limit, 10) || 200));
   const offset = Math.max(0, Math.min(50000, parseInt(req.query.offset, 10) || 0));
@@ -19741,7 +20669,7 @@ function applyPwaPhotoSettings(share, body) {
 app.get('/app/image/duplicate', (req, res) => {
   const hash = String(req.query.hash || '').toLowerCase();
   if (!/^[a-f0-9]{64}$/.test(hash)) return res.status(400).json({ error: 'invalid-hash' });
-  const share = listShares().find((item) => item && item.type === 'photo' && item.clientHash === hash && canManagePwaImage(req, item));
+  const share = managedPhotoCandidates().find((item) => item && item.type === 'photo' && (String(item.contentSha256 || '').toLowerCase() === hash || String(item.clientHash || '').toLowerCase() === hash) && canManagePwaImage(req, item));
   res.setHeader('Cache-Control', 'no-store');
   res.json({ duplicate: !!share, image: share ? pwaPhotoPayload(req, share) : null });
 });
@@ -19749,10 +20677,12 @@ app.get('/app/image/duplicate', (req, res) => {
 app.post('/app/image/:token/settings', pwaJsonParser, (req, res) => {
   const share = pwaPhotoByToken(req, req.params.token);
   if (!share) return res.status(404).json({ error: 'not-found' });
+  const before = JSON.parse(JSON.stringify(share));
   const changed = applyPwaPhotoSettings(share, req.body);
-  if (changed.length) persistNow();
-  const who = (req.pwaSession && req.pwaSession.username) || (req.pwaDevice ? 'PWA: ' + req.pwaDevice.name : 'PWA');
-  logAudit('image-edited', { username: who, ip: clientIp(req), detail: share.name + ': ' + changed.join(', ') });
+  if (changed.length) {
+    if (!persistNow()) { restorePlainObject(share, before); return res.status(503).json({ error:'write-error' }); }
+    pwaAuditReq(req, 'image-edited', share.name + ': ' + changed.join(', '));
+  }
   res.json({ ok: true, image: pwaPhotoPayload(req, share) });
 });
 
@@ -19761,18 +20691,33 @@ app.post('/app/images/bulk', pwaJsonParser, (req, res) => {
   const tokens = [...new Set(Array.isArray(body.tokens) ? body.tokens.map(String) : [])].slice(0, 200);
   if (!tokens.length) return res.status(400).json({ error: 'empty' });
   const action = String(body.action || 'settings');
+  const beforeState = JSON.parse(JSON.stringify(state));
+  const revokedActivity = [];
   let count = 0;
   for (const token of tokens) {
     const share = pwaPhotoByToken(req, token);
     if (!share) continue;
     if (action === 'revoke') {
-      if (softDeleteShare(share.id, req, false)) count += 1;
+      const activity = { shareId:share.id, name:share.name, status:'deleted', detail:share.type||'photo', ...activityPrincipal(req) };
+      const label='image '+(share.name||'');
+      if (softDeleteShare(share.id, req, false, { type:'share-trashed', label })) {
+        count += 1;
+        revokedActivity.push(activity);
+      }
     } else {
       const changed = applyPwaPhotoSettings(share, body.settings || body);
       if (changed.length) count += 1;
     }
   }
-  if (count) persistNow();
+  if (count && !persistNow()) {
+    state = beforeState; syncLiveActivityCache(); reindex(); shareLogicalBytesCache.clear();
+    return res.status(503).json({ error:'write-error' });
+  }
+  // softDeleteShare(..., false) deliberately defers persistence and therefore
+  // cannot publish activity itself. Publish only after the whole batch commits,
+  // otherwise a failed bulk revoke would leave phantom deletion events behind.
+  if (action === 'revoke') for (const activity of revokedActivity) emitLiveActivity('trash', activity);
+  if (count) pwaAuditReq(req, action === 'revoke' ? 'photos-bulk-revoked' : 'photos-bulk-edited', `via PWA — ${count}/${tokens.length}`);
   res.json({ ok: true, count });
 });
 
@@ -19818,12 +20763,13 @@ app.post('/app/albums', pwaJsonParser, (req, res) => {
   const members = tokens.map((token) => pwaPhotoByToken(req, token)).filter(Boolean).map((s) => s.token);
   if (!members.length) return res.status(400).json({ error: 'no-images' });
   const name = String(body.name || '').replace(/[\r\n\t/\\]+/g, ' ').trim().slice(0, 120) || 'Album';
-  const album = { type: 'album', name, members, expiresAt: parseExpiry(body.expiresInSeconds) };
+  const album = { type: 'album', name, members, expiresAt: parseNewShareExpiry(body.expiresInSeconds) };
   stampPwaRecordOwner(req, album);
   if (typeof body.password === 'string' && body.password) Object.assign(album, makeSharePassword(body.password.slice(0, 256)));
   const tags = normalizeTags(body.tags || []); if (tags.length) album.tags = tags;
   const note = String(body.note || '').trim().slice(0, 1000); if (note) album.adminNote = note;
   const rec = addShare(album, req);
+  pwaAuditReq(req, 'album-created', `via PWA — ${rec.name} · ${members.length} image(s)`);
   res.status(201).json({ album: pwaAlbumPayload(req, rec) });
 });
 app.post('/app/album/:token/settings', pwaJsonParser, (req, res) => {
@@ -19844,6 +20790,7 @@ app.post('/app/album/:token/settings', pwaJsonParser, (req, res) => {
   if (tags) { if (tags.length) album.tags = tags; else delete album.tags; }
   if (typeof body.note === 'string') { const note = body.note.trim().slice(0, 1000); if (note) album.adminNote = note; else delete album.adminNote; }
   if (!persistNow()) { for (const key of Object.keys(album)) delete album[key]; Object.assign(album, before); return res.status(503).json({ error:'write-error' }); }
+  pwaAuditReq(req, 'album-edited', `via PWA — ${album.name || album.id}`);
   res.json({ ok: true, album: pwaAlbumPayload(req, album) });
 });
 
@@ -19871,6 +20818,7 @@ app.post('/app/album/:token/invitations', pwaJsonParser, (req, res) => {
   if (!Array.isArray(album.collaborators)) album.collaborators = [];
   album.collaborators.push(entry);
   if (!persistNow()) { album.collaborators = album.collaborators.filter((x) => x !== entry); return res.status(503).json({ error:'write-error' }); }
+  pwaAuditReq(req, 'album-invitation-created', `via PWA — ${album.name || album.id} · ${entry.role}${entry.label ? ' · ' + entry.label : ''}`);
   const base = getSettings().imageBase || primaryBase(req) || '';
   res.status(201).json({ invitation: publicAlbumInvite(entry), url: base + '/g/' + album.token + '/c/' + secret });
 });
@@ -19882,10 +20830,11 @@ app.post('/app/album/:token/invitations/:id/revoke', pwaJsonParser, (req, res) =
   const beforeDisabled = !!entry.disabled, beforeRevokedAt = entry.revokedAt;
   entry.disabled = true; entry.revokedAt = Date.now();
   if (!persistNow()) { entry.disabled = beforeDisabled; if (beforeRevokedAt == null) delete entry.revokedAt; else entry.revokedAt = beforeRevokedAt; return res.status(503).json({ error:'write-error' }); }
+  pwaAuditReq(req, 'album-invitation-revoked', `via PWA — ${album.name || album.id} · ${entry.role}${entry.label ? ' · ' + entry.label : ''}`);
   res.json({ ok: true });
 });
 
-// Owner-scoped automatic image retention rules (PWA feature 24). Rules are
+// Owner-scoped automatic image retention rules. Rules are
 // disabled by default and are stored separately per administrator account/device.
 function pwaRetentionRuleStore() {
   if (!state.meta || typeof state.meta !== 'object') state.meta = {};
@@ -20042,6 +20991,7 @@ app.post('/app/images/retention', pwaJsonParser, async (req, res) => {
   }
   const result = req.body && req.body.runNow ? await runPwaImageRetentionForOwner(key, rules) : { checked: 0, revoked: 0, bytesFreed: 0, reasons: {}, persisted:true };
   if (result.persisted === false) return res.status(503).json({ ok:false, error:'write-error', rules, result });
+  pwaAuditReq(req, 'image-retention-rules-changed', `via PWA — ${rules.enabled ? 'enabled' : 'disabled'}${req.body && req.body.runNow ? ' · run=' + result.revoked + '/' + result.checked : ''}`);
   res.json({ ok: true, rules, result });
 });
 setInterval(() => { runAllPwaImageRetention().catch((e) => console.error('[pwa-image-retention]', e.message)); }, 5 * 60 * 1000).unref();
@@ -20095,8 +21045,80 @@ app.get('/app/images/dashboard', (req, res) => {
   res.json({ totals: { images: photos.length, views: totalViews, visitors: totalVisitors, bytes: totalBytes }, series, comparison, generatedAt: now });
 });
 
+function validSha256(value) { return /^[a-f0-9]{64}$/i.test(String(value || '')); }
+// Serialize the short duplicate-check + durable-share window for a given content
+// hash. Without this, two byte-identical uploads finishing in the same event-loop
+// window could both observe "no duplicate" before either share was persisted.
+const managedPhotoHashLocks = new Map();
+async function acquireManagedPhotoHashResponseLock(res, sha) {
+  if (!validSha256(sha)) return () => {};
+  const key = String(sha).toLowerCase();
+  const previous = managedPhotoHashLocks.get(key) || Promise.resolve();
+  let openGate;
+  const gate = new Promise((resolve) => { openGate = resolve; });
+  const tail = previous.then(() => gate);
+  managedPhotoHashLocks.set(key, tail);
+  await previous;
+  let released = false;
+  const release = () => {
+    if (released) return; released = true; openGate();
+    if (managedPhotoHashLocks.get(key) === tail) managedPhotoHashLocks.delete(key);
+  };
+  if (!res || res.destroyed) { release(); return null; }
+  res.once('finish', release); res.once('close', release);
+  return release;
+}
+
+function managedPhotoCandidates() {
+  const out = [];
+  const seen = new Set();
+  for (const photo of listShares().concat(trashItems().map((rec) => rec && rec.share).filter(Boolean))) {
+    if (!photo || photo.type !== 'photo' || seen.has(String(photo.id || ''))) continue;
+    seen.add(String(photo.id || '')); out.push(photo);
+  }
+  return out;
+}
+function findManagedPhotoDuplicate(req, sha, size, options) {
+  options = options || {}; if (!validSha256(sha)) return null;
+  const expectedSize = Math.max(0, Number(size) || 0);
+  return managedPhotoCandidates().find((photo) => {
+    if (!photo || photo.type !== 'photo' || String(photo.id) === String(options.excludeId || '')) return false;
+    if (expectedSize && Number(photo.size || 0) && Number(photo.size) !== expectedSize) return false;
+    const stored = String(photo.contentSha256 || '').toLowerCase();
+    if (stored !== String(sha).toLowerCase()) return false;
+    return options.pwa ? canManagePwaImage(req, photo) : ownsShare(req, photo);
+  }) || null;
+}
+function duplicatePhotoPayload(photo, req, pwa) {
+  if (!photo) return null;
+  const payload = pwa ? pwaPhotoPayload(req, photo) : decorateShare(photo, req);
+  if (!state.shares.some((row) => row && String(row.id) === String(photo.id))) {
+    payload.active = false; payload.status = 'trash'; payload.trashed = true;
+  }
+  return payload;
+}
+
+async function findManagedPhotoDuplicateDeep(req, sha, size, options) {
+  const direct = findManagedPhotoDuplicate(req, sha, size, options); if (direct) return direct;
+  if (!validSha256(sha)) return null;
+  options = options || {}; const expectedSize=Math.max(0,Number(size)||0);
+  for (const photo of managedPhotoCandidates()) {
+    if (!photo || photo.type !== 'photo' || String(photo.id) === String(options.excludeId || '')) continue;
+    if (expectedSize && Number(photo.size || 0) !== expectedSize) continue;
+    if (options.pwa ? !canManagePwaImage(req,photo) : !ownsShare(req,photo)) continue;
+    if (validSha256(photo.contentSha256)) continue;
+    const abs=firstExistingPhotoFile(photoOriginalPaths(photo)); if (!abs) continue;
+    try {
+      const actual=await hashFileSha256(abs); photo.contentSha256=actual; scheduleFlush();
+      if (actual.toLowerCase() === String(sha).toLowerCase()) return photo;
+    } catch (_) {}
+  }
+  return null;
+}
+
 function streamToFileBounded(req, res, dest, maxBytes, onDone) {
   const ws = fs.createWriteStream(dest);
+  const contentHash = crypto.createHash('sha256');
   let size = 0, failed = false;
   const fail = (code) => {
     if (failed) return; failed = true;
@@ -20104,14 +21126,14 @@ function streamToFileBounded(req, res, dest, maxBytes, onDone) {
     fs.unlink(dest, () => {});
     if (!res.headersSent) res.status(code || 500).json({ error: code === 413 ? 'too-large' : 'write-error' });
   };
-  req.on('data', (c) => { size += c.length; if (size > maxBytes) fail(413); });
+  req.on('data', (c) => { size += c.length; if (!failed) contentHash.update(c); if (size > maxBytes) fail(413); });
   req.on('aborted', () => fail(400));
   req.on('error', () => fail(400));
   ws.on('error', () => fail(500));
   ws.on('finish', () => {
     if (failed) return;
     if (size === 0) { fs.unlink(dest, () => {}); if (!res.headersSent) res.status(400).json({ error: 'empty' }); return; }
-    onDone(size);
+    onDone(size, contentHash.digest('hex'));
   });
   req.pipe(ws);
 }
@@ -20189,6 +21211,7 @@ app.post('/app/image/:token/restore/:versionId', pwaJsonParser, (req, res) => {
     }
     try { await unlinkManagedPathsStrict(tx.oldManagedPaths); }
     catch (e) { console.error('[pwa-photo-restore] old file cleanup failed:', e && e.message); }
+    pwaAuditReq(req, 'image-version-restored', `via PWA — ${photo.name || photo.token} · ${version.id}`);
     res.json({ ok: true, image: pwaPhotoPayload(req, photo) });
   })().catch((e) => { console.error('[pwa-photo-restore]', e && e.message); if (!res.headersSent) res.status(500).json({ error:'restore-failed' }); });
 });
@@ -20197,20 +21220,23 @@ app.post('/app/image/:token/replace', (req, res) => {
   let ext = (String(req.query.name || photo.name || 'image.jpg').split('.').pop() || '').toLowerCase(); if (ext === 'jpeg') ext = 'jpg';
   if (!PWA_IMG_EXT.test(ext)) return res.status(400).json({ error: 'not-image' });
   const fname = crypto.randomBytes(12).toString('hex') + '.' + ext; const dest = path.join(FULL_IMAGES_DIR, fname);
-  streamToFileBounded(req, res, dest, IMAGE_MAX_BYTES, (size) => {
+  streamToFileBounded(req, res, dest, IMAGE_MAX_BYTES, (size, sha256) => {
     (async () => {
       const nextName = String(req.query.name || photo.name).replace(/[\/\r\n\t]+/g, ' ').trim().slice(0, 120) || photo.name;
       let scan = null;
       if (getSettings().dlpEnabled !== false) {
         scan = await dlpScanStoredFile(dest, nextName);
-        const pseudoBody = { dlpOverride:/^(1|true|yes|on)$/i.test(String(req.query.dlpOverride || '')) };
-        if (dlpDecision(req, res, pseudoBody, scan, 'pwa-photo-replace')) { fs.unlink(dest, () => {}); return; }
+        const dlpBody = { dlpOverride:/^(1|true|yes|on)$/i.test(String(req.query.dlpOverride || '')) };
+        if (dlpDecision(req, res, dlpBody, scan, 'pwa-photo-replace', { file:dest, name:nextName })) { fs.unlink(dest, () => {}); return; }
       }
+      const hashLock = await acquireManagedPhotoHashResponseLock(res, sha256); if (!hashLock) { fs.unlink(dest, () => {}); return; }
+      const duplicate = await findManagedPhotoDuplicateDeep(req, sha256, size, { pwa:true, excludeId:photo.id });
+      if (duplicate && !/^(1|true|yes|on)$/i.test(String(req.query.duplicateOverride || ''))) { fs.unlink(dest, () => {}); return res.status(409).json({ error:'duplicate-content', duplicate:duplicatePhotoPayload(duplicate,req,true), sha256 }); }
       const before = JSON.parse(JSON.stringify(photo));
       const oldManagedPaths = [...photoOriginalPaths(photo), ...photoVariantPaths(photo.token, 'thumb'), ...photoVariantPaths(photo.token, 'micro'), photoAdaptivePath(photo.token, 'webp'), photoAdaptivePath(photo.token, 'avif')];
       let archivedVersion = null;
       try { archivedVersion = archiveCurrentPhotoVersion(photo); } catch (e) { fs.unlink(dest, () => {}); return res.status(500).json({ error: 'archive-failed' }); }
-      photo.imgPath = fname; photo.ext = ext; photo.size = size; photo.name = nextName;
+      photo.imgPath = fname; photo.ext = ext; photo.size = size; photo.contentSha256 = sha256; photo.name = nextName;
       if (String(req.query.metadataRemoved || '') === '1') photo.metadataRemoved = true; else delete photo.metadataRemoved;
       const dims = imageDimensions(dest); if (dims) { photo.w = dims.w; photo.h = dims.h; }
       delete photo.thumb; delete photo.micro; delete photo.adaptiveWebp; delete photo.adaptiveAvif; delete photo.thumbSize; delete photo.microSize; delete photo.thumbW; delete photo.thumbH; delete photo.microW; delete photo.microH; delete photo.thumbMetaMtimeMs; delete photo.microMetaMtimeMs;
@@ -20223,6 +21249,7 @@ app.post('/app/image/:token/replace', (req, res) => {
       }
       try { await unlinkManagedPathsStrict(oldManagedPaths); } catch (e) { console.error('[pwa-photo-replace] old file cleanup failed:', e && e.message); }
       addShareCenterNotification(photo,'image-full-replaced',{name:photo.name,bytes:size,dedupeKey:`image-replaced:${photo.id}:${photo.replacedAt}`});
+      pwaAuditReq(req, 'image-replaced', `via PWA — ${photo.name || photo.token} · ${size} bytes`);
       res.json({ ok: true, image: pwaPhotoPayload(req, photo), dlp:scan });
     })().catch(() => { fs.unlink(dest, () => {}); if (!res.headersSent) res.status(500).json({ error:'dlp-scan-failed' }); else res.destroy(); });
   });
@@ -20245,20 +21272,23 @@ app.post('/app/image', (req, res) => {
   if (!PWA_IMG_EXT.test(ext)) return res.status(400).json({ error: 'not-image' });
   const fname = crypto.randomBytes(12).toString('hex') + '.' + ext;
   const dest = path.join(FULL_IMAGES_DIR, fname);
-  streamToFileBounded(req, res, dest, IMAGE_MAX_BYTES, (size) => {
+  streamToFileBounded(req, res, dest, IMAGE_MAX_BYTES, (size, sha256) => {
     (async () => {
       const name = String(req.query.name || '').replace(/[\r\n\t/\\]+/g, ' ').trim().slice(0, 120) || ('image.' + ext);
       let scan = null;
       if (getSettings().dlpEnabled !== false) {
         scan = await dlpScanStoredFile(dest, name);
-        const pseudoBody = { dlpOverride:/^(1|true|yes|on)$/i.test(String(req.query.dlpOverride || '')) };
-        if (dlpDecision(req, res, pseudoBody, scan, 'pwa-photo-create')) { fs.unlink(dest, () => {}); return; }
+        const dlpBody = { dlpOverride:/^(1|true|yes|on)$/i.test(String(req.query.dlpOverride || '')) };
+        if (dlpDecision(req, res, dlpBody, scan, 'pwa-photo-create', { file:dest, name })) { fs.unlink(dest, () => {}); return; }
       }
+      const hashLock = await acquireManagedPhotoHashResponseLock(res, sha256); if (!hashLock) { fs.unlink(dest, () => {}); return; }
+      const duplicate = await findManagedPhotoDuplicateDeep(req, sha256, size, { pwa:true });
+      if (duplicate && !/^(1|true|yes|on)$/i.test(String(req.query.duplicateOverride || ''))) { fs.unlink(dest, () => {}); return res.status(409).json({ error:'duplicate-content', duplicate:duplicatePhotoPayload(duplicate,req,true), sha256 }); }
       const fileDims = imageDimensions(dest);
       const queryW = Math.max(0, Math.min(100000, parseInt(req.query.w, 10) || 0));
       const queryH = Math.max(0, Math.min(100000, parseInt(req.query.h, 10) || 0));
       const dims = queryW && queryH ? { w: queryW, h: queryH } : fileDims;
-      const share = { type: 'photo', name, imgPath: fname, ext, size };
+      const share = { type: 'photo', name, imgPath: fname, ext, size, contentSha256:sha256 };
       if (String(req.query.metadataRemoved || '') === '1') share.metadataRemoved = true;
       applyDlpSummary(share, scan);
       stampPhotoUploadDevice(share, req, 'pwa');
@@ -20266,7 +21296,8 @@ app.post('/app/image', (req, res) => {
       if (/^[a-f0-9]{64}$/.test(clientHash)) share.clientHash = clientHash;
       if (dims) { share.w = dims.w; share.h = dims.h; }
       pwaImgOwner(req, share);
-      const rec = addShare(share, req);
+      const rec = addShareDurable(share, req);
+      if (!rec) { try { fs.unlinkSync(dest); } catch (_) {} return res.status(503).json({ error:'write-error', persisted:false }); }
       const who = (req.pwaSession && req.pwaSession.username) || (req.pwaDevice ? 'PWA: ' + req.pwaDevice.name : 'PWA');
       logAudit('image-created', { username: who, ip: clientIp(req), detail: 'via PWA — ' + name });
       res.status(201).json({ ...pwaImageCreatePayload(req, rec), dlp:scan });
@@ -20331,7 +21362,7 @@ app.post('/app/share/:token/revoke', pwaJsonParser, (req, res) => {
   }
   const kind = s.type === 'photo' ? 'image' : s.type === 'inbox' ? 'reception' : 'share';
   const label = kind + ' ' + (s.name || '');
-  const revoked = softDeleteShare(s.id, req, true);
+  const revoked = softDeleteShare(s.id, req, true, { type:'share-trashed', label });
   if (revoked === false) return res.status(503).json({ error:'write-error' });
   if (!revoked) return res.status(404).json({ error: 'not-found' });
   const who = (req.pwaSession && req.pwaSession.username) || (req.pwaDevice ? 'PWA: ' + req.pwaDevice.name : 'PWA');
@@ -20413,11 +21444,11 @@ app.post('/app/host/shares', pwaJsonParser, async (req, res) => {
     hostPath: first.hostPath,
     name: first.name || first.hostPath || 'share',
     size: type === 'file' ? first.size : null,
-    expiresAt: parseExpiry(body.expiresInSeconds),
+    expiresAt: parseNewShareExpiry(body.expiresInSeconds),
     maxDownloads: parseMaxDownloads(body.maxDownloads),
   };
   if (share.expiresAt) share.expirySetAt = Date.now();
-  const pwaFirstUseExpirySeconds = boundedSeconds(body.firstUseExpirySeconds); if (pwaFirstUseExpirySeconds) share.firstUseExpirySeconds = pwaFirstUseExpirySeconds;
+  const pwaFirstUseExpirySeconds = getSettings().newSharesNeverExpire ? 0 : boundedSeconds(body.firstUseExpirySeconds); if (pwaFirstUseExpirySeconds) share.firstUseExpirySeconds = pwaFirstUseExpirySeconds;
   const parsedPwaRate = parseLinkRateKBps(body.rateKBps, { optional:true });
   if (!parsedPwaRate.ok) return res.status(400).json({ error:'invalid-rate' });
   const pwaRateKBps = parsedPwaRate.value; if (pwaRateKBps > 0) share.rateBps = pwaRateKBps * 1024;
@@ -20433,6 +21464,16 @@ app.post('/app/host/shares', pwaJsonParser, async (req, res) => {
   }
   const maxVisitors = Math.max(0, parseInt(body.maxVisitors, 10) || 0);
   if (maxVisitors > 0) share.maxVisitors = maxVisitors;
+  // 1.51.0 — PWA parity with the standard dashboard's organization metadata.
+  if (body.color !== undefined) {
+    const color = normalizeShareColor(body.color);
+    if (color === null) return res.status(400).json({ error:'invalid-color' });
+    if (color) share.color = color;
+  }
+  if (typeof body.adminNote === 'string') {
+    const adminNote = body.adminNote.replace(/\r\n?/g, '\n').trim().slice(0, 1000);
+    if (adminNote) share.adminNote = adminNote;
+  }
   if (getSettings().dlpEnabled !== false) {
     const scan = await dlpScanResolvedItems(resolved);
     // A PWA can explicitly confirm a warn policy by resubmitting dlpOverride=true.
@@ -20469,16 +21510,179 @@ app.get('/app/host/shares', (req, res) => {
   // Listing existing links is read-only, so an admin's paired device may see them even
   // without a live session (unlike FS browse / create above, which stay session-only).
   if (!pwaViewerIsAdmin(req)) return res.status(403).json({ error: 'admin-required' });
-  const list = state.shares
-    .filter((s) => s && (s.type === 'file' || s.type === 'folder' || s.type === 'collab') && canManagePwaImage(req, s))
+  const source = state.shares
+    .filter((s) => s && (s.type === 'file' || s.type === 'folder' || s.type === 'collab') && canManagePwaImage(req, s));
+  const pending = source.filter((s) => shareNeedsLogicalBytesScan(s) && !shareLogicalBytesCache.get(s.id));
+  if (pending.length) void mapLimit(pending, 2, (s) => queueShareLogicalBytesRefresh(s)).catch(() => {});
+  const list = source
     .map((s) => decorateShare(s, req))
-    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+    .sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned) || (b.createdAt || 0) - (a.createdAt || 0))
     .slice(0, 500);
   res.setHeader('Cache-Control', 'no-store');
-  res.json({ shares: list });
+  res.json({ shares: list, metricsPending:pending.length > 0 });
 });
 
-// Feature 20 — live "downloading now" presence for the PWA. Same data as the /api
+
+// 1.51.0 — lightweight lifecycle/organization mutations for the PWA share
+// library. These never require filesystem browsing and therefore also work from
+// an owner/admin paired device, not only from a live browser admin session.
+function pwaCanManageHostShare(req, share) {
+  if (!share || !['file','folder','collab'].includes(share.type)) return false;
+  return canManagePwaImage(req, share);
+}
+app.post('/app/host/shares/:token/meta', pwaJsonParser, (req, res) => {
+  const share = getByToken(req.params.token);
+  if (!pwaCanManageHostShare(req, share)) return res.status(404).json({ error:'not-found' });
+  const body = req.body || {}, beforeFull = JSON.parse(JSON.stringify(share)), before = shareChangeSnapshot(share), changed = [];
+  if (body.color !== undefined) {
+    const color = normalizeShareColor(body.color); if (color === null) return res.status(400).json({ error:'invalid-color' });
+    if (color !== (share.color || '')) { if (color) share.color=color; else delete share.color; changed.push('color'); }
+  }
+  if (typeof body.adminNote === 'string') {
+    const note = body.adminNote.replace(/\r\n?/g,'\n').trim().slice(0,1000);
+    if (note !== (share.adminNote || '')) { if (note) share.adminNote=note; else delete share.adminNote; changed.push('adminNote'); }
+  }
+  if (typeof body.archived === 'boolean' && body.archived !== !!share.archived) {
+    if (body.archived) share.archived=true; else delete share.archived; changed.push('archived');
+  }
+  if (typeof body.pinned === 'boolean' && body.pinned !== !!share.pinned) {
+    if (body.pinned) share.pinned=true; else delete share.pinned; changed.push('pinned');
+  }
+  if (!changed.length) return res.json({ ok:true, share:decorateShare(share, req) });
+  recordShareChange(share, req, 'edited', changed, before);
+  if (!persistNow()) { restorePlainObject(share, beforeFull); return res.status(503).json({ error:'write-error' }); }
+  scheduleSearchReindex();
+  const who=(req.pwaSession&&req.pwaSession.username)||(req.pwaDevice&&('PWA: '+req.pwaDevice.name))||'PWA';
+  logAudit('share-edited',{username:who,ip:clientIp(req),detail:'via PWA — '+(share.name||share.id)+': '+changed.join(', ')});
+  res.json({ ok:true, share:decorateShare(share, req) });
+});
+app.post('/app/host/shares/:token/reactivate', pwaJsonParser, async (req, res) => {
+  const share = getByToken(req.params.token);
+  if (!pwaCanManageHostShare(req, share)) return res.status(404).json({ error:'not-found' });
+  const result = await reactivateRevokedShare(share, req);
+  if (!result.ok) return res.status(result.status || 400).json({ error:result.error || 'reactivate-failed' });
+  const who=(req.pwaSession&&req.pwaSession.username)||(req.pwaDevice&&('PWA: '+req.pwaDevice.name))||'PWA';
+  logAudit('share-reactivated',{username:who,ip:clientIp(req),detail:'via PWA — '+(share.name||share.id)});
+  res.json({ ok:true, share:decorateShare(share, req) });
+});
+app.post('/app/host/shares/:token/clone', pwaJsonParser, async (req, res) => {
+  const source = getByToken(req.params.token);
+  if (!pwaCanManageHostShare(req, source)) return res.status(404).json({ error:'not-found' });
+  // Match the standard dashboard: encrypted links are intentionally not cloned.
+  // Reusing the same encrypted payload/key metadata under a second token would make
+  // the two links share lifecycle-sensitive ciphertext state.
+  if (source.encrypted) return res.status(400).json({ error:'cannot-clone' });
+  const availability = await shareReactivationAvailability(source);
+  if (!availability.available) return res.status(409).json({ error:'data-missing' });
+  const body=req.body||{};
+  const requested=String(body.name||'').replace(/[\r\n\t]+/g,' ').trim().slice(0,200);
+  const name=requested||((source.name||'Share')+' (copy)').slice(0,200);
+  const clone=JSON.parse(JSON.stringify(source));
+  for(const key of ['id','token','createdAt','downloads','revoked','disabled','burnedAt','burnedReason','visitors','views','messages','pending','recipients','ownerId','ownerName','ownerDeviceId','pstats','bytesReceived','pinned','archived','autoArchivedAt','favorite','changeHistory','lastViewAt','lastUseAt','lastDownload','lastUpload','firstUsedAt','firstUseExpiresAt','statsBaseline','adminComments','editedAt']) delete clone[key];
+  clone.name=name; clone.downloads=0; clone.revoked=false;
+  let freshDir=null;
+  try {
+    if(source.type==='collab'){
+      const base=name.replace(/[^A-Za-z0-9 _.-]/g,'_').replace(/^\.+/,'').trim().slice(0,50)||'collab';
+      clone.relDir=base+'-'+crypto.randomBytes(3).toString('hex'); clone.bytesReceived=0;
+      freshDir=resolveWithin(INBOX_DIR,clone.relDir); await fs.promises.mkdir(freshDir,{recursive:true});
+    }
+    stampPwaRecordOwner(req,clone);
+    applyNewShareLifetimePolicy(clone);
+    const rec=addShare(clone,req,{action:'created-from-duplicate',fields:['name'],before:{name:source.name||''}},false);
+    if(!persistNow()){detachActiveShare(rec);throw Object.assign(new Error('write-error'),{code:'WRITE_ERROR'});}
+    scheduleSearchReindex();
+    const who=(req.pwaSession&&req.pwaSession.username)||(req.pwaDevice&&('PWA: '+req.pwaDevice.name))||'PWA';
+    logAudit('share-cloned',{username:who,ip:clientIp(req),detail:'via PWA — '+(source.name||source.id)+' → '+rec.id});
+    res.status(201).json({ok:true,share:decorateShare(rec,req)});
+  }catch(e){if(freshDir){try{await fs.promises.rmdir(freshDir);}catch(_){}}return res.status(e&&e.code==='WRITE_ERROR'?503:500).json({error:e&&e.code==='WRITE_ERROR'?'write-error':'clone-failed'});}
+});
+
+// Global recoverable Trash in the PWA: images, receptions, collaboration links
+// and host shares all land in the same server-side lifecycle store.
+app.get('/app/trash', (req, res) => {
+  if (!req.pwaSession && !req.pwaDevice) return res.status(403).json({ error:'auth-required' });
+  const items=trashItems().filter((rec)=>rec&&rec.share&&canManagePwaImage(req,rec.share)).map(trashPublicRecord);
+  res.setHeader('Cache-Control','no-store');
+  res.json({items,retentionDays:Math.max(0,Number(getSettings().trashRetentionDays)||0),count:items.length,canPurge:pwaViewerIsAdmin(req)});
+});
+app.post('/app/trash/:id/restore', pwaJsonParser, (req, res) => {
+  const list=trashItems(); const i=list.findIndex((r)=>r&&r.id===req.params.id);
+  if(i<0||!list[i].share||!canManagePwaImage(req,list[i].share))return res.status(404).json({error:'not-found'});
+  const original=JSON.parse(JSON.stringify(list[i])); const rec=list.splice(i,1)[0], sh=restoreTrashRecord(rec);
+  recordShareChange(sh,req,'restored',[],null);
+  if(!persistNow()){detachActiveShare(sh);list.splice(Math.min(i,list.length),0,original);reindex();shareLogicalBytesCache.clear();return res.status(503).json({error:'write-error'});}
+  scheduleSearchReindex();
+  const who=(req.pwaSession&&req.pwaSession.username)||(req.pwaDevice&&('PWA: '+req.pwaDevice.name))||'PWA';
+  logAudit('share-restored',{username:who,ip:clientIp(req),detail:'via PWA — '+(sh.type||'share')+' '+(sh.name||'')});
+  emitLiveActivity('trash',{shareId:sh.id,name:sh.name,status:'restored',detail:sh.type||'share',...activityPrincipal(req)});
+  res.json({ok:true,share:decorateShare(sh,req)});
+});
+app.delete('/app/trash/:id', async (req, res) => {
+  if (!pwaViewerIsAdmin(req)) return res.status(403).json({ error:'admin-required' });
+  const rec=trashItems().find((row)=>row&&row.id===req.params.id);
+  if(!rec||!rec.share||!canManagePwaImage(req,rec.share))return res.status(404).json({error:'not-found'});
+  try{
+    const purged=await purgeTrashRecordById(req.params.id,null);if(!purged)return res.status(404).json({error:'not-found'});
+    if(!persistNow())return res.status(503).json({error:'write-error',persisted:false});
+    scheduleSearchReindex();
+    const who=(req.pwaSession&&req.pwaSession.username)||(req.pwaDevice&&('PWA: '+req.pwaDevice.name))||'PWA';
+    logAudit('trash-purged',{username:who,ip:clientIp(req),detail:'via PWA — '+((purged.share&&purged.share.name)||req.params.id)});
+    if (purged.share) emitLiveActivity('trash',{shareId:purged.share.id,name:purged.share.name,status:'purged',detail:purged.share.type||'share',...activityPrincipal(req)});
+    res.json({ok:true,persisted:true});
+  }catch(e){console.error('[trash] PWA purge failed:',e&&e.message);res.status(500).json({error:'delete-failed'});}
+});
+app.delete('/app/trash', async (req, res) => {
+  if (!pwaViewerIsAdmin(req)) return res.status(403).json({ error:'admin-required' });
+  const ids=trashItems().filter((rec)=>rec&&rec.share&&canManagePwaImage(req,rec.share)).map((rec)=>rec.id);
+  const purgedActivity=[];
+  let count=0,failed=0;
+  for(const id of ids){try{const purged=await purgeTrashRecordById(id,null);if(purged){count++;if(purged.share)purgedActivity.push({shareId:purged.share.id,name:purged.share.name,status:'purged',detail:purged.share.type||'share',...activityPrincipal(req)});}}catch(e){failed++;console.error('[trash] PWA purge failed:',id,e&&e.message);}}
+  let persisted=true;if(count)persisted=persistNow();
+  if(!persisted)return res.status(503).json({ok:false,error:'write-error',persisted:false,count,failed});
+  if(count){
+    for(const activity of purgedActivity) emitLiveActivity('trash',activity);
+    scheduleSearchReindex();const who=(req.pwaSession&&req.pwaSession.username)||(req.pwaDevice&&('PWA: '+req.pwaDevice.name))||'PWA';logAudit('trash-purged-all',{username:who,ip:clientIp(req),detail:`via PWA — ${count}; failed=${failed}`});
+  }
+  res.status(failed?207:200).json({ok:failed===0,count,failed,persisted:true});
+});
+
+// Unified undoable-action history in the PWA. It exposes the same bounded,
+// persisted journal as /api/undo, filtered to the signed-in/paired account.
+app.get('/app/undo', (req, res) => {
+  const items = undoLogItems().filter((entry) => undoEntryVisible(req, entry)).map((entry) => undoPublicEntry(entry, req));
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ items, max: UNDO_LOG_MAX });
+});
+app.post('/app/undo/:id', pwaJsonParser, (req, res) => {
+  const entry = undoLogItems().find((row) => row && row.id === req.params.id);
+  if (!entry || !undoEntryVisible(req, entry)) return res.status(404).json({ error:'not-found' });
+  if (!undoEntryExecutable(req, entry)) return res.status(403).json({ error:'forbidden' });
+  const result = performUndo(entry, req);
+  if (!result.ok) return res.status(result.status || 400).json({ error:result.error });
+  const account = undoRequestAccount(req);
+  const who = (req.pwaSession && req.pwaSession.username) || (req.pwaDevice && ('PWA: ' + req.pwaDevice.name)) || (account && account.username) || 'PWA';
+  logAudit('action-undone', { account, username:who, ip:clientIp(req), detail:'via PWA — ' + entry.type + (entry.label ? ': ' + entry.label : '') });
+  res.json({ ok:true, entry:undoPublicEntry(entry, req) });
+});
+
+app.get('/app/search', async (req, res) => {
+  if (!req.pwaSession && !req.pwaDevice) return res.status(403).json({ error:'auth-required' });
+  const q=String(req.query.q||'').trim(); if(q.length<2)return res.status(400).json({error:'query-too-short'});
+  if(!universalSearchIndex.builtAt&&!searchIndexBuilding){try{await buildUniversalSearchIndex();}catch(_){}}
+  const limit=Math.min(100,Math.max(1,parseInt(req.query.limit,10)||60));
+  const semantic=/^(1|true|yes|on)$/i.test(String(req.query.semantic||''));
+  const session=req.pwaSession||null, creator=req.pwaDevice?pwaDeviceCreatorAccount(req.pwaDevice):null;
+  const role=(session&&session.role)||(creator&&creator.role)||''; const username=(session&&session.username)||(creator&&creator.username)||'';
+  const canShare=(share)=>!!(share&&canManagePwaImage(req,share));
+  const content=(semantic?universalSemanticSearchQuery(q,req,limit,{canAccess:canShare}):universalSearchQuery(q,req,limit,{canAccess:canShare})).map((r)=>({...r,scope:'content'}));
+  const meta=globalMetadataSearch(q,req,limit,{canShare,role,username,includeAdminMeta:pwaViewerIsAdmin(req),scopes:['links','users','logs']});
+  const results=meta.concat(content).slice(0,limit);
+  res.setHeader('Cache-Control','no-store');
+  res.json({query:q,semantic,scope:'all',results,indexed:(universalSearchIndex.docs||[]).length,builtAt:universalSearchIndex.builtAt||0,building:searchIndexBuilding});
+});
+
+// Live "downloading now" presence for the PWA. Same data as the /api
 // route but authorized through the PWA context (a paired admin device, no live
 // session, may watch). Snapshot + SSE stream, scoped to the viewer's links.
 function pwaPresenceValidator(req, scope) {
@@ -20537,8 +21741,8 @@ app.get('/app/receptions', (req, res) => {
         bytesReceived: Number(s.bytesReceived) || 0,
         moderated: !!s.moderated,
         owned: canManagePwaImage(req, s),
-        threadCount: receptionThreadArray(s).length, // feature 27
-        threadUnread: receptionThreadUnreadCount(s),  // feature 27 — unread visitor replies
+        threadCount: receptionThreadArray(s).length,
+        threadUnread: receptionThreadUnreadCount(s),  // unread visitor replies
       };
     })
     .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
@@ -20546,7 +21750,7 @@ app.get('/app/receptions', (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   res.json({ receptions: list, activeTokens });
 });
-// Feature 27 — two-way reception thread (owner side, PWA). Mirrors the standard
+// Two-way reception thread (owner side, PWA). Mirrors the standard
 // admin endpoints but is authorized through the PWA principal.
 app.get('/app/receptions/:token/thread', (req, res) => {
   const s = getByToken(req.params.token);
@@ -20563,6 +21767,7 @@ app.post('/app/receptions/:token/thread', pwaJsonParser, (req, res) => {
   receptionThreadArray(s).forEach((m) => { if (m.from === 'visitor') m.read = true; });
   appendReceptionThreadMessage(s, { id: crypto.randomBytes(8).toString('hex'), at: Date.now(), from: 'owner', name: null, text });
   if (!persistNow()) { if (previous) s.thread = previous; else delete s.thread; return res.status(503).json({ error: 'write-error' }); }
+  pwaAuditReq(req, 'reception-thread-reply', `via PWA — ${s.name || s.id}`);
   res.setHeader('Cache-Control', 'no-store');
   res.status(201).json({ ok: true, unread: receptionThreadUnreadCount(s), messages: receptionThreadArray(s).map(ownerThreadMessage) });
 });
@@ -20643,7 +21848,7 @@ function inboxReceivedFiles(share) {
     let ents;
     try { ents = fs.readdirSync(dir, { withFileTypes: true }); } catch (_) { return; }
     for (const e of ents) {
-      if (top && e.name === '.dxparts') continue; // resumable-upload staging area
+      if (e.name.startsWith('.dx')) continue; // resumable/moderation/connector staging areas
       const abs = path.join(dir, e.name);
       const rel = relPrefix ? relPrefix + '/' + e.name : e.name;
       if (e.isDirectory()) { walk(abs, rel, false); if (files.length >= 5000) return; continue; }
@@ -20678,27 +21883,75 @@ app.get('/app/inbox/:token/file', (req, res) => {
   try { st = fs.statSync(abs); } catch (_) { return res.status(404).json({ error: 'not-found' }); }
   if (!st.isFile()) return res.status(404).json({ error: 'not-found' });
   const filename = path.basename(abs);
-  res.setHeader('Cache-Control', 'no-store');
-  res.setHeader('Content-Type', 'application/octet-stream');
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('Content-Length', String(st.size));
-  res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`);
-  const stream = fs.createReadStream(abs);
-  stream.on('error', () => { if (res.headersSent) res.destroy(); else res.status(500).end(); });
-  stream.pipe(res);
+  // The authenticated PWA downloader uses the same persisted Range protocol as
+  // public shares, but with an account-scoped identity and without public-share
+  // counters or shutdown hooks.
+  streamFile(req, res, abs, filename, null, null, {
+    resumable:true,
+    resumeScope:`pwa-inbox:${s.id}`,
+    cacheControl:'no-store',
+  });
 });
+function detectClientPlatform(ua) {
+  ua = String(ua || '').toLowerCase();
+  if (/android/.test(ua)) return 'android';
+  if (/iphone|ipad|ipod|macintosh.*mobile/.test(ua)) return 'ios';
+  if (/windows/.test(ua)) return 'windows';
+  if (/macintosh|mac os x/.test(ua)) return 'macos';
+  if (/linux|x11/.test(ua)) return 'linux';
+  return 'other';
+}
+function updatePwaDeviceClientInfo(device, req) {
+  if (!device || !req) return false;
+  const ua = String(req.headers && req.headers['user-agent'] || '').slice(0, 500);
+  const version = String(req.query && req.query.version || '').replace(/[^0-9A-Za-z._+-]/g, '').slice(0, 40);
+  const build = String(req.query && req.query.build || '').replace(/[\r\n\t]+/g, ' ').trim().slice(0, 80);
+  const platform = detectClientPlatform(ua);
+  let changed = false;
+  for (const [key, value] of [['platform',platform],['userAgent',ua],['appVersion',version],['appBuild',build]]) {
+    if (value && device[key] !== value) { device[key] = value; changed = true; }
+  }
+  if (changed) scheduleFlush();
+  return changed;
+}
 function publicPwaDevice(d, currentId) {
   return {
     id: d.id,
     name: d.name || 'Direct-Xfer PWA',
     createdAt: d.createdAt || null,
     lastUsedAt: d.lastUsedAt || d.createdAt || null,
+    platform: d.platform || detectClientPlatform(d.userAgent || ''),
+    appVersion: d.appVersion || null,
+    appBuild: d.appBuild || null,
     current: d.id === currentId,
   };
 }
+function pwaDlpPolicyPayload(req) {
+  const settings = getSettings();
+  return {
+    enabled: settings.dlpEnabled !== false,
+    mode: ['warn','block','log','quarantine'].includes(settings.dlpMode) ? settings.dlpMode : 'warn',
+    rulesEnabled: settings.dlpRulesEnabled === true,
+    actions: {
+      low: dlpEffectiveAction({ ...settings, dlpRulesEnabled:true, dlpActionLow:settings.dlpActionLow || 'log' }, { count:1, highest:'low' }),
+      medium: dlpEffectiveAction({ ...settings, dlpRulesEnabled:true, dlpActionMedium:settings.dlpActionMedium || 'warn' }, { count:1, highest:'medium' }),
+      high: dlpEffectiveAction({ ...settings, dlpRulesEnabled:true, dlpActionHigh:settings.dlpActionHigh || 'quarantine' }, { count:1, highest:'high' }),
+      critical: dlpEffectiveAction({ ...settings, dlpRulesEnabled:true, dlpActionCritical:settings.dlpActionCritical || 'block' }, { count:1, highest:'critical' }),
+    },
+    maxFiles: Math.max(1, Number(settings.dlpMaxFiles) || 100),
+    maxFileMB: Math.max(1, Number(settings.dlpMaxFileMB) || 25),
+    scanOcr: settings.dlpScanOcr !== false,
+    // Editing the global DLP policy is deliberately limited to an owner/admin
+    // principal. A paired device belonging to that account is treated the same
+    // way as the other administrator-only PWA management surfaces.
+    editable: pwaViewerIsAdmin(req),
+  };
+}
+
 app.get('/app/device/status', (req, res) => {
   const session = req.pwaSession || getSession(req);
   const device = req.pwaDevice || null;
+  if (device) updatePwaDeviceClientInfo(device, req);
   // A paired PWA is itself an authenticated account-scoped capability.  It must be
   // able to see the other devices paired to the SAME account even when the browser
   // admin session has expired.  Never expose devices belonging to another account.
@@ -20725,15 +21978,49 @@ app.get('/app/device/status', (req, res) => {
     // PWA clients need the active DLP policy so their main reception-upload queue
     // can run the same class of checks locally before the first byte is sent.
     // Only policy knobs are exposed here; no secrets or detector samples leave the server.
-    dlp: {
-      enabled: getSettings().dlpEnabled !== false,
-      mode: ['warn','block','log'].includes(getSettings().dlpMode) ? getSettings().dlpMode : 'warn',
-      maxFiles: Math.max(1, Number(getSettings().dlpMaxFiles) || 100),
-      maxFileMB: Math.max(1, Number(getSettings().dlpMaxFileMB) || 25),
-      scanOcr: getSettings().dlpScanOcr !== false,
+    shareDefaults: {
+      newSharesNeverExpire: getSettings().newSharesNeverExpire === true,
     },
+    dlp: pwaDlpPolicyPayload(req),
   });
 });
+
+// Global automatic DLP reactions exposed in the PWA settings. Keep the surface
+// intentionally narrow: this endpoint can only modify the per-severity reaction
+// switch/actions, never unrelated administrator configuration.
+app.post('/app/dlp/settings', pwaJsonParser, (req, res) => {
+  if (!pwaViewerIsAdmin(req)) return res.status(403).json({ error:'admin-required' });
+  const body = req.body || {};
+  const input = {};
+  if (typeof body.dlpRulesEnabled === 'boolean') input.dlpRulesEnabled = body.dlpRulesEnabled;
+  for (const key of ['dlpActionLow','dlpActionMedium','dlpActionHigh','dlpActionCritical']) {
+    if (body[key] !== undefined) input[key] = body[key];
+  }
+  if (!Object.keys(input).length) return res.status(400).json({ error:'no-settings' });
+  const parsed = computeSettingsPatch(input);
+  if (parsed.error) return res.status(400).json({ error:parsed.error });
+  const allowed = new Set(['dlpRulesEnabled','dlpActionLow','dlpActionMedium','dlpActionHigh','dlpActionCritical']);
+  const patch = Object.fromEntries(Object.entries(parsed.patch || {}).filter(([key]) => allowed.has(key)));
+  if (!Object.keys(patch).length) return res.status(400).json({ error:'no-settings' });
+
+  const previousSettings = getSettings();
+  const before = {}; for (const key of Object.keys(patch)) before[key] = previousSettings[key];
+  let undoEntry = null;
+  if (JSON.stringify(before).length <= 65536) {
+    undoEntry = recordUndoable(req, 'settings-changed', Object.keys(patch).join(', '), { kind:'settings', before, after:patch });
+  }
+  const settingsStateBefore = state.settings;
+  state.settings = { ...state.settings, ...patch };
+  if (!persistNow()) {
+    state.settings = settingsStateBefore;
+    rollbackRecordedUndo(undoEntry);
+    return res.status(503).json({ error:'write-error', persisted:false });
+  }
+  auditReq(req, 'settings-changed', 'via PWA — ' + Object.keys(patch).join(', '));
+  res.setHeader('Cache-Control','no-store');
+  res.json({ ok:true, persisted:true, dlp:pwaDlpPolicyPayload(req) });
+});
+
 app.post('/app/device/pairing', adminGuard, pwaJsonParser, async (req, res) => {
   const session = getSession(req);
   if (!session) return res.status(401).json({ error: 'not-authenticated' });
@@ -20785,7 +22072,10 @@ app.post('/app/device/revoke', pwaJsonParser, (req, res) => {
     let revokedShares = 0;
     if (revokeShares) {
       const owned = state.shares.filter((s) => s && s.ownerDeviceId === id).map((s) => s.id);
-      for (const shareId of owned) if (softDeleteShare(shareId, req, false)) revokedShares += 1;
+      for (const shareId of owned) {
+        const share = getById(shareId);
+        if (share && softDeleteShare(shareId, req, false, { type:'share-trashed', label:(share.type||'share')+' '+(share.name||'') })) revokedShares += 1;
+      }
     }
     // Device-scoped push subscriptions and live streams must not survive a
     // revocation, regardless of whether its public links are also removed.
@@ -20803,7 +22093,7 @@ app.post('/app/device/revoke', pwaJsonParser, (req, res) => {
       inboxEventSubs.delete(ownerKey);
     }
     if (!persistNow()) {
-      state = beforeState; reindex(); shareLogicalBytesCache.clear();
+      state = beforeState; syncLiveActivityCache(); reindex(); shareLogicalBytesCache.clear();
       return res.status(503).json({ error:'write-error' });
     }
     if (foundAccount && foundAccount.id) addCenterNotification(foundAccount.id, 'pwa-device-revoked', { device:found ? found.name : id, username:foundAccount.username || '', reason:revokeShares ? 'device-and-links' : 'device', dedupeKey:`pwa-device-revoked:${id}` });
@@ -20941,7 +22231,7 @@ app.post('/api/login', adminGuard, jsonParser, (req, res) => {
 });
 
 // Public metadata (version, year) — for the footer.
-// Feature 16 — unauthenticated liveness probe for Docker HEALTHCHECK / uptime
+// Unauthenticated liveness probe for Docker HEALTHCHECK / uptime
 // monitors. Deliberately exposes no secrets and no operational counts.
 app.get('/healthz', (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
@@ -20975,6 +22265,12 @@ app.use('/api', adminGuard, jsonParser, adminRouter);
 // the app — which reads the URL and opens the Images page — instead of a 404. It sits
 // behind adminGuard, the same network/allowlist gate as the rest of the interface.
 app.get('/images', adminGuard, (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache');
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Independent Activity page, protected by the same admin network guard.
+app.get('/activity', adminGuard, (req, res) => {
   res.setHeader('Cache-Control', 'no-cache');
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
@@ -21255,6 +22551,9 @@ async function shutdown(signal) {
   if (shuttingDown) return;
   shuttingDown = true;
   console.log(`\n[server] shutting down (${signal})…`);
+  // Stop rclone before the process exits so it cannot continue writing a remote
+  // object or leave a local staging payload after Direct-Xfer is gone.
+  try { for (const controller of activeConnectorJobs.values()) controller.abort(); } catch (_) {}
   try { noteCenterCleanShutdown(signal); } catch (_) {}
   server.close(async () => {
     try {

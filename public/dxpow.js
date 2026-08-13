@@ -1,4 +1,4 @@
-/* Direct-Xfer — download challenge solver (feature 7).
+/* Direct-Xfer — download challenge solver.
  *
  * Runs on the interstitial page shown before a large download when the visitor
  * has no valid proof-of-work pass. It fetches a challenge, finds a suffix whose

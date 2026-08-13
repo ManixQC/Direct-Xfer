@@ -8,6 +8,7 @@ const server = fs.readFileSync(path.join(root, 'server.js'), 'utf8');
 const app = fs.readFileSync(path.join(root, 'pwa', 'app.js'), 'utf8');
 const html = fs.readFileSync(path.join(root, 'pwa', 'index.html'), 'utf8');
 const sw = fs.readFileSync(path.join(root, 'pwa', 'sw.js'), 'utf8');
+const photoUtils = fs.readFileSync(path.join(root, 'lib', 'photo-utils.js'), 'utf8');
 
 test('image replacement preserves the public token and archives restorable versions', () => {
   assert.match(server, /app\.post\('\/app\/image\/:token\/replace'/);
@@ -40,8 +41,9 @@ test('album owners can create and revoke reader contributor and manager invitati
 test('adaptive image delivery selects small variants or AVIF WebP with original fallback', () => {
   assert.match(server, /\/i\/:token\/auto/);
   assert.match(server, /Save-Data, Width, Viewport-Width, DPR, ECT/);
-  assert.match(server, /image\/avif/);
-  assert.match(server, /image\/webp/);
+  // MIME declarations were moved to the dedicated image helper module in 1.51.2.
+  assert.match(photoUtils, /image\/avif/);
+  assert.match(photoUtils, /image\/webp/);
   assert.match(server, /return servePhoto\(req, res, 'micro'\)/);
   assert.match(server, /return servePhoto\(req, res, 'thumb'\)/);
   assert.match(app, /adaptiveWebp/);

@@ -5403,6 +5403,14 @@ function formatDate(ts) {
   });
 }
 
+function formatExactDate(ts) {
+  if (!ts) return '—';
+  return new Date(ts).toLocaleString(LOCALES[state.lang] || 'en-US', {
+    dateStyle: 'medium',
+    timeStyle: 'medium',
+  });
+}
+
 function el(tag, opts = {}) {
   const e = document.createElement(tag);
   if (opts.class) e.className = opts.class;
@@ -9872,7 +9880,7 @@ function renderHistoryPage() {
     if (hx.country) meta.appendChild(el('span', { text: countryText(hx.country) }));
     meta.appendChild(el('span', { text: formatBytes(hx.bytes) }));
     meta.appendChild(el('span', { class: 'tspeed', text: (up ? '↑ ' : '↓ ') + formatSpeed(hx.avgBps) }));
-    meta.appendChild(el('span', { text: timeAgo(hx.endedAt) }));
+    meta.appendChild(el('time', { attrs: { title: formatExactDate(hx.endedAt) }, text: timeAgo(hx.endedAt) }));
     info.appendChild(meta);
 
     row.appendChild(info);

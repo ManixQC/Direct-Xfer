@@ -20,18 +20,19 @@ using System.Windows.Forms;
 [assembly: AssemblyCompany("Direct-Xfer")]
 [assembly: AssemblyProduct("Direct-Xfer")]
 [assembly: AssemblyCopyright("Copyright © Direct-Xfer 2026")]
-[assembly: AssemblyVersion("1.58.4.0")]
-[assembly: AssemblyFileVersion("1.58.4.0")]
-[assembly: AssemblyInformationalVersion("1.58.4-launcher24-csharp")]
+[assembly: AssemblyVersion("1.59.0.0")]
+[assembly: AssemblyFileVersion("1.59.0.0")]
+[assembly: AssemblyInformationalVersion("1.59.0-launcher26-csharp")]
 
 namespace DirectXfer.WindowsLauncher
 {
     internal static class Program
     {
-        internal const string AppVersion = "1.58.4";
-        internal const string RuntimeAppBuild = "1.58.4-launcher24-csharp";
+        internal const string AppVersion = "1.59.0";
+        internal const string RuntimeAppBuild = "1.59.0-launcher26-csharp";
         internal const int DefaultPort = 55750;
         internal const int MaxFallbackPort = 55769;
+        internal const int StartupReadyTimeoutMs = 30000;
         internal const string NodeVersion = "24.19.0";
         internal const string NodeExeSha256 = "3602f2bb1a10f2cbab4c36886218a33c1ab3db87290e73b033c46c77147d0237";
         internal const string MutexName = @"Local\DirectXferLauncherInstance";
@@ -107,6 +108,7 @@ namespace DirectXfer.WindowsLauncher
         public string token;
         public string nodePath;
         public string runtimeBuild;
+        public long startedUtcTicks;
     }
 
     internal sealed class LauncherContext : ApplicationContext, IDisposable
@@ -116,11 +118,11 @@ namespace DirectXfer.WindowsLauncher
         private static readonly IDictionary<string, string> CriticalRuntimeSha256 =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                { "package.json", "6dde5d38fad5caac070711c0e4738c14545be2e78d5eff0eac9d39c3a73a319f" },
-                { "package-lock.json", "b17f197ab14a65054712acce5946d8d6d1f9bbe1ec53ca4bc58ee35194580924" },
+                { "package.json", "bb3486f7caaf97ed0736f582e429571235c6b99ec9ebc60076ccdcdb1bc392f1" },
+                { "package-lock.json", "647cf8e243cdf72e25e5611011625b9b6204da1f73ab9fdd7036b1b1a941e903" },
                 { "server.js", "7c2a8108ab4598ea519ba80f68b8e67bab60056ac6df70fe20fe7aa47c0b7b1d" },
                 { "public/app.js", "3477fcd489c396a3b0d77940d72952b0c9742b778411bb31f4c9e42aad56e0b9" },
-                { "pwa/app.js", "714990ff0d2143f7a20f405dcab8b9f394a9c75da7af63d0a62a82d68f70e878" },
+                { "pwa/app.js", "3d2b24d0a5af74990c293acf2c846f477305e0c1549b5e87e54bdd0235b41df6" },
                 { "node_modules/express/package.json", "c7db3b72582355c80cdcef1ad7b2c9a8f53557550724c6bef8502e9818c2ebe7" }
             };
 
@@ -245,26 +247,32 @@ namespace DirectXfer.WindowsLauncher
         private static LauncherConfig LoadConfig(out bool exists)
         {
             var fallback = DefaultConfig();
-            try
+            foreach (var candidate in new[] { ConfigPath, ConfigPath + ".bak" })
             {
-                if (!File.Exists(ConfigPath))
+                try
                 {
-                    exists = false;
-                    return fallback;
+                    if (!File.Exists(candidate)) continue;
+                    var raw = File.ReadAllText(candidate, Encoding.UTF8);
+                    var cfg = Json.Deserialize<LauncherConfig>(raw);
+                    if (cfg == null) continue;
+                    if (cfg.language != "fr" && cfg.language != "en" && cfg.language != "es")
+                        cfg.language = DetectLanguage();
+                    cfg.version = Program.AppVersion;
+
+                    // A .bak can remain if Windows stops between the atomic replace and
+                    // cleanup. If it is the first valid copy, heal the primary file.
+                    if (!string.Equals(candidate, ConfigPath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        try { WriteTextAtomic(ConfigPath, Json.Serialize(cfg)); } catch { }
+                    }
+                    exists = true;
+                    return cfg;
                 }
-                var cfg = Json.Deserialize<LauncherConfig>(File.ReadAllText(ConfigPath, Encoding.UTF8));
-                if (cfg == null) throw new InvalidDataException("Invalid launcher configuration.");
-                if (cfg.language != "fr" && cfg.language != "en" && cfg.language != "es")
-                    cfg.language = DetectLanguage();
-                cfg.version = Program.AppVersion;
-                exists = true;
-                return cfg;
+                catch { }
             }
-            catch
-            {
-                exists = false;
-                return fallback;
-            }
+
+            exists = false;
+            return fallback;
         }
 
         private void SaveConfig()
@@ -278,10 +286,35 @@ namespace DirectXfer.WindowsLauncher
         {
             var directory = Path.GetDirectoryName(path);
             if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
-            var temp = path + ".tmp";
-            File.WriteAllText(temp, content, new UTF8Encoding(false));
-            if (File.Exists(path)) File.Delete(path);
-            File.Move(temp, path);
+            var temp = path + ".tmp-" + Guid.NewGuid().ToString("N");
+            var backup = path + ".bak";
+            try
+            {
+                File.WriteAllText(temp, content, new UTF8Encoding(false));
+                if (!File.Exists(path))
+                {
+                    File.Move(temp, path);
+                    return;
+                }
+
+                try
+                {
+                    File.Replace(temp, path, backup, true);
+                    try { if (File.Exists(backup)) File.Delete(backup); } catch { }
+                }
+                catch (PlatformNotSupportedException)
+                {
+                    File.Copy(temp, path, true);
+                }
+                catch (IOException)
+                {
+                    File.Copy(temp, path, true);
+                }
+            }
+            finally
+            {
+                try { if (File.Exists(temp)) File.Delete(temp); } catch { }
+            }
         }
 
         private static void EnsureConfigDirectories(LauncherConfig cfg)
@@ -386,19 +419,52 @@ namespace DirectXfer.WindowsLauncher
 
         private static string EnsureApplicationRuntime()
         {
+            var failures = new List<string>();
             foreach (var candidate in AppCandidates())
-                if (ApplicationRuntimeValid(candidate)) return candidate;
+            {
+                string reason;
+                if (TryValidateApplicationRuntime(candidate, out reason)) return candidate;
+                failures.Add(candidate + " -> " + reason);
+            }
+
+            var expected = Path.Combine(RuntimeRoot, "app");
             throw new InvalidDataException(
-                "Direct-Xfer application runtime is missing or invalid; keep Direct-Xfer.exe beside the runtime folder from the Windows Portable package.");
+                "Direct-Xfer application runtime is missing or invalid.\r\n\r\n" +
+                "Expected runtime folder:\r\n" + expected + "\r\n\r\n" +
+                string.Join("\r\n", failures.ToArray()) + "\r\n\r\n" +
+                "Extract the complete GitHub Actions artifact before launching Direct-Xfer.exe. " +
+                "Do not run the EXE directly from inside a ZIP and do not move the EXE away from its runtime folder.");
         }
 
         private static bool ApplicationRuntimeValid(string root)
         {
+            string reason;
+            return TryValidateApplicationRuntime(root, out reason);
+        }
+
+        private static bool TryValidateApplicationRuntime(string root, out string reason)
+        {
             try
             {
-                if (!Directory.Exists(root)) return false;
+                if (!Directory.Exists(root))
+                {
+                    reason = "folder not found";
+                    return false;
+                }
+
                 var marker = Path.Combine(root, ".dx-runtime-build");
-                if (!File.Exists(marker) || File.ReadAllText(marker).Trim() != Program.RuntimeAppBuild) return false;
+                if (!File.Exists(marker))
+                {
+                    reason = "missing .dx-runtime-build marker";
+                    return false;
+                }
+
+                var markerValue = File.ReadAllText(marker, Encoding.ASCII).Trim();
+                if (!string.Equals(markerValue, Program.RuntimeAppBuild, StringComparison.Ordinal))
+                {
+                    reason = "runtime build mismatch (found " + markerValue + ", expected " + Program.RuntimeAppBuild + ")";
+                    return false;
+                }
 
                 foreach (var required in new[]
                 {
@@ -407,20 +473,69 @@ namespace DirectXfer.WindowsLauncher
                 })
                 {
                     var file = Path.Combine(root, required);
-                    if (!File.Exists(file) || new FileInfo(file).Length == 0) return false;
+                    if (!File.Exists(file))
+                    {
+                        reason = "missing " + required;
+                        return false;
+                    }
+                    if (new FileInfo(file).Length == 0)
+                    {
+                        reason = "empty " + required;
+                        return false;
+                    }
                 }
 
-                if (!File.ReadAllText(Path.Combine(root, "package.json"), Encoding.UTF8)
-                    .Contains("\"version\": \"" + Program.AppVersion + "\"")) return false;
+                var packagePath = Path.Combine(root, "package.json");
+                var package = Json.Deserialize<Dictionary<string, object>>(File.ReadAllText(packagePath, Encoding.UTF8));
+                object versionValue;
+                var packageVersion = package != null && package.TryGetValue("version", out versionValue)
+                    ? Convert.ToString(versionValue, CultureInfo.InvariantCulture)
+                    : string.Empty;
+                if (!string.Equals(packageVersion, Program.AppVersion, StringComparison.Ordinal))
+                {
+                    reason = "package.json version mismatch (found " + packageVersion + ", expected " + Program.AppVersion + ")";
+                    return false;
+                }
 
                 foreach (var pair in CriticalRuntimeSha256)
                 {
                     var file = Path.Combine(root, pair.Key.Replace('/', Path.DirectorySeparatorChar));
-                    if (!string.Equals(FileSha256(file), pair.Value, StringComparison.OrdinalIgnoreCase)) return false;
+                    if (!File.Exists(file))
+                    {
+                        reason = "missing integrity file " + pair.Key;
+                        return false;
+                    }
+
+                    // Every file in CriticalRuntimeSha256 is text. Normalize CRLF/CR to LF so
+                    // a Windows Git checkout cannot invalidate an otherwise identical runtime.
+                    var actual = TextFileSha256Normalized(file);
+                    if (!string.Equals(actual, pair.Value, StringComparison.OrdinalIgnoreCase))
+                    {
+                        reason = "integrity check failed for " + pair.Key + " (SHA-256 " + actual + ")";
+                        return false;
+                    }
                 }
+
+                reason = string.Empty;
                 return true;
             }
-            catch { return false; }
+            catch (Exception ex)
+            {
+                reason = ex.GetType().Name + ": " + ex.Message;
+                return false;
+            }
+        }
+
+        private static string TextFileSha256Normalized(string path)
+        {
+            var text = File.ReadAllText(path, new UTF8Encoding(false, true));
+            text = text.Replace("\r\n", "\n").Replace("\r", "\n");
+            var bytes = new UTF8Encoding(false).GetBytes(text);
+            using (var sha = SHA256.Create())
+            {
+                var hash = sha.ComputeHash(bytes);
+                return BitConverter.ToString(hash).Replace("-", string.Empty).ToLowerInvariant();
+            }
         }
 
         private static string FileSha256(string path)
@@ -436,10 +551,12 @@ namespace DirectXfer.WindowsLauncher
         private static IEnumerable<string> NodeCandidates()
         {
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            // Prefer the hash-pinned Node.js runtime shipped beside Direct-Xfer.
+            // Environment/system fallbacks are only used when the bundled runtime is unavailable.
             var raw = new List<string>
             {
-                Environment.GetEnvironmentVariable("DX_WINDOWS_NODE"),
-                PortableNodePath
+                PortableNodePath,
+                Environment.GetEnvironmentVariable("DX_WINDOWS_NODE")
             };
             var pf = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
             if (!string.IsNullOrWhiteSpace(pf)) raw.Add(Path.Combine(pf, "nodejs", "node.exe"));
@@ -500,12 +617,25 @@ namespace DirectXfer.WindowsLauncher
                         WindowStyle = ProcessWindowStyle.Hidden
                     };
                     if (!process.Start()) return false;
-                    var output = process.StandardOutput.ReadToEnd().Trim().TrimStart('v');
-                    if (!process.WaitForExit(3000)) return false;
+                    var stdout = process.StandardOutput.ReadToEndAsync();
+                    var stderr = process.StandardError.ReadToEndAsync();
+                    if (!process.WaitForExit(3000))
+                    {
+                        try { process.Kill(); } catch { }
+                        try { process.WaitForExit(1000); } catch { }
+                        return false;
+                    }
+                    if (!stdout.Wait(500)) return false;
+                    try { stderr.Wait(100); } catch { }
+                    var output = (stdout.Result ?? string.Empty).Trim().TrimStart('v');
                     var dot = output.IndexOf('.');
                     if (dot >= 0) output = output.Substring(0, dot);
                     int major;
-                    return int.TryParse(output, NumberStyles.Integer, CultureInfo.InvariantCulture, out major) && major >= 18;
+                    // Keep system fallbacks aligned with package.json and the current
+                    // production dependency tree: Node 20 LTS or Node 22+ only.
+                    return process.ExitCode == 0 &&
+                           int.TryParse(output, NumberStyles.Integer, CultureInfo.InvariantCulture, out major) &&
+                           (major == 20 || major >= 22);
                 }
             }
             catch { return false; }
@@ -594,7 +724,8 @@ namespace DirectXfer.WindowsLauncher
                 scheme = _runtimeScheme,
                 token = _token,
                 nodePath = node,
-                runtimeBuild = Program.RuntimeAppBuild
+                runtimeBuild = Program.RuntimeAppBuild,
+                startedUtcTicks = GetProcessStartUtcTicks(_server)
             });
 
             Task.Run(() => WaitForReadyAndCompleteStartup(_server.Id, _lifetime.Token));
@@ -611,7 +742,8 @@ namespace DirectXfer.WindowsLauncher
 
         private void WaitForReadyAndCompleteStartup(int pid, CancellationToken token)
         {
-            for (var i = 0; i < 80 && !token.IsCancellationRequested && !_exiting; i++)
+            var readyWait = Stopwatch.StartNew();
+            while (!token.IsCancellationRequested && !_exiting && readyWait.ElapsedMilliseconds < Program.StartupReadyTimeoutMs)
             {
                 string scheme;
                 if (TryReady(_runtimePort, _token, _runtimeScheme, pid, out scheme))
@@ -624,7 +756,8 @@ namespace DirectXfer.WindowsLauncher
                         scheme = scheme,
                         token = _token,
                         nodePath = _server.StartInfo.FileName,
-                        runtimeBuild = Program.RuntimeAppBuild
+                        runtimeBuild = Program.RuntimeAppBuild,
+                        startedUtcTicks = GetProcessStartUtcTicks(_server)
                     });
 
                     Ui(() =>
@@ -637,6 +770,22 @@ namespace DirectXfer.WindowsLauncher
                 }
                 Thread.Sleep(100);
             }
+
+            if (token.IsCancellationRequested || _exiting) return;
+            try { if (_server == null || _server.HasExited) return; } catch { return; }
+
+            // A live-but-never-ready child used to leave a dead tray icon indefinitely.
+            // Surface the server log and shut down the exact child process instead.
+            _expectedServerStop = true;
+            var details = TailFile(_runtimeLogPath, 4096);
+            var body = Tr.StartError + ".\r\n" + Tr.LogLabel + ": " + _runtimeLogPath;
+            if (!string.IsNullOrWhiteSpace(details)) body += "\r\n\r\n" + details;
+            Ui(() =>
+            {
+                if (_exiting) return;
+                MessageBox.Show(body, Tr.AppTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                RequestExit();
+            });
         }
 
         private static bool TryReady(int port, string token, string preferredScheme, int expectedPid, out string usedScheme)
@@ -989,14 +1138,17 @@ namespace DirectXfer.WindowsLauncher
             }
 
             // If the saved server is wedged, only touch the exact saved PID when its executable
-            // still resolves to the exact Node executable path recorded in this private session.
+            // still resolves to the exact Node executable path and process start time recorded in this private session.
             try
             {
                 using (var process = Process.GetProcessById(session.pid))
                 {
                     var actual = process.MainModule != null ? process.MainModule.FileName : null;
-                    if (!string.IsNullOrWhiteSpace(actual) && !string.IsNullOrWhiteSpace(session.nodePath) &&
-                        string.Equals(Path.GetFullPath(actual), Path.GetFullPath(session.nodePath), StringComparison.OrdinalIgnoreCase))
+                    var sameExecutable = !string.IsNullOrWhiteSpace(actual) && !string.IsNullOrWhiteSpace(session.nodePath) &&
+                        string.Equals(Path.GetFullPath(actual), Path.GetFullPath(session.nodePath), StringComparison.OrdinalIgnoreCase);
+                    var sameStart = session.startedUtcTicks > 0 &&
+                        GetProcessStartUtcTicks(process) == session.startedUtcTicks;
+                    if (sameExecutable && sameStart)
                     {
                         process.Kill();
                         process.WaitForExit(1800);
@@ -1005,6 +1157,12 @@ namespace DirectXfer.WindowsLauncher
             }
             catch { }
             ClearSession(session.pid);
+        }
+
+        private static long GetProcessStartUtcTicks(Process process)
+        {
+            try { return process != null ? process.StartTime.ToUniversalTime().Ticks : 0L; }
+            catch { return 0L; }
         }
 
         private static bool WaitForProcessExit(int pid, int timeoutMs)
@@ -1207,7 +1365,7 @@ namespace DirectXfer.WindowsLauncher
                 case "fr":
                     return new Texts
                     {
-                        AppTitle = "Direct-Xfer 1.58.4", Open = "Ouvrir Direct-Xfer", Logs = "Ouvrir les journaux",
+                        AppTitle = "Direct-Xfer " + Program.AppVersion, Open = "Ouvrir Direct-Xfer", Logs = "Ouvrir les journaux",
                         Configure = "Configurer les dossiers…", ResetAdminPassword = "Réinitialiser le mot de passe admin…",
                         Language = "Langue", Stop = "Arrêter Direct-Xfer",
                         FirstRunTitle = "Direct-Xfer - Configuration du premier démarrage",
@@ -1231,7 +1389,7 @@ namespace DirectXfer.WindowsLauncher
                 case "es":
                     return new Texts
                     {
-                        AppTitle = "Direct-Xfer 1.58.4", Open = "Abrir Direct-Xfer", Logs = "Abrir registros",
+                        AppTitle = "Direct-Xfer " + Program.AppVersion, Open = "Abrir Direct-Xfer", Logs = "Abrir registros",
                         Configure = "Configurar carpetas…", ResetAdminPassword = "Restablecer la contraseña de administrador…",
                         Language = "Idioma", Stop = "Detener Direct-Xfer",
                         FirstRunTitle = "Direct-Xfer - Configuración del primer inicio",
@@ -1255,7 +1413,7 @@ namespace DirectXfer.WindowsLauncher
                 default:
                     return new Texts
                     {
-                        AppTitle = "Direct-Xfer 1.58.4", Open = "Open Direct-Xfer", Logs = "Open logs",
+                        AppTitle = "Direct-Xfer " + Program.AppVersion, Open = "Open Direct-Xfer", Logs = "Open logs",
                         Configure = "Configure folders…", ResetAdminPassword = "Reset admin password…",
                         Language = "Language", Stop = "Stop Direct-Xfer",
                         FirstRunTitle = "Direct-Xfer - First-run setup",

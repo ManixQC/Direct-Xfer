@@ -1796,19 +1796,15 @@ Une PWA ne peut pas garantir que le réseau continue à travailler après sa fer
 - Sur les petites hauteurs, le sélecteur reste adaptatif et la zone d'options défile sans masquer les boutons Annuler/Partager.
 - Bump **1.58.3**, PWA **pwa277**, ressources PWA **v263**, runtime Windows **launcher21**.
 
-## Windows installer (C# + Inno Setup)
+## 1.59.0 — Audit approfondi du launcher C# et de l’installateur Windows
 
-The Windows GitHub Actions workflow now builds both the C# launcher and a conventional Inno Setup installer.
-
-After a successful run of **Build Direct-Xfer Windows C# + Installer**, open the workflow run and download the artifact named:
-
-- `Direct-Xfer-Setup-1.58.4`
-
-It contains:
-
-- `Direct-Xfer-Setup-1.58.4.exe`
-- `Direct-Xfer-Setup-1.58.4.exe.sha256`
-
-The installer deploys Direct-Xfer to `Program Files\\Direct-Xfer`, creates a Start Menu shortcut, offers an optional desktop shortcut, registers a standard Windows uninstaller, and includes the pinned official Node.js runtime required by Direct-Xfer.
-
-The Inno Setup definition is located at `installer/Direct-Xfer.iss`.
+- Le launcher Windows reste entièrement **C# / WinForms / .NET Framework 4.8** ; aucun launcher Go, packer ou archive applicative auto-extraite n’est réintroduit.
+- Les écritures de configuration utilisent un fichier temporaire unique et un remplacement atomique ; un backup valide laissé par une interruption Windows est maintenant récupéré automatiquement avant de considérer le démarrage comme une nouvelle installation.
+- La reprise d’une ancienne session Windows vérifie le **PID, le chemin exact de `node.exe` et l’heure de démarrage du processus** avant tout arrêt forcé, ce qui empêche de viser un processus Node sans rapport après réutilisation d’un PID.
+- La détection de Node préfère le runtime officiel embarqué et haché ; la sonde `node --version` est bornée dans le temps et les fallbacks système sont alignés sur le contrat courant **Node 20 ou Node 22+**.
+- Le démarrage du serveur dispose désormais d’un délai de disponibilité explicite de **30 secondes**. En cas de processus vivant mais jamais prêt, le launcher affiche le journal puis ferme proprement le child au lieu de laisser une systray inutilisable.
+- L’installateur Inno Setup purge les arbres immuables `runtime\\app` et `runtime\\node` avant une mise à niveau pour empêcher qu’un ancien module ou asset supprimé survive à la nouvelle version.
+- Le lancement post-installation est explicitement effectué avec l’utilisateur d’origine lorsque le contexte Inno le permet.
+- Le workflow GitHub Actions utilise Node.js **24.19.0** de façon reproductible, bloque les avis npm de gravité élevée/critique et exécute les tests de régression des changements récents avant MSBuild/Inno Setup.
+- Les noms d’artefacts GitHub sont dérivés de `DX_VERSION` afin de limiter les désynchronisations de version.
+- Bump **1.59.0**, PWA **pwa279**, ressources **v265**, runtime Windows **launcher26-csharp**.

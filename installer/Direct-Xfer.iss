@@ -1,12 +1,21 @@
-#ifndef AppVersion
-  #define AppVersion "1.58.4"
+#define EnvAppVersion GetEnv("DX_INNO_APP_VERSION")
+#if EnvAppVersion != ""
+  #define AppVersion EnvAppVersion
+#else
+  #define AppVersion "1.59.0"
 #endif
 
-#ifndef SourceDir
-  #define SourceDir "..\dist\Direct-Xfer-1.58.4-Windows-CSharp"
+#define EnvSourceDir GetEnv("DX_INNO_SOURCE_DIR")
+#if EnvSourceDir != ""
+  #define SourceDir EnvSourceDir
+#else
+  #define SourceDir "..\dist\Direct-Xfer-1.59.0-Windows-CSharp"
 #endif
 
-#ifndef OutputDir
+#define EnvOutputDir GetEnv("DX_INNO_OUTPUT_DIR")
+#if EnvOutputDir != ""
+  #define OutputDir EnvOutputDir
+#else
   #define OutputDir "..\dist\installer"
 #endif
 
@@ -52,6 +61,12 @@ CreateUninstallRegKey=yes
 [Tasks]
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional shortcuts:"; Flags: unchecked
 
+[InstallDelete]
+; Runtime trees are immutable build artifacts. Purge them before an upgrade so
+; removed dependencies/assets from an older release cannot survive beside 1.59.0.
+Type: filesandordirs; Name: "{app}\runtime\app"
+Type: filesandordirs; Name: "{app}\runtime\node"
+
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
@@ -60,7 +75,7 @@ Name: "{autoprograms}\Direct-Xfer"; Filename: "{app}\{#AppExeName}"; WorkingDir:
 Name: "{autodesktop}\Direct-Xfer"; Filename: "{app}\{#AppExeName}"; WorkingDir: "{app}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\{#AppExeName}"; Description: "Launch Direct-Xfer"; WorkingDir: "{app}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#AppExeName}"; Description: "Launch Direct-Xfer"; WorkingDir: "{app}"; Flags: nowait postinstall skipifsilent runasoriginaluser
 
 [Code]
 const

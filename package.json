@@ -1,6 +1,6 @@
 {
   "name": "direct-xfer",
-  "version": "1.58.3",
+  "version": "1.59.0",
   "description": "Direct-Xfer — direct HTTP file sharing, no third-party server. Web interface, revocable shares, automatic IP detection and port testing.",
   "main": "server.js",
   "type": "commonjs",
@@ -9,7 +9,7 @@
     "test": "node --test"
   },
   "engines": {
-    "node": ">=18"
+    "node": "20 || >=22"
   },
   "dependencies": {
     "archiver": "^8.0.0",

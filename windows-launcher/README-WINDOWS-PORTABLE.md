@@ -1,4 +1,4 @@
-# Direct-Xfer 1.58.4 — Windows C# / WinForms
+# Direct-Xfer 1.59.0 — Windows C# / WinForms
 
 Cette édition remplace intégralement l'ancien launcher Go par une application Windows conventionnelle **C# / WinForms ciblant .NET Framework 4.8**.
 
@@ -15,7 +15,7 @@ Le flux normal ne demande plus d'exécuter de fichier `.cmd`, `.bat` ou `.ps1` s
 - Le Node portable, lorsqu'il est utilisé, est vérifié par SHA-256.
 - Les fichiers critiques de `runtime\app` sont vérifiés par SHA-256 avant démarrage.
 
-Identifiant interne : `1.58.4-launcher24-csharp`.
+Identifiant interne : `1.59.0-launcher26-csharp`.
 
 ## Compilation sans script local
 
@@ -23,7 +23,7 @@ Identifiant interne : `1.58.4-launcher24-csharp`.
 
 Le workflow `.github/workflows/build-windows-csharp.yml` compile le launcher sur un runner Windows GitHub et produit l'artefact :
 
-`Direct-Xfer-1.58.4-Windows-CSharp.zip`
+`Direct-Xfer-1.59.0-Windows-CSharp` (GitHub le fournit au téléchargement sous forme d’archive ZIP)
 
 Aucun script de compilation ne doit être exécuté sur le PC protégé.
 
@@ -40,13 +40,20 @@ Cette méthode utilise directement Visual Studio/MSBuild déjà approuvé sur la
 
 Direct-Xfer ne télécharge plus Node.js. Pour un poste géré, déployez Node.js avec la méthode approuvée par l'organisation. Le launcher cherche successivement :
 
-1. `DX_WINDOWS_NODE` ;
-2. `runtime\node\node.exe` ;
+1. `runtime\node\node.exe` — runtime officiel épinglé et vérifié par SHA-256 ;
+2. `DX_WINDOWS_NODE` ;
 3. l'installation Node.js standard sous Program Files ;
 4. `node.exe` présent dans `PATH`.
 
-Le runtime requiert Node.js 18 ou plus récent.
+Les runtimes de secours doivent être **Node.js 20 LTS ou Node.js 22+**. Node 18 et Node 21 sont refusés afin de rester aligné sur le contrat `engines` de l'arbre de dépendances de production.
 
 ## Signature de code
 
 Le passage à C# réduit les signaux heuristiques de l'ancien launcher Go, mais un environnement Smart App Control/App Control peut toujours refuser un **EXE non signé**. Pour une distribution d'entreprise, signez `Direct-Xfer.exe` avec un certificat Authenticode approuvé par la politique de l'organisation avant déploiement.
+
+
+## Important — extract the GitHub Artifact first
+
+GitHub Actions already downloads the artifact as a ZIP. Use **Extract all** before launching Direct-Xfer.
+Do not run `Direct-Xfer.exe` from inside the ZIP and do not copy only the EXE elsewhere.
+The extracted directory must contain `Direct-Xfer.exe` and the `runtime` folder side by side.

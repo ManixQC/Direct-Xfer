@@ -22,8 +22,8 @@ jobs:
     runs-on: windows-2025
 
     env:
-      DX_VERSION: '1.58.4'
-      DX_RUNTIME_BUILD: '1.58.4-launcher25-csharp'
+      DX_VERSION: '1.59.0'
+      DX_RUNTIME_BUILD: '1.59.0-launcher26-csharp'
       DX_NODE_VERSION: '24.19.0'
       DX_NODE_EXE_SHA256: '3602f2bb1a10f2cbab4c36886218a33c1ab3db87290e73b033c46c77147d0237'
       INNO_VERSION: '6.7.3'
@@ -40,12 +40,31 @@ jobs:
       - name: Setup Node.js for build
         uses: actions/setup-node@v7
         with:
-          node-version: '24'
+          node-version: '24.19.0'
           package-manager-cache: false
 
       - name: Install production dependencies
         shell: pwsh
         run: npm ci --omit=dev --ignore-scripts
+
+      - name: Audit production dependencies
+        shell: pwsh
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Test release-critical changes
+        shell: pwsh
+        run: >-
+          node --test
+          test/release-1.58.0-regressions.test.js
+          test/release-1.58.1-picker-scroll.test.js
+          test/release-1.58.2-firefox-picker.test.js
+          test/release-1.58.3-picker-ten-rows.test.js
+          test/windows-antivirus-packaging-1.58.4.test.js
+          test/windows-csharp-github-package-readme-1.58.4.test.js
+          test/windows-csharp-runtime-layout-1.58.4.test.js
+          test/windows-inno-installer-1.58.4.test.js
+          test/windows-password-copy-history-tooltip-1.58.4.test.js
+          test/recent-changes-ultra-audit-1.59.0.test.js
 
       - name: Build C# launcher
         shell: pwsh
@@ -192,11 +211,13 @@ jobs:
           $installerDir = Join-Path $PWD 'dist\installer'
           New-Item -ItemType Directory -Force -Path $installerDir | Out-Null
 
-          & $env:INNO_ISCC `
-            "--define=AppVersion=$env:DX_VERSION" `
-            "--define=SourceDir=$dist" `
-            "--define=OutputDir=$installerDir" `
-            'installer\Direct-Xfer.iss'
+          # Pass dynamic values through environment variables. This is compatible
+          # with Inno Setup 6.x and avoids relying on newer long --define options.
+          $env:DX_INNO_APP_VERSION = $env:DX_VERSION
+          $env:DX_INNO_SOURCE_DIR = $dist
+          $env:DX_INNO_OUTPUT_DIR = $installerDir
+
+          & $env:INNO_ISCC 'installer\Direct-Xfer.iss'
           if ($LASTEXITCODE -ne 0) {
             throw "ISCC.exe failed with exit code $LASTEXITCODE"
           }
@@ -217,18 +238,18 @@ jobs:
       - name: Upload Windows installer
         uses: actions/upload-artifact@v6
         with:
-          name: Direct-Xfer-Setup-1.58.4
+          name: Direct-Xfer-Setup-${{ env.DX_VERSION }}
           path: |
-            dist/installer/Direct-Xfer-Setup-1.58.4.exe
-            dist/installer/Direct-Xfer-Setup-1.58.4.exe.sha256
+            dist/installer/Direct-Xfer-Setup-${{ env.DX_VERSION }}.exe
+            dist/installer/Direct-Xfer-Setup-${{ env.DX_VERSION }}.exe.sha256
           if-no-files-found: error
           retention-days: 30
 
       - name: Upload Windows portable package
         uses: actions/upload-artifact@v6
         with:
-          name: Direct-Xfer-1.58.4-Windows-CSharp
-          path: dist/Direct-Xfer-1.58.4-Windows-CSharp/
+          name: Direct-Xfer-${{ env.DX_VERSION }}-Windows-CSharp
+          path: dist/Direct-Xfer-${{ env.DX_VERSION }}-Windows-CSharp/
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 30

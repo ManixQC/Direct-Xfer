@@ -9,18 +9,19 @@ const { spawn } = require('node:child_process');
 
 const root = path.resolve(__dirname, '..');
 const launcher = fs.readFileSync(path.join(root, 'windows-launcher', 'Program.cs'), 'utf8');
+const host = fs.readFileSync(path.join(root, 'windows-server-host', 'Program.cs'), 'utf8');
 const serverSrc = fs.readFileSync(path.join(root, 'server.js'), 'utf8');
 
-test('Windows launcher falls back to a free port and uses it consistently', () => {
+test('Windows ServerHost falls back to a free port and publishes it consistently to the launcher', () => {
   assert.match(launcher, /DefaultPort = 55750/);
-  assert.match(launcher, /MaxFallbackPort = 55769/);
-  assert.match(launcher, /ChooseRuntimePort\(\)/);
-  assert.match(launcher, /new TcpListener\(IPAddress\.Any, port\)/);
-  assert.match(launcher, /EnvironmentVariables\["PORT"\] = _runtimePort/);
-  assert.match(launcher, /TryReady\(_runtimePort, _token/);
-  assert.match(launcher, /LauncherRequestAnyScheme\("POST", _runtimePort, "\/__dx_launcher\/shutdown"/);
-  assert.match(launcher, /RuntimeAppBuild = "1\.59\.1-launcher27-csharp"/);
-  assert.match(launcher, /PortFallback/);
+  assert.match(host, /MaxFallbackPort = 55769/);
+  assert.match(host, /ChooseRuntimePort\(\)/);
+  assert.match(host, /new TcpListener\(IPAddress\.Any, port\)/);
+  assert.match(host, /EnvironmentVariables\["PORT"\] = _port/);
+  assert.match(host, /TryReady\(_port, _token/);
+  assert.match(host, /LauncherRequest\("POST", _port, "\/__dx_launcher\/shutdown"/);
+  assert.match(host, /RuntimeAppBuild = "1\.59\.2-launcher28-csharp"/);
+  assert.match(launcher, /session\.port/);
 });
 
 test('server bind failure is explicit and cannot masquerade as exit code 0', async () => {

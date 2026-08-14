@@ -35,8 +35,8 @@ test('real public reception page still counts genuine views', () => {
 });
 
 test('PWA shell is advanced so installed clients receive the fix', () => {
-  assert.match(app, /APP_BUILD = '2026\.08\.14-pwa280'/);
-  assert.match(sw, /VERSION = '2026\.08\.14-pwa280'/);
-  assert.match(sw, /\/app\/app\.js\?v=266/);
-  assert.match(index, /\/app\/app\.js\?v=266/);
+  assert.match(app, /APP_BUILD = '2026\.08\.14-pwa281'/);
+  assert.match(sw, /VERSION = '2026\.08\.14-pwa281'/);
+  assert.match(sw, /\/app\/app\.js\?v=267/);
+  assert.match(index, /\/app\/app\.js\?v=267/);
 });

@@ -10,21 +10,25 @@ const { spawn } = require('node:child_process');
 
 const root = path.resolve(__dirname, '..');
 const launcher = fs.readFileSync(path.join(root, 'windows-launcher', 'Program.cs'), 'utf8');
+const host = fs.readFileSync(path.join(root, 'windows-server-host', 'Program.cs'), 'utf8');
 const server = fs.readFileSync(path.join(root, 'server.js'), 'utf8');
 
 function freePort() { return new Promise((resolve,reject)=>{ const s=net.createServer(); s.once('error',reject); s.listen(0,'127.0.0.1',()=>{const p=s.address().port;s.close(e=>e?reject(e):resolve(p));});}); }
 function waitHealth(port, child, out) { return new Promise((resolve,reject)=>{ const deadline=Date.now()+10000; const tick=()=>{ if(child.exitCode!=null)return reject(new Error('early exit '+child.exitCode+'\n'+out())); const r=http.get({hostname:'127.0.0.1',port,path:'/healthz',timeout:400},res=>{res.resume();if(res.statusCode===200)return resolve();setTimeout(tick,80);}); r.on('error',()=>Date.now()>deadline?reject(new Error('health timeout\n'+out())):setTimeout(tick,80));r.on('timeout',()=>r.destroy());};tick();}); }
 
 test('C# launcher deep shutdown audit prevents duplicate/stuck desktop processes', () => {
-  assert.match(launcher, /RuntimeAppBuild = "1\.59\.1-launcher27-csharp"/);
+  assert.match(launcher, /RuntimeAppBuild = "1\.59\.2-launcher28-csharp"/);
   assert.match(launcher, /new Mutex\(true, MutexName/);
   assert.match(launcher, /Local\\DirectXferLauncherInstance/);
   assert.match(launcher, /EventWaitHandle/);
   assert.match(launcher, /RequestExit\(\)/);
-  assert.match(launcher, /StopServer\(\)/);
-  assert.match(launcher, /server\.WaitForExit\(6000\)/);
-  assert.match(launcher, /server\.Kill\(\)/);
-  assert.doesNotMatch(launcher, /taskkill\.exe|TerminateJobObject|AssignProcessToJobObject/);
+  assert.match(launcher, /SignalServerHostStop\(\)/);
+  assert.doesNotMatch(launcher, /server\.Kill\(\)|node\.exe|StopNode\(\)/);
+  assert.match(host, /Local\\DirectXferServerHostInstance/);
+  assert.match(host, /StopNode\(\)/);
+  assert.match(host, /server\.WaitForExit\(6500\)/);
+  assert.match(host, /server\.Kill\(\)/);
+  assert.doesNotMatch(launcher + host, /taskkill\.exe|TerminateJobObject|AssignProcessToJobObject/);
   assert.match(launcher, /_tray\.Visible = false/);
 });
 

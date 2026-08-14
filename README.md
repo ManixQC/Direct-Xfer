@@ -1796,17 +1796,25 @@ Une PWA ne peut pas garantir que le réseau continue à travailler après sa fer
 - Sur les petites hauteurs, le sélecteur reste adaptatif et la zone d'options défile sans masquer les boutons Annuler/Partager.
 - Bump **1.58.3**, PWA **pwa277**, ressources PWA **v263**, runtime Windows **launcher21**.
 
-## 1.59.1 — Durcissement du launcher Windows et préparation Authenticode
+## 1.59.2 — Supervision Windows séparée et favicon admin
 
-- Le launcher C#/.NET Framework est désormais compilé explicitement en **x64**, aligné avec le runtime Node.js x64 fourni.
+- La supervision du backend Node.js est sortie de `Direct-Xfer.exe` et confiée à un nouvel exécutable dédié **`Direct-Xfer.ServerHost.exe`**.
+- `Direct-Xfer.exe` redevient essentiellement l’interface/systray : il ne lance plus directement `node.exe`, ne redirige plus ses flux et ne termine plus le processus Node.
+- `Direct-Xfer.ServerHost.exe` fonctionne sous le même compte utilisateur, conserve donc les permissions sur les dossiers choisis dans Direct-Xfer, et possède seul la validation du runtime/Node, le démarrage, la journalisation, l’arrêt propre et le dernier recours de terminaison du child Node exact.
+- Le launcher et le ServerHost valident leurs identités de processus (PID, chemin et heure de démarrage) avant toute reprise de session ; un événement Windows privé permet au launcher de demander l’arrêt du host sans gérer directement Node.
+- L’installateur protège désormais à la fois le launcher et le ServerHost avec `AppMutex`, et GitHub Actions compile, vérifie et package les deux exécutables x64.
+- L’interface d’administration expose maintenant le **logo rond principal Direct-Xfer** comme favicon de l’onglet du navigateur (`/favicon.png`).
+- Les deux exécutables Windows et le Setup restent volontairement **non signés Authenticode** ; le workflow vérifie ce choix explicitement et conserve les empreintes SHA-256.
+- Bump **1.59.2**, PWA **pwa281**, ressources **v267**, launcher **launcher28-csharp**, ServerHost **serverhost1-csharp**.
+
+## 1.59.1 — Durcissement du launcher Windows
+
+- Le launcher C#/.NET Framework est compilé explicitement en **x64**, aligné avec le runtime Node.js x64 fourni.
 - Le manifeste Windows utilise l’identité **DirectXfer.WindowsLauncher 1.59.1.0**, `asInvoker`, DPI-aware et long-path-aware au lieu de l’identité générique `MyApplication.app`.
 - Les requêtes HTTPS privées du launcher vers `127.0.0.1` n’acceptent plus tous les certificats : la validation Windows reste prioritaire et le mode Local CA n’autorise une chaîne non approuvée que si elle remonte exactement vers la racine Direct-Xfer locale et sans erreur de nom.
 - Le fallback automatique vers un `node.exe` trouvé dans `PATH` ou `Program Files` est retiré. Un Node externe doit être explicitement configuré avec `DX_WINDOWS_NODE` **et** épinglé avec `DX_WINDOWS_NODE_SHA256`, être un PE AMD64 normal et utiliser une version supportée.
 - Le runtime Node embarqué reste vérifié par SHA-256 et doit correspondre exactement à **Node.js 24.19.0 x64**.
-- Le workflow GitHub Actions compile le launcher en x64 et produit volontairement `Direct-Xfer.exe` et le Setup Inno sans signature Authenticode.
-  - Le workflow vérifie explicitement que les deux binaires restent non signés.
-  - Les empreintes SHA-256 restent générées pour vérifier l’intégrité des artefacts.
-  - Si la variable d’activation est absente ou différente de `true`, le workflow continue normalement mais produit volontairement des binaires non signés.
+- Le workflow GitHub Actions produit volontairement `Direct-Xfer.exe` et le Setup Inno sans signature Authenticode et génère leurs empreintes SHA-256.
 - Bump **1.59.1**, PWA **pwa280**, ressources **v266**, runtime Windows **launcher27-csharp**.
 
 ## 1.59.0 — Audit approfondi du launcher C# et de l’installateur Windows

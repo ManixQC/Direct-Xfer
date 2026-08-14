@@ -7,9 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Security;
-using System.Net.Sockets;
 using System.Reflection;
-using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
@@ -22,23 +20,23 @@ using System.Windows.Forms;
 [assembly: AssemblyCompany("Direct-Xfer")]
 [assembly: AssemblyProduct("Direct-Xfer")]
 [assembly: AssemblyCopyright("Copyright © Direct-Xfer 2026")]
-[assembly: AssemblyVersion("1.59.1.0")]
-[assembly: AssemblyFileVersion("1.59.1.0")]
-[assembly: AssemblyInformationalVersion("1.59.1-launcher27-csharp")]
+[assembly: AssemblyVersion("1.59.2.0")]
+[assembly: AssemblyFileVersion("1.59.2.0")]
+[assembly: AssemblyInformationalVersion("1.59.2-launcher28-csharp")]
 
 namespace DirectXfer.WindowsLauncher
 {
     internal static class Program
     {
-        internal const string AppVersion = "1.59.1";
-        internal const string RuntimeAppBuild = "1.59.1-launcher27-csharp";
+        internal const string AppVersion = "1.59.2";
+        internal const string RuntimeAppBuild = "1.59.2-launcher28-csharp";
+        internal const string ServerHostFileName = "Direct-Xfer.ServerHost.exe";
+        internal const string ServerHostVersion = "1.59.2.0";
         internal const int DefaultPort = 55750;
-        internal const int MaxFallbackPort = 55769;
         internal const int StartupReadyTimeoutMs = 30000;
-        internal const string NodeVersion = "24.19.0";
-        internal const string NodeExeSha256 = "3602f2bb1a10f2cbab4c36886218a33c1ab3db87290e73b033c46c77147d0237";
         internal const string MutexName = @"Local\DirectXferLauncherInstance";
         internal const string OpenEventName = @"Local\DirectXferLauncherOpen";
+        internal const string ServerHostStopEventName = @"Local\DirectXferServerHostStop";
 
         [STAThread]
         private static void Main(string[] args)
@@ -54,13 +52,10 @@ namespace DirectXfer.WindowsLauncher
 
                 Application.EnableVisualStyles();
                 Application.SetCompatibleTextRenderingDefault(false);
-
                 try
                 {
                     using (var context = new LauncherContext(args ?? new string[0]))
-                    {
                         Application.Run(context);
-                    }
                 }
                 catch (Exception ex)
                 {
@@ -77,16 +72,9 @@ namespace DirectXfer.WindowsLauncher
         {
             try
             {
-                using (var evt = EventWaitHandle.OpenExisting(OpenEventName))
-                {
-                    evt.Set();
-                }
+                using (var evt = EventWaitHandle.OpenExisting(OpenEventName)) evt.Set();
             }
-            catch
-            {
-                // A second launch must never attempt to manipulate another process.
-                // If the first instance is still starting, the user can retry shortly.
-            }
+            catch { }
         }
     }
 
@@ -104,48 +92,33 @@ namespace DirectXfer.WindowsLauncher
 
     internal sealed class LauncherSession
     {
-        public int pid;
+        public int hostPid;
+        public long hostStartedUtcTicks;
+        public string hostPath;
+        public int serverPid;
         public int port;
         public string scheme;
         public string token;
-        public string nodePath;
         public string runtimeBuild;
-        public long startedUtcTicks;
     }
 
     internal sealed class LauncherContext : ApplicationContext, IDisposable
     {
         private static readonly JavaScriptSerializer Json = new JavaScriptSerializer { MaxJsonLength = 1024 * 1024 };
-
-        private static readonly IDictionary<string, string> CriticalRuntimeSha256 =
-            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                { "package.json", "41d5f7ed1b0f3296483fe859e12df7354b91f13754fd968ee7e9b31701b2cd11" },
-                { "package-lock.json", "27a5b9dd59de2ef0c734f9a09e717d9e9e58fb75c6631a355acd54f767995b1b" },
-                { "server.js", "7c2a8108ab4598ea519ba80f68b8e67bab60056ac6df70fe20fe7aa47c0b7b1d" },
-                { "public/app.js", "3477fcd489c396a3b0d77940d72952b0c9742b778411bb31f4c9e42aad56e0b9" },
-                { "pwa/app.js", "5879b7031ae9834e27b72b4593d8d3fc7bdbd64dcc136fc79b47155f21b06a68" },
-                { "node_modules/express/package.json", "c7db3b72582355c80cdcef1ad7b2c9a8f53557550724c6bef8502e9818c2ebe7" }
-            };
-
         private readonly Control _dispatcher;
         private readonly NotifyIcon _tray;
         private readonly EventWaitHandle _openEvent;
         private readonly CancellationTokenSource _lifetime = new CancellationTokenSource();
-        private readonly object _logSync = new object();
         private readonly object _exitSync = new object();
-        private StreamWriter _logWriter;
-        private Process _server;
+        private Process _host;
         private LauncherConfig _config;
-        private LauncherConfig _runtimeConfig;
         private string _runtimeLogPath;
         private string _token;
         private string _runtimeScheme = "http";
-        private int _runtimePort = Program.DefaultPort;
+        private int _runtimePort;
         private bool _exiting;
-        private bool _expectedServerStop;
+        private bool _expectedHostStop;
         private bool _disposed;
-        private string _shutdownMarkerPath;
 
         internal LauncherContext(string[] args)
         {
@@ -154,14 +127,8 @@ namespace DirectXfer.WindowsLauncher
 
             bool exists;
             _config = LoadConfig(out exists);
-            if (!exists)
-            {
-                ConfigureFolders(true);
-            }
-            else
-            {
-                EnsureConfigDirectories(_config);
-            }
+            if (!exists) ConfigureFolders(true);
+            else EnsureConfigDirectories(_config);
 
             if (args.Any(a => string.Equals(a, "--configure", StringComparison.OrdinalIgnoreCase)))
                 ConfigureFolders(false);
@@ -172,28 +139,16 @@ namespace DirectXfer.WindowsLauncher
                 Text = "Direct-Xfer " + Program.AppVersion,
                 Visible = true
             };
-            _tray.MouseClick += (s, e) =>
-            {
-                if (e.Button == MouseButtons.Left)
-                    OpenBrowser();
-            };
-            _tray.MouseDoubleClick += (s, e) =>
-            {
-                if (e.Button == MouseButtons.Left)
-                    OpenBrowser();
-            };
+            _tray.MouseClick += (s, e) => { if (e.Button == MouseButtons.Left) OpenBrowser(); };
+            _tray.MouseDoubleClick += (s, e) => { if (e.Button == MouseButtons.Left) OpenBrowser(); };
             RebuildTrayMenu();
 
             bool eventCreated;
             _openEvent = new EventWaitHandle(false, EventResetMode.AutoReset, Program.OpenEventName, out eventCreated);
             Task.Run(() => ExistingInstanceSignalLoop(_lifetime.Token));
-
             Microsoft.Win32.SystemEvents.SessionEnding += OnSessionEnding;
 
-            try
-            {
-                StartServer();
-            }
+            try { StartOrAttachServerHost(); }
             catch (Exception ex)
             {
                 _tray.Visible = false;
@@ -210,14 +165,11 @@ namespace DirectXfer.WindowsLauncher
             get
             {
                 var p = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-                if (string.IsNullOrWhiteSpace(p))
-                    p = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-                if (string.IsNullOrWhiteSpace(p))
-                    p = Path.GetTempPath();
+                if (string.IsNullOrWhiteSpace(p)) p = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+                if (string.IsNullOrWhiteSpace(p)) p = Path.GetTempPath();
                 return Path.Combine(p, "Direct-Xfer");
             }
         }
-
         private static string ConfigPath { get { return Path.Combine(BaseDirectory, "launcher-config.json"); } }
         private static string SessionPath { get { return Path.Combine(BaseDirectory, "launcher-session.json"); } }
 
@@ -254,69 +206,48 @@ namespace DirectXfer.WindowsLauncher
                 try
                 {
                     if (!File.Exists(candidate)) continue;
-                    var raw = File.ReadAllText(candidate, Encoding.UTF8);
-                    var cfg = Json.Deserialize<LauncherConfig>(raw);
+                    var cfg = Json.Deserialize<LauncherConfig>(File.ReadAllText(candidate, Encoding.UTF8));
                     if (cfg == null) continue;
-                    if (cfg.language != "fr" && cfg.language != "en" && cfg.language != "es")
-                        cfg.language = DetectLanguage();
+                    if (cfg.language != "fr" && cfg.language != "en" && cfg.language != "es") cfg.language = fallback.language;
+                    if (string.IsNullOrWhiteSpace(cfg.dataDir)) cfg.dataDir = fallback.dataDir;
+                    if (string.IsNullOrWhiteSpace(cfg.logsDir)) cfg.logsDir = fallback.logsDir;
+                    if (string.IsNullOrWhiteSpace(cfg.inboxDir)) cfg.inboxDir = fallback.inboxDir;
+                    if (string.IsNullOrWhiteSpace(cfg.hostRoot)) cfg.hostRoot = fallback.hostRoot;
+                    if (string.IsNullOrWhiteSpace(cfg.imagesDir)) cfg.imagesDir = fallback.imagesDir;
                     cfg.version = Program.AppVersion;
-
-                    // A .bak can remain if Windows stops between the atomic replace and
-                    // cleanup. If it is the first valid copy, heal the primary file.
+                    exists = true;
                     if (!string.Equals(candidate, ConfigPath, StringComparison.OrdinalIgnoreCase))
                     {
                         try { WriteTextAtomic(ConfigPath, Json.Serialize(cfg)); } catch { }
                     }
-                    exists = true;
                     return cfg;
                 }
                 catch { }
             }
-
             exists = false;
             return fallback;
         }
 
         private void SaveConfig()
         {
-            Directory.CreateDirectory(BaseDirectory);
             _config.version = Program.AppVersion;
+            Directory.CreateDirectory(BaseDirectory);
             WriteTextAtomic(ConfigPath, Json.Serialize(_config));
         }
 
         private static void WriteTextAtomic(string path, string content)
         {
             var directory = Path.GetDirectoryName(path);
-            if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
-            var temp = path + ".tmp-" + Guid.NewGuid().ToString("N");
+            if (!string.IsNullOrWhiteSpace(directory)) Directory.CreateDirectory(directory);
+            var temp = path + ".tmp." + Guid.NewGuid().ToString("N");
             var backup = path + ".bak";
+            File.WriteAllText(temp, content, new UTF8Encoding(false));
             try
             {
-                File.WriteAllText(temp, content, new UTF8Encoding(false));
-                if (!File.Exists(path))
-                {
-                    File.Move(temp, path);
-                    return;
-                }
-
-                try
-                {
-                    File.Replace(temp, path, backup, true);
-                    try { if (File.Exists(backup)) File.Delete(backup); } catch { }
-                }
-                catch (PlatformNotSupportedException)
-                {
-                    File.Copy(temp, path, true);
-                }
-                catch (IOException)
-                {
-                    File.Copy(temp, path, true);
-                }
+                if (File.Exists(path)) File.Replace(temp, path, backup, true);
+                else File.Move(temp, path);
             }
-            finally
-            {
-                try { if (File.Exists(temp)) File.Delete(temp); } catch { }
-            }
+            finally { try { if (File.Exists(temp)) File.Delete(temp); } catch { } }
         }
 
         private static void EnsureConfigDirectories(LauncherConfig cfg)
@@ -334,46 +265,30 @@ namespace DirectXfer.WindowsLauncher
         private void ConfigureFolders(bool firstRun)
         {
             var tr = Tr;
-            if (firstRun)
-                MessageBox.Show(tr.FirstRunBody, tr.FirstRunTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
-
+            if (firstRun) MessageBox.Show(tr.FirstRunBody, tr.FirstRunTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
             var next = CloneConfig(_config);
             next.hostRoot = PickFolder(tr.PickHost, next.hostRoot);
             next.inboxDir = PickFolder(tr.PickInbox, next.inboxDir);
             next.imagesDir = PickFolder(tr.PickImages, next.imagesDir);
-
             try
             {
                 EnsureConfigDirectories(next);
                 var previous = _config;
                 _config = next;
-                try { SaveConfig(); }
-                catch { _config = previous; throw; }
-
+                try { SaveConfig(); } catch { _config = previous; throw; }
                 if (!firstRun)
-                {
-                    MessageBox.Show(_server != null && !_server.HasExited ? tr.ConfigSavedRestart : tr.ConfigSaved,
+                    MessageBox.Show(IsServerHostRunning() ? tr.ConfigSavedRestart : tr.ConfigSaved,
                         tr.AppTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.Message, tr.AppTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+            catch (Exception ex) { MessageBox.Show(ex.Message, tr.AppTitle, MessageBoxButtons.OK, MessageBoxIcon.Error); }
         }
 
         private static LauncherConfig CloneConfig(LauncherConfig c)
         {
             return new LauncherConfig
             {
-                version = c.version,
-                dataDir = c.dataDir,
-                logsDir = c.logsDir,
-                inboxDir = c.inboxDir,
-                hostRoot = c.hostRoot,
-                imagesDir = c.imagesDir,
-                openBrowser = c.openBrowser,
-                language = c.language
+                version = c.version, dataDir = c.dataDir, logsDir = c.logsDir, inboxDir = c.inboxDir,
+                hostRoot = c.hostRoot, imagesDir = c.imagesDir, openBrowser = c.openBrowser, language = c.language
             };
         }
 
@@ -387,8 +302,7 @@ namespace DirectXfer.WindowsLauncher
             })
             {
                 return dlg.ShowDialog() == DialogResult.OK && !string.IsNullOrWhiteSpace(dlg.SelectedPath)
-                    ? dlg.SelectedPath
-                    : initial;
+                    ? dlg.SelectedPath : initial;
             }
         }
 
@@ -404,248 +318,23 @@ namespace DirectXfer.WindowsLauncher
             }
         }
 
-        private static string RuntimeRoot { get { return Path.Combine(PortableRoot, "runtime"); } }
-        private static string PortableNodePath { get { return Path.Combine(RuntimeRoot, "node", "node.exe"); } }
         private string LocalCaCertificatePath
         {
-            get
-            {
-                return _runtimeConfig == null || string.IsNullOrWhiteSpace(_runtimeConfig.dataDir)
-                    ? null
-                    : Path.Combine(_runtimeConfig.dataDir, "tls", "local-ca-cert.pem");
-            }
+            get { return string.IsNullOrWhiteSpace(_config.dataDir) ? null : Path.Combine(_config.dataDir, "tls", "local-ca-cert.pem"); }
         }
 
-        private static IEnumerable<string> AppCandidates()
+        private static string EnsureServerHostExecutable()
         {
-            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var env = Environment.GetEnvironmentVariable("DX_WINDOWS_APP_DIR");
-            foreach (var value in new[] { env, Path.Combine(RuntimeRoot, "app") })
-            {
-                if (string.IsNullOrWhiteSpace(value)) continue;
-                var full = Path.GetFullPath(value.Trim());
-                if (seen.Add(full)) yield return full;
-            }
-        }
-
-        private static string EnsureApplicationRuntime()
-        {
-            var failures = new List<string>();
-            foreach (var candidate in AppCandidates())
-            {
-                string reason;
-                if (TryValidateApplicationRuntime(candidate, out reason)) return candidate;
-                failures.Add(candidate + " -> " + reason);
-            }
-
-            var expected = Path.Combine(RuntimeRoot, "app");
-            throw new InvalidDataException(
-                "Direct-Xfer application runtime is missing or invalid.\r\n\r\n" +
-                "Expected runtime folder:\r\n" + expected + "\r\n\r\n" +
-                string.Join("\r\n", failures.ToArray()) + "\r\n\r\n" +
-                "Extract the complete GitHub Actions artifact before launching Direct-Xfer.exe. " +
-                "Do not run the EXE directly from inside a ZIP and do not move the EXE away from its runtime folder.");
-        }
-
-        private static bool ApplicationRuntimeValid(string root)
-        {
-            string reason;
-            return TryValidateApplicationRuntime(root, out reason);
-        }
-
-        private static bool TryValidateApplicationRuntime(string root, out string reason)
-        {
-            try
-            {
-                if (!Directory.Exists(root))
-                {
-                    reason = "folder not found";
-                    return false;
-                }
-
-                var marker = Path.Combine(root, ".dx-runtime-build");
-                if (!File.Exists(marker))
-                {
-                    reason = "missing .dx-runtime-build marker";
-                    return false;
-                }
-
-                var markerValue = File.ReadAllText(marker, Encoding.ASCII).Trim();
-                if (!string.Equals(markerValue, Program.RuntimeAppBuild, StringComparison.Ordinal))
-                {
-                    reason = "runtime build mismatch (found " + markerValue + ", expected " + Program.RuntimeAppBuild + ")";
-                    return false;
-                }
-
-                foreach (var required in new[]
-                {
-                    "package.json", "server.js", Path.Combine("public", "app.js"),
-                    Path.Combine("node_modules", "express", "package.json")
-                })
-                {
-                    var file = Path.Combine(root, required);
-                    if (!File.Exists(file))
-                    {
-                        reason = "missing " + required;
-                        return false;
-                    }
-                    if (new FileInfo(file).Length == 0)
-                    {
-                        reason = "empty " + required;
-                        return false;
-                    }
-                }
-
-                var packagePath = Path.Combine(root, "package.json");
-                var package = Json.Deserialize<Dictionary<string, object>>(File.ReadAllText(packagePath, Encoding.UTF8));
-                object versionValue;
-                var packageVersion = package != null && package.TryGetValue("version", out versionValue)
-                    ? Convert.ToString(versionValue, CultureInfo.InvariantCulture)
-                    : string.Empty;
-                if (!string.Equals(packageVersion, Program.AppVersion, StringComparison.Ordinal))
-                {
-                    reason = "package.json version mismatch (found " + packageVersion + ", expected " + Program.AppVersion + ")";
-                    return false;
-                }
-
-                foreach (var pair in CriticalRuntimeSha256)
-                {
-                    var file = Path.Combine(root, pair.Key.Replace('/', Path.DirectorySeparatorChar));
-                    if (!File.Exists(file))
-                    {
-                        reason = "missing integrity file " + pair.Key;
-                        return false;
-                    }
-
-                    // Every file in CriticalRuntimeSha256 is text. Normalize CRLF/CR to LF so
-                    // a Windows Git checkout cannot invalidate an otherwise identical runtime.
-                    var actual = TextFileSha256Normalized(file);
-                    if (!string.Equals(actual, pair.Value, StringComparison.OrdinalIgnoreCase))
-                    {
-                        reason = "integrity check failed for " + pair.Key + " (SHA-256 " + actual + ")";
-                        return false;
-                    }
-                }
-
-                reason = string.Empty;
-                return true;
-            }
-            catch (Exception ex)
-            {
-                reason = ex.GetType().Name + ": " + ex.Message;
-                return false;
-            }
-        }
-
-        private static string TextFileSha256Normalized(string path)
-        {
-            var text = File.ReadAllText(path, new UTF8Encoding(false, true));
-            text = text.Replace("\r\n", "\n").Replace("\r", "\n");
-            var bytes = new UTF8Encoding(false).GetBytes(text);
-            using (var sha = SHA256.Create())
-            {
-                var hash = sha.ComputeHash(bytes);
-                return BitConverter.ToString(hash).Replace("-", string.Empty).ToLowerInvariant();
-            }
-        }
-
-        private static string FileSha256(string path)
-        {
-            using (var sha = SHA256.Create())
-            using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
-            {
-                var hash = sha.ComputeHash(stream);
-                return BitConverter.ToString(hash).Replace("-", string.Empty).ToLowerInvariant();
-            }
-        }
-
-        private static IEnumerable<string> NodeCandidates()
-        {
-            // The bundled, hash-pinned x64 Node.js runtime is always preferred.
-            // An external runtime is allowed only as an explicit enterprise override;
-            // automatic PATH / Program Files discovery could execute an unexpected binary.
-            yield return PortableNodePath;
-
-            var external = Environment.GetEnvironmentVariable("DX_WINDOWS_NODE");
-            if (!string.IsNullOrWhiteSpace(external))
-            {
-                string full = null;
-                try { full = Path.GetFullPath(external.Trim()); } catch { }
-                if (!string.IsNullOrWhiteSpace(full) &&
-                    !string.Equals(full, Path.GetFullPath(PortableNodePath), StringComparison.OrdinalIgnoreCase))
-                    yield return full;
-            }
-        }
-
-        private string EnsureNode()
-        {
-            foreach (var candidate in NodeCandidates())
-                if (NodeUsable(candidate)) return candidate;
-            throw new FileNotFoundException(Tr.NodeMissing);
-        }
-
-        private static bool NodeUsable(string path)
-        {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(path) || !Path.IsPathRooted(path) || !File.Exists(path)) return false;
-                var full = Path.GetFullPath(path);
-                if ((File.GetAttributes(full) & FileAttributes.ReparsePoint) != 0) return false;
-                var length = new FileInfo(full).Length;
-                if (length < 1024 * 1024 || length > 200L * 1024 * 1024) return false;
-                if (!IsAmd64Pe(full)) return false;
-
-                var bundled = string.Equals(full, Path.GetFullPath(PortableNodePath), StringComparison.OrdinalIgnoreCase);
-                if (bundled)
-                {
-                    if (!string.Equals(FileSha256(full), Program.NodeExeSha256, StringComparison.OrdinalIgnoreCase)) return false;
-                }
-                else
-                {
-                    // External Node.js is opt-in only and must be pinned by the administrator.
-                    // This avoids executing an arbitrary PATH/Program Files node.exe.
-                    var expected = (Environment.GetEnvironmentVariable("DX_WINDOWS_NODE_SHA256") ?? string.Empty).Trim();
-                    if (expected.Length != 64 || !expected.All(IsHexDigit)) return false;
-                    if (!string.Equals(FileSha256(full), expected, StringComparison.OrdinalIgnoreCase)) return false;
-                }
-
-                using (var process = new Process())
-                {
-                    process.StartInfo = new ProcessStartInfo
-                    {
-                        FileName = full,
-                        Arguments = "--version",
-                        UseShellExecute = false,
-                        CreateNoWindow = true,
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                        WindowStyle = ProcessWindowStyle.Hidden
-                    };
-                    if (!process.Start()) return false;
-                    var stdout = process.StandardOutput.ReadToEndAsync();
-                    var stderr = process.StandardError.ReadToEndAsync();
-                    if (!process.WaitForExit(3000))
-                    {
-                        try { process.Kill(); } catch { }
-                        try { process.WaitForExit(1000); } catch { }
-                        return false;
-                    }
-                    if (!stdout.Wait(500)) return false;
-                    try { stderr.Wait(100); } catch { }
-                    var output = (stdout.Result ?? string.Empty).Trim().TrimStart('v');
-                    Version parsed;
-                    if (process.ExitCode != 0 || !Version.TryParse(output, out parsed)) return false;
-                    if (!(parsed.Major == 20 || parsed.Major >= 22)) return false;
-                    if (bundled && !string.Equals(parsed.ToString(), Program.NodeVersion, StringComparison.Ordinal)) return false;
-                    return true;
-                }
-            }
-            catch { return false; }
-        }
-
-        private static bool IsHexDigit(char value)
-        {
-            return (value >= '0' && value <= '9') || (value >= 'a' && value <= 'f') || (value >= 'A' && value <= 'F');
+            var path = Path.Combine(PortableRoot, Program.ServerHostFileName);
+            if (!File.Exists(path)) throw new FileNotFoundException("Direct-Xfer Server Host is missing.", path);
+            if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
+                throw new InvalidDataException("Direct-Xfer Server Host cannot be a reparse point.");
+            if (!IsAmd64Pe(path)) throw new InvalidDataException("Direct-Xfer Server Host is not an x64 Windows executable.");
+            var info = FileVersionInfo.GetVersionInfo(path);
+            if (!string.Equals(info.FileVersion, Program.ServerHostVersion, StringComparison.Ordinal) ||
+                !string.Equals(info.ProductName, "Direct-Xfer Server Host", StringComparison.Ordinal))
+                throw new InvalidDataException("Direct-Xfer Server Host version or identity is invalid.");
+            return path;
         }
 
         private static bool IsAmd64Pe(string path)
@@ -655,154 +344,78 @@ namespace DirectXfer.WindowsLauncher
                 using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
                 using (var reader = new BinaryReader(stream))
                 {
-                    if (stream.Length < 0x100 || reader.ReadUInt16() != 0x5A4D) return false; // MZ
+                    if (stream.Length < 0x100 || reader.ReadUInt16() != 0x5A4D) return false;
                     stream.Position = 0x3C;
                     var peOffset = reader.ReadInt32();
                     if (peOffset < 0x40 || peOffset > stream.Length - 24) return false;
                     stream.Position = peOffset;
-                    if (reader.ReadUInt32() != 0x00004550) return false; // PE\0\0
-                    return reader.ReadUInt16() == 0x8664; // IMAGE_FILE_MACHINE_AMD64
+                    if (reader.ReadUInt32() != 0x00004550) return false;
+                    return reader.ReadUInt16() == 0x8664;
                 }
             }
             catch { return false; }
         }
 
-        private static int ChooseRuntimePort()
-        {
-            for (var port = Program.DefaultPort; port <= Program.MaxFallbackPort; port++)
-            {
-                TcpListener listener = null;
-                try
-                {
-                    listener = new TcpListener(IPAddress.Any, port);
-                    listener.Start();
-                    return port;
-                }
-                catch (SocketException) { }
-                finally { try { if (listener != null) listener.Stop(); } catch { } }
-            }
-            throw new InvalidOperationException(string.Format(Texts.For(DetectLanguage()).NoFreePort,
-                Program.DefaultPort, Program.MaxFallbackPort));
-        }
-
-        private static string RandomToken()
-        {
-            var bytes = new byte[24];
-            using (var rng = RandomNumberGenerator.Create()) rng.GetBytes(bytes);
-            return BitConverter.ToString(bytes).Replace("-", string.Empty).ToLowerInvariant();
-        }
-
-        private void StartServer()
+        private void StartOrAttachServerHost()
         {
             EnsureConfigDirectories(_config);
-            var appDir = EnsureApplicationRuntime();
-            var node = EnsureNode();
-            _runtimeConfig = CloneConfig(_config);
-            _runtimeLogPath = Path.Combine(_runtimeConfig.logsDir, "Direct-Xfer-Windows.log");
-            RotateLog(_runtimeLogPath, 10L * 1024 * 1024);
-            _logWriter = new StreamWriter(new FileStream(_runtimeLogPath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite),
-                new UTF8Encoding(false)) { AutoFlush = true };
+            _runtimeLogPath = Path.Combine(_config.logsDir, "Direct-Xfer-Windows.log");
+            var existing = ReadSession();
+            if (TryAttachReadySession(existing))
+            {
+                CompleteStartup();
+                return;
+            }
 
-            RecoverSavedSession();
-            _runtimePort = ChooseRuntimePort();
-            if (_runtimePort != Program.DefaultPort)
-                MessageBox.Show(string.Format(Tr.PortFallback, Program.DefaultPort, _runtimePort), Tr.AppTitle,
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            SignalServerHostStop();
+            if (!WaitForServerHostMutexRelease(5000))
+                throw new InvalidOperationException("A previous Direct-Xfer Server Host instance did not stop in time.");
+            TryDeleteStaleSession();
 
-            _token = RandomToken();
-            _runtimeScheme = "http";
-            _shutdownMarkerPath = Path.Combine(_runtimeConfig.dataDir, ".dx-windows-clean-shutdown");
-            try { if (File.Exists(_shutdownMarkerPath)) File.Delete(_shutdownMarkerPath); } catch { }
-
+            var hostExe = EnsureServerHostExecutable();
             var start = new ProcessStartInfo
             {
-                FileName = node,
-                Arguments = "server.js",
-                WorkingDirectory = appDir,
+                FileName = hostExe,
+                WorkingDirectory = PortableRoot,
                 UseShellExecute = false,
                 CreateNoWindow = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
                 WindowStyle = ProcessWindowStyle.Hidden
             };
-            start.EnvironmentVariables["PORT"] = _runtimePort.ToString(CultureInfo.InvariantCulture);
-            start.EnvironmentVariables["BIND"] = "0.0.0.0";
-            start.EnvironmentVariables["DATA_DIR"] = _runtimeConfig.dataDir;
-            start.EnvironmentVariables["INBOX_DIR"] = _runtimeConfig.inboxDir;
-            start.EnvironmentVariables["HOST_ROOT"] = _runtimeConfig.hostRoot;
-            start.EnvironmentVariables["IMAGES_DIR"] = _runtimeConfig.imagesDir;
-            start.EnvironmentVariables["NO_COLOR"] = "1";
-            start.EnvironmentVariables["DX_WINDOWS_LAUNCHER_TOKEN"] = _token;
-            start.EnvironmentVariables["DX_WINDOWS_SHUTDOWN_MARKER"] = _shutdownMarkerPath;
-
-            _server = new Process { StartInfo = start, EnableRaisingEvents = true };
-            _server.OutputDataReceived += (s, e) => AppendServerLog(e.Data);
-            _server.ErrorDataReceived += (s, e) => AppendServerLog(e.Data);
-            _server.Exited += OnServerExited;
-            if (!_server.Start()) throw new InvalidOperationException("Node.js did not start.");
-            _server.BeginOutputReadLine();
-            _server.BeginErrorReadLine();
-
-            WriteSession(new LauncherSession
-            {
-                pid = _server.Id,
-                port = _runtimePort,
-                scheme = _runtimeScheme,
-                token = _token,
-                nodePath = node,
-                runtimeBuild = Program.RuntimeAppBuild,
-                startedUtcTicks = GetProcessStartUtcTicks(_server)
-            });
-
-            Task.Run(() => WaitForReadyAndCompleteStartup(_server.Id, _lifetime.Token));
+            start.EnvironmentVariables["DX_WINDOWS_PORTABLE_ROOT"] = PortableRoot;
+            _host = new Process { StartInfo = start, EnableRaisingEvents = true };
+            _host.Exited += OnHostExited;
+            if (!_host.Start()) throw new InvalidOperationException("Direct-Xfer Server Host did not start.");
+            Task.Run(() => WaitForHostReady(_host.Id, _lifetime.Token));
         }
 
-        private void AppendServerLog(string line)
+        private bool TryAttachReadySession(LauncherSession session)
         {
-            if (line == null) return;
-            lock (_logSync)
-            {
-                try { if (_logWriter != null) _logWriter.WriteLine(line); } catch { }
-            }
+            if (session == null || !string.Equals(session.runtimeBuild, Program.RuntimeAppBuild, StringComparison.Ordinal)) return false;
+            if (!HostProcessMatches(session)) return false;
+            string usedScheme;
+            if (!TryReady(session.port, session.token, session.scheme, session.serverPid, out usedScheme)) return false;
+            _runtimePort = session.port;
+            _runtimeScheme = usedScheme;
+            _token = session.token;
+            AttachHostProcess(session.hostPid);
+            return true;
         }
 
-        private void WaitForReadyAndCompleteStartup(int pid, CancellationToken token)
+        private void WaitForHostReady(int expectedHostPid, CancellationToken token)
         {
-            var readyWait = Stopwatch.StartNew();
-            while (!token.IsCancellationRequested && !_exiting && readyWait.ElapsedMilliseconds < Program.StartupReadyTimeoutMs)
+            var watch = Stopwatch.StartNew();
+            while (!token.IsCancellationRequested && !_exiting && watch.ElapsedMilliseconds < Program.StartupReadyTimeoutMs)
             {
-                string scheme;
-                if (TryReady(_runtimePort, _token, _runtimeScheme, pid, out scheme))
+                var session = ReadSession();
+                if (session != null && session.hostPid == expectedHostPid && TryAttachReadySession(session))
                 {
-                    _runtimeScheme = scheme;
-                    WriteSession(new LauncherSession
-                    {
-                        pid = pid,
-                        port = _runtimePort,
-                        scheme = scheme,
-                        token = _token,
-                        nodePath = _server.StartInfo.FileName,
-                        runtimeBuild = Program.RuntimeAppBuild,
-                        startedUtcTicks = GetProcessStartUtcTicks(_server)
-                    });
-
-                    Ui(() =>
-                    {
-                        if (_exiting) return;
-                        ShowInitialAdminPassword();
-                        if (_runtimeConfig.openBrowser && !_exiting) OpenBrowser();
-                    });
+                    Ui(CompleteStartup);
                     return;
                 }
+                try { if (_host != null && _host.HasExited) return; } catch { return; }
                 Thread.Sleep(100);
             }
-
             if (token.IsCancellationRequested || _exiting) return;
-            try { if (_server == null || _server.HasExited) return; } catch { return; }
-
-            // A live-but-never-ready child used to leave a dead tray icon indefinitely.
-            // Surface the server log and shut down the exact child process instead.
-            _expectedServerStop = true;
             var details = TailFile(_runtimeLogPath, 4096);
             var body = Tr.StartError + ".\r\n" + Tr.LogLabel + ": " + _runtimeLogPath;
             if (!string.IsNullOrWhiteSpace(details)) body += "\r\n\r\n" + details;
@@ -814,9 +427,53 @@ namespace DirectXfer.WindowsLauncher
             });
         }
 
+        private void CompleteStartup()
+        {
+            if (_exiting) return;
+            if (_runtimePort != Program.DefaultPort)
+                MessageBox.Show(string.Format(Tr.PortFallback, Program.DefaultPort, _runtimePort), Tr.AppTitle,
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            ShowInitialAdminPassword();
+            if (_config.openBrowser && !_exiting) OpenBrowser();
+        }
+
+        private void AttachHostProcess(int pid)
+        {
+            try
+            {
+                if (_host != null && _host.Id == pid) return;
+            }
+            catch { }
+            try
+            {
+                if (_host != null) _host.Dispose();
+                _host = Process.GetProcessById(pid);
+                _host.EnableRaisingEvents = true;
+                _host.Exited += OnHostExited;
+            }
+            catch { _host = null; }
+        }
+
+        private static bool HostProcessMatches(LauncherSession session)
+        {
+            if (session == null || session.hostPid <= 0 || session.hostStartedUtcTicks <= 0 || string.IsNullOrWhiteSpace(session.hostPath)) return false;
+            try
+            {
+                using (var process = Process.GetProcessById(session.hostPid))
+                {
+                    var actual = process.MainModule != null ? process.MainModule.FileName : null;
+                    return !string.IsNullOrWhiteSpace(actual) &&
+                        string.Equals(Path.GetFullPath(actual), Path.GetFullPath(session.hostPath), StringComparison.OrdinalIgnoreCase) &&
+                        GetProcessStartUtcTicks(process) == session.hostStartedUtcTicks;
+                }
+            }
+            catch { return false; }
+        }
+
         private bool TryReady(int port, string token, string preferredScheme, int expectedPid, out string usedScheme)
         {
             usedScheme = preferredScheme;
+            if (port <= 0 || expectedPid <= 0 || string.IsNullOrEmpty(token)) return false;
             foreach (var scheme in SchemeCandidates(preferredScheme))
             {
                 try
@@ -840,16 +497,8 @@ namespace DirectXfer.WindowsLauncher
 
         private static IEnumerable<string> SchemeCandidates(string preferred)
         {
-            if (string.Equals(preferred, "https", StringComparison.OrdinalIgnoreCase))
-            {
-                yield return "https";
-                yield return "http";
-            }
-            else
-            {
-                yield return "http";
-                yield return "https";
-            }
+            if (string.Equals(preferred, "https", StringComparison.OrdinalIgnoreCase)) { yield return "https"; yield return "http"; }
+            else { yield return "http"; yield return "https"; }
         }
 
         private static HttpWebResponse LauncherRequest(string method, int port, string route, string token,
@@ -865,10 +514,8 @@ namespace DirectXfer.WindowsLauncher
             request.KeepAlive = false;
             if (!string.IsNullOrEmpty(token)) request.Headers["X-Direct-Xfer-Launcher-Token"] = token;
             if (string.Equals(scheme, "https", StringComparison.OrdinalIgnoreCase))
-            {
                 request.ServerCertificateValidationCallback = (sender, certificate, chain, errors) =>
                     ValidateLauncherServerCertificate(certificate, errors, localCaCertificatePath);
-            }
             return (HttpWebResponse)request.GetResponse();
         }
 
@@ -877,12 +524,9 @@ namespace DirectXfer.WindowsLauncher
         {
             if (certificate == null) return false;
             if (errors == SslPolicyErrors.None) return true;
-            if ((errors & (SslPolicyErrors.RemoteCertificateNameMismatch | SslPolicyErrors.RemoteCertificateNotAvailable)) != 0)
-                return false;
+            if ((errors & (SslPolicyErrors.RemoteCertificateNameMismatch | SslPolicyErrors.RemoteCertificateNotAvailable)) != 0) return false;
             if ((errors & ~SslPolicyErrors.RemoteCertificateChainErrors) != 0) return false;
-
-            X509Certificate2 localCa = null;
-            X509Certificate2 leaf = null;
+            X509Certificate2 localCa = null, leaf = null;
             X509Chain localChain = null;
             try
             {
@@ -913,13 +557,11 @@ namespace DirectXfer.WindowsLauncher
             var info = new FileInfo(path);
             if (info.Length <= 0 || info.Length > 2L * 1024 * 1024) return null;
             var pem = File.ReadAllText(path, Encoding.ASCII);
-            const string begin = "-----BEGIN CERTIFICATE-----";
-            const string end = "-----END CERTIFICATE-----";
+            const string begin = "-----BEGIN CERTIFICATE-----", end = "-----END CERTIFICATE-----";
             var first = pem.IndexOf(begin, StringComparison.Ordinal);
             var last = pem.IndexOf(end, first >= 0 ? first + begin.Length : 0, StringComparison.Ordinal);
             if (first < 0 || last <= first) return null;
-            var base64 = pem.Substring(first + begin.Length, last - first - begin.Length);
-            var compact = new string(base64.Where(c => !char.IsWhiteSpace(c)).ToArray());
+            var compact = new string(pem.Substring(first + begin.Length, last - first - begin.Length).Where(c => !char.IsWhiteSpace(c)).ToArray());
             return new X509Certificate2(Convert.FromBase64String(compact));
         }
 
@@ -957,18 +599,15 @@ namespace DirectXfer.WindowsLauncher
                     {
                         var payload = Json.Deserialize<Dictionary<string, object>>(reader.ReadToEnd());
                         if (!GetBool(payload, "ok") || !GetBool(payload, "fresh")) return;
-                        var username = GetString(payload, "username");
-                        var password = GetString(payload, "password");
+                        var username = GetString(payload, "username"), password = GetString(payload, "password");
                         if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password)) throw new InvalidDataException();
-                        using (var dialog = new InitialPasswordForm(Tr, username, password))
-                            dialog.ShowDialog();
+                        using (var dialog = new InitialPasswordForm(Tr, username, password)) dialog.ShowDialog();
                     }
                 }
             }
             catch
             {
-                MessageBox.Show(Tr.InitialPasswordError, Tr.InitialPasswordTitle,
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(Tr.InitialPasswordError, Tr.InitialPasswordTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
 
@@ -995,8 +634,7 @@ namespace DirectXfer.WindowsLauncher
                     if (response == null) throw new WebException();
                     if (response.StatusCode == HttpStatusCode.Conflict)
                     {
-                        MessageBox.Show(Tr.ResetPasswordEnvManaged, Tr.AppTitle,
-                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        MessageBox.Show(Tr.ResetPasswordEnvManaged, Tr.AppTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         return;
                     }
                     if (response.StatusCode != HttpStatusCode.OK) throw new WebException();
@@ -1007,17 +645,13 @@ namespace DirectXfer.WindowsLauncher
                         var ticket = GetString(payload, "ticket");
                         if (!GetBool(payload, "ok") || string.IsNullOrEmpty(ticket)) throw new InvalidDataException();
                         var url = scheme + "://127.0.0.1:" + _runtimePort.ToString(CultureInfo.InvariantCulture) +
-                                  "/__dx_launcher/reset-admin-password?ticket=" + Uri.EscapeDataString(ticket) +
-                                  "&lang=" + Uri.EscapeDataString(_config.language);
+                            "/__dx_launcher/reset-admin-password?ticket=" + Uri.EscapeDataString(ticket) +
+                            "&lang=" + Uri.EscapeDataString(_config.language);
                         OpenUrl(url);
                     }
                 }
             }
-            catch
-            {
-                MessageBox.Show(Tr.ResetPasswordError, Tr.AppTitle,
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+            catch { MessageBox.Show(Tr.ResetPasswordError, Tr.AppTitle, MessageBoxButtons.OK, MessageBoxIcon.Error); }
         }
 
         private static bool GetBool(IDictionary<string, object> payload, string key)
@@ -1033,12 +667,13 @@ namespace DirectXfer.WindowsLauncher
         {
             object value;
             return payload != null && payload.TryGetValue(key, out value) && value != null
-                ? Convert.ToString(value, CultureInfo.InvariantCulture)
-                : null;
+                ? Convert.ToString(value, CultureInfo.InvariantCulture) : null;
         }
 
         private void OpenBrowser()
         {
+            var session = ReadSession();
+            if (session != null && TryAttachReadySession(session)) { }
             if (_runtimePort <= 0) return;
             OpenUrl(_runtimeScheme + "://127.0.0.1:" + _runtimePort.ToString(CultureInfo.InvariantCulture) + "/");
         }
@@ -1079,11 +714,7 @@ namespace DirectXfer.WindowsLauncher
             if (language != "fr" && language != "en" && language != "es") return;
             var previous = _config.language;
             _config.language = language;
-            try
-            {
-                SaveConfig();
-                RebuildTrayMenu();
-            }
+            try { SaveConfig(); RebuildTrayMenu(); }
             catch (Exception ex)
             {
                 _config.language = previous;
@@ -1106,10 +737,7 @@ namespace DirectXfer.WindowsLauncher
         {
             while (!token.IsCancellationRequested)
             {
-                try
-                {
-                    if (_openEvent.WaitOne(500)) Ui(OpenBrowser);
-                }
+                try { if (_openEvent.WaitOne(500)) Ui(OpenBrowser); }
                 catch { return; }
             }
         }
@@ -1119,29 +747,25 @@ namespace DirectXfer.WindowsLauncher
             if (_disposed || _dispatcher.IsDisposed) return;
             try
             {
-                if (_dispatcher.InvokeRequired) _dispatcher.BeginInvoke(action);
-                else action();
+                if (_dispatcher.InvokeRequired) _dispatcher.BeginInvoke(action); else action();
             }
             catch (ObjectDisposedException) { }
             catch (InvalidOperationException) { }
         }
 
-        private void OnServerExited(object sender, EventArgs e)
+        private void OnHostExited(object sender, EventArgs e)
         {
             int exitCode = -1;
-            try { exitCode = _server.ExitCode; } catch { }
-            if (ConsumeCleanShutdownMarker()) _expectedServerStop = true;
-            CloseLogWriter();
-            ClearSession(_server != null ? _server.Id : 0);
-
+            try { exitCode = ((Process)sender).ExitCode; } catch { }
             Ui(() =>
             {
-                var wasExpected = _exiting || _expectedServerStop || exitCode == 0;
+                if (_exiting) return;
+                var wasExpected = _expectedHostStop || exitCode == 0;
                 _exiting = true;
-                if (!wasExpected && exitCode != 0)
+                if (!wasExpected)
                 {
                     var details = TailFile(_runtimeLogPath, 4096);
-                    var body = Tr.ServerStopped + " (code " + exitCode + ").\r\n" + Tr.LogLabel + ": " + _runtimeLogPath;
+                    var body = Tr.ServerStopped + " (host code " + exitCode + ").\r\n" + Tr.LogLabel + ": " + _runtimeLogPath;
                     if (!string.IsNullOrWhiteSpace(details)) body += "\r\n\r\n" + details;
                     MessageBox.Show(body, Tr.AppTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
@@ -1156,84 +780,57 @@ namespace DirectXfer.WindowsLauncher
             {
                 if (_exiting) return;
                 _exiting = true;
+                _expectedHostStop = true;
                 _tray.Visible = false;
             }
-
-            Task.Run(() =>
-            {
-                StopServer();
-                Ui(ExitThread);
-            });
+            Task.Run(() => { StopServerHost(); Ui(ExitThread); });
         }
 
-        private void StopServer()
+        private void StopServerHost()
         {
-            var server = _server;
-            if (server == null) return;
-            try { if (server.HasExited) return; } catch { return; }
-
-            try
-            {
-                string scheme;
-                using (var response = LauncherRequestAnyScheme("POST", _runtimePort, "/__dx_launcher/shutdown",
-                    _token, _runtimeScheme, 800, out scheme))
-                {
-                    _runtimeScheme = scheme;
-                }
-            }
-            catch { }
-
-            try
-            {
-                if (server.WaitForExit(6000)) return;
-            }
-            catch { return; }
-
-            // Last-resort fallback applies only to the exact child process created by this launcher.
-            try { server.Kill(); } catch { }
-            try { server.WaitForExit(1000); } catch { }
-        }
-
-        private void RecoverSavedSession()
-        {
+            SignalServerHostStop();
             var session = ReadSession();
-            if (session == null) return;
+            if (session != null) WaitForProcessExit(session.hostPid, 8000);
+        }
 
-            string usedScheme;
-            if (TryReady(session.port, session.token, session.scheme, session.pid, out usedScheme))
+        private static void SignalServerHostStop()
+        {
+            try { using (var evt = EventWaitHandle.OpenExisting(Program.ServerHostStopEventName)) evt.Set(); }
+            catch { }
+        }
+
+        private static bool WaitForServerHostMutexRelease(int timeoutMs)
+        {
+            var watch = Stopwatch.StartNew();
+            while (watch.ElapsedMilliseconds < timeoutMs)
             {
+                // Re-signal on every pass so a ServerHost that was still creating
+                // its stop event when the first signal was sent cannot be missed.
+                SignalServerHostStop();
                 try
                 {
-                    using (LauncherRequest("POST", session.port, "/__dx_launcher/shutdown", session.token, usedScheme, 700, LocalCaCertificatePath)) { }
-                }
-                catch { }
-                if (WaitForProcessExit(session.pid, 2600))
-                {
-                    ClearSession(session.pid);
-                    return;
-                }
-            }
-
-            // If the saved server is wedged, only touch the exact saved PID when its executable
-            // still resolves to the exact Node executable path and process start time recorded in this private session.
-            try
-            {
-                using (var process = Process.GetProcessById(session.pid))
-                {
-                    var actual = process.MainModule != null ? process.MainModule.FileName : null;
-                    var sameExecutable = !string.IsNullOrWhiteSpace(actual) && !string.IsNullOrWhiteSpace(session.nodePath) &&
-                        string.Equals(Path.GetFullPath(actual), Path.GetFullPath(session.nodePath), StringComparison.OrdinalIgnoreCase);
-                    var sameStart = session.startedUtcTicks > 0 &&
-                        GetProcessStartUtcTicks(process) == session.startedUtcTicks;
-                    if (sameExecutable && sameStart)
+                    using (var mutex = Mutex.OpenExisting(@"Local\DirectXferServerHostInstance"))
                     {
-                        process.Kill();
-                        process.WaitForExit(1800);
+                        var acquired = false;
+                        try { acquired = mutex.WaitOne(150); }
+                        catch (AbandonedMutexException) { acquired = true; }
+                        if (acquired)
+                        {
+                            try { mutex.ReleaseMutex(); } catch { }
+                            return true;
+                        }
                     }
                 }
+                catch (WaitHandleCannotBeOpenedException) { return true; }
+                catch { }
             }
-            catch { }
-            ClearSession(session.pid);
+            return false;
+        }
+
+        private bool IsServerHostRunning()
+        {
+            var session = ReadSession();
+            return session != null && HostProcessMatches(session);
         }
 
         private static long GetProcessStartUtcTicks(Process process)
@@ -1244,10 +841,8 @@ namespace DirectXfer.WindowsLauncher
 
         private static bool WaitForProcessExit(int pid, int timeoutMs)
         {
-            try
-            {
-                using (var process = Process.GetProcessById(pid)) return process.WaitForExit(timeoutMs);
-            }
+            if (pid <= 0) return true;
+            try { using (var process = Process.GetProcessById(pid)) return process.WaitForExit(timeoutMs); }
             catch { return true; }
         }
 
@@ -1257,62 +852,15 @@ namespace DirectXfer.WindowsLauncher
             {
                 if (!File.Exists(SessionPath)) return null;
                 var session = Json.Deserialize<LauncherSession>(File.ReadAllText(SessionPath, Encoding.UTF8));
-                return session != null && session.pid > 0 && session.port > 0 && !string.IsNullOrEmpty(session.token)
+                return session != null && session.hostPid > 0 && session.serverPid > 0 && session.port > 0 && !string.IsNullOrEmpty(session.token)
                     ? session : null;
             }
             catch { return null; }
         }
 
-        private static void WriteSession(LauncherSession session)
+        private static void TryDeleteStaleSession()
         {
-            try
-            {
-                Directory.CreateDirectory(BaseDirectory);
-                WriteTextAtomic(SessionPath, Json.Serialize(session));
-            }
-            catch { }
-        }
-
-        private static void ClearSession(int pid)
-        {
-            try
-            {
-                var current = ReadSession();
-                if (current != null && pid > 0 && current.pid != pid) return;
-                if (File.Exists(SessionPath)) File.Delete(SessionPath);
-            }
-            catch { }
-        }
-
-        private bool ConsumeCleanShutdownMarker()
-        {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(_shutdownMarkerPath) || !File.Exists(_shutdownMarkerPath)) return false;
-                File.Delete(_shutdownMarkerPath);
-                return true;
-            }
-            catch { return false; }
-        }
-
-        private static void RotateLog(string path, long maxBytes)
-        {
-            if (!File.Exists(path) || new FileInfo(path).Length < maxBytes) return;
-            try { if (File.Exists(path + ".3")) File.Delete(path + ".3"); } catch { }
-            TryMove(path + ".2", path + ".3");
-            TryMove(path + ".1", path + ".2");
-            TryMove(path, path + ".1");
-        }
-
-        private static void TryMove(string source, string destination)
-        {
-            try
-            {
-                if (!File.Exists(source)) return;
-                if (File.Exists(destination)) File.Delete(destination);
-                File.Move(source, destination);
-            }
-            catch { }
+            try { if (File.Exists(SessionPath)) File.Delete(SessionPath); } catch { }
         }
 
         private static string TailFile(string path, int maxBytes)
@@ -1332,21 +880,11 @@ namespace DirectXfer.WindowsLauncher
             catch { return string.Empty; }
         }
 
-        private void CloseLogWriter()
-        {
-            lock (_logSync)
-            {
-                try { if (_logWriter != null) _logWriter.Flush(); } catch { }
-                try { if (_logWriter != null) _logWriter.Dispose(); } catch { }
-                _logWriter = null;
-            }
-        }
-
         private void OnSessionEnding(object sender, Microsoft.Win32.SessionEndingEventArgs e)
         {
-            _expectedServerStop = true;
+            _expectedHostStop = true;
             _exiting = true;
-            StopServer();
+            StopServerHost();
         }
 
         protected override void ExitThreadCore()
@@ -1361,12 +899,11 @@ namespace DirectXfer.WindowsLauncher
             _disposed = true;
             _lifetime.Cancel();
             Microsoft.Win32.SystemEvents.SessionEnding -= OnSessionEnding;
-            try { StopServer(); } catch { }
+            try { if (_exiting) StopServerHost(); } catch { }
             try { _openEvent.Dispose(); } catch { }
             try { _tray.Visible = false; _tray.Dispose(); } catch { }
             try { _dispatcher.Dispose(); } catch { }
-            try { if (_server != null) _server.Dispose(); } catch { }
-            CloseLogWriter();
+            try { if (_host != null) _host.Dispose(); } catch { }
             _lifetime.Dispose();
             try { base.Dispose(); } catch { }
         }
@@ -1431,7 +968,7 @@ namespace DirectXfer.WindowsLauncher
         internal string AppTitle, Open, Logs, Configure, ResetAdminPassword, Language, Stop;
         internal string FirstRunTitle, FirstRunBody, PickHost, PickInbox, PickImages;
         internal string ConfigSaved, ConfigSavedRestart, StartError, ServerStopped, LogLabel, PortFallback, NoFreePort;
-        internal string ResetPasswordError, ResetPasswordEnvManaged, NodeMissing;
+        internal string ResetPasswordError, ResetPasswordEnvManaged;
         internal string InitialPasswordTitle, InitialPasswordError, InitialPasswordIntro, InitialPasswordAccount;
         internal string InitialPasswordLabel, InitialPasswordSave, InitialPasswordCopy, InitialPasswordOK;
 
@@ -1455,7 +992,6 @@ namespace DirectXfer.WindowsLauncher
                         NoFreePort = "Aucun port libre n’a été trouvé entre {0} et {1}.",
                         ResetPasswordError = "Impossible d’ouvrir la réinitialisation du mot de passe administrateur.",
                         ResetPasswordEnvManaged = "Le mot de passe propriétaire est géré par ADMIN_PASSWORD et ne peut pas être réinitialisé depuis la systray.",
-                        NodeMissing = "Runtime Node.js x64 introuvable ou invalide. Utilisez le runtime signé fourni dans runtime\\node. Pour un runtime externe approuvé, définissez DX_WINDOWS_NODE et son SHA-256 exact dans DX_WINDOWS_NODE_SHA256.",
                         InitialPasswordTitle = "Mot de passe administrateur",
                         InitialPasswordError = "Le mot de passe administrateur initial a été généré, mais le launcher n’a pas pu l’afficher. Utilisez « Réinitialiser le mot de passe admin… » dans la systray pour définir un nouveau mot de passe.",
                         InitialPasswordIntro = "Un mot de passe administrateur a été généré automatiquement.",
@@ -1479,7 +1015,6 @@ namespace DirectXfer.WindowsLauncher
                         NoFreePort = "No se encontró ningún puerto libre entre {0} y {1}.",
                         ResetPasswordError = "No se pudo abrir el restablecimiento de la contraseña de administrador.",
                         ResetPasswordEnvManaged = "La contraseña del propietario está gestionada por ADMIN_PASSWORD y no puede restablecerse desde la bandeja del sistema.",
-                        NodeMissing = "No se encontró un runtime Node.js x64 válido. Usa el runtime incluido en runtime\\node. Para un runtime externo aprobado, define DX_WINDOWS_NODE y su SHA-256 exacto en DX_WINDOWS_NODE_SHA256.",
                         InitialPasswordTitle = "Contraseña de administrador",
                         InitialPasswordError = "La contraseña inicial de administrador se generó, pero el launcher no pudo mostrarla. Usa « Restablecer la contraseña de administrador… » desde la bandeja del sistema para definir una nueva contraseña.",
                         InitialPasswordIntro = "Se generó automáticamente una contraseña de administrador.",
@@ -1503,7 +1038,6 @@ namespace DirectXfer.WindowsLauncher
                         NoFreePort = "No free port was found between {0} and {1}.",
                         ResetPasswordError = "The administrator password reset page could not be opened.",
                         ResetPasswordEnvManaged = "The owner password is managed by ADMIN_PASSWORD and cannot be reset from the system tray.",
-                        NodeMissing = "Valid x64 Node.js runtime not found. Use the bundled runtime in runtime\\node. For an approved external runtime, set DX_WINDOWS_NODE and its exact SHA-256 in DX_WINDOWS_NODE_SHA256.",
                         InitialPasswordTitle = "Administrator password",
                         InitialPasswordError = "The initial administrator password was generated, but the launcher could not display it. Use “Reset admin password…” from the system tray to define a new password.",
                         InitialPasswordIntro = "An administrator password was generated automatically.",

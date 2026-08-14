@@ -10,6 +10,8 @@ const { spawn } = require('node:child_process');
 
 const root = path.resolve(__dirname, '..');
 const launcher = fs.readFileSync(path.join(root, 'windows-launcher', 'Program.cs'), 'utf8');
+const host = fs.readFileSync(path.join(root, 'windows-server-host', 'Program.cs'), 'utf8');
+const hostProject = fs.readFileSync(path.join(root, 'windows-server-host', 'DirectXfer.ServerHost.csproj'), 'utf8');
 const project = fs.readFileSync(path.join(root, 'windows-launcher', 'DirectXfer.Launcher.csproj'), 'utf8');
 const server = fs.readFileSync(path.join(root, 'server.js'), 'utf8');
 
@@ -28,25 +30,28 @@ function request(port, pathname, token) {
   });
 }
 
-test('launcher runtime is isolated from live config mutations', () => {
-  assert.match(launcher, /LauncherConfig _runtimeConfig/);
-  assert.match(launcher, /string _runtimeLogPath/);
-  assert.match(launcher, /string _shutdownMarkerPath/);
-  assert.match(launcher, /_runtimeConfig = CloneConfig\(_config\)/);
-  assert.match(launcher, /EnvironmentVariables\["DATA_DIR"\] = _runtimeConfig\.dataDir/);
-  assert.match(launcher, /ConfigSavedRestart/);
+test('launcher configuration changes are isolated from the running ServerHost session', () => {
   assert.match(launcher, /var next = CloneConfig\(_config\)/);
   assert.match(launcher, /var previous = _config/);
+  assert.match(launcher, /ConfigSavedRestart/);
+  assert.match(launcher, /IsServerHostRunning\(\)/);
+  assert.match(host, /_config = LoadConfig\(\)/);
+  assert.match(host, /EnvironmentVariables\["DATA_DIR"\] = _config\.dataDir/);
+  assert.match(host, /EnvironmentVariables\["INBOX_DIR"\] = _config\.inboxDir/);
+  assert.match(host, /EnvironmentVariables\["IMAGES_DIR"\] = _config\.imagesDir/);
 });
 
-test('Windows launcher is conventional C# WinForms with transparent sidecar runtimes', () => {
+test('Windows components are conventional C# WinForms/WinExe with transparent sidecar runtime', () => {
   assert.match(project, /<TargetFrameworkVersion>v4\.8<\/TargetFrameworkVersion>/);
   assert.match(project, /<OutputType>WinExe<\/OutputType>/);
-  assert.match(launcher, /RuntimeRoot[\s\S]*Path\.Combine\(PortableRoot, "runtime"\)/);
-  assert.match(launcher, /Path\.Combine\(RuntimeRoot, "app"\)/);
-  assert.match(launcher, /CriticalRuntimeSha256/);
-  assert.match(launcher, /NodeExeSha256 = "3602f2bb/);
-  assert.doesNotMatch(launcher, /direct-xfer-app\.zip|go:embed|SHASUMS256|nodejs\.org\/download|MkdirTemp|extractZip/);
+  assert.match(hostProject, /<TargetFrameworkVersion>v4\.8<\/TargetFrameworkVersion>/);
+  assert.match(hostProject, /<OutputType>WinExe<\/OutputType>/);
+  assert.match(launcher, /ServerHostFileName = "Direct-Xfer\.ServerHost\.exe"/);
+  assert.match(host, /RuntimeRoot[\s\S]*Path\.Combine\(PortableRoot, "runtime"\)/);
+  assert.match(host, /Path\.Combine\(RuntimeRoot, "app"\)/);
+  assert.match(host, /CriticalRuntimeSha256/);
+  assert.match(host, /NodeExeSha256 = "3602f2bb/);
+  assert.doesNotMatch(launcher + host, /direct-xfer-app\.zip|go:embed|SHASUMS256|nodejs\.org\/download|MkdirTemp|extractZip/);
   assert.equal(fs.existsSync(path.join(root,'windows-launcher','main.go')), false);
 });
 
@@ -58,12 +63,12 @@ test('WinForms tray supports normal left click and system-session shutdown', () 
   assert.match(launcher, /SystemEvents\.SessionEnding/);
 });
 
-test('Node child is hidden and readiness is bound to launcher token and PID', () => {
-  assert.match(launcher, /CreateNoWindow = true/);
-  assert.match(launcher, /WindowStyle = ProcessWindowStyle\.Hidden/);
-  assert.match(launcher, /__dx_launcher\/ready/);
-  assert.match(launcher, /X-Direct-Xfer-Launcher-Token/);
-  assert.match(launcher, /expectedPid/);
+test('Node child is hidden by ServerHost and readiness is bound to launcher token and PID', () => {
+  assert.match(host, /CreateNoWindow = true/);
+  assert.match(host, /WindowStyle = ProcessWindowStyle\.Hidden/);
+  assert.match(host, /__dx_launcher\/ready/);
+  assert.match(host, /X-Direct-Xfer-Launcher-Token/);
+  assert.match(host, /expectedPid/);
   assert.match(server, /app\.get\('\/__dx_launcher\/ready'/);
   assert.match(server, /pid:process\.pid/);
 });

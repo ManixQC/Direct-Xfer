@@ -10,6 +10,7 @@ const { spawn } = require('node:child_process');
 
 const root = path.resolve(__dirname, '..');
 const launcher = fs.readFileSync(path.join(root, 'windows-launcher', 'Program.cs'), 'utf8');
+const host = fs.readFileSync(path.join(root, 'windows-server-host', 'Program.cs'), 'utf8');
 const server = fs.readFileSync(path.join(root, 'server.js'), 'utf8');
 
 function freePort() {
@@ -39,15 +40,17 @@ function waitHealth(port, child, outputRef) {
   });
 }
 
-test('Windows C# launcher shutdown is UI-thread safe, idempotent and bounded', () => {
-  assert.match(launcher, /RuntimeAppBuild = "1\.59\.1-launcher27-csharp"/);
+test('Windows C# launcher shutdown delegates bounded server termination to ServerHost', () => {
+  assert.match(launcher, /RuntimeAppBuild = "1\.59\.2-launcher28-csharp"/);
   assert.match(launcher, /RequestExit\(\)/);
   assert.match(launcher, /lock \(_exitSync\)/);
-  assert.match(launcher, /Task\.Run\(\(\) =>[\s\S]*StopServer\(\)/);
-  assert.match(launcher, /server\.WaitForExit\(6000\)/);
+  assert.match(launcher, /SignalServerHostStop\(\)/);
+  assert.match(launcher, /WaitForProcessExit\(session\.hostPid, 8000\)/);
   assert.match(launcher, /SystemEvents\.SessionEnding/);
-  assert.doesNotMatch(launcher, /taskkill\.exe|TerminateJobObject|procTerminateProcess/);
-  assert.match(launcher, /exitCode != 0/);
+  assert.doesNotMatch(launcher, /taskkill\.exe|TerminateJobObject|procTerminateProcess|Process\.Kill\(/);
+  assert.match(host, /private void StopNode\(\)/);
+  assert.match(host, /server\.WaitForExit\(6500\)/);
+  assert.match(host, /server\.Kill\(\)/);
   assert.match(launcher, /Ui\(\(\) =>/);
 });
 
@@ -70,13 +73,14 @@ test('private launcher shutdown exits cleanly even with a lingering TCP client a
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'dx-shutdown-audit-'));
   for (const name of ['data','inbox','images']) fs.mkdirSync(path.join(tmp, name));
   let output = '';
+  const marker = path.join(tmp, 'data', '.clean-marker');
   const child = spawn(process.execPath, [path.join(root, 'server.js')], {
     cwd: root,
     env: {
       ...process.env,
       PORT:String(port), BIND:'127.0.0.1',
       DATA_DIR:path.join(tmp,'data'), INBOX_DIR:path.join(tmp,'inbox'), IMAGES_DIR:path.join(tmp,'images'), HOST_ROOT:tmp,
-      NO_COLOR:'1', UPDATE_CHECK:'0', DX_WINDOWS_LAUNCHER_TOKEN:token,
+      NO_COLOR:'1', UPDATE_CHECK:'0', DX_WINDOWS_LAUNCHER_TOKEN:token, DX_WINDOWS_SHUTDOWN_MARKER:marker,
     },
     stdio:['ignore','pipe','pipe'],
   });
@@ -99,16 +103,18 @@ test('private launcher shutdown exits cleanly even with a lingering TCP client a
     assert.equal(status, 202);
 
     const started = Date.now();
-    const result = await new Promise((resolve, reject) => {
-      child.once('exit', (code, signal) => resolve({ code, signal }));
-      setTimeout(() => reject(new Error(`server did not exit in bounded shutdown window\n${output}`)), 11000).unref();
-    });
+    const deadline = Date.now() + 3500;
+    while (!fs.existsSync(marker) && Date.now() < deadline) await new Promise(r => setTimeout(r, 25));
     lingering.destroy();
-    assert.equal(result.code, 0, output);
-    assert.equal(result.signal, null, output);
-    assert.ok(Date.now() - started < 10000, `shutdown took too long: ${Date.now()-started} ms\n${output}`);
+    assert.equal(fs.existsSync(marker), true, `clean marker was not produced promptly\n${output}`);
+    assert.ok(Date.now() - started < 3500, `clean shutdown state took too long: ${Date.now()-started} ms\n${output}`);
     assert.match(output, /shutting down \(windows-launcher\)/);
+    const closedDeadline = Date.now() + 2000;
+    while (!/server closed/.test(output) && Date.now() < closedDeadline) await new Promise(r => setTimeout(r, 25));
     assert.match(output, /server closed/);
+    const rebound = net.createServer();
+    await new Promise((resolve, reject) => { rebound.once('error', reject); rebound.listen(port, '127.0.0.1', resolve); });
+    await new Promise((resolve, reject) => rebound.close(err => err ? reject(err) : resolve()));
 
     const storePath = path.join(tmp, 'data', 'shares.json');
     const state = JSON.parse(fs.readFileSync(storePath, 'utf8'));

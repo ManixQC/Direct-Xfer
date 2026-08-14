@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - 'windows-launcher/**'
+      - 'windows-server-host/**'
       - 'installer/**'
       - 'server.js'
       - 'package.json'
@@ -23,8 +24,9 @@ jobs:
     runs-on: windows-2025
 
     env:
-      DX_VERSION: '1.59.1'
-      DX_RUNTIME_BUILD: '1.59.1-launcher27-csharp'
+      DX_VERSION: '1.59.2'
+      DX_RUNTIME_BUILD: '1.59.2-launcher28-csharp'
+      DX_SERVER_HOST_BUILD: '1.59.2-serverhost1-csharp'
       DX_NODE_VERSION: '24.19.0'
       DX_NODE_EXE_SHA256: '3602f2bb1a10f2cbab4c36886218a33c1ab3db87290e73b033c46c77147d0237'
       INNO_VERSION: '6.7.3'
@@ -66,8 +68,10 @@ jobs:
             'test/windows-csharp-runtime-layout-1.58.4.test.js',
             'test/windows-inno-installer-1.58.4.test.js',
             'test/windows-password-copy-history-tooltip-1.58.4.test.js',
-            'test/recent-changes-ultra-audit-1.59.1.test.js',
-            'test/windows-launcher-hardening-1.59.1.test.js'
+            'test/recent-changes-ultra-audit-1.59.2.test.js',
+            'test/windows-launcher-hardening-1.59.2.test.js',
+            'test/windows-server-host-split-1.59.2.test.js',
+            'test/admin-favicon-1.59.2.test.js'
           )
 
           $missingTests = @($criticalTests | Where-Object { -not (Test-Path -LiteralPath $_ -PathType Leaf) })
@@ -80,6 +84,17 @@ jobs:
           if ($LASTEXITCODE -ne 0) {
             throw "Release-critical test suite failed with exit code $LASTEXITCODE"
           }
+
+      - name: Build C# server host
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          msbuild windows-server-host\DirectXfer.ServerHost.csproj /t:Rebuild /p:Configuration=Release /p:Platform=x64 /m /nologo /verbosity:minimal
+
+          $hostExe = 'windows-server-host\bin\Release\Direct-Xfer.ServerHost.exe'
+          $hostConfig = 'windows-server-host\bin\Release\Direct-Xfer.ServerHost.exe.config'
+          if (-not (Test-Path -LiteralPath $hostExe)) { throw "MSBuild completed without producing $hostExe" }
+          if (-not (Test-Path -LiteralPath $hostConfig)) { throw "MSBuild completed without producing $hostConfig" }
 
       - name: Build C# launcher
         shell: pwsh
@@ -96,16 +111,21 @@ jobs:
             throw "MSBuild completed without producing $config"
           }
 
-      - name: Verify launcher is unsigned by design
+      - name: Verify Windows executables are unsigned by design
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $exe = 'windows-launcher\bin\Release\Direct-Xfer.exe'
-          $signature = Get-AuthenticodeSignature -FilePath $exe
-          if ($signature.Status -ne 'NotSigned') {
-            throw "Direct-Xfer.exe must remain unsigned by design; Authenticode status is $($signature.Status)"
+          $executables = @(
+            'windows-launcher\bin\Release\Direct-Xfer.exe',
+            'windows-server-host\bin\Release\Direct-Xfer.ServerHost.exe'
+          )
+          foreach ($exe in $executables) {
+            $signature = Get-AuthenticodeSignature -FilePath $exe
+            if ($signature.Status -ne 'NotSigned') {
+              throw "$exe must remain unsigned by design; Authenticode status is $($signature.Status)"
+            }
+            Write-Host "$exe is unsigned by design."
           }
-          Write-Host 'Direct-Xfer.exe is unsigned by design.'
 
       - name: Create portable runtime
         shell: pwsh
@@ -121,6 +141,8 @@ jobs:
 
           Copy-Item 'windows-launcher\bin\Release\Direct-Xfer.exe' -Destination $dist -Force
           Copy-Item 'windows-launcher\bin\Release\Direct-Xfer.exe.config' -Destination $dist -Force
+          Copy-Item 'windows-server-host\bin\Release\Direct-Xfer.ServerHost.exe' -Destination $dist -Force
+          Copy-Item 'windows-server-host\bin\Release\Direct-Xfer.ServerHost.exe.config' -Destination $dist -Force
 
           $portableReadme = 'windows-launcher\README-WINDOWS-PORTABLE.md'
           $rootReadme = 'README.md'
@@ -133,7 +155,8 @@ jobs:
             Set-Content -Encoding UTF8 -Path $destReadme -Value @(
               "Direct-Xfer $env:DX_VERSION - Windows C#",
               '',
-              'Direct-Xfer.exe is a C# / WinForms launcher targeting .NET Framework 4.8.',
+              'Direct-Xfer.exe is a C# / WinForms UI and tray launcher targeting .NET Framework 4.8.',
+              'Direct-Xfer.ServerHost.exe is the dedicated background process that supervises Node.js.',
               'The application runtime is located in runtime\app.',
               'The pinned Node.js runtime is located in runtime\node.'
             )
@@ -162,6 +185,8 @@ jobs:
           $required = @(
             (Join-Path $dist 'Direct-Xfer.exe'),
             (Join-Path $dist 'Direct-Xfer.exe.config'),
+            (Join-Path $dist 'Direct-Xfer.ServerHost.exe'),
+            (Join-Path $dist 'Direct-Xfer.ServerHost.exe.config'),
             (Join-Path $app '.dx-runtime-build'),
             (Join-Path $app 'package.json'),
             (Join-Path $app 'package-lock.json'),
@@ -184,6 +209,7 @@ jobs:
 
           $hashLines = @(
             "Direct-Xfer.exe  $((Get-FileHash -Algorithm SHA256 (Join-Path $dist 'Direct-Xfer.exe')).Hash.ToLowerInvariant())",
+            "Direct-Xfer.ServerHost.exe  $((Get-FileHash -Algorithm SHA256 (Join-Path $dist 'Direct-Xfer.ServerHost.exe')).Hash.ToLowerInvariant())",
             "runtime/app/server.js  $((Get-FileHash -Algorithm SHA256 (Join-Path $app 'server.js')).Hash.ToLowerInvariant())",
             "runtime/node/node.exe  $nodeHash"
           )

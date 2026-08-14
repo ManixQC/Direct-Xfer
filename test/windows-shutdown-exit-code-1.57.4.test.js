@@ -10,6 +10,7 @@ const { spawn } = require('node:child_process');
 
 const root = path.resolve(__dirname, '..');
 const launcher = fs.readFileSync(path.join(root, 'windows-launcher', 'Program.cs'), 'utf8');
+const host = fs.readFileSync(path.join(root, 'windows-server-host', 'Program.cs'), 'utf8');
 const server = fs.readFileSync(path.join(root, 'server.js'), 'utf8');
 
 function freePort() {
@@ -43,13 +44,15 @@ function waitReady(port, token, child, getOutput) {
 test('successful launcher shutdown releases the listener cleanly before any last-resort child kill', {timeout:20000}, async () => {
   assert.match(server, /process\.exit\(Number\(code\) === 0 \? 0 : 1\)/);
   assert.doesNotMatch(server, /process\.kill\(process\.pid, 'SIGKILL'\)/);
-  assert.match(launcher, /RuntimeAppBuild = "1\.59\.1-launcher27-csharp"/);
-  assert.match(launcher, /ConsumeCleanShutdownMarker\(\)/);
+  assert.match(launcher, /RuntimeAppBuild = "1\.59\.2-launcher28-csharp"/);
+  assert.match(host, /ConsumeCleanShutdownMarker\(\)/);
   assert.doesNotMatch(launcher, /terminateProcessTree\(0\)/);
   assert.doesNotMatch(launcher, /TerminateJobObject/);
   assert.doesNotMatch(launcher, /procTerminateProcess/);
   assert.doesNotMatch(launcher, /taskkill\.exe/);
-  assert.match(launcher, /!wasExpected && exitCode != 0/);
+  assert.match(host, /server\.WaitForExit\(6500\)/);
+  assert.match(host, /server\.Kill\(\)/);
+  assert.doesNotMatch(launcher, /server\.Kill\(\)|Process\.Kill\(/);
 
   const port = await freePort();
   const token = 'exit-code-' + Math.random().toString(16).slice(2);

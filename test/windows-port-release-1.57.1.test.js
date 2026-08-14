@@ -5,20 +5,22 @@ const fs = require('node:fs');
 const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const launcher = fs.readFileSync(path.join(root, 'windows-launcher', 'Program.cs'), 'utf8');
+const host = fs.readFileSync(path.join(root, 'windows-server-host', 'Program.cs'), 'utf8');
 const server = fs.readFileSync(path.join(root, 'server.js'), 'utf8');
 
-test('Windows launcher recovers only the exact private Node process recorded in its saved session', () => {
-  assert.match(launcher, /RecoverSavedSession\(\)/);
-  assert.match(launcher, /ReadSession\(\)/);
-  assert.match(launcher, /TryReady\(session\.port, session\.token, session\.scheme, session\.pid/);
-  assert.match(launcher, /Process\.GetProcessById\(session\.pid\)/);
-  assert.match(launcher, /process\.MainModule/);
-  assert.match(launcher, /session\.nodePath/);
-  assert.match(launcher, /Path\.GetFullPath\(session\.nodePath\)/);
-  assert.match(launcher, /process\.Kill\(\)/);
-  assert.match(launcher, /WriteSession\(new LauncherSession/);
-  assert.match(launcher, /ClearSession\(/);
-  assert.doesNotMatch(launcher, /GetExtendedTcpTable|QueryFullProcessImageNameW|OpenProcess/);
+test('Windows ServerHost recovers only the exact private Node process recorded in its saved session', () => {
+  assert.match(host, /RecoverSavedSession\(\)/);
+  assert.match(host, /ReadSession\(\)/);
+  assert.match(host, /TryReady\(session\.port, session\.token, session\.scheme, session\.serverPid/);
+  assert.match(host, /Process\.GetProcessById\(session\.serverPid\)/);
+  assert.match(host, /process\.MainModule/);
+  assert.match(host, /session\.nodePath/);
+  assert.match(host, /Path\.GetFullPath\(session\.nodePath\)/);
+  assert.match(host, /sameExecutable && sameStart/);
+  assert.match(host, /process\.Kill\(\)/);
+  assert.match(host, /WriteSessionAtomic\(new HostSession/);
+  assert.match(host, /ClearSession\(/);
+  assert.doesNotMatch(launcher, /GetExtendedTcpTable|QueryFullProcessImageNameW|OpenProcess|process\.Kill\(\)/);
 });
 
 test('server tracks and forcibly resets accepted sockets during bounded shutdown', () => {

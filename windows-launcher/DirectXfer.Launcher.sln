@@ -4,6 +4,8 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DirectXfer.Launcher", "DirectXfer.Launcher.csproj", "{A44C7114-3EDB-4584-AE09-6587E8D6C484}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DirectXfer.ServerHost", "..\windows-server-host\DirectXfer.ServerHost.csproj", "{2D41556F-1E6D-4F77-9DE8-28D1E55B9062}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -14,5 +16,9 @@ Global
 		{A44C7114-3EDB-4584-AE09-6587E8D6C484}.Debug|x64.Build.0 = Debug|x64
 		{A44C7114-3EDB-4584-AE09-6587E8D6C484}.Release|x64.ActiveCfg = Release|x64
 		{A44C7114-3EDB-4584-AE09-6587E8D6C484}.Release|x64.Build.0 = Release|x64
+		{2D41556F-1E6D-4F77-9DE8-28D1E55B9062}.Debug|x64.ActiveCfg = Debug|x64
+		{2D41556F-1E6D-4F77-9DE8-28D1E55B9062}.Debug|x64.Build.0 = Debug|x64
+		{2D41556F-1E6D-4F77-9DE8-28D1E55B9062}.Release|x64.ActiveCfg = Release|x64
+		{2D41556F-1E6D-4F77-9DE8-28D1E55B9062}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 EndGlobal

@@ -1,57 +1,62 @@
-# Direct-Xfer 1.59.1 — Windows C# / WinForms
+# Direct-Xfer 1.59.2 — Windows C# / WinForms
 
-Cette édition remplace intégralement l'ancien launcher Go par une application Windows conventionnelle **C# / WinForms ciblant .NET Framework 4.8**.
+La distribution Windows utilise désormais **deux exécutables C#/.NET Framework 4.8 x64 distincts** :
 
-## Distribution compatible avec les postes protégés
+- `Direct-Xfer.exe` : interface/systray, configuration et ouverture de l’interface web ;
+- `Direct-Xfer.ServerHost.exe` : processus d’arrière-plan dédié qui supervise le backend Node.js.
 
-Le flux normal ne demande plus d'exécuter de fichier `.cmd`, `.bat` ou `.ps1` sur le poste cible.
+Cette séparation évite que le launcher visible lance ou termine directement `node.exe`. Le ServerHost fonctionne sous le **même compte utilisateur** afin de conserver les permissions sur les dossiers de données, de réception, d’images et de fichiers hôte choisis par l’utilisateur.
 
-- Le launcher ne contient aucun runtime Go.
-- Il n'embarque aucune archive auto-extractible.
-- Il ne télécharge aucun exécutable.
-- Il n'appelle ni PowerShell ni `taskkill.exe`.
-- L'application est visible dans `runtime\app`.
-- Node.js peut provenir d'une installation Windows gérée/approuvée ou de `runtime\node\node.exe`.
-- Le Node portable, lorsqu'il est utilisé, est vérifié par SHA-256.
-- Les fichiers critiques de `runtime\app` sont vérifiés par SHA-256 avant démarrage.
+## Distribution Windows
 
-Identifiant interne : `1.59.1-launcher27-csharp`.
+Le flux normal ne demande pas d’exécuter de fichier `.cmd`, `.bat` ou `.ps1` sur le poste cible.
+
+- Aucun runtime Go, packer ou archive auto-extractible n’est embarqué dans les exécutables C#.
+- Aucun exécutable n’est téléchargé au premier lancement.
+- Le package contient le runtime applicatif visible dans `runtime\app`.
+- Le package GitHub/Inno contient le Node.js officiel 24.19.0 x64 dans `runtime\node\node.exe`.
+- Le ServerHost vérifie le SHA-256 du Node portable et les fichiers critiques du runtime avant le démarrage.
+- Un Node externe n’est accepté que via `DX_WINDOWS_NODE` accompagné de `DX_WINDOWS_NODE_SHA256`.
+- Le launcher et le ServerHost vérifient PID, chemin et heure de démarrage avant de reprendre une session existante.
+
+Identifiants internes :
+
+- launcher : `1.59.2-launcher28-csharp`
+- server host : `1.59.2-serverhost1-csharp`
 
 ## Compilation sans script local
 
-### Option 1 — GitHub Actions (recommandée)
+### GitHub Actions (recommandé)
 
-Le workflow `.github/workflows/build-windows-csharp.yml` compile le launcher sur un runner Windows GitHub et produit l'artefact :
+Le workflow `.github/workflows/build-windows-csharp.yml` compile **les deux projets x64**, prépare le runtime portable puis génère :
 
-`Direct-Xfer-1.59.1-Windows-CSharp` (GitHub le fournit au téléchargement sous forme d’archive ZIP)
+- l’artefact `Direct-Xfer-1.59.2-Windows-CSharp` ;
+- l’installateur `Direct-Xfer-Setup-1.59.2.exe`.
 
-Aucun script de compilation ne doit être exécuté sur le PC protégé.
+### Visual Studio
 
-### Option 2 — Visual Studio
+Ouvrir `windows-launcher\DirectXfer.Launcher.sln`, sélectionner **Release / x64**, puis **Build > Build Solution**. La solution contient le launcher et le ServerHost.
 
-1. Ouvrir `windows-launcher\DirectXfer.Launcher.sln` dans Visual Studio.
-2. Choisir **Release**.
-3. Menu **Build > Build Solution**.
-4. Le launcher est produit dans `windows-launcher\bin\Release\Direct-Xfer.exe`.
+## Structure requise du package portable
 
-Cette méthode utilise directement Visual Studio/MSBuild déjà approuvé sur la machine au lieu d'un script téléchargé.
+Après extraction, conserver les fichiers côte à côte :
 
-## Node.js
+```text
+Direct-Xfer.exe
+Direct-Xfer.exe.config
+Direct-Xfer.ServerHost.exe
+Direct-Xfer.ServerHost.exe.config
+runtime\
+  app\
+  node\node.exe
+```
 
-Direct-Xfer ne télécharge plus Node.js. Le launcher accepte uniquement :
+Ne lancez pas `Direct-Xfer.exe` directement depuis une archive ZIP et ne copiez pas seulement le launcher ailleurs.
 
-1. `runtime\node\node.exe` — runtime officiel **x64** épinglé par SHA-256 et devant correspondre exactement à Node.js 24.19.0 ;
-2. un runtime externe explicitement défini par `DX_WINDOWS_NODE`, uniquement si `DX_WINDOWS_NODE_SHA256` contient aussi son SHA-256 exact.
+## Arrêt et reprise
 
-Le launcher ne recherche plus automatiquement `node.exe` dans `PATH` ni dans `Program Files`. Un runtime externe doit être un PE AMD64 normal, ne pas être un point de réanalyse et utiliser **Node.js 20 ou Node.js 22+**. Node 18 et Node 21 sont refusés afin de rester aligné sur le contrat `engines` de l'arbre de dépendances de production.
+Le launcher demande l’arrêt du ServerHost via un événement Windows privé. Le ServerHost tente ensuite l’arrêt authentifié du serveur Direct-Xfer et ne termine le processus Node exact qu’en dernier recours. Si le launcher plante, le ServerHost peut continuer à maintenir le backend ; au prochain lancement, l’UI peut se rattacher à la session valide.
 
 ## Signature de code
 
-Le workflow produit volontairement le launcher et l’installateur sans signature Authenticode. Il vérifie explicitement que les deux sorties restent non signées et publie leurs empreintes SHA-256.
-
-
-## Important — extract the GitHub Artifact first
-
-GitHub Actions already downloads the artifact as a ZIP. Use **Extract all** before launching Direct-Xfer.
-Do not run `Direct-Xfer.exe` from inside the ZIP and do not copy only the EXE elsewhere.
-The extracted directory must contain `Direct-Xfer.exe` and the `runtime` folder side by side.
+Le workflow produit volontairement `Direct-Xfer.exe`, `Direct-Xfer.ServerHost.exe` et l’installateur sans signature Authenticode. Les empreintes SHA-256 restent générées pour l’intégrité.

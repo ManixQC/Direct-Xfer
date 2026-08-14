@@ -24,9 +24,9 @@ test('PWA release cache points installed clients at the fixed JavaScript', () =>
   const app = read('pwa/app.js');
   const sw = read('pwa/sw.js');
   const html = read('pwa/index.html');
-  assert.match(app, /APP_VERSION = '1\.59\.1'/);
-  assert.match(app, /APP_BUILD = '2026\.08\.14-pwa280'/);
-  assert.match(sw, /VERSION = '2026\.08\.14-pwa280'/);
-  assert.match(sw, /\/app\/app\.js\?v=266/);
-  assert.match(html, /\/app\/app\.js\?v=266/);
+  assert.match(app, /APP_VERSION = '1\.59\.2'/);
+  assert.match(app, /APP_BUILD = '2026\.08\.14-pwa281'/);
+  assert.match(sw, /VERSION = '2026\.08\.14-pwa281'/);
+  assert.match(sw, /\/app\/app\.js\?v=267/);
+  assert.match(html, /\/app\/app\.js\?v=267/);
 });

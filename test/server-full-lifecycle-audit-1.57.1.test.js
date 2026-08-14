@@ -7,6 +7,7 @@ const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const server = fs.readFileSync(path.join(root, 'server.js'), 'utf8');
 const launcher = fs.readFileSync(path.join(root, 'windows-launcher', 'Program.cs'), 'utf8');
+const host = fs.readFileSync(path.join(root, 'windows-server-host', 'Program.cs'), 'utf8');
 
 test('fatal runtime failures initiate bounded non-zero shutdown', () => {
   assert.match(server, /requestFatalShutdown\('unhandled-rejection'/);
@@ -30,22 +31,23 @@ test('shutdown hard deadline remains referenced and cannot disappear with an emp
 });
 
 test('portable runtime is transparent sidecar content and integrity checked', () => {
-  assert.match(launcher, /RuntimeAppBuild = "1\.59\.1-launcher27-csharp"/);
-  assert.match(launcher, /\.dx-runtime-build/);
-  assert.match(launcher, /TryValidateApplicationRuntime\(candidate, out reason\)/);
-  assert.match(launcher, /CriticalRuntimeSha256/);
-  assert.match(launcher, /node_modules.*express/);
-  assert.doesNotMatch(launcher, /MkdirTemp|extractZip|direct-xfer-app\.zip/);
+  assert.match(launcher, /RuntimeAppBuild = "1\.59\.2-launcher28-csharp"/);
+  assert.match(host, /\.dx-runtime-build/);
+  assert.match(host, /TryValidateApplicationRuntime\(candidate, out reason\)/);
+  assert.match(host, /CriticalRuntimeSha256/);
+  assert.match(host, /node_modules.*express/);
+  assert.doesNotMatch(launcher + host, /MkdirTemp|extractZip|direct-xfer-app\.zip/);
 });
 
 test('portable launcher rejects unsupported or broken Node runtimes and validates health identity', () => {
-  assert.match(launcher, /NodeUsable\(string path\)/);
-  assert.match(launcher, /parsed\.Major == 20 \|\| parsed\.Major >= 22/);
-  assert.match(launcher, /NodeExeSha256/);
-  assert.match(launcher, /response\.StatusCode/);
-  assert.match(launcher, /__dx_launcher\/ready/);
-  assert.match(launcher, /X-Direct-Xfer-Launcher-Token/);
-  assert.match(launcher, /expectedPid/);
+  assert.match(host, /NodeUsable\(string path\)/);
+  assert.match(host, /parsed\.Major == 20 \|\| parsed\.Major >= 22/);
+  assert.match(host, /NodeExeSha256/);
+  assert.match(host, /response\.StatusCode/);
+  assert.match(host, /__dx_launcher\/ready/);
+  assert.match(host, /X-Direct-Xfer-Launcher-Token/);
+  assert.match(host, /expectedPid/);
+  assert.doesNotMatch(launcher, /NodeExeSha256|node\.exe|Process\.Kill\(/);
 });
 
 test('download routes never send a second error after requireActiveShare already answered', () => {

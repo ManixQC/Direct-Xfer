@@ -12,6 +12,7 @@ on:
       - 'lib/**'
       - 'public/**'
       - 'pwa/**'
+      - 'test/**'
       - '.github/workflows/build-windows-csharp.yml'
 
 permissions:

@@ -98,7 +98,7 @@ test('Windows launcher receives a freshly generated admin password exactly once 
 
 test('launcher source displays the one-time password before opening the browser', () => {
   const src = fs.readFileSync(path.join(project, 'windows-launcher', 'Program.cs'), 'utf8');
-  assert.match(src, /RuntimeAppBuild = "1\.59\.0-launcher26-csharp"/);
+  assert.match(src, /RuntimeAppBuild = "1\.59\.1-launcher27-csharp"/);
   assert.match(src, /ShowInitialAdminPassword\(\)/);
   assert.match(src, /__dx_launcher\/initial-admin-password/);
   assert.match(src, /ShowInitialAdminPassword\(\);[\s\S]*OpenBrowser\(\)/);

@@ -54,11 +54,11 @@ test('PWA Activity tab mirrors standard persistent activity and keeps local tran
 });
 
 test('release is bumped to 1.54.0 with a fresh companion cache', () => {
-  assert.equal(JSON.parse(read('package.json')).version, '1.59.0');
-  assert.equal(JSON.parse(read('package-lock.json')).version, '1.59.0');
-  assert.match(read('pwa/app.js'), /APP_VERSION = '1\.59\.0'/);
-  assert.match(read('pwa/app.js'), /APP_BUILD = '2026\.08\.14-pwa279'/);
-  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.14-pwa279'/);
-  assert.match(read('pwa/index.html'), /app\.js\?v=265/);
-  assert.match(read('pwa/sw.js'), /app\.js\?v=265/);
+  assert.equal(JSON.parse(read('package.json')).version, '1.59.1');
+  assert.equal(JSON.parse(read('package-lock.json')).version, '1.59.1');
+  assert.match(read('pwa/app.js'), /APP_VERSION = '1\.59\.1'/);
+  assert.match(read('pwa/app.js'), /APP_BUILD = '2026\.08\.14-pwa280'/);
+  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.14-pwa280'/);
+  assert.match(read('pwa/index.html'), /app\.js\?v=266/);
+  assert.match(read('pwa/sw.js'), /app\.js\?v=266/);
 });

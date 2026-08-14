@@ -22,5 +22,5 @@ test('GitHub artifact contains the portable directory directly with hidden runti
   assert.doesNotMatch(workflow, /Compress-Archive/);
   assert.doesNotMatch(workflow, /path: dist\/Direct-Xfer-\$\{\{ env\.DX_VERSION \}\}-Windows-CSharp\.zip/);
   assert.match(workflow, /Portable package is incomplete/);
-  assert.match(workflow, /1\.59\.0-launcher26-csharp/);
+  assert.match(workflow, /1\.59\.1-launcher27-csharp/);
 });

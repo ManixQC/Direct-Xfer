@@ -14,13 +14,13 @@ const login = read('pwa/login.js');
 const server = read('server.js');
 
 test('release and PWA caches are synchronized for 1.51.2', () => {
-  assert.equal(JSON.parse(read('package.json')).version, '1.59.0');
-  assert.match(app, /APP_VERSION = '1\.59\.0'/);
-  assert.match(app, /APP_BUILD = '2026\.08\.14-pwa279'/);
-  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.14-pwa279'/);
-  assert.match(html, /v1\.59\.0 · pwa279/);
-  assert.match(html, /app\.js\?v=265/);
-  assert.match(loginHtml, /login\.js\?v=265/);
+  assert.equal(JSON.parse(read('package.json')).version, '1.59.1');
+  assert.match(app, /APP_VERSION = '1\.59\.1'/);
+  assert.match(app, /APP_BUILD = '2026\.08\.14-pwa280'/);
+  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.14-pwa280'/);
+  assert.match(html, /v1\.59\.1 · pwa280/);
+  assert.match(html, /app\.js\?v=266/);
+  assert.match(loginHtml, /login\.js\?v=266/);
 });
 
 test('biometric identification is a visible and explicit PWA setting', () => {

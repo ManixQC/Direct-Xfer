@@ -11,9 +11,9 @@ const launcher = fs.readFileSync(launcherPath, 'utf8');
 const project = fs.readFileSync(projectPath, 'utf8');
 const expectedNodeHash = '3602f2bb1a10f2cbab4c36886218a33c1ab3db87290e73b033c46c77147d0237';
 
-test('1.59.0 launcher is a conventional C# WinForms project with no Go launcher left', () => {
-  assert.match(launcher, /const string AppVersion = "1\.59\.0"/);
-  assert.match(launcher, /const string RuntimeAppBuild = "1\.59\.0-launcher26-csharp"/);
+test('1.59.1 launcher is a conventional C# WinForms project with no Go launcher left', () => {
+  assert.match(launcher, /const string AppVersion = "1\.59\.1"/);
+  assert.match(launcher, /const string RuntimeAppBuild = "1\.59\.1-launcher27-csharp"/);
   assert.match(project, /<OutputType>WinExe<\/OutputType>/);
   assert.match(project, /<TargetFrameworkVersion>v4\.8<\/TargetFrameworkVersion>/);
   assert.match(project, /System\.Windows\.Forms/);
@@ -37,11 +37,12 @@ test('C# launcher has no embedded archive, runtime downloader, packer or externa
 
 test('portable Node runtime is hash-pinned and no local executable setup script is required', () => {
   assert.match(launcher, new RegExp(`NodeExeSha256 = "${expectedNodeHash}"`));
-  assert.match(launcher, /FileSha256\(path\)/);
+  assert.match(launcher, /FileSha256\((?:path|full)\)/);
   assert.equal(fs.existsSync(path.join(root, 'windows-launcher', 'Setup-Node-Runtime.ps1')), false);
   assert.equal(fs.existsSync(path.join(root, 'windows-launcher', 'build.cmd')), false);
   assert.equal(fs.existsSync(path.join(root, 'windows-launcher', 'build.ps1')), false);
-  assert.match(launcher, /organization-approved method|méthode approuvée par votre organisation/);
+  assert.match(launcher, /DX_WINDOWS_NODE_SHA256/);
+  assert.match(launcher, /runtime\\\\node/);
 });
 
 test('enterprise-friendly build uses a hosted Windows GitHub Actions workflow', () => {

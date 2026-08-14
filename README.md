@@ -1796,6 +1796,20 @@ Une PWA ne peut pas garantir que le réseau continue à travailler après sa fer
 - Sur les petites hauteurs, le sélecteur reste adaptatif et la zone d'options défile sans masquer les boutons Annuler/Partager.
 - Bump **1.58.3**, PWA **pwa277**, ressources PWA **v263**, runtime Windows **launcher21**.
 
+## 1.59.1 — Durcissement du launcher Windows et préparation Authenticode
+
+- Le launcher C#/.NET Framework est désormais compilé explicitement en **x64**, aligné avec le runtime Node.js x64 fourni.
+- Le manifeste Windows utilise l’identité **DirectXfer.WindowsLauncher 1.59.1.0**, `asInvoker`, DPI-aware et long-path-aware au lieu de l’identité générique `MyApplication.app`.
+- Les requêtes HTTPS privées du launcher vers `127.0.0.1` n’acceptent plus tous les certificats : la validation Windows reste prioritaire et le mode Local CA n’autorise une chaîne non approuvée que si elle remonte exactement vers la racine Direct-Xfer locale et sans erreur de nom.
+- Le fallback automatique vers un `node.exe` trouvé dans `PATH` ou `Program Files` est retiré. Un Node externe doit être explicitement configuré avec `DX_WINDOWS_NODE` **et** épinglé avec `DX_WINDOWS_NODE_SHA256`, être un PE AMD64 normal et utiliser une version supportée.
+- Le runtime Node embarqué reste vérifié par SHA-256 et doit correspondre exactement à **Node.js 24.19.0 x64**.
+- Le workflow GitHub Actions compile désormais le launcher en x64 et contient une intégration **optionnelle** Azure Artifact Signing : lorsqu’elle est activée/configurée, elle signe le launcher avant packaging puis le Setup Inno final avec SHA-256 + timestamp RFC3161.
+  - Variable de dépôt : `DX_ARTIFACT_SIGNING_ENABLED=true`.
+  - Secrets GitHub Actions OIDC : `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`.
+  - Variables de dépôt : `AZURE_ARTIFACT_SIGNING_ENDPOINT`, `AZURE_ARTIFACT_SIGNING_ACCOUNT`, `AZURE_ARTIFACT_SIGNING_PROFILE`.
+  - Si la variable d’activation est absente ou différente de `true`, le workflow continue normalement mais produit volontairement des binaires non signés.
+- Bump **1.59.1**, PWA **pwa280**, ressources **v266**, runtime Windows **launcher27-csharp**.
+
 ## 1.59.0 — Audit approfondi du launcher C# et de l’installateur Windows
 
 - Le launcher Windows reste entièrement **C# / WinForms / .NET Framework 4.8** ; aucun launcher Go, packer ou archive applicative auto-extraite n’est réintroduit.

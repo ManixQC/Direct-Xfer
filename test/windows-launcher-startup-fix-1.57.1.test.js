@@ -19,7 +19,7 @@ test('Windows launcher falls back to a free port and uses it consistently', () =
   assert.match(launcher, /EnvironmentVariables\["PORT"\] = _runtimePort/);
   assert.match(launcher, /TryReady\(_runtimePort, _token/);
   assert.match(launcher, /LauncherRequestAnyScheme\("POST", _runtimePort, "\/__dx_launcher\/shutdown"/);
-  assert.match(launcher, /RuntimeAppBuild = "1\.59\.0-launcher26-csharp"/);
+  assert.match(launcher, /RuntimeAppBuild = "1\.59\.1-launcher27-csharp"/);
   assert.match(launcher, /PortFallback/);
 });
 

@@ -46,11 +46,11 @@ test('editor blocks conflicting mutations while detection runs and preserves wor
 });
 
 test('1.51.2 PWA build and resource identifiers stay synchronized', () => {
-  assert.equal(pkg.version, '1.59.0');
-  assert.match(app, /APP_VERSION = '1\.59\.0'/);
-  assert.match(app, /APP_BUILD = '2026\.08\.14-pwa279'/);
-  assert.match(sw, /VERSION = '2026\.08\.14-pwa279'/);
-  assert.match(html, /v1\.59\.0 · pwa279/);
-  assert.match(html, /\/app\/app\.js\?v=265/);
-  assert.match(sw, /\/app\/app\.js\?v=265/);
+  assert.equal(pkg.version, '1.59.1');
+  assert.match(app, /APP_VERSION = '1\.59\.1'/);
+  assert.match(app, /APP_BUILD = '2026\.08\.14-pwa280'/);
+  assert.match(sw, /VERSION = '2026\.08\.14-pwa280'/);
+  assert.match(html, /v1\.59\.1 · pwa280/);
+  assert.match(html, /\/app\/app\.js\?v=266/);
+  assert.match(sw, /\/app\/app\.js\?v=266/);
 });

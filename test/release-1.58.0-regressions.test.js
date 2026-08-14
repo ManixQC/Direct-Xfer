@@ -53,16 +53,16 @@ test('resumable upload staging no longer lives in the reception directory', () =
 });
 
 
-test('1.59.0 release metadata is synchronized', () => {
+test('1.59.1 release metadata is synchronized', () => {
   const pkg = JSON.parse(read('package.json'));
   const lock = JSON.parse(read('package-lock.json'));
-  assert.equal(pkg.version, '1.59.0');
-  assert.equal(lock.version, '1.59.0');
-  assert.equal(lock.packages[''].version, '1.59.0');
-  assert.match(read('pwa/app.js'), /APP_VERSION = '1\.59\.0'/);
-  assert.match(read('pwa/app.js'), /APP_BUILD = '2026\.08\.14-pwa279'/);
-  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.14-pwa279'/);
-  assert.match(read('pwa/index.html'), /v1\.59\.0 · pwa279/);
-  assert.match(read('pwa/index.html'), /app\.js\?v=265/);
-  assert.match(read('windows-launcher/Program.cs'), /RuntimeAppBuild\s*= "1\.59\.0-launcher26-csharp"/);
+  assert.equal(pkg.version, '1.59.1');
+  assert.equal(lock.version, '1.59.1');
+  assert.equal(lock.packages[''].version, '1.59.1');
+  assert.match(read('pwa/app.js'), /APP_VERSION = '1\.59\.1'/);
+  assert.match(read('pwa/app.js'), /APP_BUILD = '2026\.08\.14-pwa280'/);
+  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.14-pwa280'/);
+  assert.match(read('pwa/index.html'), /v1\.59\.1 · pwa280/);
+  assert.match(read('pwa/index.html'), /app\.js\?v=266/);
+  assert.match(read('windows-launcher/Program.cs'), /RuntimeAppBuild\s*= "1\.59\.1-launcher27-csharp"/);
 });

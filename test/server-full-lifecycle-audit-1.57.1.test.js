@@ -30,7 +30,7 @@ test('shutdown hard deadline remains referenced and cannot disappear with an emp
 });
 
 test('portable runtime is transparent sidecar content and integrity checked', () => {
-  assert.match(launcher, /RuntimeAppBuild = "1\.59\.0-launcher26-csharp"/);
+  assert.match(launcher, /RuntimeAppBuild = "1\.59\.1-launcher27-csharp"/);
   assert.match(launcher, /\.dx-runtime-build/);
   assert.match(launcher, /TryValidateApplicationRuntime\(candidate, out reason\)/);
   assert.match(launcher, /CriticalRuntimeSha256/);
@@ -40,7 +40,7 @@ test('portable runtime is transparent sidecar content and integrity checked', ()
 
 test('portable launcher rejects unsupported or broken Node runtimes and validates health identity', () => {
   assert.match(launcher, /NodeUsable\(string path\)/);
-  assert.match(launcher, /major == 20 \|\| major >= 22/);
+  assert.match(launcher, /parsed\.Major == 20 \|\| parsed\.Major >= 22/);
   assert.match(launcher, /NodeExeSha256/);
   assert.match(launcher, /response\.StatusCode/);
   assert.match(launcher, /__dx_launcher\/ready/);

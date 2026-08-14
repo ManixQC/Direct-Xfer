@@ -83,7 +83,7 @@ function startServer(dataDir, dirs, port, extraEnv={}) {
   });
 }
 
-test('1.59.0 exposes Local CA LAN HTTPS configuration, fingerprint and root download in FR/EN/ES', () => {
+test('1.59.1 exposes Local CA LAN HTTPS configuration, fingerprint and root download in FR/EN/ES', () => {
   const server = read('server.js');
   const html = read('public','index.html');
   const app = read('public','app.js');
@@ -106,11 +106,14 @@ test('1.59.0 exposes Local CA LAN HTTPS configuration, fingerprint and root down
 test('Windows portable launcher keeps authenticated HTTP/HTTPS probing for Local CA mode', () => {
   const launcher = read('windows-launcher','Program.cs');
   assert.match(launcher, /ServerCertificateValidationCallback/);
-  assert.match(launcher, /authenticated 127\.0\.0\.1 request only/);
+  assert.match(launcher, /ValidateLauncherServerCertificate/);
+  assert.match(launcher, /RemoteCertificateNameMismatch/);
+  assert.match(launcher, /AllowUnknownCertificateAuthority/);
+  assert.match(launcher, /local-ca-cert\.pem/);
   assert.match(launcher, /SchemeCandidates/);
   assert.match(launcher, /127\.0\.0\.1/);
   assert.match(launcher, /X-Direct-Xfer-Launcher-Token/);
-  assert.match(launcher, /RuntimeAppBuild = "1\.59\.0-launcher26-csharp"/);
+  assert.match(launcher, /RuntimeAppBuild = "1\.59\.1-launcher27-csharp"/);
 });
 
 test('Local CA mode starts trusted HTTPS, reuses CA, signs LAN identities and env false overrides it', async () => {
@@ -131,7 +134,7 @@ test('Local CA mode starts trusted HTTPS, reuses CA, signs LAN identities and en
     await waitForFile(caFile,c1);
     const caPem=fs.readFileSync(caFile);
     const h1=await waitHealth('https',p1,c1,caPem);
-    assert.equal(JSON.parse(h1.body).version,'1.59.0');
+    assert.equal(JSON.parse(h1.body).version,'1.59.1');
     const caKey=path.join(data,'tls','local-ca-key.pem');
     const leafFile=path.join(data,'tls','server-cert.pem');
     const leafKey=path.join(data,'tls','server-key.pem');

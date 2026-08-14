@@ -131,8 +131,8 @@ test('dashboard startup does not wait for network diagnostics', () => {
 });
 
 test('release is 1.51.2 with refreshed companion shell', () => {
-  assert.equal(JSON.parse(read('package.json')).version, '1.59.0');
-  assert.match(read('pwa/app.js'), /APP_BUILD = '2026\.08\.14-pwa279'/);
-  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.14-pwa279'/);
+  assert.equal(JSON.parse(read('package.json')).version, '1.59.1');
+  assert.match(read('pwa/app.js'), /APP_BUILD = '2026\.08\.14-pwa280'/);
+  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.14-pwa280'/);
   assert.doesNotMatch(read('pwa/index.html'), /v=205/);
 });

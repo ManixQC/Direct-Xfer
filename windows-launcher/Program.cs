@@ -6,9 +6,11 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Security;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,16 +22,16 @@ using System.Windows.Forms;
 [assembly: AssemblyCompany("Direct-Xfer")]
 [assembly: AssemblyProduct("Direct-Xfer")]
 [assembly: AssemblyCopyright("Copyright © Direct-Xfer 2026")]
-[assembly: AssemblyVersion("1.59.0.0")]
-[assembly: AssemblyFileVersion("1.59.0.0")]
-[assembly: AssemblyInformationalVersion("1.59.0-launcher26-csharp")]
+[assembly: AssemblyVersion("1.59.1.0")]
+[assembly: AssemblyFileVersion("1.59.1.0")]
+[assembly: AssemblyInformationalVersion("1.59.1-launcher27-csharp")]
 
 namespace DirectXfer.WindowsLauncher
 {
     internal static class Program
     {
-        internal const string AppVersion = "1.59.0";
-        internal const string RuntimeAppBuild = "1.59.0-launcher26-csharp";
+        internal const string AppVersion = "1.59.1";
+        internal const string RuntimeAppBuild = "1.59.1-launcher27-csharp";
         internal const int DefaultPort = 55750;
         internal const int MaxFallbackPort = 55769;
         internal const int StartupReadyTimeoutMs = 30000;
@@ -118,11 +120,11 @@ namespace DirectXfer.WindowsLauncher
         private static readonly IDictionary<string, string> CriticalRuntimeSha256 =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                { "package.json", "bb3486f7caaf97ed0736f582e429571235c6b99ec9ebc60076ccdcdb1bc392f1" },
-                { "package-lock.json", "647cf8e243cdf72e25e5611011625b9b6204da1f73ab9fdd7036b1b1a941e903" },
+                { "package.json", "41d5f7ed1b0f3296483fe859e12df7354b91f13754fd968ee7e9b31701b2cd11" },
+                { "package-lock.json", "27a5b9dd59de2ef0c734f9a09e717d9e9e58fb75c6631a355acd54f767995b1b" },
                 { "server.js", "7c2a8108ab4598ea519ba80f68b8e67bab60056ac6df70fe20fe7aa47c0b7b1d" },
                 { "public/app.js", "3477fcd489c396a3b0d77940d72952b0c9742b778411bb31f4c9e42aad56e0b9" },
-                { "pwa/app.js", "3d2b24d0a5af74990c293acf2c846f477305e0c1549b5e87e54bdd0235b41df6" },
+                { "pwa/app.js", "5879b7031ae9834e27b72b4593d8d3fc7bdbd64dcc136fc79b47155f21b06a68" },
                 { "node_modules/express/package.json", "c7db3b72582355c80cdcef1ad7b2c9a8f53557550724c6bef8502e9818c2ebe7" }
             };
 
@@ -404,6 +406,15 @@ namespace DirectXfer.WindowsLauncher
 
         private static string RuntimeRoot { get { return Path.Combine(PortableRoot, "runtime"); } }
         private static string PortableNodePath { get { return Path.Combine(RuntimeRoot, "node", "node.exe"); } }
+        private string LocalCaCertificatePath
+        {
+            get
+            {
+                return _runtimeConfig == null || string.IsNullOrWhiteSpace(_runtimeConfig.dataDir)
+                    ? null
+                    : Path.Combine(_runtimeConfig.dataDir, "tls", "local-ca-cert.pem");
+            }
+        }
 
         private static IEnumerable<string> AppCandidates()
         {
@@ -550,43 +561,20 @@ namespace DirectXfer.WindowsLauncher
 
         private static IEnumerable<string> NodeCandidates()
         {
-            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            // Prefer the hash-pinned Node.js runtime shipped beside Direct-Xfer.
-            // Environment/system fallbacks are only used when the bundled runtime is unavailable.
-            var raw = new List<string>
-            {
-                PortableNodePath,
-                Environment.GetEnvironmentVariable("DX_WINDOWS_NODE")
-            };
-            var pf = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-            if (!string.IsNullOrWhiteSpace(pf)) raw.Add(Path.Combine(pf, "nodejs", "node.exe"));
-            var pfx = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
-            if (!string.IsNullOrWhiteSpace(pfx)) raw.Add(Path.Combine(pfx, "nodejs", "node.exe"));
-            raw.Add(FindOnPath("node.exe"));
+            // The bundled, hash-pinned x64 Node.js runtime is always preferred.
+            // An external runtime is allowed only as an explicit enterprise override;
+            // automatic PATH / Program Files discovery could execute an unexpected binary.
+            yield return PortableNodePath;
 
-            foreach (var value in raw)
+            var external = Environment.GetEnvironmentVariable("DX_WINDOWS_NODE");
+            if (!string.IsNullOrWhiteSpace(external))
             {
-                if (string.IsNullOrWhiteSpace(value)) continue;
-                string full;
-                try { full = Path.GetFullPath(value.Trim()); } catch { continue; }
-                if (seen.Add(full)) yield return full;
+                string full = null;
+                try { full = Path.GetFullPath(external.Trim()); } catch { }
+                if (!string.IsNullOrWhiteSpace(full) &&
+                    !string.Equals(full, Path.GetFullPath(PortableNodePath), StringComparison.OrdinalIgnoreCase))
+                    yield return full;
             }
-        }
-
-        private static string FindOnPath(string name)
-        {
-            var path = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
-            foreach (var dir in path.Split(Path.PathSeparator))
-            {
-                if (string.IsNullOrWhiteSpace(dir)) continue;
-                try
-                {
-                    var candidate = Path.Combine(dir.Trim(), name);
-                    if (File.Exists(candidate)) return candidate;
-                }
-                catch { }
-            }
-            return null;
         }
 
         private string EnsureNode()
@@ -600,15 +588,32 @@ namespace DirectXfer.WindowsLauncher
         {
             try
             {
-                if (!File.Exists(path)) return false;
-                if (string.Equals(Path.GetFullPath(path), Path.GetFullPath(PortableNodePath), StringComparison.OrdinalIgnoreCase) &&
-                    !string.Equals(FileSha256(path), Program.NodeExeSha256, StringComparison.OrdinalIgnoreCase)) return false;
+                if (string.IsNullOrWhiteSpace(path) || !Path.IsPathRooted(path) || !File.Exists(path)) return false;
+                var full = Path.GetFullPath(path);
+                if ((File.GetAttributes(full) & FileAttributes.ReparsePoint) != 0) return false;
+                var length = new FileInfo(full).Length;
+                if (length < 1024 * 1024 || length > 200L * 1024 * 1024) return false;
+                if (!IsAmd64Pe(full)) return false;
+
+                var bundled = string.Equals(full, Path.GetFullPath(PortableNodePath), StringComparison.OrdinalIgnoreCase);
+                if (bundled)
+                {
+                    if (!string.Equals(FileSha256(full), Program.NodeExeSha256, StringComparison.OrdinalIgnoreCase)) return false;
+                }
+                else
+                {
+                    // External Node.js is opt-in only and must be pinned by the administrator.
+                    // This avoids executing an arbitrary PATH/Program Files node.exe.
+                    var expected = (Environment.GetEnvironmentVariable("DX_WINDOWS_NODE_SHA256") ?? string.Empty).Trim();
+                    if (expected.Length != 64 || !expected.All(IsHexDigit)) return false;
+                    if (!string.Equals(FileSha256(full), expected, StringComparison.OrdinalIgnoreCase)) return false;
+                }
 
                 using (var process = new Process())
                 {
                     process.StartInfo = new ProcessStartInfo
                     {
-                        FileName = path,
+                        FileName = full,
                         Arguments = "--version",
                         UseShellExecute = false,
                         CreateNoWindow = true,
@@ -628,14 +633,35 @@ namespace DirectXfer.WindowsLauncher
                     if (!stdout.Wait(500)) return false;
                     try { stderr.Wait(100); } catch { }
                     var output = (stdout.Result ?? string.Empty).Trim().TrimStart('v');
-                    var dot = output.IndexOf('.');
-                    if (dot >= 0) output = output.Substring(0, dot);
-                    int major;
-                    // Keep system fallbacks aligned with package.json and the current
-                    // production dependency tree: Node 20 LTS or Node 22+ only.
-                    return process.ExitCode == 0 &&
-                           int.TryParse(output, NumberStyles.Integer, CultureInfo.InvariantCulture, out major) &&
-                           (major == 20 || major >= 22);
+                    Version parsed;
+                    if (process.ExitCode != 0 || !Version.TryParse(output, out parsed)) return false;
+                    if (!(parsed.Major == 20 || parsed.Major >= 22)) return false;
+                    if (bundled && !string.Equals(parsed.ToString(), Program.NodeVersion, StringComparison.Ordinal)) return false;
+                    return true;
+                }
+            }
+            catch { return false; }
+        }
+
+        private static bool IsHexDigit(char value)
+        {
+            return (value >= '0' && value <= '9') || (value >= 'a' && value <= 'f') || (value >= 'A' && value <= 'F');
+        }
+
+        private static bool IsAmd64Pe(string path)
+        {
+            try
+            {
+                using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+                using (var reader = new BinaryReader(stream))
+                {
+                    if (stream.Length < 0x100 || reader.ReadUInt16() != 0x5A4D) return false; // MZ
+                    stream.Position = 0x3C;
+                    var peOffset = reader.ReadInt32();
+                    if (peOffset < 0x40 || peOffset > stream.Length - 24) return false;
+                    stream.Position = peOffset;
+                    if (reader.ReadUInt32() != 0x00004550) return false; // PE\0\0
+                    return reader.ReadUInt16() == 0x8664; // IMAGE_FILE_MACHINE_AMD64
                 }
             }
             catch { return false; }
@@ -788,14 +814,14 @@ namespace DirectXfer.WindowsLauncher
             });
         }
 
-        private static bool TryReady(int port, string token, string preferredScheme, int expectedPid, out string usedScheme)
+        private bool TryReady(int port, string token, string preferredScheme, int expectedPid, out string usedScheme)
         {
             usedScheme = preferredScheme;
             foreach (var scheme in SchemeCandidates(preferredScheme))
             {
                 try
                 {
-                    using (var response = LauncherRequest("GET", port, "/__dx_launcher/ready", token, scheme, 900))
+                    using (var response = LauncherRequest("GET", port, "/__dx_launcher/ready", token, scheme, 900, LocalCaCertificatePath))
                     using (var reader = new StreamReader(response.GetResponseStream() ?? Stream.Null))
                     {
                         var body = reader.ReadToEnd();
@@ -827,7 +853,7 @@ namespace DirectXfer.WindowsLauncher
         }
 
         private static HttpWebResponse LauncherRequest(string method, int port, string route, string token,
-            string scheme, int timeoutMs)
+            string scheme, int timeoutMs, string localCaCertificatePath)
         {
             var url = scheme + "://127.0.0.1:" + port.ToString(CultureInfo.InvariantCulture) + route;
             var request = (HttpWebRequest)WebRequest.Create(url);
@@ -840,13 +866,64 @@ namespace DirectXfer.WindowsLauncher
             if (!string.IsNullOrEmpty(token)) request.Headers["X-Direct-Xfer-Launcher-Token"] = token;
             if (string.Equals(scheme, "https", StringComparison.OrdinalIgnoreCase))
             {
-                // The HTTPS exception is scoped to this authenticated 127.0.0.1 request only.
-                request.ServerCertificateValidationCallback = (sender, certificate, chain, errors) => true;
+                request.ServerCertificateValidationCallback = (sender, certificate, chain, errors) =>
+                    ValidateLauncherServerCertificate(certificate, errors, localCaCertificatePath);
             }
             return (HttpWebResponse)request.GetResponse();
         }
 
-        private static HttpWebResponse LauncherRequestAnyScheme(string method, int port, string route, string token,
+        private static bool ValidateLauncherServerCertificate(X509Certificate certificate, SslPolicyErrors errors,
+            string localCaCertificatePath)
+        {
+            if (certificate == null) return false;
+            if (errors == SslPolicyErrors.None) return true;
+            if ((errors & (SslPolicyErrors.RemoteCertificateNameMismatch | SslPolicyErrors.RemoteCertificateNotAvailable)) != 0)
+                return false;
+            if ((errors & ~SslPolicyErrors.RemoteCertificateChainErrors) != 0) return false;
+
+            X509Certificate2 localCa = null;
+            X509Certificate2 leaf = null;
+            X509Chain localChain = null;
+            try
+            {
+                localCa = LoadPemCertificate(localCaCertificatePath);
+                if (localCa == null) return false;
+                leaf = new X509Certificate2(certificate);
+                localChain = new X509Chain();
+                localChain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
+                localChain.ChainPolicy.VerificationFlags = X509VerificationFlags.AllowUnknownCertificateAuthority;
+                localChain.ChainPolicy.ExtraStore.Add(localCa);
+                if (!localChain.Build(leaf) || localChain.ChainElements.Count == 0) return false;
+                var root = localChain.ChainElements[localChain.ChainElements.Count - 1].Certificate;
+                return string.Equals(root.Thumbprint, localCa.Thumbprint, StringComparison.OrdinalIgnoreCase);
+            }
+            catch { return false; }
+            finally
+            {
+                if (localChain != null) localChain.Dispose();
+                if (leaf != null) leaf.Dispose();
+                if (localCa != null) localCa.Dispose();
+            }
+        }
+
+        private static X509Certificate2 LoadPemCertificate(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return null;
+            if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0) return null;
+            var info = new FileInfo(path);
+            if (info.Length <= 0 || info.Length > 2L * 1024 * 1024) return null;
+            var pem = File.ReadAllText(path, Encoding.ASCII);
+            const string begin = "-----BEGIN CERTIFICATE-----";
+            const string end = "-----END CERTIFICATE-----";
+            var first = pem.IndexOf(begin, StringComparison.Ordinal);
+            var last = pem.IndexOf(end, first >= 0 ? first + begin.Length : 0, StringComparison.Ordinal);
+            if (first < 0 || last <= first) return null;
+            var base64 = pem.Substring(first + begin.Length, last - first - begin.Length);
+            var compact = new string(base64.Where(c => !char.IsWhiteSpace(c)).ToArray());
+            return new X509Certificate2(Convert.FromBase64String(compact));
+        }
+
+        private HttpWebResponse LauncherRequestAnyScheme(string method, int port, string route, string token,
             string preferred, int timeoutMs, out string usedScheme)
         {
             Exception last = null;
@@ -854,7 +931,7 @@ namespace DirectXfer.WindowsLauncher
             {
                 try
                 {
-                    var response = LauncherRequest(method, port, route, token, scheme, timeoutMs);
+                    var response = LauncherRequest(method, port, route, token, scheme, timeoutMs, LocalCaCertificatePath);
                     usedScheme = scheme;
                     return response;
                 }
@@ -1127,7 +1204,7 @@ namespace DirectXfer.WindowsLauncher
             {
                 try
                 {
-                    using (LauncherRequest("POST", session.port, "/__dx_launcher/shutdown", session.token, usedScheme, 700)) { }
+                    using (LauncherRequest("POST", session.port, "/__dx_launcher/shutdown", session.token, usedScheme, 700, LocalCaCertificatePath)) { }
                 }
                 catch { }
                 if (WaitForProcessExit(session.pid, 2600))
@@ -1378,7 +1455,7 @@ namespace DirectXfer.WindowsLauncher
                         NoFreePort = "Aucun port libre n’a été trouvé entre {0} et {1}.",
                         ResetPasswordError = "Impossible d’ouvrir la réinitialisation du mot de passe administrateur.",
                         ResetPasswordEnvManaged = "Le mot de passe propriétaire est géré par ADMIN_PASSWORD et ne peut pas être réinitialisé depuis la systray.",
-                        NodeMissing = "Runtime Node.js introuvable. Installez Node.js LTS avec la méthode approuvée par votre organisation ou placez un node.exe approuvé dans runtime\node.",
+                        NodeMissing = "Runtime Node.js x64 introuvable ou invalide. Utilisez le runtime signé fourni dans runtime\\node. Pour un runtime externe approuvé, définissez DX_WINDOWS_NODE et son SHA-256 exact dans DX_WINDOWS_NODE_SHA256.",
                         InitialPasswordTitle = "Mot de passe administrateur",
                         InitialPasswordError = "Le mot de passe administrateur initial a été généré, mais le launcher n’a pas pu l’afficher. Utilisez « Réinitialiser le mot de passe admin… » dans la systray pour définir un nouveau mot de passe.",
                         InitialPasswordIntro = "Un mot de passe administrateur a été généré automatiquement.",
@@ -1402,7 +1479,7 @@ namespace DirectXfer.WindowsLauncher
                         NoFreePort = "No se encontró ningún puerto libre entre {0} y {1}.",
                         ResetPasswordError = "No se pudo abrir el restablecimiento de la contraseña de administrador.",
                         ResetPasswordEnvManaged = "La contraseña del propietario está gestionada por ADMIN_PASSWORD y no puede restablecerse desde la bandeja del sistema.",
-                        NodeMissing = "No se encontró el runtime de Node.js. Instala Node.js LTS mediante el método aprobado por tu organización o coloca un node.exe aprobado en runtime\node.",
+                        NodeMissing = "No se encontró un runtime Node.js x64 válido. Usa el runtime incluido en runtime\\node. Para un runtime externo aprobado, define DX_WINDOWS_NODE y su SHA-256 exacto en DX_WINDOWS_NODE_SHA256.",
                         InitialPasswordTitle = "Contraseña de administrador",
                         InitialPasswordError = "La contraseña inicial de administrador se generó, pero el launcher no pudo mostrarla. Usa « Restablecer la contraseña de administrador… » desde la bandeja del sistema para definir una nueva contraseña.",
                         InitialPasswordIntro = "Se generó automáticamente una contraseña de administrador.",
@@ -1426,7 +1503,7 @@ namespace DirectXfer.WindowsLauncher
                         NoFreePort = "No free port was found between {0} and {1}.",
                         ResetPasswordError = "The administrator password reset page could not be opened.",
                         ResetPasswordEnvManaged = "The owner password is managed by ADMIN_PASSWORD and cannot be reset from the system tray.",
-                        NodeMissing = "Node.js runtime not found. Install Node.js LTS using your organization-approved method or place an approved node.exe in runtime\node.",
+                        NodeMissing = "Valid x64 Node.js runtime not found. Use the bundled runtime in runtime\\node. For an approved external runtime, set DX_WINDOWS_NODE and its exact SHA-256 in DX_WINDOWS_NODE_SHA256.",
                         InitialPasswordTitle = "Administrator password",
                         InitialPasswordError = "The initial administrator password was generated, but the launcher could not display it. Use “Reset admin password…” from the system tray to define a new password.",
                         InitialPasswordIntro = "An administrator password was generated automatically.",

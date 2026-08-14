@@ -40,7 +40,7 @@ function waitHealth(port, child, outputRef) {
 }
 
 test('Windows C# launcher shutdown is UI-thread safe, idempotent and bounded', () => {
-  assert.match(launcher, /RuntimeAppBuild = "1\.59\.0-launcher26-csharp"/);
+  assert.match(launcher, /RuntimeAppBuild = "1\.59\.1-launcher27-csharp"/);
   assert.match(launcher, /RequestExit\(\)/);
   assert.match(launcher, /lock \(_exitSync\)/);
   assert.match(launcher, /Task\.Run\(\(\) =>[\s\S]*StopServer\(\)/);

@@ -47,7 +47,7 @@ Le launcher ne recherche plus automatiquement `node.exe` dans `PATH` ni dans `Pr
 
 ## Signature de code
 
-Le workflow sait signer **optionnellement** le launcher et l'installateur final via Azure Artifact Signing. Activez la variable de dépôt `DX_ARTIFACT_SIGNING_ENABLED=true`, configurez les secrets OIDC Azure (`AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`) et les variables `AZURE_ARTIFACT_SIGNING_ENDPOINT`, `AZURE_ARTIFACT_SIGNING_ACCOUNT`, `AZURE_ARTIFACT_SIGNING_PROFILE`. Sans cette configuration, le build reste volontairement non signé.
+Le workflow produit volontairement le launcher et l’installateur sans signature Authenticode. Il vérifie explicitement que les deux sorties restent non signées et publie leurs empreintes SHA-256.
 
 
 ## Important — extract the GitHub Artifact first

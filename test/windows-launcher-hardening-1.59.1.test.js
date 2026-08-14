@@ -51,14 +51,13 @@ test('bundled Node remains exact-version hash pinned', () => {
   assert.match(launcher, /bundled && !string\.Equals\(parsed\.ToString\(\), Program\.NodeVersion/);
 });
 
-test('GitHub workflow can optionally sign both launcher and final installer', () => {
-  assert.match(workflow, /id-token: write/);
-  assert.match(workflow, /uses: azure\/login@v3/);
-  assert.match(workflow, /uses: azure\/artifact-signing-action@v2/g);
-  assert.match(workflow, /DX_ARTIFACT_SIGNING_ENABLED/);
-  assert.match(workflow, /AZURE_ARTIFACT_SIGNING_ENDPOINT/);
-  assert.match(workflow, /windows-launcher\\bin\\Release\\Direct-Xfer\.exe/);
-  assert.match(workflow, /dist\\installer\\Direct-Xfer-Setup-\$\{\{ env\.DX_VERSION \}\}\.exe/);
-  assert.match(workflow, /timestamp-rfc3161: http:\/\/timestamp\.acs\.microsoft\.com/);
+test('GitHub workflow deliberately produces unsigned launcher and installer', () => {
+  assert.doesNotMatch(workflow, /id-token: write/);
+  assert.doesNotMatch(workflow, /azure\/login@/);
+  assert.doesNotMatch(workflow, /azure\/artifact-signing-action@/);
+  assert.doesNotMatch(workflow, /DX_ARTIFACT_SIGNING_ENABLED|AZURE_ARTIFACT_SIGNING_/);
+  assert.match(workflow, /Verify launcher is unsigned by design/);
+  assert.match(workflow, /Direct-Xfer\.exe must remain unsigned by design/);
+  assert.match(workflow, /Direct-Xfer installer must remain unsigned by design/);
   assert.match(workflow, /Finalize installer metadata/);
 });

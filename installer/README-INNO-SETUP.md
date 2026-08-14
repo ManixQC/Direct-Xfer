@@ -11,9 +11,9 @@ The GitHub Actions workflow `.github/workflows/build-windows-csharp.yml` perform
 5. Creates the portable runtime tree.
 6. Downloads the pinned official Node.js 24.19.0 x64 `node.exe` from nodejs.org and verifies its SHA-256 before packaging.
 7. Downloads the official signed Inno Setup 6.7.3 compiler installer and verifies its Authenticode signature before installing it on the ephemeral GitHub runner.
-8. If Azure Artifact Signing is enabled, signs `Direct-Xfer.exe` before it is copied into the portable runtime and installer.
+8. Verifies that `Direct-Xfer.exe` remains unsigned by design before it is copied into the portable runtime and installer.
 9. Compiles `installer/Direct-Xfer.iss` with `ISCC.exe`.
-10. If signing is enabled, signs the final `Direct-Xfer-Setup-1.59.1.exe`, verifies its Authenticode status, then computes the SHA-256 of the final signed binary.
+10. Verifies that the final `Direct-Xfer-Setup-1.59.1.exe` remains unsigned by design, then computes its SHA-256.
 11. Uploads both the installer and the portable package as GitHub Actions artifacts.
 
 ## Installed layout
@@ -33,4 +33,4 @@ The `AppId` in `Direct-Xfer.iss` is intentionally stable. Keep it unchanged in f
 
 ## Code signing
 
-Azure Artifact Signing support is built into the workflow but is **opt-in**. Set repository variable `DX_ARTIFACT_SIGNING_ENABLED=true`, configure the Azure OIDC secrets and Artifact Signing account/profile variables described in the main README, and the workflow signs both `Direct-Xfer.exe` and the final Setup EXE. If the variable is not enabled, both artifacts remain unsigned.
+The Direct-Xfer launcher and installer are intentionally produced without an Authenticode signature. The workflow fails if either output unexpectedly becomes signed. SHA-256 integrity files are still generated.

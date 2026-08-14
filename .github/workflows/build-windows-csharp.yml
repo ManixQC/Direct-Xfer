@@ -17,7 +17,6 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 jobs:
   build-windows:
@@ -97,43 +96,16 @@ jobs:
             throw "MSBuild completed without producing $config"
           }
 
-      - name: Azure login for Artifact Signing
-        if: ${{ vars.DX_ARTIFACT_SIGNING_ENABLED == 'true' }}
-        uses: azure/login@v3
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Sign C# launcher with Azure Artifact Signing
-        if: ${{ vars.DX_ARTIFACT_SIGNING_ENABLED == 'true' }}
-        uses: azure/artifact-signing-action@v2
-        with:
-          endpoint: ${{ vars.AZURE_ARTIFACT_SIGNING_ENDPOINT }}
-          signing-account-name: ${{ vars.AZURE_ARTIFACT_SIGNING_ACCOUNT }}
-          certificate-profile-name: ${{ vars.AZURE_ARTIFACT_SIGNING_PROFILE }}
-          files: ${{ github.workspace }}\windows-launcher\bin\Release\Direct-Xfer.exe
-          file-digest: SHA256
-          timestamp-rfc3161: http://timestamp.acs.microsoft.com
-          timestamp-digest: SHA256
-          description: Direct-Xfer Windows Launcher
-
-      - name: Verify launcher signature when signing is enabled
-        if: ${{ vars.DX_ARTIFACT_SIGNING_ENABLED == 'true' }}
+      - name: Verify launcher is unsigned by design
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           $exe = 'windows-launcher\bin\Release\Direct-Xfer.exe'
           $signature = Get-AuthenticodeSignature -FilePath $exe
-          if ($signature.Status -ne 'Valid') {
-            throw "Signed launcher Authenticode status is $($signature.Status)"
+          if ($signature.Status -ne 'NotSigned') {
+            throw "Direct-Xfer.exe must remain unsigned by design; Authenticode status is $($signature.Status)"
           }
-          Write-Host "Launcher signed by: $($signature.SignerCertificate.Subject)"
-
-      - name: Note unsigned build
-        if: ${{ vars.DX_ARTIFACT_SIGNING_ENABLED != 'true' }}
-        shell: pwsh
-        run: Write-Host 'Azure Artifact Signing is not enabled; the build will remain unsigned.'
+          Write-Host 'Direct-Xfer.exe is unsigned by design.'
 
       - name: Create portable runtime
         shell: pwsh
@@ -283,19 +255,6 @@ jobs:
 
           Write-Host "Generated installer: $setupExe"
 
-      - name: Sign Windows installer with Azure Artifact Signing
-        if: ${{ vars.DX_ARTIFACT_SIGNING_ENABLED == 'true' }}
-        uses: azure/artifact-signing-action@v2
-        with:
-          endpoint: ${{ vars.AZURE_ARTIFACT_SIGNING_ENDPOINT }}
-          signing-account-name: ${{ vars.AZURE_ARTIFACT_SIGNING_ACCOUNT }}
-          certificate-profile-name: ${{ vars.AZURE_ARTIFACT_SIGNING_PROFILE }}
-          files: ${{ github.workspace }}\dist\installer\Direct-Xfer-Setup-${{ env.DX_VERSION }}.exe
-          file-digest: SHA256
-          timestamp-rfc3161: http://timestamp.acs.microsoft.com
-          timestamp-digest: SHA256
-          description: Direct-Xfer Windows Installer
-
       - name: Finalize installer metadata
         shell: pwsh
         run: |
@@ -308,12 +267,11 @@ jobs:
           $setupHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $setupExe).Hash.ToLowerInvariant()
           Set-Content -Encoding ASCII -NoNewline -Path (Join-Path $installerDir "Direct-Xfer-Setup-$env:DX_VERSION.exe.sha256") -Value "$setupHash  Direct-Xfer-Setup-$env:DX_VERSION.exe"
           $setupSignature = Get-AuthenticodeSignature -FilePath $setupExe
-          if ('${{ vars.DX_ARTIFACT_SIGNING_ENABLED }}' -eq 'true' -and $setupSignature.Status -ne 'Valid') {
-            throw "Signed installer Authenticode status is $($setupSignature.Status)"
+          if ($setupSignature.Status -ne 'NotSigned') {
+            throw "Direct-Xfer installer must remain unsigned by design; Authenticode status is $($setupSignature.Status)"
           }
           Write-Host "SHA-256: $setupHash"
-          Write-Host "Installer Authenticode status: $($setupSignature.Status)"
-          if ($setupSignature.SignerCertificate) { Write-Host "Installer signed by: $($setupSignature.SignerCertificate.Subject)" }
+          Write-Host 'Installer is unsigned by design.'
 
       - name: Upload Windows installer
         uses: actions/upload-artifact@v6

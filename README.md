@@ -1803,10 +1803,9 @@ Une PWA ne peut pas garantir que le réseau continue à travailler après sa fer
 - Les requêtes HTTPS privées du launcher vers `127.0.0.1` n’acceptent plus tous les certificats : la validation Windows reste prioritaire et le mode Local CA n’autorise une chaîne non approuvée que si elle remonte exactement vers la racine Direct-Xfer locale et sans erreur de nom.
 - Le fallback automatique vers un `node.exe` trouvé dans `PATH` ou `Program Files` est retiré. Un Node externe doit être explicitement configuré avec `DX_WINDOWS_NODE` **et** épinglé avec `DX_WINDOWS_NODE_SHA256`, être un PE AMD64 normal et utiliser une version supportée.
 - Le runtime Node embarqué reste vérifié par SHA-256 et doit correspondre exactement à **Node.js 24.19.0 x64**.
-- Le workflow GitHub Actions compile désormais le launcher en x64 et contient une intégration **optionnelle** Azure Artifact Signing : lorsqu’elle est activée/configurée, elle signe le launcher avant packaging puis le Setup Inno final avec SHA-256 + timestamp RFC3161.
-  - Variable de dépôt : `DX_ARTIFACT_SIGNING_ENABLED=true`.
-  - Secrets GitHub Actions OIDC : `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`.
-  - Variables de dépôt : `AZURE_ARTIFACT_SIGNING_ENDPOINT`, `AZURE_ARTIFACT_SIGNING_ACCOUNT`, `AZURE_ARTIFACT_SIGNING_PROFILE`.
+- Le workflow GitHub Actions compile le launcher en x64 et produit volontairement `Direct-Xfer.exe` et le Setup Inno sans signature Authenticode.
+  - Le workflow vérifie explicitement que les deux binaires restent non signés.
+  - Les empreintes SHA-256 restent générées pour vérifier l’intégrité des artefacts.
   - Si la variable d’activation est absente ou différente de `true`, le workflow continue normalement mais produit volontairement des binaires non signés.
 - Bump **1.59.1**, PWA **pwa280**, ressources **v266**, runtime Windows **launcher27-csharp**.
 

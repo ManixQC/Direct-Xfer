@@ -896,8 +896,8 @@ namespace DirectXfer.WindowsLauncher
                 if (_dispatcher.InvokeRequired) _dispatcher.BeginInvoke(action);
                 else action();
             }
-            catch (InvalidOperationException) { }
             catch (ObjectDisposedException) { }
+            catch (InvalidOperationException) { }
         }
 
         private void OnServerExited(object sender, EventArgs e)

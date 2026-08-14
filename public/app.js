@@ -296,6 +296,28 @@ const I18N = {
     'cfg.sessionDefault': 'défaut',
     'cfg.tokenBytes': 'Longueur des jetons de lien (octets)',
     'cfg.httpsWarn': 'Avertir si l’admin est servie en HTTP non chiffré',
+    'cfg.tlsLocalCa': 'Activer HTTPS avec une autorité locale Direct-Xfer (LAN uniquement)',
+    'cfg.tlsLocalCaHint': 'Direct-Xfer crée une autorité de certification locale privée une seule fois, puis signe le certificat serveur LAN avec celle-ci. Installez le certificat racine une fois sur chaque appareil LAN de confiance pour supprimer les avertissements du navigateur.',
+    'cfg.tlsCaFingerprintLabel': 'Empreinte SHA-256 de la CA locale :',
+    'cfg.tlsCaDownload': 'Télécharger le certificat racine de confiance (.cer)',
+    'cfg.tlsCaInstallHint': 'Installez ce certificat dans les autorités de certification racines de confiance de l’appareil. Vérifiez son empreinte SHA-256 avant de lui faire confiance. Cette CA est destinée uniquement à votre réseau local.',
+    'cfg.tlsCaHowTo': 'Comment approuver le certificat',
+    'cfg.tlsCaWindows': 'Windows : ouvrez le fichier .cer téléchargé → Installer le certificat → Utilisateur actuel → Placer tous les certificats dans Autorités de certification racines de confiance.',
+    'cfg.tlsCaAndroid': 'Android : Paramètres → Sécurité / Chiffrement et identifiants → Installer un certificat → Certificat CA, puis sélectionnez le fichier .cer téléchargé.',
+    'cfg.tlsCaRestartHint': 'Les changements d’IP LAN et le renouvellement du certificat serveur sont vérifiés automatiquement. La CA racine reste identique et n’a pas besoin d’être réinstallée.',
+    'cfg.tlsCaBootstrapHint': 'Premier appareil distant : ouvrez /direct-xfer-local-ca.cer sans vous connecter, puis comparez son empreinte SHA-256 avec celle affichée localement sur le serveur avant de l’installer. Ne saisissez jamais vos identifiants après avoir simplement ignoré un avertissement TLS.',
+    'cfg.tlsCaBackupWarning': '⚠ Sans DATA_KEY, les sauvegardes complètes n’exportent jamais la clé privée de la CA locale. Pour préserver la même CA lors d’une restauration/migration, utilisez une sauvegarde chiffrée avec DATA_KEY.',
+    'cfg.tlsCaSigningUnavailable': '⚠ La clé privée de la CA est indisponible. HTTPS peut continuer avec le certificat serveur actuel, mais son renouvellement est impossible. Restaurez une sauvegarde chiffrée contenant la CA.',
+    'cfg.tlsCaExpiringSoon': '⚠ La CA locale expire dans moins d’un an. Planifiez son remplacement et l’installation de la nouvelle racine sur les appareils de confiance.',
+    'cfg.tlsCaExpiry': 'CA valide jusqu’au {ca} · certificat serveur jusqu’au {leaf}',
+    'cfg.tlsCaIdentities': 'Certificat serveur LAN : {names}',
+    'cfg.tlsCaUnavailable': 'La CA locale n’est pas encore disponible. Enregistrez l’option puis redémarrez Direct-Xfer.',
+    'cfg.tlsManagedEnv': 'HTTPS est géré par TLS_CERT/TLS_KEY ou TLS_SELF_SIGNED dans l’environnement (ce dernier active le mode CA locale).',
+    'cfg.tlsActive': 'HTTPS natif est actif.',
+    'cfg.tlsProvidedExpiry': 'Certificat TLS fourni valide jusqu’au {date}.',
+    'cfg.tlsProvidedExpiring': '⚠ Le certificat TLS fourni expire le {date}. Remplacez les fichiers de certificat ; Direct-Xfer les recharge automatiquement.',
+    'cfg.tlsRestartRequired': 'Redémarrez Direct-Xfer pour appliquer ce changement HTTPS.',
+    'cfg.savedTlsRestart': 'Configuration enregistrée ✓ — redémarrez Direct-Xfer pour appliquer HTTPS.',
     'cfg.httpsBanner': '⚠ Interface d’administration servie en HTTP non chiffré : vos identifiants circulent en clair. Utilisez HTTPS.',
     'cfg.allowPreview': 'Autoriser l’aperçu dans le navigateur',
     'cfg.reqPassword': 'Exiger un mot de passe par défaut',
@@ -336,7 +358,7 @@ const I18N = {
     'cfg.auditProof': 'Exporter la preuve signée',
     'cfg.auditHint': 'Le journal des actions admin (connexions, création/révocation de liens, changements de réglages, alertes).',
     'cfg.bkTitle': 'Sauvegarde complète planifiée',
-    'cfg.bkIntro': 'Une sauvegarde complète regroupe tout le store (liens + réglages), le journal des transferts et les notes secrètes dans un seul fichier — chiffré avec DATA_KEY si défini. Envoyé vers un dossier, WebDAV ou S3.',
+    'cfg.bkIntro': 'Une sauvegarde complète regroupe le store, le journal des transferts et les notes secrètes. Si DATA_KEY est défini, la sauvegarde chiffrée préserve aussi la CA locale et sa clé afin de conserver la confiance des appareils LAN après restauration. Sans DATA_KEY, la clé privée de la CA n’est jamais exportée. Envoyé vers un dossier, WebDAV ou S3.',
     'cfg.bkEnable': 'Lancer une sauvegarde planifiée automatiquement',
     'cfg.bkInterval': 'Fréquence',
     'cfg.bkDaily': 'Quotidienne',
@@ -1346,7 +1368,7 @@ const I18N = {
     'trash.restoreSelected':'Restaurer la sélection', 'trash.restoreSelectedN':'Restaurer la sélection ({n})', 'trash.selected':'{n} sélectionné(s)', 'trash.select':'Sélectionner cet élément', 'trash.restoreSelectedOk':'{n} élément(s) restauré(s)', 'trash.restoreSelectedFail':'{n} restauration(s) impossible(s)',
     'trash.open': '🗑 Corbeille', 'trash.title': 'Corbeille', 'trash.empty': 'La corbeille est vide.', 'trash.restore': '↩ Restaurer', 'trash.purge': 'Supprimer définitivement', 'trash.purgeAll': 'Tout supprimer définitivement', 'trash.restoreOk': 'Partage restauré', 'trash.restoreFail': 'Restauration impossible', 'trash.purgeOk': 'Élément supprimé définitivement', 'trash.purgeFail': 'Suppression définitive impossible', 'trash.purgeConfirm': 'Supprimer définitivement « {name} » ? Cette action est irréversible.', 'trash.purgeAllConfirm': 'Supprimer définitivement tous les éléments de la corbeille ? Cette action est irréversible.', 'trash.retention': 'Conservation : {n} jour(s)',
     'undo.open': '↶ Historique / Annuler', 'undo.title': 'Historique d’actions', 'undo.subtitle': 'Consultez les dernières actions administratives et annulez celles qui sont encore réversibles.', 'undo.empty': 'Aucune action récente.', 'undo.btn': '↶ Annuler', 'undo.done': 'Annulée', 'undo.unavailable': 'Plus annulable', 'undo.ok': 'Action annulée', 'undo.fail': 'Annulation impossible', 'undo.confirm': 'Annuler « {label} » ?', 'undo.type.settings': 'Configuration modifiée', 'undo.type.stats': 'Statistiques réinitialisées', 'undo.type.recipient': 'Destinataire retiré', 'undo.type.ipnames': 'Surnoms client effacés', 'undo.type.share': 'Partage supprimé', 'undo.reason.changed': 'État modifié depuis', 'undo.reason.restored': 'Déjà restaurée', 'undo.reason.purged': 'Élément supprimé définitivement', 'undo.reason.legacy': 'Ancienne entrée non sûre', 'undo.reason.forbidden': 'Lecture seule', 'undo.reason.gone': 'Partage introuvable', 'undo.reason.unsupported': 'Annulation non prise en charge', 'undo.reason.restoreConflict': 'Conflit avec un lien actif', 'undo.reason.tooLarge': 'Données d’annulation trop volumineuses', 'undo.loadFail': 'Impossible de charger l’historique',
-    'activity.open': '◉ Historique d’activité', 'activity.title': 'Historique d’activité', 'activity.sectionTitle': 'Activité', 'activity.back': 'Retour aux partages', 'activity.sectionHint': 'Historique persistant des événements pertinents de Direct-Xfer.', 'activity.openFull': 'Ouvrir l’historique complet', 'activity.clear': 'Effacer la vue', 'activity.hint': 'Les transferts pertinents, événements de sécurité, actions administratives et changements PWA sont conservés ici et mis à jour en temps réel.', 'activity.connected': 'Historique chargé · événements en temps réel', 'activity.reconnecting': 'Reconnexion…', 'activity.empty': 'Aucune activité enregistrée.', 'activity.searchPh': 'Rechercher une activité…', 'activity.filtersAria': 'Filtres d’activité', 'activity.kindAria': 'Type d’activité', 'activity.kindAll': 'Tous les types', 'activity.kindTransfer': 'Transferts', 'activity.kindAdmin': 'Administration', 'activity.kindSecurity': 'Sécurité', 'activity.kindVisitor': 'Visiteurs', 'activity.kindSystem': 'Système', 'activity.shareAria':'Partage', 'activity.shareAll':'Tous les partages', 'activity.imagesOnly':'Images seulement', 'activity.pwaOnly':'PWA seulement', 'activity.hideRoutine':'Masquer le système routinier', 'activity.resetFilters': 'Effacer les filtres', 'activity.summary': '{shown} affichée(s) sur {total}', 'activity.loadFail': 'Impossible de charger l’historique d’activité.',
+    'activity.open': '◉ Historique d’activité', 'activity.title': 'Historique d’activité', 'activity.sectionTitle': 'Activité', 'activity.back': 'Retour aux partages', 'activity.sectionHint': 'Historique persistant des événements Direct-Xfer, incluant les actions encore annulables.', 'activity.openFull': 'Ouvrir l’historique complet', 'activity.clear': 'Effacer la vue', 'activity.hint': 'Les transferts pertinents, événements de sécurité, actions administratives et changements PWA sont conservés ici et mis à jour en temps réel.', 'activity.connected': 'Historique chargé · événements en temps réel', 'activity.reconnecting': 'Reconnexion…', 'activity.empty': 'Aucune activité enregistrée.', 'activity.searchPh': 'Rechercher une activité…', 'activity.filtersAria': 'Filtres d’activité', 'activity.kindAria': 'Type d’activité', 'activity.kindAll': 'Tous les types', 'activity.kindTransfer': 'Transferts', 'activity.kindAdmin': 'Administration', 'activity.kindSecurity': 'Sécurité', 'activity.kindVisitor': 'Visiteurs', 'activity.kindSystem': 'Système', 'activity.shareAria':'Partage', 'activity.shareAll':'Tous les partages', 'activity.imagesOnly':'Images seulement', 'activity.pwaOnly':'PWA seulement', 'activity.hideRoutine':'Masquer le système routinier', 'activity.resetFilters': 'Effacer les filtres', 'activity.summary': '{shown} affichée(s) sur {total}', 'activity.loadFail': 'Impossible de charger l’historique d’activité.',
     'cfg.trashRetention': 'Conservation de la corbeille (jours, 0 = garder indéfiniment)',
     'cfg.autoArchiveExpired': 'Archiver automatiquement les liens expirés après (jours, 0 = désactivé)',
     'cfg.autoArchiveExpiredHint': 'Masque les anciens liens de la liste principale sans supprimer leurs fichiers gérés.',
@@ -1842,6 +1864,28 @@ const I18N = {
     'cfg.sessionDefault': 'default',
     'cfg.tokenBytes': 'Link token length (bytes)',
     'cfg.httpsWarn': 'Warn when the admin is served over plain HTTP',
+    'cfg.tlsLocalCa': 'Enable HTTPS with a Direct-Xfer Local CA (LAN only)',
+    'cfg.tlsLocalCaHint': 'Direct-Xfer creates a private local certification authority once, then signs the LAN server certificate with it. Install the root certificate once on each trusted LAN device to remove browser warnings.',
+    'cfg.tlsCaFingerprintLabel': 'Local CA SHA-256 fingerprint:',
+    'cfg.tlsCaDownload': 'Download trusted root certificate (.cer)',
+    'cfg.tlsCaInstallHint': 'Install this certificate in the device’s trusted root certification authorities. Verify its SHA-256 fingerprint before trusting it. This CA is intended only for your local network.',
+    'cfg.tlsCaHowTo': 'How to trust the certificate',
+    'cfg.tlsCaWindows': 'Windows: open the downloaded .cer → Install Certificate → Current User → Place all certificates in Trusted Root Certification Authorities.',
+    'cfg.tlsCaAndroid': 'Android: Settings → Security / Encryption & credentials → Install a certificate → CA certificate, then select the downloaded .cer.',
+    'cfg.tlsCaRestartHint': 'LAN IP changes and server-certificate renewal are checked automatically. The trusted root CA stays unchanged and does not need to be reinstalled.',
+    'cfg.tlsCaBootstrapHint': 'First remote device: open /direct-xfer-local-ca.cer without signing in, then compare its SHA-256 fingerprint with the value shown locally on the server before installing it. Never enter credentials after merely bypassing a TLS warning.',
+    'cfg.tlsCaBackupWarning': '⚠ Without DATA_KEY, full backups never export the Local CA private key. To preserve the same CA across restore/migration, use an encrypted backup with DATA_KEY.',
+    'cfg.tlsCaSigningUnavailable': '⚠ The Local CA private key is unavailable. HTTPS can continue with the current server certificate, but renewal is impossible. Restore an encrypted backup containing the CA.',
+    'cfg.tlsCaExpiringSoon': '⚠ The Local CA expires in less than one year. Plan its replacement and install the new root on trusted devices.',
+    'cfg.tlsCaExpiry': 'CA valid until {ca} · server certificate until {leaf}',
+    'cfg.tlsCaIdentities': 'LAN server certificate: {names}',
+    'cfg.tlsCaUnavailable': 'The Local CA is not available yet. Save the option, then restart Direct-Xfer.',
+    'cfg.tlsManagedEnv': 'HTTPS is managed by TLS_CERT/TLS_KEY or TLS_SELF_SIGNED in the environment (the latter enables Local CA mode).',
+    'cfg.tlsActive': 'Native HTTPS is active.',
+    'cfg.tlsProvidedExpiry': 'Provided TLS certificate valid until {date}.',
+    'cfg.tlsProvidedExpiring': '⚠ The provided TLS certificate expires on {date}. Replace the certificate files; Direct-Xfer reloads them automatically.',
+    'cfg.tlsRestartRequired': 'Restart Direct-Xfer to apply this HTTPS change.',
+    'cfg.savedTlsRestart': 'Configuration saved ✓ — restart Direct-Xfer to apply HTTPS.',
     'cfg.httpsBanner': '⚠ Admin panel served over plain HTTP: your credentials travel unencrypted. Use HTTPS.',
     'cfg.allowPreview': 'Allow in-browser preview',
     'cfg.reqPassword': 'Require a password by default',
@@ -1882,7 +1926,7 @@ const I18N = {
     'cfg.auditProof': 'Export signed proof',
     'cfg.auditHint': 'The admin action log (logins, link create/revoke, settings changes, alerts).',
     'cfg.bkTitle': 'Scheduled full backup',
-    'cfg.bkIntro': 'A full backup bundles the whole store (links + settings), the transfer journal and the secret notes into one file — encrypted with DATA_KEY when it is set. Pushed to a folder, WebDAV or S3.',
+    'cfg.bkIntro': 'A full backup bundles the store, transfer journal and secret notes. When DATA_KEY is set, the encrypted backup also preserves the Local CA and its private key so trusted LAN devices keep working after restore. Without DATA_KEY, the CA private key is never exported. Pushed to a folder, WebDAV or S3.',
     'cfg.bkEnable': 'Run a scheduled backup automatically',
     'cfg.bkInterval': 'Frequency',
     'cfg.bkDaily': 'Daily',
@@ -2891,7 +2935,7 @@ const I18N = {
     'trash.restoreSelected':'Restore selected', 'trash.restoreSelectedN':'Restore selected ({n})', 'trash.selected':'{n} selected', 'trash.select':'Select this item', 'trash.restoreSelectedOk':'{n} item(s) restored', 'trash.restoreSelectedFail':'{n} restore(s) failed',
     'trash.open': '🗑 Trash', 'trash.title': 'Trash', 'trash.empty': 'Trash is empty.', 'trash.restore': '↩ Restore', 'trash.purge': 'Delete permanently', 'trash.purgeAll': 'Delete all permanently', 'trash.restoreOk': 'Share restored', 'trash.restoreFail': 'Could not restore share', 'trash.purgeOk': 'Item permanently deleted', 'trash.purgeFail': 'Permanent deletion failed', 'trash.purgeConfirm': 'Permanently delete “{name}”? This cannot be undone.', 'trash.purgeAllConfirm': 'Permanently delete every item in the trash? This action cannot be undone.', 'trash.retention': 'Retention: {n} day(s)',
     'undo.open': '↶ History / Undo', 'undo.title': 'Action history', 'undo.subtitle': 'Review recent administrative actions and undo the ones that are still reversible.', 'undo.empty': 'No recent actions.', 'undo.btn': '↶ Undo', 'undo.done': 'Undone', 'undo.unavailable': 'No longer undoable', 'undo.ok': 'Action undone', 'undo.fail': 'Could not undo', 'undo.confirm': 'Undo “{label}”?', 'undo.type.settings': 'Settings changed', 'undo.type.stats': 'Stats reset', 'undo.type.recipient': 'Recipient removed', 'undo.type.ipnames': 'Client nicknames cleared', 'undo.type.share': 'Share deleted', 'undo.reason.changed': 'State changed since', 'undo.reason.restored': 'Already restored', 'undo.reason.purged': 'Item permanently deleted', 'undo.reason.legacy': 'Legacy entry is unsafe', 'undo.reason.forbidden': 'Read-only', 'undo.reason.gone': 'Share no longer exists', 'undo.reason.unsupported': 'Undo not supported', 'undo.reason.restoreConflict': 'Conflicts with an active link', 'undo.reason.tooLarge': 'Undo data is too large', 'undo.loadFail': 'Could not load action history',
-    'activity.open': '◉ Activity history', 'activity.title': 'Activity history', 'activity.sectionTitle': 'Activity', 'activity.back': 'Back to shares', 'activity.sectionHint': 'Persistent history of relevant Direct-Xfer events.', 'activity.openFull': 'Open full history', 'activity.clear': 'Clear view', 'activity.hint': 'Relevant transfers, security events, administrative actions and PWA changes are retained here and updated in real time.', 'activity.connected': 'History loaded · real-time events', 'activity.reconnecting': 'Reconnecting…', 'activity.empty': 'No recorded activity.', 'activity.searchPh': 'Search activity…', 'activity.filtersAria': 'Activity filters', 'activity.kindAria': 'Activity type', 'activity.kindAll': 'All types', 'activity.kindTransfer': 'Transfers', 'activity.kindAdmin': 'Administration', 'activity.kindSecurity': 'Security', 'activity.kindVisitor': 'Visitors', 'activity.kindSystem': 'System', 'activity.shareAria':'Share', 'activity.shareAll':'All shares', 'activity.imagesOnly':'Images only', 'activity.pwaOnly':'PWA only', 'activity.hideRoutine':'Hide routine system events', 'activity.resetFilters': 'Clear filters', 'activity.summary': '{shown} shown of {total}', 'activity.loadFail': 'Could not load activity history.',
+    'activity.open': '◉ Activity history', 'activity.title': 'Activity history', 'activity.sectionTitle': 'Activity', 'activity.back': 'Back to shares', 'activity.sectionHint': 'Persistent Direct-Xfer history, including actions that can still be undone.', 'activity.openFull': 'Open full history', 'activity.clear': 'Clear view', 'activity.hint': 'Relevant transfers, security events, administrative actions and PWA changes are retained here and updated in real time.', 'activity.connected': 'History loaded · real-time events', 'activity.reconnecting': 'Reconnecting…', 'activity.empty': 'No recorded activity.', 'activity.searchPh': 'Search activity…', 'activity.filtersAria': 'Activity filters', 'activity.kindAria': 'Activity type', 'activity.kindAll': 'All types', 'activity.kindTransfer': 'Transfers', 'activity.kindAdmin': 'Administration', 'activity.kindSecurity': 'Security', 'activity.kindVisitor': 'Visitors', 'activity.kindSystem': 'System', 'activity.shareAria':'Share', 'activity.shareAll':'All shares', 'activity.imagesOnly':'Images only', 'activity.pwaOnly':'PWA only', 'activity.hideRoutine':'Hide routine system events', 'activity.resetFilters': 'Clear filters', 'activity.summary': '{shown} shown of {total}', 'activity.loadFail': 'Could not load activity history.',
     'cfg.trashRetention': 'Trash retention (days, 0 = keep forever)',
     'cfg.autoArchiveExpired': 'Auto-archive expired links after (days, 0 = off)',
     'cfg.autoArchiveExpiredHint': 'Keeps old links out of the main list without deleting their managed files.',
@@ -3386,6 +3430,28 @@ const I18N = {
     'cfg.sessionDefault': 'predet.',
     'cfg.tokenBytes': 'Longitud de los tokens de enlace (bytes)',
     'cfg.httpsWarn': 'Avisar si el admin se sirve por HTTP sin cifrar',
+    'cfg.tlsLocalCa': 'Activar HTTPS con una CA local de Direct-Xfer (solo LAN)',
+    'cfg.tlsLocalCaHint': 'Direct-Xfer crea una autoridad de certificación local privada una sola vez y luego firma con ella el certificado del servidor LAN. Instala el certificado raíz una vez en cada dispositivo LAN de confianza para eliminar las advertencias del navegador.',
+    'cfg.tlsCaFingerprintLabel': 'Huella SHA-256 de la CA local:',
+    'cfg.tlsCaDownload': 'Descargar certificado raíz de confianza (.cer)',
+    'cfg.tlsCaInstallHint': 'Instala este certificado en las autoridades de certificación raíz de confianza del dispositivo. Verifica su huella SHA-256 antes de confiar en él. Esta CA está destinada únicamente a tu red local.',
+    'cfg.tlsCaHowTo': 'Cómo confiar en el certificado',
+    'cfg.tlsCaWindows': 'Windows: abre el archivo .cer descargado → Instalar certificado → Usuario actual → Colocar todos los certificados en Entidades de certificación raíz de confianza.',
+    'cfg.tlsCaAndroid': 'Android: Ajustes → Seguridad / Cifrado y credenciales → Instalar un certificado → Certificado de CA y selecciona el archivo .cer descargado.',
+    'cfg.tlsCaRestartHint': 'Los cambios de IP LAN y la renovación del certificado del servidor se comprueban automáticamente. La CA raíz permanece igual y no necesita reinstalarse.',
+    'cfg.tlsCaBootstrapHint': 'Primer dispositivo remoto: abre /direct-xfer-local-ca.cer sin iniciar sesión y compara su huella SHA-256 con el valor mostrado localmente en el servidor antes de instalarlo. Nunca introduzcas credenciales tras simplemente ignorar una advertencia TLS.',
+    'cfg.tlsCaBackupWarning': '⚠ Sin DATA_KEY, las copias completas nunca exportan la clave privada de la CA local. Para conservar la misma CA al restaurar o migrar, utiliza una copia cifrada con DATA_KEY.',
+    'cfg.tlsCaSigningUnavailable': '⚠ La clave privada de la CA no está disponible. HTTPS puede continuar con el certificado actual, pero no podrá renovarse. Restaura una copia de seguridad cifrada que contenga la CA.',
+    'cfg.tlsCaExpiringSoon': '⚠ La CA local caduca en menos de un año. Planifica su sustitución e instala la nueva raíz en los dispositivos de confianza.',
+    'cfg.tlsCaExpiry': 'CA válida hasta {ca} · certificado del servidor hasta {leaf}',
+    'cfg.tlsCaIdentities': 'Certificado del servidor LAN: {names}',
+    'cfg.tlsCaUnavailable': 'La CA local aún no está disponible. Guarda la opción y reinicia Direct-Xfer.',
+    'cfg.tlsManagedEnv': 'HTTPS está gestionado por TLS_CERT/TLS_KEY o TLS_SELF_SIGNED en el entorno (este último activa el modo CA local).',
+    'cfg.tlsActive': 'HTTPS nativo está activo.',
+    'cfg.tlsProvidedExpiry': 'Certificado TLS proporcionado válido hasta {date}.',
+    'cfg.tlsProvidedExpiring': '⚠ El certificado TLS proporcionado caduca el {date}. Sustituye los archivos del certificado; Direct-Xfer los recarga automáticamente.',
+    'cfg.tlsRestartRequired': 'Reinicia Direct-Xfer para aplicar este cambio de HTTPS.',
+    'cfg.savedTlsRestart': 'Configuración guardada ✓ — reinicia Direct-Xfer para aplicar HTTPS.',
     'cfg.httpsBanner': '⚠ Panel de administración por HTTP sin cifrar: tus credenciales viajan sin protección. Usa HTTPS.',
     'cfg.allowPreview': 'Permitir vista previa en el navegador',
     'cfg.reqPassword': 'Exigir una contraseña por defecto',
@@ -3426,7 +3492,7 @@ const I18N = {
     'cfg.auditProof': 'Exportar prueba firmada',
     'cfg.auditHint': 'El registro de acciones de administración (accesos, creación/revocación de enlaces, cambios de ajustes, alertas).',
     'cfg.bkTitle': 'Copia de seguridad completa programada',
-    'cfg.bkIntro': 'Una copia completa agrupa todo el almacén (enlaces + ajustes), el registro de transferencias y las notas secretas en un solo archivo — cifrado con DATA_KEY si está definido. Enviado a una carpeta, WebDAV o S3.',
+    'cfg.bkIntro': 'Una copia completa agrupa el almacén, el registro de transferencias y las notas secretas. Si DATA_KEY está definido, la copia cifrada también conserva la CA local y su clave privada para mantener la confianza de los dispositivos LAN tras restaurar. Sin DATA_KEY, la clave privada de la CA nunca se exporta. Enviado a una carpeta, WebDAV o S3.',
     'cfg.bkEnable': 'Ejecutar una copia programada automáticamente',
     'cfg.bkInterval': 'Frecuencia',
     'cfg.bkDaily': 'Diaria',
@@ -4436,7 +4502,7 @@ const I18N = {
     'trash.restoreSelected':'Restaurar selección', 'trash.restoreSelectedN':'Restaurar selección ({n})', 'trash.selected':'{n} seleccionado(s)', 'trash.select':'Seleccionar este elemento', 'trash.restoreSelectedOk':'{n} elemento(s) restaurado(s)', 'trash.restoreSelectedFail':'Fallaron {n} restauración(es)',
     'trash.open': '🗑 Papelera', 'trash.title': 'Papelera', 'trash.empty': 'La papelera está vacía.', 'trash.restore': '↩ Restaurar', 'trash.purge': 'Eliminar definitivamente', 'trash.purgeAll': 'Eliminar todo definitivamente', 'trash.restoreOk': 'Compartición restaurada', 'trash.restoreFail': 'No se pudo restaurar', 'trash.purgeOk': 'Elemento eliminado definitivamente', 'trash.purgeFail': 'No se pudo eliminar definitivamente', 'trash.purgeConfirm': '¿Eliminar definitivamente «{name}»? Esta acción no se puede deshacer.', 'trash.purgeAllConfirm': '¿Eliminar definitivamente todos los elementos de la papelera? Esta acción es irreversible.', 'trash.retention': 'Retención: {n} día(s)',
     'undo.open': '↶ Historial / Deshacer', 'undo.title': 'Historial de acciones', 'undo.subtitle': 'Consulta las acciones administrativas recientes y deshaz las que aún sean reversibles.', 'undo.empty': 'No hay acciones recientes.', 'undo.btn': '↶ Deshacer', 'undo.done': 'Deshecha', 'undo.unavailable': 'Ya no se puede deshacer', 'undo.ok': 'Acción deshecha', 'undo.fail': 'No se pudo deshacer', 'undo.confirm': '¿Deshacer «{label}»?', 'undo.type.settings': 'Configuración modificada', 'undo.type.stats': 'Estadísticas reiniciadas', 'undo.type.recipient': 'Destinatario eliminado', 'undo.type.ipnames': 'Apodos de cliente borrados', 'undo.type.share': 'Compartición eliminada', 'undo.reason.changed': 'El estado cambió después', 'undo.reason.restored': 'Ya restaurada', 'undo.reason.purged': 'Elemento eliminado definitivamente', 'undo.reason.legacy': 'Entrada antigua no segura', 'undo.reason.forbidden': 'Solo lectura', 'undo.reason.gone': 'La compartición ya no existe', 'undo.reason.unsupported': 'Deshacer no compatible', 'undo.reason.restoreConflict': 'Conflicto con un enlace activo', 'undo.reason.tooLarge': 'Los datos para deshacer son demasiado grandes', 'undo.loadFail': 'No se pudo cargar el historial',
-    'activity.open': '◉ Historial de actividad', 'activity.title': 'Historial de actividad', 'activity.sectionTitle': 'Actividad', 'activity.back': 'Volver a los enlaces', 'activity.sectionHint': 'Historial persistente de los eventos relevantes de Direct-Xfer.', 'activity.openFull': 'Abrir historial completo', 'activity.clear': 'Limpiar vista', 'activity.hint': 'Las transferencias relevantes, eventos de seguridad, acciones administrativas y cambios PWA se conservan aquí y se actualizan en tiempo real.', 'activity.connected': 'Historial cargado · eventos en tiempo real', 'activity.reconnecting': 'Reconectando…', 'activity.empty': 'Sin actividad registrada.', 'activity.searchPh': 'Buscar actividad…', 'activity.filtersAria': 'Filtros de actividad', 'activity.kindAria': 'Tipo de actividad', 'activity.kindAll': 'Todos los tipos', 'activity.kindTransfer': 'Transferencias', 'activity.kindAdmin': 'Administración', 'activity.kindSecurity': 'Seguridad', 'activity.kindVisitor': 'Visitantes', 'activity.kindSystem': 'Sistema', 'activity.shareAria':'Compartición', 'activity.shareAll':'Todas las comparticiones', 'activity.imagesOnly':'Solo imágenes', 'activity.pwaOnly':'Solo PWA', 'activity.hideRoutine':'Ocultar eventos rutinarios del sistema', 'activity.resetFilters': 'Limpiar filtros', 'activity.summary': '{shown} mostrada(s) de {total}', 'activity.loadFail': 'No se pudo cargar el historial de actividad.',
+    'activity.open': '◉ Historial de actividad', 'activity.title': 'Historial de actividad', 'activity.sectionTitle': 'Actividad', 'activity.back': 'Volver a los enlaces', 'activity.sectionHint': 'Historial persistente de Direct-Xfer, incluidas las acciones que aún se pueden deshacer.', 'activity.openFull': 'Abrir historial completo', 'activity.clear': 'Limpiar vista', 'activity.hint': 'Las transferencias relevantes, eventos de seguridad, acciones administrativas y cambios PWA se conservan aquí y se actualizan en tiempo real.', 'activity.connected': 'Historial cargado · eventos en tiempo real', 'activity.reconnecting': 'Reconectando…', 'activity.empty': 'Sin actividad registrada.', 'activity.searchPh': 'Buscar actividad…', 'activity.filtersAria': 'Filtros de actividad', 'activity.kindAria': 'Tipo de actividad', 'activity.kindAll': 'Todos los tipos', 'activity.kindTransfer': 'Transferencias', 'activity.kindAdmin': 'Administración', 'activity.kindSecurity': 'Seguridad', 'activity.kindVisitor': 'Visitantes', 'activity.kindSystem': 'Sistema', 'activity.shareAria':'Compartición', 'activity.shareAll':'Todas las comparticiones', 'activity.imagesOnly':'Solo imágenes', 'activity.pwaOnly':'Solo PWA', 'activity.hideRoutine':'Ocultar eventos rutinarios del sistema', 'activity.resetFilters': 'Limpiar filtros', 'activity.summary': '{shown} mostrada(s) de {total}', 'activity.loadFail': 'No se pudo cargar el historial de actividad.',
     'cfg.trashRetention': 'Retención de la papelera (días, 0 = conservar siempre)',
     'cfg.autoArchiveExpired': 'Archivar automáticamente enlaces caducados después de (días, 0 = desactivado)',
     'cfg.autoArchiveExpiredHint': 'Oculta los enlaces antiguos de la lista principal sin eliminar sus archivos gestionados.',
@@ -4811,6 +4877,8 @@ const state = {
   pickerMode: 'create', // 'create' | 'addTo' | 'configDir'
   addToShareId: null,
   selections: [], // [{ path, name, isDir }] — multi-select in the picker
+  pickerRangeAnchor: null, // last clicked entry path for Shift+click range selection
+  pickerRangeCwd: null,
   port: 55750,
   pollTimer: null,
   lastSharesJson: '',
@@ -4903,6 +4971,7 @@ const state = {
   idleLastReset: 0,
   settings: {}, // last settings snapshot (for the Configuration window)
   activitySource: null, activityEvents: [], activityRetained: 0, activityLoading: false, activityInitialized: false,
+  undoItems: [], undoLoading: false,
 };
 
 const $ = (id) => document.getElementById(id);
@@ -5447,6 +5516,8 @@ function clearAuthenticatedClientState() {
   state.activityEvents = [];
   state.activityRetained = 0;
   state.activityInitialized = false;
+  state.undoItems = [];
+  state.undoLoading = false;
   state.allShares = [];
   state.photosData = [];
   state.albumsData = [];
@@ -8321,6 +8392,54 @@ async function openConfigModal() {
   $('cfg-session-hours').value = s.sessionHours ? String(s.sessionHours) : '';
   $('cfg-token-bytes').value = s.tokenBytes || 24;
   $('cfg-https-warn').checked = s.httpsWarning !== false;
+  if ($('cfg-tls-localca')) {
+    $('cfg-tls-localca').checked = s.tlsManagedByEnv ? !!s.tlsLocalCaEffective : !!(s.tlsLocalCa || s.tlsSelfSigned);
+    $('cfg-tls-localca').disabled = !!s.tlsManagedByEnv;
+  }
+  if ($('cfg-tls-env')) $('cfg-tls-env').classList.toggle('hidden', !s.tlsManagedByEnv);
+  if ($('cfg-tls-status')) {
+    let statusText = s.tlsRestartRequired ? t('cfg.tlsRestartRequired') : (s.tlsActive ? t('cfg.tlsActive') : '');
+    let statusWarn = !!s.tlsRestartRequired;
+    if (s.tlsProvidedCertificate && s.tlsProvidedCertificateExpiresAt) {
+      const exp = Number(s.tlsProvidedCertificateExpiresAt) || 0;
+      const date = exp ? new Date(exp).toLocaleDateString() : '—';
+      const expiring = exp && exp <= Date.now() + 30 * 86400000;
+      statusText += (statusText ? ' · ' : '') + t(expiring ? 'cfg.tlsProvidedExpiring' : 'cfg.tlsProvidedExpiry', { date });
+      statusWarn = statusWarn || !!expiring;
+    }
+    $('cfg-tls-status').textContent = statusText;
+    $('cfg-tls-status').className = statusWarn ? 'sm cfg-warn' : 'muted sm';
+  }
+  if ($('cfg-tls-ca-info')) {
+    const localCaSelected = !!(s.tlsManagedByEnv ? s.tlsLocalCaEffective : (s.tlsLocalCa || s.tlsSelfSigned));
+    $('cfg-tls-ca-info').classList.toggle('hidden', !localCaSelected);
+    if ($('cfg-tls-ca-fingerprint')) $('cfg-tls-ca-fingerprint').textContent = s.tlsLocalCaFingerprint || t('cfg.tlsCaUnavailable');
+    const ids = [...(s.tlsLocalCaDns || []), ...(s.tlsLocalCaIps || [])];
+    if ($('cfg-tls-ca-identities')) $('cfg-tls-ca-identities').textContent = ids.length ? t('cfg.tlsCaIdentities', { names:ids.join(', ') }) : '';
+    if ($('cfg-tls-ca-health')) {
+      const signingProblem = s.tlsLocalCaAvailable && s.tlsLocalCaSigningAvailable === false;
+      const expiringSoon = !!s.tlsLocalCaExpiresSoon;
+      $('cfg-tls-ca-health').textContent = signingProblem ? t('cfg.tlsCaSigningUnavailable') : (s.tlsLocalCaError || (expiringSoon ? t('cfg.tlsCaExpiringSoon') : ''));
+      $('cfg-tls-ca-health').className = signingProblem || s.tlsLocalCaError || expiringSoon ? 'sm cfg-warn' : 'muted sm';
+    }
+    if ($('cfg-tls-ca-backup-warning')) {
+      const backupRisk = localCaSelected && !!s.tlsLocalCaAvailable && !s.dataEncrypted;
+      $('cfg-tls-ca-backup-warning').textContent = backupRisk ? t('cfg.tlsCaBackupWarning') : '';
+      $('cfg-tls-ca-backup-warning').className = backupRisk ? 'sm cfg-warn' : 'muted sm';
+    }
+    if ($('cfg-tls-ca-expiry')) {
+      const caDate = s.tlsLocalCaExpiresAt ? new Date(s.tlsLocalCaExpiresAt).toLocaleDateString() : '—';
+      const leafDate = s.tlsLocalCaServerExpiresAt ? new Date(s.tlsLocalCaServerExpiresAt).toLocaleDateString() : '—';
+      $('cfg-tls-ca-expiry').textContent = s.tlsLocalCaAvailable ? t('cfg.tlsCaExpiry', { ca:caDate, leaf:leafDate }) : '';
+    }
+    if ($('cfg-tls-ca-download')) {
+      const loopbackHost = /^(localhost|127(?:\.\d{1,3}){3}|::1|\[::1\])$/i.test(location.hostname || '');
+      const safeBootstrap = location.protocol === 'https:' || loopbackHost;
+      const canDownload = !!s.tlsLocalCaAvailable && safeBootstrap;
+      $('cfg-tls-ca-download').classList.toggle('hidden', !canDownload);
+      $('cfg-tls-ca-download').setAttribute('aria-disabled', canDownload ? 'false' : 'true');
+    }
+  }
   // Force 2FA + admin IP allowlist
   $('cfg-require-2fa').checked = !!s.requireTwoFactor;
   const allowEnv = !!s.allowlistFromEnv;
@@ -9142,6 +9261,11 @@ if ($('config-form')) $('config-form').addEventListener('submit', async (e) => {
     }
     payload.adminAllowedIps = al;
   }
+  // Native HTTPS is a process-level listener setting: save it durably now and
+  // apply it at the next restart. Environment-managed TLS remains read-only.
+  if ($('cfg-tls-localca') && !$('cfg-tls-localca').disabled) {
+    payload.tlsLocalCa = $('cfg-tls-localca').checked;
+  }
   // E-mail (SMTP) — only when editable (not env-managed / module available).
   if (!$('cfg-email-enable').disabled) {
     payload.emailEnabled = $('cfg-email-enable').checked;
@@ -9170,7 +9294,9 @@ if ($('config-form')) $('config-form').addEventListener('submit', async (e) => {
     loadUndoPreview();
     applyIdleLock(idleLockMinutes);
     closeConfigModal();
-    toast(r && r.persisted === false ? t('cfg.savedTemp') : t('cfg.saved'), r && r.persisted === false ? 'warn' : 'ok');
+    if (r && r.persisted === false) toast(t('cfg.savedTemp'), 'warn');
+    else if (r && r.tlsRestartRequired) toast(t('cfg.savedTlsRestart'), 'warn');
+    else toast(t('cfg.saved'), 'ok');
   } catch (e2) {
     const err = $('config-error');
     const code = e2.data && e2.data.error;
@@ -11604,85 +11730,177 @@ async function restoreSelectedTrash(){
 function openTrash(){$('trash-overlay').classList.remove('hidden');loadTrash();}function closeTrash(){$('trash-overlay').classList.add('hidden');}
 if($('trash-btn'))$('trash-btn').addEventListener('click',openTrash);if($('trash-close'))$('trash-close').addEventListener('click',closeTrash);if($('trash-overlay'))$('trash-overlay').addEventListener('click',(e)=>{if(e.target===$('trash-overlay'))closeTrash();});if($('trash-restore-selected'))$('trash-restore-selected').addEventListener('click',restoreSelectedTrash);if($('trash-purge-all'))$('trash-purge-all').addEventListener('click',async()=>{if(!confirm(t('trash.purgeAllConfirm')))return;try{await api('DELETE','/api/trash');state.trashSelection.clear();toast(t('trash.purgeOk'),'ok');loadTrash();loadUndoPreview();refreshShares();}catch(_){toast(t('trash.purgeFail'),'err');}});
 
-// Undoable-action log UI (#89): visible dashboard preview + complete modal.
+// Undoable-action history (#89), merged directly into the Activity tab.
+// There is deliberately no separate card/modal in the standard UI: the durable
+// Undo journal enriches matching Activity rows and supplies a synthetic Activity
+// row only when the original activity event is outside the retained window.
 const UNDO_TYPE_KEY={'settings-changed':'undo.type.settings','share-stats-reset':'undo.type.stats','recipient-removed':'undo.type.recipient','ip-names-cleared':'undo.type.ipnames','share-trashed':'undo.type.share'};
 const UNDO_REASON_KEY={'state-changed':'undo.reason.changed','already-restored':'undo.reason.restored','already-purged':'undo.reason.purged','legacy-unsafe':'undo.reason.legacy','forbidden':'undo.reason.forbidden','share-gone':'undo.reason.gone','undo-unsupported':'undo.reason.unsupported','restore-conflict':'undo.reason.restoreConflict','undo-too-large':'undo.reason.tooLarge'};
 function undoTypeLabel(e){const k=UNDO_TYPE_KEY[e.type];return k?t(k):(e.type||'');}
 function undoConfirmLabel(e){return [undoTypeLabel(e),e&&e.label||''].filter(Boolean).join(' — ');}
 function undoCanRun(e){return !!(e&&!e.undone&&e.canUndo!==false);}
 function undoStatusText(e){if(e&&e.undone)return t('undo.done');if(e&&e.canUndo===false){const k=UNDO_REASON_KEY[e.unavailableReason];return k?t(k):t('undo.unavailable');}return '';}
-function updateUndoCount(items){const node=$('undo-count');if(!node)return;node.textContent=String((items||[]).filter(undoCanRun).length);}
-function buildUndoRow(e,compact){
-  const row=el('div',{class:'trash-row undo-row'+(compact?' compact':'')+(e.undone?' is-undone':e.canUndo===false?' is-unavailable':'')});
-  const main=el('div',{class:'trash-main'});
-  main.appendChild(el('strong',{text:undoTypeLabel(e)}));
-  main.appendChild(el('span',{class:'muted sm',text:[e.label||'',e.at?timeAgo(e.at):''].filter(Boolean).join(' · ')}));
-  if(e.actor)main.appendChild(el('span',{class:'muted xs',text:e.actor}));
-  const acts=el('div',{class:'trash-actions'});
-  const status=undoStatusText(e);
-  if(status)acts.appendChild(el('span',{class:'undo-state muted sm',text:status}));
-  if(undoCanRun(e)){
-    const b=el('button',{class:'btn sm',text:t('undo.btn')});
-    b.addEventListener('click',async()=>{
-      if(!confirm(t('undo.confirm',{label:undoConfirmLabel(e)})))return;
-      b.disabled=true;
-      try{
-        await api('POST','/api/undo/'+encodeURIComponent(e.id),{});
-        toast(t('undo.ok'),'ok');
-        await Promise.all([loadUndoLog(),loadUndoPreview(),loadTrash()]);
-        refreshShares();
-      }catch(_){toast(t('undo.fail'),'err');b.disabled=false;Promise.allSettled([loadUndoLog(),loadUndoPreview()]);}
-    });
-    acts.appendChild(b);
-  }
-  row.append(main,acts);return row;
-}
 async function fetchUndoItems(){const data=await api('GET','/api/undo');return (data&&Array.isArray(data.items))?data.items:[];}
-function renderUndoPreview(items){
-  const body=$('undo-preview');if(!body)return;body.textContent='';updateUndoCount(items);
-  if(!items.length){body.appendChild(el('div',{class:'empty',text:t('undo.empty')}));return;}
-  items.slice(0,3).forEach((e)=>body.appendChild(buildUndoRow(e,true)));
+function undoMatchesActivity(undo,event){
+  if(!undo||!event)return false;
+  const dt=Math.abs((Number(undo.at)||0)-(Number(event.at)||0));
+  if(dt>15000)return false;
+  const actorOk=!undo.actor||!event.actor||String(undo.actor)===String(event.actor);
+  if(!actorOk)return false;
+  const kind=String(event.kind||''), name=String(event.name||''), status=String(event.status||'');
+  if(name===String(undo.type||'')||status===String(undo.type||''))return true;
+  if(undo.type==='share-trashed'&&kind==='trash'&&status==='deleted'){
+    const label=String(undo.label||'').trim(), eventName=String(event.name||'').trim();
+    return !label||!eventName||label===eventName||label.endsWith(' '+eventName);
+  }
+  return false;
 }
-async function loadUndoPreview(){
-  const body=$('undo-preview');if(!body)return;
-  try{renderUndoPreview(await fetchUndoItems());}catch(_){body.textContent=t('undo.loadFail');updateUndoCount([]);}
+function activityEventsWithUndo(){
+  const rows=(state.activityEvents||[]).map((e)=>({...e}));
+  const claimed=new Set();
+  (state.undoItems||[]).forEach((undo)=>{
+    let best=-1,bestDt=Infinity;
+    for(let i=0;i<rows.length;i++){
+      if(claimed.has(i)||rows[i]._undo||!undoMatchesActivity(undo,rows[i]))continue;
+      const dt=Math.abs((Number(undo.at)||0)-(Number(rows[i].at)||0));
+      if(dt<bestDt){best=i;bestDt=dt;}
+    }
+    if(best>=0){rows[best]._undo=undo;claimed.add(best);return;}
+    rows.push({
+      id:'undo:'+undo.id, at:undo.at||0, kind:'undo-action', status:undo.undone?'undone':undoCanRun(undo)?'undoable':'unavailable',
+      name:undoTypeLabel(undo), detail:undo.label||'', actor:undo.actor||'', _undo:undo,
+    });
+  });
+  rows.sort((a,b)=>(Number(b.at)||0)-(Number(a.at)||0));
+  return rows;
 }
-async function loadUndoLog(){
-  const body=$('undo-body');if(!body)return;body.textContent=t('filehist.loading');
+async function loadUndoActivityItems({render=true}={}){
+  if(state.undoLoading||!isLoggedIn()||!['owner','admin','auditor',''].includes(state.role||''))return state.undoItems||[];
+  state.undoLoading=true;
+  try{state.undoItems=await fetchUndoItems();if(render)renderActivity();return state.undoItems;}
+  catch(_){state.undoItems=[];if(render)renderActivity();return [];}
+  finally{state.undoLoading=false;}
+}
+async function runUndoFromActivity(undo,button){
+  if(!undoCanRun(undo))return;
+  if(!confirm(t('undo.confirm',{label:undoConfirmLabel(undo)})))return;
+  if(button)button.disabled=true;
   try{
-    const items=await fetchUndoItems();body.textContent='';updateUndoCount(items);renderUndoPreview(items);
-    if(!items.length){body.appendChild(el('div',{class:'empty',text:t('undo.empty')}));return;}
-    items.forEach((e)=>body.appendChild(buildUndoRow(e,false)));
-  }catch(_){body.textContent=t('undo.loadFail');updateUndoCount([]);}
+    await api('POST','/api/undo/'+encodeURIComponent(undo.id),{});
+    toast(t('undo.ok'),'ok');
+    await Promise.allSettled([loadUndoActivityItems({render:false}),loadActivityRecent(),loadTrash()]);
+    refreshShares();renderActivity();
+  }catch(_){
+    toast(t('undo.fail'),'err');
+    await Promise.allSettled([loadUndoActivityItems({render:false}),loadActivityRecent()]);
+    if(button)button.disabled=false;
+    renderActivity();
+  }
 }
-function openUndo(){$('undo-overlay').classList.remove('hidden');loadUndoLog();}
-function closeUndo(){$('undo-overlay').classList.add('hidden');}
-if($('undo-btn'))$('undo-btn').addEventListener('click',openUndo);
-if($('undo-preview-refresh'))$('undo-preview-refresh').addEventListener('click',loadUndoPreview);
-if($('undo-close'))$('undo-close').addEventListener('click',closeUndo);
-if($('undo-overlay'))$('undo-overlay').addEventListener('click',(e)=>{if(e.target===$('undo-overlay'))closeUndo();});
-document.addEventListener('keydown',(e)=>{if(e.key==='Escape'&&$('undo-overlay')&&!$('undo-overlay').classList.contains('hidden'))closeUndo();});
-loadUndoPreview();
+// Compatibility hook used by existing mutation paths. It now refreshes the
+// Activity-integrated Undo data instead of a removed dashboard preview.
+function loadUndoPreview(){return loadUndoActivityItems();}
+function loadUndoLog(){return loadUndoActivityItems();}
 
 // Detailed per-file download history.
 async function openFileHistory(sh){$('file-history-subtitle').textContent=sh.name||'';const body=$('file-history-body');body.textContent=t('filehist.loading');$('file-history-overlay').classList.remove('hidden');try{const data=await api('GET','/api/shares/'+encodeURIComponent(sh.id)+'/file-history');body.textContent='';if(data&&(data.historyTruncated||data.zipMembersTruncated))body.appendChild(el('div',{class:'notice warn',text:t('filehist.truncated')}));const files=(data&&data.files)||[];if(!files.length){body.appendChild(el('div',{class:'empty',text:t('filehist.empty')}));return;}files.forEach((f)=>{const box=el('div',{class:'filehist-file'}),head=el('div',{class:'filehist-head'});head.appendChild(el('strong',{text:f.name||'—'}));head.appendChild(el('span',{text:t('filehist.transfers',{n:f.transfers||0})+' · '+formatBytes(f.bytes||0)}));box.appendChild(head);box.appendChild(el('div',{class:'muted sm',text:t('filehist.completed',{n:f.completed||0})+' · '+(f.lastAt?t('filehist.last',{v:timeAgo(f.lastAt)}):'—')+(f.lastIp?' · '+f.lastIp:'')+(f.lastCountry?' · '+f.lastCountry:'')}));((data&&data.events)||[]).filter((e)=>e.name===f.name).slice(0,20).forEach((e)=>{const row=el('div',{class:'filehist-event '+(e.completed?'ok':'fail')});row.appendChild(el('span',{text:e.completed?'✓':'⚠'}));row.appendChild(el('span',{text:[e.at?formatDate(e.at):'—',e.viaZip?'📦 ZIP':'',formatBytes(e.bytes||0),e.ipName||e.ip||'—',e.country||'',e.recipient?'👤 '+e.recipient:'',e.completed?'':(e.reason||'')].filter(Boolean).join(' · ')}));box.appendChild(row);});body.appendChild(box);});}catch(_){body.textContent=t('filehist.fail');}}
 function closeFileHistory(){$('file-history-overlay').classList.add('hidden');}if($('file-history-close'))$('file-history-close').addEventListener('click',closeFileHistory);if($('file-history-overlay'))$('file-history-overlay').addEventListener('click',(e)=>{if(e.target===$('file-history-overlay'))closeFileHistory();});
 
 // Persistent activity history + real-time SSE stream.
-function activityIcon(kind,status){if(kind==='transfer-start')return'⇄';if(kind==='transfer-complete')return'✓';if(kind==='transfer-error')return'⚠';if(kind==='ocr-start'||kind==='ocr-complete')return'T';if(kind==='ocr-error')return'⚠';if(kind==='antivirus')return status==='infected'?'🦠':'🛡';if(kind==='trash')return'🗑';if(kind==='security')return'🔐';if(kind==='visitor')return'👥';if(kind==='system')return'⚙';if(kind==='share')return'🔗';if(kind==='audit')return'🧾';return'•';}
-function activityGroup(e){const k=String(e&&e.kind||'').toLowerCase();if(k.indexOf('transfer-')===0)return'transfer';if(k==='audit'||k==='share'||k==='trash')return'admin';if(k==='security'||k==='antivirus')return'security';if(k==='visitor')return'visitor';if(k==='system'||k.indexOf('ocr-')===0)return'system';return'admin';}
-function activitySearchText(e){return [e&&e.name,e&&e.kind,e&&e.status,e&&e.detail,e&&e.ip,e&&e.direction,e&&e.shareId,e&&e.actor,e&&e.accountId,e&&e.deviceId].filter(Boolean).join(' ').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase(LOCALES[state.lang]||'en-US');}
+function activityIcon(kind,status){if(kind==='transfer-start')return'⇄';if(kind==='transfer-complete')return'✓';if(kind==='transfer-error')return'⚠';if(kind==='ocr-start'||kind==='ocr-complete')return'T';if(kind==='ocr-error')return'⚠';if(kind==='antivirus')return status==='infected'?'🦠':'🛡';if(kind==='trash')return'🗑';if(kind==='security')return'🔐';if(kind==='visitor')return'👥';if(kind==='system')return'⚙';if(kind==='share')return'🔗';if(kind==='audit')return'🧾';if(kind==='undo-action')return'↶';return'•';}
+function activityGroup(e){const k=String(e&&e.kind||'').toLowerCase();if(k.indexOf('transfer-')===0)return'transfer';if(k==='audit'||k==='share'||k==='trash'||k==='undo-action')return'admin';if(k==='security'||k==='antivirus')return'security';if(k==='visitor')return'visitor';if(k==='system'||k.indexOf('ocr-')===0)return'system';return'admin';}
+const AUDIT_ACTION_LABELS = {
+  fr: {
+    'action-undone':'Action annulée','album-created':'Album créé','audit-exported':'Journal d’audit exporté','backup-download':'Sauvegarde téléchargée','backup-failed':'Sauvegarde échouée','backup-ok':'Sauvegarde réussie','collab-created':'Collaboration créée','collab-delete':'Fichier collaboratif supprimé','diagnostics-run':'Diagnostics exécutés','digest-tested':'Digest testé','dlp-blocked':'DLP : publication bloquée','dlp-detected':'DLP : contenu détecté','dlp-ocr-unavailable':'DLP : OCR indisponible','dlp-overridden':'DLP : avertissement outrepassé','dlp-quarantine-deleted':'Élément de quarantaine supprimé','dlp-quarantine-failed':'DLP : mise en quarantaine échouée','dlp-quarantined':'DLP : contenu mis en quarantaine','dlp-warning':'DLP : avertissement','download-threshold':'Seuil de téléchargements atteint','email-tested':'Courriel de test envoyé','expired-share-purged':'Partage expiré purgé','feedback-deleted':'Feedback supprimé','history-cleared':'Historique effacé','image-created':'Image créée','image-first-view':'Première vue d’image','image-retention-revoked':'Image révoquée par rétention','inbox-messages-cleared':'Messages de réception effacés','ip-names-cleared':'Surnoms IP effacés','items-reordered':'Éléments réordonnés','leak-alert':'Alerte de fuite','link-preset-deleted':'Préréglage de lien supprimé','link-preset-saved':'Préréglage de lien enregistré','links-exported':'Liens exportés','network-port-tested':'Port réseau testé','notification-prefs-changed':'Préférences de notifications modifiées','notification-rule-created':'Règle de notification créée','notification-rule-deleted':'Règle de notification supprimée','notification-rule-updated':'Règle de notification modifiée','passkey-added':'Clé d’accès ajoutée','passkey-device-added':'Appareil biométrique ajouté','passkey-login':'Connexion par clé d’accès','passkey-login-fail':'Échec de connexion par clé d’accès','passkey-removed':'Clé d’accès supprimée','passkeys-disabled':'Clés d’accès désactivées','pending-approved':'Dépôt approuvé','pending-orphans-cleaned':'Dépôts orphelins nettoyés','pending-rejected':'Dépôt rejeté','photo-edited':'Image modifiée','photo-history-deleted':'Historique d’image supprimé','photo-history-purged':'Historique d’images purgé','photo-uploaded':'Image téléversée','photos-created':'Images créées','photos-downloaded':'Images téléchargées','push-tested':'Notification push testée','pwa-auto-lock':'PWA verrouillée automatiquement','pwa-device-paired':'Appareil PWA appairé','pwa-device-renamed':'Appareil PWA renommé','pwa-device-revoked':'Appareil PWA révoqué','pwa-login-bound':'Session PWA associée','reception-thread-cleared':'Discussion de réception effacée','reception-thread-reply':'Réponse à une discussion de réception','recipient-updated':'Sous-lien modifié','restore':'Sauvegarde restaurée','secret-created':'Secret créé','settings-exported':'Réglages exportés','settings-imported':'Réglages importés','share-auto-archived':'Partage archivé automatiquement','share-bandwidth-limit':'Limite de bande passante atteinte','share-burned':'Lien à usage unique consommé','share-cloned':'Partage dupliqué','share-comment-added':'Commentaire privé ajouté','share-comment-deleted':'Commentaire privé supprimé','share-edited':'Partage modifié','share-emailed':'Partage envoyé par courriel','share-extended':'Expiration du partage prolongée','share-first-use-expiry-started':'Expiration au premier usage démarrée','share-reactivated':'Partage réactivé','share-restored':'Partage restauré','share-stats-reset':'Statistiques du partage réinitialisées','share-trashed':'Partage mis à la corbeille','share-visitor-limit':'Limite de visiteurs atteinte','shares-bulk':'Action en lot sur les partages','shares-exported':'Partages exportés','shares-imported':'Partages importés','shares-paused-all':'Partages mis en pause','shares-resumed-all':'Partages réactivés','transfer-stopped':'Transfert arrêté','trash-purged':'Élément supprimé définitivement','trash-purged-all':'Corbeille vidée','upload-deduped':'Téléversement doublon détecté','upload-folder-created':'Dossier de téléversement créé','upload-infected':'Téléversement infecté','webhook-tested':'Webhook testé','access-approved':'Demande d’accès approuvée','access-denied':'Demande d’accès refusée','access-request-deleted':'Demande d’accès supprimée','storage-connector-created':'Connecteur de stockage créé','storage-connector-updated':'Connecteur de stockage modifié','storage-connector-deleted':'Connecteur de stockage supprimé','storage-connector-tested':'Connecteur de stockage testé','storage-connector-cancelled':'Opération de stockage annulée'
+  },
+  en: {
+    'action-undone':'Action undone','album-created':'Album created','audit-exported':'Audit log exported','backup-download':'Backup downloaded','backup-failed':'Backup failed','backup-ok':'Backup completed','collab-created':'Collaboration created','collab-delete':'Collaborative file deleted','diagnostics-run':'Diagnostics run','digest-tested':'Digest tested','dlp-blocked':'DLP: publication blocked','dlp-detected':'DLP: content detected','dlp-ocr-unavailable':'DLP: OCR unavailable','dlp-overridden':'DLP: warning overridden','dlp-quarantine-deleted':'Quarantine item deleted','dlp-quarantine-failed':'DLP: quarantine failed','dlp-quarantined':'DLP: content quarantined','dlp-warning':'DLP: warning','download-threshold':'Download threshold reached','email-tested':'Test email sent','expired-share-purged':'Expired share purged','feedback-deleted':'Feedback deleted','history-cleared':'History cleared','image-created':'Image created','image-first-view':'First image view','image-retention-revoked':'Image revoked by retention','inbox-messages-cleared':'Reception messages cleared','ip-names-cleared':'IP nicknames cleared','items-reordered':'Items reordered','leak-alert':'Leak alert','link-preset-deleted':'Link preset deleted','link-preset-saved':'Link preset saved','links-exported':'Links exported','network-port-tested':'Network port tested','notification-prefs-changed':'Notification preferences changed','notification-rule-created':'Notification rule created','notification-rule-deleted':'Notification rule deleted','notification-rule-updated':'Notification rule updated','passkey-added':'Passkey added','passkey-device-added':'Biometric device added','passkey-login':'Passkey login','passkey-login-fail':'Passkey login failed','passkey-removed':'Passkey removed','passkeys-disabled':'Passkeys disabled','pending-approved':'Pending upload approved','pending-orphans-cleaned':'Orphan pending uploads cleaned','pending-rejected':'Pending upload rejected','photo-edited':'Image edited','photo-history-deleted':'Image history deleted','photo-history-purged':'Image history purged','photo-uploaded':'Image uploaded','photos-created':'Images created','photos-downloaded':'Images downloaded','push-tested':'Push notification tested','pwa-auto-lock':'PWA automatically locked','pwa-device-paired':'PWA device paired','pwa-device-renamed':'PWA device renamed','pwa-device-revoked':'PWA device revoked','pwa-login-bound':'PWA session bound','reception-thread-cleared':'Reception thread cleared','reception-thread-reply':'Reception thread reply','recipient-updated':'Sub-link updated','restore':'Backup restored','secret-created':'Secret created','settings-exported':'Settings exported','settings-imported':'Settings imported','share-auto-archived':'Share automatically archived','share-bandwidth-limit':'Share bandwidth limit reached','share-burned':'One-time link consumed','share-cloned':'Share duplicated','share-comment-added':'Private comment added','share-comment-deleted':'Private comment deleted','share-edited':'Share edited','share-emailed':'Share emailed','share-extended':'Share expiration extended','share-first-use-expiry-started':'First-use expiry started','share-reactivated':'Share reactivated','share-restored':'Share restored','share-stats-reset':'Share statistics reset','share-trashed':'Share moved to trash','share-visitor-limit':'Visitor limit reached','shares-bulk':'Bulk share action','shares-exported':'Shares exported','shares-imported':'Shares imported','shares-paused-all':'Shares paused','shares-resumed-all':'Shares resumed','transfer-stopped':'Transfer stopped','trash-purged':'Item permanently deleted','trash-purged-all':'Trash emptied','upload-deduped':'Duplicate upload detected','upload-folder-created':'Upload folder created','upload-infected':'Infected upload','webhook-tested':'Webhook tested','access-approved':'Access request approved','access-denied':'Access request denied','access-request-deleted':'Access request deleted','storage-connector-created':'Storage connector created','storage-connector-updated':'Storage connector updated','storage-connector-deleted':'Storage connector deleted','storage-connector-tested':'Storage connector tested','storage-connector-cancelled':'Storage operation cancelled'
+  },
+  es: {
+    'action-undone':'Acción deshecha','album-created':'Álbum creado','audit-exported':'Registro de auditoría exportado','backup-download':'Copia de seguridad descargada','backup-failed':'Copia de seguridad fallida','backup-ok':'Copia de seguridad completada','collab-created':'Colaboración creada','collab-delete':'Archivo colaborativo eliminado','diagnostics-run':'Diagnósticos ejecutados','digest-tested':'Resumen probado','dlp-blocked':'DLP: publicación bloqueada','dlp-detected':'DLP: contenido detectado','dlp-ocr-unavailable':'DLP: OCR no disponible','dlp-overridden':'DLP: advertencia ignorada','dlp-quarantine-deleted':'Elemento de cuarentena eliminado','dlp-quarantine-failed':'DLP: cuarentena fallida','dlp-quarantined':'DLP: contenido en cuarentena','dlp-warning':'DLP: advertencia','download-threshold':'Umbral de descargas alcanzado','email-tested':'Correo de prueba enviado','expired-share-purged':'Recurso caducado purgado','feedback-deleted':'Comentario eliminado','history-cleared':'Historial borrado','image-created':'Imagen creada','image-first-view':'Primera vista de imagen','image-retention-revoked':'Imagen revocada por retención','inbox-messages-cleared':'Mensajes de recepción borrados','ip-names-cleared':'Alias de IP borrados','items-reordered':'Elementos reordenados','leak-alert':'Alerta de fuga','link-preset-deleted':'Preajuste de enlace eliminado','link-preset-saved':'Preajuste de enlace guardado','links-exported':'Enlaces exportados','network-port-tested':'Puerto de red probado','notification-prefs-changed':'Preferencias de notificación modificadas','notification-rule-created':'Regla de notificación creada','notification-rule-deleted':'Regla de notificación eliminada','notification-rule-updated':'Regla de notificación modificada','passkey-added':'Clave de acceso añadida','passkey-device-added':'Dispositivo biométrico añadido','passkey-login':'Inicio con clave de acceso','passkey-login-fail':'Fallo de inicio con clave de acceso','passkey-removed':'Clave de acceso eliminada','passkeys-disabled':'Claves de acceso desactivadas','pending-approved':'Carga pendiente aprobada','pending-orphans-cleaned':'Cargas pendientes huérfanas limpiadas','pending-rejected':'Carga pendiente rechazada','photo-edited':'Imagen editada','photo-history-deleted':'Historial de imagen eliminado','photo-history-purged':'Historial de imágenes purgado','photo-uploaded':'Imagen subida','photos-created':'Imágenes creadas','photos-downloaded':'Imágenes descargadas','push-tested':'Notificación push probada','pwa-auto-lock':'PWA bloqueada automáticamente','pwa-device-paired':'Dispositivo PWA emparejado','pwa-device-renamed':'Dispositivo PWA renombrado','pwa-device-revoked':'Dispositivo PWA revocado','pwa-login-bound':'Sesión PWA vinculada','reception-thread-cleared':'Conversación de recepción borrada','reception-thread-reply':'Respuesta en conversación de recepción','recipient-updated':'Subenlace modificado','restore':'Copia de seguridad restaurada','secret-created':'Secreto creado','settings-exported':'Ajustes exportados','settings-imported':'Ajustes importados','share-auto-archived':'Recurso archivado automáticamente','share-bandwidth-limit':'Límite de ancho de banda alcanzado','share-burned':'Enlace de un solo uso consumido','share-cloned':'Recurso duplicado','share-comment-added':'Comentario privado añadido','share-comment-deleted':'Comentario privado eliminado','share-edited':'Recurso modificado','share-emailed':'Recurso enviado por correo','share-extended':'Caducidad del recurso ampliada','share-first-use-expiry-started':'Caducidad tras primer uso iniciada','share-reactivated':'Recurso reactivado','share-restored':'Recurso restaurado','share-stats-reset':'Estadísticas del recurso reiniciadas','share-trashed':'Recurso movido a la papelera','share-visitor-limit':'Límite de visitantes alcanzado','shares-bulk':'Acción masiva sobre recursos','shares-exported':'Recursos exportados','shares-imported':'Recursos importados','shares-paused-all':'Recursos pausados','shares-resumed-all':'Recursos reactivados','transfer-stopped':'Transferencia detenida','trash-purged':'Elemento eliminado definitivamente','trash-purged-all':'Papelera vaciada','upload-deduped':'Carga duplicada detectada','upload-folder-created':'Carpeta de carga creada','upload-infected':'Carga infectada','webhook-tested':'Webhook probado','access-approved':'Solicitud de acceso aprobada','access-denied':'Solicitud de acceso rechazada','access-request-deleted':'Solicitud de acceso eliminada','storage-connector-created':'Conector de almacenamiento creado','storage-connector-updated':'Conector de almacenamiento modificado','storage-connector-deleted':'Conector de almacenamiento eliminado','storage-connector-tested':'Conector de almacenamiento probado','storage-connector-cancelled':'Operación de almacenamiento cancelada'
+  }
+};
+const LOG_VALUE_TRANSLATIONS = {
+  fr:{'active':'actif','completed':'terminé','interrupted':'interrompu','deleted':'supprimé','restored':'restauré','purged':'supprimé définitivement','reactivated':'réactivé','clean':'sain','infected':'infecté','error':'erreur','restarted':'redémarré','recovered':'récupéré','updated':'mis à jour','message':'message','thread-reply':'réponse à la discussion','access-request':'demande d’accès','feedback':'commentaire','locked-out':'verrouillé après trop d’essais','paired device':'appareil appairé','new device':'nouvel appareil','known device':'appareil connu','device renamed':'appareil renommé','PWA session locked':'session PWA verrouillée','manual rebuild requested':'réindexation manuelle demandée','visitor message':'message visiteur','visitor thread reply':'réponse du visiteur','access request submitted':'demande d’accès envoyée','feedback submitted':'commentaire envoyé','Content modified':'Contenu modifié','none muted':'aucune catégorie désactivée','failed':'échec','no-channel':'aucun canal','open':'ouvert','closed':'fermé','unknown':'inconnu'},
+  en:{'active':'active','completed':'completed','interrupted':'interrupted','deleted':'deleted','restored':'restored','purged':'permanently deleted','reactivated':'reactivated','clean':'clean','infected':'infected','error':'error','restarted':'restarted','recovered':'recovered','updated':'updated','message':'message','thread-reply':'thread reply','access-request':'access request','feedback':'feedback','locked-out':'locked after too many attempts','paired device':'paired device','new device':'new device','known device':'known device','device renamed':'device renamed','PWA session locked':'PWA session locked','manual rebuild requested':'manual reindex requested','visitor message':'visitor message','visitor thread reply':'visitor thread reply','access request submitted':'access request submitted','feedback submitted':'feedback submitted','Contenu modifié':'Content modified','none muted':'nothing muted','failed':'failed','no-channel':'no channel','open':'open','closed':'closed','unknown':'unknown'},
+  es:{'active':'activo','completed':'completado','interrupted':'interrumpido','deleted':'eliminado','restored':'restaurado','purged':'eliminado definitivamente','reactivated':'reactivado','clean':'limpio','infected':'infectado','error':'error','restarted':'reiniciado','recovered':'recuperado','updated':'actualizado','message':'mensaje','thread-reply':'respuesta a la conversación','access-request':'solicitud de acceso','feedback':'comentario','locked-out':'bloqueado tras demasiados intentos','paired device':'dispositivo emparejado','new device':'nuevo dispositivo','known device':'dispositivo conocido','device renamed':'dispositivo renombrado','PWA session locked':'sesión PWA bloqueada','manual rebuild requested':'reindexación manual solicitada','visitor message':'mensaje del visitante','visitor thread reply':'respuesta del visitante','access request submitted':'solicitud de acceso enviada','feedback submitted':'comentario enviado','Content modified':'Contenido modificado','Contenu modifié':'Contenido modificado','none muted':'ninguna categoría silenciada','failed':'fallido','no-channel':'sin canal','open':'abierto','closed':'cerrado','unknown':'desconocido'}
+};
+const AUDIT_ACTION_LABELS_EXTRA = {"fr":{"notification-rule-reused":"Règle de notification réutilisée","storage-connector-upload":"Téléversement vers le stockage terminé","storage-connector-download":"Téléchargement depuis le stockage terminé","storage-connector-done":"Opération de stockage terminée","storage-connector-failed":"Opération de stockage échouée"},"en":{"notification-rule-reused":"Notification rule reused","storage-connector-upload":"Storage upload completed","storage-connector-download":"Storage download completed","storage-connector-done":"Storage operation completed","storage-connector-failed":"Storage operation failed"},"es":{"notification-rule-reused":"Regla de notificación reutilizada","storage-connector-upload":"Carga al almacenamiento completada","storage-connector-download":"Descarga desde el almacenamiento completada","storage-connector-done":"Operación de almacenamiento completada","storage-connector-failed":"Operación de almacenamiento fallida"}};
+function localizedAuditAction(action){
+  const raw=String(action||'');
+  const key='auditA.'+raw, translated=t(key);
+  if(translated!==key)return translated;
+  const lang=state.lang==='fr'?'fr':state.lang==='es'?'es':'en';
+  return (AUDIT_ACTION_LABELS[lang]&&AUDIT_ACTION_LABELS[lang][raw])||(AUDIT_ACTION_LABELS_EXTRA[lang]&&AUDIT_ACTION_LABELS_EXTRA[lang][raw])||raw.replace(/-/g,' ');
+}
+const LOG_VALUE_TRANSLATIONS_EXTRA = {"fr":{"queued":"en file","pending":"en attente","paused-all":"tous mis en pause","resumed-all":"tous réactivés","thread-reply":"réponse à la discussion","access-request":"demande d’accès","feedback":"commentaire","message":"message"},"en":{"queued":"queued","pending":"pending","paused-all":"all paused","resumed-all":"all resumed","thread-reply":"thread reply","access-request":"access request","feedback":"feedback","message":"message"},"es":{"queued":"en cola","pending":"pendiente","paused-all":"todos pausados","resumed-all":"todos reanudados","thread-reply":"respuesta a la conversación","access-request":"solicitud de acceso","feedback":"comentario","message":"mensaje"}};
+function localizedLogText(value){
+  if(value===null||value===undefined)return '';
+  let raw=String(value), lang=state.lang==='fr'?'fr':state.lang==='es'?'es':'en';
+  const exact=LOG_VALUE_TRANSLATIONS[lang]||{}, extra=LOG_VALUE_TRANSLATIONS_EXTRA[lang]||{};
+  if(Object.prototype.hasOwnProperty.call(exact,raw))return exact[raw];
+  if(Object.prototype.hasOwnProperty.call(extra,raw))return extra[raw];
+  // Prefixes/suffixes emitted by the server are machine text; translate the prose
+  // while leaving filenames, share names, IPs and identifiers untouched.
+  const via=raw.match(/^via PWA\s*[—-]\s*(.*)$/i);
+  if(via)return (lang==='fr'?'via PWA — ':lang==='es'?'vía PWA — ':'via PWA — ')+localizedLogText(via[1]);
+  const counts=[
+    [/^(\d+) link\(s\)$/i,['{n} lien(s)','{n} link(s)','{n} enlace(s)']],
+    [/^(\d+) share\(s\)$/i,['{n} partage(s)','{n} share(s)','{n} recurso(s)']],
+    [/^(\d+) image\(s\)$/i,['{n} image(s)','{n} image(s)','{n} imagen(es)']],
+    [/^(\d+) message\(s\)$/i,['{n} message(s)','{n} message(s)','{n} mensaje(s)']],
+    [/^(\d+) nickname\(s\)$/i,['{n} surnom(s)','{n} nickname(s)','{n} alias']],
+    [/^(\d+) key\(s\)$/i,['{n} clé(s)','{n} key(s)','{n} clave(s)']],
+    [/^(\d+) record\(s\)$/i,['{n} entrée(s)','{n} record(s)','{n} registro(s)']],
+    [/^(\d+) credential\(s\)$/i,['{n} identifiant(s)','{n} credential(s)','{n} credencial(es)']],
+    [/^(\d+) orphan pending file\(s\)$/i,['{n} dépôt(s) orphelin(s)','{n} orphan pending file(s)','{n} carga(s) pendiente(s) huérfana(s)']]
+  ];
+  for(const [rx,forms] of counts){const m=raw.match(rx);if(m)return forms[lang==='fr'?0:lang==='es'?2:1].replace('{n}',m[1]);}
+  const addSkip=raw.match(/^(\d+) added,\s*(\d+) skipped(?:\s*\(([^)]+)\))?$/i);
+  if(addSkip){const base=lang==='fr'?`${addSkip[1]} ajouté(s), ${addSkip[2]} ignoré(s)`:lang==='es'?`${addSkip[1]} añadido(s), ${addSkip[2]} omitido(s)`:`${addSkip[1]} added, ${addSkip[2]} skipped`;return base+(addSkip[3]?' ('+addSkip[3]+')':'');}
+  const sent=raw.match(/^sent=(\d+)$/i); if(sent)return lang==='fr'?`${sent[1]} envoyé(s)`:lang==='es'?`${sent[1]} enviado(s)`:`${sent[1]} sent`;
+  const diag=raw.match(/^ok=(\d+)\s+warn=(\d+)\s+bad=(\d+)$/i); if(diag)return lang==='fr'?`${diag[1]} OK · ${diag[2]} avertissement(s) · ${diag[3]} erreur(s)`:lang==='es'?`${diag[1]} OK · ${diag[2]} advertencia(s) · ${diag[3]} error(es)`:`${diag[1]} OK · ${diag[2]} warning(s) · ${diag[3]} error(s)`;
+  const failedCount=raw.match(/^(\d+);\s*failed=(\d+)$/i); if(failedCount)return lang==='fr'?`${failedCount[1]} traité(s) · ${failedCount[2]} échec(s)`:lang==='es'?`${failedCount[1]} procesado(s) · ${failedCount[2]} fallo(s)`:`${failedCount[1]} processed · ${failedCount[2]} failed`;
+  const migrated=raw.match(/^migrated=(\d+)$/i); if(migrated)return lang==='fr'?`${migrated[1]} migré(s)`:lang==='es'?`${migrated[1]} migrado(s)`:`${migrated[1]} migrated`;
+  raw=raw.replace(/\bPLAINTEXT\b/g,lang==='fr'?'NON CHIFFRÉ':lang==='es'?'SIN CIFRAR':'PLAINTEXT');
+  raw=raw.replace(/\bencrypted\b/gi,lang==='fr'?'chiffré':lang==='es'?'cifrado':'encrypted');
+  raw=raw.replace(/\bfailed=(\d+)\b/gi,(_,n)=>lang==='fr'?`échecs=${n}`:lang==='es'?`fallos=${n}`:`failed=${n}`);
+  raw=raw.replace(/\btransferredShares=(\d+)\b/gi,(_,n)=>lang==='fr'?`partages transférés=${n}`:lang==='es'?`recursos transferidos=${n}`:`transferred shares=${n}`);
+  raw=raw.replace(/\bpwaDevices=(\d+)\b/gi,(_,n)=>lang==='fr'?`appareils PWA=${n}`:lang==='es'?`dispositivos PWA=${n}`:`PWA devices=${n}`);
+  raw=raw.replace(/\bpairingTickets=(\d+)\b/gi,(_,n)=>lang==='fr'?`tickets d’appairage=${n}`:lang==='es'?`tickets de emparejamiento=${n}`:`pairing tickets=${n}`);
+  raw=raw.replace(/\bpush-scopes=(\d+)\b/gi,(_,n)=>lang==='fr'?`portées push=${n}`:lang==='es'?`ámbitos push=${n}`:`push scopes=${n}`);
+  raw=raw.replace(/\bone-time link\b/gi,lang==='fr'?'lien à usage unique':lang==='es'?'enlace de un solo uso':'one-time link');
+  raw=raw.replace(/\bdelete allowed\b/gi,lang==='fr'?'suppression autorisée':lang==='es'?'eliminación permitida':'delete allowed');
+  raw=raw.replace(/\bfinding\(s\)\b/gi,lang==='fr'?'détection(s)':lang==='es'?'detección(es)':'finding(s)');
+  raw=raw.replace(/\bvisitors\b/gi,lang==='fr'?'visiteurs':lang==='es'?'visitantes':'visitors');
+  raw=raw.replace(/\bcountries\b/gi,lang==='fr'?'pays':lang==='es'?'países':'countries');
+  raw=raw.replace(/\bmanual rebuild requested\b/gi,exact['manual rebuild requested']||'manual rebuild requested');
+  raw=raw.replace(/\bPWA session locked\b/gi,exact['PWA session locked']||'PWA session locked');
+  raw=raw.replace(/\bdevice renamed\b/gi,exact['device renamed']||'device renamed');
+  return raw;
+}
+function localizedActivityName(e){
+  const raw=String(e&&e.name||e&&e.kind||'event');
+  const known={'server-restarted':{fr:'Serveur redémarré',en:'Server restarted',es:'Servidor reiniciado'},'server-shutdown':{fr:'Serveur arrêté',en:'Server shutdown',es:'Servidor detenido'},'server-crash-recovered':{fr:'Récupération après arrêt anormal',en:'Recovered after abnormal shutdown',es:'Recuperación tras cierre anómalo'},'update-installed':{fr:'Mise à jour installée',en:'Update installed',es:'Actualización instalada'},'index-failed':{fr:'Échec de l’indexation',en:'Indexing failed',es:'Error de indexación'},'feedback submitted':{fr:'Feedback envoyé',en:'Feedback submitted',es:'Comentario enviado'},'visitor thread reply':{fr:'Réponse du visiteur',en:'Visitor thread reply',es:'Respuesta del visitante'}};
+  const lang=state.lang==='fr'?'fr':state.lang==='es'?'es':'en';
+  if(known[raw])return known[raw][lang];
+  if((e&&e.kind)==='audit'||AUDIT_ACTION_LABELS.fr[raw]||AUDIT_ACTION_LABELS.en[raw]||AUDIT_ACTION_LABELS_EXTRA.fr[raw]||AUDIT_ACTION_LABELS_EXTRA.en[raw])return localizedAuditAction(raw);
+  return raw;
+}
+
+function activitySearchText(e){return [localizedActivityName(e),e&&e.kind,localizedLogText(e&&e.status),localizedLogText(e&&e.detail),e&&e.ip,e&&e.direction,e&&e.shareId,e&&e.actor,e&&e.accountId,e&&e.deviceId,e&&e._undo&&undoTypeLabel(e._undo),e&&e._undo&&undoStatusText(e._undo)].filter(Boolean).join(' ').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase(LOCALES[state.lang]||'en-US');}
 function activityIsPwa(e){return !!(e&&(e.source==='pwa'||e.deviceId||/^PWA(?::|$)/i.test(String(e.actor||''))||/via PWA/i.test(String(e.detail||''))));}
-function activityIsImage(e){if(!e)return false;if(/^(photo|album)$/i.test(String(e.resourceType||e.detail||'')))return true;const sh=(state.allShares||[]).find((x)=>x&&e.shareId&&String(x.id)===String(e.shareId));return !!(sh&&(sh.type==='photo'||sh.type==='album'));}
+function activityIsImage(e){if(!e)return false;const action=String(e.name||e.status||'');if(/^(photo|photos|image|album)(?:-|$)/i.test(action))return true;if(/^(photo|album)$/i.test(String(e.resourceType||e.detail||'')))return true;const sh=(state.allShares||[]).find((x)=>x&&e.shareId&&String(x.id)===String(e.shareId));return !!(sh&&(sh.type==='photo'||sh.type==='album'));}
 function activityIsRoutineSystem(e){const n=String(e&&e.name||'').toLowerCase(),k=String(e&&e.kind||'').toLowerCase();return k==='ocr-start'||k==='ocr-complete'||['server-restarted','server-shutdown'].includes(n);}
-function refreshActivityShareOptions(){const sel=$('activity-section-share');if(!sel)return;const current=sel.value;const map=new Map();(state.activityEvents||[]).forEach((e)=>{if(e&&e.shareId&&!map.has(String(e.shareId)))map.set(String(e.shareId),e.name||e.shareId);});sel.innerHTML='';sel.appendChild(el('option',{text:t('activity.shareAll'),attrs:{value:''}}));[...map.entries()].sort((a,b)=>String(a[1]).localeCompare(String(b[1]))).forEach(([id,name])=>sel.appendChild(el('option',{text:name+' · '+id.slice(0,8),attrs:{value:id}})));if([...sel.options].some((o)=>o.value===current))sel.value=current;}
-function filteredActivityEvents(){const locale=LOCALES[state.lang]||'en-US';const search=String(($('activity-section-search')&&$('activity-section-search').value)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLocaleLowerCase(locale);const kind=String(($('activity-section-kind')&&$('activity-section-kind').value)||'');const share=String(($('activity-section-share')&&$('activity-section-share').value)||'');const images=!!($('activity-images-only')&&$('activity-images-only').checked),pwa=!!($('activity-pwa-only')&&$('activity-pwa-only').checked),hideRoutine=!!($('activity-hide-routine')&&$('activity-hide-routine').checked);return (state.activityEvents||[]).filter((e)=>(!kind||activityGroup(e)===kind)&&(!share||String(e.shareId||'')===share)&&(!images||activityIsImage(e))&&(!pwa||activityIsPwa(e))&&(!hideRoutine||!activityIsRoutineSystem(e))&&(!search||activitySearchText(e).includes(search)));}
-function renderActivityRows(body,list,limit){if(!body)return;body.textContent='';const rows=(list||[]).slice(0,limit);if(!rows.length){body.appendChild(el('div',{class:'empty',text:t('activity.empty')}));return;}rows.forEach((e)=>{const row=el('div',{class:'activity-row '+String(e.kind||'')});row.appendChild(el('span',{class:'activity-icon',text:activityIcon(e.kind,e.status)}));const main=el('div',{class:'activity-main'});main.appendChild(el('strong',{text:e.name||e.kind||'event'}));main.appendChild(el('span',{class:'muted sm',text:[e.direction==='up'?'⬆':e.direction==='down'?'⬇':'',e.bytes?formatBytes(e.bytes):'',e.status||'',e.ip||'',e.detail||''].filter(Boolean).join(' · ')}));row.append(main,el('time',{attrs:{title:e.at?formatDate(e.at):''},text:e.at?timeAgo(e.at):'—'}));body.appendChild(row);});}
-function renderActivity(){refreshActivityShareOptions();renderActivityRows($('activity-body'),state.activityEvents||[],500);const filtered=filteredActivityEvents();const sectionLimit=activityPageOpen()?1000:30;renderActivityRows($('activity-section-body'),filtered,sectionLimit);const count=$('activity-section-count');if(count)count.textContent=String(state.activityRetained||state.activityEvents.length||0);const summary=$('activity-section-summary');if(summary)summary.textContent=t('activity.summary',{shown:Math.min(filtered.length,sectionLimit),total:state.activityEvents.length});}
+function refreshActivityShareOptions(){const sel=$('activity-section-share');if(!sel)return;const current=sel.value;const map=new Map();activityEventsWithUndo().forEach((e)=>{if(e&&e.shareId&&!map.has(String(e.shareId)))map.set(String(e.shareId),e.name||e.shareId);});sel.innerHTML='';sel.appendChild(el('option',{text:t('activity.shareAll'),attrs:{value:''}}));[...map.entries()].sort((a,b)=>String(a[1]).localeCompare(String(b[1]))).forEach(([id,name])=>sel.appendChild(el('option',{text:name+' · '+id.slice(0,8),attrs:{value:id}})));if([...sel.options].some((o)=>o.value===current))sel.value=current;}
+function filteredActivityEvents(){const locale=LOCALES[state.lang]||'en-US';const search=String(($('activity-section-search')&&$('activity-section-search').value)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLocaleLowerCase(locale);const kind=String(($('activity-section-kind')&&$('activity-section-kind').value)||'');const share=String(($('activity-section-share')&&$('activity-section-share').value)||'');const images=!!($('activity-images-only')&&$('activity-images-only').checked),pwa=!!($('activity-pwa-only')&&$('activity-pwa-only').checked),hideRoutine=!!($('activity-hide-routine')&&$('activity-hide-routine').checked);return activityEventsWithUndo().filter((e)=>(!kind||activityGroup(e)===kind)&&(!share||String(e.shareId||'')===share)&&(!images||activityIsImage(e))&&(!pwa||activityIsPwa(e))&&(!hideRoutine||!activityIsRoutineSystem(e))&&(!search||activitySearchText(e).includes(search)));}
+function renderActivityRows(body,list,limit){if(!body)return;body.textContent='';const rows=(list||[]).slice(0,limit);if(!rows.length){body.appendChild(el('div',{class:'empty',text:t('activity.empty')}));return;}rows.forEach((e)=>{const row=el('div',{class:'activity-row '+String(e.kind||'')+(e._undo?' has-undo':'')});row.appendChild(el('span',{class:'activity-icon',text:activityIcon(e.kind,e.status)}));const main=el('div',{class:'activity-main'});main.appendChild(el('strong',{text:localizedActivityName(e)}));main.appendChild(el('span',{class:'muted sm',text:[e.direction==='up'?'⬆':e.direction==='down'?'⬇':'',e.bytes?formatBytes(e.bytes):'',localizedLogText(e.status),e.ip||'',localizedLogText(e.detail),e.actor||''].filter(Boolean).join(' · ')}));if(e._undo){const undo=e._undo,tools=el('div',{class:'activity-undo-tools'}),status=undoStatusText(undo);tools.appendChild(el('span',{class:'activity-undo-label muted sm',text:status||undoTypeLabel(undo)}));if(undoCanRun(undo)){const b=el('button',{class:'btn sm activity-undo-btn',text:t('undo.btn'),attrs:{type:'button'}});b.addEventListener('click',()=>runUndoFromActivity(undo,b));tools.appendChild(b);}main.appendChild(tools);}row.append(main,el('time',{attrs:{title:e.at?formatDate(e.at):''},text:e.at?timeAgo(e.at):'—'}));body.appendChild(row);});}
+function renderActivity(){const combined=activityEventsWithUndo();refreshActivityShareOptions();renderActivityRows($('activity-body'),combined,500);const filtered=filteredActivityEvents();const sectionLimit=activityPageOpen()?1000:30;renderActivityRows($('activity-section-body'),filtered,sectionLimit);const count=$('activity-section-count');if(count)count.textContent=String(state.activityRetained||state.activityEvents.length||0);const summary=$('activity-section-summary');if(summary)summary.textContent=t('activity.summary',{shown:Math.min(filtered.length,sectionLimit),total:combined.length});}
 function mergeActivityEvents(events){const map=new Map();(state.activityEvents||[]).forEach((e)=>{if(e&&e.id)map.set(e.id,e);});(Array.isArray(events)?events:[]).forEach((e)=>{if(e&&e.id)map.set(e.id,e);});state.activityEvents=Array.from(map.values()).sort((a,b)=>(Number(b.at)||0)-(Number(a.at)||0));if(state.activityEvents.length>1000)state.activityEvents.length=1000;renderActivity();}
-function addActivityEvent(e){if(!e||!e.id)return;const existed=(state.activityEvents||[]).some((x)=>x.id===e.id);state.activityEvents=(state.activityEvents||[]).filter((x)=>x.id!==e.id);state.activityEvents.unshift(e);if(state.activityEvents.length>1000)state.activityEvents.length=1000;const retained=Number(state.activityRetained)||0;state.activityRetained=existed?Math.max(retained,state.activityEvents.length):Math.min(2000,Math.max(state.activityEvents.length,retained+1));renderActivity();}
+function activityMayHaveUndo(e){const name=String(e&&e.name||''),kind=String(e&&e.kind||''),status=String(e&&e.status||'');return !!(UNDO_TYPE_KEY[name]||name==='action-undone'||(kind==='trash'&&status==='deleted'));}
+function addActivityEvent(e){if(!e||!e.id)return;const existed=(state.activityEvents||[]).some((x)=>x.id===e.id);state.activityEvents=(state.activityEvents||[]).filter((x)=>x.id!==e.id);state.activityEvents.unshift(e);if(state.activityEvents.length>1000)state.activityEvents.length=1000;const retained=Number(state.activityRetained)||0;state.activityRetained=existed?Math.max(retained,state.activityEvents.length):Math.min(2000,Math.max(state.activityEvents.length,retained+1));renderActivity();if(activityMayHaveUndo(e))loadUndoActivityItems().catch(()=>{});}
 function setActivityConnectionStatus(key){['activity-status','activity-section-status'].forEach((id)=>{const node=$(id);if(node)node.textContent=t(key);});}
-async function loadActivityRecent(){if(state.activityLoading||!isLoggedIn()||!['owner','admin','auditor',''].includes(state.role||''))return;state.activityLoading=true;try{const data=await api('GET','/api/activity/recent?limit=1000');state.activityRetained=Math.max(0,Number(data&&data.retained)||0);state.activityEvents=Array.isArray(data&&data.events)?data.events.slice(0,1000):[];state.activityInitialized=true;renderActivity();}catch(e){const status=$('activity-section-status');if(status)status.textContent=t('activity.loadFail');throw e;}finally{state.activityLoading=false;}}
+async function loadActivityRecent(){if(state.activityLoading||!isLoggedIn()||!['owner','admin','auditor',''].includes(state.role||''))return;state.activityLoading=true;try{const [data]=await Promise.all([api('GET','/api/activity/recent?limit=1000'),loadUndoActivityItems({render:false})]);state.activityRetained=Math.max(0,Number(data&&data.retained)||0);state.activityEvents=Array.isArray(data&&data.events)?data.events.slice(0,1000):[];state.activityInitialized=true;renderActivity();}catch(e){const status=$('activity-section-status');if(status)status.textContent=t('activity.loadFail');throw e;}finally{state.activityLoading=false;}}
 function stopActivityStream(){if(state.activitySource){try{state.activitySource.close();}catch(_){}state.activitySource=null;}}
 function ensureActivityStream(){if(!isLoggedIn()||!['owner','admin','auditor',''].includes(state.role||''))return;if(state.activitySource)return;setActivityConnectionStatus('activity.reconnecting');const src=new EventSource('/api/activity/stream');state.activitySource=src;src.addEventListener('snapshot',(ev)=>{try{const arr=JSON.parse(ev.data);mergeActivityEvents(Array.isArray(arr)?arr:[]);}catch(_){}});src.addEventListener('activity',(ev)=>{try{addActivityEvent(JSON.parse(ev.data));}catch(_){}});src.onopen=()=>{setActivityConnectionStatus('activity.connected');};src.onerror=()=>{if(state.activitySource===src)setActivityConnectionStatus('activity.reconnecting');};}
 function openLiveActivity(){$('activity-overlay').classList.remove('hidden');renderActivity();loadActivityRecent().catch(()=>{});ensureActivityStream();}
@@ -12382,6 +12600,79 @@ function toLocalDatetime(d) {
   return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes());
 }
 
+function pickerViewportHeight() {
+  const vv = window.visualViewport;
+  const visual = vv && Number(vv.height) > 0 ? Number(vv.height) : 0;
+  const inner = Number(window.innerHeight) || 0;
+  const client = Number(document.documentElement && document.documentElement.clientHeight) || 0;
+  // Firefox can report visualViewport a frame late after zoom/fullscreen changes.
+  // Prefer the smallest positive viewport so the dialog can never extend below it.
+  const values = [visual, inner, client].filter((v) => Number.isFinite(v) && v > 0);
+  return values.length ? Math.min(...values) : 720;
+}
+function syncPickerViewport() {
+  const overlay = $('picker-overlay');
+  if (!overlay) return;
+  const rawHeight = pickerViewportHeight();
+  const edgeGap = rawHeight <= 480 ? 8 : (rawHeight <= 700 ? 12 : 24);
+  const modalHeight = Math.max(280, Math.floor(rawHeight - edgeGap));
+  // 1.58.3: expose ten normal file rows whenever the viewport is tall enough.
+  // A row is fixed to 44 CSS px by the picker stylesheet; 442 px includes borders.
+  // On short windows the body remains scrollable and the list is reduced so the
+  // header/footer stay reachable without browser zoom-out.
+  const tenRowHeight = 442;
+  const browserFloor = rawHeight <= 480 ? 220 : (rawHeight <= 700 ? 280 : tenRowHeight);
+  const browserHeight = browserFloor;
+  overlay.style.setProperty('--dx-picker-modal-height', modalHeight + 'px');
+  overlay.style.setProperty('--dx-picker-browser-height', browserHeight + 'px');
+}
+function showPickerOverlay() {
+  const overlay = $('picker-overlay');
+  const body = overlay && overlay.querySelector('.picker-body');
+  const list = $('browser-list');
+  syncPickerViewport();
+  if (body) body.scrollTop = 0;
+  if (list) list.scrollTop = 0;
+  overlay.classList.remove('hidden');
+  // Firefox/visualViewport can settle one or two frames after zoom, focus or the
+  // browser chrome changes height. Re-measure twice so the final pixel height wins.
+  requestAnimationFrame(() => {
+    syncPickerViewport();
+    requestAnimationFrame(syncPickerViewport);
+  });
+}
+function refreshOpenPickerViewport() {
+  const overlay = $('picker-overlay');
+  if (overlay && !overlay.classList.contains('hidden')) syncPickerViewport();
+}
+window.addEventListener('resize', refreshOpenPickerViewport, { passive: true });
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', refreshOpenPickerViewport, { passive: true });
+  window.visualViewport.addEventListener('scroll', refreshOpenPickerViewport, { passive: true });
+}
+
+// Nested scrollers are unavoidable here because a directory can contain thousands
+// of entries. Firefox on Windows does not always chain wheel input from an inner
+// overflow element to its parent, especially after page zoom. Explicitly hand the
+// wheel back to the dialog body once the file list reaches either boundary.
+(function installPickerWheelHandoff() {
+  const list = $('browser-list');
+  const body = document.querySelector('#picker-overlay .picker-body');
+  if (!list || !body || list.dataset.wheelHandoff === '1') return;
+  list.dataset.wheelHandoff = '1';
+  list.addEventListener('wheel', (ev) => {
+    if (!ev || !Number.isFinite(ev.deltaY) || ev.deltaY === 0) return;
+    if (Math.abs(ev.deltaX || 0) > Math.abs(ev.deltaY)) return;
+    const epsilon = 2;
+    const atTop = list.scrollTop <= epsilon;
+    const atBottom = list.scrollTop + list.clientHeight >= list.scrollHeight - epsilon;
+    if (!((ev.deltaY < 0 && atTop) || (ev.deltaY > 0 && atBottom))) return;
+    const before = body.scrollTop;
+    body.scrollTop += ev.deltaY;
+    if (body.scrollTop !== before) ev.preventDefault();
+  }, { passive: false });
+})();
+
 function openPicker() {
   state.pickerMode = 'create';
   state.addToShareId = null;
@@ -12422,7 +12713,7 @@ function openPicker() {
   $('picker-title').textContent = t('pk.title');
   $('create-share-btn').textContent = t('pk.share');
   updateSelectionUI();
-  $('picker-overlay').classList.remove('hidden');
+  showPickerOverlay();
   // Start at the configured default folder (Configuration → Defaults for new links);
   // fall back to the last-browsed folder, then root. A stale/invalid default lands
   // on root rather than erroring (browse() re-validates server-side).
@@ -12444,7 +12735,7 @@ function openDefaultDirPicker() {
   // and swallow all clicks). Reset on close so the in-picker video preview (z-index
   // 45) still stacks correctly during normal share creation.
   $('picker-overlay').style.zIndex = '50';
-  $('picker-overlay').classList.remove('hidden');
+  showPickerOverlay();
   const cur = ($('cfg-default-dir') && $('cfg-default-dir').value.trim()) || '';
   browse(cur || (state.settings && state.settings.defaultShareDir) || '/', true);
 }
@@ -12459,12 +12750,14 @@ function openPickerForAdd(share) {
   $('picker-title').textContent = t('pk.addTitle', { name: share.name });
   $('create-share-btn').textContent = t('pk.addBtn');
   updateSelectionUI();
-  $('picker-overlay').classList.remove('hidden');
+  showPickerOverlay();
   browse(state.cwd || '/');
 }
 function closePicker() {
   $('picker-overlay').classList.add('hidden');
   $('picker-overlay').style.zIndex = ''; // reset the folder-chooser z-index bump
+  $('picker-overlay').style.removeProperty('--dx-picker-modal-height');
+  $('picker-overlay').style.removeProperty('--dx-picker-browser-height');
 }
 
 
@@ -12489,7 +12782,7 @@ function openPhotosPicker() {
   $('picker-title').textContent = t('photo.pickTitle');
   $('create-share-btn').textContent = t('photo.pickBtn');
   updateSelectionUI();
-  $('picker-overlay').classList.remove('hidden');
+  showPickerOverlay();
   const s = state.settings || {};
   browse(s.defaultShareDir || state.cwd || '/', true);
 }
@@ -13951,6 +14244,15 @@ function renderBreadcrumbs(data) {
 function renderBrowser(data) {
   const list = $('browser-list');
   list.textContent = '';
+  // The parent-folder control must not consume one of the ten requested visible
+  // file rows. CSS adds one row of height whenever this marker is present.
+  list.classList.toggle('has-parent', data.parent !== null && data.parent !== undefined);
+  const cwd = String(data.cwd || state.cwd || '/');
+  // Shift ranges are meaningful only inside the folder that established the anchor.
+  if (state.pickerRangeCwd !== cwd) {
+    state.pickerRangeAnchor = null;
+    state.pickerRangeCwd = cwd;
+  }
 
   if (data.parent !== null && data.parent !== undefined) {
     const up = el('div', { class: 'row' });
@@ -13965,8 +14267,9 @@ function renderBrowser(data) {
     return;
   }
 
-  data.entries.forEach((entry) => {
+  data.entries.forEach((entry, entryIndex) => {
     const row = el('div', { class: 'row' });
+    row.dataset.pickerIndex = String(entryIndex);
     row.appendChild(el('span', { class: 'ico', text: entry.isDir ? '📁' : '📄' }));
     row.appendChild(el('span', { class: 'name', text: entry.name }));
 
@@ -14000,23 +14303,46 @@ function renderBrowser(data) {
         if (entry.isDir) browse(entry.path);
         return;
       }
+      if (ev.shiftKey && state.pickerRangeAnchor && state.pickerRangeCwd === cwd) {
+        const anchorIndex = data.entries.findIndex((x) => x.path === state.pickerRangeAnchor);
+        if (anchorIndex !== -1) {
+          selectPickerRange(data.entries, anchorIndex, entryIndex, list);
+          return;
+        }
+      }
       toggleItem(entry, row);
+      state.pickerRangeAnchor = entry.path;
+      state.pickerRangeCwd = cwd;
     });
     if (entry.isDir) row.addEventListener('dblclick', () => browse(entry.path));
     list.appendChild(row);
   });
 }
 
+function setPickerItemSelected(entry, selected, row) {
+  const i = state.selections.findIndex((x) => x.path === entry.path);
+  if (selected && i === -1) state.selections.push({ path: entry.path, name: entry.name, isDir: entry.isDir });
+  if (!selected && i !== -1) state.selections.splice(i, 1);
+  if (row) row.classList.toggle('selected', selected);
+}
+
+// Windows/Explorer-style range selection: after selecting one entry, Shift+click
+// another entry selects the entire contiguous range. Existing selections in other
+// folders are preserved, so range selection composes with Direct-Xfer's picker.
+function selectPickerRange(entries, fromIndex, toIndex, list) {
+  const lo = Math.min(fromIndex, toIndex), hi = Math.max(fromIndex, toIndex);
+  for (let i = lo; i <= hi; i++) {
+    const entry = entries[i];
+    const row = list && list.querySelector(`[data-picker-index="${i}"]`);
+    setPickerItemSelected(entry, true, row);
+  }
+  updateSelectionUI();
+}
+
 // Multi-select: clicking a row toggles it in/out of state.selections.
 function toggleItem(entry, row) {
-  const i = state.selections.findIndex((x) => x.path === entry.path);
-  if (i === -1) {
-    state.selections.push({ path: entry.path, name: entry.name, isDir: entry.isDir });
-    row.classList.add('selected');
-  } else {
-    state.selections.splice(i, 1);
-    row.classList.remove('selected');
-  }
+  const selected = !state.selections.some((x) => x.path === entry.path);
+  setPickerItemSelected(entry, selected, row);
   updateSelectionUI();
 }
 
@@ -14167,14 +14493,29 @@ $('create-share-btn').addEventListener('click', async () => {
 // ------------------------------------------------------------------
 // Metadata (version / year) for the footer
 // ------------------------------------------------------------------
+let createdShareBannerTimer = null;
+function hideCreatedShareLink() {
+  if (createdShareBannerTimer) {
+    clearTimeout(createdShareBannerTimer);
+    createdShareBannerTimer = null;
+  }
+  const banner = $('share-created-banner'), urlNode = $('share-created-url');
+  if (banner) {
+    banner.classList.add('hidden');
+    delete banner.dataset.url;
+  }
+  if (urlNode) urlNode.textContent = '';
+}
 function showCreatedShareLink(share) {
   const banner=$('share-created-banner'), urlNode=$('share-created-url');
   if(!banner||!urlNode||!share||!share.url)return;
+  if (createdShareBannerTimer) clearTimeout(createdShareBannerTimer);
   urlNode.textContent=share.url; banner.dataset.url=share.url; banner.classList.remove('hidden');
+  createdShareBannerTimer = setTimeout(hideCreatedShareLink, 60 * 1000);
   try{banner.scrollIntoView({block:'nearest',behavior:'smooth'});}catch(_){}
 }
-if($('share-created-copy'))$('share-created-copy').addEventListener('click',async()=>{const banner=$('share-created-banner');const url=banner&&banner.dataset.url;if(url){await copyText(url);toast(t('sh.copied'),'ok');}});
-if($('share-created-close'))$('share-created-close').addEventListener('click',()=>{const b=$('share-created-banner');if(b)b.classList.add('hidden');});
+if($('share-created-copy'))$('share-created-copy').addEventListener('click',()=>{const banner=$('share-created-banner');const url=banner&&banner.dataset.url;if(url)copy(url);});
+if($('share-created-close'))$('share-created-close').addEventListener('click',hideCreatedShareLink);
 
 async function loadMeta() {
   try {
@@ -14796,9 +15137,7 @@ setTimeout(loadMeta, 12000); // re-check so a freshly-started server surfaces an
   }
 
   function actionLabel(action) {
-    const key = 'auditA.' + action;
-    const v = t(key);
-    return v === key ? action : v; // fall back to the raw action code
+    return localizedAuditAction(action);
   }
 
   function renderAudit(entries) {
@@ -14811,7 +15150,7 @@ setTimeout(loadMeta, 12000); // re-check so a freshly-started server surfaces an
       const mid = el('div', { class: 'audit-mid' });
       const who = el('div', { class: 'audit-who' });
       who.appendChild(el('span', { class: 'audit-actor', text: e2.actor || '—' }));
-      if (e2.detail) who.appendChild(el('span', { class: 'audit-detail', text: e2.detail }));
+      if (e2.detail) who.appendChild(el('span', { class: 'audit-detail', text: localizedLogText(e2.detail) }));
       mid.appendChild(who);
       mid.appendChild(el('div', { class: 'audit-meta', text: (e2.ip ? e2.ip + ' · ' : '') + formatDate(e2.at) }));
       row.appendChild(mid);

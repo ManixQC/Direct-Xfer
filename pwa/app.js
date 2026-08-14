@@ -9,8 +9,8 @@
 (function () {
   // Build tag, shown in the footer so a user can confirm at a glance which version
   // is actually running after an update. Keep it in lock-step with sw.js VERSION.
-  var APP_VERSION = '1.55.1';
-  var APP_BUILD = '2026.08.13-pwa263';
+  var APP_VERSION = '1.58.3';
+  var APP_BUILD = '2026.08.14-pwa277';
   // Upload blocks are deliberately small on mobile. A number of reverse proxies
   // still default to a 1 MiB request-body limit; an 8 MiB first block can therefore
   // be rejected before the browser emits any useful progress event, which looks like
@@ -546,7 +546,7 @@
       });
     });
     var manifest = document.getElementById('app-manifest');
-    if (manifest) manifest.href = (lang === 'fr' ? '/direct-xfer-pwa.webmanifest' : '/direct-xfer-pwa-' + lang + '.webmanifest') + '?v=249';
+    if (manifest) manifest.href = (lang === 'fr' ? '/direct-xfer-pwa.webmanifest' : '/direct-xfer-pwa-' + lang + '.webmanifest') + '?v=263';
     $('lang-select').value = lang;
     $('dest-save-btn').textContent = editingToken ? t('updateDestination') : t('saveDestination');
     renderDests(); renderQueue(); renderHistory(); renderDeviceStatus();
@@ -2647,6 +2647,8 @@
   // an administrator session, so a bare paired device sees the "sign in" note.
   var shareCwd = '/';
   var shareSelected = Object.create(null); // hostPath -> { name, size }
+  var shareRangeAnchorIndex = null;
+  var shareRangeCwd = null;
   var sharesInitialised = false;
   var sharesWired = false;
   var hostSharesCache = [];
@@ -2702,7 +2704,9 @@
       if (!r.ok) throw new Error('browse');
       showSharesAuthNote(false);
       var data = await r.json();
-      shareCwd = data.cwd || '/';
+      var nextCwd = data.cwd || '/';
+      if (shareRangeCwd !== nextCwd) { shareRangeAnchorIndex = null; shareRangeCwd = nextCwd; }
+      shareCwd = nextCwd;
       if ($('share-path')) $('share-path').value = shareCwd;
       if ($('share-up')) { $('share-up').setAttribute('data-parent', data.parent || ''); $('share-up').disabled = !data.parent; }
       renderShareBrowser(data.entries || []);
@@ -2711,13 +2715,14 @@
 
   function renderShareBrowser(entries) {
     var listEl = $('share-browser-list'); listEl.textContent = '';
-    entries.forEach(function (e) {
+    entries.forEach(function (e, entryIndex) {
       var rowEl = document.createElement('div'); rowEl.className = 'share-row' + (e.isDir ? ' is-dir' : '');
+      rowEl.setAttribute('data-share-index', String(entryIndex));
       if (e.isDir) {
         // A folder can be BOTH selected (its own checkbox → a folder share) and opened
         // (the name/chevron navigates in), mirroring the standard admin multi-select.
         var dcb = document.createElement('input'); dcb.type = 'checkbox'; dcb.className = 'share-check'; dcb.checked = !!shareSelected[e.path];
-        dcb.addEventListener('change', function () { toggleShareItem(e, dcb.checked); });
+        dcb.addEventListener('click', function (ev) { handleSharePickerClick(entries, e, entryIndex, dcb, ev); });
         rowEl.appendChild(dcb);
         var btn = document.createElement('button'); btn.type = 'button'; btn.className = 'share-entry share-nav';
         var ico = document.createElement('span'); ico.className = 'share-ico'; ico.textContent = '📁'; btn.appendChild(ico);
@@ -2728,7 +2733,13 @@
       } else {
         var lab = document.createElement('label'); lab.className = 'share-entry';
         var cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = !!shareSelected[e.path];
-        cb.addEventListener('change', function () { toggleShareItem(e, cb.checked); });
+        cb.addEventListener('click', function (ev) { handleSharePickerClick(entries, e, entryIndex, cb, ev); });
+        lab.addEventListener('click', function (ev) {
+          if (!ev.shiftKey || ev.target === cb) return;
+          ev.preventDefault();
+          cb.checked = true;
+          handleSharePickerClick(entries, e, entryIndex, cb, ev);
+        });
         lab.appendChild(cb);
         var ico2 = document.createElement('span'); ico2.className = 'share-ico'; ico2.textContent = '📄'; lab.appendChild(ico2);
         var nm2 = document.createElement('span'); nm2.className = 'share-name'; nm2.textContent = e.name; lab.appendChild(nm2);
@@ -2740,10 +2751,26 @@
     if (!entries.length) { var em = document.createElement('p'); em.className = 'muted sm'; em.textContent = '—'; listEl.appendChild(em); }
   }
 
-  function toggleShareItem(entry, checked) {
+  function handleSharePickerClick(entries, entry, entryIndex, checkbox, ev) {
+    var checked = !!checkbox.checked;
+    if (ev && ev.shiftKey && shareRangeAnchorIndex !== null && shareRangeCwd === shareCwd) {
+      var lo = Math.min(shareRangeAnchorIndex, entryIndex), hi = Math.max(shareRangeAnchorIndex, entryIndex);
+      // Shift+click always selects the contiguous range. Existing selections in
+      // other directories remain intact, matching the standard file picker.
+      for (var i = lo; i <= hi; i++) toggleShareItem(entries[i], true, false);
+      renderShareBrowser(entries);
+      updateShareSelection();
+      return;
+    }
+    toggleShareItem(entry, checked);
+    shareRangeAnchorIndex = entryIndex;
+    shareRangeCwd = shareCwd;
+  }
+
+  function toggleShareItem(entry, checked, update) {
     if (checked) shareSelected[entry.path] = { name: entry.name, size: entry.size };
     else delete shareSelected[entry.path];
-    updateShareSelection();
+    if (update !== false) updateShareSelection();
   }
 
   function selectedSharePaths() { return Object.keys(shareSelected); }
@@ -5941,9 +5968,47 @@
     if (kind === 'system' || kind.indexOf('ocr-') === 0) return 'system';
     return 'admin';
   }
-  function pwaServerActivitySearchText(e) {
-    return [e && e.name,e && e.kind,e && e.status,e && e.detail,e && e.ip,e && e.direction,e && e.shareId,e && e.actor,e && e.accountId,e && e.deviceId].filter(Boolean).join(' ').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase(lang === 'fr' ? 'fr-CA' : lang === 'es' ? 'es-ES' : 'en-US');
+  var PWA_ACTIVITY_ACTIONS = {
+    fr:{'action-undone':'Action annulée','album-created':'Album créé','audit-exported':'Journal d’audit exporté','backup-download':'Sauvegarde téléchargée','backup-failed':'Sauvegarde échouée','backup-ok':'Sauvegarde réussie','diagnostics-run':'Diagnostics exécutés','dlp-blocked':'DLP : publication bloquée','dlp-detected':'DLP : contenu détecté','dlp-ocr-unavailable':'DLP : OCR indisponible','dlp-overridden':'DLP : avertissement outrepassé','dlp-quarantine-deleted':'Élément de quarantaine supprimé','dlp-quarantine-failed':'DLP : mise en quarantaine échouée','dlp-quarantined':'DLP : contenu mis en quarantaine','dlp-warning':'DLP : avertissement','download-threshold':'Seuil de téléchargements atteint','email-tested':'Courriel de test envoyé','expired-share-purged':'Partage expiré purgé','feedback-deleted':'Feedback supprimé','history-cleared':'Historique effacé','image-created':'Image créée','image-first-view':'Première vue d’image','image-retention-revoked':'Image révoquée par rétention','inbox-created':'Lien de réception créé','inbox-messages-cleared':'Messages de réception effacés','ip-named':'Client renommé','ip-names-cleared':'Surnoms IP effacés','ip-unnamed':'Surnom de client retiré','items-reordered':'Éléments réordonnés','link-preset-deleted':'Préréglage de lien supprimé','link-preset-saved':'Préréglage de lien enregistré','links-exported':'Liens exportés','login':'Connexion','login-fail':'Échec de connexion','logout':'Déconnexion','network-port-tested':'Port réseau testé','notification-prefs-changed':'Préférences de notifications modifiées','passkey-added':'Clé d’accès ajoutée','passkey-login':'Connexion par clé d’accès','pending-approved':'Dépôt approuvé','pending-rejected':'Dépôt rejeté','photo-edited':'Image modifiée','photo-uploaded':'Image téléversée','photos-created':'Images créées','photos-downloaded':'Images téléchargées','push-tested':'Notification push testée','pwa-auto-lock':'PWA verrouillée automatiquement','pwa-device-paired':'Appareil PWA appairé','pwa-device-renamed':'Appareil PWA renommé','pwa-device-revoked':'Appareil PWA révoqué','reception-thread-cleared':'Discussion de réception effacée','reception-thread-reply':'Réponse à une discussion de réception','recipients-added':'Sous-liens ajoutés','recipient-removed':'Sous-lien supprimé','recipient-updated':'Sous-lien modifié','restore':'Sauvegarde restaurée','search-reindex':'Réindexation recherche','server-shutdown':'Extinction serveur','settings-changed':'Réglages modifiés','settings-exported':'Réglages exportés','settings-imported':'Réglages importés','share-auto-archived':'Partage archivé automatiquement','share-cloned':'Partage dupliqué','share-created':'Partage créé','share-edited':'Partage modifié','share-extended':'Expiration prolongée','share-reactivated':'Partage réactivé','share-restored':'Partage restauré','share-revoked':'Partage révoqué','share-stats-reset':'Statistiques réinitialisées','share-trashed':'Partage mis à la corbeille','shares-exported':'Partages exportés','shares-imported':'Partages importés','shares-paused-all':'Partages mis en pause','shares-resumed-all':'Partages réactivés','transfer-stopped':'Transfert arrêté','trash-purged':'Élément supprimé définitivement','trash-purged-all':'Corbeille vidée','upload-deduped':'Doublon détecté','upload-folder-created':'Dossier de téléversement créé','upload-infected':'Téléversement infecté','webhook-tested':'Webhook testé'},
+    en:{'action-undone':'Action undone','album-created':'Album created','audit-exported':'Audit log exported','backup-download':'Backup downloaded','backup-failed':'Backup failed','backup-ok':'Backup completed','diagnostics-run':'Diagnostics run','dlp-blocked':'DLP: publication blocked','dlp-detected':'DLP: content detected','dlp-ocr-unavailable':'DLP: OCR unavailable','dlp-overridden':'DLP: warning overridden','dlp-quarantine-deleted':'Quarantine item deleted','dlp-quarantine-failed':'DLP: quarantine failed','dlp-quarantined':'DLP: content quarantined','dlp-warning':'DLP: warning','download-threshold':'Download threshold reached','email-tested':'Test email sent','expired-share-purged':'Expired share purged','feedback-deleted':'Feedback deleted','history-cleared':'History cleared','image-created':'Image created','image-first-view':'First image view','image-retention-revoked':'Image revoked by retention','inbox-created':'Reception link created','inbox-messages-cleared':'Reception messages cleared','ip-named':'Client renamed','ip-names-cleared':'IP nicknames cleared','ip-unnamed':'Client nickname cleared','items-reordered':'Items reordered','link-preset-deleted':'Link preset deleted','link-preset-saved':'Link preset saved','links-exported':'Links exported','login':'Login','login-fail':'Login failed','logout':'Logout','network-port-tested':'Network port tested','notification-prefs-changed':'Notification preferences changed','passkey-added':'Passkey added','passkey-login':'Passkey login','pending-approved':'Pending upload approved','pending-rejected':'Pending upload rejected','photo-edited':'Image edited','photo-uploaded':'Image uploaded','photos-created':'Images created','photos-downloaded':'Images downloaded','push-tested':'Push notification tested','pwa-auto-lock':'PWA automatically locked','pwa-device-paired':'PWA device paired','pwa-device-renamed':'PWA device renamed','pwa-device-revoked':'PWA device revoked','reception-thread-cleared':'Reception thread cleared','reception-thread-reply':'Reception thread reply','recipients-added':'Sub-links added','recipient-removed':'Sub-link removed','recipient-updated':'Sub-link updated','restore':'Backup restored','search-reindex':'Search reindex','server-shutdown':'Server shutdown','settings-changed':'Settings changed','settings-exported':'Settings exported','settings-imported':'Settings imported','share-auto-archived':'Share automatically archived','share-cloned':'Share duplicated','share-created':'Share created','share-edited':'Share edited','share-extended':'Share expiration extended','share-reactivated':'Share reactivated','share-restored':'Share restored','share-revoked':'Share revoked','share-stats-reset':'Share statistics reset','share-trashed':'Share moved to trash','shares-exported':'Shares exported','shares-imported':'Shares imported','shares-paused-all':'Shares paused','shares-resumed-all':'Shares resumed','transfer-stopped':'Transfer stopped','trash-purged':'Item permanently deleted','trash-purged-all':'Trash emptied','upload-deduped':'Duplicate upload detected','upload-folder-created':'Upload folder created','upload-infected':'Infected upload','webhook-tested':'Webhook tested'},
+    es:{'action-undone':'Acción deshecha','album-created':'Álbum creado','audit-exported':'Registro de auditoría exportado','backup-download':'Copia de seguridad descargada','backup-failed':'Copia de seguridad fallida','backup-ok':'Copia de seguridad completada','diagnostics-run':'Diagnósticos ejecutados','dlp-blocked':'DLP: publicación bloqueada','dlp-detected':'DLP: contenido detectado','dlp-ocr-unavailable':'DLP: OCR no disponible','dlp-overridden':'DLP: advertencia ignorada','dlp-quarantine-deleted':'Elemento de cuarentena eliminado','dlp-quarantine-failed':'DLP: cuarentena fallida','dlp-quarantined':'DLP: contenido en cuarentena','dlp-warning':'DLP: advertencia','download-threshold':'Umbral de descargas alcanzado','email-tested':'Correo de prueba enviado','expired-share-purged':'Recurso caducado purgado','feedback-deleted':'Comentario eliminado','history-cleared':'Historial borrado','image-created':'Imagen creada','image-first-view':'Primera vista de imagen','image-retention-revoked':'Imagen revocada por retención','inbox-created':'Enlace de recepción creado','inbox-messages-cleared':'Mensajes de recepción borrados','ip-named':'Cliente renombrado','ip-names-cleared':'Alias de IP borrados','ip-unnamed':'Alias de cliente eliminado','items-reordered':'Elementos reordenados','link-preset-deleted':'Preajuste de enlace eliminado','link-preset-saved':'Preajuste de enlace guardado','links-exported':'Enlaces exportados','login':'Inicio de sesión','login-fail':'Inicio fallido','logout':'Cierre de sesión','network-port-tested':'Puerto de red probado','notification-prefs-changed':'Preferencias de notificación modificadas','passkey-added':'Clave de acceso añadida','passkey-login':'Inicio con clave de acceso','pending-approved':'Carga pendiente aprobada','pending-rejected':'Carga pendiente rechazada','photo-edited':'Imagen editada','photo-uploaded':'Imagen subida','photos-created':'Imágenes creadas','photos-downloaded':'Imágenes descargadas','push-tested':'Notificación push probada','pwa-auto-lock':'PWA bloqueada automáticamente','pwa-device-paired':'Dispositivo PWA emparejado','pwa-device-renamed':'Dispositivo PWA renombrado','pwa-device-revoked':'Dispositivo PWA revocado','reception-thread-cleared':'Conversación de recepción borrada','reception-thread-reply':'Respuesta en conversación de recepción','recipients-added':'Subenlaces añadidos','recipient-removed':'Subenlace eliminado','recipient-updated':'Subenlace modificado','restore':'Copia de seguridad restaurada','search-reindex':'Reindexación de búsqueda','server-shutdown':'Apagado del servidor','settings-changed':'Ajustes modificados','settings-exported':'Ajustes exportados','settings-imported':'Ajustes importados','share-auto-archived':'Recurso archivado automáticamente','share-cloned':'Recurso duplicado','share-created':'Recurso creado','share-edited':'Recurso modificado','share-extended':'Caducidad ampliada','share-reactivated':'Recurso reactivado','share-restored':'Recurso restaurado','share-revoked':'Recurso revocado','share-stats-reset':'Estadísticas reiniciadas','share-trashed':'Recurso movido a la papelera','shares-exported':'Recursos exportados','shares-imported':'Recursos importados','shares-paused-all':'Recursos pausados','shares-resumed-all':'Recursos reactivados','transfer-stopped':'Transferencia detenida','trash-purged':'Elemento eliminado definitivamente','trash-purged-all':'Papelera vaciada','upload-deduped':'Carga duplicada detectada','upload-folder-created':'Carpeta de carga creada','upload-infected':'Carga infectada','webhook-tested':'Webhook probado'}
+  };
+  var PWA_ACTIVITY_ACTIONS_EXTRA = {"fr":{"2fa-disabled":"2FA désactivée","2fa-enabled":"2FA activée","access-request-deleted":"Demande d’accès supprimée","account-created":"Compte créé","account-deleted":"Compte supprimé","account-renamed":"Compte renommé","collab-created":"Collaboration créée","collab-delete":"Fichier collaboratif supprimé","digest-tested":"Digest testé","enc-share-created":"Partage chiffré créé","leak-alert":"Alerte de fuite","login-2fa-fail":"Échec 2FA","notification-rule-created":"Règle de notification créée","notification-rule-deleted":"Règle de notification supprimée","notification-rule-reused":"Règle de notification réutilisée","notification-rule-updated":"Règle de notification modifiée","passkey-device-added":"Appareil biométrique ajouté","passkey-login-fail":"Échec de connexion par clé d’accès","passkey-removed":"Clé d’accès supprimée","passkeys-disabled":"Clés d’accès désactivées","password-changed":"Mot de passe changé","password-reset":"Mot de passe réinitialisé","pending-orphans-cleaned":"Dépôts orphelins nettoyés","photo-history-deleted":"Historique d’image supprimé","photo-history-purged":"Historique d’images purgé","push-subscribed":"Notifications push activées","push-unsubscribed":"Notifications push désactivées","pwa-login-bound":"Session PWA associée","ransomware-blocked":"Client bloqué (anomalie)","ransomware-unblocked":"Client débloqué","secret-created":"Secret créé","share-bandwidth-limit":"Limite de bande passante atteinte","share-burned":"Lien à usage unique consommé","share-comment-added":"Commentaire privé ajouté","share-comment-deleted":"Commentaire privé supprimé","share-emailed":"Partage envoyé par courriel","share-first-use-expiry-started":"Expiration au premier usage démarrée","share-visitor-limit":"Limite de visiteurs atteinte","shares-bulk":"Action en lot sur les partages","storage-connector-cancelled":"Opération de stockage annulée","storage-connector-created":"Connecteur de stockage créé","storage-connector-deleted":"Connecteur de stockage supprimé","storage-connector-done":"Opération de stockage terminée","storage-connector-download":"Téléchargement depuis le stockage terminé","storage-connector-failed":"Opération de stockage échouée","storage-connector-tested":"Connecteur de stockage testé","storage-connector-updated":"Connecteur de stockage modifié","storage-connector-upload":"Téléversement vers le stockage terminé"},"en":{"2fa-disabled":"2FA disabled","2fa-enabled":"2FA enabled","access-request-deleted":"Access request deleted","account-created":"Account created","account-deleted":"Account deleted","account-renamed":"Account renamed","collab-created":"Collaboration created","collab-delete":"Collaborative file deleted","digest-tested":"Digest tested","enc-share-created":"Encrypted share created","leak-alert":"Leak alert","login-2fa-fail":"2FA failed","notification-rule-created":"Notification rule created","notification-rule-deleted":"Notification rule deleted","notification-rule-reused":"Notification rule reused","notification-rule-updated":"Notification rule updated","passkey-device-added":"Biometric device added","passkey-login-fail":"Passkey login failed","passkey-removed":"Passkey removed","passkeys-disabled":"Passkeys disabled","password-changed":"Password changed","password-reset":"Password reset","pending-orphans-cleaned":"Orphan pending uploads cleaned","photo-history-deleted":"Image history deleted","photo-history-purged":"Image history purged","push-subscribed":"Push notifications enabled","push-unsubscribed":"Push notifications disabled","pwa-login-bound":"PWA session bound","ransomware-blocked":"Client blocked (anomaly)","ransomware-unblocked":"Client unblocked","secret-created":"Secret created","share-bandwidth-limit":"Share bandwidth limit reached","share-burned":"One-time link consumed","share-comment-added":"Private comment added","share-comment-deleted":"Private comment deleted","share-emailed":"Share emailed","share-first-use-expiry-started":"First-use expiry started","share-visitor-limit":"Visitor limit reached","shares-bulk":"Bulk share action","storage-connector-cancelled":"Storage operation cancelled","storage-connector-created":"Storage connector created","storage-connector-deleted":"Storage connector deleted","storage-connector-done":"Storage operation completed","storage-connector-download":"Storage download completed","storage-connector-failed":"Storage operation failed","storage-connector-tested":"Storage connector tested","storage-connector-updated":"Storage connector updated","storage-connector-upload":"Storage upload completed"},"es":{"2fa-disabled":"2FA desactivada","2fa-enabled":"2FA activada","access-request-deleted":"Solicitud de acceso eliminada","account-created":"Cuenta creada","account-deleted":"Cuenta eliminada","account-renamed":"Cuenta renombrada","collab-created":"Colaboración creada","collab-delete":"Archivo colaborativo eliminado","digest-tested":"Resumen probado","enc-share-created":"Recurso cifrado creado","leak-alert":"Alerta de fuga","login-2fa-fail":"2FA fallido","notification-rule-created":"Regla de notificación creada","notification-rule-deleted":"Regla de notificación eliminada","notification-rule-reused":"Regla de notificación reutilizada","notification-rule-updated":"Regla de notificación modificada","passkey-device-added":"Dispositivo biométrico añadido","passkey-login-fail":"Fallo de inicio con clave de acceso","passkey-removed":"Clave de acceso eliminada","passkeys-disabled":"Claves de acceso desactivadas","password-changed":"Contraseña cambiada","password-reset":"Contraseña restablecida","pending-orphans-cleaned":"Cargas pendientes huérfanas limpiadas","photo-history-deleted":"Historial de imagen eliminado","photo-history-purged":"Historial de imágenes purgado","push-subscribed":"Notificaciones push activadas","push-unsubscribed":"Notificaciones push desactivadas","pwa-login-bound":"Sesión PWA vinculada","ransomware-blocked":"Cliente bloqueado (anomalía)","ransomware-unblocked":"Cliente desbloqueado","secret-created":"Secreto creado","share-bandwidth-limit":"Límite de ancho de banda alcanzado","share-burned":"Enlace de un solo uso consumido","share-comment-added":"Comentario privado añadido","share-comment-deleted":"Comentario privado eliminado","share-emailed":"Recurso enviado por correo","share-first-use-expiry-started":"Caducidad tras primer uso iniciada","share-visitor-limit":"Límite de visitantes alcanzado","shares-bulk":"Acción masiva sobre recursos","storage-connector-cancelled":"Operación de almacenamiento cancelada","storage-connector-created":"Conector de almacenamiento creado","storage-connector-deleted":"Conector de almacenamiento eliminado","storage-connector-done":"Operación de almacenamiento completada","storage-connector-download":"Descarga desde el almacenamiento completada","storage-connector-failed":"Operación de almacenamiento fallida","storage-connector-tested":"Conector de almacenamiento probado","storage-connector-updated":"Conector de almacenamiento modificado","storage-connector-upload":"Carga al almacenamiento completada"}};
+  function pwaActivityActionLabel(action){var key=String(action||''),dict=PWA_ACTIVITY_ACTIONS[lang]||PWA_ACTIVITY_ACTIONS.en,extra=PWA_ACTIVITY_ACTIONS_EXTRA[lang]||PWA_ACTIVITY_ACTIONS_EXTRA.en;return dict[key]||extra[key]||key.replace(/-/g,' ');}
+  var PWA_ACTIVITY_TEXT_EXTRA = {"fr":{"queued":"en file","pending":"en attente","paused-all":"tous mis en pause","resumed-all":"tous réactivés","thread-reply":"réponse à la discussion","access-request":"demande d’accès","feedback":"commentaire","message":"message"},"en":{"queued":"queued","pending":"pending","paused-all":"all paused","resumed-all":"all resumed","thread-reply":"thread reply","access-request":"access request","feedback":"feedback","message":"message"},"es":{"queued":"en cola","pending":"pendiente","paused-all":"todos pausados","resumed-all":"todos reanudados","thread-reply":"respuesta a la conversación","access-request":"solicitud de acceso","feedback":"comentario","message":"mensaje"}};
+  function pwaLocalizedActivityText(value){
+    if(value===null||value===undefined)return '';
+    var raw=String(value), maps={
+      fr:{active:'actif',completed:'terminé',interrupted:'interrompu',deleted:'supprimé',restored:'restauré',purged:'supprimé définitivement',reactivated:'réactivé',clean:'sain',infected:'infecté',error:'erreur',restarted:'redémarré',recovered:'récupéré',updated:'mis à jour','locked-out':'verrouillé après trop d’essais','paired device':'appareil appairé','new device':'nouvel appareil','known device':'appareil connu','device renamed':'appareil renommé','PWA session locked':'session PWA verrouillée','manual rebuild requested':'réindexation manuelle demandée','visitor message':'message visiteur','visitor thread reply':'réponse du visiteur','access request submitted':'demande d’accès envoyée','feedback submitted':'feedback envoyé','Content modified':'Contenu modifié',failed:'échec',open:'ouvert',closed:'fermé',unknown:'inconnu'},
+      en:{active:'active',completed:'completed',interrupted:'interrupted',deleted:'deleted',restored:'restored',purged:'permanently deleted',reactivated:'reactivated',clean:'clean',infected:'infected',error:'error',restarted:'restarted',recovered:'recovered',updated:'updated','locked-out':'locked after too many attempts','paired device':'paired device','new device':'new device','known device':'known device','device renamed':'device renamed','PWA session locked':'PWA session locked','manual rebuild requested':'manual reindex requested','visitor message':'visitor message','visitor thread reply':'visitor thread reply','access request submitted':'access request submitted','feedback submitted':'feedback submitted','Contenu modifié':'Content modified',failed:'failed',open:'open',closed:'closed',unknown:'unknown'},
+      es:{active:'activo',completed:'completado',interrupted:'interrumpido',deleted:'eliminado',restored:'restaurado',purged:'eliminado definitivamente',reactivated:'reactivado',clean:'limpio',infected:'infectado',error:'error',restarted:'reiniciado',recovered:'recuperado',updated:'actualizado','locked-out':'bloqueado tras demasiados intentos','paired device':'dispositivo emparejado','new device':'nuevo dispositivo','known device':'dispositivo conocido','device renamed':'dispositivo renombrado','PWA session locked':'sesión PWA bloqueada','manual rebuild requested':'reindexación manual solicitada','visitor message':'mensaje del visitante','visitor thread reply':'respuesta del visitante','access request submitted':'solicitud de acceso enviada','feedback submitted':'comentario enviado','Content modified':'Contenido modificado','Contenu modifié':'Contenido modificado',failed:'fallido',open:'abierto',closed:'cerrado',unknown:'desconocido'}
+    }, exact=maps[lang]||maps.en, extra=PWA_ACTIVITY_TEXT_EXTRA[lang]||PWA_ACTIVITY_TEXT_EXTRA.en;
+    if(Object.prototype.hasOwnProperty.call(exact,raw))return exact[raw];
+    if(Object.prototype.hasOwnProperty.call(extra,raw))return extra[raw];
+    var via=raw.match(/^via PWA\s*[—-]\s*(.*)$/i); if(via)return (lang==='fr'?'via PWA — ':lang==='es'?'vía PWA — ':'via PWA — ')+pwaLocalizedActivityText(via[1]);
+    var count=raw.match(/^(\d+) (link|share|image|message|record|key|credential)\(s\)$/i); if(count){var nouns={fr:{link:'lien',share:'partage',image:'image',message:'message',record:'entrée',key:'clé',credential:'identifiant'},en:{link:'link',share:'share',image:'image',message:'message',record:'record',key:'key',credential:'credential'},es:{link:'enlace',share:'recurso',image:'imagen',message:'mensaje',record:'registro',key:'clave',credential:'credencial'}},noun=(nouns[lang]||nouns.en)[count[2].toLowerCase()]||count[2];return count[1]+' '+noun+'(s)';}
+    var sent=raw.match(/^sent=(\d+)$/i); if(sent)return lang==='fr'?sent[1]+' envoyé(s)':lang==='es'?sent[1]+' enviado(s)':sent[1]+' sent';
+    var diag=raw.match(/^ok=(\d+)\s+warn=(\d+)\s+bad=(\d+)$/i); if(diag)return lang==='fr'?diag[1]+' OK · '+diag[2]+' avertissement(s) · '+diag[3]+' erreur(s)':lang==='es'?diag[1]+' OK · '+diag[2]+' advertencia(s) · '+diag[3]+' error(es)':diag[1]+' OK · '+diag[2]+' warning(s) · '+diag[3]+' error(s)';
+    var failedCount=raw.match(/^(\d+);\s*failed=(\d+)$/i); if(failedCount)return lang==='fr'?failedCount[1]+' traité(s) · '+failedCount[2]+' échec(s)':lang==='es'?failedCount[1]+' procesado(s) · '+failedCount[2]+' fallo(s)':failedCount[1]+' processed · '+failedCount[2]+' failed';
+    var migrated=raw.match(/^migrated=(\d+)$/i); if(migrated)return lang==='fr'?migrated[1]+' migré(s)':lang==='es'?migrated[1]+' migrado(s)':migrated[1]+' migrated';
+    raw=raw.replace(/\bPLAINTEXT\b/g,lang==='fr'?'NON CHIFFRÉ':lang==='es'?'SIN CIFRAR':'PLAINTEXT');
+    raw=raw.replace(/\bencrypted\b/gi,lang==='fr'?'chiffré':lang==='es'?'cifrado':'encrypted');
+    raw=raw.replace(/\bfailed=(\d+)\b/gi,function(_,n){return lang==='fr'?'échecs='+n:lang==='es'?'fallos='+n:'failed='+n;});
+    raw=raw.replace(/\btransferredShares=(\d+)\b/gi,function(_,n){return lang==='fr'?'partages transférés='+n:lang==='es'?'recursos transferidos='+n:'transferred shares='+n;});
+    raw=raw.replace(/\bpwaDevices=(\d+)\b/gi,function(_,n){return lang==='fr'?'appareils PWA='+n:lang==='es'?'dispositivos PWA='+n:'PWA devices='+n;});
+    raw=raw.replace(/\bpairingTickets=(\d+)\b/gi,function(_,n){return lang==='fr'?'tickets d’appairage='+n:lang==='es'?'tickets de emparejamiento='+n:'pairing tickets='+n;});
+    raw=raw.replace(/\bpush-scopes=(\d+)\b/gi,function(_,n){return lang==='fr'?'portées push='+n:lang==='es'?'ámbitos push='+n:'push scopes='+n;});
+    raw=raw.replace(/\bone-time link\b/gi,lang==='fr'?'lien à usage unique':lang==='es'?'enlace de un solo uso':'one-time link');
+    raw=raw.replace(/\bfinding\(s\)\b/gi,lang==='fr'?'détection(s)':lang==='es'?'detección(es)':'finding(s)');
+    return raw;
   }
+  function pwaLocalizedActivityName(e){var raw=String(e&&e.name||e&&e.kind||'event'), known={'server-restarted':{fr:'Serveur redémarré',en:'Server restarted',es:'Servidor reiniciado'},'server-shutdown':{fr:'Serveur arrêté',en:'Server shutdown',es:'Servidor detenido'},'server-crash-recovered':{fr:'Récupération après arrêt anormal',en:'Recovered after abnormal shutdown',es:'Recuperación tras cierre anómalo'},'update-installed':{fr:'Mise à jour installée',en:'Update installed',es:'Actualización instalada'},'index-failed':{fr:'Échec de l’indexation',en:'Indexing failed',es:'Error de indexación'},'feedback submitted':{fr:'Feedback envoyé',en:'Feedback submitted',es:'Comentario enviado'},'visitor thread reply':{fr:'Réponse du visiteur',en:'Visitor thread reply',es:'Respuesta del visitante'}};if(known[raw])return known[raw][lang]||known[raw].en;if((e&&e.kind)==='audit'||PWA_ACTIVITY_ACTIONS.fr[raw]||PWA_ACTIVITY_ACTIONS.en[raw]||PWA_ACTIVITY_ACTIONS_EXTRA.fr[raw]||PWA_ACTIVITY_ACTIONS_EXTRA.en[raw])return pwaActivityActionLabel(raw);return raw;}
+
+  function pwaServerActivitySearchText(e) {
+    return [pwaLocalizedActivityName(e),e && e.kind,pwaLocalizedActivityText(e && e.status),pwaLocalizedActivityText(e && e.detail),e && e.ip,e && e.direction,e && e.shareId,e && e.actor,e && e.accountId,e && e.deviceId].filter(Boolean).join(' ').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase(lang === 'fr' ? 'fr-CA' : lang === 'es' ? 'es-ES' : 'en-US');
+  }
+  function pwaServerActivityIsPwa(e){return !!(e&&(e.source==='pwa'||e.deviceId||/^PWA(?::|$)/i.test(String(e.actor||''))||/via PWA/i.test(String(e.detail||''))));}
+  function pwaServerActivityIsImage(e){if(!e)return false;var action=String(e.name||e.status||'');if(/^(photo|photos|image|album)(?:-|$)/i.test(action))return true;if(/^(photo|album)$/i.test(String(e.resourceType||e.detail||'')))return true;return false;}
   function pwaServerActivityIsRoutine(e){var n=String(e&&e.name||'').toLowerCase(),k=String(e&&e.kind||'').toLowerCase();return k==='ocr-start'||k==='ocr-complete'||n==='server-restarted'||n==='server-shutdown';}
   function refreshPwaActivityShareOptions(){var sel=$('server-activity-share');if(!sel)return;var current=sel.value,map={};serverActivityEvents.forEach(function(e){if(e&&e.shareId&&!map[e.shareId])map[e.shareId]=e.name||e.shareId;});sel.innerHTML='';var all=document.createElement('option');all.value='';all.textContent=t('serverActivityShareAll');sel.appendChild(all);Object.keys(map).sort(function(a,b){return String(map[a]).localeCompare(String(map[b]));}).forEach(function(id){var o=document.createElement('option');o.value=id;o.textContent=map[id]+' · '+id.slice(0,8);sel.appendChild(o);});if([].slice.call(sel.options).some(function(o){return o.value===current;}))sel.value=current;}
   function renderPwaServerActivity() {
@@ -5954,19 +6019,19 @@
     var kind = String($('server-activity-kind') && $('server-activity-kind').value || '');
     var share = String($('server-activity-share') && $('server-activity-share').value || '');
     var imagesOnly=!!($('server-activity-images')&&$('server-activity-images').checked), pwaOnly=!!($('server-activity-pwa')&&$('server-activity-pwa').checked), hideRoutine=!!($('server-activity-hide-routine')&&$('server-activity-hide-routine').checked);
-    var rows = serverActivityEvents.filter(function (e) { return (!kind || pwaServerActivityGroup(e) === kind) && (!share || String(e.shareId||'')===share) && (!imagesOnly || /^(photo|album)$/i.test(String(e.resourceType||''))) && (!pwaOnly || e.source==='pwa') && (!hideRoutine || !pwaServerActivityIsRoutine(e)) && (!q || pwaServerActivitySearchText(e).indexOf(q) !== -1); });
+    var rows = serverActivityEvents.filter(function (e) { return (!kind || pwaServerActivityGroup(e) === kind) && (!share || String(e.shareId||'')===share) && (!imagesOnly || pwaServerActivityIsImage(e)) && (!pwaOnly || pwaServerActivityIsPwa(e)) && (!hideRoutine || !pwaServerActivityIsRoutine(e)) && (!q || pwaServerActivitySearchText(e).indexOf(q) !== -1); });
     if (!rows.length) { var empty = document.createElement('p'); empty.className = 'muted sm'; empty.textContent = t('serverActivityEmpty'); list.appendChild(empty); }
     rows.slice(0, 1000).forEach(function (e) {
       var row = document.createElement('div'); row.className = 'history-row server-activity-row ' + String(e.kind || '');
       var icon = document.createElement('span'); icon.className = 'server-activity-icon'; icon.textContent = pwaServerActivityIcon(e); row.appendChild(icon);
       var main = document.createElement('div'); main.className = 'history-main';
-      var strong = document.createElement('strong'); strong.textContent = String(e.name || e.kind || 'event'); main.appendChild(strong);
+      var strong = document.createElement('strong'); strong.textContent = pwaLocalizedActivityName(e); main.appendChild(strong);
       var metaParts = [];
       if (e.direction === 'up') metaParts.push('⬆'); else if (e.direction === 'down') metaParts.push('⬇');
       if (e.bytes) metaParts.push(fmtBytes(e.bytes));
-      if (e.status) metaParts.push(e.status);
+      if (e.status) metaParts.push(pwaLocalizedActivityText(e.status));
       if (e.ip) metaParts.push(e.ip);
-      if (e.detail) metaParts.push(e.detail);
+      if (e.detail) metaParts.push(pwaLocalizedActivityText(e.detail));
       var meta = document.createElement('div'); meta.className = 'history-meta'; meta.textContent = metaParts.filter(Boolean).join(' · '); main.appendChild(meta);
       row.appendChild(main);
       var time = document.createElement('time');
@@ -8497,7 +8562,7 @@
   function registerServiceWorker() {
     if (!navigator.serviceWorker || typeof navigator.serviceWorker.register !== 'function') return;
     navigator.serviceWorker.addEventListener('controllerchange', refreshToNewVersion);
-    var registrationPromise = navigator.serviceWorker.register('/direct-xfer-pwa-sw.js?v=249', { scope: '/app/' }).then(function (reg) {
+    var registrationPromise = navigator.serviceWorker.register('/direct-xfer-pwa-sw.js?v=263', { scope: '/app/' }).then(function (reg) {
       swReg = reg;
       navigator.serviceWorker.ready.then(function () {
         swReadyForInstall = true;

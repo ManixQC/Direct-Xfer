@@ -81,9 +81,10 @@ services:
       # MAX_ACTIVE_CONNECTOR_JOBS: "4"
       # Native HTTPS (so encrypted shares / secret notes / E2E reception work
       # without a reverse proxy — WebCrypto needs a secure context). Provide a
-      # cert/key pair, OR set TLS_SELF_SIGNED to auto-generate one (cached in
-      # /data/tls). Android WebAPK installation requires a certificate trusted by
-      # Chrome; an untrusted self-signed certificate still yields only a shortcut.
+      # cert/key pair, OR set TLS_SELF_SIGNED to enable the managed Direct-Xfer
+      # Local CA mode (cached in /data/tls). Download the root .cer from
+      # Configuration → Security and trust it once on each LAN device. Android
+      # WebAPK installation requires that this root CA be trusted by Chrome.
       # Serves HTTPS on PORT.
       # TLS_SELF_SIGNED: "true"
       # TLS_CERT: "/data/tls/fullchain.pem"

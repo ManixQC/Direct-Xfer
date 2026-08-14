@@ -1,0 +1,67 @@
+name: Build Direct-Xfer Windows C#
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'windows-launcher/**'
+      - 'server.js'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'lib/**'
+      - 'public/**'
+      - 'pwa/**'
+      - '.github/workflows/build-windows-csharp.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Build C# launcher
+        shell: cmd
+        run: >-
+          msbuild windows-launcher\DirectXfer.Launcher.csproj
+          /t:Rebuild
+          /p:Configuration=Release
+          /m
+          /nologo
+
+      - name: Create portable package
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $dist = Join-Path $PWD 'dist\Direct-Xfer-1.58.4-Windows-CSharp'
+          $app = Join-Path $dist 'runtime\app'
+          $node = Join-Path $dist 'runtime\node'
+          New-Item -ItemType Directory -Force -Path $app, $node | Out-Null
+
+          Copy-Item 'windows-launcher\bin\Release\Direct-Xfer.exe' $dist
+          Copy-Item 'windows-launcher\bin\Release\Direct-Xfer.exe.config' $dist
+          Copy-Item 'windows-launcher\README-WINDOWS-PORTABLE.md' $dist
+          Copy-Item 'package.json','package-lock.json','server.js' $app
+          Copy-Item 'lib','public','pwa','node_modules' $app -Recurse
+          Set-Content -Encoding ASCII -NoNewline -Path (Join-Path $app '.dx-runtime-build') -Value '1.58.4-launcher24-csharp'
+          Set-Content -Encoding UTF8 -Path (Join-Path $node 'README.txt') -Value 'Optional: place an organization-approved Node.js 18+ node.exe here. Direct-Xfer also detects a normal system Node.js installation.'
+
+          $zip = Join-Path $PWD 'dist\Direct-Xfer-1.58.4-Windows-CSharp.zip'
+          Compress-Archive -Path (Join-Path $dist '*') -DestinationPath $zip -CompressionLevel Optimal
+          Get-FileHash -Algorithm SHA256 (Join-Path $dist 'Direct-Xfer.exe') | Format-List
+          Get-FileHash -Algorithm SHA256 $zip | Format-List
+
+      - name: Upload Windows package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Direct-Xfer-1.58.4-Windows-CSharp
+          path: dist/Direct-Xfer-1.58.4-Windows-CSharp.zip
+          if-no-files-found: error
+          retention-days: 30

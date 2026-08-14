@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="fr" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#0b1020">
+  <title>Direct-Xfer — Connexion mobile</title>
+  <link rel="icon" href="/app/icon-192.png">
+  <link rel="apple-touch-icon" href="/app/apple-touch-icon.png">
+  <link rel="manifest" href="/direct-xfer-pwa.webmanifest?v=264">
+  <!-- Shell assets carry ?v so a fresh login.html is never paired with a stale cached
+       login.js/login.css from a previous version (bump in lock-step with sw.js VERSION). -->
+  <script src="/app/theme-init.js?v=264"></script>
+  <link rel="stylesheet" href="/app/login.css?v=264">
+  <script src="/app/login-vault.js?v=264" defer></script>
+  <script src="/app/login.js?v=264" defer></script>
+</head>
+<body>
+  <div id="mobile-pull-refresh" class="pull-refresh" role="status" aria-live="polite" aria-hidden="true">
+    <span class="pull-refresh-icon" aria-hidden="true">↻</span>
+    <span class="pull-refresh-text" data-i18n="pullToRefresh">Glissez vers le bas pour actualiser</span>
+  </div>
+  <main class="mobile-login-shell">
+    <form id="mobile-login-form" class="mobile-login-card" autocomplete="off" novalidate>
+      <a class="mobile-login-brand" href="/" title="Ouvrir l’administration complète" aria-label="Ouvrir l’administration complète">
+        <img src="/app/icon.svg" alt="Direct-Xfer">
+      </a>
+      <button id="mobile-install-btn" class="mobile-install-button hidden" type="button" title="Installer" aria-label="Installer" data-i18n-title="install" data-i18n-aria="install">
+        <span class="mobile-install-mark" aria-hidden="true">
+          <img src="/app/icon.svg" alt="">
+          <span class="mobile-install-badge">⇩</span>
+        </span>
+        <span class="sr-only" data-i18n="install">Installer</span>
+      </button>
+
+      <div class="mobile-login-heading">
+        <p class="mobile-login-kicker" data-i18n="mobile">Administration mobile</p>
+        <h1 data-i18n="title">Connexion administrateur</h1>
+        <p class="mobile-login-subtitle" data-i18n="subtitle">Connectez-vous pour ouvrir l’application d’envoi mobile.</p>
+      </div>
+
+      <div id="mobile-install-warning" class="mobile-install-warning hidden" role="status" aria-live="polite">
+        <strong data-i18n="installWarningTitle">Installation complète indisponible</strong>
+        <span id="mobile-install-warning-text" data-i18n="installHttpsRequired">Android ne peut installer Direct-Xfer comme application que depuis une adresse HTTPS avec un certificat reconnu.</span>
+        <a id="mobile-install-https-link" class="hidden" href="/app" data-i18n="installOpenHttps">Ouvrir l’adresse HTTPS</a>
+      </div>
+
+      <label class="mobile-login-field" for="mobile-username">
+        <span data-i18n="username">Nom d’utilisateur</span>
+        <input id="mobile-username" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+      </label>
+
+      <label class="mobile-login-field" for="mobile-password">
+        <span data-i18n="password">Mot de passe</span>
+        <input id="mobile-password" name="password" type="password" autocomplete="off" readonly required>
+      </label>
+
+      <div class="mobile-login-remember">
+        <label class="mobile-login-check" for="mobile-remember-username">
+          <input id="mobile-remember-username" type="checkbox">
+          <span data-i18n="rememberUsername">Se souvenir du nom d’utilisateur</span>
+        </label>
+        <label class="mobile-login-check" for="mobile-remember-password">
+          <input id="mobile-remember-password" type="checkbox">
+          <span data-i18n="rememberPassword">Se souvenir du mot de passe</span>
+        </label>
+        <small data-i18n="rememberPasswordHint">Le mot de passe est chiffré dans ce navigateur uniquement lorsque cette case est cochée.</small>
+      </div>
+
+      <label id="mobile-totp-row" class="mobile-login-field hidden" for="mobile-totp">
+        <span data-i18n="totp">Code de double authentification</span>
+        <input id="mobile-totp" name="totp" type="text" inputmode="numeric" autocomplete="one-time-code" spellcheck="false">
+        <small data-i18n="totpHint">Entrez le code à 6 chiffres ou un code de récupération.</small>
+      </label>
+
+      <button id="mobile-login-submit" class="mobile-login-submit" type="submit" data-i18n="submit">Se connecter</button>
+      <button id="mobile-passkey-btn" class="mobile-login-passkey" type="button" disabled aria-describedby="mobile-biometric-hint" data-i18n="passkeySignIn">👆 Identification biométrique</button>
+      <p id="mobile-biometric-hint" class="mobile-biometric-hint hidden" role="status" aria-live="polite"></p>
+      <p id="mobile-login-error" class="mobile-login-error hidden" role="alert" aria-live="assertive"></p>
+
+      <div class="mobile-login-footer">
+        <label class="mobile-language-label" for="mobile-language" data-i18n="language">Langue</label>
+        <select id="mobile-language" aria-label="Langue">
+          <option value="fr">Français</option>
+          <option value="en">English</option>
+          <option value="es">Español</option>
+        </select>
+        <a href="/" data-i18n="fullAdmin">Version administrateur complète</a>
+      </div>
+    </form>
+  </main>
+</body>
+</html>

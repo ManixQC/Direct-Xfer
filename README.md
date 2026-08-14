@@ -456,7 +456,7 @@ window. (Shared reference — variable names are identical in every language.)
 | `SEARCH_OCR_BATCH` | `100` | Maximum number of previously uncached OCR files processed in one index rebuild. Cached files do not count; deferred files are picked up by later rebuilds. |
 | `SEARCH_OCR_PDF_MAX_PAGES` | `12` | Maximum PDF pages rasterized for OCR when no usable text layer exists. |
 | `SEARCH_OCR_IMAGE_MAX_MB` / `SEARCH_OCR_PDF_MAX_MB` | `50` / `100` | Safety caps for files sent to the server OCR pipeline. |
-| `TLS_SELF_SIGNED` | `false` | Serve HTTPS on `PORT` with an auto self-signed cert (cached in `/data/tls`). An untrusted self-signed certificate does **not** qualify for Android WebAPK installation. |
+| `TLS_SELF_SIGNED` | `false` | Legacy environment switch for the managed **Direct-Xfer Local CA** HTTPS mode. When enabled, Direct-Xfer creates a stable private root CA under `/data/tls` and signs the LAN server certificate from it. Install the exported root `.cer` once on each trusted LAN device to remove browser warnings. When this variable is absent, use **Configuration → Security**. |
 | `TLS_CERT` / `TLS_KEY` | *(empty)* | Paths to a PEM cert + key to serve HTTPS (takes precedence over `TLS_SELF_SIGNED`). |
 | `SMTP_URL` | *(empty)* | SMTP transport for e-mail notifications (e.g. `smtps://user:pass@host:465`). Overrides the in-app fields. |
 | `EMAIL_FROM` / `EMAIL_TO` | *(empty)* | Default sender / recipient for e-mail notifications. |
@@ -522,6 +522,85 @@ re-add the container from its saved template. Application data remains in the ma
 `/data` and `/Direct-Xfer` host folders.
 
 
+
+
+
+## 1.57.4 — HTTPS LAN avec autorité locale de confiance
+
+- Remplace l’option auto-signée de l’interface par **« Activer HTTPS avec une autorité locale Direct-Xfer (LAN uniquement) »**.
+- Direct-Xfer crée une **CA racine locale stable** une seule fois (`data/tls/local-ca-cert.pem` + `local-ca-key.pem`) puis émet un certificat serveur séparé (`server-cert.pem` + `server-key.pem`).
+- Le certificat serveur contient automatiquement `localhost`, le nom de la machine et les IP privées/loopback détectées ; un changement d’IP LAN peut régénérer le certificat serveur **sans changer la CA racine déjà approuvée**.
+- La configuration affiche l’**empreinte SHA-256** de la CA et fournit un bouton pour télécharger `Direct-Xfer-Local-CA.cer`.
+- Après installation de cette racine dans le magasin de confiance de chaque appareil du LAN, les navigateurs ne doivent plus afficher d’avertissement tant que l’URL utilise un nom/IP présent dans le certificat.
+- Les IP publiques ne sont jamais ajoutées automatiquement au certificat de ce mode : il est conçu uniquement pour le réseau local.
+- Une CA existante corrompue ou proche de l’expiration n’est **jamais remplacée silencieusement**, afin de ne pas casser la confiance installée sur les appareils.
+- `TLS_CERT`/`TLS_KEY` gardent la priorité ; `TLS_SELF_SIGNED=true` reste accepté comme alias d’environnement historique pour le mode CA locale.
+- Bump **1.57.4**, PWA **pwa273**, ressources **v259**.
+
+### Audit TLS/CA approfondi (1.57.4)
+
+- Renforce le profil X.509 : racine RSA-3072 / SHA-256 avec `pathLen=0`, certificats serveur RSA-2048 d’environ 90 jours, SAN exacts, EKU serveur et Authority Key Identifier.
+- Renouvelle automatiquement le certificat serveur et ses SAN quand les interfaces/IP LAN changent, sans remplacer la racine déjà approuvée ; les IPv6 sont normalisées pour éviter les rotations inutiles.
+- Force TLS 1.2 minimum et recharge à chaud les certificats fournis par `TLS_CERT`/`TLS_KEY`, y compris lorsqu’une chaîne intermédiaire change sans modifier la feuille.
+- Rend la création initiale de la CA et la restauration de `data/tls` résistantes aux crashs grâce à des transactions durables et à une récupération au redémarrage.
+- Une sauvegarde complète ne contient la clé privée de la CA que lorsque le bundle est chiffré par `DATA_KEY`; une sauvegarde non chiffrée n’exporte jamais cette clé.
+- Le téléchargement initial de la racine est disponible sans authentification sur `/direct-xfer-local-ca.cer` uniquement via HTTPS natif ou depuis la boucle locale ; l’empreinte SHA-256 doit être comparée avant installation.
+- En mode CA locale, Direct-Xfer envoie `Strict-Transport-Security: max-age=0` pour supprimer une ancienne politique HSTS qui pourrait empêcher un retour volontaire à HTTP.
+- Si la clé de signature de la CA est perdue mais qu’un certificat serveur encore valide subsiste, HTTPS reste disponible en mode dégradé et l’interface avertit que le renouvellement est impossible.
+
+
+## 1.57.3 — HTTPS natif configurable
+
+- Ajoute dans **Configuration → Sécurité** l’option **« Activer HTTPS avec un certificat auto-signé »**.
+- Le certificat et sa clé sont générés localement sous le dossier de données (`tls/cert.pem` et `tls/key.pem`) puis réutilisés jusqu’à leur renouvellement.
+- Le changement HTTP/HTTPS est appliqué au **prochain redémarrage** afin de ne pas interrompre une sauvegarde de configuration en cours.
+- Le portable Windows détecte automatiquement si le serveur redémarré écoute en HTTP ou HTTPS ; ses sondes privées, la réinitialisation admin et l’arrêt gracieux restent fonctionnels avec le certificat auto-signé.
+- `TLS_CERT`/`TLS_KEY` et `TLS_SELF_SIGNED` restent prioritaires lorsqu’ils sont définis dans l’environnement.
+- Un certificat auto-signé doit être explicitement approuvé sur l’appareil pour supprimer l’avertissement navigateur et pour les fonctions PWA qui exigent un contexte HTTPS de confiance.
+- Bump **1.57.3**, PWA **pwa272**, ressources **v258**.
+
+## 1.57.2 — Portable Windows : port + réinitialisation admin
+
+- Conserve la libération vérifiée du port TCP à la fermeture du portable Windows.
+- Ajoute « Réinitialiser le mot de passe admin… » au menu systray avec ticket local éphémère à usage unique.
+- Invalide les sessions du propriétaire après réinitialisation sans modifier les partages, statistiques ou réglages.
+- Synchronise la PWA sur **pwa271** et les ressources sur **v257**.
+
+## 1.57.1 — Audit approfondi des ajouts récents
+
+- Validation renforcée de la règle Windows Defender Firewall du portable : Direct-Xfer vérifie maintenant qu’elle est réellement activée, entrante, en TCP, sur le bon port et limitée à `LocalSubnet`.
+- Une règle Direct-Xfer périmée ou incorrecte est remplacée proprement au lieu d’être acceptée uniquement parce que son nom existe.
+- Tests de reprise de téléchargement réalignés sur le protocole sécurisé `X-Direct-Xfer-Resume-Id`, sans réintroduire le contournement de quota par un simple en-tête `Range`.
+- Test d’export d’audit corrigé pour tenir compte de l’événement `audit-exported` inclus volontairement dans l’instantané exporté.
+- Cache PWA **pwa270**, ressources **v256**.
+
+## 1.57.0 — Stabilisation et nouveau jalon de version
+
+- Bump de Direct-Xfer vers **1.57.0** sans changement fonctionnel supplémentaire.
+- Cache PWA **pwa269**, ressources **v255** pour forcer le rafraîchissement des installations existantes.
+- Inclut les derniers correctifs de sélection Shift+clic, traductions Activité/logs et accès réseau du portable Windows.
+
+## 1.56.0 — Historique d’actions fusionné dans Activité
+
+- L’**Historique d’actions / Undo** revient dans la vue standard, sans recréer de carte ni de modale séparée.
+- Les actions réversibles enrichissent directement les lignes correspondantes de l’onglet **Activité**, avec leur état et un bouton **Annuler** lorsqu’elles sont encore réversibles.
+- Si l’événement Activité d’origine n’est plus dans la fenêtre retenue, une ligne d’action synthétique est insérée à sa position chronologique afin de ne pas perdre l’historique Undo.
+- Les filtres, la recherche et l’ordre chronologique de l’onglet Activité s’appliquent aussi aux actions Undo.
+- Version **1.56.0**, cache PWA **pwa267**, ressources **v253**.
+
+## 1.55.3 — retrait de l’historique d’actions de la vue standard
+
+- La section visible **Historique d’actions** a été retirée de l’interface standard, ainsi que sa modale standard associée.
+- Le moteur Undo, son historique persistant et l’interface PWA restent disponibles et inchangés.
+- Version **1.55.3**, cache PWA **pwa265**, ressources **v251**.
+
+## 1.55.2 — modale « Créer un partage » responsive
+
+- La modale standard **Créer un partage** est maintenant limitée à la hauteur de la fenêtre et son contenu central défile indépendamment.
+- Les boutons **Annuler / Partager** restent toujours accessibles dans un pied de modale fixe, même sur les écrans courts.
+- La zone de sélection des fichiers/dossiers a été nettement agrandie pour faciliter la navigation.
+- Mise en page responsive renforcée sur mobile et sur les écrans à faible hauteur.
+- Version **1.55.2**, cache PWA **pwa264**, ressources **v250**.
 
 ## 1.55.1 — audit ultra approfondi des ajouts 1.55.x
 
@@ -1689,3 +1768,30 @@ Une PWA ne peut pas garantir que le réseau continue à travailler après sa fer
 - Historique borné des changements administratifs (100 entrées par partage) avec acteur, date et champs modifiés. Les mots de passe ne sont jamais inscrits dans cet historique ; seule leur présence peut être enregistrée.
 - Les volumes des liens de réception/collaboration utilisent les octets réellement reçus pour les filtres par taille.
 - Validation : 234/234 tests automatisés réussis pour cette livraison.
+
+## 1.58.2 — Modale de partage Firefox / écrans 4K
+
+- Corrige le défilement de « Créer un lien de partage » sous Mozilla Firefox, y compris avec écran 3840×2160, mise à l’échelle Windows élevée et zoom navigateur.
+- La hauteur de la modale est calculée en pixels à partir du viewport réellement utilisable plutôt que de dépendre uniquement de `vh`/`dvh`.
+- Le corps de la modale possède désormais un défilement vertical explicite et permanent ; l’overlay ne participe plus au scroll.
+- Le navigateur de fichiers conserve au minimum environ 6–7 lignes sur les viewports courts au lieu de tomber à ~3 lignes, et monte jusqu’à 720 px sur les grands écrans.
+- Ajoute un transfert explicite de la molette du navigateur de fichiers vers le corps de la modale lorsque la liste atteint son début ou sa fin, pour contourner les différences de scroll chaining de Firefox.
+- Bump **1.58.2**, PWA **pwa276**, ressources **v262**, runtime Windows **launcher20**.
+
+## 1.58.1 — Modale de partage et stockage interne propre
+
+- La modale **Créer un lien de partage** reste entièrement défilable sur les écrans courts, en paysage, avec zoom élevé et sur les navigateurs mobiles à viewport dynamique.
+- Le dialogue est ancré dans le viewport et son corps central possède son propre défilement tactile, tandis que l’en-tête et les actions restent accessibles.
+- Les fichiers partiels des téléversements reprenables ne sont plus écrits dans le dossier de réception utilisateur (`.dxparts`) : ils vivent désormais sous le dossier de données interne de Direct-Xfer.
+- Migration sûre des anciens fichiers `.dxparts` vers le stockage interne au premier démarrage, avec suppression du dossier legacy uniquement s’il est vide.
+- Le nettoyage des connecteurs de stockage ne crée plus un dossier `Imports` vide au démarrage. Les anciens dossiers `Imports` contenant uniquement le staging interne vide sont automatiquement nettoyés.
+- Bump **1.58.1**, PWA **pwa275**, ressources **v260**, runtime Windows **launcher19**.
+
+## 1.58.3 — Modale de partage et sélecteur 10 fichiers
+
+- La modale **Créer un lien de partage** utilise désormais une structure stricte en trois zones (en-tête, corps défilable, pied fixe) afin d'éviter le dépassement vertical sous Firefox, y compris avec écran 4K, mise à l'échelle Windows et zoom navigateur.
+- Le sélecteur de fichiers réserve **10 lignes de fichiers visibles simultanément** sur les écrans disposant d'une hauteur suffisante.
+- Lorsqu'un dossier parent est disponible, sa ligne obtient une hauteur supplémentaire afin de conserver 10 entrées de fichiers/dossiers visibles en plus du bouton parent.
+- Les noms très longs restent sur une ligne avec ellipse pour qu'ils ne réduisent plus artificiellement le nombre de fichiers visibles.
+- Sur les petites hauteurs, le sélecteur reste adaptatif et la zone d'options défile sans masquer les boutons Annuler/Partager.
+- Bump **1.58.3**, PWA **pwa277**, ressources PWA **v263**, runtime Windows **launcher21**.

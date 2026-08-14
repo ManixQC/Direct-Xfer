@@ -1,10 +1,11 @@
-name: Build Direct-Xfer Windows C#
+name: Build Direct-Xfer Windows C# + Installer
 
 on:
   workflow_dispatch:
   push:
     paths:
       - 'windows-launcher/**'
+      - 'installer/**'
       - 'server.js'
       - 'package.json'
       - 'package-lock.json'
@@ -20,6 +21,13 @@ jobs:
   build-windows:
     runs-on: windows-2025
 
+    env:
+      DX_VERSION: '1.58.4'
+      DX_RUNTIME_BUILD: '1.58.4-launcher25-csharp'
+      DX_NODE_VERSION: '24.19.0'
+      DX_NODE_EXE_SHA256: '3602f2bb1a10f2cbab4c36886218a33c1ab3db87290e73b033c46c77147d0237'
+      INNO_VERSION: '6.7.3'
+
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -29,7 +37,7 @@ jobs:
         with:
           msbuild-architecture: x64
 
-      - name: Setup Node.js
+      - name: Setup Node.js for build
         uses: actions/setup-node@v7
         with:
           node-version: '24'
@@ -42,20 +50,24 @@ jobs:
       - name: Build C# launcher
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
           msbuild windows-launcher\DirectXfer.Launcher.csproj /t:Rebuild /p:Configuration=Release /p:Platform=AnyCPU /m /nologo /verbosity:minimal
-          if (-not (Test-Path 'windows-launcher\bin\Release\Direct-Xfer.exe')) {
-            throw 'MSBuild completed without producing windows-launcher\bin\Release\Direct-Xfer.exe'
+
+          $exe = 'windows-launcher\bin\Release\Direct-Xfer.exe'
+          $config = 'windows-launcher\bin\Release\Direct-Xfer.exe.config'
+          if (-not (Test-Path -LiteralPath $exe)) {
+            throw "MSBuild completed without producing $exe"
           }
-          if (-not (Test-Path 'windows-launcher\bin\Release\Direct-Xfer.exe.config')) {
-            throw 'MSBuild completed without producing Direct-Xfer.exe.config'
+          if (-not (Test-Path -LiteralPath $config)) {
+            throw "MSBuild completed without producing $config"
           }
 
-      - name: Create portable package
+      - name: Create portable runtime
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           $distRoot = Join-Path $PWD 'dist'
-          $dist = Join-Path $distRoot 'Direct-Xfer-1.58.4-Windows-CSharp'
+          $dist = Join-Path $distRoot "Direct-Xfer-$env:DX_VERSION-Windows-CSharp"
           $app = Join-Path $dist 'runtime\app'
           $node = Join-Path $dist 'runtime\node'
 
@@ -65,7 +77,6 @@ jobs:
           Copy-Item 'windows-launcher\bin\Release\Direct-Xfer.exe' -Destination $dist -Force
           Copy-Item 'windows-launcher\bin\Release\Direct-Xfer.exe.config' -Destination $dist -Force
 
-          # Documentation is useful but must never make a successful C# build fail.
           $portableReadme = 'windows-launcher\README-WINDOWS-PORTABLE.md'
           $rootReadme = 'README.md'
           $destReadme = Join-Path $dist 'README-WINDOWS-PORTABLE.md'
@@ -74,35 +85,150 @@ jobs:
           } elseif (Test-Path $rootReadme) {
             Copy-Item $rootReadme -Destination $destReadme -Force
           } else {
-            $readmeLines = @(
-              'Direct-Xfer 1.58.4 - Windows C#',
+            Set-Content -Encoding UTF8 -Path $destReadme -Value @(
+              "Direct-Xfer $env:DX_VERSION - Windows C#",
               '',
               'Direct-Xfer.exe is a C# / WinForms launcher targeting .NET Framework 4.8.',
               'The application runtime is located in runtime\app.',
-              'Node.js 18+ must be available from an approved system installation or runtime\node\node.exe.'
+              'The pinned Node.js runtime is located in runtime\node.'
             )
-            Set-Content -Encoding UTF8 -Path $destReadme -Value $readmeLines
           }
 
           Copy-Item -Path @('package.json','package-lock.json','server.js') -Destination $app -Force
           Copy-Item -Path @('lib','public','pwa','node_modules') -Destination $app -Recurse -Force
+          Set-Content -Encoding ASCII -NoNewline -Path (Join-Path $app '.dx-runtime-build') -Value $env:DX_RUNTIME_BUILD
 
-          Set-Content -Encoding ASCII -NoNewline -Path (Join-Path $app '.dx-runtime-build') -Value '1.58.4-launcher24-csharp'
-          Set-Content -Encoding UTF8 -Path (Join-Path $node 'README.txt') -Value 'Optional: place an organization-approved Node.js 18+ node.exe here. Direct-Xfer also detects a normal system Node.js installation.'
+          # Bundle an official pinned Node.js executable so the installed application
+          # does not need to download or install an executable on first launch.
+          $nodeExe = Join-Path $node 'node.exe'
+          $nodeUrl = "https://nodejs.org/download/release/v$env:DX_NODE_VERSION/win-x64/node.exe"
+          Write-Host "Downloading pinned Node.js runtime: $nodeUrl"
+          Invoke-WebRequest -Uri $nodeUrl -OutFile $nodeExe -UseBasicParsing
+          $nodeHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $nodeExe).Hash.ToLowerInvariant()
+          if ($nodeHash -ne $env:DX_NODE_EXE_SHA256) {
+            throw "Node.js SHA-256 mismatch. Expected $env:DX_NODE_EXE_SHA256, got $nodeHash"
+          }
+          Set-Content -Encoding UTF8 -Path (Join-Path $node 'README.txt') -Value @(
+            "Direct-Xfer pinned Node.js runtime $env:DX_NODE_VERSION (x64)",
+            "SHA-256: $nodeHash",
+            'Source: official nodejs.org release distribution.'
+          )
 
-          $zip = Join-Path $distRoot 'Direct-Xfer-1.58.4-Windows-CSharp.zip'
-          Remove-Item $zip -Force -ErrorAction SilentlyContinue
-          Compress-Archive -Path (Join-Path $dist '*') -DestinationPath $zip -CompressionLevel Optimal
+          $required = @(
+            (Join-Path $dist 'Direct-Xfer.exe'),
+            (Join-Path $dist 'Direct-Xfer.exe.config'),
+            (Join-Path $app '.dx-runtime-build'),
+            (Join-Path $app 'package.json'),
+            (Join-Path $app 'package-lock.json'),
+            (Join-Path $app 'server.js'),
+            (Join-Path $app 'public\app.js'),
+            (Join-Path $app 'pwa\app.js'),
+            (Join-Path $app 'node_modules\express\package.json'),
+            $nodeExe
+          )
+          foreach ($item in $required) {
+            if (-not (Test-Path -LiteralPath $item)) {
+              throw "Portable package is incomplete: missing $item"
+            }
+          }
 
-          Write-Host 'EXE SHA-256:'
-          (Get-FileHash -Algorithm SHA256 (Join-Path $dist 'Direct-Xfer.exe')).Hash
-          Write-Host 'ZIP SHA-256:'
-          (Get-FileHash -Algorithm SHA256 $zip).Hash
+          $marker = (Get-Content -Raw -LiteralPath (Join-Path $app '.dx-runtime-build')).Trim()
+          if ($marker -ne $env:DX_RUNTIME_BUILD) {
+            throw "Portable runtime marker mismatch: $marker"
+          }
 
-      - name: Upload Windows package
+          $hashLines = @(
+            "Direct-Xfer.exe  $((Get-FileHash -Algorithm SHA256 (Join-Path $dist 'Direct-Xfer.exe')).Hash.ToLowerInvariant())",
+            "runtime/app/server.js  $((Get-FileHash -Algorithm SHA256 (Join-Path $app 'server.js')).Hash.ToLowerInvariant())",
+            "runtime/node/node.exe  $nodeHash"
+          )
+          Set-Content -Encoding ASCII -Path (Join-Path $dist 'SHA256SUMS.txt') -Value $hashLines
+
+          Write-Host "Portable runtime validated: $dist"
+
+      - name: Install verified Inno Setup compiler
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $innoInstaller = Join-Path $env:RUNNER_TEMP "innosetup-$env:INNO_VERSION.exe"
+          $innoDir = Join-Path $env:RUNNER_TEMP 'InnoSetup6'
+          $innoUrl = "https://github.com/jrsoftware/issrc/releases/download/is-6_7_3/innosetup-$env:INNO_VERSION.exe"
+
+          Write-Host "Downloading official Inno Setup $env:INNO_VERSION"
+          Invoke-WebRequest -Uri $innoUrl -OutFile $innoInstaller -UseBasicParsing
+
+          $signature = Get-AuthenticodeSignature -FilePath $innoInstaller
+          if ($signature.Status -ne 'Valid') {
+            throw "Inno Setup Authenticode signature is not valid: $($signature.Status)"
+          }
+          if (-not $signature.SignerCertificate -or $signature.SignerCertificate.Subject -notmatch 'Pyrsys B\.V\.') {
+            throw "Unexpected Inno Setup signer: $($signature.SignerCertificate.Subject)"
+          }
+          Write-Host "Verified Inno Setup signer: $($signature.SignerCertificate.Subject)"
+
+          New-Item -ItemType Directory -Force -Path $innoDir | Out-Null
+          $process = Start-Process -FilePath $innoInstaller -ArgumentList @(
+            '/VERYSILENT',
+            '/SUPPRESSMSGBOXES',
+            '/NORESTART',
+            '/SP-',
+            "/DIR=$innoDir"
+          ) -Wait -PassThru
+          if ($process.ExitCode -ne 0) {
+            throw "Inno Setup installer exited with code $($process.ExitCode)"
+          }
+
+          $iscc = Join-Path $innoDir 'ISCC.exe'
+          if (-not (Test-Path -LiteralPath $iscc)) {
+            throw "ISCC.exe was not installed at the expected path: $iscc"
+          }
+          "INNO_ISCC=$iscc" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Build Inno Setup installer
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $dist = Join-Path $PWD "dist\Direct-Xfer-$env:DX_VERSION-Windows-CSharp"
+          $installerDir = Join-Path $PWD 'dist\installer'
+          New-Item -ItemType Directory -Force -Path $installerDir | Out-Null
+
+          & $env:INNO_ISCC `
+            "--define=AppVersion=$env:DX_VERSION" `
+            "--define=SourceDir=$dist" `
+            "--define=OutputDir=$installerDir" `
+            'installer\Direct-Xfer.iss'
+          if ($LASTEXITCODE -ne 0) {
+            throw "ISCC.exe failed with exit code $LASTEXITCODE"
+          }
+
+          $setupExe = Join-Path $installerDir "Direct-Xfer-Setup-$env:DX_VERSION.exe"
+          if (-not (Test-Path -LiteralPath $setupExe)) {
+            throw "Inno Setup completed without producing $setupExe"
+          }
+
+          $setupHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $setupExe).Hash.ToLowerInvariant()
+          Set-Content -Encoding ASCII -NoNewline -Path (Join-Path $installerDir "Direct-Xfer-Setup-$env:DX_VERSION.exe.sha256") -Value "$setupHash  Direct-Xfer-Setup-$env:DX_VERSION.exe"
+
+          $setupSignature = Get-AuthenticodeSignature -FilePath $setupExe
+          Write-Host "Generated installer: $setupExe"
+          Write-Host "SHA-256: $setupHash"
+          Write-Host "Installer Authenticode status: $($setupSignature.Status)"
+
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v6
+        with:
+          name: Direct-Xfer-Setup-1.58.4
+          path: |
+            dist/installer/Direct-Xfer-Setup-1.58.4.exe
+            dist/installer/Direct-Xfer-Setup-1.58.4.exe.sha256
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload Windows portable package
         uses: actions/upload-artifact@v6
         with:
           name: Direct-Xfer-1.58.4-Windows-CSharp
-          path: dist/Direct-Xfer-1.58.4-Windows-CSharp.zip
+          path: dist/Direct-Xfer-1.58.4-Windows-CSharp/
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 30

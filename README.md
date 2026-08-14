@@ -1795,3 +1795,20 @@ Une PWA ne peut pas garantir que le réseau continue à travailler après sa fer
 - Les noms très longs restent sur une ligne avec ellipse pour qu'ils ne réduisent plus artificiellement le nombre de fichiers visibles.
 - Sur les petites hauteurs, le sélecteur reste adaptatif et la zone d'options défile sans masquer les boutons Annuler/Partager.
 - Bump **1.58.3**, PWA **pwa277**, ressources PWA **v263**, runtime Windows **launcher21**.
+
+## Windows installer (C# + Inno Setup)
+
+The Windows GitHub Actions workflow now builds both the C# launcher and a conventional Inno Setup installer.
+
+After a successful run of **Build Direct-Xfer Windows C# + Installer**, open the workflow run and download the artifact named:
+
+- `Direct-Xfer-Setup-1.58.4`
+
+It contains:
+
+- `Direct-Xfer-Setup-1.58.4.exe`
+- `Direct-Xfer-Setup-1.58.4.exe.sha256`
+
+The installer deploys Direct-Xfer to `Program Files\\Direct-Xfer`, creates a Start Menu shortcut, offers an optional desktop shortcut, registers a standard Windows uninstaller, and includes the pinned official Node.js runtime required by Direct-Xfer.
+
+The Inno Setup definition is located at `installer/Direct-Xfer.iss`.

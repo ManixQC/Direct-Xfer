@@ -92,14 +92,14 @@ namespace DirectXfer.WindowsLauncher
 
     internal sealed class LauncherSession
     {
-        public int hostPid;
-        public long hostStartedUtcTicks;
-        public string hostPath;
-        public int serverPid;
-        public int port;
-        public string scheme;
-        public string token;
-        public string runtimeBuild;
+        public int hostPid { get; set; }
+        public long hostStartedUtcTicks { get; set; }
+        public string hostPath { get; set; }
+        public int serverPid { get; set; }
+        public int port { get; set; }
+        public string scheme { get; set; }
+        public string token { get; set; }
+        public string runtimeBuild { get; set; }
     }
 
     internal sealed class LauncherContext : ApplicationContext, IDisposable
@@ -599,7 +599,8 @@ namespace DirectXfer.WindowsLauncher
                     {
                         var payload = Json.Deserialize<Dictionary<string, object>>(reader.ReadToEnd());
                         if (!GetBool(payload, "ok") || !GetBool(payload, "fresh")) return;
-                        var username = GetString(payload, "username"), password = GetString(payload, "password");
+                        var username = GetString(payload, "username");
+                        var password = GetString(payload, "password");
                         if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password)) throw new InvalidDataException();
                         using (var dialog = new InitialPasswordForm(Tr, username, password)) dialog.ShowDialog();
                     }

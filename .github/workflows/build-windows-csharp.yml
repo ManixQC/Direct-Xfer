@@ -71,7 +71,8 @@ jobs:
             'test/recent-changes-ultra-audit-1.59.2.test.js',
             'test/windows-launcher-hardening-1.59.2.test.js',
             'test/windows-server-host-split-1.59.2.test.js',
-            'test/admin-favicon-1.59.2.test.js'
+            'test/admin-favicon-1.59.2.test.js',
+            'test/windows-csharp-compile-sanity-1.59.2.test.js'
           )
 
           $missingTests = @($criticalTests | Where-Object { -not (Test-Path -LiteralPath $_ -PathType Leaf) })

@@ -53,18 +53,31 @@ jobs:
 
       - name: Test release-critical changes
         shell: pwsh
-        run: >-
-          node --test
-          test/release-1.58.0-regressions.test.js
-          test/release-1.58.1-picker-scroll.test.js
-          test/release-1.58.2-firefox-picker.test.js
-          test/release-1.58.3-picker-ten-rows.test.js
-          test/windows-antivirus-packaging-1.58.4.test.js
-          test/windows-csharp-github-package-readme-1.58.4.test.js
-          test/windows-csharp-runtime-layout-1.58.4.test.js
-          test/windows-inno-installer-1.58.4.test.js
-          test/windows-password-copy-history-tooltip-1.58.4.test.js
-          test/recent-changes-ultra-audit-1.59.0.test.js
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $criticalTests = @(
+            'test/release-1.58.0-regressions.test.js',
+            'test/release-1.58.1-picker-scroll.test.js',
+            'test/release-1.58.2-firefox-picker.test.js',
+            'test/release-1.58.3-picker-ten-rows.test.js',
+            'test/windows-antivirus-packaging-1.58.4.test.js',
+            'test/windows-csharp-github-package-readme-1.58.4.test.js',
+            'test/windows-csharp-runtime-layout-1.58.4.test.js',
+            'test/windows-inno-installer-1.58.4.test.js',
+            'test/windows-password-copy-history-tooltip-1.58.4.test.js',
+            'test/recent-changes-ultra-audit-1.59.0.test.js'
+          )
+
+          $missingTests = @($criticalTests | Where-Object { -not (Test-Path -LiteralPath $_ -PathType Leaf) })
+          if ($missingTests.Count -gt 0) {
+            $formatted = ($missingTests | ForEach-Object { " - $_" }) -join [Environment]::NewLine
+            throw "Release-critical test files are missing from the Git checkout:$([Environment]::NewLine)$formatted"
+          }
+
+          & node --test @criticalTests
+          if ($LASTEXITCODE -ne 0) {
+            throw "Release-critical test suite failed with exit code $LASTEXITCODE"
+          }
 
       - name: Build C# launcher
         shell: pwsh

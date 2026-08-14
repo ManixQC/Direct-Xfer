@@ -64,7 +64,25 @@ jobs:
 
           Copy-Item 'windows-launcher\bin\Release\Direct-Xfer.exe' -Destination $dist -Force
           Copy-Item 'windows-launcher\bin\Release\Direct-Xfer.exe.config' -Destination $dist -Force
-          Copy-Item 'windows-launcher\README-WINDOWS-PORTABLE.md' -Destination $dist -Force
+
+          # Documentation is useful but must never make a successful C# build fail.
+          $portableReadme = 'windows-launcher\README-WINDOWS-PORTABLE.md'
+          $rootReadme = 'README.md'
+          $destReadme = Join-Path $dist 'README-WINDOWS-PORTABLE.md'
+          if (Test-Path $portableReadme) {
+            Copy-Item $portableReadme -Destination $destReadme -Force
+          } elseif (Test-Path $rootReadme) {
+            Copy-Item $rootReadme -Destination $destReadme -Force
+          } else {
+            $readmeLines = @(
+              'Direct-Xfer 1.58.4 - Windows C#',
+              '',
+              'Direct-Xfer.exe is a C# / WinForms launcher targeting .NET Framework 4.8.',
+              'The application runtime is located in runtime\app.',
+              'Node.js 18+ must be available from an approved system installation or runtime\node\node.exe.'
+            )
+            Set-Content -Encoding UTF8 -Path $destReadme -Value $readmeLines
+          }
 
           Copy-Item -Path @('package.json','package-lock.json','server.js') -Destination $app -Force
           Copy-Item -Path @('lib','public','pwa','node_modules') -Destination $app -Recurse -Force

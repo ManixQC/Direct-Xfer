@@ -18,48 +18,71 @@ permissions:
 
 jobs:
   build-windows:
-    runs-on: windows-latest
+    runs-on: windows-2025
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v2
+        uses: microsoft/setup-msbuild@v3
+        with:
+          msbuild-architecture: x64
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Install production dependencies
+        shell: pwsh
+        run: npm ci --omit=dev --ignore-scripts
 
       - name: Build C# launcher
-        shell: cmd
-        run: >-
-          msbuild windows-launcher\DirectXfer.Launcher.csproj
-          /t:Rebuild
-          /p:Configuration=Release
-          /m
-          /nologo
+        shell: pwsh
+        run: |
+          msbuild windows-launcher\DirectXfer.Launcher.csproj /t:Rebuild /p:Configuration=Release /p:Platform=AnyCPU /m /nologo /verbosity:minimal
+          if (-not (Test-Path 'windows-launcher\bin\Release\Direct-Xfer.exe')) {
+            throw 'MSBuild completed without producing windows-launcher\bin\Release\Direct-Xfer.exe'
+          }
+          if (-not (Test-Path 'windows-launcher\bin\Release\Direct-Xfer.exe.config')) {
+            throw 'MSBuild completed without producing Direct-Xfer.exe.config'
+          }
 
       - name: Create portable package
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $dist = Join-Path $PWD 'dist\Direct-Xfer-1.58.4-Windows-CSharp'
+          $distRoot = Join-Path $PWD 'dist'
+          $dist = Join-Path $distRoot 'Direct-Xfer-1.58.4-Windows-CSharp'
           $app = Join-Path $dist 'runtime\app'
           $node = Join-Path $dist 'runtime\node'
+
+          Remove-Item $dist -Recurse -Force -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Force -Path $app, $node | Out-Null
 
-          Copy-Item 'windows-launcher\bin\Release\Direct-Xfer.exe' $dist
-          Copy-Item 'windows-launcher\bin\Release\Direct-Xfer.exe.config' $dist
-          Copy-Item 'windows-launcher\README-WINDOWS-PORTABLE.md' $dist
-          Copy-Item 'package.json','package-lock.json','server.js' $app
-          Copy-Item 'lib','public','pwa','node_modules' $app -Recurse
+          Copy-Item 'windows-launcher\bin\Release\Direct-Xfer.exe' -Destination $dist -Force
+          Copy-Item 'windows-launcher\bin\Release\Direct-Xfer.exe.config' -Destination $dist -Force
+          Copy-Item 'windows-launcher\README-WINDOWS-PORTABLE.md' -Destination $dist -Force
+
+          Copy-Item -Path @('package.json','package-lock.json','server.js') -Destination $app -Force
+          Copy-Item -Path @('lib','public','pwa','node_modules') -Destination $app -Recurse -Force
+
           Set-Content -Encoding ASCII -NoNewline -Path (Join-Path $app '.dx-runtime-build') -Value '1.58.4-launcher24-csharp'
           Set-Content -Encoding UTF8 -Path (Join-Path $node 'README.txt') -Value 'Optional: place an organization-approved Node.js 18+ node.exe here. Direct-Xfer also detects a normal system Node.js installation.'
 
-          $zip = Join-Path $PWD 'dist\Direct-Xfer-1.58.4-Windows-CSharp.zip'
+          $zip = Join-Path $distRoot 'Direct-Xfer-1.58.4-Windows-CSharp.zip'
+          Remove-Item $zip -Force -ErrorAction SilentlyContinue
           Compress-Archive -Path (Join-Path $dist '*') -DestinationPath $zip -CompressionLevel Optimal
-          Get-FileHash -Algorithm SHA256 (Join-Path $dist 'Direct-Xfer.exe') | Format-List
-          Get-FileHash -Algorithm SHA256 $zip | Format-List
+
+          Write-Host 'EXE SHA-256:'
+          (Get-FileHash -Algorithm SHA256 (Join-Path $dist 'Direct-Xfer.exe')).Hash
+          Write-Host 'ZIP SHA-256:'
+          (Get-FileHash -Algorithm SHA256 $zip).Hash
 
       - name: Upload Windows package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: Direct-Xfer-1.58.4-Windows-CSharp
           path: dist/Direct-Xfer-1.58.4-Windows-CSharp.zip

@@ -15,26 +15,26 @@ function normalizedTextSha256(rel) {
   return crypto.createHash('sha256').update(Buffer.from(text, 'utf8')).digest('hex');
 }
 
-test('1.59.4 release metadata is synchronized across Node, PWA, launcher, host and installer', () => {
+test('1.59.5 release metadata is synchronized across Node, PWA, launcher, host and installer', () => {
   const pkg = JSON.parse(read('package.json'));
   const lock = JSON.parse(read('package-lock.json'));
-  assert.equal(pkg.version, '1.59.4');
-  assert.equal(lock.version, '1.59.4');
-  assert.equal(lock.packages[''].version, '1.59.4');
-  assert.match(read('pwa', 'app.js'), /APP_VERSION = '1\.59\.4'/);
-  assert.match(read('pwa', 'app.js'), /APP_BUILD = '2026\.08\.14-pwa283'/);
-  assert.match(read('pwa', 'sw.js'), /VERSION = '2026\.08\.14-pwa283'/);
-  assert.match(read('pwa', 'index.html'), /v1\.59\.4 · pwa283/);
-  assert.match(launcher, /AppVersion = "1\.59\.4"/);
-  assert.match(launcher, /RuntimeAppBuild = "1\.59\.4-launcher30-csharp"/);
-  assert.match(host, /AppVersion = "1\.59\.4"/);
-  assert.match(host, /HostVersion = "1\.59\.4-serverhost3-csharp"/);
-  assert.match(workflow, /DX_VERSION: '1\.59\.4'/);
-  assert.match(workflow, /DX_RUNTIME_BUILD: '1\.59\.4-launcher30-csharp'/);
-  assert.match(iss, /#define AppVersion "1\.59\.4"/);
+  assert.equal(pkg.version, '1.59.5');
+  assert.equal(lock.version, '1.59.5');
+  assert.equal(lock.packages[''].version, '1.59.5');
+  assert.match(read('pwa', 'app.js'), /APP_VERSION = '1\.59\.5'/);
+  assert.match(read('pwa', 'app.js'), /APP_BUILD = '2026\.08\.14-pwa284'/);
+  assert.match(read('pwa', 'sw.js'), /VERSION = '2026\.08\.14-pwa284'/);
+  assert.match(read('pwa', 'index.html'), /v1\.59\.5 · pwa284/);
+  assert.match(launcher, /AppVersion = "1\.59\.5"/);
+  assert.match(launcher, /RuntimeAppBuild = "1\.59\.5-launcher31-csharp"/);
+  assert.match(host, /AppVersion = "1\.59\.5"/);
+  assert.match(host, /HostVersion = "1\.59\.5-serverhost4-csharp"/);
+  assert.match(workflow, /DX_VERSION: '1\.59\.5'/);
+  assert.match(workflow, /DX_RUNTIME_BUILD: '1\.59\.5-launcher31-csharp'/);
+  assert.match(iss, /#define AppVersion "1\.59\.5"/);
 });
 
-test('PWA resources are advanced to pwa283/v268', () => {
+test('PWA resources are advanced to pwa284/v268', () => {
   assert.match(read('pwa', 'index.html'), /v=268/);
   assert.match(read('pwa', 'app.js'), /v=268/);
   assert.match(read('pwa', 'sw.js'), /v=268/);

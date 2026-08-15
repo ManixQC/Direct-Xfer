@@ -6,7 +6,7 @@ const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const read = (...p) => fs.readFileSync(path.join(root, ...p), 'utf8');
 
-test('1.59.4 merges standard Action history into Activity without restoring a separate section', () => {
+test('1.59.5 merges standard Action history into Activity without restoring a separate section', () => {
   const html = read('public','index.html');
   const app = read('public','app.js');
   const pwa = read('pwa','index.html');
@@ -22,15 +22,15 @@ test('1.59.4 merges standard Action history into Activity without restoring a se
   assert.match(server, /adminRouter\.post\('\/undo\/:id'/);
 });
 
-test('1.59.4 release metadata is synchronized', () => {
+test('1.59.5 release metadata is synchronized', () => {
   const pkg = JSON.parse(read('package.json'));
   const lock = JSON.parse(read('package-lock.json'));
-  assert.equal(pkg.version, '1.59.4');
-  assert.equal(lock.version, '1.59.4');
-  assert.equal(lock.packages[''].version, '1.59.4');
-  assert.match(read('pwa','app.js'), /APP_VERSION = '1\.59\.4'/);
-  assert.match(read('pwa','app.js'), /APP_BUILD = '2026\.08\.14-pwa283'/);
-  assert.match(read('pwa','sw.js'), /VERSION = '2026\.08\.14-pwa283'/);
-  assert.match(read('pwa','index.html'), /v1\.59\.4 · pwa283/);
+  assert.equal(pkg.version, '1.59.5');
+  assert.equal(lock.version, '1.59.5');
+  assert.equal(lock.packages[''].version, '1.59.5');
+  assert.match(read('pwa','app.js'), /APP_VERSION = '1\.59\.5'/);
+  assert.match(read('pwa','app.js'), /APP_BUILD = '2026\.08\.14-pwa284'/);
+  assert.match(read('pwa','sw.js'), /VERSION = '2026\.08\.14-pwa284'/);
+  assert.match(read('pwa','index.html'), /v1\.59\.5 · pwa284/);
   assert.match(read('pwa','index.html'), /app\.js\?v=268/);
 });

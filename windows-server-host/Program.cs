@@ -20,17 +20,17 @@ using System.Web.Script.Serialization;
 [assembly: AssemblyCompany("Direct-Xfer")]
 [assembly: AssemblyProduct("Direct-Xfer Server Host")]
 [assembly: AssemblyCopyright("Copyright © Direct-Xfer 2026")]
-[assembly: AssemblyVersion("1.59.4.0")]
-[assembly: AssemblyFileVersion("1.59.4.0")]
-[assembly: AssemblyInformationalVersion("1.59.4-serverhost3-csharp")]
+[assembly: AssemblyVersion("1.59.5.0")]
+[assembly: AssemblyFileVersion("1.59.5.0")]
+[assembly: AssemblyInformationalVersion("1.59.5-serverhost4-csharp")]
 
 namespace DirectXfer.WindowsServerHost
 {
     internal static class Program
     {
-        internal const string AppVersion = "1.59.4";
-        internal const string RuntimeAppBuild = "1.59.4-launcher30-csharp";
-        internal const string HostVersion = "1.59.4-serverhost3-csharp";
+        internal const string AppVersion = "1.59.5";
+        internal const string RuntimeAppBuild = "1.59.5-launcher31-csharp";
+        internal const string HostVersion = "1.59.5-serverhost4-csharp";
         internal const int DefaultPort = 55750;
         internal const int MaxFallbackPort = 55769;
         internal const int StartupReadyTimeoutMs = 30000;
@@ -97,11 +97,11 @@ namespace DirectXfer.WindowsServerHost
         private static readonly IDictionary<string, string> CriticalRuntimeSha256 =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                { "package.json", "58b0cb065e8a6af88ba4107709470d9a29d7bf8a3d0de5134865187a036cf31f" },
-                { "package-lock.json", "bdb78e5e21df43af5671f33fb9542cacd1812a2c8083f2cd0b61db989822d4d8" },
+                { "package.json", "89243aee867d6ea223cc3231b7fef712208b39264a71348f6f007f5a3da963de" },
+                { "package-lock.json", "e05c57fb6ef04684e5fd9330a3ef30a90e4e13c63c44b8a768a6828ec95ef5dd" },
                 { "server.js", "9fdc8ecaacc67aa8aac19a04ec41fe8cd4f984c3a4f7e779930d51bc56c223e8" },
-                { "public/app.js", "3477fcd489c396a3b0d77940d72952b0c9742b778411bb31f4c9e42aad56e0b9" },
-                { "pwa/app.js", "3e71c2c5b964a9a91b51b3510012e27eeacb569e9711ad9c01926a7a69df57a1" },
+                { "public/app.js", "14c5a88afa4d660fbfc8dfc1395b4320091cf2ccb426ad1dae1d84a6d8a46b3a" },
+                { "pwa/app.js", "ee163daa8cc4c5c745ed7eb01f9c52d1566f2182666a125a534f4313888f1ac7" },
                 { "node_modules/express/package.json", "c7db3b72582355c80cdcef1ad7b2c9a8f53557550724c6bef8502e9818c2ebe7" }
             };
 

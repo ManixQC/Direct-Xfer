@@ -28,10 +28,10 @@ test('registered biometric metadata and actions remain readable on phones', () =
 });
 
 test('the corrected stylesheet is forced onto installed PWAs', () => {
-  assert.equal(JSON.parse(read('package.json')).version, '1.59.4');
-  assert.match(app, /APP_BUILD = '2026\.08\.14-pwa283'/);
-  assert.match(sw, /VERSION = '2026\.08\.14-pwa283'/);
-  assert.match(html, /v1\.59\.4 · pwa283/);
+  assert.equal(JSON.parse(read('package.json')).version, '1.59.5');
+  assert.match(app, /APP_BUILD = '2026\.08\.14-pwa284'/);
+  assert.match(sw, /VERSION = '2026\.08\.14-pwa284'/);
+  assert.match(html, /v1\.59\.5 · pwa284/);
   assert.match(html, /app\.css\?v=269/);
   assert.match(sw, /app\.css\?v=269/);
 });

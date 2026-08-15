@@ -14,11 +14,11 @@ const login = read('pwa/login.js');
 const server = read('server.js');
 
 test('release and PWA caches are synchronized for 1.51.2', () => {
-  assert.equal(JSON.parse(read('package.json')).version, '1.59.4');
-  assert.match(app, /APP_VERSION = '1\.59\.4'/);
-  assert.match(app, /APP_BUILD = '2026\.08\.14-pwa283'/);
-  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.14-pwa283'/);
-  assert.match(html, /v1\.59\.4 · pwa283/);
+  assert.equal(JSON.parse(read('package.json')).version, '1.59.5');
+  assert.match(app, /APP_VERSION = '1\.59\.5'/);
+  assert.match(app, /APP_BUILD = '2026\.08\.14-pwa284'/);
+  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.14-pwa284'/);
+  assert.match(html, /v1\.59\.5 · pwa284/);
   assert.match(html, /app\.js\?v=268/);
   assert.match(loginHtml, /login\.js\?v=268/);
 });

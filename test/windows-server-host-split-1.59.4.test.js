@@ -10,7 +10,7 @@ const host = read('windows-server-host', 'Program.cs');
 const iss = read('installer', 'Direct-Xfer.iss');
 const workflow = read('.github', 'workflows', 'build-windows-csharp.yml');
 
-test('1.59.4 launcher no longer starts or supervises the background server process', () => {
+test('1.59.5 launcher no longer starts or supervises the background server process', () => {
   assert.doesNotMatch(launcher, /CreateNoWindow|Process\.GetProcessById|\.Kill\(\)|FileName\s*=\s*hostExe|StartOrAttachServerHost|StopServerHost|WaitForServerHostMutexRelease|OnHostExited/);
   assert.doesNotMatch(launcher, /node\.exe|server\.js|RedirectStandardOutput|RedirectStandardError|DX_WINDOWS_NODE/);
   assert.match(launcher, /AttachToServerHost\(\)/);

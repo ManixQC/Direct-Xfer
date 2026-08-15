@@ -1796,17 +1796,6 @@ Une PWA ne peut pas garantir que le réseau continue à travailler après sa fer
 - Sur les petites hauteurs, le sélecteur reste adaptatif et la zone d'options défile sans masquer les boutons Annuler/Partager.
 - Bump **1.58.3**, PWA **pwa277**, ressources PWA **v263**, runtime Windows **launcher21**.
 
-## 1.59.4 — Audit approfondi du ServerHost Windows
-
-- Corrige le redémarrage après un timeout de démarrage : un backend qui ne devient pas prêt est désormais arrêté puis relancé avec le backoff supervisé au lieu d'arrêter silencieusement le ServerHost.
-- Ajoute une sonde de santé HTTP périodique du backend ; trois échecs consécutifs déclenchent un redémarrage supervisé même si `node.exe` est encore vivant.
-- Les endpoints privés Windows `/__dx_launcher/ready` et `/__dx_launcher/shutdown` exigent maintenant à la fois le token aléatoire et une connexion loopback.
-- Le ServerHost valide les chemins de configuration comme chemins absolus, vérifie l'écriture des répertoires configurés et restaure atomiquement `launcher-config.json` depuis son backup validé si nécessaire.
-- Les journaux d'urgence ServerHost sont désormais rotatifs et bornés ; l'attente d'une configuration invalide produit un diagnostic périodique au lieu d'un échec silencieux.
-- Le processus Node supervisé n'hérite plus de `NODE_OPTIONS`, `NODE_PATH`, `NODE_TLS_REJECT_UNAUTHORIZED` ni `NODE_REPL_EXTERNAL_MODULE`.
-- Les sessions Windows sauvegardées sont davantage validées (taille, port, schéma, token, chemins) avant récupération.
-- Bump **1.59.4**, PWA **pwa283**, ressources **v268**, launcher **launcher30-csharp**, ServerHost **serverhost3-csharp**.
-
 ## 1.59.3 — Supervision Windows séparée et favicon admin
 
 - La supervision du backend Node.js est sortie de `Direct-Xfer.exe` et confiée à un nouvel exécutable dédié **`Direct-Xfer.ServerHost.exe`**.

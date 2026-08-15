@@ -34,8 +34,8 @@ test('server push diagnostic targets only current PWA subscription and awaits ve
 });
 
 test('push fix is forced onto installed PWAs', () => {
-  assert.match(app, /APP_BUILD = '2026\.08\.14-pwa283'/);
+  assert.match(app, /APP_BUILD = '2026\.08\.14-pwa284'/);
   assert.match(html, /app\.js\?v=268/);
-  assert.match(sw, /pwa283/);
+  assert.match(sw, /pwa284/);
   assert.match(sw, /app\.js\?v=268/);
 });

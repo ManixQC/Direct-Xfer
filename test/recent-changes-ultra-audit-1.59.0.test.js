@@ -9,8 +9,8 @@ const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
 
-test('1.59.0 ultra-audit regression file is superseded by the 1.59.5 suite', () => {
-  assert.equal(fs.existsSync(path.join(root, 'test', 'recent-changes-ultra-audit-1.59.5.test.js')), true);
+test('1.59.0 ultra-audit regression file is superseded by the 1.59.8 suite', () => {
+  assert.equal(fs.existsSync(path.join(root, 'test', 'recent-changes-ultra-audit-1.59.8.test.js')), true);
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-  assert.equal(pkg.version, '1.59.5');
+  assert.equal(pkg.version, '1.59.8');
 });

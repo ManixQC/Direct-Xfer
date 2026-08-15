@@ -15,7 +15,7 @@
         document.documentElement.setAttribute('data-theme', t);
       })();
     </script>
-    <link rel="stylesheet" href="/style.css?v=270" />
+    <link rel="stylesheet" href="/style.css?v=273" />
   </head>
   <body>
     <!-- ===================== Login ===================== -->
@@ -134,7 +134,7 @@
               <span id="notifications-badge" class="notification-badge hidden">0</span>
             </button>
             <div id="notifications-dropdown" class="dropdown notification-dropdown hidden" role="menu">
-              <div class="notification-head"><strong data-i18n="notifications.title">Notifications</strong><span id="notifications-count" class="muted sm"></span><span class="notification-head-actions"><button id="notifications-sound" class="btn ghost sm notification-head-btn" type="button" aria-pressed="false">🔕</button><button id="notifications-prefs-btn" class="btn ghost sm notification-head-btn" type="button" aria-expanded="false" title="Préférences" data-i18n-title="notifications.prefs">⚙️</button></span></div>
+              <div class="notification-head"><strong data-i18n="notifications.title">Notifications</strong><span id="notifications-count" class="muted sm"></span><span class="notification-head-actions"><button id="notifications-sound" class="btn ghost sm notification-head-btn notification-sound-off" type="button" aria-pressed="false"><span class="notification-head-glyph notification-sound-glyph" aria-hidden="true"></span></button><button id="notifications-prefs-btn" class="btn ghost sm notification-head-btn" type="button" aria-expanded="false" title="Préférences" data-i18n-title="notifications.prefs"><span class="notification-head-glyph notification-settings-glyph" aria-hidden="true"></span></button></span></div>
               <div id="notifications-prefs" class="notification-prefs hidden"></div>
               <div class="notification-filters" aria-label="Filtres de notifications" data-i18n-aria="notifications.filters">
                 <select id="notifications-category-filter" class="notification-filter-select" aria-label="Filtrer par catégorie" data-i18n-aria="notifications.categoryFilter">
@@ -2843,6 +2843,6 @@
     <div id="toast" class="toast hidden"></div>
     <script src="/login-vault.js"></script>
     <script src="/dxcrypto.js"></script>
-    <script src="/app.js?v=271"></script>
+    <script src="/app.js?v=274"></script>
   </body>
 </html>

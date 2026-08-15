@@ -3440,13 +3440,19 @@ body[data-role="auditor"] .album-url .clone-btn {
   display: inline-grid; place-items: center; border-radius: 999px; background: var(--danger); color: #fff;
   font-size: .58rem; font-weight: 900; line-height: 1; box-shadow: 0 0 0 2px var(--card-2);
 }
-.notification-dropdown { width: min(390px, calc(100vw - 24px)); max-height: min(540px, calc(100vh - 82px)); }
+.notification-dropdown {
+  width:min(390px, calc(100vw - 24px));
+  max-height:min(540px, calc(100vh - 82px));
+  max-height:min(540px, calc(100dvh - 82px));
+  overflow:hidden;
+  min-height:0;
+}
 .notification-head { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 9px 9px; border-bottom:1px solid var(--border-soft); }
 .notification-filters { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:6px; padding:8px 4px 5px; }
 .notification-filter-select, .notification-search { width:100%; min-width:0; height:34px; padding:0 9px; border:1px solid var(--border); border-radius:8px; background:var(--card); color:var(--text); font:inherit; font-size:.76rem; }
 .notification-search { grid-column:1 / -1; }
 .notification-filter-select:focus, .notification-search:focus { outline:2px solid color-mix(in srgb,var(--accent) 55%,transparent); outline-offset:1px; }
-.notification-list { display:flex; flex-direction:column; gap:4px; overflow:auto; min-height:44px; max-height:330px; padding:4px 0; }
+.notification-list { display:flex; flex:1 1 180px; flex-direction:column; gap:4px; overflow:auto; min-height:44px; max-height:330px; padding:4px 0; overscroll-behavior:contain; }
 .notification-item { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; align-items:start; padding:9px; border-radius:9px; background:color-mix(in srgb,var(--card) 74%,transparent); }
 .notification-item-main { min-width:0; display:grid; gap:3px; }
 .notification-item-title { font-size:.88rem; font-weight:750; overflow-wrap:anywhere; }
@@ -3481,8 +3487,27 @@ body[data-role="auditor"] .album-url .clone-btn {
 /* Load more */
 .notification-loadmore { width:calc(100% - 8px); margin:4px 4px 2px; }
 /* Header action buttons + bell pulse */
-.notification-head-actions { display:inline-flex; gap:4px; margin-left:auto; }
-.notification-head-btn { width:28px; height:28px; padding:0; display:grid; place-items:center; border-radius:7px; font-size:.9rem; line-height:1; }
+.notification-head-actions { display:inline-flex; align-items:center; gap:4px; margin-left:auto; line-height:0; }
+.notification-head-btn { width:28px; height:28px; min-width:28px; min-height:28px; padding:0; display:inline-flex !important; align-items:center; justify-content:center; border-radius:7px; font-size:0; line-height:0; vertical-align:middle; }
+.notification-head-glyph {
+  display:block; width:17px; height:17px; flex:0 0 17px; pointer-events:none;
+  background-color:currentColor;
+  -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
+  -webkit-mask-position:center; mask-position:center;
+  -webkit-mask-size:contain; mask-size:contain;
+}
+.notification-sound-glyph {
+  -webkit-mask-image:url('/ui/notification-volume-off.svg');
+  mask-image:url('/ui/notification-volume-off.svg');
+}
+.notification-head-btn.notification-sound-on .notification-sound-glyph {
+  -webkit-mask-image:url('/ui/notification-volume-on.svg');
+  mask-image:url('/ui/notification-volume-on.svg');
+}
+.notification-settings-glyph {
+  -webkit-mask-image:url('/ui/notification-settings.svg');
+  mask-image:url('/ui/notification-settings.svg');
+}
 .notifications-btn.notif-pulse { animation:notif-pulse 2.6s ease; }
 @keyframes notif-pulse {
   0%,100% { transform:none; }
@@ -3494,7 +3519,20 @@ body[data-role="auditor"] .album-url .clone-btn {
 }
 @media (prefers-reduced-motion: reduce) { .notifications-btn.notif-pulse { animation:none; } }
 /* Per-account category preferences */
-.notification-prefs { padding:8px 6px; border-bottom:1px solid var(--border-soft); display:grid; gap:5px; }
+.notification-prefs {
+  padding:8px 6px;
+  border-bottom:1px solid var(--border-soft);
+  display:grid;
+  gap:5px;
+  flex:0 1 250px;
+  min-height:0;
+  max-height:min(250px, 40vh);
+  max-height:min(250px, 40dvh);
+  overflow-y:auto;
+  overflow-x:hidden;
+  overscroll-behavior:contain;
+  scrollbar-gutter:stable;
+}
 .notification-prefs-hint { margin-bottom:3px; }
 .notification-pref-row { display:flex; align-items:center; gap:8px; font-size:.8rem; cursor:pointer; }
 .notification-pref-row input { width:16px; height:16px; accent-color:var(--accent); }

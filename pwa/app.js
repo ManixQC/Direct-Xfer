@@ -9,8 +9,8 @@
 (function () {
   // Build tag, shown in the footer so a user can confirm at a glance which version
   // is actually running after an update. Keep it in lock-step with sw.js VERSION.
-  var APP_VERSION = '1.59.5';
-  var APP_BUILD = '2026.08.14-pwa284';
+  var APP_VERSION = '1.59.8';
+  var APP_BUILD = '2026.08.14-pwa287';
   // Upload blocks are deliberately small on mobile. A number of reverse proxies
   // still default to a 1 MiB request-body limit; an 8 MiB first block can therefore
   // be rejected before the browser emits any useful progress event, which looks like
@@ -555,6 +555,7 @@
     if (typeof updateSessionStats === 'function') updateSessionStats();
     if (typeof updateSendBtn === 'function') updateSendBtn();
     if (typeof activatePwaPanel === 'function') activatePwaPanel(activePwaPanel, { keepScroll: true, instant: true });
+    if (typeof updatePwaNotificationsSoundBtn === 'function') updatePwaNotificationsSoundBtn();
     if (typeof sendLangToSw === 'function') sendLangToSw(); // keep the SW's resume prompt localized
   }
 
@@ -1019,7 +1020,7 @@
       main.addEventListener('keydown',function(ev){if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();go();}});
       var acts=pwaNotificationActions(n);
       if(acts.length){var wrap=document.createElement('div');wrap.className='pwa-notification-actions';acts.forEach(function(a){var b=document.createElement('button');b.type='button';b.className='btn ghost sm pwa-notification-action';b.textContent=a.label;b.addEventListener('click',function(ev){ev.stopPropagation();markOnePwaNotificationRead(n);a.run();});wrap.appendChild(b);});main.appendChild(wrap);}
-      var del=document.createElement('button'); del.type='button'; del.className='btn ghost sm pwa-notification-delete'; del.textContent='×'; del.title=t('notificationsDelete'); del.setAttribute('aria-label',t('notificationsDelete'));
+      var del=document.createElement('button'); del.type='button'; del.className='btn ghost sm pwa-notification-delete'; del.title=t('notificationsDelete'); del.setAttribute('aria-label',t('notificationsDelete'));
       del.addEventListener('click',async function(e){e.stopPropagation();del.disabled=true;try{var r=await appMutate('/app/notifications/delete','application/json',JSON.stringify({id:n.id}));if(!r.ok)throw new Error('delete');notificationRequestSeq+=1;accountNotifications=accountNotifications.filter(function(x){return x&&x.id!==n.id;});renderPwaNotifications();if(!notificationRequestInFlight)await refreshPwaNotifications();}catch(_){del.disabled=false;}});
       row.appendChild(main); row.appendChild(del); list.appendChild(row);
     });
@@ -1084,7 +1085,7 @@
     catch (_) { if(seq!==notificationRequestSeq)return; }
     finally { if(timer)clearTimeout(timer); if(notificationRequestController===ctrl)notificationRequestController=null; notificationRequestInFlight=false; }
   }
-  function closePwaNotifications(){var d=$('pwa-notifications-dropdown'),b=$('pwa-notifications-btn');if(d)d.classList.add('hidden');if(b)b.setAttribute('aria-expanded','false');}
+  function closePwaNotifications(){var d=$('pwa-notifications-dropdown'),b=$('pwa-notifications-btn'),prefs=$('pwa-notifications-prefs'),prefsBtn=$('pwa-notifications-prefs-btn');if(d)d.classList.add('hidden');if(b)b.setAttribute('aria-expanded','false');if(prefs)prefs.classList.add('hidden');if(prefsBtn)prefsBtn.setAttribute('aria-expanded','false');}
   // A push tap (or ?opencenter=1 cold start) lands on the right panel
   // and opens the notification center so the matching alert is right there.
   function openPwaNotificationCenter(panel){
@@ -1099,7 +1100,8 @@
   // Optional arrival sound toggle, remembered locally (default off).
   function updatePwaNotificationsSoundBtn(){
     var b=$('pwa-notifications-sound'); if(!b) return;
-    b.textContent=notificationSoundOn?'🔔':'🔕';
+    b.classList.toggle('notification-sound-on',notificationSoundOn);
+    b.classList.toggle('notification-sound-off',!notificationSoundOn);
     b.setAttribute('aria-pressed',notificationSoundOn?'true':'false');
     var label=t('notificationsSound')+' — '+(notificationSoundOn?t('notificationsSoundOn'):t('notificationsSoundOff'));
     b.title=label; b.setAttribute('aria-label',label);
@@ -9723,7 +9725,7 @@
     });
     if ($('pwa-notifications-clear')) $('pwa-notifications-clear').addEventListener('click', async function(e){e.stopPropagation();if(!accountNotifications.length||!confirm(t('notificationsClearConfirm')))return;var r=await appMutate('/app/notifications/clear','application/json','{}');if(r.ok){notificationRequestSeq+=1;accountNotifications=[];renderPwaNotifications();if(!notificationRequestInFlight)await refreshPwaNotifications();}});
     if ($('pwa-notifications-sound')) { updatePwaNotificationsSoundBtn(); $('pwa-notifications-sound').addEventListener('click', function(e){ e.stopPropagation(); notificationSoundOn=!notificationSoundOn; try{localStorage.setItem('dx-notif-sound',notificationSoundOn?'1':'0');}catch(_){} updatePwaNotificationsSoundBtn(); if(notificationSoundOn)playPwaNotificationSound(); }); }
-    if ($('pwa-notifications-prefs-btn')) { var pb=$('pwa-notifications-prefs-btn'); pb.textContent='⚙️'; pb.title=t('notificationsPrefs'); pb.setAttribute('aria-label',t('notificationsPrefs')); pb.addEventListener('click', function(e){ e.stopPropagation(); var box=$('pwa-notifications-prefs'); if(!box)return; var opening=box.classList.contains('hidden'); box.classList.toggle('hidden'); pb.setAttribute('aria-expanded',opening?'true':'false'); if(opening&&!notificationPrefsLoaded)loadPwaNotificationPrefs(); }); }
+    if ($('pwa-notifications-prefs-btn')) { var pb=$('pwa-notifications-prefs-btn'); pb.title=t('notificationsPrefs'); pb.setAttribute('aria-label',t('notificationsPrefs')); pb.addEventListener('click', function(e){ e.stopPropagation(); var box=$('pwa-notifications-prefs'); if(!box)return; var opening=box.classList.contains('hidden'); box.classList.toggle('hidden'); pb.setAttribute('aria-expanded',opening?'true':'false'); if(opening&&!notificationPrefsLoaded)loadPwaNotificationPrefs(); }); }
     document.addEventListener('click', function(e){if(e.target.closest&&e.target.closest('#pwa-notifications-menu'))return;closePwaNotifications();});
     $('dest-add-btn').addEventListener('click', function () { if (!destinationLocked) openDestForm(); });
     $('dest-cancel-btn').addEventListener('click', closeDestForm);

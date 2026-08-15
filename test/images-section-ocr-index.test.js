@@ -56,7 +56,7 @@ test('PWA image cards can OCR an existing Images record and persist it under the
 });
 
 test('PWA shell/cache was bumped for the Images OCR integration', () => {
-  assert.match(pwa, /APP_BUILD = '2026\.08\.14-pwa284'/);
-  assert.match(pwaHtml, /app\.js\?v=268/);
-  assert.match(sw, /pwa284/);
+  assert.match(pwa, /APP_BUILD = '2026\.08\.14-pwa287'/);
+  assert.match(pwaHtml, /app\.js\?v=270/);
+  assert.match(sw, /pwa287/);
 });

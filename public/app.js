@@ -5229,6 +5229,7 @@ function setLang(lang) {
       ? (t('app.name') + ' — ' + t('photo.title'))
       : t('app.docTitle');
   applyTranslations();
+  updateNotificationsSoundBtn();
   renderNotifications();
   updateLiveDot();
   document.querySelectorAll('.lang-select').forEach((s) => {
@@ -5971,7 +5972,7 @@ function renderNotifications() {
       });
       main.appendChild(actionsWrap);
     }
-    const del = el('button', { class:'btn ghost sm notification-delete', text:'×', attrs:{ type:'button', title:t('notifications.delete'), 'aria-label':t('notifications.delete') } });
+    const del = el('button', { class:'btn ghost sm notification-delete', attrs:{ type:'button', title:t('notifications.delete'), 'aria-label':t('notifications.delete') } });
     del.addEventListener('click', async (ev) => { ev.stopPropagation(); del.disabled = true; try {
       await api('DELETE','/api/notifications/'+encodeURIComponent(n.id));
       // Invalidate any GET that started before the DELETE. Without this, a slow
@@ -6083,7 +6084,13 @@ async function refreshNotifications(silent) {
     notificationsRequestInFlight = false;
   }
 }
-function closeNotificationsMenu() { const d=$('notifications-dropdown'), b=$('notifications-btn'); if(d)d.classList.add('hidden'); if(b)b.setAttribute('aria-expanded','false'); }
+function closeNotificationsMenu() {
+  const d=$('notifications-dropdown'), b=$('notifications-btn'), prefs=$('notifications-prefs'), prefsBtn=$('notifications-prefs-btn');
+  if(d)d.classList.add('hidden');
+  if(b)b.setAttribute('aria-expanded','false');
+  if(prefs)prefs.classList.add('hidden');
+  if(prefsBtn)prefsBtn.setAttribute('aria-expanded','false');
+}
 function stopNotificationsPolling() {
   if (notificationsRefreshTimer) {
     clearInterval(notificationsRefreshTimer);
@@ -6125,7 +6132,8 @@ if ($('notifications-clear')) $('notifications-clear').addEventListener('click',
 // Optional arrival sound, remembered locally (default off).
 function updateNotificationsSoundBtn() {
   const b = $('notifications-sound'); if (!b) return;
-  b.textContent = notificationsSoundOn ? '🔔' : '🔕';
+  b.classList.toggle('notification-sound-on', notificationsSoundOn);
+  b.classList.toggle('notification-sound-off', !notificationsSoundOn);
   b.setAttribute('aria-pressed', notificationsSoundOn ? 'true' : 'false');
   const label = t('notifications.sound') + ' — ' + (notificationsSoundOn ? t('notifications.soundOn') : t('notifications.soundOff'));
   b.title = label; b.setAttribute('aria-label', label);
@@ -6297,7 +6305,6 @@ if($('cfg-notification-rule-metric'))$('cfg-notification-rule-metric').addEventL
 if($('cfg-notification-rule-add'))$('cfg-notification-rule-add').addEventListener('click',addNotificationRule);
 
 if ($('notifications-prefs-btn')) {
-  $('notifications-prefs-btn').textContent = '⚙️';
   $('notifications-prefs-btn').title = t('notifications.prefs');
   $('notifications-prefs-btn').setAttribute('aria-label', t('notifications.prefs'));
   $('notifications-prefs-btn').addEventListener('click', (e) => {

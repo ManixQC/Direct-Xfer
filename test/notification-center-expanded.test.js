@@ -51,7 +51,7 @@ test('standard and PWA render structured notification types and current shell', 
   assert.match(std, /function notificationMetaText\(/);
   assert.match(pwa, /function pwaNotificationTitle\(/);
   assert.match(pwa, /function pwaNotificationMeta\(/);
-  assert.match(pwa, /APP_BUILD = '2026\.08\.14-pwa284'/);
-  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.14-pwa284'/);
-  assert.match(read('pwa/index.html'), /app\.js\?v=268/);
+  assert.match(pwa, /APP_BUILD = '2026\.08\.14-pwa287'/);
+  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.14-pwa287'/);
+  assert.match(read('pwa/index.html'), /app\.js\?v=270/);
 });

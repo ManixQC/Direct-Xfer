@@ -16,12 +16,12 @@
        paired with a stale app.js/app.css from a previous version's service-worker cache
        (that mix threw on removed elements and broke the icon styling). Bump ?v in
        lock-step with sw.js VERSION on every release. -->
-  <link rel="stylesheet" href="/app/app.css?v=269">
+  <link rel="stylesheet" href="/app/app.css?v=271">
   <script src="/app/theme-init.js?v=268"></script>
   <script src="/dxcrypto.js?v=268" defer></script>
   <script src="/app/dlp-local.js?v=268" defer></script>
   <script src="/download-resume.js?v=268" defer></script>
-  <script src="/app/app.js?v=268" defer></script>
+  <script src="/app/app.js?v=270" defer></script>
   <title>Direct-Xfer — Envoyer</title>
 </head>
 <body>
@@ -65,7 +65,7 @@
           <span id="pwa-notifications-badge" class="pwa-header-badge hidden">0</span>
         </button>
         <div id="pwa-notifications-dropdown" class="pwa-notifications-dropdown hidden">
-          <div class="pwa-notification-head"><strong data-i18n="notificationsTitle">Notifications</strong><span id="pwa-notifications-count" class="muted sm"></span><span class="pwa-notification-head-actions"><button id="pwa-notifications-sound" class="btn ghost sm pwa-notification-head-btn" type="button" aria-pressed="false">🔕</button><button id="pwa-notifications-prefs-btn" class="btn ghost sm pwa-notification-head-btn" type="button" aria-expanded="false">⚙️</button></span></div>
+          <div class="pwa-notification-head"><strong data-i18n="notificationsTitle">Notifications</strong><span id="pwa-notifications-count" class="muted sm"></span><span class="pwa-notification-head-actions"><button id="pwa-notifications-sound" class="btn ghost sm pwa-notification-head-btn notification-sound-off" type="button" aria-pressed="false"><span class="pwa-notification-head-glyph pwa-notification-sound-glyph" aria-hidden="true"></span></button><button id="pwa-notifications-prefs-btn" class="btn ghost sm pwa-notification-head-btn" type="button" aria-expanded="false" data-i18n-title="notificationsPrefs" data-i18n-aria="notificationsPrefs"><span class="pwa-notification-head-glyph pwa-notification-settings-glyph" aria-hidden="true"></span></button></span></div>
           <div id="pwa-notifications-prefs" class="notification-prefs hidden"></div>
           <div class="pwa-notification-filters" aria-label="Filtres de notifications" data-i18n-aria="notificationsFilters">
             <select id="pwa-notifications-category-filter" class="pwa-notification-filter-select" aria-label="Filtrer par catégorie" data-i18n-aria="notificationsCategoryFilter">
@@ -995,7 +995,7 @@
       </div>
     </details>
 
-    <p class="foot">Direct-Xfer · <span data-i18n="companionApp">application compagnon</span> · <span id="build-tag" class="muted">v1.59.5 · pwa284</span></p>
+    <p class="foot">Direct-Xfer · <span data-i18n="companionApp">application compagnon</span> · <span id="build-tag" class="muted">v1.59.8 · pwa287</span></p>
   </main>
 
   <nav id="pwa-bottom-nav" class="pwa-bottom-nav" aria-label="Navigation principale" data-i18n-aria="navMain">

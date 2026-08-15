@@ -12,14 +12,14 @@ const manifest = read('windows-launcher', 'app.manifest');
 const host = read('windows-server-host', 'Program.cs');
 const workflow = read('.github', 'workflows', 'build-windows-csharp.yml');
 
-test('1.59.5 launcher metadata, manifest identity and x64 target are explicit', () => {
-  assert.match(launcher, /AssemblyVersion\("1\.59\.5\.0"\)/);
-  assert.match(launcher, /RuntimeAppBuild = "1\.59\.5-launcher31-csharp"/);
+test('1.59.8 launcher metadata, manifest identity and x64 target are explicit', () => {
+  assert.match(launcher, /AssemblyVersion\("1\.59\.8\.0"\)/);
+  assert.match(launcher, /RuntimeAppBuild = "1\.59\.8-launcher34-csharp"/);
   assert.match(project, /<ApplicationManifest>app\.manifest<\/ApplicationManifest>/);
   assert.match(project, /<PlatformTarget>x64<\/PlatformTarget>/);
   assert.doesNotMatch(project, /<PlatformTarget>AnyCPU<\/PlatformTarget>/);
   assert.match(manifest, /name="DirectXfer\.WindowsLauncher"/);
-  assert.match(manifest, /version="1\.59\.5\.0"/);
+  assert.match(manifest, /version="1\.59\.8\.0"/);
   assert.match(manifest, /processorArchitecture="amd64"/);
   assert.match(manifest, /requestedExecutionLevel level="asInvoker"/);
   assert.doesNotMatch(manifest, /MyApplication\.app/);

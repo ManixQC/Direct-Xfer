@@ -67,9 +67,9 @@ test('PWA clipboard fallback rejects a browser refusal instead of reporting fals
 });
 
 test('PWA shell advanced for notification-center fixes',()=>{
-  assert.match(read('pwa/app.js'),/APP_BUILD = '2026\.08\.14-pwa284'/);
-  assert.match(read('pwa/sw.js'),/VERSION = '2026\.08\.14-pwa284'/);
-  assert.match(read('pwa/index.html'),/app\.js\?v=268/);
+  assert.match(read('pwa/app.js'),/APP_BUILD = '2026\.08\.14-pwa287'/);
+  assert.match(read('pwa/sw.js'),/VERSION = '2026\.08\.14-pwa287'/);
+  assert.match(read('pwa/index.html'),/app\.js\?v=270/);
 });
 
 

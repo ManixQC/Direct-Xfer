@@ -3,7 +3,7 @@
  * Shell versioning + network-aware updates. Upload/API requests are never cached.
  * Web Share Target batches are isolated so simultaneous shares cannot overwrite one another.
  */
-var VERSION = '2026.08.14-pwa284';
+var VERSION = '2026.08.14-pwa287';
 var SHELL_CACHE = 'dx-pwa-shell-' + VERSION;
 var RUNTIME_CACHE = 'dx-pwa-runtime-' + VERSION;
 var SHARE_CACHE = 'dx-share-v2';
@@ -13,12 +13,12 @@ var SHARE_CACHE = 'dx-share-v2';
 var SHELL = [
   '/app/launch',
   '/direct-xfer-pwa-shell.html',
-  '/app/app.css?v=269',
+  '/app/app.css?v=271',
   '/app/theme-init.js?v=268',
   '/app/login-vault.js?v=268',
   '/app/dlp-local.js?v=268',
   '/download-resume.js?v=268',
-  '/app/app.js?v=268',
+  '/app/app.js?v=270',
   '/direct-xfer-pwa.webmanifest',
   '/direct-xfer-pwa-en.webmanifest',
   '/direct-xfer-pwa-es.webmanifest',
@@ -29,6 +29,9 @@ var SHELL = [
   '/app/icon-maskable-192.png',
   '/app/icon-maskable-512.png',
   '/app/apple-touch-icon.png',
+  '/ui/notification-volume-on.svg',
+  '/ui/notification-volume-off.svg',
+  '/ui/notification-settings.svg',
   '/dxcrypto.js?v=268'
 ];
 

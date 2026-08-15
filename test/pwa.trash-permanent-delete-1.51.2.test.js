@@ -34,11 +34,11 @@ test('destructive trash wording is explicit in all supported PWA languages and s
 test('1.51.2 release identifiers are synchronized', () => {
   const pkg = JSON.parse(read('package.json'));
   const lock = JSON.parse(read('package-lock.json'));
-  assert.equal(pkg.version, '1.59.5');
-  assert.equal(lock.version, '1.59.5');
-  assert.equal(lock.packages[''].version, '1.59.5');
-  assert.match(app, /APP_BUILD = '2026\.08\.14-pwa284'/);
-  assert.match(read('pwa', 'sw.js'), /VERSION = '2026\.08\.14-pwa284'/);
-  assert.match(html, /v1\.59\.5 · pwa284/);
-  assert.match(html, /app\.js\?v=268/);
+  assert.equal(pkg.version, '1.59.8');
+  assert.equal(lock.version, '1.59.8');
+  assert.equal(lock.packages[''].version, '1.59.8');
+  assert.match(app, /APP_BUILD = '2026\.08\.14-pwa287'/);
+  assert.match(read('pwa', 'sw.js'), /VERSION = '2026\.08\.14-pwa287'/);
+  assert.match(html, /v1\.59\.8 · pwa287/);
+  assert.match(html, /app\.js\?v=270/);
 });

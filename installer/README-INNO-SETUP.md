@@ -1,4 +1,4 @@
-# Direct-Xfer — Inno Setup 1.59.5
+# Direct-Xfer — Inno Setup 1.59.8
 
 Le workflow `.github/workflows/build-windows-csharp.yml` réalise la chaîne Windows complète :
 
@@ -9,7 +9,7 @@ Le workflow `.github/workflows/build-windows-csharp.yml` réalise la chaîne Win
 5. crée le runtime portable ;
 6. télécharge le Node.js officiel 24.19.0 x64 et vérifie son SHA-256 ;
 7. télécharge Inno Setup 6.7.3 et vérifie la signature Authenticode de l’outil tiers avant de l’exécuter ;
-8. compile `Direct-Xfer-Setup-1.59.5.exe` ;
+8. compile `Direct-Xfer-Setup-1.59.8.exe` ;
 9. vérifie que le Setup final reste non signé et calcule son SHA-256 ;
 10. publie le Setup et le package portable comme Artifacts GitHub.
 

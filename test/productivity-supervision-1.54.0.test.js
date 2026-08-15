@@ -92,12 +92,12 @@ test('global never-expire policy is enforced, not merely cosmetic', () => {
 });
 
 test('release is 1.54.0 with a completely fresh PWA shell', () => {
-  assert.equal(JSON.parse(read('package.json')).version,'1.59.5');
-  assert.equal(JSON.parse(read('package-lock.json')).version,'1.59.5');
-  assert.match(pwa,/APP_VERSION = '1\.59\.5'/);
-  assert.match(pwa,/APP_BUILD = '2026\.08\.14-pwa284'/);
-  assert.match(pwaSw,/VERSION = '2026\.08\.14-pwa284'/);
-  assert.match(pwaHtml,/v1\.59\.5 · pwa284/);
+  assert.equal(JSON.parse(read('package.json')).version,'1.59.8');
+  assert.equal(JSON.parse(read('package-lock.json')).version,'1.59.8');
+  assert.match(pwa,/APP_VERSION = '1\.59\.8'/);
+  assert.match(pwa,/APP_BUILD = '2026\.08\.14-pwa287'/);
+  assert.match(pwaSw,/VERSION = '2026\.08\.14-pwa287'/);
+  assert.match(pwaHtml,/v1\.59\.8 · pwa287/);
   assert.doesNotMatch(read('pwa','launch.html'),/\?v=245/);
   assert.doesNotMatch(read('pwa','login.html'),/\?v=245/);
   assert.doesNotMatch(read('pwa','login.js'),/\?v=245/);

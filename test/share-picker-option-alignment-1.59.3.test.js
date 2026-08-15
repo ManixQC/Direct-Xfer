@@ -19,5 +19,5 @@ test('password and password hint stay in one logical picker pair', () => {
 });
 
 test('standard stylesheet cache-bust advances for the share-picker layout hotfix', () => {
-  assert.match(html, /href="\/style\.css\?v=270"/);
+  assert.match(html, /href="\/style\.css\?v=273"/);
 });

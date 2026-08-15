@@ -20095,13 +20095,34 @@ function notificationCategoryMuted(accountId, category) {
   return accountMutedNotificationCategories(accountId).includes(category);
 }
 function setAccountMutedNotificationCategories(accountId, list) {
-  const acc = getAccountById(String(accountId || ''));
+  accountId = String(accountId || '');
+  const acc = getAccountById(accountId);
   if (!acc) return null;
   const previous = Array.isArray(acc.notifMutedCategories) ? acc.notifMutedCategories.slice() : null;
+  const previousClean = normalizeMutedNotificationCategories(previous || []);
   const clean = normalizeMutedNotificationCategories(list);
+  const newlyMuted = new Set(clean.filter((category) => !previousClean.includes(category)));
+
+  // Muting a category must take effect immediately, including for notifications
+  // that were already queued/unread when the preference changed. Keep the rows as
+  // history, but mark them read so re-enabling the category later cannot replay a
+  // stale badge/sound/toast. The read-state mutation is persisted atomically with
+  // the account preference and rolled back together if the store write fails.
+  const changedReadState = [];
+  if (newlyMuted.size) {
+    const readAt = Date.now();
+    for (const n of notificationCenterStore()) {
+      if (!n || String(n.accountId) !== accountId || Number(n.readAt) > 0) continue;
+      if (!newlyMuted.has(String(n.category || 'system_health'))) continue;
+      changedReadState.push({ n, previous:n.readAt });
+      n.readAt = readAt;
+    }
+  }
+
   acc.notifMutedCategories = clean;
   if (persistNow()) return clean;
   if (previous) acc.notifMutedCategories = previous; else delete acc.notifMutedCategories;
+  for (const row of changedReadState) row.n.readAt = row.previous;
   return null;
 }
 
@@ -20785,8 +20806,15 @@ function notificationLinkUrlForRequest(n, req, accountId) {
 function notificationsForAccount(accountId, req) {
   accountId = String(accountId || '');
   if (!accountId) return [];
+  const muted = new Set(accountMutedNotificationCategories(accountId));
   return notificationCenterStore()
     .filter((n) => String(n.accountId) === accountId)
+    // Apply preferences again at delivery time. addCenterNotification already
+    // blocks future muted events, but this second gate also hides a notification
+    // that was queued immediately before the user muted its category (or restored
+    // from an older backup). This closes the timing window that could still expose
+    // an Updates alert after the user unchecked “Mises à jour”.
+    .filter((n) => !muted.has(String((n && n.category) || 'system_health')))
     .sort((a, b) => Number(b.at || 0) - Number(a.at || 0))
     .map((n) => ({ ...publicNotification(n), linkUrl:notificationLinkUrlForRequest(n, req, accountId) }));
 }

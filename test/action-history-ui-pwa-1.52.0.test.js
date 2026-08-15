@@ -53,8 +53,8 @@ test('PWA server exposes the persisted Undo log with scoped execution and atomic
 });
 
 test('PWA shell cache is advanced so installed apps receive the new interface', () => {
-  assert.match(pwaApp, /APP_BUILD = '2026\.08\.14-pwa284'/);
-  assert.match(read('pwa', 'sw.js'), /VERSION = '2026\.08\.14-pwa284'/);
-  assert.match(pwaHtml, /app\.js\?v=268/);
-  assert.match(pwaHtml, /app\.css\?v=269/);
+  assert.match(pwaApp, /APP_BUILD = '2026\.08\.14-pwa287'/);
+  assert.match(read('pwa', 'sw.js'), /VERSION = '2026\.08\.14-pwa287'/);
+  assert.match(pwaHtml, /app\.js\?v=270/);
+  assert.match(pwaHtml, /app\.css\?v=271/);
 });

@@ -58,7 +58,7 @@ test('feature 35 remains enforced server-side and is now configurable from the P
 });
 
 test('PWA cache is advanced for the new UI', () => {
-  assert.match(pwa, /APP_BUILD = '2026\.08\.14-pwa284'/);
-  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.14-pwa284'/);
-  assert.match(pwaHtml, /app\.js\?v=268/);
+  assert.match(pwa, /APP_BUILD = '2026\.08\.14-pwa287'/);
+  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.14-pwa287'/);
+  assert.match(pwaHtml, /app\.js\?v=270/);
 });

@@ -107,7 +107,7 @@ test('feature 33 produces an independently verifiable Ed25519 proof and detects 
   const entryHash = crypto.createHash('sha256').update('entry').digest('hex');
   const entries = [{ seq:1, at:1, action:'test', prevHash:'', hash:entryHash }];
   const digest = crypto.createHash('sha256').update(JSON.stringify(entries[0]) + '\n').digest('hex');
-  const proof = { proofVersion:1, app:'Direct-Xfer', appVersion:'1.59.5', exportedAt:2, entryCount:1, entriesSha256:digest, head:{ seq:1, hash:entryHash }, publicKeyId, publicKey:publicPem, algorithm:'Ed25519', entries };
+  const proof = { proofVersion:1, app:'Direct-Xfer', appVersion:'1.59.8', exportedAt:2, entryCount:1, entriesSha256:digest, head:{ seq:1, hash:entryHash }, publicKeyId, publicKey:publicPem, algorithm:'Ed25519', entries };
   proof.signature = crypto.sign(null, Buffer.from(proofPayload(proof)), pair.privateKey).toString('base64');
   assert.deepEqual(verify(proof, { publicKeyId }), { ok:true, reason:null, entries:1, keyId:publicKeyId });
   assert.equal(verify(proof, { publicKeyId:'0'.repeat(64) }).reason, 'untrusted-public-key');

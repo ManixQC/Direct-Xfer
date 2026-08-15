@@ -1,4 +1,4 @@
-# Direct-Xfer 1.59.2 — Windows C# / WinForms
+# Direct-Xfer 1.59.4 — Windows C# / WinForms
 
 La distribution Windows utilise désormais **deux exécutables C#/.NET Framework 4.8 x64 distincts** :
 
@@ -21,8 +21,8 @@ Le flux normal ne demande pas d’exécuter de fichier `.cmd`, `.bat` ou `.ps1` 
 
 Identifiants internes :
 
-- launcher : `1.59.2-launcher28-csharp`
-- server host : `1.59.2-serverhost1-csharp`
+- launcher : `1.59.4-launcher30-csharp`
+- server host : `1.59.4-serverhost3-csharp`
 
 ## Compilation sans script local
 
@@ -30,8 +30,8 @@ Identifiants internes :
 
 Le workflow `.github/workflows/build-windows-csharp.yml` compile **les deux projets x64**, prépare le runtime portable puis génère :
 
-- l’artefact `Direct-Xfer-1.59.2-Windows-CSharp` ;
-- l’installateur `Direct-Xfer-Setup-1.59.2.exe`.
+- l’artefact `Direct-Xfer-1.59.4-Windows-CSharp` ;
+- l’installateur `Direct-Xfer-Setup-1.59.4.exe`.
 
 ### Visual Studio
 
@@ -53,9 +53,18 @@ runtime\
 
 Ne lancez pas `Direct-Xfer.exe` directement depuis une archive ZIP et ne copiez pas seulement le launcher ailleurs.
 
+### Démarrage du package portable
+
+Contrairement à l’installateur Inno Setup, un ZIP portable ne peut pas enregistrer le démarrage automatique du ServerHost sans modifier Windows. Pour conserver la séparation stricte des responsabilités :
+
+1. lancez `Direct-Xfer.ServerHost.exe` ;
+2. lancez ensuite `Direct-Xfer.exe`.
+
+Le ServerHost peut être lancé avant la première configuration : il attendra silencieusement que le launcher enregistre les dossiers. Après installation via le Setup, cette étape manuelle n’est pas nécessaire : l’installateur démarre le ServerHost et crée son entrée de démarrage à l’ouverture de session.
+
 ## Arrêt et reprise
 
-Le launcher demande l’arrêt du ServerHost via un événement Windows privé. Le ServerHost tente ensuite l’arrêt authentifié du serveur Direct-Xfer et ne termine le processus Node exact qu’en dernier recours. Si le launcher plante, le ServerHost peut continuer à maintenir le backend ; au prochain lancement, l’UI peut se rattacher à la session valide.
+Quitter `Direct-Xfer.exe` ferme uniquement la systray : le ServerHost et le backend continuent de fonctionner indépendamment. Les changements de configuration sont transmis au ServerHost par un événement IPC privé de reload. Lors d’une mise à jour, d’une désinstallation ou d’une fermeture de session Windows, le ServerHost reçoit sa propre demande d’arrêt, tente l’arrêt authentifié du serveur Direct-Xfer et ne termine le processus Node exact qu’en dernier recours. Si la systray plante, le ServerHost continue donc à maintenir le backend ; au prochain lancement, l’UI ne se rattache à la session que si le binaire attendu et l’IPC du ServerHost sont encore valides.
 
 ## Signature de code
 

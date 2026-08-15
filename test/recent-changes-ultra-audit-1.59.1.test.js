@@ -18,22 +18,22 @@ function normalizedTextSha256(rel) {
   return crypto.createHash('sha256').update(Buffer.from(text, 'utf8')).digest('hex');
 }
 
-test('1.59.1 hardening remains present after the 1.59.2 ServerHost split', () => {
-  assert.match(launcher, /AssemblyVersion\("1\.59\.2\.0"\)/);
-  assert.match(host, /AssemblyVersion\("1\.59\.2\.0"\)/);
-  assert.match(launcher, /RuntimeAppBuild = "1\.59\.2-launcher28-csharp"/);
-  assert.match(host, /RuntimeAppBuild = "1\.59\.2-launcher28-csharp"/);
-  assert.match(workflow, /DX_VERSION: '1\.59\.2'/);
-  assert.match(iss, /#define AppVersion "1\.59\.2"/);
+test('1.59.1 hardening remains present after the 1.59.4 ServerHost split', () => {
+  assert.match(launcher, /AssemblyVersion\("1\.59\.4\.0"\)/);
+  assert.match(host, /AssemblyVersion\("1\.59\.4\.0"\)/);
+  assert.match(launcher, /RuntimeAppBuild = "1\.59\.4-launcher30-csharp"/);
+  assert.match(host, /RuntimeAppBuild = "1\.59\.4-launcher30-csharp"/);
+  assert.match(workflow, /DX_VERSION: '1\.59\.4'/);
+  assert.match(iss, /#define AppVersion "1\.59\.4"/);
 });
 
-test('PWA cache generation is advanced consistently for 1.59.2', () => {
+test('PWA cache generation is advanced consistently for 1.59.4', () => {
   for (const file of ['pwa/index.html', 'pwa/login.html', 'pwa/launch.html', 'pwa/app.js', 'pwa/login.js', 'pwa/sw.js']) {
     assert.doesNotMatch(read(...file.split('/')), /v=266|pwa280/);
   }
-  assert.match(read('pwa', 'index.html'), /v=267/);
-  assert.match(read('pwa', 'app.js'), /v=267/);
-  assert.match(read('pwa', 'sw.js'), /v=267/);
+  assert.match(read('pwa', 'index.html'), /v=268/);
+  assert.match(read('pwa', 'app.js'), /v=268/);
+  assert.match(read('pwa', 'sw.js'), /v=268/);
 });
 
 test('launcher configuration writes remain atomic and recover their backup', () => {
@@ -58,17 +58,18 @@ test('Node validation remains pinned, explicit and bounded inside ServerHost onl
   assert.match(host, /parsed\.Major == 20 \|\| parsed\.Major >= 22/);
 });
 
-test('stale saved session cannot kill an unrelated process after PID reuse', () => {
+test('stale saved session cannot target an unrelated process and launcher refuses orphaned host sessions', () => {
   assert.match(host, /public long serverStartedUtcTicks;/);
   assert.match(host, /serverStartedUtcTicks = GetProcessStartUtcTicks\(_server\)/);
   assert.match(host, /var sameStart = session\.serverStartedUtcTicks > 0/);
   assert.match(host, /GetProcessStartUtcTicks\(process\) == session\.serverStartedUtcTicks/);
   assert.match(host, /if \(sameExecutable && sameStart\)/);
-  assert.match(launcher, /hostStartedUtcTicks/);
-  assert.match(launcher, /GetProcessStartUtcTicks\(process\) == session\.hostStartedUtcTicks/);
+  assert.match(launcher, /IsServerHostIpcAlive\(\)/);
+  assert.match(launcher, /EventWaitHandle\.OpenExisting\(Program\.ServerHostReloadEventName\)/);
+  assert.doesNotMatch(launcher, /Process\.GetProcessById|\.Kill\(\)/);
 });
 
-test('all ServerHost critical runtime hashes match actual normalized 1.59.2 files', () => {
+test('all ServerHost critical runtime hashes match actual normalized 1.59.4 files', () => {
   for (const rel of ['package.json','package-lock.json','server.js','public/app.js','pwa/app.js','node_modules/express/package.json']) {
     const escaped = rel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const match = host.match(new RegExp('\\{ "' + escaped + '", "([0-9a-f]{64})" \\}'));
@@ -84,8 +85,8 @@ test('installer upgrade and GitHub release gates remain hardened', () => {
   assert.match(iss, /Flags: nowait postinstall skipifsilent runasoriginaluser/);
   assert.match(workflow, /npm audit --omit=dev --audit-level=high/);
   assert.match(workflow, /name: Test release-critical changes/);
-  assert.match(workflow, /recent-changes-ultra-audit-1\.59\.2\.test\.js/);
-  assert.match(workflow, /windows-server-host-split-1\.59\.2\.test\.js/);
+  assert.match(workflow, /recent-changes-ultra-audit-1\.59\.4\.test\.js/);
+  assert.match(workflow, /windows-server-host-split-1\.59\.4\.test\.js/);
 });
 
 test('ServerHost has bounded startup readiness with diagnostics and clean cancellation', () => {
@@ -94,5 +95,5 @@ test('ServerHost has bounded startup readiness with diagnostics and clean cancel
   assert.match(host, /watch\.ElapsedMilliseconds < Program\.StartupReadyTimeoutMs/);
   assert.match(host, /server did not become ready before timeout/);
   assert.match(host, /startup cancelled by stop request/);
-  assert.match(host, /_stopEvent\.WaitOne\(100\)/);
+  assert.match(host, /WaitHandle\.WaitAny\(new WaitHandle\[\] \{ _stopEvent, _reloadEvent \}, 100\)/);
 });

@@ -15,29 +15,29 @@ function normalizedTextSha256(rel) {
   return crypto.createHash('sha256').update(Buffer.from(text, 'utf8')).digest('hex');
 }
 
-test('1.59.2 release metadata is synchronized across Node, PWA, launcher, host and installer', () => {
+test('1.59.4 release metadata is synchronized across Node, PWA, launcher, host and installer', () => {
   const pkg = JSON.parse(read('package.json'));
   const lock = JSON.parse(read('package-lock.json'));
-  assert.equal(pkg.version, '1.59.2');
-  assert.equal(lock.version, '1.59.2');
-  assert.equal(lock.packages[''].version, '1.59.2');
-  assert.match(read('pwa', 'app.js'), /APP_VERSION = '1\.59\.2'/);
-  assert.match(read('pwa', 'app.js'), /APP_BUILD = '2026\.08\.14-pwa281'/);
-  assert.match(read('pwa', 'sw.js'), /VERSION = '2026\.08\.14-pwa281'/);
-  assert.match(read('pwa', 'index.html'), /v1\.59\.2 · pwa281/);
-  assert.match(launcher, /AppVersion = "1\.59\.2"/);
-  assert.match(launcher, /RuntimeAppBuild = "1\.59\.2-launcher28-csharp"/);
-  assert.match(host, /AppVersion = "1\.59\.2"/);
-  assert.match(host, /HostVersion = "1\.59\.2-serverhost1-csharp"/);
-  assert.match(workflow, /DX_VERSION: '1\.59\.2'/);
-  assert.match(workflow, /DX_RUNTIME_BUILD: '1\.59\.2-launcher28-csharp'/);
-  assert.match(iss, /#define AppVersion "1\.59\.2"/);
+  assert.equal(pkg.version, '1.59.4');
+  assert.equal(lock.version, '1.59.4');
+  assert.equal(lock.packages[''].version, '1.59.4');
+  assert.match(read('pwa', 'app.js'), /APP_VERSION = '1\.59\.4'/);
+  assert.match(read('pwa', 'app.js'), /APP_BUILD = '2026\.08\.14-pwa283'/);
+  assert.match(read('pwa', 'sw.js'), /VERSION = '2026\.08\.14-pwa283'/);
+  assert.match(read('pwa', 'index.html'), /v1\.59\.4 · pwa283/);
+  assert.match(launcher, /AppVersion = "1\.59\.4"/);
+  assert.match(launcher, /RuntimeAppBuild = "1\.59\.4-launcher30-csharp"/);
+  assert.match(host, /AppVersion = "1\.59\.4"/);
+  assert.match(host, /HostVersion = "1\.59\.4-serverhost3-csharp"/);
+  assert.match(workflow, /DX_VERSION: '1\.59\.4'/);
+  assert.match(workflow, /DX_RUNTIME_BUILD: '1\.59\.4-launcher30-csharp'/);
+  assert.match(iss, /#define AppVersion "1\.59\.4"/);
 });
 
-test('PWA resources are advanced to pwa281/v267', () => {
-  assert.match(read('pwa', 'index.html'), /v=267/);
-  assert.match(read('pwa', 'app.js'), /v=267/);
-  assert.match(read('pwa', 'sw.js'), /v=267/);
+test('PWA resources are advanced to pwa283/v268', () => {
+  assert.match(read('pwa', 'index.html'), /v=268/);
+  assert.match(read('pwa', 'app.js'), /v=268/);
+  assert.match(read('pwa', 'sw.js'), /v=268/);
   assert.doesNotMatch(read('pwa', 'index.html'), /pwa280|v=266/);
 });
 
@@ -58,7 +58,9 @@ test('server supervision moved out of the tray launcher', () => {
 });
 
 test('installer protects both active Windows components during upgrade', () => {
-  assert.match(iss, /AppMutex=Local\\DirectXferLauncherInstance,Local\\DirectXferServerHostInstance/);
+  assert.match(iss, /AppMutex=Local\\DirectXferLauncherInstance\s*$/m);
+  assert.match(iss, /StopServerHostAndWait/);
+  assert.match(iss, /CheckForMutexes\('Local\\DirectXferServerHostInstance'\)/);
   assert.match(iss, /\[InstallDelete\]/);
   assert.match(iss, /\{app\}\\runtime\\app/);
   assert.match(iss, /\{app\}\\runtime\\node/);

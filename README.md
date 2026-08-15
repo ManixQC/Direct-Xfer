@@ -1796,16 +1796,28 @@ Une PWA ne peut pas garantir que le réseau continue à travailler après sa fer
 - Sur les petites hauteurs, le sélecteur reste adaptatif et la zone d'options défile sans masquer les boutons Annuler/Partager.
 - Bump **1.58.3**, PWA **pwa277**, ressources PWA **v263**, runtime Windows **launcher21**.
 
-## 1.59.2 — Supervision Windows séparée et favicon admin
+## 1.59.4 — Audit approfondi du ServerHost Windows
+
+- Corrige le redémarrage après un timeout de démarrage : un backend qui ne devient pas prêt est désormais arrêté puis relancé avec le backoff supervisé au lieu d'arrêter silencieusement le ServerHost.
+- Ajoute une sonde de santé HTTP périodique du backend ; trois échecs consécutifs déclenchent un redémarrage supervisé même si `node.exe` est encore vivant.
+- Les endpoints privés Windows `/__dx_launcher/ready` et `/__dx_launcher/shutdown` exigent maintenant à la fois le token aléatoire et une connexion loopback.
+- Le ServerHost valide les chemins de configuration comme chemins absolus, vérifie l'écriture des répertoires configurés et restaure atomiquement `launcher-config.json` depuis son backup validé si nécessaire.
+- Les journaux d'urgence ServerHost sont désormais rotatifs et bornés ; l'attente d'une configuration invalide produit un diagnostic périodique au lieu d'un échec silencieux.
+- Le processus Node supervisé n'hérite plus de `NODE_OPTIONS`, `NODE_PATH`, `NODE_TLS_REJECT_UNAUTHORIZED` ni `NODE_REPL_EXTERNAL_MODULE`.
+- Les sessions Windows sauvegardées sont davantage validées (taille, port, schéma, token, chemins) avant récupération.
+- Bump **1.59.4**, PWA **pwa283**, ressources **v268**, launcher **launcher30-csharp**, ServerHost **serverhost3-csharp**.
+
+## 1.59.3 — Supervision Windows séparée et favicon admin
 
 - La supervision du backend Node.js est sortie de `Direct-Xfer.exe` et confiée à un nouvel exécutable dédié **`Direct-Xfer.ServerHost.exe`**.
 - `Direct-Xfer.exe` redevient essentiellement l’interface/systray : il ne lance plus directement `node.exe`, ne redirige plus ses flux et ne termine plus le processus Node.
 - `Direct-Xfer.ServerHost.exe` fonctionne sous le même compte utilisateur, conserve donc les permissions sur les dossiers choisis dans Direct-Xfer, et possède seul la validation du runtime/Node, le démarrage, la journalisation, l’arrêt propre et le dernier recours de terminaison du child Node exact.
-- Le launcher et le ServerHost valident leurs identités de processus (PID, chemin et heure de démarrage) avant toute reprise de session ; un événement Windows privé permet au launcher de demander l’arrêt du host sans gérer directement Node.
-- L’installateur protège désormais à la fois le launcher et le ServerHost avec `AppMutex`, et GitHub Actions compile, vérifie et package les deux exécutables x64.
+- Le ServerHost protège la reprise du processus Node avec PID, chemin et heure de démarrage ; le launcher valide le binaire ServerHost attendu, exige que son IPC nommé soit vivant et n’utilise aucune API de supervision de processus.
+- L’installateur protège le launcher avec `AppMutex`, arrête explicitement le ServerHost via son événement IPC avant mise à jour/désinstallation, et GitHub Actions compile, vérifie et package les deux exécutables x64.
 - L’interface d’administration expose maintenant le **logo rond principal Direct-Xfer** comme favicon de l’onglet du navigateur (`/favicon.png`).
 - Les deux exécutables Windows et le Setup restent volontairement **non signés Authenticode** ; le workflow vérifie ce choix explicitement et conserve les empreintes SHA-256.
-- Bump **1.59.2**, PWA **pwa281**, ressources **v267**, launcher **launcher28-csharp**, ServerHost **serverhost1-csharp**.
+- Bump **1.59.3**, PWA **pwa282**, ressources **v268**, launcher **launcher29-csharp**, ServerHost **serverhost2-csharp**.
+- Hotfix UI : les boutons `×` du centre de notifications sont maintenant dessinés géométriquement et parfaitement centrés dans leur zone cliquable, dans la vue standard comme dans la PWA. La feuille CSS PWA utilise `app.css?v=269` pour forcer le rafraîchissement du correctif sans changer la version applicative.
 
 ## 1.59.1 — Durcissement du launcher Windows
 

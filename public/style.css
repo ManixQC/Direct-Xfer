@@ -3451,7 +3451,19 @@ body[data-role="auditor"] .album-url .clone-btn {
 .notification-item-main { min-width:0; display:grid; gap:3px; }
 .notification-item-title { font-size:.88rem; font-weight:750; overflow-wrap:anywhere; }
 .notification-item-meta { color:var(--muted); font-size:.74rem; line-height:1.35; overflow-wrap:anywhere; }
-.notification-delete { width:30px; height:30px; padding:0; display:grid; place-items:center; border-radius:8px; }
+/* Use a geometric CSS X instead of the font glyph so it is optically and
+   mathematically centered in the 30×30 delete hit target on every platform/font. */
+.notification-delete {
+  width:30px; height:30px; padding:0; display:inline-flex !important;
+  align-items:center; justify-content:center; border-radius:8px;
+  font-size:0; line-height:0;
+}
+.notification-delete::before {
+  content:""; display:block; width:14px; height:14px; flex:0 0 14px;
+  background:
+    linear-gradient(45deg, transparent 43%, currentColor 44%, currentColor 56%, transparent 57%),
+    linear-gradient(-45deg, transparent 43%, currentColor 44%, currentColor 56%, transparent 57%);
+}
 .notification-clear { margin:6px 4px 2px; }
 .notification-item.notification-warning { border-left: 3px solid var(--warn); }
 .notification-item.notification-critical { border-left: 3px solid var(--danger); }
@@ -3670,6 +3682,29 @@ body[data-role="auditor"] .album-url .clone-btn {
   text-overflow: ellipsis;
   word-break: normal;
 }
+/* Keep explanatory copy out of the option packing flow so the next field always
+   starts on the left edge instead of being pushed to the far right. */
+.picker-modal .share-options .smart-expiry-hint {
+  flex: 1 0 100%;
+  width: 100%;
+  margin: 0;
+}
+
+/* Password and hint form one logical pair. Treat them as a single flex item so
+   wrapping never leaves the hint stranded far away from the password field. */
+.picker-modal .share-option-pair {
+  display: flex;
+  flex: 0 1 auto;
+  gap: 14px;
+  min-width: 0;
+}
+.picker-modal .share-option-pair > label {
+  min-width: 0;
+}
+.picker-modal .share-option-password-pair > label {
+  flex: 0 1 190px;
+}
+
 .picker-modal .share-options { margin-top: 10px; }
 .picker-modal > .modal-foot {
   position: relative;
@@ -3698,6 +3733,12 @@ body[data-role="auditor"] .album-url .clone-btn {
   .picker-body { padding: 12px 14px 16px; }
   .picker-modal .browser-list,
   .picker-modal .browser-list.has-parent { min-height: 240px; }
+  .picker-modal .share-option-pair {
+    width: 100%;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .picker-modal .share-option-password-pair > label { flex: 1 1 auto; width: 100%; }
   .picker-modal > .modal-foot { padding: 12px 14px 14px; }
 }
 

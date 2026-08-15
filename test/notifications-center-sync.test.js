@@ -27,9 +27,9 @@ test('standard and PWA both render synced notification controls', () => {
 });
 
 test('release is bumped to 1.51.2 and PWA cache is advanced', () => {
-  assert.equal(JSON.parse(read('package.json')).version,'1.59.2');
-  assert.match(read('pwa/app.js'),/APP_VERSION = '1\.59\.2'/);
-  assert.match(read('pwa/app.js'),/pwa281/);
-  assert.match(read('pwa/sw.js'),/pwa281/);
-  assert.match(read('pwa/index.html'),/v=267/);
+  assert.equal(JSON.parse(read('package.json')).version,'1.59.4');
+  assert.match(read('pwa/app.js'),/APP_VERSION = '1\.59\.4'/);
+  assert.match(read('pwa/app.js'),/pwa283/);
+  assert.match(read('pwa/sw.js'),/pwa283/);
+  assert.match(read('pwa/index.html'),/v=268/);
 });

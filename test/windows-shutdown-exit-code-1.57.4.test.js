@@ -44,7 +44,7 @@ function waitReady(port, token, child, getOutput) {
 test('successful launcher shutdown releases the listener cleanly before any last-resort child kill', {timeout:20000}, async () => {
   assert.match(server, /process\.exit\(Number\(code\) === 0 \? 0 : 1\)/);
   assert.doesNotMatch(server, /process\.kill\(process\.pid, 'SIGKILL'\)/);
-  assert.match(launcher, /RuntimeAppBuild = "1\.59\.2-launcher28-csharp"/);
+  assert.match(launcher, /RuntimeAppBuild = "1\.59\.4-launcher30-csharp"/);
   assert.match(host, /ConsumeCleanShutdownMarker\(\)/);
   assert.doesNotMatch(launcher, /terminateProcessTree\(0\)/);
   assert.doesNotMatch(launcher, /TerminateJobObject/);
@@ -80,7 +80,7 @@ test('successful launcher shutdown releases the listener cleanly before any last
     const markerDeadline = Date.now() + 3500;
     while (!fs.existsSync(marker) && Date.now() < markerDeadline) await new Promise(r => setTimeout(r, 25));
     assert.equal(fs.existsSync(marker), true, 'clean marker should be written before the launcher fallback is ever needed');
-    assert.match(output, /shutting down \(windows-launcher\)/);
+    assert.match(output, /shutting down \(windows-server-host\)/);
     const outputDeadline = Date.now() + 2000;
     while (!/server closed/.test(output) && Date.now() < outputDeadline) await new Promise(r => setTimeout(r, 25));
     assert.match(output, /server closed/);

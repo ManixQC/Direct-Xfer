@@ -55,12 +55,14 @@ test('Windows components are conventional C# WinForms/WinExe with transparent si
   assert.equal(fs.existsSync(path.join(root,'windows-launcher','main.go')), false);
 });
 
-test('WinForms tray supports normal left click and system-session shutdown', () => {
+test('WinForms tray supports normal left click while ServerHost owns system-session shutdown', () => {
   assert.match(launcher, /new NotifyIcon/);
   assert.match(launcher, /_tray\.MouseClick \+=/);
   assert.match(launcher, /_tray\.MouseDoubleClick \+=/);
   assert.match(launcher, /ContextMenuStrip/);
-  assert.match(launcher, /SystemEvents\.SessionEnding/);
+  assert.doesNotMatch(launcher, /SystemEvents\.SessionEnding/);
+  assert.match(host, /SystemEvents\.SessionEnding \+= OnSessionEnding/);
+  assert.match(host, /OnSessionEnding[\s\S]*_stopEvent\.Set\(\)/);
 });
 
 test('Node child is hidden by ServerHost and readiness is bound to launcher token and PID', () => {

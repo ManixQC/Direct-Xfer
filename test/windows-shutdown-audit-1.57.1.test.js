@@ -40,14 +40,14 @@ function waitHealth(port, child, outputRef) {
   });
 }
 
-test('Windows C# launcher shutdown delegates bounded server termination to ServerHost', () => {
-  assert.match(launcher, /RuntimeAppBuild = "1\.59\.2-launcher28-csharp"/);
+test('Windows C# launcher exits independently while ServerHost owns bounded server shutdown', () => {
+  assert.match(launcher, /RuntimeAppBuild = "1\.59\.4-launcher30-csharp"/);
   assert.match(launcher, /RequestExit\(\)/);
   assert.match(launcher, /lock \(_exitSync\)/);
-  assert.match(launcher, /SignalServerHostStop\(\)/);
-  assert.match(launcher, /WaitForProcessExit\(session\.hostPid, 8000\)/);
-  assert.match(launcher, /SystemEvents\.SessionEnding/);
+  assert.doesNotMatch(launcher, /SignalServerHostStop\(\)|WaitForProcessExit\(session\.hostPid|SystemEvents\.SessionEnding/);
   assert.doesNotMatch(launcher, /taskkill\.exe|TerminateJobObject|procTerminateProcess|Process\.Kill\(/);
+  assert.match(host, /SystemEvents\.SessionEnding \+= OnSessionEnding/);
+  assert.match(host, /OnSessionEnding[\s\S]*_stopEvent\.Set\(\)/);
   assert.match(host, /private void StopNode\(\)/);
   assert.match(host, /server\.WaitForExit\(6500\)/);
   assert.match(host, /server\.Kill\(\)/);
@@ -108,7 +108,7 @@ test('private launcher shutdown exits cleanly even with a lingering TCP client a
     lingering.destroy();
     assert.equal(fs.existsSync(marker), true, `clean marker was not produced promptly\n${output}`);
     assert.ok(Date.now() - started < 3500, `clean shutdown state took too long: ${Date.now()-started} ms\n${output}`);
-    assert.match(output, /shutting down \(windows-launcher\)/);
+    assert.match(output, /shutting down \(windows-server-host\)/);
     const closedDeadline = Date.now() + 2000;
     while (!/server closed/.test(output) && Date.now() < closedDeadline) await new Promise(r => setTimeout(r, 25));
     assert.match(output, /server closed/);
@@ -119,7 +119,7 @@ test('private launcher shutdown exits cleanly even with a lingering TCP client a
     const storePath = path.join(tmp, 'data', 'shares.json');
     const state = JSON.parse(fs.readFileSync(storePath, 'utf8'));
     assert.equal(state.meta?.notificationRuntime?.clean, true);
-    assert.equal(state.meta?.notificationRuntime?.shutdownSignal, 'windows-launcher');
+    assert.equal(state.meta?.notificationRuntime?.shutdownSignal, 'windows-server-host');
   } finally {
     if (child.exitCode == null) child.kill('SIGKILL');
     fs.rmSync(tmp, { recursive:true, force:true });

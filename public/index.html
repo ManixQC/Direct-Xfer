@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex,nofollow" />
     <title>Direct-Xfer — Admin</title>
-    <link rel="icon" href="/favicon.png?v=267" type="image/png" sizes="192x192" />
+    <link rel="icon" href="/favicon.png?v=269" type="image/png" sizes="192x192" />
     <!-- Apply the saved theme before first paint (dark is the default). -->
     <script>
       (function () {
@@ -15,7 +15,7 @@
         document.documentElement.setAttribute('data-theme', t);
       })();
     </script>
-    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/style.css?v=270" />
   </head>
   <body>
     <!-- ===================== Login ===================== -->
@@ -1089,14 +1089,16 @@
             <span data-i18n="pk.emoji">Emoji marker (optional)</span>
             <input id="opt-emoji" type="text" maxlength="8" autocomplete="off" placeholder="📁" />
           </label>
-          <label>
-            <span data-i18n="pk.password">Password (optional)</span>
-            <input id="opt-password" type="text" autocomplete="off" spellcheck="false" data-i18n-ph="pk.passwordPh" placeholder="none" />
-          </label>
-          <label>
-            <span data-i18n="pk.pwHint">Password hint (optional)</span>
-            <input id="opt-pwhint" type="text" maxlength="200" autocomplete="off" data-i18n-ph="pk.pwHintPh" placeholder="e.g. our home town" />
-          </label>
+          <div class="share-option-pair share-option-password-pair">
+            <label>
+              <span data-i18n="pk.password">Password (optional)</span>
+              <input id="opt-password" type="text" autocomplete="off" spellcheck="false" data-i18n-ph="pk.passwordPh" placeholder="none" />
+            </label>
+            <label>
+              <span data-i18n="pk.pwHint">Password hint (optional)</span>
+              <input id="opt-pwhint" type="text" maxlength="200" autocomplete="off" data-i18n-ph="pk.pwHintPh" placeholder="e.g. our home town" />
+            </label>
+          </div>
           <label>
             <span data-i18n="pk.rate">Max speed (KB/s)</span>
             <input id="opt-rate" type="number" min="0" step="1" data-i18n-ph="pk.unlimited" placeholder="unlimited" />

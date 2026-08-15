@@ -20,23 +20,24 @@ using System.Windows.Forms;
 [assembly: AssemblyCompany("Direct-Xfer")]
 [assembly: AssemblyProduct("Direct-Xfer")]
 [assembly: AssemblyCopyright("Copyright © Direct-Xfer 2026")]
-[assembly: AssemblyVersion("1.59.2.0")]
-[assembly: AssemblyFileVersion("1.59.2.0")]
-[assembly: AssemblyInformationalVersion("1.59.2-launcher28-csharp")]
+[assembly: AssemblyVersion("1.59.4.0")]
+[assembly: AssemblyFileVersion("1.59.4.0")]
+[assembly: AssemblyInformationalVersion("1.59.4-launcher30-csharp")]
 
 namespace DirectXfer.WindowsLauncher
 {
     internal static class Program
     {
-        internal const string AppVersion = "1.59.2";
-        internal const string RuntimeAppBuild = "1.59.2-launcher28-csharp";
+        internal const string AppVersion = "1.59.4";
+        internal const string RuntimeAppBuild = "1.59.4-launcher30-csharp";
         internal const string ServerHostFileName = "Direct-Xfer.ServerHost.exe";
-        internal const string ServerHostVersion = "1.59.2.0";
+        internal const string ServerHostVersion = "1.59.4.0";
         internal const int DefaultPort = 55750;
         internal const int StartupReadyTimeoutMs = 30000;
         internal const string MutexName = @"Local\DirectXferLauncherInstance";
         internal const string OpenEventName = @"Local\DirectXferLauncherOpen";
-        internal const string ServerHostStopEventName = @"Local\DirectXferServerHostStop";
+        internal const string ServerHostBuild = "1.59.4-serverhost3-csharp";
+        internal const string ServerHostReloadEventName = @"Local\DirectXferServerHostReload";
 
         [STAThread]
         private static void Main(string[] args)
@@ -100,6 +101,7 @@ namespace DirectXfer.WindowsLauncher
         public string scheme { get; set; }
         public string token { get; set; }
         public string runtimeBuild { get; set; }
+        public string hostBuild { get; set; }
     }
 
     internal sealed class LauncherContext : ApplicationContext, IDisposable
@@ -110,14 +112,12 @@ namespace DirectXfer.WindowsLauncher
         private readonly EventWaitHandle _openEvent;
         private readonly CancellationTokenSource _lifetime = new CancellationTokenSource();
         private readonly object _exitSync = new object();
-        private Process _host;
         private LauncherConfig _config;
         private string _runtimeLogPath;
         private string _token;
         private string _runtimeScheme = "http";
         private int _runtimePort;
         private bool _exiting;
-        private bool _expectedHostStop;
         private bool _disposed;
 
         internal LauncherContext(string[] args)
@@ -146,9 +146,7 @@ namespace DirectXfer.WindowsLauncher
             bool eventCreated;
             _openEvent = new EventWaitHandle(false, EventResetMode.AutoReset, Program.OpenEventName, out eventCreated);
             Task.Run(() => ExistingInstanceSignalLoop(_lifetime.Token));
-            Microsoft.Win32.SystemEvents.SessionEnding += OnSessionEnding;
-
-            try { StartOrAttachServerHost(); }
+            try { AttachToServerHost(); }
             catch (Exception ex)
             {
                 _tray.Visible = false;
@@ -277,8 +275,12 @@ namespace DirectXfer.WindowsLauncher
                 _config = next;
                 try { SaveConfig(); } catch { _config = previous; throw; }
                 if (!firstRun)
-                    MessageBox.Show(IsServerHostRunning() ? tr.ConfigSavedRestart : tr.ConfigSaved,
+                {
+                    var running = IsServerHostRunning();
+                    if (running) SignalServerHostReload();
+                    MessageBox.Show(running ? tr.ConfigSavedRestart : tr.ConfigSaved,
                         tr.AppTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
             }
             catch (Exception ex) { MessageBox.Show(ex.Message, tr.AppTitle, MessageBoxButtons.OK, MessageBoxIcon.Error); }
         }
@@ -323,18 +325,26 @@ namespace DirectXfer.WindowsLauncher
             get { return string.IsNullOrWhiteSpace(_config.dataDir) ? null : Path.Combine(_config.dataDir, "tls", "local-ca-cert.pem"); }
         }
 
-        private static string EnsureServerHostExecutable()
+        private static string ExpectedServerHostPath
         {
-            var path = Path.Combine(PortableRoot, Program.ServerHostFileName);
-            if (!File.Exists(path)) throw new FileNotFoundException("Direct-Xfer Server Host is missing.", path);
-            if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
-                throw new InvalidDataException("Direct-Xfer Server Host cannot be a reparse point.");
-            if (!IsAmd64Pe(path)) throw new InvalidDataException("Direct-Xfer Server Host is not an x64 Windows executable.");
-            var info = FileVersionInfo.GetVersionInfo(path);
-            if (!string.Equals(info.FileVersion, Program.ServerHostVersion, StringComparison.Ordinal) ||
-                !string.Equals(info.ProductName, "Direct-Xfer Server Host", StringComparison.Ordinal))
-                throw new InvalidDataException("Direct-Xfer Server Host version or identity is invalid.");
-            return path;
+            get { return Path.Combine(PortableRoot, Program.ServerHostFileName); }
+        }
+
+        private static bool ServerHostFileMatchesSession(LauncherSession session)
+        {
+            if (session == null || string.IsNullOrWhiteSpace(session.hostPath) ||
+                !string.Equals(session.hostBuild, Program.ServerHostBuild, StringComparison.Ordinal)) return false;
+            try
+            {
+                var expected = Path.GetFullPath(ExpectedServerHostPath);
+                var reported = Path.GetFullPath(session.hostPath);
+                if (!string.Equals(expected, reported, StringComparison.OrdinalIgnoreCase) || !File.Exists(expected)) return false;
+                if ((File.GetAttributes(expected) & FileAttributes.ReparsePoint) != 0 || !IsAmd64Pe(expected)) return false;
+                var info = FileVersionInfo.GetVersionInfo(expected);
+                return string.Equals(info.FileVersion, Program.ServerHostVersion, StringComparison.Ordinal) &&
+                    string.Equals(info.ProductName, "Direct-Xfer Server Host", StringComparison.Ordinal);
+            }
+            catch { return false; }
         }
 
         private static bool IsAmd64Pe(string path)
@@ -356,7 +366,7 @@ namespace DirectXfer.WindowsLauncher
             catch { return false; }
         }
 
-        private void StartOrAttachServerHost()
+        private void AttachToServerHost()
         {
             EnsureConfigDirectories(_config);
             _runtimeLogPath = Path.Combine(_config.logsDir, "Direct-Xfer-Windows.log");
@@ -367,57 +377,37 @@ namespace DirectXfer.WindowsLauncher
                 return;
             }
 
-            SignalServerHostStop();
-            if (!WaitForServerHostMutexRelease(5000))
-                throw new InvalidOperationException("A previous Direct-Xfer Server Host instance did not stop in time.");
-            TryDeleteStaleSession();
-
-            var hostExe = EnsureServerHostExecutable();
-            var start = new ProcessStartInfo
-            {
-                FileName = hostExe,
-                WorkingDirectory = PortableRoot,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                WindowStyle = ProcessWindowStyle.Hidden
-            };
-            start.EnvironmentVariables["DX_WINDOWS_PORTABLE_ROOT"] = PortableRoot;
-            _host = new Process { StartInfo = start, EnableRaisingEvents = true };
-            _host.Exited += OnHostExited;
-            if (!_host.Start()) throw new InvalidOperationException("Direct-Xfer Server Host did not start.");
-            Task.Run(() => WaitForHostReady(_host.Id, _lifetime.Token));
+            Task.Run(() => WaitForServerHostReady(_lifetime.Token));
         }
 
         private bool TryAttachReadySession(LauncherSession session)
         {
             if (session == null || !string.Equals(session.runtimeBuild, Program.RuntimeAppBuild, StringComparison.Ordinal)) return false;
-            if (!HostProcessMatches(session)) return false;
+            if (!ServerHostFileMatchesSession(session) || !IsServerHostIpcAlive()) return false;
             string usedScheme;
             if (!TryReady(session.port, session.token, session.scheme, session.serverPid, out usedScheme)) return false;
             _runtimePort = session.port;
             _runtimeScheme = usedScheme;
             _token = session.token;
-            AttachHostProcess(session.hostPid);
             return true;
         }
 
-        private void WaitForHostReady(int expectedHostPid, CancellationToken token)
+        private void WaitForServerHostReady(CancellationToken token)
         {
             var watch = Stopwatch.StartNew();
             while (!token.IsCancellationRequested && !_exiting && watch.ElapsedMilliseconds < Program.StartupReadyTimeoutMs)
             {
                 var session = ReadSession();
-                if (session != null && session.hostPid == expectedHostPid && TryAttachReadySession(session))
+                if (TryAttachReadySession(session))
                 {
                     Ui(CompleteStartup);
                     return;
                 }
-                try { if (_host != null && _host.HasExited) return; } catch { return; }
                 Thread.Sleep(100);
             }
             if (token.IsCancellationRequested || _exiting) return;
             var details = TailFile(_runtimeLogPath, 4096);
-            var body = Tr.StartError + ".\r\n" + Tr.LogLabel + ": " + _runtimeLogPath;
+            var body = Tr.ServerHostUnavailable + "\r\n" + Tr.LogLabel + ": " + _runtimeLogPath;
             if (!string.IsNullOrWhiteSpace(details)) body += "\r\n\r\n" + details;
             Ui(() =>
             {
@@ -437,37 +427,15 @@ namespace DirectXfer.WindowsLauncher
             if (_config.openBrowser && !_exiting) OpenBrowser();
         }
 
-        private void AttachHostProcess(int pid)
-        {
-            try
-            {
-                if (_host != null && _host.Id == pid) return;
-            }
-            catch { }
-            try
-            {
-                if (_host != null) _host.Dispose();
-                _host = Process.GetProcessById(pid);
-                _host.EnableRaisingEvents = true;
-                _host.Exited += OnHostExited;
-            }
-            catch { _host = null; }
-        }
 
-        private static bool HostProcessMatches(LauncherSession session)
+        private static bool IsServerHostIpcAlive()
         {
-            if (session == null || session.hostPid <= 0 || session.hostStartedUtcTicks <= 0 || string.IsNullOrWhiteSpace(session.hostPath)) return false;
             try
             {
-                using (var process = Process.GetProcessById(session.hostPid))
-                {
-                    var actual = process.MainModule != null ? process.MainModule.FileName : null;
-                    return !string.IsNullOrWhiteSpace(actual) &&
-                        string.Equals(Path.GetFullPath(actual), Path.GetFullPath(session.hostPath), StringComparison.OrdinalIgnoreCase) &&
-                        GetProcessStartUtcTicks(process) == session.hostStartedUtcTicks;
-                }
+                using (var evt = EventWaitHandle.OpenExisting(Program.ServerHostReloadEventName)) return true;
             }
-            catch { return false; }
+            catch (WaitHandleCannotBeOpenedException) { return false; }
+            catch (UnauthorizedAccessException) { return false; }
         }
 
         private bool TryReady(int port, string token, string preferredScheme, int expectedPid, out string usedScheme)
@@ -674,8 +642,11 @@ namespace DirectXfer.WindowsLauncher
         private void OpenBrowser()
         {
             var session = ReadSession();
-            if (session != null && TryAttachReadySession(session)) { }
-            if (_runtimePort <= 0) return;
+            if (!TryAttachReadySession(session))
+            {
+                MessageBox.Show(Tr.ServerHostUnavailable, Tr.AppTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
             OpenUrl(_runtimeScheme + "://127.0.0.1:" + _runtimePort.ToString(CultureInfo.InvariantCulture) + "/");
         }
 
@@ -687,7 +658,7 @@ namespace DirectXfer.WindowsLauncher
 
         private static void OpenUrl(string value)
         {
-            try { Process.Start(new ProcessStartInfo(value) { UseShellExecute = true }); } catch { }
+            try { Process.Start(value); } catch { }
         }
 
         private void RebuildTrayMenu()
@@ -754,97 +725,26 @@ namespace DirectXfer.WindowsLauncher
             catch (InvalidOperationException) { }
         }
 
-        private void OnHostExited(object sender, EventArgs e)
-        {
-            int exitCode = -1;
-            try { exitCode = ((Process)sender).ExitCode; } catch { }
-            Ui(() =>
-            {
-                if (_exiting) return;
-                var wasExpected = _expectedHostStop || exitCode == 0;
-                _exiting = true;
-                if (!wasExpected)
-                {
-                    var details = TailFile(_runtimeLogPath, 4096);
-                    var body = Tr.ServerStopped + " (host code " + exitCode + ").\r\n" + Tr.LogLabel + ": " + _runtimeLogPath;
-                    if (!string.IsNullOrWhiteSpace(details)) body += "\r\n\r\n" + details;
-                    MessageBox.Show(body, Tr.AppTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-                _tray.Visible = false;
-                ExitThread();
-            });
-        }
-
         private void RequestExit()
         {
             lock (_exitSync)
             {
                 if (_exiting) return;
                 _exiting = true;
-                _expectedHostStop = true;
                 _tray.Visible = false;
             }
-            Task.Run(() => { StopServerHost(); Ui(ExitThread); });
+            Ui(ExitThread);
         }
 
-        private void StopServerHost()
+        private static void SignalServerHostReload()
         {
-            SignalServerHostStop();
-            var session = ReadSession();
-            if (session != null) WaitForProcessExit(session.hostPid, 8000);
-        }
-
-        private static void SignalServerHostStop()
-        {
-            try { using (var evt = EventWaitHandle.OpenExisting(Program.ServerHostStopEventName)) evt.Set(); }
+            try { using (var evt = EventWaitHandle.OpenExisting(Program.ServerHostReloadEventName)) evt.Set(); }
             catch { }
-        }
-
-        private static bool WaitForServerHostMutexRelease(int timeoutMs)
-        {
-            var watch = Stopwatch.StartNew();
-            while (watch.ElapsedMilliseconds < timeoutMs)
-            {
-                // Re-signal on every pass so a ServerHost that was still creating
-                // its stop event when the first signal was sent cannot be missed.
-                SignalServerHostStop();
-                try
-                {
-                    using (var mutex = Mutex.OpenExisting(@"Local\DirectXferServerHostInstance"))
-                    {
-                        var acquired = false;
-                        try { acquired = mutex.WaitOne(150); }
-                        catch (AbandonedMutexException) { acquired = true; }
-                        if (acquired)
-                        {
-                            try { mutex.ReleaseMutex(); } catch { }
-                            return true;
-                        }
-                    }
-                }
-                catch (WaitHandleCannotBeOpenedException) { return true; }
-                catch { }
-            }
-            return false;
         }
 
         private bool IsServerHostRunning()
         {
-            var session = ReadSession();
-            return session != null && HostProcessMatches(session);
-        }
-
-        private static long GetProcessStartUtcTicks(Process process)
-        {
-            try { return process != null ? process.StartTime.ToUniversalTime().Ticks : 0L; }
-            catch { return 0L; }
-        }
-
-        private static bool WaitForProcessExit(int pid, int timeoutMs)
-        {
-            if (pid <= 0) return true;
-            try { using (var process = Process.GetProcessById(pid)) return process.WaitForExit(timeoutMs); }
-            catch { return true; }
+            return TryAttachReadySession(ReadSession());
         }
 
         private static LauncherSession ReadSession()
@@ -853,15 +753,11 @@ namespace DirectXfer.WindowsLauncher
             {
                 if (!File.Exists(SessionPath)) return null;
                 var session = Json.Deserialize<LauncherSession>(File.ReadAllText(SessionPath, Encoding.UTF8));
-                return session != null && session.hostPid > 0 && session.serverPid > 0 && session.port > 0 && !string.IsNullOrEmpty(session.token)
+                return session != null && session.hostPid > 0 && session.serverPid > 0 && session.port > 0 &&
+                    !string.IsNullOrEmpty(session.token) && !string.IsNullOrEmpty(session.hostBuild)
                     ? session : null;
             }
             catch { return null; }
-        }
-
-        private static void TryDeleteStaleSession()
-        {
-            try { if (File.Exists(SessionPath)) File.Delete(SessionPath); } catch { }
         }
 
         private static string TailFile(string path, int maxBytes)
@@ -881,12 +777,6 @@ namespace DirectXfer.WindowsLauncher
             catch { return string.Empty; }
         }
 
-        private void OnSessionEnding(object sender, Microsoft.Win32.SessionEndingEventArgs e)
-        {
-            _expectedHostStop = true;
-            _exiting = true;
-            StopServerHost();
-        }
 
         protected override void ExitThreadCore()
         {
@@ -899,12 +789,9 @@ namespace DirectXfer.WindowsLauncher
             if (_disposed) return;
             _disposed = true;
             _lifetime.Cancel();
-            Microsoft.Win32.SystemEvents.SessionEnding -= OnSessionEnding;
-            try { if (_exiting) StopServerHost(); } catch { }
             try { _openEvent.Dispose(); } catch { }
             try { _tray.Visible = false; _tray.Dispose(); } catch { }
             try { _dispatcher.Dispose(); } catch { }
-            try { if (_host != null) _host.Dispose(); } catch { }
             _lifetime.Dispose();
             try { base.Dispose(); } catch { }
         }
@@ -968,7 +855,7 @@ namespace DirectXfer.WindowsLauncher
     {
         internal string AppTitle, Open, Logs, Configure, ResetAdminPassword, Language, Stop;
         internal string FirstRunTitle, FirstRunBody, PickHost, PickInbox, PickImages;
-        internal string ConfigSaved, ConfigSavedRestart, StartError, ServerStopped, LogLabel, PortFallback, NoFreePort;
+        internal string ConfigSaved, ConfigSavedRestart, StartError, ServerStopped, ServerHostUnavailable, LogLabel, PortFallback, NoFreePort;
         internal string ResetPasswordError, ResetPasswordEnvManaged;
         internal string InitialPasswordTitle, InitialPasswordError, InitialPasswordIntro, InitialPasswordAccount;
         internal string InitialPasswordLabel, InitialPasswordSave, InitialPasswordCopy, InitialPasswordOK;
@@ -982,13 +869,14 @@ namespace DirectXfer.WindowsLauncher
                     {
                         AppTitle = "Direct-Xfer " + Program.AppVersion, Open = "Ouvrir Direct-Xfer", Logs = "Ouvrir les journaux",
                         Configure = "Configurer les dossiers…", ResetAdminPassword = "Réinitialiser le mot de passe admin…",
-                        Language = "Langue", Stop = "Arrêter Direct-Xfer",
+                        Language = "Langue", Stop = "Quitter la systray",
                         FirstRunTitle = "Direct-Xfer - Configuration du premier démarrage",
                         FirstRunBody = "Choisissez les dossiers utilisés par Direct-Xfer. Vous pourrez les modifier plus tard depuis l’icône près de l’heure.",
                         PickHost = "Choisir le dossier à partager / parcourir", PickInbox = "Choisir le dossier des fichiers reçus",
                         PickImages = "Choisir le dossier des images", ConfigSaved = "Configuration enregistrée.",
-                        ConfigSavedRestart = "Configuration enregistrée. Les nouveaux dossiers seront utilisés au prochain démarrage de Direct-Xfer.",
+                        ConfigSavedRestart = "Configuration enregistrée. Le serveur recharge les nouveaux dossiers.",
                         StartError = "Impossible de démarrer Direct-Xfer", ServerStopped = "Le serveur Direct-Xfer s’est arrêté",
+                        ServerHostUnavailable = "Le composant Direct-Xfer Server Host n’est pas prêt. Vérifiez son démarrage automatique Windows ou réinstallez Direct-Xfer.",
                         LogLabel = "Journal", PortFallback = "Le port {0} est déjà utilisé. Direct-Xfer utilisera le port {1} pour cette session.",
                         NoFreePort = "Aucun port libre n’a été trouvé entre {0} et {1}.",
                         ResetPasswordError = "Impossible d’ouvrir la réinitialisation du mot de passe administrateur.",
@@ -1005,13 +893,14 @@ namespace DirectXfer.WindowsLauncher
                     {
                         AppTitle = "Direct-Xfer " + Program.AppVersion, Open = "Abrir Direct-Xfer", Logs = "Abrir registros",
                         Configure = "Configurar carpetas…", ResetAdminPassword = "Restablecer la contraseña de administrador…",
-                        Language = "Idioma", Stop = "Detener Direct-Xfer",
+                        Language = "Idioma", Stop = "Salir de la bandeja",
                         FirstRunTitle = "Direct-Xfer - Configuración del primer inicio",
                         FirstRunBody = "Elige las carpetas que usará Direct-Xfer. Podrás cambiarlas más tarde desde el icono de la bandeja del sistema.",
                         PickHost = "Elegir la carpeta para compartir / explorar", PickInbox = "Elegir la carpeta de archivos recibidos",
                         PickImages = "Elegir la carpeta de imágenes", ConfigSaved = "Configuración guardada.",
-                        ConfigSavedRestart = "Configuración guardada. Las nuevas carpetas se usarán la próxima vez que se inicie Direct-Xfer.",
+                        ConfigSavedRestart = "Configuración guardada. El servidor está recargando las nuevas carpetas.",
                         StartError = "No se pudo iniciar Direct-Xfer", ServerStopped = "El servidor Direct-Xfer se detuvo",
+                        ServerHostUnavailable = "Direct-Xfer Server Host no está listo. Comprueba su inicio automático de Windows o reinstala Direct-Xfer.",
                         LogLabel = "Registro", PortFallback = "El puerto {0} ya está en uso. Direct-Xfer usará el puerto {1} durante esta sesión.",
                         NoFreePort = "No se encontró ningún puerto libre entre {0} y {1}.",
                         ResetPasswordError = "No se pudo abrir el restablecimiento de la contraseña de administrador.",
@@ -1028,13 +917,14 @@ namespace DirectXfer.WindowsLauncher
                     {
                         AppTitle = "Direct-Xfer " + Program.AppVersion, Open = "Open Direct-Xfer", Logs = "Open logs",
                         Configure = "Configure folders…", ResetAdminPassword = "Reset admin password…",
-                        Language = "Language", Stop = "Stop Direct-Xfer",
+                        Language = "Language", Stop = "Exit tray",
                         FirstRunTitle = "Direct-Xfer - First-run setup",
                         FirstRunBody = "Choose the folders used by Direct-Xfer. You can change them later from the system tray icon.",
                         PickHost = "Choose the folder to share / browse", PickInbox = "Choose the received-files folder",
                         PickImages = "Choose the images folder", ConfigSaved = "Configuration saved.",
-                        ConfigSavedRestart = "Configuration saved. The new folders will be used the next time Direct-Xfer starts.",
+                        ConfigSavedRestart = "Configuration saved. The server is reloading the new folders.",
                         StartError = "Direct-Xfer could not be started", ServerStopped = "The Direct-Xfer server stopped",
+                        ServerHostUnavailable = "Direct-Xfer Server Host is not ready. Check its Windows auto-start entry or reinstall Direct-Xfer.",
                         LogLabel = "Log", PortFallback = "Port {0} is already in use. Direct-Xfer will use port {1} for this session.",
                         NoFreePort = "No free port was found between {0} and {1}.",
                         ResetPasswordError = "The administrator password reset page could not be opened.",

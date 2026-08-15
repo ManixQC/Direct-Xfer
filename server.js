@@ -87,9 +87,9 @@ const PORT = int(process.env.PORT, 55750);
 const BIND = process.env.BIND || '0.0.0.0';
 
 
-// Windows portable launcher integration. The token is random and exists only for
-// the lifetime of the launcher process; it enables the private graceful-shutdown
-// route and lets us distinguish the portable build from normal Node/Docker use.
+// Windows ServerHost integration. The token is random and exists only for the
+// lifetime of the supervised Node process; it enables loopback-only private
+// lifecycle routes and distinguishes the Windows runtime from normal Node/Docker use.
 const DX_WINDOWS_LAUNCHER_TOKEN = String(process.env.DX_WINDOWS_LAUNCHER_TOKEN || '').trim();
 const DX_WINDOWS_SHUTDOWN_MARKER = String(process.env.DX_WINDOWS_SHUTDOWN_MARKER || '').trim();
 
@@ -18601,33 +18601,24 @@ app.post('/__dx_launcher/reset-admin-password', windowsLauncherResetFormParser, 
   return windowsLauncherSendResetPage(res, { lang, ticket:'', message:tx.success, success:true, showForm:false });
 });
 
-// Windows portable launcher: process-specific readiness probe. This prevents
-// the desktop launcher from mistaking another service (or an older Direct-Xfer
-// process that won a port race) for the child process it just started.
+// Windows ServerHost: process-specific loopback readiness probe. This prevents
+// the desktop components from mistaking another service (or an older Direct-Xfer
+// process that won a port race) for the supervised Node process.
 app.get('/__dx_launcher/ready', (req, res, next) => {
   if (!DX_WINDOWS_LAUNCHER_TOKEN) return next();
-  const supplied = String(req.get('X-Direct-Xfer-Launcher-Token') || '');
-  const expectedBuf = Buffer.from(DX_WINDOWS_LAUNCHER_TOKEN);
-  const suppliedBuf = Buffer.from(supplied);
-  if (expectedBuf.length !== suppliedBuf.length || !crypto.timingSafeEqual(expectedBuf, suppliedBuf)) {
-    return res.status(404).end();
-  }
+  if (!windowsLauncherTokenMatches(req)) return res.status(404).end();
   res.setHeader('Cache-Control', 'no-store');
   return res.json({ ok:true, app:APP_NAME, version:APP_VERSION, pid:process.pid });
 });
 
-// Windows portable launcher: private graceful-shutdown endpoint. Without the
+// Windows ServerHost: private loopback graceful-shutdown endpoint. Without the
 // per-process token the route behaves as if it does not exist.
 app.post('/__dx_launcher/shutdown', (req, res, next) => {
   if (!DX_WINDOWS_LAUNCHER_TOKEN) return next();
-  const supplied = String(req.get('X-Direct-Xfer-Launcher-Token') || '');
-  const expectedBuf = Buffer.from(DX_WINDOWS_LAUNCHER_TOKEN);
-  const suppliedBuf = Buffer.from(supplied);
-  if (expectedBuf.length !== suppliedBuf.length || !crypto.timingSafeEqual(expectedBuf, suppliedBuf)) {
-    return res.status(404).end();
-  }
+  if (!windowsLauncherTokenMatches(req)) return res.status(404).end();
+  res.setHeader('Cache-Control', 'no-store');
   res.status(202).json({ ok:true });
-  setTimeout(() => shutdown('windows-launcher'), 150);
+  setTimeout(() => shutdown('windows-server-host'), 150);
 });
 
 // Public downloads and receptions (no authentication).

@@ -2,14 +2,14 @@
 #if EnvAppVersion != ""
   #define AppVersion EnvAppVersion
 #else
-  #define AppVersion "1.59.2"
+  #define AppVersion "1.59.4"
 #endif
 
 #define EnvSourceDir GetEnv("DX_INNO_SOURCE_DIR")
 #if EnvSourceDir != ""
   #define SourceDir EnvSourceDir
 #else
-  #define SourceDir "..\dist\Direct-Xfer-1.59.2-Windows-CSharp"
+  #define SourceDir "..\dist\Direct-Xfer-1.59.4-Windows-CSharp"
 #endif
 
 #define EnvOutputDir GetEnv("DX_INNO_OUTPUT_DIR")
@@ -52,7 +52,7 @@ ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0.17763
 CloseApplications=yes
 RestartApplications=no
-AppMutex=Local\DirectXferLauncherInstance,Local\DirectXferServerHostInstance
+AppMutex=Local\DirectXferLauncherInstance
 UsePreviousAppDir=yes
 SetupLogging=yes
 Uninstallable=yes
@@ -63,7 +63,7 @@ Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription:
 
 [InstallDelete]
 ; Runtime trees are immutable build artifacts. Purge them before an upgrade so
-; removed dependencies/assets from an older release cannot survive beside 1.59.2.
+; removed dependencies/assets from an older release cannot survive beside 1.59.4.
 Type: filesandordirs; Name: "{app}\runtime\app"
 Type: filesandordirs; Name: "{app}\runtime\node"
 
@@ -72,9 +72,11 @@ Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs 
 
 [Icons]
 Name: "{autoprograms}\Direct-Xfer"; Filename: "{app}\{#AppExeName}"; WorkingDir: "{app}"
+Name: "{userstartup}\Direct-Xfer Server Host"; Filename: "{app}\Direct-Xfer.ServerHost.exe"; WorkingDir: "{app}"
 Name: "{autodesktop}\Direct-Xfer"; Filename: "{app}\{#AppExeName}"; WorkingDir: "{app}"; Tasks: desktopicon
 
 [Run]
+Filename: "{app}\Direct-Xfer.ServerHost.exe"; WorkingDir: "{app}"; Flags: nowait runasoriginaluser
 Filename: "{app}\{#AppExeName}"; Description: "Launch Direct-Xfer"; WorkingDir: "{app}"; Flags: nowait postinstall skipifsilent runasoriginaluser
 
 [Code]
@@ -91,6 +93,59 @@ begin
     'Release',
     ReleaseValue
   ) and (ReleaseValue >= Net48Release);
+end;
+
+const
+  EventModifyState = $0002;
+
+function OpenEvent(dwDesiredAccess: LongWord; bInheritHandle: Boolean; lpName: string): THandle;
+  external 'OpenEventW@kernel32.dll stdcall';
+function SetEvent(hEvent: THandle): Boolean;
+  external 'SetEvent@kernel32.dll stdcall';
+function CloseHandle(hObject: THandle): Boolean;
+  external 'CloseHandle@kernel32.dll stdcall';
+
+procedure SignalServerHostStop;
+var
+  StopEvent: THandle;
+begin
+  StopEvent := OpenEvent(EventModifyState, False, 'Local\DirectXferServerHostStop');
+  if StopEvent <> 0 then
+  begin
+    SetEvent(StopEvent);
+    CloseHandle(StopEvent);
+  end;
+end;
+
+function StopServerHostAndWait: Boolean;
+var
+  I: Integer;
+begin
+  SignalServerHostStop;
+  for I := 0 to 100 do
+  begin
+    if not CheckForMutexes('Local\DirectXferServerHostInstance') then
+    begin
+      Result := True;
+      exit;
+    end;
+    if (I mod 10) = 0 then SignalServerHostStop;
+    Sleep(100);
+  end;
+  Result := not CheckForMutexes('Local\DirectXferServerHostInstance');
+end;
+
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+begin
+  if StopServerHostAndWait then
+    Result := ''
+  else
+    Result := 'Direct-Xfer Server Host did not stop in time. Close the current Windows session or restart Windows, then run the installer again.';
+end;
+
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+begin
+  if CurUninstallStep = usUninstall then StopServerHostAndWait;
 end;
 
 function InitializeSetup: Boolean;

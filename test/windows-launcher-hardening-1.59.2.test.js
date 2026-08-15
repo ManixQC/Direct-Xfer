@@ -12,12 +12,12 @@ const launcherManifest = read('windows-launcher', 'app.manifest');
 const hostProject = read('windows-server-host', 'DirectXfer.ServerHost.csproj');
 const workflow = read('.github', 'workflows', 'build-windows-csharp.yml');
 
-test('1.59.2 launcher identity remains explicit and x64', () => {
-  assert.match(launcher, /AssemblyVersion\("1\.59\.2\.0"\)/);
-  assert.match(launcher, /RuntimeAppBuild = "1\.59\.2-launcher28-csharp"/);
+test('1.59.4 launcher identity remains explicit and x64', () => {
+  assert.match(launcher, /AssemblyVersion\("1\.59\.4\.0"\)/);
+  assert.match(launcher, /RuntimeAppBuild = "1\.59\.4-launcher30-csharp"/);
   assert.match(launcherProject, /<PlatformTarget>x64<\/PlatformTarget>/);
   assert.match(launcherManifest, /name="DirectXfer\.WindowsLauncher"/);
-  assert.match(launcherManifest, /version="1\.59\.2\.0"/);
+  assert.match(launcherManifest, /version="1\.59\.4\.0"/);
   assert.match(launcherManifest, /processorArchitecture="amd64"/);
   assert.match(hostProject, /<PlatformTarget>x64<\/PlatformTarget>/);
 });

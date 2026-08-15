@@ -32,8 +32,8 @@ test('required hints mention Maintenance in all supported languages', () => {
 });
 
 test('PWA cache is refreshed while app version is 1.51.2', () => {
-  assert.equal(JSON.parse(read('package.json')).version, '1.59.2');
-  assert.match(read('pwa/app.js'), /APP_BUILD = '2026\.08\.14-pwa281'/);
-  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.14-pwa281'/);
-  assert.match(read('pwa/index.html'), /app\.js\?v=267/);
+  assert.equal(JSON.parse(read('package.json')).version, '1.59.4');
+  assert.match(read('pwa/app.js'), /APP_BUILD = '2026\.08\.14-pwa283'/);
+  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.14-pwa283'/);
+  assert.match(read('pwa/index.html'), /app\.js\?v=268/);
 });

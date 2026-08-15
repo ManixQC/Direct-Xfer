@@ -10,9 +10,9 @@ const project = fs.readFileSync(path.join(root, 'windows-launcher', 'DirectXfer.
 const hostProject = fs.readFileSync(path.join(root, 'windows-server-host', 'DirectXfer.ServerHost.csproj'), 'utf8');
 const expectedNodeHash = '3602f2bb1a10f2cbab4c36886218a33c1ab3db87290e73b033c46c77147d0237';
 
-test('1.59.2 launcher is a conventional C# WinForms UI with no Go launcher left', () => {
-  assert.match(launcher, /const string AppVersion = "1\.59\.2"/);
-  assert.match(launcher, /const string RuntimeAppBuild = "1\.59\.2-launcher28-csharp"/);
+test('1.59.4 launcher is a conventional C# WinForms UI with no Go launcher left', () => {
+  assert.match(launcher, /const string AppVersion = "1\.59\.4"/);
+  assert.match(launcher, /const string RuntimeAppBuild = "1\.59\.4-launcher30-csharp"/);
   assert.match(project, /<OutputType>WinExe<\/OutputType>/);
   assert.match(project, /<TargetFrameworkVersion>v4\.8<\/TargetFrameworkVersion>/);
   assert.match(project, /System\.Windows\.Forms/);
@@ -26,7 +26,8 @@ test('tray launcher contains no Node supervisor, embedded archive, downloader or
   assert.doesNotMatch(launcher, /node\.exe|server\.js|RedirectStandardOutput|RedirectStandardError|Process\.Kill\(|taskkill\.exe|TerminateJobObject|VirtualAlloc|powershell/i);
   assert.doesNotMatch(launcher, /direct-xfer-app\.zip|go:embed|archive\/zip|nodejs\.org\/download/i);
   assert.match(launcher, /ServerHostFileName = "Direct-Xfer\.ServerHost\.exe"/);
-  assert.match(launcher, /SignalServerHostStop/);
+  assert.doesNotMatch(launcher, /SignalServerHostStop|StopServerHost|FileName = hostExe|Process\.GetProcessById/);
+  assert.match(launcher, /SignalServerHostReload/);
   assert.equal(fs.existsSync(path.join(root, 'windows-launcher', 'direct-xfer-app.zip')), false);
 });
 

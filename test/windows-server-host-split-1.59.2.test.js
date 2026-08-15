@@ -11,11 +11,11 @@ const host = read('windows-server-host', 'Program.cs');
 const workflow = read('.github', 'workflows', 'build-windows-csharp.yml');
 const iss = read('installer', 'Direct-Xfer.iss');
 
-test('1.59.2 separates tray UI from Node supervision', () => {
+test('1.59.4 separates tray UI from Node supervision', () => {
   assert.doesNotMatch(launcher, /node\.exe|server\.js|RedirectStandardOutput|RedirectStandardError|Process\.Kill\(|DX_WINDOWS_NODE|NodeExeSha256/);
   assert.match(launcher, /ServerHostFileName = "Direct-Xfer\.ServerHost\.exe"/);
-  assert.match(launcher, /StartOrAttachServerHost\(\)/);
-  assert.match(launcher, /ServerHostStopEventName/);
+  assert.match(launcher, /AttachToServerHost\(\)/);
+  assert.match(launcher, /ServerHostReloadEventName/);
   assert.match(host, /AssemblyProduct\("Direct-Xfer Server Host"\)/);
   assert.match(host, /FileName = node, Arguments = "server\.js"/);
   assert.match(host, /RedirectStandardOutput = true/);
@@ -37,25 +37,25 @@ test('server host is same-user, x64 and independently single-instance', () => {
   assert.match(host, /StopEventName = @"Local\\DirectXferServerHostStop"/);
 });
 
-test('launcher only validates and starts the dedicated host executable', () => {
-  assert.match(launcher, /FileVersionInfo\.GetVersionInfo\(path\)/);
+test('launcher validates the dedicated host executable without starting or supervising it', () => {
+  assert.match(launcher, /FileVersionInfo\.GetVersionInfo\(expected\)/);
   assert.match(launcher, /ProductName, "Direct-Xfer Server Host"/);
-  assert.match(launcher, /IsAmd64Pe\(path\)/);
-  assert.match(launcher, /FileName = hostExe/);
-  assert.match(launcher, /Process\.GetProcessById\(session\.hostPid\)/);
-  assert.match(launcher, /GetProcessStartUtcTicks\(process\) == session\.hostStartedUtcTicks/);
+  assert.match(launcher, /IsAmd64Pe\(expected\)/);
+  assert.match(launcher, /Path\.GetFullPath\(session\.hostPath\)/);
+  assert.doesNotMatch(launcher, /FileName = hostExe|Process\.GetProcessById\(session\.hostPid\)|GetProcessStartUtcTicks\(process\)/);
 });
 
 test('server host treats a stop request during startup as a clean cancellation', () => {
   assert.match(host, /if \(_expectedStop\)[\s\S]*startup cancelled by stop request/);
-  assert.match(host, /_stopEvent\.WaitOne\(100\)[\s\S]*_expectedStop = true; StopNode\(\); return false/);
+  assert.match(host, /WaitHandle\.WaitAny\(new WaitHandle\[\] \{ _stopEvent, _reloadEvent \}, 100\)/);
+  assert.match(host, /if \(signal == 0\) \{ _expectedStop = true; StopNode\(\); return false; \}/);
 });
 
-test('launcher waits for the old ServerHost mutex before starting a replacement', () => {
-  assert.match(launcher, /WaitForServerHostMutexRelease\(5000\)/);
-  assert.match(launcher, /Mutex\.OpenExisting\(@"Local\\DirectXferServerHostInstance"\)/);
-  assert.match(launcher, /SignalServerHostStop\(\);[\s\S]*mutex\.WaitOne\(150\)/);
-  assert.match(launcher, /catch \(WaitHandleCannotBeOpenedException\) \{ return true; \}/);
+test('launcher never replaces the ServerHost and only waits for its independently published session', () => {
+  assert.match(launcher, /WaitForServerHostReady\(_lifetime\.Token\)/);
+  assert.match(launcher, /ReadSession\(\)/);
+  assert.match(launcher, /TryAttachReadySession\(session\)/);
+  assert.doesNotMatch(launcher, /WaitForServerHostMutexRelease|Mutex\.OpenExisting\(@"Local\\DirectXferServerHostInstance"\)|SignalServerHostStop/);
 });
 
 
@@ -74,6 +74,7 @@ test('GitHub and Inno package both launcher and server host', () => {
   assert.match(workflow, /DirectXfer\.ServerHost\.csproj/);
   assert.match(workflow, /Direct-Xfer\.ServerHost\.exe/);
   assert.match(workflow, /Verify Windows executables are unsigned by design/);
-  assert.match(iss, /AppMutex=Local\\DirectXferLauncherInstance,Local\\DirectXferServerHostInstance/);
+  assert.match(iss, /AppMutex=Local\\DirectXferLauncherInstance\s*$/m);
+  assert.match(iss, /CheckForMutexes\('Local\\DirectXferServerHostInstance'\)/);
   assert.match(iss, /Source: "\{#SourceDir\}\\\*"; DestDir: "\{app\}"; Flags: ignoreversion recursesubdirs createallsubdirs/);
 });

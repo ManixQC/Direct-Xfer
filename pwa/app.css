@@ -1762,7 +1762,19 @@ input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; a
 .pwa-notification-main { min-width:0; display:grid; gap:3px; }
 .pwa-notification-title { font-size:.83rem; font-weight:800; overflow-wrap:anywhere; }
 .pwa-notification-meta { color:var(--muted); font-size:.71rem; line-height:1.35; overflow-wrap:anywhere; }
-.pwa-notification-delete { width:30px; min-width:30px; height:30px; padding:0; }
+/* Draw the delete X geometrically so it remains perfectly centered regardless
+   of the platform font metrics (Android, Firefox, Windows, etc.). */
+.pwa-notification-delete {
+  width:30px; min-width:30px; height:30px; padding:0;
+  display:inline-flex !important; align-items:center; justify-content:center;
+  font-size:0; line-height:0;
+}
+.pwa-notification-delete::before {
+  content:""; display:block; width:14px; height:14px; flex:0 0 14px;
+  background:
+    linear-gradient(45deg, transparent 43%, currentColor 44%, currentColor 56%, transparent 57%),
+    linear-gradient(-45deg, transparent 43%, currentColor 44%, currentColor 56%, transparent 57%);
+}
 .pwa-notifications-dropdown > #pwa-notifications-clear { width:100%; margin-top:3px; }
 @media (max-width:560px) {
   /* Mobile topbar keeps the logo, network state and Notifications on the first row.

@@ -12,6 +12,7 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
+using Microsoft.Win32;
 using System.Web.Script.Serialization;
 
 [assembly: AssemblyTitle("Direct-Xfer Server Host")]
@@ -19,24 +20,28 @@ using System.Web.Script.Serialization;
 [assembly: AssemblyCompany("Direct-Xfer")]
 [assembly: AssemblyProduct("Direct-Xfer Server Host")]
 [assembly: AssemblyCopyright("Copyright © Direct-Xfer 2026")]
-[assembly: AssemblyVersion("1.59.2.0")]
-[assembly: AssemblyFileVersion("1.59.2.0")]
-[assembly: AssemblyInformationalVersion("1.59.2-serverhost1-csharp")]
+[assembly: AssemblyVersion("1.59.4.0")]
+[assembly: AssemblyFileVersion("1.59.4.0")]
+[assembly: AssemblyInformationalVersion("1.59.4-serverhost3-csharp")]
 
 namespace DirectXfer.WindowsServerHost
 {
     internal static class Program
     {
-        internal const string AppVersion = "1.59.2";
-        internal const string RuntimeAppBuild = "1.59.2-launcher28-csharp";
-        internal const string HostVersion = "1.59.2-serverhost1-csharp";
+        internal const string AppVersion = "1.59.4";
+        internal const string RuntimeAppBuild = "1.59.4-launcher30-csharp";
+        internal const string HostVersion = "1.59.4-serverhost3-csharp";
         internal const int DefaultPort = 55750;
         internal const int MaxFallbackPort = 55769;
         internal const int StartupReadyTimeoutMs = 30000;
+        internal const int HealthProbeIntervalMs = 5000;
+        internal const int HealthProbeFailureThreshold = 3;
+        internal const long EmergencyLogMaxBytes = 2L * 1024 * 1024;
         internal const string NodeVersion = "24.19.0";
         internal const string NodeExeSha256 = "3602f2bb1a10f2cbab4c36886218a33c1ab3db87290e73b033c46c77147d0237";
         internal const string MutexName = @"Local\DirectXferServerHostInstance";
         internal const string StopEventName = @"Local\DirectXferServerHostStop";
+        internal const string ReloadEventName = @"Local\DirectXferServerHostReload";
 
         [STAThread]
         private static int Main(string[] args)
@@ -92,15 +97,16 @@ namespace DirectXfer.WindowsServerHost
         private static readonly IDictionary<string, string> CriticalRuntimeSha256 =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                { "package.json", "2b28b057e27cab2502fc5358397d6e890daf2182b8d490fc8d8d66fe192cf757" },
-                { "package-lock.json", "99273bcf7b0baea30b276673ec95d631b6c08cb5057e40b37cde4a8148ce19f2" },
-                { "server.js", "7c2a8108ab4598ea519ba80f68b8e67bab60056ac6df70fe20fe7aa47c0b7b1d" },
+                { "package.json", "58b0cb065e8a6af88ba4107709470d9a29d7bf8a3d0de5134865187a036cf31f" },
+                { "package-lock.json", "bdb78e5e21df43af5671f33fb9542cacd1812a2c8083f2cd0b61db989822d4d8" },
+                { "server.js", "9fdc8ecaacc67aa8aac19a04ec41fe8cd4f984c3a4f7e779930d51bc56c223e8" },
                 { "public/app.js", "3477fcd489c396a3b0d77940d72952b0c9742b778411bb31f4c9e42aad56e0b9" },
-                { "pwa/app.js", "1dfd026278e2d562ffa92c7bb8ba4da2aef4aa9f8f662ddd111e18be71d1a546" },
+                { "pwa/app.js", "3e71c2c5b964a9a91b51b3510012e27eeacb569e9711ad9c01926a7a69df57a1" },
                 { "node_modules/express/package.json", "c7db3b72582355c80cdcef1ad7b2c9a8f53557550724c6bef8502e9818c2ebe7" }
             };
 
         private readonly EventWaitHandle _stopEvent;
+        private readonly EventWaitHandle _reloadEvent;
         private readonly object _logSync = new object();
         private StreamWriter _logWriter;
         private Process _server;
@@ -111,12 +117,27 @@ namespace DirectXfer.WindowsServerHost
         private string _scheme = "http";
         private int _port;
         private bool _expectedStop;
+        private bool _reloadRequested;
+        private bool _systemEventsSubscribed;
         private bool _disposed;
+        private long _lastReadyUptimeMs;
 
         internal ServerHost()
         {
             bool created;
             _stopEvent = new EventWaitHandle(false, EventResetMode.AutoReset, Program.StopEventName, out created);
+            _reloadEvent = new EventWaitHandle(false, EventResetMode.AutoReset, Program.ReloadEventName, out created);
+            try
+            {
+                SystemEvents.SessionEnding += OnSessionEnding;
+                _systemEventsSubscribed = true;
+            }
+            catch { _systemEventsSubscribed = false; }
+        }
+
+        private void OnSessionEnding(object sender, SessionEndingEventArgs e)
+        {
+            try { _stopEvent.Set(); } catch { }
         }
 
         private static string BaseDirectory
@@ -152,17 +173,96 @@ namespace DirectXfer.WindowsServerHost
 
         internal int Run()
         {
+            if (!WaitForInitialConfig()) return _expectedStop ? 0 : 1;
+            RecoverSavedSession();
+
+            var consecutiveFailures = 0;
+            while (true)
+            {
+                _expectedStop = false;
+                _reloadRequested = false;
+                _lastReadyUptimeMs = 0;
+                int result;
+                try
+                {
+                    result = RunConfiguredCycle();
+                }
+                catch (Exception ex)
+                {
+                    WriteEmergencyLog(ex);
+                    AppendLog("[server-host] runtime cycle failed: " + ex.Message);
+                    result = 1;
+                }
+
+                if (_expectedStop || result == 0) return 0;
+                if (result == 75)
+                {
+                    consecutiveFailures = 0;
+                    ResetForReload();
+                    continue;
+                }
+
+                // A backend that remained healthy for at least a minute has recovered.
+                // Do not carry a stale crash-loop penalty into a much later unrelated failure.
+                if (_lastReadyUptimeMs >= 60000) consecutiveFailures = 0;
+                consecutiveFailures = Math.Min(consecutiveFailures + 1, 6);
+                var delayMs = Math.Min(30000, 1000 * (1 << (consecutiveFailures - 1)));
+                AppendLog("[server-host] backend stopped unexpectedly; retrying in " + delayMs.ToString(CultureInfo.InvariantCulture) + " ms.");
+                ResetForReload();
+
+                var signal = WaitHandle.WaitAny(new WaitHandle[] { _stopEvent, _reloadEvent }, delayMs);
+                if (signal == 0)
+                {
+                    _expectedStop = true;
+                    return 0;
+                }
+                if (signal == 1) consecutiveFailures = 0;
+            }
+        }
+
+        private bool WaitForInitialConfig()
+        {
+            var nextDiagnosticUtc = DateTime.MinValue;
+            while (true)
+            {
+                try
+                {
+                    _config = LoadConfig();
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    if (!IsRetryableConfigException(ex)) throw;
+                    if (DateTime.UtcNow >= nextDiagnosticUtc)
+                    {
+                        WriteEmergencyMessage("[server-host] waiting for a usable launcher configuration: " + ex.GetType().Name + ": " + ex.Message);
+                        nextDiagnosticUtc = DateTime.UtcNow.AddSeconds(30);
+                    }
+                }
+
+                if (_stopEvent.WaitOne(250))
+                {
+                    _expectedStop = true;
+                    return false;
+                }
+                try { _reloadEvent.WaitOne(0); } catch { }
+            }
+        }
+
+        private static bool IsRetryableConfigException(Exception ex)
+        {
+            return ex is InvalidDataException || ex is DirectoryNotFoundException || ex is UnauthorizedAccessException ||
+                ex is IOException || ex is ArgumentException || ex is NotSupportedException;
+        }
+
+        private int RunConfiguredCycle()
+        {
             _config = LoadConfig();
-            EnsureConfigDirectories(_config);
             var appDir = EnsureApplicationRuntime();
             var node = EnsureNode();
-            _runtimeLogPath = Path.Combine(_config.logsDir, "Direct-Xfer-Windows.log");
-            RotateLog(_runtimeLogPath, 10L * 1024 * 1024);
-            _logWriter = new StreamWriter(new FileStream(_runtimeLogPath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite),
-                new UTF8Encoding(false)) { AutoFlush = true };
-            AppendLog("[server-host] Direct-Xfer " + Program.AppVersion + " " + Program.HostVersion + " starting.");
+            OpenRuntimeLog();
+            AppendLog("[server-host] Direct-Xfer " + Program.AppVersion + " " + Program.HostVersion + " starting runtime cycle.");
 
-            RecoverSavedSession();
             _port = ChooseRuntimePort();
             _token = RandomToken();
             _scheme = "http";
@@ -177,33 +277,104 @@ namespace DirectXfer.WindowsServerHost
                     AppendLog("[server-host] startup cancelled by stop request.");
                     return 0;
                 }
-                AppendLog("[server-host] server did not become ready before timeout.");
-                _expectedStop = true;
+                if (_reloadRequested)
+                {
+                    AppendLog("[server-host] startup interrupted by configuration reload request.");
+                    return 75;
+                }
+                AppendLog("[server-host] server did not become ready before timeout; the supervised backend will be restarted.");
                 StopNode();
                 return 1;
             }
 
             AppendLog("[server-host] server ready on " + _scheme + "://127.0.0.1:" + _port.ToString(CultureInfo.InvariantCulture));
+            var readyWatch = Stopwatch.StartNew();
+            var nextHealthProbeMs = (long)Program.HealthProbeIntervalMs;
+            var consecutiveHealthFailures = 0;
             while (true)
             {
-                if (_stopEvent.WaitOne(250))
+                var signal = WaitHandle.WaitAny(new WaitHandle[] { _stopEvent, _reloadEvent }, 250);
+                if (signal == 0)
                 {
                     _expectedStop = true;
                     StopNode();
                     return 0;
+                }
+                if (signal == 1)
+                {
+                    _reloadRequested = true;
+                    AppendLog("[server-host] configuration reload requested.");
+                    StopNode();
+                    return 75;
                 }
                 try
                 {
                     if (_server == null || _server.HasExited)
                     {
                         var code = _server != null ? _server.ExitCode : 1;
+                        _lastReadyUptimeMs = readyWatch.ElapsedMilliseconds;
                         var clean = ConsumeCleanShutdownMarker();
                         AppendLog("[server-host] server exited with code " + code + (clean ? " (clean)." : "."));
-                        return clean || code == 0 ? 0 : code;
+                        return clean ? 0 : (code == 0 ? 1 : code);
                     }
                 }
-                catch { return 1; }
+                catch
+                {
+                    _lastReadyUptimeMs = readyWatch.ElapsedMilliseconds;
+                    return 1;
+                }
+
+                if (readyWatch.ElapsedMilliseconds >= nextHealthProbeMs)
+                {
+                    string usedScheme;
+                    if (TryReady(_port, _token, _scheme, _server.Id, out usedScheme))
+                    {
+                        _scheme = usedScheme;
+                        consecutiveHealthFailures = 0;
+                    }
+                    else
+                    {
+                        consecutiveHealthFailures++;
+                        AppendLog("[server-host] readiness health probe failed (" + consecutiveHealthFailures.ToString(CultureInfo.InvariantCulture) + "/" + Program.HealthProbeFailureThreshold.ToString(CultureInfo.InvariantCulture) + ").");
+                        if (consecutiveHealthFailures >= Program.HealthProbeFailureThreshold)
+                        {
+                            _lastReadyUptimeMs = readyWatch.ElapsedMilliseconds;
+                            AppendLog("[server-host] backend is alive but unresponsive; restarting supervised Node.js process.");
+                            StopNode();
+                            return 1;
+                        }
+                    }
+                    nextHealthProbeMs = readyWatch.ElapsedMilliseconds + Program.HealthProbeIntervalMs;
+                }
             }
+        }
+
+        private void OpenRuntimeLog()
+        {
+            var nextPath = Path.Combine(_config.logsDir, "Direct-Xfer-Windows.log");
+            lock (_logSync)
+            {
+                try { if (_logWriter != null) _logWriter.Dispose(); } catch { }
+                _logWriter = null;
+                _runtimeLogPath = nextPath;
+                RotateLog(_runtimeLogPath, 10L * 1024 * 1024);
+                _logWriter = new StreamWriter(new FileStream(_runtimeLogPath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite),
+                    new UTF8Encoding(false)) { AutoFlush = true };
+            }
+        }
+
+        private void ResetForReload()
+        {
+            var oldServerPid = 0;
+            try { oldServerPid = _server != null ? _server.Id : 0; } catch { }
+            try { StopNode(); } catch { }
+            try { ClearSession(Process.GetCurrentProcess().Id, oldServerPid); } catch { }
+            try { if (_server != null) _server.Dispose(); } catch { }
+            _server = null;
+            _token = null;
+            _scheme = "http";
+            _port = 0;
+            _shutdownMarkerPath = null;
         }
 
         private static LauncherConfig LoadConfig()
@@ -214,24 +385,85 @@ namespace DirectXfer.WindowsServerHost
                 try
                 {
                     if (!File.Exists(candidate)) continue;
+                    var info = new FileInfo(candidate);
+                    if (info.Length <= 0 || info.Length > 1024 * 1024) throw new InvalidDataException("Launcher configuration size is invalid.");
+                    if ((File.GetAttributes(candidate) & FileAttributes.ReparsePoint) != 0) throw new InvalidDataException("Launcher configuration cannot be a reparse point.");
                     var cfg = Json.Deserialize<LauncherConfig>(File.ReadAllText(candidate, Encoding.UTF8));
-                    if (cfg != null) return cfg;
+                    NormalizeAndValidateConfig(cfg);
+                    EnsureConfigDirectories(cfg);
+                    if (!string.Equals(candidate, ConfigPath, StringComparison.OrdinalIgnoreCase)) RestorePrimaryConfigAtomic(cfg);
+                    return cfg;
                 }
-                catch (Exception ex) { last = ex; }
+                catch (Exception ex)
+                {
+                    if (!IsRetryableConfigException(ex)) throw;
+                    last = ex;
+                }
             }
             throw new InvalidDataException("Direct-Xfer launcher configuration is missing or invalid.", last);
         }
 
-        private static void EnsureConfigDirectories(LauncherConfig cfg)
+        private static void NormalizeAndValidateConfig(LauncherConfig cfg)
         {
             if (cfg == null) throw new InvalidDataException("Missing launcher configuration.");
+            cfg.dataDir = RequireAbsolutePath(cfg.dataDir, "dataDir");
+            cfg.logsDir = RequireAbsolutePath(cfg.logsDir, "logsDir");
+            cfg.inboxDir = RequireAbsolutePath(cfg.inboxDir, "inboxDir");
+            cfg.imagesDir = RequireAbsolutePath(cfg.imagesDir, "imagesDir");
+            cfg.hostRoot = RequireAbsolutePath(cfg.hostRoot, "hostRoot");
+        }
+
+        private static string RequireAbsolutePath(string value, string name)
+        {
+            if (string.IsNullOrWhiteSpace(value)) throw new InvalidDataException("Empty folder path: " + name + ".");
+            var full = Path.GetFullPath(value.Trim());
+            if (!Path.IsPathRooted(full)) throw new InvalidDataException("Folder path must be absolute: " + name + ".");
+            return full;
+        }
+
+        private static void EnsureConfigDirectories(LauncherConfig cfg)
+        {
             foreach (var path in new[] { cfg.dataDir, cfg.logsDir, cfg.inboxDir, cfg.imagesDir })
             {
-                if (string.IsNullOrWhiteSpace(path)) throw new InvalidDataException("Empty folder path.");
                 Directory.CreateDirectory(path);
+                ProbeDirectoryWritable(path);
             }
-            if (string.IsNullOrWhiteSpace(cfg.hostRoot) || !Directory.Exists(cfg.hostRoot))
-                throw new DirectoryNotFoundException("Invalid host root.");
+            if (!Directory.Exists(cfg.hostRoot)) throw new DirectoryNotFoundException("Invalid host root.");
+        }
+
+        private static void ProbeDirectoryWritable(string path)
+        {
+            var probe = Path.Combine(path, ".dx-write-probe-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                using (var stream = new FileStream(probe, FileMode.CreateNew, FileAccess.Write, FileShare.None, 1, FileOptions.None))
+                    stream.WriteByte(0x44);
+            }
+            finally
+            {
+                try { if (File.Exists(probe)) File.Delete(probe); } catch { }
+            }
+        }
+
+        private static void RestorePrimaryConfigAtomic(LauncherConfig cfg)
+        {
+            try
+            {
+                Directory.CreateDirectory(BaseDirectory);
+                var temp = ConfigPath + ".restore." + Guid.NewGuid().ToString("N");
+                File.WriteAllText(temp, Json.Serialize(cfg), new UTF8Encoding(false));
+                try
+                {
+                    if (File.Exists(ConfigPath)) File.Replace(temp, ConfigPath, null, true);
+                    else File.Move(temp, ConfigPath);
+                }
+                finally { try { if (File.Exists(temp)) File.Delete(temp); } catch { } }
+                WriteEmergencyMessage("[server-host] restored launcher-config.json from the validated backup.");
+            }
+            catch (Exception ex)
+            {
+                WriteEmergencyMessage("[server-host] validated backup configuration is usable but primary restoration failed: " + ex.Message);
+            }
         }
 
         private static IEnumerable<string> AppCandidates()
@@ -329,6 +561,15 @@ namespace DirectXfer.WindowsServerHost
             throw new FileNotFoundException("Valid pinned x64 Node.js runtime not found.");
         }
 
+        private static void SanitizeNodeEnvironment(ProcessStartInfo start)
+        {
+            if (start == null) return;
+            foreach (var inheritedName in new[] { "NODE_OPTIONS", "NODE_PATH", "NODE_TLS_REJECT_UNAUTHORIZED", "NODE_REPL_EXTERNAL_MODULE" })
+            {
+                try { if (start.EnvironmentVariables.ContainsKey(inheritedName)) start.EnvironmentVariables.Remove(inheritedName); } catch { }
+            }
+        }
+
         private static bool NodeUsable(string path)
         {
             try
@@ -355,6 +596,7 @@ namespace DirectXfer.WindowsServerHost
                         FileName = full, Arguments = "--version", UseShellExecute = false, CreateNoWindow = true,
                         RedirectStandardOutput = true, RedirectStandardError = true, WindowStyle = ProcessWindowStyle.Hidden
                     };
+                    SanitizeNodeEnvironment(process.StartInfo);
                     if (!process.Start()) return false;
                     var stdout = process.StandardOutput.ReadToEndAsync();
                     var stderr = process.StandardError.ReadToEndAsync();
@@ -427,6 +669,7 @@ namespace DirectXfer.WindowsServerHost
                 CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true,
                 WindowStyle = ProcessWindowStyle.Hidden
             };
+            SanitizeNodeEnvironment(start);
             start.EnvironmentVariables["PORT"] = _port.ToString(CultureInfo.InvariantCulture);
             start.EnvironmentVariables["BIND"] = "0.0.0.0";
             start.EnvironmentVariables["DATA_DIR"] = _config.dataDir;
@@ -478,7 +721,9 @@ namespace DirectXfer.WindowsServerHost
                     WriteSession(_server.StartInfo.FileName);
                     return true;
                 }
-                if (_stopEvent.WaitOne(100)) { _expectedStop = true; StopNode(); return false; }
+                var signal = WaitHandle.WaitAny(new WaitHandle[] { _stopEvent, _reloadEvent }, 100);
+                if (signal == 0) { _expectedStop = true; StopNode(); return false; }
+                if (signal == 1) { _reloadRequested = true; StopNode(); return false; }
             }
             return false;
         }
@@ -494,7 +739,12 @@ namespace DirectXfer.WindowsServerHost
                     using (var reader = new StreamReader(response.GetResponseStream() ?? Stream.Null))
                     {
                         var body = reader.ReadToEnd();
-                        if ((int)response.StatusCode == 200 && body.Contains("\"ok\":true") && body.Contains("\"pid\":" + expectedPid.ToString(CultureInfo.InvariantCulture)))
+                        var payload = Json.Deserialize<Dictionary<string, object>>(body);
+                        object okValue, appValue, pidValue;
+                        var ok = payload != null && payload.TryGetValue("ok", out okValue) && Convert.ToBoolean(okValue, CultureInfo.InvariantCulture);
+                        var app = payload != null && payload.TryGetValue("app", out appValue) ? Convert.ToString(appValue, CultureInfo.InvariantCulture) : string.Empty;
+                        var pid = payload != null && payload.TryGetValue("pid", out pidValue) ? Convert.ToInt32(pidValue, CultureInfo.InvariantCulture) : 0;
+                        if ((int)response.StatusCode == 200 && ok && string.Equals(app, "Direct-Xfer", StringComparison.Ordinal) && pid == expectedPid)
                         { usedScheme = scheme; return true; }
                     }
                 }
@@ -606,8 +856,17 @@ namespace DirectXfer.WindowsServerHost
             try
             {
                 if (!File.Exists(SessionPath)) return null;
+                var info = new FileInfo(SessionPath);
+                if (info.Length <= 0 || info.Length > 64 * 1024) return null;
+                if ((File.GetAttributes(SessionPath) & FileAttributes.ReparsePoint) != 0) return null;
                 var session = Json.Deserialize<HostSession>(File.ReadAllText(SessionPath, Encoding.UTF8));
-                return session != null && session.serverPid > 0 && session.port > 0 && !string.IsNullOrEmpty(session.token) ? session : null;
+                if (session == null || session.hostPid <= 0 || session.serverPid <= 0) return null;
+                if (session.port < Program.DefaultPort || session.port > Program.MaxFallbackPort) return null;
+                if (!string.Equals(session.scheme, "http", StringComparison.OrdinalIgnoreCase) && !string.Equals(session.scheme, "https", StringComparison.OrdinalIgnoreCase)) return null;
+                if (string.IsNullOrWhiteSpace(session.token) || session.token.Length != 48 || !session.token.All(IsHexDigit)) return null;
+                if (string.IsNullOrWhiteSpace(session.nodePath) || !Path.IsPathRooted(session.nodePath)) return null;
+                if (string.IsNullOrWhiteSpace(session.hostPath) || !Path.IsPathRooted(session.hostPath)) return null;
+                return session;
             }
             catch { return null; }
         }
@@ -670,11 +929,17 @@ namespace DirectXfer.WindowsServerHost
 
         internal static void WriteEmergencyLog(Exception ex)
         {
+            WriteEmergencyMessage(ex == null ? "Unknown ServerHost error." : ex.ToString());
+        }
+
+        internal static void WriteEmergencyMessage(string message)
+        {
             try
             {
                 Directory.CreateDirectory(BaseDirectory);
-                File.AppendAllText(Path.Combine(BaseDirectory, "Direct-Xfer-ServerHost-error.log"),
-                    DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture) + " " + ex + Environment.NewLine, new UTF8Encoding(false));
+                var path = Path.Combine(BaseDirectory, "Direct-Xfer-ServerHost-error.log");
+                RotateLog(path, Program.EmergencyLogMaxBytes);
+                File.AppendAllText(path, DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture) + " " + (message ?? string.Empty) + Environment.NewLine, new UTF8Encoding(false));
             }
             catch { }
         }
@@ -704,7 +969,13 @@ namespace DirectXfer.WindowsServerHost
                 try { if (_logWriter != null) _logWriter.Dispose(); } catch { }
                 _logWriter = null;
             }
+            if (_systemEventsSubscribed)
+            {
+                try { SystemEvents.SessionEnding -= OnSessionEnding; } catch { }
+                _systemEventsSubscribed = false;
+            }
             try { _stopEvent.Dispose(); } catch { }
+            try { _reloadEvent.Dispose(); } catch { }
         }
     }
 }

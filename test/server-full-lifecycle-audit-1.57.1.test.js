@@ -31,7 +31,7 @@ test('shutdown hard deadline remains referenced and cannot disappear with an emp
 });
 
 test('portable runtime is transparent sidecar content and integrity checked', () => {
-  assert.match(launcher, /RuntimeAppBuild = "1\.59\.8-launcher34-csharp"/);
+  assert.match(launcher, /RuntimeAppBuild = "1\.60\.0-launcher35-csharp"/);
   assert.match(host, /\.dx-runtime-build/);
   assert.match(host, /TryValidateApplicationRuntime\(candidate, out reason\)/);
   assert.match(host, /CriticalRuntimeSha256/);

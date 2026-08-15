@@ -54,7 +54,7 @@ test('full backup/restore preserves a Local CA only inside an encrypted v3 backu
 
 test('Windows launcher keeps private loopback control channel compatible with managed HTTPS',()=>{
   const s=read('windows-launcher','Program.cs');
-  assert.match(s,/RuntimeAppBuild = "1\.59\.8-launcher34-csharp"/);
+  assert.match(s,/RuntimeAppBuild = "1\.60\.0-launcher35-csharp"/);
   assert.match(s,/ServerCertificateValidationCallback/);
   assert.match(s,/127\.0\.0\.1/);
   assert.match(s,/X-Direct-Xfer-Launcher-Token/);

@@ -47,8 +47,8 @@ test('Windows portable server listens on LAN and provisions a scoped firewall ru
 });
 
 test('PWA cache is refreshed for this hotfix', () => {
-  assert.match(pwa, /2026\.08\.14-pwa287/);
-  assert.match(sw, /2026\.08\.14-pwa287/);
-  assert.match(pwaIndex, /v1\.59\.8 · pwa287/);
-  assert.match(pwaIndex, /app\.js\?v=270/);
+  assert.match(pwa, /2026\.08\.15-pwa289/);
+  assert.match(sw, /2026\.08\.15-pwa289/);
+  assert.match(pwaIndex, /v1\.60\.0 · pwa289/);
+  assert.match(pwaIndex, /app\.js\?v=273/);
 });

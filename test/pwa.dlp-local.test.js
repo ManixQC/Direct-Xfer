@@ -86,8 +86,8 @@ test('PWA queue runs DLP before any upload and exposes manual tests/status', () 
   assert.match(html, /id="dlp-test-queue-btn"/);
   assert.match(html, /id="bulk-dlp-btn"/);
   assert.match(html, /id="dlp-pwa-policy"/);
-  assert.match(html, /dlp-local\.js\?v=268/);
-  assert.match(sw, /dlp-local\.js\?v=268/);
+  assert.match(html, /dlp-local\.js\?v=269/);
+  assert.match(sw, /dlp-local\.js\?v=269/);
   assert.match(server, /function pwaDlpPolicyPayload\(req\)[\s\S]{0,2200}maxFileMB:[\s\S]{0,500}scanOcr:/);
   assert.match(server, /dlp:\s*pwaDlpPolicyPayload\(req\)/);
 });

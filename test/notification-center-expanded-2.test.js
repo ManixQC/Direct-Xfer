@@ -42,9 +42,9 @@ test('service and push recovery hooks are wired',()=>{
 });
 
 test('PWA shell is refreshed for the expanded center',()=>{
-  assert.match(pwa,/APP_BUILD = '2026\.08\.14-pwa287'/);
-  assert.match(read('pwa/sw.js'),/VERSION = '2026\.08\.14-pwa287'/);
-  assert.match(read('pwa/index.html'),/app\.js\?v=270/);
+  assert.match(pwa,/APP_BUILD = '2026\.08\.15-pwa289'/);
+  assert.match(read('pwa/sw.js'),/VERSION = '2026\.08\.15-pwa289'/);
+  assert.match(read('pwa/index.html'),/app\.js\?v=273/);
 });
 
 test('GeoIP health tracks provider reachability instead of treating an unlocatable IP as an outage',()=>{

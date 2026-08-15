@@ -29,13 +29,13 @@ test('automatic image links are used consistently without a user preference', ()
 });
 
 test('1.51.2 release and PWA cache identifiers stay synchronized', () => {
-  assert.equal(pkg.version, '1.59.8');
+  assert.equal(pkg.version, '1.60.0');
   assert.equal(lock.version, pkg.version);
   assert.equal(lock.packages[''].version, pkg.version);
-  assert.match(app, /APP_VERSION = '1\.59\.8'/);
-  assert.match(app, /APP_BUILD = '2026\.08\.14-pwa287'/);
-  assert.match(sw, /VERSION = '2026\.08\.14-pwa287'/);
-  assert.match(html, /v1\.59\.8 · pwa287/);
-  assert.match(html, /app\.css\?v=271/);
-  assert.match(html, /app\.js\?v=270/);
+  assert.match(app, /APP_VERSION = '1\.60\.0'/);
+  assert.match(app, /APP_BUILD = '2026\.08\.15-pwa289'/);
+  assert.match(sw, /VERSION = '2026\.08\.15-pwa289'/);
+  assert.match(html, /v1\.60\.0 · pwa289/);
+  assert.match(html, /app\.css\?v=272/);
+  assert.match(html, /app\.js\?v=273/);
 });

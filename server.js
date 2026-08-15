@@ -15194,10 +15194,7 @@ adminRouter.post('/undo/:id', (req, res) => {
 // Detailed statistics for one active share or shared image. The response combines
 // persistent aggregates with the retained transfer history, live activity and,
 // for direct images, per-variant access counters and on-disk copy metadata.
-adminRouter.get('/shares/:id/stats-detail', async (req, res) => {
-  const s = getById(req.params.id);
-  if (!s || !ownsShare(req, s)) return res.status(404).json({ error: 'not-found' });
-
+async function detailedShareStatsPayload(s, req) {
   const now = Date.now();
   const decorated = decorateShare(s, req);
   const aggregate = displayStatsForShare(s) || {
@@ -15276,7 +15273,9 @@ adminRouter.get('/shares/:id/stats-detail', async (req, res) => {
   const items = shareItems(s) || [];
   const logicalBytes = items.reduce((sum, item) => sum + Math.max(0, Number(item.size) || 0), 0)
     || Math.max(0, Number(s.size) || 0);
-  const status = s.disabled ? 'paused' : isScheduled(s) ? 'scheduled' : isActive(s) ? 'active' : 'inactive';
+  const effectiveExpiresAt = Number(decorated.effectiveExpiresAt) || Number(shareEffectiveExpiry(s)) || 0;
+  const expired = !!(effectiveExpiresAt && now > effectiveExpiresAt);
+  const status = s.revoked ? 'revoked' : s.disabled ? 'paused' : isScheduled(s) ? 'scheduled' : expired ? 'expired' : isActive(s) ? 'active' : 'inactive';
   const quota = [];
   if (s.maxDownloads > 0) quota.push({ kind: 'downloads', used: s.downloads || 0, max: s.maxDownloads });
   if (s.maxVisitors > 0) quota.push({ kind: 'visitors', used: Array.isArray(s.visitors) ? s.visitors.length : 0, max: s.maxVisitors });
@@ -15351,7 +15350,7 @@ adminRouter.get('/shares/:id/stats-detail', async (req, res) => {
     };
   });
 
-  res.json({
+  return {
     share: {
       id: s.id,
       name: s.name || '',
@@ -15361,6 +15360,7 @@ adminRouter.get('/shares/:id/stats-detail', async (req, res) => {
       createdAt: s.createdAt || 0,
       startsAt: s.startsAt || 0,
       expiresAt: s.expiresAt || 0,
+      effectiveExpiresAt,
       ownerName: s.ownerName || null,
       url: s.type === 'photo' && decorated.photo ? decorated.photo.imgUrl : decorated.url,
       path: s.hostPath || s.relDir || null,
@@ -15391,7 +15391,19 @@ adminRouter.get('/shares/:id/stats-detail', async (req, res) => {
     clients: [...clientMap.values()].sort((a, b) => b.count - a.count || b.bytes - a.bytes).slice(0, 12),
     recent,
     image,
-  });
+  };
+}
+
+adminRouter.get('/shares/:id/stats-detail', async (req, res) => {
+  const s = getById(req.params.id);
+  if (!s || !ownsShare(req, s)) return res.status(404).json({ error: 'not-found' });
+  res.setHeader('Cache-Control', 'no-store');
+  try {
+    res.json(await detailedShareStatsPayload(s, req));
+  } catch (e) {
+    console.error('[stats-detail] failed:', e && e.message);
+    res.status(500).json({ error: 'stats-failed' });
+  }
 });
 
 // Per-link access log: the recent transfer-journal entries for one
@@ -22629,6 +22641,19 @@ function pwaCanManageHostShare(req, share) {
   if (!share || !['file','folder','collab'].includes(share.type)) return false;
   return canManagePwaImage(req, share);
 }
+// 1.60.0 — expose the same detailed share statistics as the standard dashboard
+// to an authorized PWA owner/admin device without requiring a browser admin session.
+app.get('/app/host/shares/:token/stats-detail', async (req, res) => {
+  const share = getByToken(req.params.token);
+  if (!pwaCanManageHostShare(req, share)) return res.status(404).json({ error:'not-found' });
+  res.setHeader('Cache-Control', 'no-store');
+  try {
+    res.json(await detailedShareStatsPayload(share, req));
+  } catch (e) {
+    console.error('[pwa share stats-detail] failed:', e && e.message);
+    res.status(500).json({ error:'stats-failed' });
+  }
+});
 app.post('/app/host/shares/:token/meta', pwaJsonParser, (req, res) => {
   const share = getByToken(req.params.token);
   if (!pwaCanManageHostShare(req, share)) return res.status(404).json({ error:'not-found' });

@@ -58,10 +58,10 @@ test('notification control labels re-localize after language changes', () => {
 });
 
 test('changed notification assets are cache-busted consistently', () => {
-  assert.match(html, /\/style\.css\?v=273/);
-  assert.match(html, /\/app\.js\?v=274/);
-  assert.match(pwaHtml, /\/app\/app\.css\?v=271/);
-  assert.match(pwaHtml, /\/app\/app\.js\?v=270/);
-  assert.match(pwaSw, /'\/app\/app\.css\?v=271'/);
-  assert.match(pwaSw, /'\/app\/app\.js\?v=270'/);
+  assert.match(html, /\/style\.css\?v=275/);
+  assert.match(html, /\/app\.js\?v=275/);
+  assert.match(pwaHtml, /\/app\/app\.css\?v=272/);
+  assert.match(pwaHtml, /\/app\/app\.js\?v=273/);
+  assert.match(pwaSw, /'\/app\/app\.css\?v=272'/);
+  assert.match(pwaSw, /'\/app\/app\.js\?v=273'/);
 });

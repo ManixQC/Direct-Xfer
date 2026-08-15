@@ -8,7 +8,7 @@ const launcher = fs.readFileSync(path.join(root, 'windows-launcher', 'Program.cs
 const app = fs.readFileSync(path.join(root, 'public', 'app.js'), 'utf8');
 
 test('initial Windows admin password is selectable and explicitly copyable in the C# launcher', () => {
-  assert.match(launcher, /RuntimeAppBuild = "1\.59\.8-launcher34-csharp"/);
+  assert.match(launcher, /RuntimeAppBuild = "1\.60\.0-launcher35-csharp"/);
   assert.match(launcher, /class InitialPasswordForm : Form/);
   assert.match(launcher, /ReadOnly = true/);
   assert.match(launcher, /InitialPasswordCopy = "Copier le mot de passe"/);

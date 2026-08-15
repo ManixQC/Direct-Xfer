@@ -50,7 +50,7 @@ test('read mutations reconcile server-confirmed read and existence ids to avoid 
 test('unread rows have a visual distinction and PWA cache advances',()=>{
   assert.match(read('public/style.css'),/notification-item\.notification-unread/);
   assert.match(read('pwa/app.css'),/pwa-notification-item\.notification-unread/);
-  assert.match(read('pwa/app.js'),/APP_BUILD = '2026\.08\.14-pwa287'/);
-  assert.match(read('pwa/sw.js'),/VERSION = '2026\.08\.14-pwa287'/);
-  assert.match(read('pwa/index.html'),/app\.js\?v=270/);
+  assert.match(read('pwa/app.js'),/APP_BUILD = '2026\.08\.15-pwa289'/);
+  assert.match(read('pwa/sw.js'),/VERSION = '2026\.08\.15-pwa289'/);
+  assert.match(read('pwa/index.html'),/app\.js\?v=273/);
 });

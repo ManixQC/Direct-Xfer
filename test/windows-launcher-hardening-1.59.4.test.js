@@ -12,13 +12,13 @@ const launcherManifest = read('windows-launcher', 'app.manifest');
 const hostProject = read('windows-server-host', 'DirectXfer.ServerHost.csproj');
 const workflow = read('.github', 'workflows', 'build-windows-csharp.yml');
 
-test('1.59.8 launcher identity is explicit, x64 and independent from server spawning', () => {
-  assert.match(launcher, /AssemblyVersion\("1\.59\.8\.0"\)/);
-  assert.match(launcher, /RuntimeAppBuild = "1\.59\.8-launcher34-csharp"/);
-  assert.match(launcher, /ServerHostBuild = "1\.59\.8-serverhost7-csharp"/);
+test('1.60.0 launcher identity is explicit, x64 and independent from server spawning', () => {
+  assert.match(launcher, /AssemblyVersion\("1\.60\.0\.0"\)/);
+  assert.match(launcher, /RuntimeAppBuild = "1\.60\.0-launcher35-csharp"/);
+  assert.match(launcher, /ServerHostBuild = "1\.60\.0-serverhost8-csharp"/);
   assert.match(launcherProject, /<PlatformTarget>x64<\/PlatformTarget>/);
   assert.match(launcherManifest, /name="DirectXfer\.WindowsLauncher"/);
-  assert.match(launcherManifest, /version="1\.59\.8\.0"/);
+  assert.match(launcherManifest, /version="1\.60\.0\.0"/);
   assert.match(launcherManifest, /processorArchitecture="amd64"/);
   assert.match(hostProject, /<PlatformTarget>x64<\/PlatformTarget>/);
   assert.doesNotMatch(launcher, /CreateNoWindow|Process\.GetProcessById|\.Kill\(\)|FileName\s*=\s*hostExe/);

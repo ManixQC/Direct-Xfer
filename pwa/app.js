@@ -9,8 +9,8 @@
 (function () {
   // Build tag, shown in the footer so a user can confirm at a glance which version
   // is actually running after an update. Keep it in lock-step with sw.js VERSION.
-  var APP_VERSION = '1.59.8';
-  var APP_BUILD = '2026.08.14-pwa287';
+  var APP_VERSION = '1.60.0';
+  var APP_BUILD = '2026.08.15-pwa289';
   // Upload blocks are deliberately small on mobile. A number of reverse proxies
   // still default to a 1 MiB request-body limit; an 8 MiB first block can therefore
   // be rejected before the browser emits any useful progress event, which looks like
@@ -521,6 +521,23 @@
       actionHistoryTooLarge: 'Los datos para deshacer son demasiado grandes'
   });
 
+  // 1.60.0 — detailed statistics for PWA host shares.
+  Object.assign(STRINGS.fr, {
+    sharesStatsButton:'📊 Stats', shareStatsTitle:'Statistiques détaillées', shareStatsLoading:'Chargement des statistiques…', shareStatsUnavailable:'Statistiques indisponibles',
+    shareStatsOverview:'Vue d’ensemble', shareStatsTransfers:'Transferts', shareStatsVolume:'Volume', shareStatsAverageSize:'Taille moyenne', shareStatsSuccess:'Taux de réussite', shareStatsCompleted:'Terminés', shareStatsInterrupted:'Interrompus', shareStatsSpeed:'Vitesse moyenne', shareStatsViews:'Vues', shareStatsVisitors:'Visiteurs', shareStatsStorage:'Stockage', shareStatsDownloads:'Téléchargements',
+    shareStatsDetails:'Informations du partage', shareStatsStatus:'État', shareStatsType:'Type', shareStatsOwner:'Propriétaire', shareStatsCreated:'Créé', shareStatsExpiry:'Expiration', shareStatsItems:'Éléments', shareStatsLastActivity:'Dernière activité', shareStatsFirstActivity:'Première activité', shareStatsTags:'Tags', shareStatsPath:'Chemin', shareStatsUrl:'URL', shareStatsQuota:'Quotas', shareStatsFiles:'Fichiers', shareStatsLive:'Transferts en cours', shareStatsActivity14:'Activité — 14 derniers jours', shareStatsCountries:'Pays', shareStatsClients:'Clients', shareStatsRecent:'Transferts récents', shareStatsNoRecent:'Aucun transfert récent.', shareStatsUnknown:'Inconnu', shareStatsNever:'Jamais', shareStatsActive:'Actif', shareStatsInactive:'Inactif', shareStatsPaused:'En pause', shareStatsScheduled:'Planifié', shareStatsExpired:'Expiré', shareStatsRevoked:'Révoqué', shareStatsNoData:'Aucune donnée disponible.', shareStatsFile:'Fichier', shareStatsFolder:'Dossier', shareStatsCollab:'Collaboration'
+  });
+  Object.assign(STRINGS.en, {
+    sharesStatsButton:'📊 Stats', shareStatsTitle:'Detailed statistics', shareStatsLoading:'Loading statistics…', shareStatsUnavailable:'Statistics unavailable',
+    shareStatsOverview:'Overview', shareStatsTransfers:'Transfers', shareStatsVolume:'Volume', shareStatsAverageSize:'Average size', shareStatsSuccess:'Success rate', shareStatsCompleted:'Completed', shareStatsInterrupted:'Interrupted', shareStatsSpeed:'Average speed', shareStatsViews:'Views', shareStatsVisitors:'Visitors', shareStatsStorage:'Storage', shareStatsDownloads:'Downloads',
+    shareStatsDetails:'Share information', shareStatsStatus:'Status', shareStatsType:'Type', shareStatsOwner:'Owner', shareStatsCreated:'Created', shareStatsExpiry:'Expiry', shareStatsItems:'Items', shareStatsLastActivity:'Last activity', shareStatsFirstActivity:'First activity', shareStatsTags:'Tags', shareStatsPath:'Path', shareStatsUrl:'URL', shareStatsQuota:'Quotas', shareStatsFiles:'Files', shareStatsLive:'Active transfers', shareStatsActivity14:'Activity — last 14 days', shareStatsCountries:'Countries', shareStatsClients:'Clients', shareStatsRecent:'Recent transfers', shareStatsNoRecent:'No recent transfers.', shareStatsUnknown:'Unknown', shareStatsNever:'Never', shareStatsActive:'Active', shareStatsInactive:'Inactive', shareStatsPaused:'Paused', shareStatsScheduled:'Scheduled', shareStatsExpired:'Expired', shareStatsRevoked:'Revoked', shareStatsNoData:'No data available.', shareStatsFile:'File', shareStatsFolder:'Folder', shareStatsCollab:'Collaboration'
+  });
+  Object.assign(STRINGS.es, {
+    sharesStatsButton:'📊 Stats', shareStatsTitle:'Estadísticas detalladas', shareStatsLoading:'Cargando estadísticas…', shareStatsUnavailable:'Estadísticas no disponibles',
+    shareStatsOverview:'Resumen', shareStatsTransfers:'Transferencias', shareStatsVolume:'Volumen', shareStatsAverageSize:'Tamaño medio', shareStatsSuccess:'Tasa de éxito', shareStatsCompleted:'Completadas', shareStatsInterrupted:'Interrumpidas', shareStatsSpeed:'Velocidad media', shareStatsViews:'Vistas', shareStatsVisitors:'Visitantes', shareStatsStorage:'Almacenamiento', shareStatsDownloads:'Descargas',
+    shareStatsDetails:'Información del recurso', shareStatsStatus:'Estado', shareStatsType:'Tipo', shareStatsOwner:'Propietario', shareStatsCreated:'Creado', shareStatsExpiry:'Caducidad', shareStatsItems:'Elementos', shareStatsLastActivity:'Última actividad', shareStatsFirstActivity:'Primera actividad', shareStatsTags:'Etiquetas', shareStatsPath:'Ruta', shareStatsUrl:'URL', shareStatsQuota:'Cuotas', shareStatsFiles:'Archivos', shareStatsLive:'Transferencias activas', shareStatsActivity14:'Actividad — últimos 14 días', shareStatsCountries:'Países', shareStatsClients:'Clientes', shareStatsRecent:'Transferencias recientes', shareStatsNoRecent:'No hay transferencias recientes.', shareStatsUnknown:'Desconocido', shareStatsNever:'Nunca', shareStatsActive:'Activo', shareStatsInactive:'Inactivo', shareStatsPaused:'En pausa', shareStatsScheduled:'Programado', shareStatsExpired:'Caducado', shareStatsRevoked:'Revocado', shareStatsNoData:'No hay datos disponibles.', shareStatsFile:'Archivo', shareStatsFolder:'Carpeta', shareStatsCollab:'Colaboración'
+  });
+
   var lang = 'fr';
   function detectLang() {
     var saved = '';
@@ -546,7 +563,7 @@
       });
     });
     var manifest = document.getElementById('app-manifest');
-    if (manifest) manifest.href = (lang === 'fr' ? '/direct-xfer-pwa.webmanifest' : '/direct-xfer-pwa-' + lang + '.webmanifest') + '?v=268';
+    if (manifest) manifest.href = (lang === 'fr' ? '/direct-xfer-pwa.webmanifest' : '/direct-xfer-pwa-' + lang + '.webmanifest') + '?v=269';
     $('lang-select').value = lang;
     $('dest-save-btn').textContent = editingToken ? t('updateDestination') : t('saveDestination');
     renderDests(); renderQueue(); renderHistory(); renderDeviceStatus();
@@ -2950,6 +2967,10 @@
       copy.addEventListener('click', function () { if (s.url) copyText(s.url).then(function () { toast(t('copied'), 'ok'); }); }); actions.appendChild(copy);
       var open = document.createElement('button'); open.type = 'button'; open.className = 'btn ghost sm'; open.textContent = t('sharesOpen');
       open.addEventListener('click', function () { if (s.url) window.open(s.url, '_blank', 'noopener'); }); actions.appendChild(open);
+      if (s.token) {
+        var statsBtn = document.createElement('button'); statsBtn.type = 'button'; statsBtn.className = 'btn ghost sm'; statsBtn.textContent = t('sharesStatsButton');
+        statsBtn.addEventListener('click', function () { openHostShareDetailedStats(s); }); actions.appendChild(statsBtn);
+      }
       var metaBtn=document.createElement('button');metaBtn.type='button';metaBtn.className='btn ghost sm';metaBtn.textContent=t('sharesEditMeta');metaBtn.addEventListener('click',function(){editHostShareMeta(s);});actions.appendChild(metaBtn);
       var clone=document.createElement('button');clone.type='button';clone.className='btn ghost sm';clone.textContent=t('sharesDuplicate');clone.addEventListener('click',function(){cloneHostShare(s);});actions.appendChild(clone);
       var pin=document.createElement('button');pin.type='button';pin.className='btn ghost sm';pin.textContent=t(s.pinned?'sharesUnpin':'sharesPin');pin.addEventListener('click',function(){toggleHostSharePin(s);});actions.appendChild(pin);
@@ -2963,6 +2984,125 @@
       rev.addEventListener('click', function () { revokeHostShare(s.token); }); actions.appendChild(rev);
       row.appendChild(actions); listEl.appendChild(row);
     });
+  }
+
+  function shareStatsNumber(value) {
+    var locale = lang === 'fr' ? 'fr-CA' : lang === 'es' ? 'es-ES' : 'en-US';
+    return (Number(value) || 0).toLocaleString(locale);
+  }
+  function shareStatsBps(value) { return fmtBytes(Math.max(0, Number(value) || 0)) + '/s'; }
+  function shareStatsDuration(ms) {
+    ms = Math.max(0, Number(ms) || 0);
+    if (ms < 1000) return Math.round(ms) + ' ms';
+    var sec = ms / 1000;
+    if (sec < 60) return sec.toFixed(sec < 10 ? 1 : 0) + ' s';
+    var min = Math.floor(sec / 60), rest = Math.round(sec % 60);
+    if (min < 60) return min + ' min ' + rest + ' s';
+    return Math.floor(min / 60) + ' h ' + (min % 60) + ' min';
+  }
+  function shareStatsStatusLabel(status) {
+    var map = { active:'shareStatsActive', inactive:'shareStatsInactive', paused:'shareStatsPaused', scheduled:'shareStatsScheduled', expired:'shareStatsExpired', revoked:'shareStatsRevoked' };
+    return t(map[String(status || '').toLowerCase()] || 'shareStatsUnknown');
+  }
+  function shareStatsTypeLabel(type) {
+    var map = { file:'shareStatsFile', folder:'shareStatsFolder', collab:'shareStatsCollab' };
+    return t(map[String(type || '').toLowerCase()] || 'shareStatsUnknown');
+  }
+  function shareStatsMetric(icon, value, label, detail) {
+    var card = imageStatsMetric(icon, value, label);
+    if (detail) {
+      var main = card.querySelector('div');
+      var small = document.createElement('small'); small.className = 'share-stats-metric-detail'; small.textContent = detail;
+      if (main) main.appendChild(small);
+    }
+    return card;
+  }
+  function shareStatsBreakdown(rows) {
+    var box = document.createElement('div'); box.className = 'share-stats-breakdown'; rows = Array.isArray(rows) ? rows : [];
+    if (!rows.length) { var empty = document.createElement('p'); empty.className = 'muted sm'; empty.textContent = t('shareStatsNoData'); box.appendChild(empty); return box; }
+    var max = Math.max.apply(null, [1].concat(rows.map(function (row) { return Number(row && row.count) || 0; })));
+    rows.forEach(function (entry) {
+      var row = document.createElement('div'); row.className = 'share-stats-breakdown-row';
+      var label = document.createElement('span'); label.className = 'share-stats-breakdown-label'; label.textContent = (entry.flag ? entry.flag + ' ' : '') + (entry.name || entry.label || t('shareStatsUnknown'));
+      var bar = document.createElement('span'); bar.className = 'share-stats-breakdown-bar'; var fill = document.createElement('i'); fill.style.width = Math.max(4, Math.round(((Number(entry.count) || 0) / max) * 100)) + '%'; bar.appendChild(fill);
+      var value = document.createElement('strong'); value.textContent = shareStatsNumber(entry.count);
+      row.appendChild(label); row.appendChild(bar); row.appendChild(value); box.appendChild(row);
+    });
+    return box;
+  }
+  function shareStatsTimeline(points) {
+    var chart = document.createElement('div'); chart.className = 'share-stats-timeline'; points = Array.isArray(points) ? points : [];
+    var max = Math.max.apply(null, [1].concat(points.map(function (p) { return Number(p && p.bytes) || Number(p && p.count) || 0; })));
+    points.forEach(function (point) {
+      var raw = Number(point.bytes) || Number(point.count) || 0;
+      var cell = document.createElement('div'); cell.className = 'share-stats-timeline-cell'; cell.title = String(point.day || '') + ' · ' + shareStatsNumber(point.count) + ' · ' + fmtBytes(point.bytes || 0);
+      var bar = document.createElement('i'); bar.style.height = (raw ? Math.max(6, Math.round((raw / max) * 100)) : 2) + '%';
+      var label = document.createElement('span'); label.textContent = String(point.day || '').slice(5); cell.appendChild(bar); cell.appendChild(label); chart.appendChild(cell);
+    });
+    return chart;
+  }
+  function shareStatsAppendEvent(list, event, shareName, live) {
+    var row = document.createElement('div'); row.className = 'image-stats-event' + (live ? ' share-stats-live' : '');
+    var icon = document.createElement('span'); icon.className = 'image-stats-event-icon'; icon.setAttribute('aria-hidden', 'true'); icon.textContent = live ? (event.direction === 'up' ? '⬆' : '⬇') : (event.completed ? (event.direction === 'up' ? '⬆' : '⬇') : '⚠');
+    var main = document.createElement('div'); main.className = 'image-stats-event-main'; var title = document.createElement('strong'); title.textContent = event.name || shareName || '—';
+    var client = [event.flag, event.ipName || event.ip, event.country, event.recipient ? '👤 ' + event.recipient : ''].filter(Boolean).join(' · ');
+    var detail = document.createElement('span');
+    detail.textContent = live ? [fmtBytes(event.bytes || 0) + (event.expectedBytes ? ' / ' + fmtBytes(event.expectedBytes) : ''), client].filter(Boolean).join(' · ') : [fmtBytes(event.bytes || 0), shareStatsDuration(event.durationMs || 0), shareStatsBps(event.avgBps || 0), client].filter(Boolean).join(' · ');
+    main.appendChild(title); main.appendChild(detail);
+    if (!live && !event.completed && event.reason) { var reason = document.createElement('small'); reason.className = 'share-stats-event-reason'; reason.textContent = String(event.reason); main.appendChild(reason); }
+    row.appendChild(icon); row.appendChild(main);
+    if (!live) { var time = document.createElement('time'); time.textContent = event.at ? fmtDate(event.at) : '—'; row.appendChild(time); }
+    list.appendChild(row);
+  }
+  function renderHostShareDetailedStats(data) {
+    var body = $('image-stats-body'); if (!body) return; body.innerHTML = '';
+    if (!data || !data.share) { body.textContent = t('shareStatsUnavailable'); return; }
+    var sh = data.share, ag = data.aggregate || {};
+    var overview = imageStatsSection(t('shareStatsOverview')); var metrics = document.createElement('div'); metrics.className = 'image-stats-metrics share-stats-metrics';
+    metrics.appendChild(shareStatsMetric('🔄', shareStatsNumber(ag.count), t('shareStatsTransfers'), shareStatsNumber(ag.completed) + ' ' + t('shareStatsCompleted') + ' · ' + shareStatsNumber(ag.interrupted) + ' ' + t('shareStatsInterrupted')));
+    metrics.appendChild(shareStatsMetric('💾', fmtBytes(ag.bytes || 0), t('shareStatsVolume'), t('shareStatsAverageSize') + ' : ' + fmtBytes(ag.averageBytes || 0)));
+    metrics.appendChild(shareStatsMetric('✅', (Number(ag.successRate) || 0) + '%', t('shareStatsSuccess')));
+    metrics.appendChild(shareStatsMetric('⚡', shareStatsBps(ag.averageBps || 0), t('shareStatsSpeed')));
+    metrics.appendChild(shareStatsMetric('👁', shareStatsNumber(sh.views || 0), t('shareStatsViews')));
+    metrics.appendChild(shareStatsMetric('👤', shareStatsNumber(sh.uniqueVisitors || 0), t('shareStatsVisitors')));
+    metrics.appendChild(shareStatsMetric('⬇', shareStatsNumber(sh.downloads || 0), t('shareStatsDownloads')));
+    overview.appendChild(metrics); body.appendChild(overview);
+
+    var detailsSection = imageStatsSection(t('shareStatsDetails')); var details = document.createElement('div'); details.className = 'image-stats-details share-stats-details';
+    [[t('shareStatsStatus'),shareStatsStatusLabel(sh.status)],[t('shareStatsType'),shareStatsTypeLabel(sh.type)],[t('shareStatsOwner'),sh.ownerName||'—'],[t('shareStatsCreated'),sh.createdAt?fmtDate(sh.createdAt):'—'],[t('shareStatsExpiry'),(sh.effectiveExpiresAt||sh.expiresAt)?fmtDate(sh.effectiveExpiresAt||sh.expiresAt):t('shareStatsNever')],[t('shareStatsItems'),shareStatsNumber(sh.itemCount)],[t('shareStatsStorage'),fmtBytes(sh.logicalBytes||0)],[t('shareStatsLastActivity'),ag.lastAt?fmtDate(ag.lastAt):'—'],[t('shareStatsFirstActivity'),ag.firstAt?fmtDate(ag.firstAt):'—'],[t('shareStatsTags'),Array.isArray(sh.tags)&&sh.tags.length?sh.tags.join(', '):'—'],[t('shareStatsPath'),sh.path||'—'],[t('shareStatsUrl'),sh.url||'—']].forEach(function (entry) { details.appendChild(imageStatsDetail(entry[0], entry[1])); });
+    detailsSection.appendChild(details); body.appendChild(detailsSection);
+
+    if (Array.isArray(data.quota) && data.quota.length) {
+      var quotaSection = imageStatsSection(t('shareStatsQuota')); var quotaList = document.createElement('div'); quotaList.className = 'share-stats-quota-list';
+      data.quota.forEach(function (q) {
+        var pct = q.max ? Math.max(0, Math.min(100, Math.round((Number(q.used || 0) / Number(q.max)) * 100))) : 0;
+        var label = q.kind === 'bytes' ? t('shareStatsStorage') : q.kind === 'files' ? t('shareStatsFiles') : q.kind === 'visitors' ? t('shareStatsVisitors') : t('shareStatsDownloads');
+        var used = q.kind === 'bytes' ? fmtBytes(q.used || 0) : shareStatsNumber(q.used), max = q.kind === 'bytes' ? fmtBytes(q.max || 0) : shareStatsNumber(q.max);
+        var row = document.createElement('div'); row.className = 'share-stats-quota-row'; var head = document.createElement('div'); head.className = 'share-stats-quota-head'; head.textContent = label + ' · ' + used + ' / ' + max + ' · ' + pct + '%';
+        var bar = document.createElement('div'); bar.className = 'share-stats-quota-bar'; var fill = document.createElement('i'); fill.style.width = pct + '%'; bar.appendChild(fill); row.appendChild(head); row.appendChild(bar); quotaList.appendChild(row);
+      });
+      quotaSection.appendChild(quotaList); body.appendChild(quotaSection);
+    }
+    if (Array.isArray(data.live) && data.live.length) { var liveSection = imageStatsSection(t('shareStatsLive')); var liveList = document.createElement('div'); liveList.className = 'image-stats-recent'; data.live.forEach(function (e) { shareStatsAppendEvent(liveList,e,sh.name,true); }); liveSection.appendChild(liveList); body.appendChild(liveSection); }
+    var timelineSection = imageStatsSection(t('shareStatsActivity14')); timelineSection.appendChild(shareStatsTimeline(data.timeline || [])); body.appendChild(timelineSection);
+    var split = document.createElement('div'); split.className = 'share-stats-two-columns'; var countries=imageStatsSection(t('shareStatsCountries')); countries.appendChild(shareStatsBreakdown(data.countries||[])); var clients=imageStatsSection(t('shareStatsClients')); clients.appendChild(shareStatsBreakdown(data.clients||[])); split.appendChild(countries); split.appendChild(clients); body.appendChild(split);
+    var recentSection=imageStatsSection(t('shareStatsRecent')); var recentList=document.createElement('div'); recentList.className='image-stats-recent';
+    if (!Array.isArray(data.recent) || !data.recent.length) { var empty=document.createElement('p'); empty.className='muted sm'; empty.textContent=t('shareStatsNoRecent'); recentList.appendChild(empty); } else data.recent.forEach(function(e){shareStatsAppendEvent(recentList,e,sh.name,false);});
+    recentSection.appendChild(recentList); body.appendChild(recentSection);
+  }
+  var detailedStatsRequestSerial = 0;
+  async function openHostShareDetailedStats(share) {
+    var overlay = $('image-stats-overlay'), body = $('image-stats-body'); if (!share || !share.token || !overlay || !body) return;
+    var requestSerial = ++detailedStatsRequestSerial;
+    overlay.classList.add('share-stats-mode'); $('image-stats-title').textContent = t('shareStatsTitle'); $('image-stats-subtitle').textContent = share.name || share.token || ''; body.textContent = t('shareStatsLoading'); body.scrollTop = 0; overlay.classList.remove('hidden');
+    if ($('image-stats-close')) $('image-stats-close').focus();
+    try {
+      var response = await fetch('/app/host/shares/' + encodeURIComponent(share.token) + '/stats-detail', { credentials:'same-origin', cache:'no-store', headers:{ Accept:'application/json' } });
+      if (!response.ok) throw new Error('http ' + response.status);
+      var payload = await response.json();
+      if (requestSerial !== detailedStatsRequestSerial || overlay.classList.contains('hidden') || !overlay.classList.contains('share-stats-mode')) return;
+      renderHostShareDetailedStats(payload); body.scrollTop = 0;
+    } catch (_) { if (requestSerial === detailedStatsRequestSerial && !overlay.classList.contains('hidden') && overlay.classList.contains('share-stats-mode')) body.textContent = t('shareStatsUnavailable'); }
   }
 
   async function editHostShareMeta(share){
@@ -4125,19 +4265,24 @@
     recentSection.appendChild(recent); body.appendChild(recentSection);
   }
   async function openImageDetailedStats(photo) {
-    if (!photo || !photo.token || !$('image-stats-overlay')) return;
+    var overlay = $('image-stats-overlay'), body = $('image-stats-body');
+    if (!photo || !photo.token || !overlay || !body) return;
+    var requestSerial = ++detailedStatsRequestSerial;
+    overlay.classList.remove('share-stats-mode');
     $('image-stats-title').textContent = t('imgStatsTitle');
     $('image-stats-subtitle').textContent = photo.name || '';
-    $('image-stats-body').textContent = t('imgStatsLoading');
-    $('image-stats-overlay').classList.remove('hidden');
+    body.textContent = t('imgStatsLoading'); body.scrollTop = 0;
+    overlay.classList.remove('hidden');
     if ($('image-stats-close')) $('image-stats-close').focus();
     try {
       var response = await fetch('/app/image/' + encodeURIComponent(photo.token) + '/stats-detail', { credentials: 'same-origin', cache: 'no-store' });
       if (!response.ok) throw new Error('http ' + response.status);
-      renderImageDetailedStats(await response.json());
-    } catch (_) { $('image-stats-body').textContent = t('imgStatsUnavailable'); }
+      var payload = await response.json();
+      if (requestSerial !== detailedStatsRequestSerial || overlay.classList.contains('hidden') || overlay.classList.contains('share-stats-mode')) return;
+      renderImageDetailedStats(payload); body.scrollTop = 0;
+    } catch (_) { if (requestSerial === detailedStatsRequestSerial && !overlay.classList.contains('hidden') && !overlay.classList.contains('share-stats-mode')) body.textContent = t('imgStatsUnavailable'); }
   }
-  function closeImageDetailedStats() { if ($('image-stats-overlay')) $('image-stats-overlay').classList.add('hidden'); }
+  function closeImageDetailedStats() { detailedStatsRequestSerial += 1; var overlay = $('image-stats-overlay'); if (overlay) { overlay.classList.add('hidden'); overlay.classList.remove('share-stats-mode'); } }
 
   function imageDataUrls(data) {
     return {
@@ -8564,7 +8709,7 @@
   function registerServiceWorker() {
     if (!navigator.serviceWorker || typeof navigator.serviceWorker.register !== 'function') return;
     navigator.serviceWorker.addEventListener('controllerchange', refreshToNewVersion);
-    var registrationPromise = navigator.serviceWorker.register('/direct-xfer-pwa-sw.js?v=268', { scope: '/app/' }).then(function (reg) {
+    var registrationPromise = navigator.serviceWorker.register('/direct-xfer-pwa-sw.js?v=269', { scope: '/app/' }).then(function (reg) {
       swReg = reg;
       navigator.serviceWorker.ready.then(function () {
         swReadyForInstall = true;

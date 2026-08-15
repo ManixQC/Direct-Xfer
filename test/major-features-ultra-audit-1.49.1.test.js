@@ -23,13 +23,13 @@ const {
 test('1.51.2 metadata and PWA resources are synchronized', () => {
   const pkg = JSON.parse(read('package.json'));
   const lock = JSON.parse(read('package-lock.json'));
-  assert.equal(pkg.version, '1.59.8');
+  assert.equal(pkg.version, '1.60.0');
   assert.equal(lock.version, pkg.version);
   assert.equal(lock.packages[''].version, pkg.version);
-  assert.match(pwa, /APP_VERSION = '1\.59\.8'/);
-  assert.match(pwa, /APP_BUILD = '2026\.08\.14-pwa287'/);
-  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.14-pwa287'/);
-  assert.match(read('pwa/index.html'), /download-resume\.js\?v=268/);
+  assert.match(pwa, /APP_VERSION = '1\.60\.0'/);
+  assert.match(pwa, /APP_BUILD = '2026\.08\.15-pwa289'/);
+  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.15-pwa289'/);
+  assert.match(read('pwa/index.html'), /download-resume\.js\?v=269/);
 });
 
 test('resumable downloads fail closed on blocked IndexedDB and validate every range', () => {

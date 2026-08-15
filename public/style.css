@@ -3141,11 +3141,19 @@ body[data-role="auditor"] .share-actions .stats-btn { display: inline-flex !impo
   box-shadow: 0 0 0 2px var(--accent-soft);
 }
 
+.shares-list.view-list {
+  display: flex;
+  flex-direction: column;
+}
 .shares-list.view-grid {
+  /* Keep the grid visibly distinct from the stacked list on normal desktop
+     widths. The old 430px minimum often collapsed to a single column, making
+     the Grid button appear to do nothing. */
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(430px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
   align-items: start;
 }
+.shares-list.view-grid > .share { min-width: 0; }
 .shares-list.view-grid > .empty { grid-column: 1 / -1; }
 
 /* Admin links table density toggle. Compact tightens card padding,

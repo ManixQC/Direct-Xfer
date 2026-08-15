@@ -11,7 +11,7 @@ const host = read('windows-server-host', 'Program.cs');
 const workflow = read('.github', 'workflows', 'build-windows-csharp.yml');
 const iss = read('installer', 'Direct-Xfer.iss');
 
-test('1.59.8 separates tray UI from Node supervision', () => {
+test('1.60.0 separates tray UI from Node supervision', () => {
   assert.doesNotMatch(launcher, /node\.exe|server\.js|RedirectStandardOutput|RedirectStandardError|Process\.Kill\(|DX_WINDOWS_NODE|NodeExeSha256/);
   assert.match(launcher, /ServerHostFileName = "Direct-Xfer\.ServerHost\.exe"/);
   assert.match(launcher, /AttachToServerHost\(\)/);

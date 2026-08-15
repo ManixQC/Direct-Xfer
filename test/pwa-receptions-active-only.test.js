@@ -32,8 +32,8 @@ test('PWA purges stale remembered owned receptions but preserves manual/external
 });
 
 test('PWA shell revision is bumped so installed apps receive the fix', () => {
-  assert.match(sw, /var VERSION = '2026\.08\.14-pwa287';/);
-  assert.match(app, /var APP_BUILD = '2026\.08\.14-pwa287';/);
-  assert.match(sw, /\/app\/app\.js\?v=270/);
-  assert.match(index, /\/app\/app\.js\?v=270/);
+  assert.match(sw, /var VERSION = '2026\.08\.15-pwa289';/);
+  assert.match(app, /var APP_BUILD = '2026\.08\.15-pwa289';/);
+  assert.match(sw, /\/app\/app\.js\?v=273/);
+  assert.match(index, /\/app\/app\.js\?v=273/);
 });

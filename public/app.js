@@ -1172,6 +1172,8 @@ const I18N = {
     'stats.inactive': 'Inactif',
     'stats.paused': 'En pause',
     'stats.scheduled': 'Programmé',
+    'stats.expired': 'Expiré',
+    'stats.revoked': 'Révoqué',
     'stats.unknown': 'Inconnu',
     'stats.quota': 'Utilisation des quotas',
     'stats.files': 'Fichiers',
@@ -2741,6 +2743,8 @@ const I18N = {
     'stats.inactive': 'Inactive',
     'stats.paused': 'Paused',
     'stats.scheduled': 'Scheduled',
+    'stats.expired': 'Expired',
+    'stats.revoked': 'Revoked',
     'stats.unknown': 'Unknown',
     'stats.quota': 'Quota usage',
     'stats.files': 'Files',
@@ -4310,6 +4314,8 @@ const I18N = {
     'stats.inactive': 'Inactivo',
     'stats.paused': 'En pausa',
     'stats.scheduled': 'Programado',
+    'stats.expired': 'Caducado',
+    'stats.revoked': 'Revocado',
     'stats.unknown': 'Desconocido',
     'stats.quota': 'Uso de cuotas',
     'stats.files': 'Archivos',
@@ -11613,21 +11619,26 @@ function renderDetailedStats(data) {
   }
 }
 
+let detailedStatsRequestSerial = 0;
 async function openDetailedStats(s) {
   const overlay = $('stats-overlay');
   const body = $('stats-body');
+  const requestSerial = ++detailedStatsRequestSerial;
   $('stats-title').textContent = t('stats.title');
   $('stats-subtitle').textContent = s && s.name ? s.name : '';
   body.textContent = t('stats.loading');
+  body.scrollTop = 0;
   overlay.classList.remove('hidden');
   try {
     const data = await api('GET', '/api/shares/' + encodeURIComponent(s.id) + '/stats-detail');
+    if (requestSerial !== detailedStatsRequestSerial || overlay.classList.contains('hidden')) return;
     renderDetailedStats(data);
+    body.scrollTop = 0;
   } catch (_) {
-    body.textContent = t('stats.fail');
+    if (requestSerial === detailedStatsRequestSerial && !overlay.classList.contains('hidden')) body.textContent = t('stats.fail');
   }
 }
-function closeDetailedStats() { $('stats-overlay').classList.add('hidden'); }
+function closeDetailedStats() { detailedStatsRequestSerial += 1; $('stats-overlay').classList.add('hidden'); }
 
 // Per-link access log modal.
 async function openAccessLog(s) {

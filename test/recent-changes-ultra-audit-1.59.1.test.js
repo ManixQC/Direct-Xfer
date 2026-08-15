@@ -18,22 +18,22 @@ function normalizedTextSha256(rel) {
   return crypto.createHash('sha256').update(Buffer.from(text, 'utf8')).digest('hex');
 }
 
-test('1.59.1 hardening remains present after the 1.59.8 ServerHost split', () => {
-  assert.match(launcher, /AssemblyVersion\("1\.59\.8\.0"\)/);
-  assert.match(host, /AssemblyVersion\("1\.59\.8\.0"\)/);
-  assert.match(launcher, /RuntimeAppBuild = "1\.59\.8-launcher34-csharp"/);
-  assert.match(host, /RuntimeAppBuild = "1\.59\.8-launcher34-csharp"/);
-  assert.match(workflow, /DX_VERSION: '1\.59\.8'/);
-  assert.match(iss, /#define AppVersion "1\.59\.8"/);
+test('1.59.1 hardening remains present after the 1.60.0 ServerHost split', () => {
+  assert.match(launcher, /AssemblyVersion\("1\.60\.0\.0"\)/);
+  assert.match(host, /AssemblyVersion\("1\.60\.0\.0"\)/);
+  assert.match(launcher, /RuntimeAppBuild = "1\.60\.0-launcher35-csharp"/);
+  assert.match(host, /RuntimeAppBuild = "1\.60\.0-launcher35-csharp"/);
+  assert.match(workflow, /DX_VERSION: '1\.60\.0'/);
+  assert.match(iss, /#define AppVersion "1\.60\.0"/);
 });
 
-test('PWA cache generation is advanced consistently for 1.59.8', () => {
+test('PWA cache generation is advanced consistently for 1.60.0', () => {
   for (const file of ['pwa/index.html', 'pwa/login.html', 'pwa/launch.html', 'pwa/app.js', 'pwa/login.js', 'pwa/sw.js']) {
     assert.doesNotMatch(read(...file.split('/')), /v=266|pwa280/);
   }
-  assert.match(read('pwa', 'index.html'), /v=268/);
-  assert.match(read('pwa', 'app.js'), /v=268/);
-  assert.match(read('pwa', 'sw.js'), /v=268/);
+  assert.match(read('pwa', 'index.html'), /v=269/);
+  assert.match(read('pwa', 'app.js'), /v=269/);
+  assert.match(read('pwa', 'sw.js'), /v=269/);
 });
 
 test('launcher configuration writes remain atomic and recover their backup', () => {
@@ -69,7 +69,7 @@ test('stale saved session cannot target an unrelated process and launcher refuse
   assert.doesNotMatch(launcher, /Process\.GetProcessById|\.Kill\(\)/);
 });
 
-test('all ServerHost critical runtime hashes match actual normalized 1.59.8 files', () => {
+test('all ServerHost critical runtime hashes match actual normalized 1.60.0 files', () => {
   for (const rel of ['package.json','package-lock.json','server.js','public/app.js','pwa/app.js','node_modules/express/package.json']) {
     const escaped = rel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const match = host.match(new RegExp('\\{ "' + escaped + '", "([0-9a-f]{64})" \\}'));
@@ -85,8 +85,8 @@ test('installer upgrade and GitHub release gates remain hardened', () => {
   assert.match(iss, /Flags: nowait postinstall skipifsilent runasoriginaluser/);
   assert.match(workflow, /npm audit --omit=dev --audit-level=high/);
   assert.match(workflow, /name: Test release-critical changes/);
-  assert.match(workflow, /recent-changes-ultra-audit-1\.59\.8\.test\.js/);
-  assert.match(workflow, /windows-server-host-split-1\.59\.8\.test\.js/);
+  assert.match(workflow, /recent-changes-ultra-audit-1\.60\.0\.test\.js/);
+  assert.match(workflow, /windows-server-host-split-1\.59\.4\.test\.js/);
 });
 
 test('ServerHost has bounded startup readiness with diagnostics and clean cancellation', () => {

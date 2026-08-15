@@ -68,7 +68,7 @@ test('new-country notifications resolve uncached landing visits and reject fake/
 });
 
 test('PWA shell is advanced for the notification polling fix', () => {
-  assert.match(read('pwa/app.js'), /APP_BUILD = '2026\.08\.14-pwa287'/);
-  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.14-pwa287'/);
-  assert.match(read('pwa/index.html'), /app\.js\?v=270/);
+  assert.match(read('pwa/app.js'), /APP_BUILD = '2026\.08\.15-pwa289'/);
+  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.15-pwa289'/);
+  assert.match(read('pwa/index.html'), /app\.js\?v=273/);
 });

@@ -3,7 +3,7 @@
  * Shell versioning + network-aware updates. Upload/API requests are never cached.
  * Web Share Target batches are isolated so simultaneous shares cannot overwrite one another.
  */
-var VERSION = '2026.08.14-pwa287';
+var VERSION = '2026.08.15-pwa289';
 var SHELL_CACHE = 'dx-pwa-shell-' + VERSION;
 var RUNTIME_CACHE = 'dx-pwa-runtime-' + VERSION;
 var SHARE_CACHE = 'dx-share-v2';
@@ -13,12 +13,12 @@ var SHARE_CACHE = 'dx-share-v2';
 var SHELL = [
   '/app/launch',
   '/direct-xfer-pwa-shell.html',
-  '/app/app.css?v=271',
-  '/app/theme-init.js?v=268',
-  '/app/login-vault.js?v=268',
-  '/app/dlp-local.js?v=268',
-  '/download-resume.js?v=268',
-  '/app/app.js?v=270',
+  '/app/app.css?v=272',
+  '/app/theme-init.js?v=269',
+  '/app/login-vault.js?v=269',
+  '/app/dlp-local.js?v=269',
+  '/download-resume.js?v=269',
+  '/app/app.js?v=273',
   '/direct-xfer-pwa.webmanifest',
   '/direct-xfer-pwa-en.webmanifest',
   '/direct-xfer-pwa-es.webmanifest',
@@ -32,7 +32,7 @@ var SHELL = [
   '/ui/notification-volume-on.svg',
   '/ui/notification-volume-off.svg',
   '/ui/notification-settings.svg',
-  '/dxcrypto.js?v=268'
+  '/dxcrypto.js?v=269'
 ];
 
 function randomId() {

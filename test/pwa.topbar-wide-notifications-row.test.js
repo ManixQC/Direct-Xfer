@@ -15,8 +15,8 @@ test('tablet and wide PWA keep Notifications in the compact topbar without Infor
 });
 
 test('PWA shell is advanced so the topbar removal is not served from stale cache', () => {
-  assert.match(read('pwa/app.js'), /APP_BUILD = '2026\.08\.14-pwa287'/);
-  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.14-pwa287'/);
-  assert.match(read('pwa/index.html'), /app\.css\?v=271/);
-  assert.match(read('pwa/index.html'), /app\.js\?v=270/);
+  assert.match(read('pwa/app.js'), /APP_BUILD = '2026\.08\.15-pwa289'/);
+  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.15-pwa289'/);
+  assert.match(read('pwa/index.html'), /app\.css\?v=272/);
+  assert.match(read('pwa/index.html'), /app\.js\?v=273/);
 });

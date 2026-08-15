@@ -7,19 +7,19 @@ const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const read = (...parts) => fs.readFileSync(path.join(root, ...parts), 'utf8');
 
-test('1.59.8 release identifiers are synchronized', () => {
+test('1.60.0 release identifiers are synchronized', () => {
   const pkg = JSON.parse(read('package.json'));
   const lock = JSON.parse(read('package-lock.json'));
-  assert.equal(pkg.version, '1.59.8');
-  assert.equal(lock.version, '1.59.8');
-  assert.equal(lock.packages[''].version, '1.59.8');
-  assert.match(read('pwa','app.js'), /APP_VERSION = '1\.59\.8'/);
-  assert.match(read('pwa','app.js'), /APP_BUILD = '2026\.08\.14-pwa287'/);
-  assert.match(read('pwa','sw.js'), /VERSION = '2026\.08\.14-pwa287'/);
-  assert.match(read('pwa','index.html'), /v1\.59\.8 · pwa287/);
-  assert.match(read('windows-launcher','Program.cs'), /RuntimeAppBuild = "1\.59\.8-launcher34-csharp"/);
-  assert.match(read('windows-launcher','Program.cs'), /ServerHostBuild = "1\.59\.8-serverhost7-csharp"/);
-  assert.match(read('windows-server-host','Program.cs'), /HostVersion = "1\.59\.8-serverhost7-csharp"/);
-  assert.match(read('.github','workflows','build-windows-csharp.yml'), /DX_VERSION: '1\.59\.8'/);
-  assert.match(read('installer','Direct-Xfer.iss'), /#define AppVersion "1\.59\.8"/);
+  assert.equal(pkg.version, '1.60.0');
+  assert.equal(lock.version, '1.60.0');
+  assert.equal(lock.packages[''].version, '1.60.0');
+  assert.match(read('pwa','app.js'), /APP_VERSION = '1\.60\.0'/);
+  assert.match(read('pwa','app.js'), /APP_BUILD = '2026\.08\.15-pwa289'/);
+  assert.match(read('pwa','sw.js'), /VERSION = '2026\.08\.15-pwa289'/);
+  assert.match(read('pwa','index.html'), /v1\.60\.0 · pwa289/);
+  assert.match(read('windows-launcher','Program.cs'), /RuntimeAppBuild = "1\.60\.0-launcher35-csharp"/);
+  assert.match(read('windows-launcher','Program.cs'), /ServerHostBuild = "1\.60\.0-serverhost8-csharp"/);
+  assert.match(read('windows-server-host','Program.cs'), /HostVersion = "1\.60\.0-serverhost8-csharp"/);
+  assert.match(read('.github','workflows','build-windows-csharp.yml'), /DX_VERSION: '1\.60\.0'/);
+  assert.match(read('installer','Direct-Xfer.iss'), /#define AppVersion "1\.60\.0"/);
 });

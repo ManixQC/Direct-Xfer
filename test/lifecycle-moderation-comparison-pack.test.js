@@ -95,8 +95,8 @@ test('30 — PWA image dashboard compares 7 or 30 days to the preceding period',
 });
 
 test('PWA shell is advanced while application version remains 1.51.2', () => {
-  assert.match(pwa, /APP_VERSION = '1\.59\.8'/);
-  assert.match(pwa, /APP_BUILD = '2026\.08\.14-pwa287'/);
-  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.14-pwa287'/);
-  assert.match(pwaHtml, /app\.js\?v=270/);
+  assert.match(pwa, /APP_VERSION = '1\.60\.0'/);
+  assert.match(pwa, /APP_BUILD = '2026\.08\.15-pwa289'/);
+  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.15-pwa289'/);
+  assert.match(pwaHtml, /app\.js\?v=273/);
 });

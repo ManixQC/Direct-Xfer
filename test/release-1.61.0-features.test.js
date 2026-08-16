@@ -11,7 +11,7 @@ const reception = read('public/reception.js');
 const pwa = read('pwa/app.js');
 const html = read('public/index.html');
 
-test('1.62.3 share editing and duplication retain useful config while clearing runtime state', () => {
+test('1.62.4 share editing and duplication retain useful config while clearing runtime state', () => {
   for (const key of ['maxFilesPerUpload','maxFilesPerSender','maxBytesPerSender','allowExt','blockExt','rejectDuplicates','requireSenderName','blockExecutables','moderated']) {
     assert.ok(server.includes(`'${key}'`) || server.includes(`editPositiveInt('${key}'`) || server.includes(`${key}:`), `missing ${key}`);
   }
@@ -21,7 +21,7 @@ test('1.62.3 share editing and duplication retain useful config while clearing r
   for (const key of ['receivedHashes','senderStats','versions','editHistory','cacheRevision']) assert.ok(server.includes(`'${key}'`), `clone does not reset ${key}`);
 });
 
-test('1.62.3 standard share search covers type, files, recipients and recent client metadata', () => {
+test('1.62.4 standard share search covers type, files, recipients and recent client metadata', () => {
   assert.match(app, /s\.type/);
   assert.match(app, /s\.items/);
   assert.match(app, /s\.recipients/);
@@ -29,7 +29,7 @@ test('1.62.3 standard share search covers type, files, recipients and recent cli
   assert.match(app, /allowExt|blockExt/);
 });
 
-test('1.62.3 detailed stats support selectable periods, comparison, failure causes and resume visibility', () => {
+test('1.62.4 detailed stats support selectable periods, comparison, failure causes and resume visibility', () => {
   assert.match(server, /rawPeriod/);
   assert.match(server, /comparison,/);
   assert.match(server, /failureReasons:/);
@@ -42,7 +42,7 @@ test('1.62.3 detailed stats support selectable periods, comparison, failure caus
   assert.match(pwa, /failureReasons/);
 });
 
-test('1.62.3 reception shows restrictions and aggregate speed/ETA progress before and during upload', () => {
+test('1.62.4 reception shows restrictions and aggregate speed/ETA progress before and during upload', () => {
   assert.match(server, /inboxRestrictions/);
   assert.match(server, /id="up-overall"/);
   assert.match(reception, /function updateOverallProgress/);
@@ -51,7 +51,7 @@ test('1.62.3 reception shows restrictions and aggregate speed/ETA progress befor
   assert.match(reception, /currentFiles/);
 });
 
-test('1.62.3 reception resumes per file and detects duplicates with replace keep or ignore choices', () => {
+test('1.62.4 reception resumes per file and detects duplicates with replace keep or ignore choices', () => {
   assert.match(reception, /finishAlreadySent/);
   assert.match(reception, /upload-status/);
   assert.match(server, /duplicate-check/);
@@ -63,7 +63,7 @@ test('1.62.3 reception resumes per file and detects duplicates with replace keep
   assert.match(server, /hashFileSha256\(part\)/);
 });
 
-test('1.62.3 image editor keeps versions, edit history, restore and before-after comparison', () => {
+test('1.62.4 image editor keeps versions, edit history, restore and before-after comparison', () => {
   assert.match(server, /archiveCurrentPhotoVersion/);
   assert.match(server, /addPhotoEditHistory/);
   assert.match(server, /\/photos\/:id\/versions/);
@@ -74,7 +74,7 @@ test('1.62.3 image editor keeps versions, edit history, restore and before-after
   assert.match(pwa, /annOperations/);
 });
 
-test('1.62.3 admin before-after preview does not use the public view-counting image route', () => {
+test('1.62.4 admin before-after preview does not use the public view-counting image route', () => {
   assert.match(server, /adminRouter\.get\('\/photos\/:id\/preview'/);
   // GitHub's Windows checkout may expose CRLF while local/Linux runs use LF.
   // Normalize line endings before slicing the function so the test validates the
@@ -87,7 +87,7 @@ test('1.62.3 admin before-after preview does not use the public view-counting im
   assert.doesNotMatch(fn, /cur\.src='\/i\//);
 });
 
-test('1.62.3 image variant stats include bandwidth and view share and edits bump cache revisions', () => {
+test('1.62.4 image variant stats include bandwidth and view share and edits bump cache revisions', () => {
   assert.match(server, /bandwidthBytes/);
   assert.match(server, /viewSharePct/);
   assert.match(app, /stats\.bandwidth/);

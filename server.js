@@ -10401,20 +10401,55 @@ function receptionHashSeen(s, sha) {
   if (entry && typeof entry === 'object' && entry.path) return !!receptionDuplicateStoredPath(s, sha);
   return true; // legacy numeric entries have no path to validate
 }
+function stripWindowsPathNamespace(value) {
+  let p = String(value || '');
+  if (process.platform !== 'win32') return p;
+  if (/^\\\\\?\\UNC\\/i.test(p)) return '\\\\' + p.slice(8);
+  if (/^\\\\\?\\/.test(p)) return p.slice(4);
+  return p;
+}
+function receptionComparableRealPath(value) {
+  const lexical = path.resolve(stripWindowsPathNamespace(value));
+  try {
+    const real = fs.realpathSync.native ? fs.realpathSync.native(lexical) : fs.realpathSync(lexical);
+    return path.resolve(stripWindowsPathNamespace(real));
+  } catch (_) {
+    return lexical;
+  }
+}
 function receptionRelativeStoredPath(dest) {
   if (!dest) return '';
   try {
-    // On Windows, fs.realpath()/realpath.native may yield a namespaced path
-    // (\\?\D:\...) while INBOX_DIR is a regular drive path (D:\...).
-    // path.relative() then treats them as unrelated roots and returns an absolute
-    // path, which made the durable duplicate entry fall back to legacy value `1`.
-    // Normalize both sides to the same namespace before deriving the stored path.
-    const inboxRoot = path.toNamespacedPath(path.resolve(INBOX_DIR));
-    const resolvedDest = path.toNamespacedPath(path.resolve(String(dest)));
-    const rel = path.relative(inboxRoot, resolvedDest).replace(/\\/g, '/');
-    if (!rel || rel === '..' || rel.startsWith('../') || path.isAbsolute(rel)) return '';
-    return rel.slice(0, 800);
+    // reserveUniqueUploadPath() intentionally writes through the REAL reception
+    // directory after the anti-symlink check. On Windows this real path can also
+    // carry the extended "\\\\?\\" prefix, and GitHub-hosted runner temp paths may
+    // traverse a junction. Comparing that physical destination with the lexical
+    // INBOX_DIR therefore makes path.relative() report an unrelated/absolute path.
+    // Canonicalize BOTH sides to their real, non-namespaced locations first, then
+    // persist only a portable path relative to INBOX_DIR.
+    const inboxRoot = receptionComparableRealPath(INBOX_DIR);
+    const resolvedDest = receptionComparableRealPath(dest);
+    const rawRel = path.relative(inboxRoot, resolvedDest);
+    if (!rawRel || rawRel === '..' || rawRel.startsWith('..' + path.sep) || path.isAbsolute(rawRel)) return '';
+    return rawRel.split(path.sep).join('/').slice(0, 800);
   } catch (_) { return ''; }
+}
+function receptionMetadataPath(absPath) {
+  if (!absPath) return '';
+  const rel = receptionRelativeStoredPath(absPath);
+  if (rel) {
+    try { return resolveWithin(INBOX_DIR, rel); } catch (_) {}
+  }
+  try { return path.resolve(stripWindowsPathNamespace(absPath)); }
+  catch (_) { return String(absPath || ''); }
+}
+function deleteFileExpiryForPath(absPath) {
+  const map = state.meta && state.meta.fileExpiry && typeof state.meta.fileExpiry === 'object' ? state.meta.fileExpiry : null;
+  if (!map || !absPath) return;
+  const raw = String(absPath);
+  delete map[raw];
+  const normalized = receptionMetadataPath(raw);
+  if (normalized && normalized !== raw) delete map[normalized];
 }
 function rememberReceptionHash(s, sha, dest = '') {
   if (!sha) return;
@@ -10785,7 +10820,8 @@ function applyReceptionAccountingState(s, opts = {}) {
   if (senderKey) bumpSenderStatByKey(s, senderKey, size);
   if (expireSec > 0 && dest) {
     const map = fileExpiryMap();
-    map[dest] = { expiresAt:Date.now() + expireSec * 1000, shareId:s.id || null, accountId:notificationAccountIdForShare(s) || null, name:String(path.basename(dest)).slice(0,240) };
+    const metadataDest = receptionMetadataPath(dest);
+    map[metadataDest] = { expiresAt:Date.now() + expireSec * 1000, shareId:s.id || null, accountId:notificationAccountIdForShare(s) || null, name:String(path.basename(dest)).slice(0,240) };
   }
   return { beforeDownloads, firstInboxDeposit, size, sha, senderKey, dest, expireSec };
 }
@@ -10798,7 +10834,7 @@ function finalizeReceptionAccountingEffects(s, accounting) {
 }
 function rollbackReceptionAccountingState(s, beforeShare, dest) {
   if (s && beforeShare) restorePlainObject(s, beforeShare);
-  if (dest && state.meta && state.meta.fileExpiry) delete state.meta.fileExpiry[String(dest)];
+  if (dest) deleteFileExpiryForPath(dest);
 }
 async function rollbackAcceptedUploadFile(target, restorePath = null) {
   if (!target) return true;
@@ -11822,7 +11858,8 @@ function fileExpiryMap() {
 function recordFileExpiry(absPath, sec, share, name) {
   if (!absPath || sec <= 0) return;
   const map = fileExpiryMap(), accountId = share ? notificationAccountIdForShare(share) : null;
-  map[absPath] = { expiresAt:Date.now() + sec * 1000, shareId:share && share.id || null, accountId:accountId || null, name:String(name || path.basename(absPath)).slice(0,240) };
+  const metadataPath = receptionMetadataPath(absPath);
+  map[metadataPath] = { expiresAt:Date.now() + sec * 1000, shareId:share && share.id || null, accountId:accountId || null, name:String(name || path.basename(absPath)).slice(0,240) };
   if (Object.keys(map).length > 20000) {
     const now = Date.now();
     for (const k of Object.keys(map)) { const v=map[k], exp=typeof v==='number'?v:Number(v&&v.expiresAt)||0; if (exp <= now) delete map[k]; }
@@ -12754,7 +12791,11 @@ async function handleUpload(req, res) {
       if (duplicateAction === 'replace' && duplicateTarget) {
         target = duplicateTarget;
         const expiryMap = state.meta && state.meta.fileExpiry && typeof state.meta.fileExpiry === 'object' ? state.meta.fileExpiry : null;
-        if (expiryMap && Object.prototype.hasOwnProperty.call(expiryMap, target)) {
+        const expiryTarget = receptionMetadataPath(target);
+        if (expiryMap && Object.prototype.hasOwnProperty.call(expiryMap, expiryTarget)) {
+          replacedExpiryHad = true;
+          replacedExpiryBefore = JSON.parse(JSON.stringify(expiryMap[expiryTarget]));
+        } else if (expiryMap && Object.prototype.hasOwnProperty.call(expiryMap, target)) {
           replacedExpiryHad = true;
           replacedExpiryBefore = JSON.parse(JSON.stringify(expiryMap[target]));
         }
@@ -12814,15 +12855,17 @@ async function handleUpload(req, res) {
     // its self-destruct timer (or clear the old one when no expiry was requested).
     if (outcome.replaced) {
       const expiryMap = fileExpiryMap();
-      if (expireSec > 0) expiryMap[target] = { expiresAt:Date.now() + expireSec * 1000, shareId:s.id || null, accountId:notificationAccountIdForShare(s) || null, name:String(path.basename(target)).slice(0,240) };
-      else delete expiryMap[target];
+      const expiryTarget = receptionMetadataPath(target);
+      deleteFileExpiryForPath(target);
+      if (expireSec > 0) expiryMap[expiryTarget] = { expiresAt:Date.now() + expireSec * 1000, shareId:s.id || null, accountId:notificationAccountIdForShare(s) || null, name:String(path.basename(target)).slice(0,240) };
     }
     if (!persistNow()) {
       rollbackReceptionAccountingState(s, beforeShare, target);
       if (outcome.replaced) {
         const expiryMap = fileExpiryMap();
-        if (outcome.replacedExpiryHad) expiryMap[target] = outcome.replacedExpiryBefore;
-        else delete expiryMap[target];
+        const expiryTarget = receptionMetadataPath(target);
+        deleteFileExpiryForPath(target);
+        if (outcome.replacedExpiryHad) expiryMap[expiryTarget] = outcome.replacedExpiryBefore;
       }
       if (outcome.replacedBackup) {
         try { await fs.promises.unlink(target); } catch (_) {}
@@ -17724,7 +17767,7 @@ adminRouter.post('/pending/:id/approve', async (req, res) => {
       restorePlainObject(s, beforeShare);
       const liveList = pendingModerationRows();
       if (!liveList.some((row) => row && row.id === p.id)) liveList.splice(Math.min(i, liveList.length), 0, p);
-      if (state.meta && state.meta.fileExpiry && outcome.dest) delete state.meta.fileExpiry[outcome.dest];
+      if (outcome.dest) deleteFileExpiryForPath(outcome.dest);
       try {
         const pendingPath = path.join(PENDING_DIR, String(p.id));
         if (outcome.dest && fs.existsSync(outcome.dest) && !fs.existsSync(pendingPath)) fs.renameSync(outcome.dest, pendingPath);
@@ -23923,7 +23966,7 @@ app.post('/app/inbox/:token/pending/:id/approve', pwaJsonParser, async (req, res
       restorePlainObject(sh, beforeShare);
       const liveList = pendingModerationRows();
       if (!liveList.some((item) => item && item.id === row.id)) liveList.splice(Math.max(0, Math.min(originalIndex, liveList.length)), 0, row);
-      if (state.meta && state.meta.fileExpiry && outcome.dest) delete state.meta.fileExpiry[outcome.dest];
+      if (outcome.dest) deleteFileExpiryForPath(outcome.dest);
       try { const pendingPath=path.join(PENDING_DIR,String(row.id)); if(outcome.dest&&fs.existsSync(outcome.dest)&&!fs.existsSync(pendingPath))fs.renameSync(outcome.dest,pendingPath); } catch(e){ console.error('[moderation] PWA approval rollback failed:',e.message); }
       return res.status(503).json({error:'write-error'});
     }

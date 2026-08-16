@@ -20,7 +20,7 @@ test('Windows ServerHost falls back to a free port and publishes it consistently
   assert.match(host, /EnvironmentVariables\["PORT"\] = _port/);
   assert.match(host, /TryReady\(_port, _token/);
   assert.match(host, /LauncherRequest\("POST", _port, "\/__dx_launcher\/shutdown"/);
-  assert.match(host, /RuntimeAppBuild = "1\.62\.3-launcher44-csharp"/);
+  assert.match(host, /RuntimeAppBuild = "1\.62\.4-launcher45-csharp"/);
   assert.match(launcher, /session\.port/);
 });
 

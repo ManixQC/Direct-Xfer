@@ -21,9 +21,9 @@ test('PWA push test is immediately before notification center settings', () => {
 });
 
 test('PWA cache/build is bumped for reordered settings', () => {
-  assert.match(html, /v1\.62\.3 · pwa307/);
-  assert.match(app, /APP_BUILD = '2026\.08\.16-pwa307'/);
-  assert.match(sw, /VERSION = '2026\.08\.16-pwa307'/);
+  assert.match(html, /v1\.62\.4 · pwa308/);
+  assert.match(app, /APP_BUILD = '2026\.08\.16-pwa308'/);
+  assert.match(sw, /VERSION = '2026\.08\.16-pwa308'/);
   assert.match(html, /app\.js\?v=290/);
   assert.match(sw, /app\.js\?v=290/);
 });

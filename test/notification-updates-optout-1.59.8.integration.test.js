@@ -113,7 +113,7 @@ test('muting Updates suppresses both queued and startup update notifications', a
   assert.ok(owner && owner.id, 'owner account missing from persisted state');
   state.meta.notificationReadStateVersion = 1;
   state.meta.notificationCategorySchemaVersion = 3;
-  state.meta.notificationLastAppVersion = '1.59.7'; // forces the 1.62.3 startup update-installed path
+  state.meta.notificationLastAppVersion = '1.59.7'; // forces the 1.62.4 startup update-installed path
   state.meta.notifications = Array.isArray(state.meta.notifications) ? state.meta.notifications : [];
   state.meta.notifications.unshift({
     id:'stale-update-before-delivery', accountId:owner.id, type:'update-available',

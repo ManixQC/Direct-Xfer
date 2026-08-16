@@ -20,23 +20,23 @@ using System.Windows.Forms;
 [assembly: AssemblyCompany("Direct-Xfer")]
 [assembly: AssemblyProduct("Direct-Xfer")]
 [assembly: AssemblyCopyright("Copyright © Direct-Xfer 2026")]
-[assembly: AssemblyVersion("1.62.3.0")]
-[assembly: AssemblyFileVersion("1.62.3.0")]
-[assembly: AssemblyInformationalVersion("1.62.3-launcher44-csharp")]
+[assembly: AssemblyVersion("1.62.4.0")]
+[assembly: AssemblyFileVersion("1.62.4.0")]
+[assembly: AssemblyInformationalVersion("1.62.4-launcher45-csharp")]
 
 namespace DirectXfer.WindowsLauncher
 {
     internal static class Program
     {
-        internal const string AppVersion = "1.62.3";
-        internal const string RuntimeAppBuild = "1.62.3-launcher44-csharp";
+        internal const string AppVersion = "1.62.4";
+        internal const string RuntimeAppBuild = "1.62.4-launcher45-csharp";
         internal const string ServerHostFileName = "Direct-Xfer.ServerHost.exe";
-        internal const string ServerHostVersion = "1.62.3.0";
+        internal const string ServerHostVersion = "1.62.4.0";
         internal const int DefaultPort = 55750;
         internal const int StartupReadyTimeoutMs = 30000;
         internal const string MutexName = @"Local\DirectXferLauncherInstance";
         internal const string OpenEventName = @"Local\DirectXferLauncherOpen";
-        internal const string ServerHostBuild = "1.62.3-serverhost17-csharp";
+        internal const string ServerHostBuild = "1.62.4-serverhost18-csharp";
         internal const string ServerHostReloadEventName = @"Local\DirectXferServerHostReload";
 
         [STAThread]

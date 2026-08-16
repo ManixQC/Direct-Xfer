@@ -36,8 +36,8 @@ test('current shell cache keys deliver the corrected admin and PWA scripts', () 
   assert.match(html, /style\.css\?v=286/);
   assert.match(html, /app\.js\?v=292/);
   assert.match(pwaHtml, /app\.js\?v=290/);
-  assert.match(pwaHtml, /v1\.62\.3 · pwa307/);
-  assert.match(sw, /VERSION = '2026\.08\.16-pwa307'/);
+  assert.match(pwaHtml, /v1\.62\.4 · pwa308/);
+  assert.match(sw, /VERSION = '2026\.08\.16-pwa308'/);
   assert.match(sw, /app\/app\.js\?v=290/);
 });
 

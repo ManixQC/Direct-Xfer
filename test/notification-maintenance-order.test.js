@@ -21,8 +21,8 @@ test('Maintenance is immediately above Security in PWA notification settings', (
 });
 
 test('PWA shell cache is advanced without changing app version', () => {
-  assert.match(read('pwa/app.js'), /APP_VERSION = '1\.62\.3'/);
-  assert.match(read('pwa/app.js'), /APP_BUILD = '2026\.08\.16-pwa307'/);
-  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.16-pwa307'/);
+  assert.match(read('pwa/app.js'), /APP_VERSION = '1\.62\.4'/);
+  assert.match(read('pwa/app.js'), /APP_BUILD = '2026\.08\.16-pwa308'/);
+  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.16-pwa308'/);
   assert.match(read('pwa/index.html'), /app\.js\?v=290/);
 });

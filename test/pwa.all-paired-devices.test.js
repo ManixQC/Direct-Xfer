@@ -27,9 +27,9 @@ test('PWA renders the shared device list without requiring an admin session', ()
 });
 
 test('1.51.2 advances the PWA shell', () => {
-  assert.equal(JSON.parse(read('package.json')).version, '1.62.3');
-  assert.match(read('pwa/app.js'), /APP_VERSION = '1\.62\.3'/);
-  assert.match(read('pwa/app.js'), /APP_BUILD = '2026\.08\.16-pwa307'/);
-  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.16-pwa307'/);
+  assert.equal(JSON.parse(read('package.json')).version, '1.62.4');
+  assert.match(read('pwa/app.js'), /APP_VERSION = '1\.62\.4'/);
+  assert.match(read('pwa/app.js'), /APP_BUILD = '2026\.08\.16-pwa308'/);
+  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.16-pwa308'/);
   assert.match(read('pwa/index.html'), /app\.js\?v=290/);
 });

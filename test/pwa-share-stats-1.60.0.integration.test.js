@@ -130,7 +130,7 @@ test('paired-device PWA stats works without a live admin browser session and mat
   assert.deepEqual(pwaData.quota, [{ kind: 'downloads', used: 0, max: 3 }]);
 });
 
-test('1.62.3 detailed stats accepts 24h, 7d and lifetime periods in standard and PWA routes', async () => {
+test('1.62.4 detailed stats accepts 24h, 7d and lifetime periods in standard and PWA routes', async () => {
   for (const period of ['1', '7', 'all']) {
     const standard = await fetch(`${base}/api/shares/${encodeURIComponent(createdShare.id)}/stats-detail?period=${period}`, { headers: { Cookie: adminCookie }, cache: 'no-store' });
     const pwa = await fetch(`${base}/app/host/shares/${encodeURIComponent(createdShare.token)}/stats-detail?period=${period}`, { headers: { Cookie: deviceCookie }, cache: 'no-store' });

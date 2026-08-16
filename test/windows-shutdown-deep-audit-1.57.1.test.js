@@ -17,7 +17,7 @@ function freePort() { return new Promise((resolve,reject)=>{ const s=net.createS
 function waitHealth(port, child, out) { return new Promise((resolve,reject)=>{ const deadline=Date.now()+10000; const tick=()=>{ if(child.exitCode!=null)return reject(new Error('early exit '+child.exitCode+'\n'+out())); const r=http.get({hostname:'127.0.0.1',port,path:'/healthz',timeout:400},res=>{res.resume();if(res.statusCode===200)return resolve();setTimeout(tick,80);}); r.on('error',()=>Date.now()>deadline?reject(new Error('health timeout\n'+out())):setTimeout(tick,80));r.on('timeout',()=>r.destroy());};tick();}); }
 
 test('C# launcher and ServerHost deep shutdown audit prevents duplicate/stuck desktop processes', () => {
-  assert.match(launcher, /RuntimeAppBuild = "1\.62\.3-launcher44-csharp"/);
+  assert.match(launcher, /RuntimeAppBuild = "1\.62\.4-launcher45-csharp"/);
   assert.match(launcher, /new Mutex\(true, MutexName/);
   assert.match(launcher, /Local\\DirectXferLauncherInstance/);
   assert.match(launcher, /EventWaitHandle/);

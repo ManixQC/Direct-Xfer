@@ -28,7 +28,7 @@ test('topbar shows only the logo without Send or Paired device labels', () => {
 });
 
 test('PWA cache is advanced for the topbar/settings move', () => {
-  assert.match(read('pwa/app.js'), /APP_BUILD = '2026\.08\.16-pwa307'/);
-  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.16-pwa307'/);
+  assert.match(read('pwa/app.js'), /APP_BUILD = '2026\.08\.16-pwa308'/);
+  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.16-pwa308'/);
   assert.match(read('pwa/index.html'), /app\.css\?v=274/);
 });

@@ -6,7 +6,7 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const root = path.resolve(__dirname, '..');
 const read = (...parts) => fs.readFileSync(path.join(root, ...parts), 'utf8');
-test('admin interface keeps the round Direct-Xfer logo as browser favicon in 1.62.3', () => {
+test('admin interface keeps the round Direct-Xfer logo as browser favicon in 1.62.4', () => {
   const html = read('public', 'index.html');
   const favicon = path.join(root, 'public', 'favicon.png');
   const pwaIcon = path.join(root, 'pwa', 'icon-192.png');

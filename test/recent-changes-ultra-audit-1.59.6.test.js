@@ -15,23 +15,23 @@ function normalizedTextSha256(rel) {
   return crypto.createHash('sha256').update(Buffer.from(text, 'utf8')).digest('hex');
 }
 
-test('1.62.3 release metadata is synchronized across Node, PWA, launcher, host and installer', () => {
+test('1.62.4 release metadata is synchronized across Node, PWA, launcher, host and installer', () => {
   const pkg = JSON.parse(read('package.json'));
   const lock = JSON.parse(read('package-lock.json'));
-  assert.equal(pkg.version, '1.62.3');
-  assert.equal(lock.version, '1.62.3');
-  assert.equal(lock.packages[''].version, '1.62.3');
-  assert.match(read('pwa', 'app.js'), /APP_VERSION = '1\.62\.3'/);
-  assert.match(read('pwa', 'app.js'), /APP_BUILD = '2026\.08\.16-pwa307'/);
-  assert.match(read('pwa', 'sw.js'), /VERSION = '2026\.08\.16-pwa307'/);
-  assert.match(read('pwa', 'index.html'), /v1\.62\.3 · pwa307/);
-  assert.match(launcher, /AppVersion = "1\.62\.3"/);
-  assert.match(launcher, /RuntimeAppBuild = "1\.62\.3-launcher44-csharp"/);
-  assert.match(host, /HostVersion = "1\.62\.3-serverhost17-csharp"/);
-  assert.match(workflow, /DX_VERSION: '1\.62\.3'/);
-  assert.match(workflow, /DX_RUNTIME_BUILD: '1\.62\.3-launcher44-csharp'/);
-  assert.match(workflow, /DX_SERVER_HOST_BUILD: '1\.62\.3-serverhost17-csharp'/);
-  assert.match(iss, /#define AppVersion "1\.62\.3"/);
+  assert.equal(pkg.version, '1.62.4');
+  assert.equal(lock.version, '1.62.4');
+  assert.equal(lock.packages[''].version, '1.62.4');
+  assert.match(read('pwa', 'app.js'), /APP_VERSION = '1\.62\.4'/);
+  assert.match(read('pwa', 'app.js'), /APP_BUILD = '2026\.08\.16-pwa308'/);
+  assert.match(read('pwa', 'sw.js'), /VERSION = '2026\.08\.16-pwa308'/);
+  assert.match(read('pwa', 'index.html'), /v1\.62\.4 · pwa308/);
+  assert.match(launcher, /AppVersion = "1\.62\.4"/);
+  assert.match(launcher, /RuntimeAppBuild = "1\.62\.4-launcher45-csharp"/);
+  assert.match(host, /HostVersion = "1\.62\.4-serverhost18-csharp"/);
+  assert.match(workflow, /DX_VERSION: '1\.62\.4'/);
+  assert.match(workflow, /DX_RUNTIME_BUILD: '1\.62\.4-launcher45-csharp'/);
+  assert.match(workflow, /DX_SERVER_HOST_BUILD: '1\.62\.4-serverhost18-csharp'/);
+  assert.match(iss, /#define AppVersion "1\.62\.4"/);
 });
 
 test('PWA resources stay on v268 while the admin favicon is cache-busted to v269', () => {

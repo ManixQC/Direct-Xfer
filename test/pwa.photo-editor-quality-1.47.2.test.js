@@ -19,11 +19,11 @@ test('photo editor defaults to 99 percent quality in every export path', () => {
 });
 
 test('1.51.2 PWA build and resource identifiers stay synchronized', () => {
-  assert.equal(pkg.version, '1.62.3');
-  assert.match(app, /APP_VERSION = '1\.62\.3'/);
-  assert.match(app, /APP_BUILD = '2026\.08\.16-pwa307'/);
-  assert.match(sw, /VERSION = '2026\.08\.16-pwa307'/);
-  assert.match(html, /v1\.62\.3 · pwa307/);
+  assert.equal(pkg.version, '1.62.4');
+  assert.match(app, /APP_VERSION = '1\.62\.4'/);
+  assert.match(app, /APP_BUILD = '2026\.08\.16-pwa308'/);
+  assert.match(sw, /VERSION = '2026\.08\.16-pwa308'/);
+  assert.match(html, /v1\.62\.4 · pwa308/);
   assert.match(html, /\/app\/app\.js\?v=290/);
   assert.match(sw, /\/app\/app\.js\?v=290/);
 });

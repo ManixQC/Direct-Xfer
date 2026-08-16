@@ -124,10 +124,10 @@ test('40: missing original locations return safe restore alternatives and select
   assert.match(pwa, /await pwaTrashRestoreRequest\(ids\[i\]\)/);
 });
 
-test('wave 2 remains on 1.62.3 while PWA cache/build are advanced coherently', () => {
-  assert.equal(JSON.parse(read('package.json')).version, '1.62.3');
-  assert.match(pwa, /APP_BUILD = '2026\.08\.16-pwa307'/);
-  assert.match(sw, /VERSION = '2026\.08\.16-pwa307'/);
+test('wave 2 remains on 1.62.4 while PWA cache/build are advanced coherently', () => {
+  assert.equal(JSON.parse(read('package.json')).version, '1.62.4');
+  assert.match(pwa, /APP_BUILD = '2026\.08\.16-pwa308'/);
+  assert.match(sw, /VERSION = '2026\.08\.16-pwa308'/);
   assert.match(pwaHtml, /app\.css\?v=274/);
   assert.match(pwaHtml, /app\.js\?v=290/);
   assert.match(pubHtml, /style\.css\?v=286/);

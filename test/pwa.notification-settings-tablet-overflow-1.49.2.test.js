@@ -29,12 +29,12 @@ test('1.51.2 system notification descriptions span the full tablet preference ca
 test('1.51.2 release and PWA shell identifiers are synchronized', () => {
   const pkg = JSON.parse(read('package.json'));
   const lock = JSON.parse(read('package-lock.json'));
-  assert.equal(pkg.version, '1.62.3');
+  assert.equal(pkg.version, '1.62.4');
   assert.equal(lock.version, pkg.version);
   assert.equal(lock.packages[''].version, pkg.version);
-  assert.match(read('pwa/app.js'), /APP_VERSION = '1\.62\.3'/);
-  assert.match(read('pwa/app.js'), /APP_BUILD = '2026\.08\.16-pwa307'/);
-  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.16-pwa307'/);
+  assert.match(read('pwa/app.js'), /APP_VERSION = '1\.62\.4'/);
+  assert.match(read('pwa/app.js'), /APP_BUILD = '2026\.08\.16-pwa308'/);
+  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.16-pwa308'/);
   assert.match(read('pwa/index.html'), /app\.css\?v=274/);
-  assert.match(read('pwa/index.html'), /v1\.62\.3 · pwa307/);
+  assert.match(read('pwa/index.html'), /v1\.62\.4 · pwa308/);
 });

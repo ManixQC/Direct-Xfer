@@ -154,10 +154,15 @@ test('photo replacement persists new metadata before deleting old managed files'
   assert.match(pwa, /Object\.assign\(photo, before\)/);
 });
 
-test('photo version trimming never forgets metadata before deleting its directory', () => {
-  const fn = slice('function archiveCurrentPhotoVersion', 'function restorePhotoVersion');
-  assert.match(fn, /photo\.versions\[photo\.versions\.length - 1\]/);
-  assert.ok(fn.indexOf('fs.rmSync') < fn.lastIndexOf('photo.versions.pop()'));
+test('photo version trimming preserves the original marker and defers physical deletion until after persistence', () => {
+  const fn = slice('function archiveCurrentPhotoVersion', 'function cleanupPhotoVersionStorage');
+  assert.match(fn, /ensurePhotoOriginalVersionMarker\(photo\)/);
+  assert.match(fn, /if \(photo\.versions\[removeIndex\] && photo\.versions\[removeIndex\]\.original\) removeIndex -= 1/);
+  assert.match(fn, /photo\.versions\.splice\(removeIndex, 1\)/);
+  const trim = fn.slice(fn.indexOf('while (photo.versions.length > 10)'));
+  assert.doesNotMatch(trim, /fs\.rmSync/);
+  const cleanup = slice('function cleanupPhotoVersionStorage', 'function restorePhotoVersion');
+  assert.match(cleanup, /fs\.rmSync/);
 });
 
 test('legacy direct destructive removeShare helper is gone', () => {
@@ -188,6 +193,10 @@ test('PWA retention and adaptive variants surface durable-store failures', () =>
   const retention = slice('async function runPwaImageRetentionForOwner', "app.get('/app/images/dashboard'");
   assert.match(retention, /persisted = persistNow\(\)/);
   assert.match(retention, /result\.persisted === false/);
-  const adaptive = slice("app.post('/app/image/:token/adaptive/:format'", "app.post('/app/image',");
-  assert.match(adaptive, /if \(!persistNow\(\)\) return res\.status\(503\)/);
+  const route = slice("app.post('/app/image/:token/adaptive/:format'", "app.post('/app/image',");
+  assert.match(route, /handlePhotoAdaptiveUpload\(req,res,photo,fmt/);
+  const adaptive = slice('function handlePhotoAdaptiveUpload', "adminRouter.post('/photos/:id/thumb'");
+  assert.match(adaptive, /if\(!persistNow\(\)\)/);
+  assert.match(adaptive, /res\.status\(503\)/);
+  assert.match(adaptive, /restorePlainObject\(s,before\)/);
 });

@@ -60,9 +60,9 @@ test('standard and PWA settings expose system subcategories with descriptions an
 });
 
 test('release is 1.51.2 with refreshed PWA cache', () => {
-  assert.equal(JSON.parse(read('package.json')).version, '1.60.0');
-  assert.match(read('pwa/app.js'), /APP_VERSION = '1\.60\.0'/);
-  assert.match(read('pwa/app.js'), /APP_BUILD = '2026\.08\.15-pwa289'/);
-  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.15-pwa289'/);
-  assert.match(read('pwa/index.html'), /app\.js\?v=273/);
+  assert.equal(JSON.parse(read('package.json')).version, '1.62.2');
+  assert.match(read('pwa/app.js'), /APP_VERSION = '1\.62\.2'/);
+  assert.match(read('pwa/app.js'), /APP_BUILD = '2026\.08\.16-pwa306'/);
+  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.16-pwa306'/);
+  assert.match(read('pwa/index.html'), /app\.js\?v=290/);
 });

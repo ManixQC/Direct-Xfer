@@ -14,7 +14,7 @@ test('1.51.2 exposes individual and bulk permanent deletion in the PWA trash', (
   assert.match(html, /id="share-trash-purge-all"[\s\S]*data-i18n="sharesTrashDeleteAll"/);
   assert.match(app, /sharesTrashDelete:\s*'Supprimer définitivement'/);
   assert.match(app, /sharesTrashDeleteAll:\s*'Tout supprimer définitivement'/);
-  assert.match(app, /purge\.addEventListener\('click',function\(\)\{purgePwaTrash\(item\.id,item\.name\|\|item\.shareId\);\}\)/);
+  assert.match(app, /purge\.addEventListener\('click',function\(\)\{purgePwaTrash\(item\.id,item\.name\|\|item\.shareId,item\);\}\)/);
   assert.match(app, /async function purgeAllPwaTrash\(\)/);
   assert.match(app, /method:'DELETE'/);
 });
@@ -34,11 +34,11 @@ test('destructive trash wording is explicit in all supported PWA languages and s
 test('1.51.2 release identifiers are synchronized', () => {
   const pkg = JSON.parse(read('package.json'));
   const lock = JSON.parse(read('package-lock.json'));
-  assert.equal(pkg.version, '1.60.0');
-  assert.equal(lock.version, '1.60.0');
-  assert.equal(lock.packages[''].version, '1.60.0');
-  assert.match(app, /APP_BUILD = '2026\.08\.15-pwa289'/);
-  assert.match(read('pwa', 'sw.js'), /VERSION = '2026\.08\.15-pwa289'/);
-  assert.match(html, /v1\.60\.0 · pwa289/);
-  assert.match(html, /app\.js\?v=273/);
+  assert.equal(pkg.version, '1.62.2');
+  assert.equal(lock.version, '1.62.2');
+  assert.equal(lock.packages[''].version, '1.62.2');
+  assert.match(app, /APP_BUILD = '2026\.08\.16-pwa306'/);
+  assert.match(read('pwa', 'sw.js'), /VERSION = '2026\.08\.16-pwa306'/);
+  assert.match(html, /v1\.62\.2 · pwa306/);
+  assert.match(html, /app\.js\?v=290/);
 });

@@ -9,8 +9,8 @@
 (function () {
   // Build tag, shown in the footer so a user can confirm at a glance which version
   // is actually running after an update. Keep it in lock-step with sw.js VERSION.
-  var APP_VERSION = '1.60.0';
-  var APP_BUILD = '2026.08.15-pwa289';
+  var APP_VERSION = '1.62.2';
+  var APP_BUILD = '2026.08.16-pwa306';
   // Upload blocks are deliberately small on mobile. A number of reverse proxies
   // still default to a 1 MiB request-body limit; an 8 MiB first block can therefore
   // be rejected before the browser emits any useful progress event, which looks like
@@ -61,6 +61,7 @@
   var OPFS_COPY_CHUNK = 4 * 1024 * 1024;
   var launchParams = new URLSearchParams(location.search);
   var launchAction = launchParams.get('action') || '';
+  var launchFocusToken = launchParams.get('focus') || '';
   var launchDestinationUrl = launchParams.get('dest') || '';
   var launchOpenCenter = launchParams.get('opencenter') === '1'; // cold start
   var launchCenterPanel = launchParams.get('panel') || '';
@@ -538,6 +539,46 @@
     shareStatsDetails:'Información del recurso', shareStatsStatus:'Estado', shareStatsType:'Tipo', shareStatsOwner:'Propietario', shareStatsCreated:'Creado', shareStatsExpiry:'Caducidad', shareStatsItems:'Elementos', shareStatsLastActivity:'Última actividad', shareStatsFirstActivity:'Primera actividad', shareStatsTags:'Etiquetas', shareStatsPath:'Ruta', shareStatsUrl:'URL', shareStatsQuota:'Cuotas', shareStatsFiles:'Archivos', shareStatsLive:'Transferencias activas', shareStatsActivity14:'Actividad — últimos 14 días', shareStatsCountries:'Países', shareStatsClients:'Clientes', shareStatsRecent:'Transferencias recientes', shareStatsNoRecent:'No hay transferencias recientes.', shareStatsUnknown:'Desconocido', shareStatsNever:'Nunca', shareStatsActive:'Activo', shareStatsInactive:'Inactivo', shareStatsPaused:'En pausa', shareStatsScheduled:'Programado', shareStatsExpired:'Caducado', shareStatsRevoked:'Revocado', shareStatsNoData:'No hay datos disponibles.', shareStatsFile:'Archivo', shareStatsFolder:'Carpeta', shareStatsCollab:'Colaboración'
   });
 
+
+  // 1.62.0 — selectable/comparative host-share statistics.
+  Object.assign(STRINGS.fr, {
+    shareStatsPeriod:'Période', shareStats24h:'24 heures', shareStats7d:'7 jours', shareStats14d:'14 jours', shareStats30d:'30 jours', shareStatsAll:'Durée complète', shareStatsActivity:'Activité', shareStatsComparison:'Comparaison avec la période précédente', shareStatsFailures:'Causes des interruptions', shareStatsResumed:'Repris', shareStatsResumedFrom:'Repris depuis', shareStatsBandwidth:'Bande passante estimée', shareStatsViewShare:'Part des vues', shareStatsImageCopies:'Copies de l’image', shareStatsDimensions:'Dimensions', shareStatsChangeTransfers:'Transferts', shareStatsChangeVolume:'Volume', shareStatsChangeSuccess:'Réussite', shareStatsChangeSpeed:'Vitesse'
+  });
+  Object.assign(STRINGS.en, {
+    shareStatsPeriod:'Period', shareStats24h:'24 hours', shareStats7d:'7 days', shareStats14d:'14 days', shareStats30d:'30 days', shareStatsAll:'Lifetime', shareStatsActivity:'Activity', shareStatsComparison:'Compared with previous period', shareStatsFailures:'Interruption reasons', shareStatsResumed:'Resumed', shareStatsResumedFrom:'Resumed from', shareStatsBandwidth:'Estimated bandwidth', shareStatsViewShare:'View share', shareStatsImageCopies:'Image copies', shareStatsDimensions:'Dimensions', shareStatsChangeTransfers:'Transfers', shareStatsChangeVolume:'Volume', shareStatsChangeSuccess:'Success', shareStatsChangeSpeed:'Speed'
+  });
+  Object.assign(STRINGS.es, {
+    shareStatsPeriod:'Período', shareStats24h:'24 horas', shareStats7d:'7 días', shareStats14d:'14 días', shareStats30d:'30 días', shareStatsAll:'Duración completa', shareStatsActivity:'Actividad', shareStatsComparison:'Comparación con el período anterior', shareStatsFailures:'Causas de interrupción', shareStatsResumed:'Reanudados', shareStatsResumedFrom:'Reanudado desde', shareStatsBandwidth:'Ancho de banda estimado', shareStatsViewShare:'Proporción de vistas', shareStatsImageCopies:'Copias de la imagen', shareStatsDimensions:'Dimensiones', shareStatsChangeTransfers:'Transferencias', shareStatsChangeVolume:'Volumen', shareStatsChangeSuccess:'Éxito', shareStatsChangeSpeed:'Velocidad'
+  });
+
+  Object.assign(STRINGS.fr, {
+  bgSyncTitle:'Synchronisation en arrière-plan', bgSyncRefresh:'Actualiser le diagnostic', bgSyncRun:'Relancer maintenant', bgSyncSupported:'Prise en charge', bgSyncPermission:'Autorisation périodique', bgSyncRegistered:'Enregistrée', bgSyncPending:'Transferts en attente', bgSyncLast:'Dernière exécution', bgSyncFailure:'Dernier échec', bgSyncNever:'jamais',
+  installDiagTitle:'État de l’application', installDiagRefresh:'Vérifier', installDiagInstalled:'Installée sur cet appareil', installDiagDetected:'Installation détectée sur cet appareil', installDiagBrowser:'Ouverte dans le navigateur — PWA non détectée', installDiagUnknown:'État d’installation indéterminé', installDiagSecure:'Contexte sécurisé', installDiagSw:'Service worker',
+  longOpWorking:'Traitement…', longOpDlp:'Analyse DLP', longOpHash:'Calcul SHA-256', longOpPrepare:'Préparation du fichier', longOpOcr:'OCR local',
+  passkeyDeviceRemove:'Révoquer cet appareil', passkeyDeviceRemoved:'Appareil révoqué de cette passkey', passkeyDeviceCurrent:'Cet appareil', passkeyDeviceUnavailable:'Appareil révoqué',
+  serverActivityActor:'Utilisateur', serverActivityIp:'IP', serverActivityDevice:'Appareil/source', serverActivityResult:'Résultat', serverActivityPeriod:'Période', serverActivityDirection:'Sens', serverActivityCorrelate:'Regrouper par partage', serverActivity24h:'24 h', serverActivity7d:'7 jours', serverActivity30d:'30 jours',
+  sharesTrashImpact:'Impact : {count} élément(s) · {bytes}', sharesTrashDependencies:'Dépendances : {value}', sharesTrashNoDependencies:'aucune', sharesTrashSmartRestore:'Emplacement original absent. Utiliser « {path} » ?', sharesTrashChooseRestore:'Autre chemin hôte à restaurer :'
+});
+Object.assign(STRINGS.en, {
+  bgSyncTitle:'Background synchronization', bgSyncRefresh:'Refresh diagnostic', bgSyncRun:'Retry now', bgSyncSupported:'Supported', bgSyncPermission:'Periodic permission', bgSyncRegistered:'Registered', bgSyncPending:'Pending transfers', bgSyncLast:'Last run', bgSyncFailure:'Last failure', bgSyncNever:'never',
+  installDiagTitle:'Application status', installDiagRefresh:'Check', installDiagInstalled:'Installed on this device', installDiagDetected:'Installation detected on this device', installDiagBrowser:'Opened in browser — PWA not detected', installDiagUnknown:'Installation status unknown', installDiagSecure:'Secure context', installDiagSw:'Service worker',
+  longOpWorking:'Working…', longOpDlp:'DLP scan', longOpHash:'SHA-256 calculation', longOpPrepare:'Preparing file', longOpOcr:'Local OCR',
+  passkeyDeviceRemove:'Revoke this device', passkeyDeviceRemoved:'Device revoked from this passkey', passkeyDeviceCurrent:'This device', passkeyDeviceUnavailable:'Revoked device',
+  serverActivityActor:'User', serverActivityIp:'IP', serverActivityDevice:'Device/source', serverActivityResult:'Result', serverActivityPeriod:'Period', serverActivityDirection:'Direction', serverActivityCorrelate:'Group by share', serverActivity24h:'24 h', serverActivity7d:'7 days', serverActivity30d:'30 days',
+  sharesTrashImpact:'Impact: {count} item(s) · {bytes}', sharesTrashDependencies:'Dependencies: {value}', sharesTrashNoDependencies:'none', sharesTrashSmartRestore:'Original location is missing. Use “{path}”?', sharesTrashChooseRestore:'Other host path to restore:'
+});
+Object.assign(STRINGS.es, {
+  bgSyncTitle:'Sincronización en segundo plano', bgSyncRefresh:'Actualizar diagnóstico', bgSyncRun:'Reintentar ahora', bgSyncSupported:'Compatible', bgSyncPermission:'Permiso periódico', bgSyncRegistered:'Registrada', bgSyncPending:'Transferencias pendientes', bgSyncLast:'Última ejecución', bgSyncFailure:'Último fallo', bgSyncNever:'nunca',
+  installDiagTitle:'Estado de la aplicación', installDiagRefresh:'Comprobar', installDiagInstalled:'Instalada en este dispositivo', installDiagDetected:'Instalación detectada en este dispositivo', installDiagBrowser:'Abierta en el navegador — PWA no detectada', installDiagUnknown:'Estado de instalación indeterminado', installDiagSecure:'Contexto seguro', installDiagSw:'Service worker',
+  longOpWorking:'Procesando…', longOpDlp:'Análisis DLP', longOpHash:'Cálculo SHA-256', longOpPrepare:'Preparación del archivo', longOpOcr:'OCR local',
+  passkeyDeviceRemove:'Revocar este dispositivo', passkeyDeviceRemoved:'Dispositivo revocado de esta passkey', passkeyDeviceCurrent:'Este dispositivo', passkeyDeviceUnavailable:'Dispositivo revocado',
+  serverActivityActor:'Usuario', serverActivityIp:'IP', serverActivityDevice:'Dispositivo/origen', serverActivityResult:'Resultado', serverActivityPeriod:'Período', serverActivityDirection:'Dirección', serverActivityCorrelate:'Agrupar por recurso', serverActivity24h:'24 h', serverActivity7d:'7 días', serverActivity30d:'30 días',
+  sharesTrashImpact:'Impacto: {count} elemento(s) · {bytes}', sharesTrashDependencies:'Dependencias: {value}', sharesTrashNoDependencies:'ninguna', sharesTrashSmartRestore:'Falta la ubicación original. ¿Usar «{path}»?', sharesTrashChooseRestore:'Otra ruta del host:'
+});
+Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', imgCompareBeforeAfter:'Comparer avant/après', imgRestoreOriginal:'Revenir à l’original', imgCurrentVersion:'Version actuelle', imgVersionOperations:'Opérations', imgClose:'Fermer', imgRestoreConfirm:'Restaurer cette version ?', imgOriginal:'Originale' });
+  Object.assign(STRINGS.en, { imgVersionHistory:'Edit history', imgCompareBeforeAfter:'Compare before/after', imgRestoreOriginal:'Revert to original', imgCurrentVersion:'Current version', imgVersionOperations:'Operations', imgClose:'Close', imgRestoreConfirm:'Restore this version?', imgOriginal:'Original' });
+  Object.assign(STRINGS.es, { imgVersionHistory:'Historial de modificaciones', imgCompareBeforeAfter:'Comparar antes/después', imgRestoreOriginal:'Volver al original', imgCurrentVersion:'Versión actual', imgVersionOperations:'Operaciones', imgClose:'Cerrar', imgRestoreConfirm:'¿Restaurar esta versión?', imgOriginal:'Original' });
+
   var lang = 'fr';
   function detectLang() {
     var saved = '';
@@ -970,7 +1011,7 @@
     if(['system','system_health','maintenance','network','restarts','updates','pwa'].indexOf(cat)!==-1) return 'settings';
     return 'activity';
   }
-  function openPwaNotificationTarget(n){ closePwaNotifications(); activatePwaPanel(pwaNotificationPanel(n)); }
+  function openPwaNotificationTarget(n){ closePwaNotifications(); if(n&&n.manageUrl){try{location.assign(String(n.manageUrl));return;}catch(_){}} activatePwaPanel(pwaNotificationPanel(n)); }
   // Public link for a notification's share, by category (download /s/,
   // reception /u/, image /i/). Only shown when a token is present.
   function pwaNotificationLink(n){
@@ -1008,7 +1049,9 @@
   function announcePwaNotifications(fresh){
     if(!fresh||!fresh.length)return;
     pulsePwaBell();
-    var newest=fresh.slice().sort(function(a,b){return Number(b.at||0)-Number(a.at||0);})[0];
+    var actionable=fresh.filter(function(n){return n&&n.priority!=='low';});
+    if(!actionable.length)return;
+    var newest=actionable.slice().sort(function(a,b){return Number(b.at||0)-Number(a.at||0);})[0];
     if(newest)toast('🔔 '+pwaNotificationTitle(newest),(newest.severity==='critical'||newest.severity==='warning')?'warn':'ok');
     if(notificationSoundOn)playPwaNotificationSound();
   }
@@ -1029,7 +1072,8 @@
     visibleRows.slice(0,shown).forEach(function(n){
       var row=document.createElement('div'); var isUnread=n&&(n.unread===true||!(Number(n.readAt)>0)); row.className='pwa-notification-item notification-'+(n.severity||'info')+(isUnread?' notification-unread':'');
       var main=document.createElement('div'); main.className='pwa-notification-main notification-clickable'; main.setAttribute('role','button'); main.setAttribute('tabindex','0');
-      var title=document.createElement('div'); title.className='pwa-notification-title'; title.textContent=pwaNotificationIcon(n)+' '+pwaNotificationTitle(n);
+      var title=document.createElement('div'); title.className='pwa-notification-title'; title.textContent=pwaNotificationIcon(n)+' '+pwaNotificationTitle(n)+(Number(n.groupCount)>1?' ×'+Number(n.groupCount):'');
+      if(n.priority==='urgent'||n.priority==='high'){var pr=document.createElement('span');pr.className='notification-priority '+n.priority;pr.textContent=n.priority==='urgent'?'⚠':'↑';title.appendChild(pr);}
       var meta=document.createElement('div'); meta.className='pwa-notification-meta'; meta.textContent=pwaNotificationMeta(n); if(n.at)meta.title=fmtDate(n.at);
       main.appendChild(title); main.appendChild(meta);
       var go=function(){markOnePwaNotificationRead(n);openPwaNotificationTarget(n);};
@@ -2077,7 +2121,15 @@
       deduped: !!it.deduped,
       dlpLocal: it.dlpLocal || null,
       dlpApprovedFingerprint: it.dlpApprovedFingerprint || '',
-      backgroundReady: !!it.backgroundReady
+      backgroundReady: !!it.backgroundReady,
+      backgroundFailedAt: Math.max(0, Number(it.backgroundFailedAt) || 0),
+      backgroundCompletedAt: Math.max(0, Number(it.backgroundCompletedAt) || 0),
+      backgroundResponse: it.backgroundResponse || null,
+      lastCheckpointAt: Math.max(0, Number(it.lastCheckpointAt) || 0),
+      lastServerOffset: Math.max(0, Number(it.lastServerOffset) || 0),
+      recoveryAttempts: Math.max(0, Number(it.recoveryAttempts) || 0),
+      recoveredAt: Math.max(0, Number(it.recoveredAt) || 0),
+      recoveryReason: it.recoveryReason || null
     };
   }
   // Durable localStorage mirror of the transfer queue. IndexedDB is the primary
@@ -2103,13 +2155,23 @@
     try { var p = JSON.parse(localStorage.getItem(QUEUE_BACKUP_KEY) || '[]'); return Array.isArray(p) ? p : []; }
     catch (_) { return []; }
   }
+  function queueRecordFreshness(r) {
+    if (!r) return 0;
+    return Math.max(
+      Number(r.backgroundCompletedAt) || 0, Number(r.backgroundFailedAt) || 0,
+      Number(r.lastCheckpointAt) || 0, Number(r.recoveredAt) || 0, Number(r.createdAt) || 0
+    );
+  }
   function mergeQueueRecords(primary, backup) {
-    var seen = Object.create(null), out = [];
+    var best = Object.create(null), order = [];
     (Array.isArray(primary) ? primary : []).concat(Array.isArray(backup) ? backup : []).forEach(function (r) {
-      if (!r || !r.id || seen[r.id]) return;
-      seen[r.id] = true; out.push(r);
+      if (!r || !r.id) return;
+      var previous = best[r.id];
+      if (!previous) { best[r.id] = r; order.push(r.id); return; }
+      var newer = queueRecordFreshness(r) - queueRecordFreshness(previous);
+      if (newer > 0 || (newer === 0 && Number(r.sentBytes || 0) > Number(previous.sentBytes || 0))) best[r.id] = r;
     });
-    return out;
+    return order.map(function (id) { return best[id]; }).filter(Boolean);
   }
   function markSessionOnly(it, notify) {
     if (!it) return Promise.resolve(false);
@@ -2194,7 +2256,15 @@
       deduped: !!record.deduped,
       dlpLocal: record.dlpLocal || null,
       dlpApprovedFingerprint: record.dlpApprovedFingerprint || '',
+      backgroundFailedAt: Math.max(0, Number(record.backgroundFailedAt) || 0),
+      backgroundCompletedAt: Math.max(0, Number(record.backgroundCompletedAt) || 0),
+      backgroundResponse: record.backgroundResponse || null,
       backgroundReady: !!record.backgroundReady,
+      lastCheckpointAt: Math.max(0, Number(record.lastCheckpointAt) || 0),
+      lastServerOffset: Math.max(0, Number(record.lastServerOffset) || 0),
+      recoveryAttempts: Math.max(0, Number(record.recoveryAttempts) || 0),
+      recoveredAt: Math.max(0, Number(record.recoveredAt) || 0),
+      recoveryReason: record.recoveryReason || null,
       volatile: !!record.volatile,
       resumeOnOpen: !!record.resumeOnOpen,
       persisting: false,
@@ -2926,12 +2996,14 @@
     } catch (_) {}
   }
 
+  function focusPwaLaunchObject(){if(!launchFocusToken)return false;try{var node=document.querySelector('[data-token="'+CSS.escape(String(launchFocusToken))+'"]');if(!node)return false;node.classList.add('notification-focus');node.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(function(){node.classList.remove('notification-focus');},5000);launchFocusToken='';return true;}catch(_){return false;}}
+  function schedulePwaLaunchFocus(){if(!launchFocusToken)return;var attempts=0,timer=setInterval(function(){attempts++;if(focusPwaLaunchObject()||attempts>=40)clearInterval(timer);},250);}
   function renderHostShares(list) {
     var listEl = $('share-list'); listEl.textContent = '';
     var visible=(list||[]).filter(function(s){return shareShowArchived||!s.archived;});
     if (!visible.length) { var em = document.createElement('p'); em.className = 'muted sm'; em.textContent = t('sharesEmpty'); listEl.appendChild(em); return; }
     visible.forEach(function (s) {
-      var row = document.createElement('div'); row.className = 'share-link-row';
+      var row = document.createElement('div'); row.className = 'share-link-row'; if(s.token)row.dataset.token=String(s.token);
       if(/^#[0-9a-f]{6}$/i.test(String(s.color||''))){row.style.borderLeftColor=s.color;row.style.borderLeftWidth='4px';}
       var main = document.createElement('div'); main.className = 'share-link-main';
       var strong = document.createElement('strong'); strong.textContent = s.name || s.token; main.appendChild(strong);
@@ -2984,6 +3056,7 @@
       rev.addEventListener('click', function () { revokeHostShare(s.token); }); actions.appendChild(rev);
       row.appendChild(actions); listEl.appendChild(row);
     });
+    if(launchFocusToken)schedulePwaLaunchFocus();
   }
 
   function shareStatsNumber(value) {
@@ -3037,7 +3110,7 @@
       var raw = Number(point.bytes) || Number(point.count) || 0;
       var cell = document.createElement('div'); cell.className = 'share-stats-timeline-cell'; cell.title = String(point.day || '') + ' · ' + shareStatsNumber(point.count) + ' · ' + fmtBytes(point.bytes || 0);
       var bar = document.createElement('i'); bar.style.height = (raw ? Math.max(6, Math.round((raw / max) * 100)) : 2) + '%';
-      var label = document.createElement('span'); label.textContent = String(point.day || '').slice(5); cell.appendChild(bar); cell.appendChild(label); chart.appendChild(cell);
+      var label = document.createElement('span'); var rawLabel=String(point.day || ''); label.textContent = /^\d{2}:\d{2}$/.test(rawLabel) ? rawLabel : rawLabel.slice(5); cell.appendChild(bar); cell.appendChild(label); chart.appendChild(cell);
     });
     return chart;
   }
@@ -3047,26 +3120,64 @@
     var main = document.createElement('div'); main.className = 'image-stats-event-main'; var title = document.createElement('strong'); title.textContent = event.name || shareName || '—';
     var client = [event.flag, event.ipName || event.ip, event.country, event.recipient ? '👤 ' + event.recipient : ''].filter(Boolean).join(' · ');
     var detail = document.createElement('span');
-    detail.textContent = live ? [fmtBytes(event.bytes || 0) + (event.expectedBytes ? ' / ' + fmtBytes(event.expectedBytes) : ''), client].filter(Boolean).join(' · ') : [fmtBytes(event.bytes || 0), shareStatsDuration(event.durationMs || 0), shareStatsBps(event.avgBps || 0), client].filter(Boolean).join(' · ');
+    var resumed = event.resumed ? ('↻ ' + t('shareStatsResumed') + (event.resumeOffset ? ' · ' + t('shareStatsResumedFrom') + ' ' + fmtBytes(event.resumeOffset) : '')) : '';
+    detail.textContent = live ? [fmtBytes(event.bytes || 0) + (event.expectedBytes ? ' / ' + fmtBytes(event.expectedBytes) : ''), resumed, client].filter(Boolean).join(' · ') : [fmtBytes(event.bytes || 0), shareStatsDuration(event.durationMs || 0), shareStatsBps(event.avgBps || 0), resumed, client].filter(Boolean).join(' · ');
     main.appendChild(title); main.appendChild(detail);
     if (!live && !event.completed && event.reason) { var reason = document.createElement('small'); reason.className = 'share-stats-event-reason'; reason.textContent = String(event.reason); main.appendChild(reason); }
     row.appendChild(icon); row.appendChild(main);
     if (!live) { var time = document.createElement('time'); time.textContent = event.at ? fmtDate(event.at) : '—'; row.appendChild(time); }
     list.appendChild(row);
   }
+  var pwaHostStatsCurrentShare = null;
+  var pwaHostStatsPeriod = '14';
+  function shareStatsDelta(value, suffix) {
+    var n = Number(value) || 0; return (n > 0 ? '+' : '') + n + (suffix || '%');
+  }
+  function shareStatsPeriodToolbar() {
+    var bar = document.createElement('div'); bar.className = 'share-stats-period-toolbar';
+    var label = document.createElement('label'); label.textContent = t('shareStatsPeriod') + ' ';
+    var sel = document.createElement('select'); sel.className = 'input sm';
+    [['1','shareStats24h'],['7','shareStats7d'],['14','shareStats14d'],['30','shareStats30d'],['all','shareStatsAll']].forEach(function (entry) {
+      var o=document.createElement('option'); o.value=entry[0]; o.textContent=t(entry[1]); if(entry[0]===pwaHostStatsPeriod)o.selected=true; sel.appendChild(o);
+    });
+    sel.addEventListener('change', function () { pwaHostStatsPeriod=sel.value; if(pwaHostStatsCurrentShare) openHostShareDetailedStats(pwaHostStatsCurrentShare, pwaHostStatsPeriod, true); });
+    label.appendChild(sel); bar.appendChild(label); return bar;
+  }
+  function shareStatsComparisonSection(comp) {
+    if (!comp || !comp.available) return null;
+    var sec=imageStatsSection(t('shareStatsComparison')), grid=document.createElement('div'); grid.className='image-stats-metrics share-stats-comparison';
+    var d=comp.delta||{};
+    grid.appendChild(shareStatsMetric('🔄',shareStatsDelta(d.countPct),t('shareStatsChangeTransfers')));
+    grid.appendChild(shareStatsMetric('💾',shareStatsDelta(d.bytesPct),t('shareStatsChangeVolume')));
+    grid.appendChild(shareStatsMetric('✅',shareStatsDelta(d.successRatePoints,' pt'),t('shareStatsChangeSuccess')));
+    grid.appendChild(shareStatsMetric('⚡',shareStatsDelta(d.speedPct),t('shareStatsChangeSpeed')));
+    sec.appendChild(grid); return sec;
+  }
+  function shareStatsFailureSection(rows) {
+    rows=Array.isArray(rows)?rows:[]; if(!rows.length)return null;
+    var sec=imageStatsSection(t('shareStatsFailures')), box=document.createElement('div'); box.className='share-stats-breakdown';
+    var max=Math.max.apply(null,[1].concat(rows.map(function(x){return Number(x.count)||0;})));
+    rows.forEach(function(x){var row=document.createElement('div');row.className='share-stats-breakdown-row';var lab=document.createElement('span');lab.className='share-stats-breakdown-label';lab.textContent=x.reason||t('shareStatsUnknown');var bar=document.createElement('span');bar.className='share-stats-breakdown-bar';var fill=document.createElement('i');fill.style.width=Math.max(4,Math.round((Number(x.count)||0)/max*100))+'%';bar.appendChild(fill);var val=document.createElement('strong');val.textContent=shareStatsNumber(x.count);row.append(lab,bar,val);box.appendChild(row);});
+    sec.appendChild(box); return sec;
+  }
+
   function renderHostShareDetailedStats(data) {
     var body = $('image-stats-body'); if (!body) return; body.innerHTML = '';
     if (!data || !data.share) { body.textContent = t('shareStatsUnavailable'); return; }
-    var sh = data.share, ag = data.aggregate || {};
+    var sh = data.share, ag = data.aggregate || {}, image = data.image || null;
+    body.appendChild(shareStatsPeriodToolbar());
     var overview = imageStatsSection(t('shareStatsOverview')); var metrics = document.createElement('div'); metrics.className = 'image-stats-metrics share-stats-metrics';
     metrics.appendChild(shareStatsMetric('🔄', shareStatsNumber(ag.count), t('shareStatsTransfers'), shareStatsNumber(ag.completed) + ' ' + t('shareStatsCompleted') + ' · ' + shareStatsNumber(ag.interrupted) + ' ' + t('shareStatsInterrupted')));
     metrics.appendChild(shareStatsMetric('💾', fmtBytes(ag.bytes || 0), t('shareStatsVolume'), t('shareStatsAverageSize') + ' : ' + fmtBytes(ag.averageBytes || 0)));
     metrics.appendChild(shareStatsMetric('✅', (Number(ag.successRate) || 0) + '%', t('shareStatsSuccess')));
     metrics.appendChild(shareStatsMetric('⚡', shareStatsBps(ag.averageBps || 0), t('shareStatsSpeed')));
-    metrics.appendChild(shareStatsMetric('👁', shareStatsNumber(sh.views || 0), t('shareStatsViews')));
-    metrics.appendChild(shareStatsMetric('👤', shareStatsNumber(sh.uniqueVisitors || 0), t('shareStatsVisitors')));
-    metrics.appendChild(shareStatsMetric('⬇', shareStatsNumber(sh.downloads || 0), t('shareStatsDownloads')));
+    metrics.appendChild(shareStatsMetric('👁', shareStatsNumber((image && image.totalViews) || sh.views || 0), t('shareStatsViews')));
+    metrics.appendChild(shareStatsMetric('👤', shareStatsNumber((image && image.totalVisitors) || sh.uniqueVisitors || 0), t('shareStatsVisitors')));
+    if (image) metrics.appendChild(shareStatsMetric('🗄', fmtBytes(image.totalStorageBytes || sh.logicalBytes || 0), t('shareStatsStorage')));
+    else metrics.appendChild(shareStatsMetric('⬇', shareStatsNumber(sh.downloads || 0), t('shareStatsDownloads')));
+    metrics.appendChild(shareStatsMetric('↻', shareStatsNumber(ag.resumed || 0), t('shareStatsResumed')));
     overview.appendChild(metrics); body.appendChild(overview);
+    var comparisonSection = shareStatsComparisonSection(data.comparison); if (comparisonSection) body.appendChild(comparisonSection);
 
     var detailsSection = imageStatsSection(t('shareStatsDetails')); var details = document.createElement('div'); details.className = 'image-stats-details share-stats-details';
     [[t('shareStatsStatus'),shareStatsStatusLabel(sh.status)],[t('shareStatsType'),shareStatsTypeLabel(sh.type)],[t('shareStatsOwner'),sh.ownerName||'—'],[t('shareStatsCreated'),sh.createdAt?fmtDate(sh.createdAt):'—'],[t('shareStatsExpiry'),(sh.effectiveExpiresAt||sh.expiresAt)?fmtDate(sh.effectiveExpiresAt||sh.expiresAt):t('shareStatsNever')],[t('shareStatsItems'),shareStatsNumber(sh.itemCount)],[t('shareStatsStorage'),fmtBytes(sh.logicalBytes||0)],[t('shareStatsLastActivity'),ag.lastAt?fmtDate(ag.lastAt):'—'],[t('shareStatsFirstActivity'),ag.firstAt?fmtDate(ag.firstAt):'—'],[t('shareStatsTags'),Array.isArray(sh.tags)&&sh.tags.length?sh.tags.join(', '):'—'],[t('shareStatsPath'),sh.path||'—'],[t('shareStatsUrl'),sh.url||'—']].forEach(function (entry) { details.appendChild(imageStatsDetail(entry[0], entry[1])); });
@@ -3084,20 +3195,28 @@
       quotaSection.appendChild(quotaList); body.appendChild(quotaSection);
     }
     if (Array.isArray(data.live) && data.live.length) { var liveSection = imageStatsSection(t('shareStatsLive')); var liveList = document.createElement('div'); liveList.className = 'image-stats-recent'; data.live.forEach(function (e) { shareStatsAppendEvent(liveList,e,sh.name,true); }); liveSection.appendChild(liveList); body.appendChild(liveSection); }
-    var timelineSection = imageStatsSection(t('shareStatsActivity14')); timelineSection.appendChild(shareStatsTimeline(data.timeline || [])); body.appendChild(timelineSection);
+    if (data.image && data.image.variants) {
+      var variantsSection=imageStatsSection(t('shareStatsImageCopies')||'Image'); var variants=document.createElement('div'); variants.className='image-stats-variants';
+      ['full','thumb','micro'].forEach(function(kind){var v=data.image.variants[kind]||{};var card=document.createElement('div');card.className='image-stats-variant'+(v.present===false?' missing':'');var title=document.createElement('strong');title.textContent=imageVariantLabel(kind);card.appendChild(title);[
+        t('shareStatsDimensions')+' : '+(v.w&&v.h?v.w+'×'+v.h:'—'), t('shareStatsStorage')+' : '+fmtBytes(v.size||0), t('shareStatsViews')+' : '+shareStatsNumber(v.views), t('shareStatsVisitors')+' : '+shareStatsNumber(v.visitors), t('shareStatsBandwidth')+' : '+fmtBytes(v.bandwidthBytes||0), t('shareStatsViewShare')+' : '+(Number(v.viewSharePct)||0)+'%'
+      ].forEach(function(txt){var line=document.createElement('span');line.textContent=txt;card.appendChild(line);});variants.appendChild(card);}); variantsSection.appendChild(variants);body.appendChild(variantsSection);
+    }
+    var timelineSection = imageStatsSection(t('shareStatsActivity')); timelineSection.appendChild(shareStatsTimeline(data.timeline || [])); body.appendChild(timelineSection);
+    var failureSection=shareStatsFailureSection(data.failureReasons); if(failureSection)body.appendChild(failureSection);
     var split = document.createElement('div'); split.className = 'share-stats-two-columns'; var countries=imageStatsSection(t('shareStatsCountries')); countries.appendChild(shareStatsBreakdown(data.countries||[])); var clients=imageStatsSection(t('shareStatsClients')); clients.appendChild(shareStatsBreakdown(data.clients||[])); split.appendChild(countries); split.appendChild(clients); body.appendChild(split);
     var recentSection=imageStatsSection(t('shareStatsRecent')); var recentList=document.createElement('div'); recentList.className='image-stats-recent';
     if (!Array.isArray(data.recent) || !data.recent.length) { var empty=document.createElement('p'); empty.className='muted sm'; empty.textContent=t('shareStatsNoRecent'); recentList.appendChild(empty); } else data.recent.forEach(function(e){shareStatsAppendEvent(recentList,e,sh.name,false);});
     recentSection.appendChild(recentList); body.appendChild(recentSection);
   }
   var detailedStatsRequestSerial = 0;
-  async function openHostShareDetailedStats(share) {
+  async function openHostShareDetailedStats(share, period, keepOpen) {
     var overlay = $('image-stats-overlay'), body = $('image-stats-body'); if (!share || !share.token || !overlay || !body) return;
+    pwaHostStatsCurrentShare=share; if(period)pwaHostStatsPeriod=period;
     var requestSerial = ++detailedStatsRequestSerial;
-    overlay.classList.add('share-stats-mode'); $('image-stats-title').textContent = t('shareStatsTitle'); $('image-stats-subtitle').textContent = share.name || share.token || ''; body.textContent = t('shareStatsLoading'); body.scrollTop = 0; overlay.classList.remove('hidden');
-    if ($('image-stats-close')) $('image-stats-close').focus();
+    overlay.classList.add('share-stats-mode'); $('image-stats-title').textContent = t('shareStatsTitle'); $('image-stats-subtitle').textContent = share.name || share.token || ''; body.textContent = t('shareStatsLoading'); body.scrollTop = 0; if(!keepOpen)overlay.classList.remove('hidden');
+    if (!keepOpen && $('image-stats-close')) $('image-stats-close').focus();
     try {
-      var response = await fetch('/app/host/shares/' + encodeURIComponent(share.token) + '/stats-detail', { credentials:'same-origin', cache:'no-store', headers:{ Accept:'application/json' } });
+      var response = await fetch('/app/host/shares/' + encodeURIComponent(share.token) + '/stats-detail?period=' + encodeURIComponent(pwaHostStatsPeriod), { credentials:'same-origin', cache:'no-store', headers:{ Accept:'application/json' } });
       if (!response.ok) throw new Error('http ' + response.status);
       var payload = await response.json();
       if (requestSerial !== detailedStatsRequestSerial || overlay.classList.contains('hidden') || !overlay.classList.contains('share-stats-mode')) return;
@@ -3134,17 +3253,19 @@
     if(btn){btn.classList.toggle('hidden',!ids.length);btn.disabled=!ids.length;}
     if(label)label.textContent=ids.length?t('sharesTrashSelected',{n:ids.length}):'';
   }
+  var pwaTrashPurgeSummary=null;
   async function loadPwaTrash(){
     var box=$('share-trash-list'),purgeAll=$('share-trash-purge-all');if(!box)return;box.textContent='…';if(purgeAll)purgeAll.classList.add('hidden');
     try{
-      var r=await fetch('/app/trash',{credentials:'same-origin',cache:'no-store'});if(!r.ok)throw new Error('trash');var data=await r.json();var items=data.items||[],canPurge=!!data.canPurge;box.textContent='';
+      var r=await fetch('/app/trash',{credentials:'same-origin',cache:'no-store'});if(!r.ok)throw new Error('trash');var data=await r.json();var items=data.items||[],canPurge=!!data.canPurge;pwaTrashPurgeSummary=data.purgeSummary||null;box.textContent='';
       var count=$('share-trash-count');if(count)count.textContent=String(items.length);
       var liveIds=Object.create(null);items.forEach(function(item){liveIds[item.id]=true;});Object.keys(pwaTrashSelection).forEach(function(id){if(!liveIds[id])delete pwaTrashSelection[id];});updatePwaTrashSelectionUi();
       if(purgeAll)purgeAll.classList.toggle('hidden',!canPurge||!items.length);if(!items.length){var em=document.createElement('p');em.className='muted sm';em.textContent=t('sharesTrashEmpty');box.appendChild(em);return;}
       items.forEach(function(item){var row=document.createElement('div');row.className='share-link-row';var main=document.createElement('div');main.className='share-link-main';
         var select=document.createElement('label');select.className='trash-select';var cb=document.createElement('input');cb.type='checkbox';cb.checked=!!pwaTrashSelection[item.id];cb.setAttribute('aria-label',t('sharesTrashRestore')+' '+(item.name||item.shareId));cb.addEventListener('change',function(){if(cb.checked)pwaTrashSelection[item.id]=true;else delete pwaTrashSelection[item.id];updatePwaTrashSelectionUi();});select.appendChild(cb);main.appendChild(select);
-        var strong=document.createElement('strong');strong.textContent=item.name||item.shareId;var meta=document.createElement('div');meta.className='muted sm';meta.textContent=[item.type||'',fmtBytes(item.logicalBytes||0),fmtDate(item.deletedAt)].filter(Boolean).join(' · ');main.appendChild(strong);main.appendChild(meta);var actions=document.createElement('div');actions.className='share-link-actions';var restore=document.createElement('button');restore.type='button';restore.className='btn ghost sm';restore.textContent=t('sharesTrashRestore');restore.addEventListener('click',function(){restorePwaTrash(item.id);});actions.appendChild(restore);if(canPurge){var purge=document.createElement('button');purge.type='button';purge.className='btn danger sm';purge.textContent=t('sharesTrashDelete');purge.addEventListener('click',function(){purgePwaTrash(item.id,item.name||item.shareId);});actions.appendChild(purge);}row.appendChild(main);row.appendChild(actions);box.appendChild(row);});
+        var strong=document.createElement('strong');strong.textContent=item.name||item.shareId;var meta=document.createElement('div');meta.className='muted sm';meta.textContent=[item.type||'',fmtBytes(item.logicalBytes||0),fmtDate(item.deletedAt)].filter(Boolean).join(' · ');main.appendChild(strong);main.appendChild(meta);var impact=item.purgeImpact||{},impactLine=document.createElement('div');impactLine.className='muted xs trash-impact';impactLine.textContent=t('sharesTrashImpact',{count:impact.itemCount||1,bytes:fmtBytes(impact.bytes||item.logicalBytes||0)})+' · '+t('sharesTrashDependencies',{value:(impact.dependencies&&impact.dependencies.length)?impact.dependencies.join(', '):t('sharesTrashNoDependencies')});main.appendChild(impactLine);var actions=document.createElement('div');actions.className='share-link-actions';var restore=document.createElement('button');restore.type='button';restore.className='btn ghost sm';restore.textContent=t('sharesTrashRestore');restore.addEventListener('click',function(){restorePwaTrash(item.id);});actions.appendChild(restore);if(canPurge){var purge=document.createElement('button');purge.type='button';purge.className='btn danger sm';purge.textContent=t('sharesTrashDelete');purge.addEventListener('click',function(){purgePwaTrash(item.id,item.name||item.shareId,item);});actions.appendChild(purge);}row.appendChild(main);row.appendChild(actions);box.appendChild(row);});
     }catch(_){
+      pwaTrashPurgeSummary=null;
       if(purgeAll)purgeAll.classList.add('hidden');
       Object.keys(pwaTrashSelection).forEach(function(id){delete pwaTrashSelection[id];});
       updatePwaTrashSelectionUi();
@@ -3152,10 +3273,11 @@
       box.textContent=t('sharesTrashEmpty');
     }
   }
+  async function pwaTrashRestoreRequest(id){var r=await appMutate('/app/trash/'+encodeURIComponent(id)+'/restore','application/json','{}');if(r.status===409){var d=await r.clone().json().catch(function(){return{};}),alts=d.assessment&&Array.isArray(d.assessment.alternatives)?d.assessment.alternatives:[],path=alts[0]||'';if(path&&!confirm(t('sharesTrashSmartRestore',{path:path})))path='';if(!path)path=window.prompt(t('sharesTrashChooseRestore'),alts[0]||'')||'';if(!path)throw new Error('restore-cancel');r=await appMutate('/app/trash/'+encodeURIComponent(id)+'/restore','application/json',JSON.stringify({alternativePath:path}));}if(!r.ok)throw new Error('restore');return r;}
   async function restoreSelectedPwaTrash(){
     var ids=Object.keys(pwaTrashSelection);if(!ids.length)return;var btn=$('share-trash-restore-selected');if(btn)btn.disabled=true;var ok=0,fail=0;
     try{
-      for(var i=0;i<ids.length;i++){try{var r=await appMutate('/app/trash/'+encodeURIComponent(ids[i])+'/restore','application/json','{}');if(!r.ok)throw new Error('restore');delete pwaTrashSelection[ids[i]];ok++;}catch(_){fail++;}}
+      for(var i=0;i<ids.length;i++){try{await pwaTrashRestoreRequest(ids[i]);delete pwaTrashSelection[ids[i]];ok++;}catch(_){fail++;}}
       if(ok)toast(t('sharesTrashRestoreSelectedOk',{n:ok}),fail?'warn':'ok');else if(fail)toast(t('sharesRevokeFail'),'err');
       await Promise.all([loadPwaTrash(),loadPwaActionHistory(),loadHostShares(),loadReceptions(),refreshImageStats(true)]);
     }finally{if(btn)btn.disabled=false;}
@@ -3210,13 +3332,16 @@
     }catch(_){toast(t('actionHistoryFail'),'err');if(button)button.disabled=false;loadPwaActionHistory();}
   }
 
-  async function restorePwaTrash(id){try{var r=await appMutate('/app/trash/'+encodeURIComponent(id)+'/restore','application/json','{}');if(!r.ok)throw new Error('restore');toast(t('sharesTrashRestored'),'ok');await Promise.all([loadPwaTrash(),loadPwaActionHistory(),loadHostShares(),loadReceptions(),refreshImageStats(true)]);}catch(_){toast(t('sharesRevokeFail'),'err');}}
+  async function restorePwaTrash(id){try{await pwaTrashRestoreRequest(id);toast(t('sharesTrashRestored'),'ok');await Promise.all([loadPwaTrash(),loadPwaActionHistory(),loadHostShares(),loadReceptions(),refreshImageStats(true)]);}catch(_){toast(t('sharesRevokeFail'),'err');}}
   async function appDeleteMutate(url){if(!deviceInfo)await fetchDeviceStatus();var r=await fetch(url,{method:'DELETE',credentials:'same-origin',cache:'no-store',headers:appMutationHeaders()});if(r.status===403){var e=await r.clone().json().catch(function(){return{};});if(e.error==='invalid-csrf'){await fetchDeviceStatus();r=await fetch(url,{method:'DELETE',credentials:'same-origin',cache:'no-store',headers:appMutationHeaders()});}}return r;}
-  async function purgePwaTrash(id,name){if(!window.confirm(t('sharesTrashDeleteConfirm',{name:name||''})))return;try{var r=await appDeleteMutate('/app/trash/'+encodeURIComponent(id));if(!r.ok)throw new Error('purge');toast(t('sharesTrashDeleted'),'ok');await Promise.all([loadPwaTrash(),loadPwaActionHistory(),loadHostShares(),loadReceptions(),refreshImageStats(true)]);}catch(_){toast(t('sharesTrashDeleteFail'),'err');}}
-  async function purgeAllPwaTrash(){if(!window.confirm(t('sharesTrashDeleteAllConfirm')))return;var btn=$('share-trash-purge-all'),label=btn&&btn.textContent;if(btn)btn.disabled=true;try{var r=await appDeleteMutate('/app/trash');if(!r.ok&&r.status!==207)throw new Error('purge-all');var data=await r.json().catch(function(){return{};});toast(t('sharesTrashAllDeleted',{n:Number(data.count)||0}),data.failed?'warn':'ok');await Promise.all([loadPwaTrash(),loadPwaActionHistory(),loadHostShares(),loadReceptions(),refreshImageStats(true)]);}catch(_){toast(t('sharesTrashDeleteFail'),'err');}finally{if(btn){btn.disabled=false;if(label)btn.textContent=label;}}}
+  async function purgePwaTrash(id,name,item){var imp=item&&item.purgeImpact||{},deps=imp.dependencyCount?' · '+t('sharesTrashDependencies',{value:(imp.dependencies||[]).join(', ')}):'';if(!window.confirm(t('sharesTrashDeleteConfirm',{name:name||''})+'\n'+t('sharesTrashImpact',{count:imp.itemCount||1,bytes:fmtBytes(imp.bytes!=null?imp.bytes:((item&&item.logicalBytes)||0))})+deps))return;try{var r=await appDeleteMutate('/app/trash/'+encodeURIComponent(id));if(!r.ok)throw new Error('purge');toast(t('sharesTrashDeleted'),'ok');await Promise.all([loadPwaTrash(),loadPwaActionHistory(),loadHostShares(),loadReceptions(),refreshImageStats(true)]);}catch(_){toast(t('sharesTrashDeleteFail'),'err');}}
+  async function purgeAllPwaTrash(){var sum=pwaTrashPurgeSummary||{};if(!window.confirm(t('sharesTrashDeleteAllConfirm')+'\n'+t('sharesTrashImpact',{count:sum.items||0,bytes:fmtBytes(sum.bytes||0)})+(sum.dependencies?' · '+t('sharesTrashDependencies',{value:String(sum.dependencies)}):'')))return;var btn=$('share-trash-purge-all'),label=btn&&btn.textContent;if(btn)btn.disabled=true;try{var r=await appDeleteMutate('/app/trash');if(!r.ok&&r.status!==207)throw new Error('purge-all');var data=await r.json().catch(function(){return{};});toast(t('sharesTrashAllDeleted',{n:Number(data.count)||0}),data.failed?'warn':'ok');await Promise.all([loadPwaTrash(),loadPwaActionHistory(),loadHostShares(),loadReceptions(),refreshImageStats(true)]);}catch(_){toast(t('sharesTrashDeleteFail'),'err');}finally{if(btn){btn.disabled=false;if(label)btn.textContent=label;}}}
+  function pwaHighlightMap(text){var locale=lang==='fr'?'fr-CA':lang==='es'?'es-ES':'en-US',map=[],parts=[],offset=0;Array.from(String(text||'')).forEach(function(ch){var folded=ch.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase(locale);for(var i=0;i<folded.length;i++){parts.push(folded[i]);map.push({start:offset,end:offset+ch.length});}offset+=ch.length;});return {text:parts.join(''),map:map};}
+  function appendPwaHighlighted(node,text,terms){text=String(text||'');var locale=lang==='fr'?'fr-CA':lang==='es'?'es-ES':'en-US',folded=pwaHighlightMap(text);terms=(Array.isArray(terms)?terms:[]).map(function(x){return String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLocaleLowerCase(locale);}).filter(Boolean).sort(function(a,b){return b.length-a.length;});if(!terms.length||!folded.text){node.textContent=text;return;}var ranges=[];terms.forEach(function(term){var from=0;while(from<=folded.text.length-term.length){var at=folded.text.indexOf(term,from);if(at<0)break;var first=folded.map[at],last=folded.map[at+term.length-1];if(first&&last)ranges.push([first.start,last.end]);from=at+Math.max(1,term.length);}});if(!ranges.length){node.textContent=text;return;}ranges.sort(function(a,b){return a[0]-b[0]||b[1]-a[1];});var merged=[];ranges.forEach(function(r){var last=merged[merged.length-1];if(last&&r[0]<=last[1])last[1]=Math.max(last[1],r[1]);else merged.push(r.slice());});var pos=0;merged.forEach(function(r){if(r[0]>pos)node.appendChild(document.createTextNode(text.slice(pos,r[0])));var mark=document.createElement('mark');mark.textContent=text.slice(r[0],r[1]);node.appendChild(mark);pos=r[1];});if(pos<text.length)node.appendChild(document.createTextNode(text.slice(pos)));}
+
   async function runPwaGlobalSearch(){
     var input=$('share-global-search'),box=$('share-global-search-results');if(!input||!box)return;var q=String(input.value||'').trim();box.textContent='';if(q.length<2)return;
-    try{var r=await fetch('/app/search?q='+encodeURIComponent(q)+'&semantic=1',{credentials:'same-origin',cache:'no-store'});if(!r.ok)throw new Error('search');var data=await r.json();var results=data.results||[];if(!results.length){box.textContent=t('sharesGlobalSearchEmpty');return;}results.slice(0,60).forEach(function(m){var row=document.createElement('div');row.className='share-search-hit';var title=document.createElement('strong');title.textContent=(m.scope==='user'?'👤 ':m.scope==='log'?'📜 ':m.scope==='link'?'🔗 ':'📄 ')+(m.shareName||m.file||'—');var meta=document.createElement('span');meta.className='muted sm';meta.textContent=[m.file,m.type,m.snippet].filter(Boolean).join(' · ');row.appendChild(title);row.appendChild(meta);if(m.path||m.token){var open=document.createElement('button');open.type='button';open.className='btn ghost xs';open.textContent=t('sharesOpen');open.addEventListener('click',function(){var path=m.path||(m.type==='photo'?('/images?image='+encodeURIComponent(m.token)):('/s/'+encodeURIComponent(m.token)));window.open(path,'_blank','noopener');});row.appendChild(open);}box.appendChild(row);});}
+    try{var r=await fetch('/app/search?q='+encodeURIComponent(q)+'&semantic=1',{credentials:'same-origin',cache:'no-store'});if(!r.ok)throw new Error('search');var data=await r.json();var results=data.results||[];if(!results.length){box.textContent=t('sharesGlobalSearchEmpty');return;}results.slice(0,60).forEach(function(m){var row=document.createElement('div');row.className='share-search-hit';var title=document.createElement('strong');title.textContent=(m.scope==='user'?'👤 ':m.scope==='log'?'📜 ':m.scope==='link'?'🔗 ':'📄 ')+(m.shareName||'');if(m.file){title.appendChild(document.createTextNode(' · '));appendPwaHighlighted(title,m.file,m.highlightTerms);}var meta=document.createElement('span');meta.className='muted sm';appendPwaHighlighted(meta,[m.type,m.snippet].filter(Boolean).join(' · '),m.highlightTerms);row.appendChild(title);row.appendChild(meta);if(m.path||m.token){var open=document.createElement('button');open.type='button';open.className='btn ghost xs';open.textContent=t('sharesOpen');open.addEventListener('click',function(){var path=m.path||(m.type==='photo'?('/images?image='+encodeURIComponent(m.token)):('/s/'+encodeURIComponent(m.token)));window.open(path,'_blank','noopener');});row.appendChild(open);}box.appendChild(row);});}
     catch(_){box.textContent=t('sharesGlobalSearchFail');}
   }
 
@@ -4217,6 +4342,7 @@
     metrics.appendChild(imageStatsMetric('👁', String(Number(totals.views) || 0), t('imgViews', { n: Number(totals.views) || 0 }).replace(/^\d+\s*/, '')));
     metrics.appendChild(imageStatsMetric('👤', String(Number(totals.visitors) || 0), t('imgVisitors', { n: Number(totals.visitors) || 0 }).replace(/^\d+\s*/, '')));
     metrics.appendChild(imageStatsMetric('🗄', fmtBytes(Number(totals.bytes) || 0), t('imgStatsStorage')));
+    metrics.appendChild(imageStatsMetric('↕', fmtBytes(Number(totals.bandwidthBytes) || 0), t('shareStatsBandwidth')));
     overview.appendChild(metrics);
     var details = document.createElement('div'); details.className = 'image-stats-details';
     details.appendChild(imageStatsDetail(t('imgStatsStatus'), imageStatsStatusLabel(data)));
@@ -4236,6 +4362,8 @@
         [t('imgStatsStorage'), fmtBytes(variant.bytes)],
         [t('imgViews', { n: Number(variant.views) || 0 }), ''],
         [t('imgVisitors', { n: Number(variant.visitors) || 0 }), ''],
+        [t('shareStatsBandwidth'), fmtBytes(Number(variant.bandwidthBytes) || 0)],
+        [t('shareStatsViewShare'), (Number(variant.viewSharePct) || 0) + '%'],
         [t('imgStatsLastView'), variant.lastAt ? fmtDate(variant.lastAt) : '—']
       ].forEach(function (entry) {
         var line = document.createElement('span');
@@ -4301,7 +4429,9 @@
       autoUrl: data.autoUrl || data.imgUrl,
       previewUrls: data.previewUrls || {},
       adaptive: data.adaptive || {},
+      cacheRevision: Math.max(1, Number(data.cacheRevision) || 1),
       versionCount: Number(data.versionCount) || 0,
+      editHistoryCount: Number(data.editHistoryCount) || 0,
       variants: data.variants || {},
       totals: data.totals || null,
       favorite: !!data.favorite,
@@ -4509,10 +4639,12 @@
     refreshCopyAll();
     return updated;
   }
-  async function commitImageReplacement(photo, prepared, metadataRemoved) {
+  async function commitImageReplacement(photo, prepared, metadataRemoved, operations) {
     var variants = null; try { variants = await makeImageVariants(prepared.blob, photo && photo.variants); } catch (_) {}
     var replaceUrl = '/app/image/' + encodeURIComponent(photo.token) + '/replace?name=' + encodeURIComponent(prepared.name);
     if (metadataRemoved || prepared.metadataStripped) replaceUrl += '&metadataRemoved=1';
+    var ops = Array.isArray(operations) ? operations.filter(Boolean).slice(0,30) : [];
+    if (ops.length) replaceUrl += '&ops=' + encodeURIComponent(ops.join(','));
     var response = await imageDlpMutate(replaceUrl, prepared.type, prepared.blob);
     if (!response) return null;
     if (!response.ok) {
@@ -4542,7 +4674,7 @@
       // Cancel/Escape returns the exact source object. No server mutation or new
       // version is created until the user explicitly applies an edit.
       if (!edited || edited === sourceFile) return;
-      var result = await commitImageReplacement(photo, { blob: edited, name: edited.name, type: edited.type || 'image/jpeg', metadataStripped: true }, true);
+      var result = await commitImageReplacement(photo, { blob: edited, name: edited.name, type: edited.type || 'image/jpeg', metadataStripped: true }, true, edited.dxEditOperations || ['photo-editor']);
       if (!result) return;
       recordImageAction('edited', result.updated || photo, 'photo-editor');
       toast(t(result.variantsOk ? 'imgEditUploadedDone' : 'imgVariantsFailed'), result.variantsOk ? 'ok' : 'warn');
@@ -4555,7 +4687,7 @@
       var file = input.files && input.files[0]; if (!file) return;
       try {
         var prepared = await prepareImageForLink(file, !!($('imglink-strip-exif') && $('imglink-strip-exif').checked));
-        var result = await commitImageReplacement(photo, prepared, prepared.metadataStripped);
+        var result = await commitImageReplacement(photo, prepared, prepared.metadataStripped, ['replace']);
         if (!result) return;
         recordImageAction('edited', result.updated || photo, 'replace');
         toast(t(result.variantsOk ? 'imgReplaceDone' : 'imgVariantsFailed'), result.variantsOk ? 'ok' : 'warn');
@@ -4616,19 +4748,21 @@
     if (!photo) return;
     var r = await fetch('/app/image/' + encodeURIComponent(photo.token) + '/versions', { credentials: 'same-origin', cache: 'no-store' });
     if (!r.ok) { toast(t('revokeFail'), 'err'); return; }
-    var versions = (await r.json()).versions || [];
+    var payload = await r.json(), versions = payload.versions || [], history = payload.history || [];
     if (!versions.length) { toast(t('imgVersions') + ': 0', 'warn'); return; }
-    var lines = versions.map(function (v, i) { return (i + 1) + '. ' + new Date(v.at).toLocaleString() + ' · ' + v.name + ' · ' + fmtBytes(v.size); });
-    var choice = window.prompt(t('imgRestoreVersion') + '\n' + lines.join('\n'), '1');
-    if (choice === null) return;
-    var idx = Math.max(0, Math.min(versions.length - 1, (parseInt(choice, 10) || 1) - 1));
-    var rr = await imageJsonMutation('/app/image/' + encodeURIComponent(photo.token) + '/restore/' + encodeURIComponent(versions[idx].id), {});
-    if (!rr.ok) { toast(t('revokeFail'), 'err'); return; }
-    var updated = imageDataUrls((await rr.json()).image);
-    imageRecordsByToken.set(updated.token, updated);
-    var row = imageRowsByToken.get(updated.token);
-    if (row) { row.querySelector('.imglink-thumb').src = imageCardPreviewUrl(updated) + (imageCardPreviewUrl(updated).indexOf('?') === -1 ? '?' : '&') + 'v=' + Date.now(); renderImageVariantStats(row, updated); }
-    toast(t('imgVersionRestored'), 'ok');
+    var old = document.getElementById('pwa-version-overlay'); if (old) old.remove();
+    var overlay=document.createElement('div'); overlay.id='pwa-version-overlay'; overlay.className='pair-overlay pwa-version-overlay';
+    var dialog=document.createElement('div'); dialog.className='pair-dialog pwa-version-dialog'; dialog.setAttribute('role','dialog'); dialog.setAttribute('aria-modal','true');
+    var head=document.createElement('div'); head.className='pwa-version-head'; var title=document.createElement('h3'); title.textContent=t('imgVersions')+' — '+(photo.name||''); var close=document.createElement('button');close.type='button';close.className='btn ghost';close.textContent='✕';close.title=t('imgClose');head.append(title,close);dialog.appendChild(head);
+    var compare=document.createElement('div');compare.className='pwa-version-compare hidden';compare.innerHTML='<div class="pwa-version-compare-stage"><img class="pwa-version-current" alt=""><div class="pwa-version-before-wrap"><img class="pwa-version-before" alt=""></div><input class="pwa-version-slider" type="range" min="0" max="100" value="50" aria-label="'+t('imgCompareBeforeAfter')+'"></div>';
+    dialog.appendChild(compare);
+    var list=document.createElement('div');list.className='pwa-version-list';
+    async function restore(v){ if(!window.confirm(t('imgRestoreConfirm')))return; var rr=await imageJsonMutation('/app/image/'+encodeURIComponent(photo.token)+'/restore/'+encodeURIComponent(v.id),{}); if(!rr.ok){toast(t('revokeFail'),'err');return;} var updated=applyUpdatedImageRecord((await rr.json()).image); toast(t('imgVersionRestored'),'ok'); overlay.remove(); if(updated)manageImageVersions(updated); }
+    function showCompare(v){var current=compare.querySelector('.pwa-version-current'),before=compare.querySelector('.pwa-version-before'),wrap=compare.querySelector('.pwa-version-before-wrap'),slider=compare.querySelector('.pwa-version-slider');current.src=(photo.previewUrls&&photo.previewUrls.full)||('/app/image/'+encodeURIComponent(photo.token)+'/preview/full');before.src='/app/image/'+encodeURIComponent(photo.token)+'/versions/'+encodeURIComponent(v.id)+'/preview';compare.classList.remove('hidden');var apply=function(){wrap.style.width=slider.value+'%';};slider.oninput=apply;apply();compare.scrollIntoView({behavior:'smooth',block:'nearest'});}
+    versions.forEach(function(v,i){var row=document.createElement('div');row.className='pwa-version-row';var meta=document.createElement('div');var strong=document.createElement('strong');strong.textContent=(v.original?t('imgOriginal')+' · ':'')+new Date(v.at).toLocaleString();var sub=document.createElement('span');sub.textContent=[v.w&&v.h?v.w+'×'+v.h:'',fmtBytes(v.size||0),(v.operations||[]).join(', ')].filter(Boolean).join(' · ');meta.append(strong,sub);var actions=document.createElement('div');var cmp=document.createElement('button');cmp.type='button';cmp.className='btn ghost sm';cmp.textContent=t('imgCompareBeforeAfter');cmp.onclick=function(){showCompare(v);};var rst=document.createElement('button');rst.type='button';rst.className='btn ghost sm';rst.textContent=v.original?t('imgRestoreOriginal'):t('imgRestoreVersion');rst.onclick=function(){restore(v);};actions.append(cmp,rst);row.append(meta,actions);list.appendChild(row);});
+    dialog.appendChild(list);
+    if(history.length){var hs=document.createElement('section');hs.className='pwa-version-history';var ht=document.createElement('h4');ht.textContent=t('imgVersionHistory');hs.appendChild(ht);history.slice(0,30).forEach(function(h){var line=document.createElement('div');line.textContent=new Date(h.at).toLocaleString()+' · '+(h.action||'edit')+(h.operations&&h.operations.length?' · '+h.operations.join(', '):'');hs.appendChild(line);});dialog.appendChild(hs);}
+    overlay.appendChild(dialog);document.body.appendChild(overlay);close.onclick=function(){overlay.remove();};overlay.addEventListener('click',function(e){if(e.target===overlay)overlay.remove();});
   }
 
   function activateImageLinkRow(row, data, linkName, metadataStripped, trackForCopyAll) {
@@ -5072,43 +5206,73 @@
     if (!snapshot.key) return Promise.reject(new Error('nokey'));
     return window.DXCrypto.importRawKey(window.DXCrypto.b64urlDecode(snapshot.key)).then(function (key) { return { mode: 'key', key: key, salt: null }; });
   }
-  async function prepareUpload(it) {
-    if (it.preparedBlob && it.upName && it.upSize != null) {
-      it.backgroundReady = !!($('auto-resume') && $('auto-resume').checked && preparedPayloadIsDurable(it));
-      return;
+  var longOperationToken = 0, longOperations = new Map();
+  function renderLongOperation() {
+    var box=$('long-operation'), label=$('long-operation-label'), detail=$('long-operation-detail'), progress=$('long-operation-progress');
+    if (!box) return;
+    if (!longOperations.size) { box.classList.add('hidden'); return; }
+    var rec=null; longOperations.forEach(function (candidate) { if (!rec || Number(candidate.updatedAt||0) >= Number(rec.updatedAt||0)) rec=candidate; });
+    box.classList.remove('hidden');
+    if (label) label.textContent=rec.label||t('longOpWorking');
+    if (detail) detail.textContent=rec.detail||'';
+    if (progress) {
+      if (Number.isFinite(Number(rec.percent))) progress.value=Math.max(0,Math.min(100,Number(rec.percent)));
+      else { progress.value=0; progress.removeAttribute('value'); }
     }
-    var source = await optimizeImage(it);
-    if (!it.snapshot.enc) {
-      it.preparedBlob = source;
-      it.upName = it.name;
-      it.upSize = source.size;
-      it.preparedEncrypted = false;
+  }
+  function beginLongOperation(label, detail) {
+    var token=++longOperationToken, rec={token:token,label:label||t('longOpWorking'),detail:detail||'',percent:null,updatedAt:Date.now(),timer:null};
+    rec.timer=setTimeout(function(){endLongOperation(token);},10*60*1000);
+    longOperations.set(token,rec); renderLongOperation(); return token;
+  }
+  function updateLongOperation(token, percent, detail) {
+    var rec=longOperations.get(token); if(!rec)return;
+    if(Number.isFinite(Number(percent)))rec.percent=Math.max(0,Math.min(100,Number(percent)));
+    if(detail!=null)rec.detail=String(detail); rec.updatedAt=Date.now(); renderLongOperation();
+  }
+  function endLongOperation(token) {
+    var rec=longOperations.get(token); if(!rec)return; clearTimeout(rec.timer); longOperations.delete(token); renderLongOperation();
+  }
+  async function prepareUpload(it) {
+    var longOp = beginLongOperation(t('longOpPrepare'), it && it.name || '');
+    try {
+      if (it.preparedBlob && it.upName && it.upSize != null) {
+        it.backgroundReady = !!($('auto-resume') && $('auto-resume').checked && preparedPayloadIsDurable(it));
+        return;
+      }
+      var source = await optimizeImage(it);
+      if (!it.snapshot.enc) {
+        it.preparedBlob = source;
+        it.upName = it.name;
+        it.upSize = source.size;
+        it.preparedEncrypted = false;
+        it.state = 'waiting';
+        await ensurePreparedDurable(it);
+        it.backgroundReady = !!($('auto-resume') && $('auto-resume').checked && preparedPayloadIsDurable(it));
+        return;
+      }
+      it.state = 'encrypting'; updateItemUi(it, t('encrypting'));
+      var ctx = await encryptionContext(it.snapshot);
+      var sourceNamed = namedFile(source, it.name, source.type || it.type, it.lastModified);
+      var encrypted = await window.DXCrypto.encryptFile(sourceNamed, ctx.mode, {
+        key: ctx.key,
+        salt: ctx.salt,
+        onProgress: function (fraction) {
+          it.prepareProgress = Math.max(0, Math.min(1, fraction || 0));
+          updateItemUi(it, t('encrypting') + ' ' + Math.round(it.prepareProgress * 100) + '%'); updateLongOperation(longOp, Math.round(it.prepareProgress * 100), it.name || '');
+          if (it.progress) { it.progress.max = 100; it.progress.value = Math.round(it.prepareProgress * 100); }
+        }
+      });
+      it.preparedBlob = encrypted;
+      it.upName = genId(24) + '.dxe';
+      it.upSize = encrypted.size;
+      it.preparedEncrypted = true;
+      it.sentBytes = 0;
       it.state = 'waiting';
+      it.prepareProgress = 1;
       await ensurePreparedDurable(it);
       it.backgroundReady = !!($('auto-resume') && $('auto-resume').checked && preparedPayloadIsDurable(it));
-      return;
-    }
-    it.state = 'encrypting'; updateItemUi(it, t('encrypting'));
-    var ctx = await encryptionContext(it.snapshot);
-    var sourceNamed = namedFile(source, it.name, source.type || it.type, it.lastModified);
-    var encrypted = await window.DXCrypto.encryptFile(sourceNamed, ctx.mode, {
-      key: ctx.key,
-      salt: ctx.salt,
-      onProgress: function (fraction) {
-        it.prepareProgress = Math.max(0, Math.min(1, fraction || 0));
-        updateItemUi(it, t('encrypting') + ' ' + Math.round(it.prepareProgress * 100) + '%');
-        if (it.progress) { it.progress.max = 100; it.progress.value = Math.round(it.prepareProgress * 100); }
-      }
-    });
-    it.preparedBlob = encrypted;
-    it.upName = genId(24) + '.dxe';
-    it.upSize = encrypted.size;
-    it.preparedEncrypted = true;
-    it.sentBytes = 0;
-    it.state = 'waiting';
-    it.prepareProgress = 1;
-    await ensurePreparedDurable(it);
-    it.backgroundReady = !!($('auto-resume') && $('auto-resume').checked && preparedPayloadIsDurable(it));
+    } finally { endLongOperation(longOp); }
   }
 
   function persistErrorLog() {
@@ -5493,9 +5657,13 @@
     try {
       updateItemUi(it, t('dedupeChecking'));
       if (!it.contentHash) {
-        it.contentHash = await sha256Blob(it.preparedBlob, function (fraction) {
-          if (it.meta) it.meta.textContent = t('dedupeChecking') + ' ' + Math.round(fraction * 100) + '%';
-        });
+        var hashOp=beginLongOperation(t('longOpHash'),it.name||'');
+        try {
+          it.contentHash = await sha256Blob(it.preparedBlob, function (fraction) {
+            if (it.meta) it.meta.textContent = t('hashing') + ' ' + Math.round(fraction * 100) + '%';
+            updateLongOperation(hashOp,Math.round(fraction*100),it.name||'');
+          });
+        } finally { endLongOperation(hashOp); }
       }
       if (!it.contentHash || it.state === 'removed') return null;
       await persistItem(it, false).catch(function () {});
@@ -5542,7 +5710,7 @@
     }
     it.prepareProgress = 0;
     var offset = await getOffset(it.snapshot, it.uploadId);
-    offset = Math.min(offset, it.upSize); it.sentBytes = offset;
+    offset = Math.min(offset, it.upSize); it.sentBytes = offset; it.lastServerOffset=offset; if(offset>0){it.recoveryAttempts=Math.max(0,Number(it.recoveryAttempts)||0)+1;it.recoveredAt=Date.now();it.recoveryReason='server-offset';}
     if (offset === 0 && !it.preparedEncrypted) {
       var dedupe = await tryServerDedup(it);
       if (dedupe) {
@@ -6120,12 +6288,38 @@
     en:{'action-undone':'Action undone','album-created':'Album created','audit-exported':'Audit log exported','backup-download':'Backup downloaded','backup-failed':'Backup failed','backup-ok':'Backup completed','diagnostics-run':'Diagnostics run','dlp-blocked':'DLP: publication blocked','dlp-detected':'DLP: content detected','dlp-ocr-unavailable':'DLP: OCR unavailable','dlp-overridden':'DLP: warning overridden','dlp-quarantine-deleted':'Quarantine item deleted','dlp-quarantine-failed':'DLP: quarantine failed','dlp-quarantined':'DLP: content quarantined','dlp-warning':'DLP: warning','download-threshold':'Download threshold reached','email-tested':'Test email sent','expired-share-purged':'Expired share purged','feedback-deleted':'Feedback deleted','history-cleared':'History cleared','image-created':'Image created','image-first-view':'First image view','image-retention-revoked':'Image revoked by retention','inbox-created':'Reception link created','inbox-messages-cleared':'Reception messages cleared','ip-named':'Client renamed','ip-names-cleared':'IP nicknames cleared','ip-unnamed':'Client nickname cleared','items-reordered':'Items reordered','link-preset-deleted':'Link preset deleted','link-preset-saved':'Link preset saved','links-exported':'Links exported','login':'Login','login-fail':'Login failed','logout':'Logout','network-port-tested':'Network port tested','notification-prefs-changed':'Notification preferences changed','passkey-added':'Passkey added','passkey-login':'Passkey login','pending-approved':'Pending upload approved','pending-rejected':'Pending upload rejected','photo-edited':'Image edited','photo-uploaded':'Image uploaded','photos-created':'Images created','photos-downloaded':'Images downloaded','push-tested':'Push notification tested','pwa-auto-lock':'PWA automatically locked','pwa-device-paired':'PWA device paired','pwa-device-renamed':'PWA device renamed','pwa-device-revoked':'PWA device revoked','reception-thread-cleared':'Reception thread cleared','reception-thread-reply':'Reception thread reply','recipients-added':'Sub-links added','recipient-removed':'Sub-link removed','recipient-updated':'Sub-link updated','restore':'Backup restored','search-reindex':'Search reindex','server-shutdown':'Server shutdown','settings-changed':'Settings changed','settings-exported':'Settings exported','settings-imported':'Settings imported','share-auto-archived':'Share automatically archived','share-cloned':'Share duplicated','share-created':'Share created','share-edited':'Share edited','share-extended':'Share expiration extended','share-reactivated':'Share reactivated','share-restored':'Share restored','share-revoked':'Share revoked','share-stats-reset':'Share statistics reset','share-trashed':'Share moved to trash','shares-exported':'Shares exported','shares-imported':'Shares imported','shares-paused-all':'Shares paused','shares-resumed-all':'Shares resumed','transfer-stopped':'Transfer stopped','trash-purged':'Item permanently deleted','trash-purged-all':'Trash emptied','upload-deduped':'Duplicate upload detected','upload-folder-created':'Upload folder created','upload-infected':'Infected upload','webhook-tested':'Webhook tested'},
     es:{'action-undone':'Acción deshecha','album-created':'Álbum creado','audit-exported':'Registro de auditoría exportado','backup-download':'Copia de seguridad descargada','backup-failed':'Copia de seguridad fallida','backup-ok':'Copia de seguridad completada','diagnostics-run':'Diagnósticos ejecutados','dlp-blocked':'DLP: publicación bloqueada','dlp-detected':'DLP: contenido detectado','dlp-ocr-unavailable':'DLP: OCR no disponible','dlp-overridden':'DLP: advertencia ignorada','dlp-quarantine-deleted':'Elemento de cuarentena eliminado','dlp-quarantine-failed':'DLP: cuarentena fallida','dlp-quarantined':'DLP: contenido en cuarentena','dlp-warning':'DLP: advertencia','download-threshold':'Umbral de descargas alcanzado','email-tested':'Correo de prueba enviado','expired-share-purged':'Recurso caducado purgado','feedback-deleted':'Comentario eliminado','history-cleared':'Historial borrado','image-created':'Imagen creada','image-first-view':'Primera vista de imagen','image-retention-revoked':'Imagen revocada por retención','inbox-created':'Enlace de recepción creado','inbox-messages-cleared':'Mensajes de recepción borrados','ip-named':'Cliente renombrado','ip-names-cleared':'Alias de IP borrados','ip-unnamed':'Alias de cliente eliminado','items-reordered':'Elementos reordenados','link-preset-deleted':'Preajuste de enlace eliminado','link-preset-saved':'Preajuste de enlace guardado','links-exported':'Enlaces exportados','login':'Inicio de sesión','login-fail':'Inicio fallido','logout':'Cierre de sesión','network-port-tested':'Puerto de red probado','notification-prefs-changed':'Preferencias de notificación modificadas','passkey-added':'Clave de acceso añadida','passkey-login':'Inicio con clave de acceso','pending-approved':'Carga pendiente aprobada','pending-rejected':'Carga pendiente rechazada','photo-edited':'Imagen editada','photo-uploaded':'Imagen subida','photos-created':'Imágenes creadas','photos-downloaded':'Imágenes descargadas','push-tested':'Notificación push probada','pwa-auto-lock':'PWA bloqueada automáticamente','pwa-device-paired':'Dispositivo PWA emparejado','pwa-device-renamed':'Dispositivo PWA renombrado','pwa-device-revoked':'Dispositivo PWA revocado','reception-thread-cleared':'Conversación de recepción borrada','reception-thread-reply':'Respuesta en conversación de recepción','recipients-added':'Subenlaces añadidos','recipient-removed':'Subenlace eliminado','recipient-updated':'Subenlace modificado','restore':'Copia de seguridad restaurada','search-reindex':'Reindexación de búsqueda','server-shutdown':'Apagado del servidor','settings-changed':'Ajustes modificados','settings-exported':'Ajustes exportados','settings-imported':'Ajustes importados','share-auto-archived':'Recurso archivado automáticamente','share-cloned':'Recurso duplicado','share-created':'Recurso creado','share-edited':'Recurso modificado','share-extended':'Caducidad ampliada','share-reactivated':'Recurso reactivado','share-restored':'Recurso restaurado','share-revoked':'Recurso revocado','share-stats-reset':'Estadísticas reiniciadas','share-trashed':'Recurso movido a la papelera','shares-exported':'Recursos exportados','shares-imported':'Recursos importados','shares-paused-all':'Recursos pausados','shares-resumed-all':'Recursos reactivados','transfer-stopped':'Transferencia detenida','trash-purged':'Elemento eliminado definitivamente','trash-purged-all':'Papelera vaciada','upload-deduped':'Carga duplicada detectada','upload-folder-created':'Carpeta de carga creada','upload-infected':'Carga infectada','webhook-tested':'Webhook probado'}
   };
-  var PWA_ACTIVITY_ACTIONS_EXTRA = {"fr":{"2fa-disabled":"2FA désactivée","2fa-enabled":"2FA activée","access-request-deleted":"Demande d’accès supprimée","account-created":"Compte créé","account-deleted":"Compte supprimé","account-renamed":"Compte renommé","collab-created":"Collaboration créée","collab-delete":"Fichier collaboratif supprimé","digest-tested":"Digest testé","enc-share-created":"Partage chiffré créé","leak-alert":"Alerte de fuite","login-2fa-fail":"Échec 2FA","notification-rule-created":"Règle de notification créée","notification-rule-deleted":"Règle de notification supprimée","notification-rule-reused":"Règle de notification réutilisée","notification-rule-updated":"Règle de notification modifiée","passkey-device-added":"Appareil biométrique ajouté","passkey-login-fail":"Échec de connexion par clé d’accès","passkey-removed":"Clé d’accès supprimée","passkeys-disabled":"Clés d’accès désactivées","password-changed":"Mot de passe changé","password-reset":"Mot de passe réinitialisé","pending-orphans-cleaned":"Dépôts orphelins nettoyés","photo-history-deleted":"Historique d’image supprimé","photo-history-purged":"Historique d’images purgé","push-subscribed":"Notifications push activées","push-unsubscribed":"Notifications push désactivées","pwa-login-bound":"Session PWA associée","ransomware-blocked":"Client bloqué (anomalie)","ransomware-unblocked":"Client débloqué","secret-created":"Secret créé","share-bandwidth-limit":"Limite de bande passante atteinte","share-burned":"Lien à usage unique consommé","share-comment-added":"Commentaire privé ajouté","share-comment-deleted":"Commentaire privé supprimé","share-emailed":"Partage envoyé par courriel","share-first-use-expiry-started":"Expiration au premier usage démarrée","share-visitor-limit":"Limite de visiteurs atteinte","shares-bulk":"Action en lot sur les partages","storage-connector-cancelled":"Opération de stockage annulée","storage-connector-created":"Connecteur de stockage créé","storage-connector-deleted":"Connecteur de stockage supprimé","storage-connector-done":"Opération de stockage terminée","storage-connector-download":"Téléchargement depuis le stockage terminé","storage-connector-failed":"Opération de stockage échouée","storage-connector-tested":"Connecteur de stockage testé","storage-connector-updated":"Connecteur de stockage modifié","storage-connector-upload":"Téléversement vers le stockage terminé"},"en":{"2fa-disabled":"2FA disabled","2fa-enabled":"2FA enabled","access-request-deleted":"Access request deleted","account-created":"Account created","account-deleted":"Account deleted","account-renamed":"Account renamed","collab-created":"Collaboration created","collab-delete":"Collaborative file deleted","digest-tested":"Digest tested","enc-share-created":"Encrypted share created","leak-alert":"Leak alert","login-2fa-fail":"2FA failed","notification-rule-created":"Notification rule created","notification-rule-deleted":"Notification rule deleted","notification-rule-reused":"Notification rule reused","notification-rule-updated":"Notification rule updated","passkey-device-added":"Biometric device added","passkey-login-fail":"Passkey login failed","passkey-removed":"Passkey removed","passkeys-disabled":"Passkeys disabled","password-changed":"Password changed","password-reset":"Password reset","pending-orphans-cleaned":"Orphan pending uploads cleaned","photo-history-deleted":"Image history deleted","photo-history-purged":"Image history purged","push-subscribed":"Push notifications enabled","push-unsubscribed":"Push notifications disabled","pwa-login-bound":"PWA session bound","ransomware-blocked":"Client blocked (anomaly)","ransomware-unblocked":"Client unblocked","secret-created":"Secret created","share-bandwidth-limit":"Share bandwidth limit reached","share-burned":"One-time link consumed","share-comment-added":"Private comment added","share-comment-deleted":"Private comment deleted","share-emailed":"Share emailed","share-first-use-expiry-started":"First-use expiry started","share-visitor-limit":"Visitor limit reached","shares-bulk":"Bulk share action","storage-connector-cancelled":"Storage operation cancelled","storage-connector-created":"Storage connector created","storage-connector-deleted":"Storage connector deleted","storage-connector-done":"Storage operation completed","storage-connector-download":"Storage download completed","storage-connector-failed":"Storage operation failed","storage-connector-tested":"Storage connector tested","storage-connector-updated":"Storage connector updated","storage-connector-upload":"Storage upload completed"},"es":{"2fa-disabled":"2FA desactivada","2fa-enabled":"2FA activada","access-request-deleted":"Solicitud de acceso eliminada","account-created":"Cuenta creada","account-deleted":"Cuenta eliminada","account-renamed":"Cuenta renombrada","collab-created":"Colaboración creada","collab-delete":"Archivo colaborativo eliminado","digest-tested":"Resumen probado","enc-share-created":"Recurso cifrado creado","leak-alert":"Alerta de fuga","login-2fa-fail":"2FA fallido","notification-rule-created":"Regla de notificación creada","notification-rule-deleted":"Regla de notificación eliminada","notification-rule-reused":"Regla de notificación reutilizada","notification-rule-updated":"Regla de notificación modificada","passkey-device-added":"Dispositivo biométrico añadido","passkey-login-fail":"Fallo de inicio con clave de acceso","passkey-removed":"Clave de acceso eliminada","passkeys-disabled":"Claves de acceso desactivadas","password-changed":"Contraseña cambiada","password-reset":"Contraseña restablecida","pending-orphans-cleaned":"Cargas pendientes huérfanas limpiadas","photo-history-deleted":"Historial de imagen eliminado","photo-history-purged":"Historial de imágenes purgado","push-subscribed":"Notificaciones push activadas","push-unsubscribed":"Notificaciones push desactivadas","pwa-login-bound":"Sesión PWA vinculada","ransomware-blocked":"Cliente bloqueado (anomalía)","ransomware-unblocked":"Cliente desbloqueado","secret-created":"Secreto creado","share-bandwidth-limit":"Límite de ancho de banda alcanzado","share-burned":"Enlace de un solo uso consumido","share-comment-added":"Comentario privado añadido","share-comment-deleted":"Comentario privado eliminado","share-emailed":"Recurso enviado por correo","share-first-use-expiry-started":"Caducidad tras primer uso iniciada","share-visitor-limit":"Límite de visitantes alcanzado","shares-bulk":"Acción masiva sobre recursos","storage-connector-cancelled":"Operación de almacenamiento cancelada","storage-connector-created":"Conector de almacenamiento creado","storage-connector-deleted":"Conector de almacenamiento eliminado","storage-connector-done":"Operación de almacenamiento completada","storage-connector-download":"Descarga desde el almacenamiento completada","storage-connector-failed":"Operación de almacenamiento fallida","storage-connector-tested":"Conector de almacenamiento probado","storage-connector-updated":"Conector de almacenamiento modificado","storage-connector-upload":"Carga al almacenamiento completada"}};
+  var PWA_ACTIVITY_ACTIONS_EXTRA = {"fr":{"2fa-disabled":"2FA désactivée","2fa-enabled":"2FA activée","access-request-deleted":"Demande d’accès supprimée","account-created":"Compte créé","account-deleted":"Compte supprimé","account-renamed":"Compte renommé","collab-created":"Collaboration créée","collab-delete":"Fichier collaboratif supprimé","digest-tested":"Digest testé","enc-share-created":"Partage chiffré créé","leak-alert":"Alerte de fuite","login-2fa-fail":"Échec 2FA","notification-rule-created":"Règle de notification créée","notification-rule-deleted":"Règle de notification supprimée","notification-rule-reused":"Règle de notification réutilisée","notification-rule-updated":"Règle de notification modifiée","passkey-device-added":"Appareil biométrique ajouté","passkey-login-fail":"Échec de connexion par clé d’accès","passkey-removed":"Clé d’accès supprimée","passkeys-disabled":"Clés d’accès désactivées","password-changed":"Mot de passe changé","password-reset":"Mot de passe réinitialisé","pending-orphans-cleaned":"Dépôts orphelins nettoyés","photo-history-deleted":"Historique d’image supprimé","photo-history-purged":"Historique d’images purgé","push-subscribed":"Notifications push activées","push-unsubscribed":"Notifications push désactivées","pwa-login-bound":"Session PWA associée","ransomware-blocked":"Client bloqué (anomalie)","ransomware-unblocked":"Client débloqué","secret-created":"Secret créé","share-bandwidth-limit":"Limite de bande passante atteinte","share-burned":"Lien à usage unique consommé","share-comment-added":"Commentaire privé ajouté","share-comment-deleted":"Commentaire privé supprimé","share-emailed":"Partage envoyé par courriel","share-first-use-expiry-started":"Expiration au premier usage démarrée","share-visitor-limit":"Limite de visiteurs atteinte","shares-bulk":"Action en lot sur les partages","storage-connector-cancelled":"Opération de stockage annulée","storage-connector-created":"Connecteur de stockage créé","storage-connector-deleted":"Connecteur de stockage supprimé","storage-connector-done":"Opération de stockage terminée","storage-connector-download":"Téléchargement depuis le stockage terminé","storage-connector-failed":"Opération de stockage échouée","storage-connector-tested":"Connecteur de stockage testé","storage-connector-updated":"Connecteur de stockage modifié","storage-connector-upload":"Téléversement vers le stockage terminé","session-revoked":"Session déconnectée","diagnostic-fix-requested":"Correction diagnostic demandée","diagnostic-fix":"Correction diagnostic","diagnostic-fix-failed":"Échec de correction diagnostic","tls-refresh":"Renouvellement TLS","image-version-restored":"Version d’image restaurée","passkey-device-removed":"Appareil biométrique retiré"},"en":{"2fa-disabled":"2FA disabled","2fa-enabled":"2FA enabled","access-request-deleted":"Access request deleted","account-created":"Account created","account-deleted":"Account deleted","account-renamed":"Account renamed","collab-created":"Collaboration created","collab-delete":"Collaborative file deleted","digest-tested":"Digest tested","enc-share-created":"Encrypted share created","leak-alert":"Leak alert","login-2fa-fail":"2FA failed","notification-rule-created":"Notification rule created","notification-rule-deleted":"Notification rule deleted","notification-rule-reused":"Notification rule reused","notification-rule-updated":"Notification rule updated","passkey-device-added":"Biometric device added","passkey-login-fail":"Passkey login failed","passkey-removed":"Passkey removed","passkeys-disabled":"Passkeys disabled","password-changed":"Password changed","password-reset":"Password reset","pending-orphans-cleaned":"Orphan pending uploads cleaned","photo-history-deleted":"Image history deleted","photo-history-purged":"Image history purged","push-subscribed":"Push notifications enabled","push-unsubscribed":"Push notifications disabled","pwa-login-bound":"PWA session bound","ransomware-blocked":"Client blocked (anomaly)","ransomware-unblocked":"Client unblocked","secret-created":"Secret created","share-bandwidth-limit":"Share bandwidth limit reached","share-burned":"One-time link consumed","share-comment-added":"Private comment added","share-comment-deleted":"Private comment deleted","share-emailed":"Share emailed","share-first-use-expiry-started":"First-use expiry started","share-visitor-limit":"Visitor limit reached","shares-bulk":"Bulk share action","storage-connector-cancelled":"Storage operation cancelled","storage-connector-created":"Storage connector created","storage-connector-deleted":"Storage connector deleted","storage-connector-done":"Storage operation completed","storage-connector-download":"Storage download completed","storage-connector-failed":"Storage operation failed","storage-connector-tested":"Storage connector tested","storage-connector-updated":"Storage connector updated","storage-connector-upload":"Storage upload completed","session-revoked":"Session signed out","diagnostic-fix-requested":"Diagnostic fix requested","diagnostic-fix":"Diagnostic fix","diagnostic-fix-failed":"Diagnostic fix failed","tls-refresh":"TLS refresh","image-version-restored":"Image version restored","passkey-device-removed":"Biometric device removed"},"es":{"2fa-disabled":"2FA desactivada","2fa-enabled":"2FA activada","access-request-deleted":"Solicitud de acceso eliminada","account-created":"Cuenta creada","account-deleted":"Cuenta eliminada","account-renamed":"Cuenta renombrada","collab-created":"Colaboración creada","collab-delete":"Archivo colaborativo eliminado","digest-tested":"Resumen probado","enc-share-created":"Recurso cifrado creado","leak-alert":"Alerta de fuga","login-2fa-fail":"2FA fallido","notification-rule-created":"Regla de notificación creada","notification-rule-deleted":"Regla de notificación eliminada","notification-rule-reused":"Regla de notificación reutilizada","notification-rule-updated":"Regla de notificación modificada","passkey-device-added":"Dispositivo biométrico añadido","passkey-login-fail":"Fallo de inicio con clave de acceso","passkey-removed":"Clave de acceso eliminada","passkeys-disabled":"Claves de acceso desactivadas","password-changed":"Contraseña cambiada","password-reset":"Contraseña restablecida","pending-orphans-cleaned":"Cargas pendientes huérfanas limpiadas","photo-history-deleted":"Historial de imagen eliminado","photo-history-purged":"Historial de imágenes purgado","push-subscribed":"Notificaciones push activadas","push-unsubscribed":"Notificaciones push desactivadas","pwa-login-bound":"Sesión PWA vinculada","ransomware-blocked":"Cliente bloqueado (anomalía)","ransomware-unblocked":"Cliente desbloqueado","secret-created":"Secreto creado","share-bandwidth-limit":"Límite de ancho de banda alcanzado","share-burned":"Enlace de un solo uso consumido","share-comment-added":"Comentario privado añadido","share-comment-deleted":"Comentario privado eliminado","share-emailed":"Recurso enviado por correo","share-first-use-expiry-started":"Caducidad tras primer uso iniciada","share-visitor-limit":"Límite de visitantes alcanzado","shares-bulk":"Acción masiva sobre recursos","storage-connector-cancelled":"Operación de almacenamiento cancelada","storage-connector-created":"Conector de almacenamiento creado","storage-connector-deleted":"Conector de almacenamiento eliminado","storage-connector-done":"Operación de almacenamiento completada","storage-connector-download":"Descarga desde el almacenamiento completada","storage-connector-failed":"Operación de almacenamiento fallida","storage-connector-tested":"Conector de almacenamiento probado","storage-connector-updated":"Conector de almacenamiento modificado","storage-connector-upload":"Carga al almacenamiento completada","session-revoked":"Sesión cerrada","diagnostic-fix-requested":"Corrección de diagnóstico solicitada","diagnostic-fix":"Corrección de diagnóstico","diagnostic-fix-failed":"Error de corrección de diagnóstico","tls-refresh":"Renovación TLS","image-version-restored":"Versión de imagen restaurada","passkey-device-removed":"Dispositivo biométrico eliminado"}};
   function pwaActivityActionLabel(action){var key=String(action||''),dict=PWA_ACTIVITY_ACTIONS[lang]||PWA_ACTIVITY_ACTIONS.en,extra=PWA_ACTIVITY_ACTIONS_EXTRA[lang]||PWA_ACTIVITY_ACTIONS_EXTRA.en;return dict[key]||extra[key]||key.replace(/-/g,' ');}
   var PWA_ACTIVITY_TEXT_EXTRA = {"fr":{"queued":"en file","pending":"en attente","paused-all":"tous mis en pause","resumed-all":"tous réactivés","thread-reply":"réponse à la discussion","access-request":"demande d’accès","feedback":"commentaire","message":"message"},"en":{"queued":"queued","pending":"pending","paused-all":"all paused","resumed-all":"all resumed","thread-reply":"thread reply","access-request":"access request","feedback":"feedback","message":"message"},"es":{"queued":"en cola","pending":"pendiente","paused-all":"todos pausados","resumed-all":"todos reanudados","thread-reply":"respuesta a la conversación","access-request":"solicitud de acceso","feedback":"comentario","message":"mensaje"}};
+
+  var PWA_STRUCTURED_LOG_TEXT = {
+    fr:{'session-revoked':'Session de {username} déconnectée ({device})','diagnostic-fix-requested':'Correction diagnostic « {action} » demandée','dlp-result':'DLP {source} : {count} détection(s), niveau {highest} · {types}','diagnostics-run':'Diagnostic : {ok} OK, {warn} avertissement(s), {bad} erreur(s)','diagnostic-fix':'Correction diagnostic « {action} » appliquée','diagnostic-fix-failed':'Correction diagnostic « {action} » échouée : {error}'},
+    en:{'session-revoked':'Signed out {username} session ({device})','diagnostic-fix-requested':'Diagnostic fix “{action}” requested','dlp-result':'DLP {source}: {count} finding(s), severity {highest} · {types}','diagnostics-run':'Diagnostics: {ok} OK, {warn} warning(s), {bad} error(s)','diagnostic-fix':'Diagnostic fix “{action}” applied','diagnostic-fix-failed':'Diagnostic fix “{action}” failed: {error}'},
+    es:{'session-revoked':'Sesión de {username} cerrada ({device})','diagnostic-fix-requested':'Corrección de diagnóstico «{action}» solicitada','dlp-result':'DLP {source}: {count} detección(es), gravedad {highest} · {types}','diagnostics-run':'Diagnóstico: {ok} OK, {warn} aviso(s), {bad} error(es)','diagnostic-fix':'Corrección de diagnóstico «{action}» aplicada','diagnostic-fix-failed':'Corrección de diagnóstico «{action}» fallida: {error}'}
+  };
+  function pwaStructuredLogParams(code, params) {
+    var out = Object.assign({}, params && typeof params === 'object' ? params : {}), sev;
+    if (code === 'dlp-result') {
+      sev = { low:'dlpSeverityLow', medium:'dlpSeverityMedium', high:'dlpSeverityHigh', critical:'dlpSeverityCritical' };
+      if (out.highest === 'none') out.highest = '—'; else if (sev[String(out.highest || '')]) out.highest = t(sev[String(out.highest)]);
+      if (out.types) out.types = String(out.types).split(/,\s*/).filter(Boolean).map(function (v) { return pwaDlpRuleLabel(v); }).join(', ');
+    }
+    if ((code === 'diagnostic-fix-requested' || code === 'diagnostic-fix' || code === 'diagnostic-fix-failed') && out.action) out.action = pwaActivityActionLabel(String(out.action));
+    return out;
+  }
+  function pwaStructuredLogText(raw) {
+    if (String(raw || '').indexOf('@dxlog:') !== 0) return null;
+    try {
+      var rec = JSON.parse(String(raw).slice(7)), code = String(rec.code || ''), params = pwaStructuredLogParams(code, rec.params || {}), template = (PWA_STRUCTURED_LOG_TEXT[lang] || PWA_STRUCTURED_LOG_TEXT.en)[code];
+      if (template) return template.replace(/\{([a-zA-Z0-9_.-]+)\}/g, function (_, key) { var v = params[key]; return v === null || v === undefined ? '' : String(v); });
+      if (rec.fallback) return String(rec.fallback);
+    } catch (_) {}
+    return null;
+  }
   function pwaLocalizedActivityText(value){
     if(value===null||value===undefined)return '';
-    var raw=String(value), maps={
+    var raw=String(value), structured=pwaStructuredLogText(raw); if(structured!==null)return structured;
+    var maps={
       fr:{active:'actif',completed:'terminé',interrupted:'interrompu',deleted:'supprimé',restored:'restauré',purged:'supprimé définitivement',reactivated:'réactivé',clean:'sain',infected:'infecté',error:'erreur',restarted:'redémarré',recovered:'récupéré',updated:'mis à jour','locked-out':'verrouillé après trop d’essais','paired device':'appareil appairé','new device':'nouvel appareil','known device':'appareil connu','device renamed':'appareil renommé','PWA session locked':'session PWA verrouillée','manual rebuild requested':'réindexation manuelle demandée','visitor message':'message visiteur','visitor thread reply':'réponse du visiteur','access request submitted':'demande d’accès envoyée','feedback submitted':'feedback envoyé','Content modified':'Contenu modifié',failed:'échec',open:'ouvert',closed:'fermé',unknown:'inconnu'},
       en:{active:'active',completed:'completed',interrupted:'interrupted',deleted:'deleted',restored:'restored',purged:'permanently deleted',reactivated:'reactivated',clean:'clean',infected:'infected',error:'error',restarted:'restarted',recovered:'recovered',updated:'updated','locked-out':'locked after too many attempts','paired device':'paired device','new device':'new device','known device':'known device','device renamed':'device renamed','PWA session locked':'PWA session locked','manual rebuild requested':'manual reindex requested','visitor message':'visitor message','visitor thread reply':'visitor thread reply','access request submitted':'access request submitted','feedback submitted':'feedback submitted','Contenu modifié':'Content modified',failed:'failed',open:'open',closed:'closed',unknown:'unknown'},
       es:{active:'activo',completed:'completado',interrupted:'interrumpido',deleted:'eliminado',restored:'restaurado',purged:'eliminado definitivamente',reactivated:'reactivado',clean:'limpio',infected:'infectado',error:'error',restarted:'reiniciado',recovered:'recuperado',updated:'actualizado','locked-out':'bloqueado tras demasiados intentos','paired device':'dispositivo emparejado','new device':'nuevo dispositivo','known device':'dispositivo conocido','device renamed':'dispositivo renombrado','PWA session locked':'sesión PWA bloqueada','manual rebuild requested':'reindexación manual solicitada','visitor message':'mensaje del visitante','visitor thread reply':'respuesta del visitante','access request submitted':'solicitud de acceso enviada','feedback submitted':'comentario enviado','Content modified':'Contenido modificado','Contenu modifié':'Contenido modificado',failed:'fallido',open:'abierto',closed:'cerrado',unknown:'desconocido'}
@@ -6157,18 +6351,23 @@
   function pwaServerActivityIsPwa(e){return !!(e&&(e.source==='pwa'||e.deviceId||/^PWA(?::|$)/i.test(String(e.actor||''))||/via PWA/i.test(String(e.detail||''))));}
   function pwaServerActivityIsImage(e){if(!e)return false;var action=String(e.name||e.status||'');if(/^(photo|photos|image|album)(?:-|$)/i.test(action))return true;if(/^(photo|album)$/i.test(String(e.resourceType||e.detail||'')))return true;return false;}
   function pwaServerActivityIsRoutine(e){var n=String(e&&e.name||'').toLowerCase(),k=String(e&&e.kind||'').toLowerCase();return k==='ocr-start'||k==='ocr-complete'||n==='server-restarted'||n==='server-shutdown';}
-  function refreshPwaActivityShareOptions(){var sel=$('server-activity-share');if(!sel)return;var current=sel.value,map={};serverActivityEvents.forEach(function(e){if(e&&e.shareId&&!map[e.shareId])map[e.shareId]=e.name||e.shareId;});sel.innerHTML='';var all=document.createElement('option');all.value='';all.textContent=t('serverActivityShareAll');sel.appendChild(all);Object.keys(map).sort(function(a,b){return String(map[a]).localeCompare(String(map[b]));}).forEach(function(id){var o=document.createElement('option');o.value=id;o.textContent=map[id]+' · '+id.slice(0,8);sel.appendChild(o);});if([].slice.call(sel.options).some(function(o){return o.value===current;}))sel.value=current;}
+  function refreshPwaActivityShareOptions(){var sel=$('server-activity-share');if(!sel)return;var current=sel.value,map={};serverActivityEvents.forEach(function(e){if(e&&e.shareId&&!map[e.shareId])map[e.shareId]=e.shareName||e.name||e.shareId;});sel.innerHTML='';var all=document.createElement('option');all.value='';all.textContent=t('serverActivityShareAll');sel.appendChild(all);Object.keys(map).sort(function(a,b){return String(map[a]).localeCompare(String(map[b]));}).forEach(function(id){var o=document.createElement('option');o.value=id;o.textContent=map[id]+' · '+id.slice(0,8);sel.appendChild(o);});if([].slice.call(sel.options).some(function(o){return o.value===current;}))sel.value=current;}
+  function pwaActivityResultMatches(e,want){if(!want)return true;var text=String([e&&e.status,e&&e.detail,e&&e.name].filter(Boolean).join(' ')).toLowerCase();if(want==='ok')return /ok|done|complete|completed|success|created|updated|sent|ready/.test(text);if(want==='error')return /error|fail|failed|interrupt|abandon|blocked|denied|impossible/.test(text);if(want==='restored')return /restor|reactivat/.test(text);if(want==='deleted')return /delete|deleted|purge|purged|revok|trash/.test(text);return text.indexOf(String(want).toLowerCase())!==-1;}
   function renderPwaServerActivity() {
     var list = $('server-activity-list'); if (!list) return;
     refreshPwaActivityShareOptions(); list.innerHTML = '';
     var locale = lang === 'fr' ? 'fr-CA' : lang === 'es' ? 'es-ES' : 'en-US';
     var q = String($('server-activity-search') && $('server-activity-search').value || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLocaleLowerCase(locale);
     var kind = String($('server-activity-kind') && $('server-activity-kind').value || '');
-    var share = String($('server-activity-share') && $('server-activity-share').value || '');
+    var normActivity=function(v){return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLocaleLowerCase(locale);};
+    var share = String($('server-activity-share') && $('server-activity-share').value || ''), actor=normActivity($('server-activity-actor')&&$('server-activity-actor').value), ip=normActivity($('server-activity-ip')&&$('server-activity-ip').value), device=String($('server-activity-device')&&$('server-activity-device').value||''), result=normActivity($('server-activity-result')&&$('server-activity-result').value), direction=String($('server-activity-direction')&&$('server-activity-direction').value||''), period=Math.max(0,Number($('server-activity-period')&&$('server-activity-period').value||0)), cutoff=period?Date.now()-period*3600000:0;
     var imagesOnly=!!($('server-activity-images')&&$('server-activity-images').checked), pwaOnly=!!($('server-activity-pwa')&&$('server-activity-pwa').checked), hideRoutine=!!($('server-activity-hide-routine')&&$('server-activity-hide-routine').checked);
-    var rows = serverActivityEvents.filter(function (e) { return (!kind || pwaServerActivityGroup(e) === kind) && (!share || String(e.shareId||'')===share) && (!imagesOnly || pwaServerActivityIsImage(e)) && (!pwaOnly || pwaServerActivityIsPwa(e)) && (!hideRoutine || !pwaServerActivityIsRoutine(e)) && (!q || pwaServerActivitySearchText(e).indexOf(q) !== -1); });
+    var rows = serverActivityEvents.filter(function (e) { return (!kind || pwaServerActivityGroup(e) === kind) && (!share || String(e.shareId||'')===share) && (!device||String(e.source||'')===device) && (!direction||e.direction===direction) && (!cutoff||Number(e.at)>=cutoff) && (!actor||normActivity((e.actor||'')+' '+(e.accountId||'')).indexOf(actor)!==-1) && (!ip||normActivity(e.ip).indexOf(ip)!==-1) && pwaActivityResultMatches(e,result) && (!imagesOnly || pwaServerActivityIsImage(e)) && (!pwaOnly || pwaServerActivityIsPwa(e)) && (!hideRoutine || !pwaServerActivityIsRoutine(e)) && (!q || pwaServerActivitySearchText(e).indexOf(q) !== -1); });
     if (!rows.length) { var empty = document.createElement('p'); empty.className = 'muted sm'; empty.textContent = t('serverActivityEmpty'); list.appendChild(empty); }
-    rows.slice(0, 1000).forEach(function (e) {
+    var correlate=!!($('server-activity-correlate')&&$('server-activity-correlate').checked), rendered=rows.slice(0,1000),lastCorrelation=null;
+    if(correlate){var latestByCorrelation=Object.create(null);rendered.forEach(function(e){var k=String(e.correlationId||e.shareId||('single:'+e.id)),at=Number(e.at)||0;latestByCorrelation[k]=Math.max(latestByCorrelation[k]||0,at);});rendered.sort(function(a,b){var ak=String(a.correlationId||a.shareId||('single:'+a.id)),bk=String(b.correlationId||b.shareId||('single:'+b.id));if(ak===bk)return Number(a.at)-Number(b.at);return Number(latestByCorrelation[bk]||0)-Number(latestByCorrelation[ak]||0)||ak.localeCompare(bk);});}
+    rendered.forEach(function (e) {
+      var correlation=String(e.correlationId||e.shareId||'');if(correlate&&correlation&&correlation!==lastCorrelation){var gh=document.createElement('div');gh.className='server-activity-group-head';gh.textContent=(e.shareName||e.name||correlation)+' · '+rendered.filter(function(x){return String(x.correlationId||x.shareId||'')===correlation;}).length;list.appendChild(gh);lastCorrelation=correlation;}
       var row = document.createElement('div'); row.className = 'history-row server-activity-row ' + String(e.kind || '');
       var icon = document.createElement('span'); icon.className = 'server-activity-icon'; icon.textContent = pwaServerActivityIcon(e); row.appendChild(icon);
       var main = document.createElement('div'); main.className = 'history-main';
@@ -6422,7 +6621,7 @@
     if (deviceStatusPromise) return deviceStatusPromise;
     deviceStatusPromise = (async function () {
       try {
-        var r = await fetchWithTimeout('/app/device/status?version=' + encodeURIComponent(APP_VERSION) + '&build=' + encodeURIComponent(APP_BUILD), { credentials: 'same-origin', cache: 'no-store' }, 10000);
+        var r = await fetchWithTimeout('/app/device/status?version=' + encodeURIComponent(APP_VERSION) + '&build=' + encodeURIComponent(APP_BUILD) + (isStandaloneApp() ? '&standalone=1' : ''), { credentials: 'same-origin', cache: 'no-store' }, 10000);
         if (r.status === 401 || r.status === 403) { accountNotifications = []; renderPwaNotifications(); }
         if (!r.ok) throw new Error('status');
         deviceInfo = await r.json();
@@ -6461,11 +6660,34 @@
     }
     return r;
   }
+  function pwaDlpRuleLabel(type) {
+    var maps = {
+      fr:{'private-key':'Clé privée','aws-access-key':'Identifiant de clé AWS','github-token':'Jeton GitHub','slack-token':'Jeton Slack','jwt':'Jeton JWT','password':'Mot de passe assigné','api-secret':'Secret / jeton API','payment-card':'Numéro de carte de paiement','canadian-sin':'NAS canadien','iban':'IBAN','identity-document':'Document d’identité','confidential-marker':'Marqueur de confidentialité'},
+      en:{'private-key':'Private key','aws-access-key':'AWS access-key ID','github-token':'GitHub token','slack-token':'Slack token','jwt':'JWT token','password':'Password assignment','api-secret':'API secret/token','payment-card':'Payment-card number','canadian-sin':'Canadian SIN','iban':'IBAN','identity-document':'Identity document','confidential-marker':'Confidentiality marker'},
+      es:{'private-key':'Clave privada','aws-access-key':'ID de clave AWS','github-token':'Token GitHub','slack-token':'Token Slack','jwt':'Token JWT','password':'Asignación de contraseña','api-secret':'Secreto/token API','payment-card':'Número de tarjeta','canadian-sin':'SIN/NAS canadiense','iban':'IBAN','identity-document':'Documento de identidad','confidential-marker':'Marcador de confidencialidad'}
+    };
+    return (maps[lang] && maps[lang][String(type || '')]) || String(type || 'DLP').replace(/-/g, ' ');
+  }
+  function pwaDlpRuleReason(f) {
+    var maps = {
+      fr:{'private-key':'Du matériel de clé privée a été détecté.','aws-access-key':'Un identifiant de clé d’accès AWS correspond au format connu.','github-token':'Un jeton GitHub correspond à un format de secret connu.','slack-token':'Un jeton Slack correspond à un format de secret connu.','jwt':'Une chaîne au format JSON Web Token a été détectée.','password':'Une valeur de mot de passe assignée a été détectée.','api-secret':'Une valeur ressemblant à une clé API ou un jeton secret a été détectée.','payment-card':'Le numéro correspond à un format de carte et passe la validation de Luhn.','canadian-sin':'Le numéro est présenté comme NAS/SIN et passe la validation de Luhn.','iban':'La valeur correspond à un IBAN valide selon le contrôle mod-97.','identity-document':'Un identifiant de document officiel a été trouvé avec un contexte explicite.','confidential-marker':'Un marqueur de confidentialité explicite est présent.'},
+      en:{'private-key':'Private-key material was detected.','aws-access-key':'An AWS access-key identifier matches the known format.','github-token':'A GitHub token matches a known secret format.','slack-token':'A Slack token matches a known secret format.','jwt':'A JSON Web Token-shaped value was detected.','password':'An assigned password value was detected.','api-secret':'A value resembling an API key or secret token was detected.','payment-card':'The number matches a payment-card shape and passes the Luhn check.','canadian-sin':'The number is presented as a SIN/NAS and passes the Luhn check.','iban':'The value matches an IBAN and passes the mod-97 check.','identity-document':'An official-document identifier was found with explicit context.','confidential-marker':'An explicit confidentiality marker is present.'},
+      es:{'private-key':'Se detectó material de clave privada.','aws-access-key':'Un identificador de clave AWS coincide con el formato conocido.','github-token':'Un token de GitHub coincide con un formato secreto conocido.','slack-token':'Un token de Slack coincide con un formato secreto conocido.','jwt':'Se detectó un valor con formato JSON Web Token.','password':'Se detectó un valor asignado a una contraseña.','api-secret':'Se detectó un valor parecido a una clave API o token secreto.','payment-card':'El número tiene formato de tarjeta y supera la validación de Luhn.','canadian-sin':'El número se presenta como SIN/NAS y supera la validación de Luhn.','iban':'El valor coincide con un IBAN y supera la comprobación mod-97.','identity-document':'Se encontró un identificador de documento oficial con contexto explícito.','confidential-marker':'Hay un marcador explícito de confidencialidad.'}
+    };
+    return (maps[lang] && maps[lang][String(f && f.type || '')]) || String(f && f.detail || '');
+  }
+  function pwaDlpFindingLines(d, limit) {
+    return (d && Array.isArray(d.findings) ? d.findings : []).slice(0, limit || 5).map(function (f) {
+      return [pwaDlpRuleLabel(f.type), f.file || '—', f.sample || '—', pwaDlpRuleReason(f)].filter(Boolean).join(' · ');
+    });
+  }
   function pwaServerDlpWarningText(d) {
+    var msg;
     if (d && (d.incomplete || d.filesSkipped || d.ocrErrors || d.scanErrors || d.truncated)) {
-      return t('dlpIncompleteConfirm', { n:d.count || 0, files:Math.max(1, (Number(d.filesScanned)||0) + (Number(d.filesSkipped)||0)) });
-    }
-    return t('sharesDlpWarning', { n:d && d.count || 0, level:d && d.highest || '—' });
+      msg = t('dlpIncompleteConfirm', { n:d.count || 0, files:Math.max(1, (Number(d.filesScanned)||0) + (Number(d.filesSkipped)||0)) });
+    } else msg = t('sharesDlpWarning', { n:d && d.count || 0, level:d && d.highest || '—' });
+    var lines = pwaDlpFindingLines(d, 5); if (lines.length) msg += '\n\n' + lines.join('\n');
+    return msg;
   }
   async function imageDlpMutate(url, contentType, body) {
     var requestUrl = url, duplicateApproved = false, dlpApproved = false;
@@ -6692,9 +6914,9 @@
   }
   async function runPwaDlpForItems(targets, options) {
     options = options || {}; targets = (targets || []).filter(function (it) { return it && it.file && it.state !== 'removed'; });
-    var policy = pwaDlpPolicy(), max = Math.min(targets.length, policy.maxFiles), results = [];
+    var policy = pwaDlpPolicy(), max = Math.min(targets.length, policy.maxFiles), results = [], dlpOp=beginLongOperation(t('longOpDlp'), '0 / '+max);
     try {
-      for (var i = 0; i < max; i++) results.push(await runPwaDlpForItem(targets[i], { force:!!options.force, toast:false, keepOcrWorker:true }));
+      for (var i = 0; i < max; i++) { updateLongOperation(dlpOp,max?Math.round(i/max*100):100,(i+1)+' / '+max); results.push(await runPwaDlpForItem(targets[i], { force:!!options.force, toast:false, keepOcrWorker:true })); }
       // Files beyond the configured batch inspection cap were previously represented
       // only in the merged summary. In warn mode that left no item requiring approval,
       // so a large all-safe batch could continue without acknowledging the unscanned
@@ -6708,6 +6930,7 @@
         results.push(skipped.dlpLocal);
       }
     } finally {
+      endLongOperation(dlpOp);
       if (!ocrRunning) await terminateOcrWorker().catch(function () {});
     }
     var merged = pwaDlpMerge(results);
@@ -6736,6 +6959,7 @@
     var needsApproval = candidates.filter(function (it) { return it.dlpLocal && (it.dlpLocal.count || pwaDlpIncomplete(it.dlpLocal)) && it.dlpApprovedFingerprint !== it.dlpLocal.fingerprint; });
     if (!needsApproval.length) return true;
     var msg = incomplete ? t('dlpIncompleteConfirm', { n:result.count || 0, files:needsApproval.length }) : t('dlpLocalConfirm', { n:result.count, level:result.highest || '—', files:needsApproval.length });
+    var findingLines = pwaDlpFindingLines(result, 5); if (findingLines.length) msg += '\n\n' + findingLines.join('\n');
     if (!window.confirm(msg)) return false;
     needsApproval.forEach(function (it) { it.dlpApprovedFingerprint = it.dlpLocal.fingerprint; persistItem(it, false); });
     return true;
@@ -6909,10 +7133,13 @@
       rm.disabled = biometricMutationInFlight || !(deviceInfo && deviceInfo.passkeyManagement === true);
       rm.addEventListener('click', function () { removePasskey(p); });
       row.appendChild(rm);
+      var devices=Array.isArray(p.devices)?p.devices:[];
+      if(devices.length){var devList=el('div',{class:'passkey-device-list'});devices.forEach(function(d){var dr=el('div',{class:'passkey-device-row'+(d.current?' current':'')}),dm=el('div',{class:'passkey-device-main'});dm.appendChild(el('strong',{text:(d.name||t('passkeyDeviceUnavailable'))+(d.current?' · '+t('passkeyDeviceCurrent'):'')}));dm.appendChild(el('span',{class:'muted xs',text:[d.createdAt?t('passkeyCreated',{date:fmtDate(d.createdAt)}):'',d.lastUsedAt?t('passkeyUsed',{date:fmtDate(d.lastUsedAt)}):t('passkeyNeverUsed')].filter(Boolean).join(' · ')}));dr.appendChild(dm);if(d.available!==false){var rb=el('button',{class:'btn danger xs',attrs:{type:'button'},text:t('passkeyDeviceRemove')});rb.disabled=biometricMutationInFlight||!(deviceInfo&&deviceInfo.passkeyManagement===true);rb.addEventListener('click',function(){removePasskeyDevice(p,d,rb);});dr.appendChild(rb);}devList.appendChild(dr);});row.appendChild(devList);}
       box.appendChild(row);
     });
     updateBiometricSummary(passkeyRecords);
   }
+  async function removePasskeyDevice(passkey,device,button){if(!passkey||!device||!confirm(t('passkeyDeviceRemove')+' — '+(device.name||'')))return;if(button)button.disabled=true;try{var r=await appDeleteMutate('/app/webauthn/passkeys/'+encodeURIComponent(passkey.id)+'/devices/'+encodeURIComponent(device.id));if(!r.ok)throw new Error('remove-device');var data=await r.json();renderPasskeyList(data.passkeys||[]);toast(t('passkeyDeviceRemoved'),'ok');}catch(_){if(button)button.disabled=false;toast(t('biometricDisableFail'),'err');}}
   async function loadPasskeys() {
     if (passkeysLoadPromise) return passkeysLoadPromise;
     passkeysLoading = true;
@@ -7669,7 +7896,7 @@
   // available. Plate detection is a conservative, fully local edge/contrast
   // heuristic. Every detected area is shown in the same review canvas, where the
   // user can undo it or add manual zones before any byte is uploaded.
-  var annItem = null, annCanvas = null, annCtx = null, annTool = 'pen', annUndoStack = [], annBaseSnapshot = null, annAtBase = true, annDrawing = false, annStart = null, annLastPoint = null, annGestureChanged = false, annPrevFocus = null;
+  var annItem = null, annCanvas = null, annCtx = null, annTool = 'pen', annUndoStack = [], annBaseSnapshot = null, annAtBase = true, annDrawing = false, annStart = null, annLastPoint = null, annGestureChanged = false, annPrevFocus = null, annOperations = [];
   var annResolve = null, annSourceFile = null, annSmartMode = false, annBusy = false, annExporting = false;
   var annZoom = 1, annPanning = null, annPinch = null, annResizeFrame = 0, annSession = 0, annOcrInFlight = false;
   function beginAnnotateSession() {
@@ -7742,7 +7969,7 @@
     var session = beginAnnotateSession(), loaded = false;
     try { loaded = await loadAnnotateCanvas(file, session); } catch (_) { if (session === annSession) toast(t('optimizeFallback'), 'warn'); return null; }
     if (!loaded || session !== annSession) return null;
-    annItem = null; annSourceFile = file; annResolve = null; annSmartMode = false;
+    annItem = null; annSourceFile = file; annResolve = null; annSmartMode = false; annOperations = [];
     if ($('ann-cancel')) $('ann-cancel').textContent = t('cancel');
     setAnnStatus(''); annPrevFocus = document.activeElement; showAnnotateOverlay();
     // closeAnnotate resolves with the original File, which lets the caller
@@ -7881,12 +8108,12 @@
     if (!annCanvas || annBusy) return;
     var tmp=document.createElement('canvas'); tmp.width=annCanvas.height; tmp.height=annCanvas.width; var c=tmp.getContext('2d');
     if (dir < 0) { c.translate(0,tmp.height); c.rotate(-Math.PI/2); } else { c.translate(tmp.width,0); c.rotate(Math.PI/2); }
-    c.drawImage(annCanvas,0,0); replaceEditorCanvas(tmp);
+    c.drawImage(annCanvas,0,0); replaceEditorCanvas(tmp); annOperations.push(dir < 0 ? 'rotate-left' : 'rotate-right');
   }
   function flipAnnotate(horizontal) {
     if (!annCanvas || annBusy) return;
     var tmp=document.createElement('canvas'); tmp.width=annCanvas.width; tmp.height=annCanvas.height; var c=tmp.getContext('2d');
-    c.save(); c.translate(horizontal ? tmp.width : 0, horizontal ? 0 : tmp.height); c.scale(horizontal ? -1 : 1, horizontal ? 1 : -1); c.drawImage(annCanvas,0,0); c.restore(); replaceEditorCanvas(tmp);
+    c.save(); c.translate(horizontal ? tmp.width : 0, horizontal ? 0 : tmp.height); c.scale(horizontal ? -1 : 1, horizontal ? 1 : -1); c.drawImage(annCanvas,0,0); c.restore(); replaceEditorCanvas(tmp); annOperations.push(horizontal ? 'flip-horizontal' : 'flip-vertical');
   }
   function adjustedEditorChannel(value, brightness, contrast) {
     return Math.max(0, Math.min(255, (value * brightness - 128) * contrast + 128));
@@ -7915,7 +8142,7 @@
       pushAnnUndo();
     } catch (_) { toast(t('error'), 'err'); setAnnStatus(t('error'), 'err'); return; }
     $('ann-brightness').value='100'; $('ann-contrast').value='100'; $('ann-saturation').value='100';
-    setAnnStatus('');
+    annOperations.push('adjustments'); setAnnStatus('');
   }
   function resizeAnnotate() {
     if (!annCanvas || annBusy) return;
@@ -7923,7 +8150,7 @@
     if ($('ann-resize-max')) $('ann-resize-max').value = String(Math.round(max));
     if (Math.max(annCanvas.width,annCanvas.height)<=max) return;
     var scale=max/Math.max(annCanvas.width,annCanvas.height), tmp=document.createElement('canvas'); tmp.width=Math.max(1,Math.round(annCanvas.width*scale)); tmp.height=Math.max(1,Math.round(annCanvas.height*scale));
-    var c=tmp.getContext('2d'); c.imageSmoothingEnabled=true; c.imageSmoothingQuality='high'; c.drawImage(annCanvas,0,0,tmp.width,tmp.height); replaceEditorCanvas(tmp);
+    var c=tmp.getContext('2d'); c.imageSmoothingEnabled=true; c.imageSmoothingQuality='high'; c.drawImage(annCanvas,0,0,tmp.width,tmp.height); replaceEditorCanvas(tmp); annOperations.push('resize-'+tmp.width+'x'+tmp.height);
   }
   function cropAnnotate(ratio) {
     if (!annCanvas || !annCtx || !ratio || annBusy) return;
@@ -7933,7 +8160,7 @@
     var sx = Math.max(0, Math.round((sw - tw) / 2)), sy = Math.max(0, Math.round((sh - th) / 2));
     var tmp = document.createElement('canvas'); tmp.width = tw; tmp.height = th;
     tmp.getContext('2d').drawImage(annCanvas, sx, sy, tw, th, 0, 0, tw, th);
-    replaceEditorCanvas(tmp);
+    replaceEditorCanvas(tmp); annOperations.push('crop-'+tw+'x'+th);
   }
   function setAnnTool(tool) {
     if (annBusy) return;
@@ -8036,7 +8263,7 @@
       else if (annTool === 'redact') annGestureChanged = paintSolidBrushSegment(annLastPoint, p, brushSize, '#000') || annGestureChanged;
     }
     annDrawing = false; annStart = null; annLastPoint = null;
-    if (annGestureChanged) pushAnnUndo(); annGestureChanged = false;
+    if (annGestureChanged) { pushAnnUndo(); annOperations.push(annTool === 'pen' ? 'draw' : annTool === 'blur' ? 'blur' : annTool === 'redact' ? 'redact' : annTool); } annGestureChanged = false;
   }
   function cancelAnnGesture() {
     if (annDrawing && annUndoStack.length) restoreAnnSnapshot(annUndoStack[annUndoStack.length - 1]);
@@ -8224,6 +8451,7 @@
       var originalName = source && source.name || (item && item.name) || ('image-' + Date.now());
       var newName = originalName.replace(/\.[^.\/]+$/, '') + ext;
       var file = namedFile(blob, newName, outType, Date.now());
+      try { file.dxEditOperations = annOperations.slice(0, 30); } catch (_) {}
       if (resolve && resolve === annResolve) { annExporting = false; return finishAnnotate(file); }
       if (item && item === annItem) {
         await replaceItemSourceDurably(item, file);
@@ -8288,12 +8516,47 @@
     if (!sending) startBatch(clones);
   }
 
+  // --- Generic file picker ---------------------------------------------------
+  // Keep camera capture separate from normal file selection. On Chromium-based
+  // Android browsers that expose File System Access, showOpenFilePicker() opens
+  // the system file chooser and lets the user select actual documents/files.
+  // Other browsers fall back to a generic */* input with no capture hint.
+  async function openGenericFilePicker(useFileSystemPicker) {
+    var input = $('pick-files');
+    if (!input) return;
+    var canUseFsa = useFileSystemPicker !== false && window.isSecureContext && typeof window.showOpenFilePicker === 'function';
+    if (canUseFsa) {
+      try {
+        var handles = await window.showOpenFilePicker({ multiple: true });
+        var files = [];
+        for (var i = 0; i < handles.length; i++) {
+          try { files.push(await handles[i].getFile()); } catch (_) {}
+        }
+        if (files.length) await addFiles(files);
+        return;
+      } catch (err) {
+        if (err && err.name === 'AbortError') return;
+        // Some browsers expose the API before their platform implementation is
+        // fully usable. Remember the failure for this session and use the plain
+        // HTML picker on the next click instead of repeatedly failing.
+        try { sessionStorage.setItem('dx-force-html-file-picker', '1'); } catch (_) {}
+      }
+    }
+    input.removeAttribute('capture');
+    input.setAttribute('accept', '*/*');
+    input.click();
+  }
+  function shouldUseFileSystemPicker() {
+    try { if (sessionStorage.getItem('dx-force-html-file-picker') === '1') return false; } catch (_) {}
+    return true;
+  }
+
   // --- Command palette (Ctrl/Cmd+K) ------------------------------------------
   var cmdPrevFocus = null, cmdItems = [], cmdActiveIdx = 0;
   function buildCommands() {
     return [
       { ico: '📤', label: t('send'), run: function () { if (!$('send-btn').disabled) startBatch(); } },
-      { ico: '📄', label: t('chooseFiles'), run: function () { $('pick-files').click(); } },
+      { ico: '📄', label: t('chooseFiles'), run: function () { openGenericFilePicker(shouldUseFileSystemPicker()); } },
       { ico: '📁', label: t('chooseFolder'), run: function () { $('pick-folder').click(); } },
       { ico: '📷', label: t('takePhoto'), run: function () { $('pick-camera').click(); } },
       { ico: '🎙', label: t('voiceNote'), run: openVoice },
@@ -8583,6 +8846,14 @@
         !!navigator.standalone || document.referrer.indexOf('android-app://') === 0;
     } catch (_) { return false; }
   }
+  function rememberInstalledPwa() {
+    try { localStorage.setItem('dx-pwa-installed', String(Date.now())); } catch (_) {}
+    try {
+      document.cookie = 'dx_pwa_installed=' + encodeURIComponent(String(Date.now())) + '; Path=/; Max-Age=15552000; SameSite=Lax' +
+        (location.protocol === 'https:' ? '; Secure' : '');
+    } catch (_) {}
+  }
+  if (isStandaloneApp()) rememberInstalledPwa();
   function isIosBrowser() {
     var ua = navigator.userAgent || '';
     return /iPad|iPhone|iPod/i.test(ua) || (/Macintosh/i.test(ua) && Number(navigator.maxTouchPoints || 0) > 1);
@@ -8709,7 +8980,7 @@
   function registerServiceWorker() {
     if (!navigator.serviceWorker || typeof navigator.serviceWorker.register !== 'function') return;
     navigator.serviceWorker.addEventListener('controllerchange', refreshToNewVersion);
-    var registrationPromise = navigator.serviceWorker.register('/direct-xfer-pwa-sw.js?v=269', { scope: '/app/' }).then(function (reg) {
+    var registrationPromise = navigator.serviceWorker.register('/direct-xfer-pwa-sw.js?v=274', { scope: '/app/' }).then(function (reg) {
       swReg = reg;
       navigator.serviceWorker.ready.then(function () {
         swReadyForInstall = true;
@@ -8767,6 +9038,33 @@
         }
       }).catch(function () {});
     } catch (_) {}
+  }
+  async function refreshBackgroundSyncDiagnostic() {
+    var out=$('background-sync-status'); if(!out)return;
+    var parts=[], reg=null, syncTags=[], periodicTags=[];
+    try{reg=navigator.serviceWorker?await navigator.serviceWorker.ready:null;}catch(_){}
+    var syncSupported=!!(reg&&reg.sync&&typeof reg.sync.register==='function'), periodicSupported=!!(reg&&reg.periodicSync&&typeof reg.periodicSync.register==='function'), permission='unknown';
+    try{if(syncSupported&&reg.sync.getTags)syncTags=await reg.sync.getTags();}catch(_){}
+    try{if(periodicSupported&&reg.periodicSync.getTags)periodicTags=await reg.periodicSync.getTags();}catch(_){}
+    try{if(periodicSupported&&navigator.permissions&&navigator.permissions.query){var ps=await navigator.permissions.query({name:'periodic-background-sync'});permission=ps&&ps.state||'unknown';}}catch(_){}
+    var pending=items.filter(function(it){return it&&it.state!=='done'&&it.state!=='removed'&&(it.resumeOnOpen||it.backgroundReady);});
+    var lastOk=0,lastFail=0,lastReason='';
+    items.concat(restoredBackgroundCompletions||[]).forEach(function(it){lastOk=Math.max(lastOk,Number(it.backgroundCompletedAt)||0);if(Number(it.backgroundFailedAt)>lastFail){lastFail=Number(it.backgroundFailedAt)||0;lastReason=it.errorCode||it.recoveryReason||'';}});
+    (Array.isArray(historyEntries)?historyEntries:[]).forEach(function(entry){if(entry&&entry.background)lastOk=Math.max(lastOk,Number(entry.at)||0);});
+    parts.push(t('bgSyncSupported')+': '+(syncSupported?'✓':'—')+(periodicSupported?' + périodique':''));
+    parts.push(t('bgSyncRegistered')+': '+((syncTags.indexOf('dx-resume-uploads')!==-1||periodicTags.indexOf('dx-periodic-uploads')!==-1)?'✓':'—'));
+    if(periodicSupported)parts.push(t('bgSyncPermission')+': '+permission);
+    parts.push(t('bgSyncPending')+': '+pending.length);
+    parts.push(t('bgSyncLast')+': '+(lastOk?fmtDate(lastOk):t('bgSyncNever')));
+    if(lastFail)parts.push(t('bgSyncFailure')+': '+fmtDate(lastFail)+(lastReason?' · '+lastReason:''));
+    out.textContent=parts.join(' · ');
+  }
+  async function refreshPwaInstallDiagnostic() {
+    var out=$('pwa-install-diagnostic');if(!out)return;var installed=isStandaloneApp(),detected=false,server=false;
+    if(!installed&&navigator.getInstalledRelatedApps){try{var apps=await navigator.getInstalledRelatedApps();detected=Array.isArray(apps)&&apps.some(function(a){return a&&a.platform==='webapp';});}catch(_){}}
+    try{var r=await fetch('/pwa/install-state',{credentials:'same-origin',cache:'no-store'});if(r.ok){var d=await r.json();server=!!d.installed;}}catch(_){}
+    var stateText=installed?t('installDiagInstalled'):(detected||server)?t('installDiagDetected'):(window.isSecureContext?t('installDiagBrowser'):t('installDiagUnknown'));
+    out.textContent=stateText+' · '+t('installDiagSecure')+': '+(window.isSecureContext?'✓':'✕')+' · '+t('installDiagSw')+': '+(navigator.serviceWorker&&navigator.serviceWorker.controller?'✓':'—');
   }
   // Give the SW the current language so its closed-app "resume pending" prompt is localized.
   function sendLangToSw() {
@@ -9266,6 +9564,7 @@
   }
   async function runOcr() {
     if (ocrRunning || !ocrCurrentItem || !canOcrItem(ocrCurrentItem)) return;
+    var ocrOp=beginLongOperation(t('longOpOcr'),ocrCurrentItem.name||'');
     ocrAbort = false; ocrRunning = true; setOcrResult('');
     if ($('ocr-run')) $('ocr-run').disabled = true;
     if ($('ocr-cancel-run')) $('ocr-cancel-run').disabled = false;
@@ -9280,6 +9579,7 @@
       if (ocrAbort || (err && err.message === 'OCR_CANCELLED')) ocrSetStatus(t('ocrCanceled'), 0);
       else { var msg = String(err && err.message || err || ''); ocrSetStatus(t('ocrFailed', { error: msg.slice(0, 180) }), 0); }
     } finally {
+      endLongOperation(ocrOp);
       await terminateOcrWorker();
       ocrRunning = false;
       if ($('ocr-run')) $('ocr-run').disabled = false;
@@ -9924,6 +10224,7 @@
     $('enc-key').addEventListener('input', function () { updateEncryptionPanel(); updateSendBtn(); });
     $('enc-passphrase').addEventListener('input', updateSendBtn);
     $('sender-name').addEventListener('input', function () { saveSenderForCurrent(); updateSendBtn(); });
+    if ($('pick-files-btn')) $('pick-files-btn').addEventListener('click', function () { openGenericFilePicker(shouldUseFileSystemPicker()); });
     ['pick-camera', 'pick-files', 'pick-folder'].forEach(function (id) {
       var el = $(id); if (el) el.addEventListener('change', function (e) { addFiles(e.target.files); e.target.value = ''; });
     });
@@ -9953,6 +10254,10 @@
     if ($('rename-device-btn')) $('rename-device-btn').addEventListener('click', function () { renameDevice(null, deviceInfo && deviceInfo.device && deviceInfo.device.name, true); });
     $('clear-local-btn').addEventListener('click', clearLocalData);
     $('logout-session-btn').addEventListener('click', closeSession);
+    if ($('background-sync-refresh')) $('background-sync-refresh').addEventListener('click', refreshBackgroundSyncDiagnostic);
+    if ($('background-sync-run')) $('background-sync-run').addEventListener('click', function(){registerBackgroundSync();maybeAutoResume();setTimeout(refreshBackgroundSyncDiagnostic,300);});
+    if ($('pwa-install-refresh')) $('pwa-install-refresh').addEventListener('click', refreshPwaInstallDiagnostic);
+    refreshBackgroundSyncDiagnostic(); refreshPwaInstallDiagnostic();
     if ($('add-passkey-btn')) $('add-passkey-btn').addEventListener('click', addPasskey);
     if ($('disable-biometric-btn')) $('disable-biometric-btn').addEventListener('click', disableBiometricIdentification);
     if ($('reauth-biometric-btn')) $('reauth-biometric-btn').addEventListener('click', reauthenticateForBiometric);
@@ -10031,9 +10336,10 @@
     if ($('server-activity-refresh')) $('server-activity-refresh').addEventListener('click', function () { loadPwaServerActivity(true).catch(function () {}); });
     if ($('server-activity-search')) $('server-activity-search').addEventListener('input', renderPwaServerActivity);
     if ($('server-activity-kind')) $('server-activity-kind').addEventListener('change', renderPwaServerActivity);
-    ['server-activity-share','server-activity-images','server-activity-pwa','server-activity-hide-routine'].forEach(function(id){if($(id))$(id).addEventListener('change',function(){if(id==='server-activity-hide-routine')try{localStorage.setItem('dxpwa-activity-hide-routine',this.checked?'1':'0');}catch(_){}renderPwaServerActivity();});});
+    ['server-activity-share','server-activity-device','server-activity-result','server-activity-period','server-activity-direction','server-activity-correlate','server-activity-images','server-activity-pwa','server-activity-hide-routine'].forEach(function(id){if($(id))$(id).addEventListener('change',function(){if(id==='server-activity-hide-routine')try{localStorage.setItem('dxpwa-activity-hide-routine',this.checked?'1':'0');}catch(_){}renderPwaServerActivity();});});
+    ['server-activity-actor','server-activity-ip'].forEach(function(id){if($(id))$(id).addEventListener('input',renderPwaServerActivity);});
     if($('server-activity-hide-routine'))try{$('server-activity-hide-routine').checked=localStorage.getItem('dxpwa-activity-hide-routine')==='1';}catch(_){}
-    if ($('server-activity-reset')) $('server-activity-reset').addEventListener('click', function () { if ($('server-activity-search')) $('server-activity-search').value = ''; if ($('server-activity-kind')) $('server-activity-kind').value = ''; if($('server-activity-share'))$('server-activity-share').value=''; if($('server-activity-images'))$('server-activity-images').checked=false;if($('server-activity-pwa'))$('server-activity-pwa').checked=false;if($('server-activity-hide-routine'))$('server-activity-hide-routine').checked=false;try{localStorage.removeItem('dxpwa-activity-hide-routine');}catch(_){}renderPwaServerActivity(); });
+    if ($('server-activity-reset')) $('server-activity-reset').addEventListener('click', function () { if ($('server-activity-search')) $('server-activity-search').value = ''; if ($('server-activity-kind')) $('server-activity-kind').value = ''; if($('server-activity-share'))$('server-activity-share').value=''; ['server-activity-actor','server-activity-ip'].forEach(function(x){if($(x))$(x).value='';}); ['server-activity-device','server-activity-result','server-activity-period','server-activity-direction'].forEach(function(x){if($(x))$(x).value='';}); if($('server-activity-correlate'))$('server-activity-correlate').checked=true; if($('server-activity-images'))$('server-activity-images').checked=false;if($('server-activity-pwa'))$('server-activity-pwa').checked=false;if($('server-activity-hide-routine'))$('server-activity-hide-routine').checked=false;try{localStorage.removeItem('dxpwa-activity-hide-routine');}catch(_){}renderPwaServerActivity(); });
     if ($('history-search')) $('history-search').addEventListener('input', function () { historyFilter = this.value || ''; renderHistory(); });
     if ($('check-update-btn')) $('check-update-btn').addEventListener('click', checkForUpdate);
     if ($('copy-diag-btn')) $('copy-diag-btn').addEventListener('click', copyDiagnostic);
@@ -10249,6 +10555,7 @@
     if ($('install-btn')) $('install-btn').addEventListener('click', requestPwaInstall);
     window.addEventListener('appinstalled', function () {
       deferredPrompt = null;
+      rememberInstalledPwa();
       clearTimeout(installDiagnosticTimer);
       clearInstallDiagnostic();
       updateInstallButtonVisibility(true);
@@ -10559,8 +10866,9 @@
     }
     if (launchAction === 'destination') { activatePwaPanel('send', { instant: true }); openDestForm(); }
     else if (launchAction === 'camera') { activatePwaPanel('send', { instant: true }); setTimeout(function () { $('pick-camera').click(); }, 150); }
-    else if (launchAction === 'files') { activatePwaPanel('send', { instant: true }); setTimeout(function () { $('pick-files').click(); }, 150); }
-    else if (launchAction === 'shares') { activatePwaPanel('shares', { instant: true }); }
+    else if (launchAction === 'files') { activatePwaPanel('send', { instant: true }); setTimeout(function () { openGenericFilePicker(false); }, 150); }
+    else if (launchAction === 'shares') { activatePwaPanel('shares', { instant: true }); schedulePwaLaunchFocus(); }
+    else if (launchAction === 'images') { activatePwaPanel('images', { instant: true }); schedulePwaLaunchFocus(); }
     else if (launchAction === 'copy-link') { setTimeout(function () { handleNotificationAction('copy-link', { destinationUrl: launchDestinationUrl }); }, 150); }
     else if (launchAction === 'resend-last') { setTimeout(function () { handleNotificationAction('resend-last', {}); }, 150); }
     else if (launchAction === 'send') { activatePwaPanel('send', { instant: true }); }
@@ -10581,9 +10889,10 @@
       return it.snapshot && ['sending', 'waiting-network', 'waiting', 'encrypting', 'optimizing'].indexOf(it.state) !== -1;
     }).forEach(function (it) {
       if (it.state !== 'paused') it.resumeOnOpen = true;
-      // OPFS-backed records are metadata-only and safe to checkpoint frequently.
-      if (it.opfsPath || it.preparedOpfsPath) idbPut(QUEUE_STORE, queueRecord(it)).catch(function () {});
-      else persistItem(it, false);
+      it.lastCheckpointAt=Date.now();
+      // persistItem also refreshes the localStorage OPFS mirror, so an IndexedDB
+      // failure cannot silently leave the only recoverable checkpoint stale.
+      persistItem(it, false).catch(function () {});
     });
   }
   function checkpointPersistentUiState() {
@@ -10597,6 +10906,7 @@
     persistImageActionHistory();
     Array.from(imageRecordsByToken.values()).forEach(function (photo) { persistImageRecord(photo); });
   }
+  var transferCheckpointTimer=setInterval(function(){if(document.visibilityState!=='hidden'&&items.some(function(it){return it&&['sending','waiting-network','waiting','encrypting','optimizing'].indexOf(it.state)!==-1;}))checkpointActiveTransfers();},15000);
   window.addEventListener('pagehide', function () {
     checkpointPersistentUiState();
     if (items.some(function (it) { return it.backgroundReady && it.resumeOnOpen; })) registerBackgroundSync();

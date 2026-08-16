@@ -29,6 +29,6 @@ test('PWA renders the standard detailed-stat datasets responsively', () => {
   assert.match(css, /\.share-stats-metrics/); assert.match(css, /\.share-stats-two-columns/); assert.match(css, /\.share-stats-timeline/); assert.match(css, /@media \(max-width:620px\)/);
 });
 
-test('release and PWA cache identifiers are 1.60.0/pwa289', () => {
-  assert.equal(pkg.version, '1.60.0'); assert.match(pwa, /APP_VERSION = '1\.60\.0'/); assert.match(pwa, /2026\.08\.15-pwa289/); assert.match(sw, /2026\.08\.15-pwa289/);
+test('release and PWA cache identifiers are 1.62.2/pwa306', () => {
+  assert.equal(pkg.version, '1.62.2'); assert.match(pwa, /APP_VERSION = '1\.62\.2'/); assert.match(pwa, /2026\.08\.16-pwa306/); assert.match(sw, /2026\.08\.16-pwa306/);
 });

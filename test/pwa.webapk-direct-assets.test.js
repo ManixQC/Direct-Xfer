@@ -22,14 +22,14 @@ for (const filename of ['manifest.webmanifest', 'manifest-en.webmanifest', 'mani
 }
 
 test('manifest and service worker use direct root aliases instead of protected /app asset URLs', () => {
-  // Derive the cache-busting version from the app shell, then require every reference
-  // to use the SAME value — instead of a hardcoded literal that goes stale on each release.
-  const vMatch = appHtml.match(/href="\/direct-xfer-pwa\.webmanifest\?v=(\d+)"/);
-  assert.ok(vMatch, 'app shell must reference the versioned manifest alias');
-  const v = vMatch[1];
-  assert.match(loginHtml, new RegExp('href="/direct-xfer-pwa\\.webmanifest\\?v=' + v + '"'));
-  assert.match(app, new RegExp("register\\('/direct-xfer-pwa-sw\\.js\\?v=" + v + "', \\{ scope: '/app/' \\}\\)"));
-  assert.match(login, new RegExp("register\\('/direct-xfer-pwa-sw\\.js\\?v=" + v + "', \\{ scope: '/app/' \\}\\)"));
+  // Manifest and service-worker aliases have independent cache revisions. The two
+  // app entry points must agree on each alias, but they do not need to share one revision.
+  const manifestMatch = appHtml.match(/href="\/direct-xfer-pwa\.webmanifest\?v=(\d+)"/);
+  const swMatch = app.match(/register\('\/direct-xfer-pwa-sw\.js\?v=(\d+)', \{ scope: '\/app\/' \}\)/);
+  assert.ok(manifestMatch, 'app shell must reference the versioned manifest alias');
+  assert.ok(swMatch, 'app runtime must register the versioned service-worker alias');
+  assert.match(loginHtml, new RegExp('href="/direct-xfer-pwa\\.webmanifest\\?v=' + manifestMatch[1] + '"'));
+  assert.match(login, new RegExp("register\\('/direct-xfer-pwa-sw\\.js\\?v=" + swMatch[1] + "', \\{ scope: '/app/' \\}\\)"));
   assert.match(server, /app\.get\('\/direct-xfer-pwa-sw\.js'/);
   assert.match(server, /Service-Worker-Allowed', '\/app\/'/);
   assert.match(server, /application\/manifest\+json/);

@@ -15,32 +15,32 @@ function normalizedTextSha256(rel) {
   return crypto.createHash('sha256').update(Buffer.from(text, 'utf8')).digest('hex');
 }
 
-test('1.60.0 release metadata is synchronized across Node, PWA, launcher, host and installer', () => {
+test('1.62.2 release metadata is synchronized across Node, PWA, launcher, host and installer', () => {
   const pkg = JSON.parse(read('package.json'));
   const lock = JSON.parse(read('package-lock.json'));
-  assert.equal(pkg.version, '1.60.0');
-  assert.equal(lock.version, '1.60.0');
-  assert.equal(lock.packages[''].version, '1.60.0');
-  assert.match(read('pwa', 'app.js'), /APP_VERSION = '1\.60\.0'/);
-  assert.match(read('pwa', 'app.js'), /APP_BUILD = '2026\.08\.15-pwa289'/);
-  assert.match(read('pwa', 'sw.js'), /VERSION = '2026\.08\.15-pwa289'/);
-  assert.match(read('pwa', 'index.html'), /v1\.60\.0 · pwa289/);
-  assert.match(launcher, /AppVersion = "1\.60\.0"/);
-  assert.match(launcher, /RuntimeAppBuild = "1\.60\.0-launcher35-csharp"/);
-  assert.match(host, /HostVersion = "1\.60\.0-serverhost8-csharp"/);
-  assert.match(workflow, /DX_VERSION: '1\.60\.0'/);
-  assert.match(workflow, /DX_RUNTIME_BUILD: '1\.60\.0-launcher35-csharp'/);
-  assert.match(workflow, /DX_SERVER_HOST_BUILD: '1\.60\.0-serverhost8-csharp'/);
-  assert.match(iss, /#define AppVersion "1\.60\.0"/);
+  assert.equal(pkg.version, '1.62.2');
+  assert.equal(lock.version, '1.62.2');
+  assert.equal(lock.packages[''].version, '1.62.2');
+  assert.match(read('pwa', 'app.js'), /APP_VERSION = '1\.62\.2'/);
+  assert.match(read('pwa', 'app.js'), /APP_BUILD = '2026\.08\.16-pwa306'/);
+  assert.match(read('pwa', 'sw.js'), /VERSION = '2026\.08\.16-pwa306'/);
+  assert.match(read('pwa', 'index.html'), /v1\.62\.2 · pwa306/);
+  assert.match(launcher, /AppVersion = "1\.62\.2"/);
+  assert.match(launcher, /RuntimeAppBuild = "1\.62\.2-launcher43-csharp"/);
+  assert.match(host, /HostVersion = "1\.62\.2-serverhost16-csharp"/);
+  assert.match(workflow, /DX_VERSION: '1\.62\.2'/);
+  assert.match(workflow, /DX_RUNTIME_BUILD: '1\.62\.2-launcher43-csharp'/);
+  assert.match(workflow, /DX_SERVER_HOST_BUILD: '1\.62\.2-serverhost16-csharp'/);
+  assert.match(iss, /#define AppVersion "1\.62\.2"/);
 });
 
 test('PWA and admin notification assets are cache-busted consistently while the favicon remains v269', () => {
-  assert.match(read('pwa', 'index.html'), /app\.css\?v=272/);
-  assert.match(read('pwa', 'index.html'), /app\.js\?v=273/);
-  assert.match(read('pwa', 'sw.js'), /app\.css\?v=272/);
-  assert.match(read('pwa', 'sw.js'), /app\.js\?v=273/);
-  assert.match(read('public', 'index.html'), /style\.css\?v=275/);
-  assert.match(read('public', 'index.html'), /app\.js\?v=275/);
+  assert.match(read('pwa', 'index.html'), /app\.css\?v=274/);
+  assert.match(read('pwa', 'index.html'), /app\.js\?v=290/);
+  assert.match(read('pwa', 'sw.js'), /app\.css\?v=274/);
+  assert.match(read('pwa', 'sw.js'), /app\.js\?v=290/);
+  assert.match(read('public', 'index.html'), /style\.css\?v=286/);
+  assert.match(read('public', 'index.html'), /app\.js\?v=292/);
   assert.match(read('public', 'index.html'), /favicon\.png\?v=269/);
 });
 

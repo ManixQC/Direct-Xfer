@@ -131,11 +131,15 @@ test('#20 admin photo replace archives the prior version and swaps the pixels', 
   assert.equal(r.status, 200, JSON.stringify(await bodyJson(r.clone())));
   const edited = (await bodyJson(r)).share;
   assert.equal(edited.id, photo.id);
-  // The public URL is token-based, so it stays stable across an edit (by design).
-  assert.equal(edited.photo.imgUrl, before);
-  // The prior pixels were archived as a restorable version.
-  const versions = await bodyJson(await adminFetch('/app/image/' + photo.token + '/versions'));
+  // The public path remains token-based, while its cache revision changes after an edit.
+  assert.equal(edited.photo.imgUrl.split('?')[0], before.split('?')[0]);
+  assert.notEqual(edited.photo.imgUrl, before, 'an edited image must advance its cache-busting revision');
+  // The prior pixels and the edit event are exposed through the standard management API.
+  const versions = await bodyJson(await adminFetch('/api/photos/' + photo.id + '/versions'));
   assert.ok(Array.isArray(versions.versions) && versions.versions.length >= 1, JSON.stringify(versions));
+  assert.ok(Array.isArray(versions.history) && versions.history.length >= 1, JSON.stringify(versions));
+  const preview = await adminFetch('/api/photos/' + photo.id + '/preview');
+  assert.equal(preview.status, 200, 'management preview should be available without using the public view-counting route');
 
   assert.equal((await adminFetch('/api/photos/deadbeef/replace?name=x.png&dlpOverride=1', { method: 'POST', headers: { 'Content-Type': 'image/png' }, body: png })).status, 404);
 });

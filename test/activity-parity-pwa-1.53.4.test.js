@@ -35,12 +35,12 @@ test('local device transfer history no longer changes what the Activity tab cont
   assert.doesNotMatch(pwa, /panel === 'activity'[^\n]*history-card/);
 });
 
-test('release/cache remain on 1.60.0 with pwa289 v268', () => {
-  assert.equal(JSON.parse(read('package.json')).version, '1.60.0');
-  assert.equal(JSON.parse(read('package-lock.json')).version, '1.60.0');
-  assert.match(pwa, /APP_VERSION = '1\.60\.0'/);
-  assert.match(pwa, /APP_BUILD = '2026\.08\.15-pwa289'/);
-  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.15-pwa289'/);
-  assert.match(html, /v1\.60\.0 · pwa289/);
-  assert.match(html, /app\.js\?v=273/);
+test('release/cache remain on 1.62.2 with pwa306 v274', () => {
+  assert.equal(JSON.parse(read('package.json')).version, '1.62.2');
+  assert.equal(JSON.parse(read('package-lock.json')).version, '1.62.2');
+  assert.match(pwa, /APP_VERSION = '1\.62\.2'/);
+  assert.match(pwa, /APP_BUILD = '2026\.08\.16-pwa306'/);
+  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.16-pwa306'/);
+  assert.match(html, /v1\.62\.2 · pwa306/);
+  assert.match(html, /app\.js\?v=290/);
 });

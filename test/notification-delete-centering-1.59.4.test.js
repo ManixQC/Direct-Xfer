@@ -8,13 +8,13 @@ test('standard notification delete X is geometrically centered', () => {
   const css = text('public/style.css');
   assert.match(css, /\.notification-delete\s*\{[\s\S]*display:inline-flex\s*!important;[\s\S]*align-items:center;[\s\S]*justify-content:center;[\s\S]*font-size:0;/);
   assert.match(css, /\.notification-delete::before\s*\{[\s\S]*width:14px;[\s\S]*height:14px;[\s\S]*linear-gradient\(45deg/);
-  assert.match(text('public/index.html'), /\/style\.css\?v=275/);
+  assert.match(text('public/index.html'), /\/style\.css\?v=286/);
 });
 
 test('PWA notification delete X uses the same centered geometry', () => {
   const css = text('pwa/app.css');
   assert.match(css, /\.pwa-notification-delete\s*\{[\s\S]*display:inline-flex\s*!important;[\s\S]*align-items:center;[\s\S]*justify-content:center;[\s\S]*font-size:0;/);
   assert.match(css, /\.pwa-notification-delete::before\s*\{[\s\S]*width:14px;[\s\S]*height:14px;[\s\S]*linear-gradient\(-45deg/);
-  assert.match(text('pwa/index.html'), /\/app\/app\.css\?v=272/);
-  assert.match(text('pwa/sw.js'), /pwa289/);
+  assert.match(text('pwa/index.html'), /\/app\/app\.css\?v=274/);
+  assert.match(text('pwa/sw.js'), /pwa306/);
 });

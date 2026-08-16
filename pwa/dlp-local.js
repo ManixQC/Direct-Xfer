@@ -6,7 +6,7 @@
 })(typeof self !== 'undefined' ? self : (typeof window !== 'undefined' ? window : globalThis), function () {
   // Bump whenever detector/completeness semantics change. Queue fingerprints include
   // this value so a PWA update never trusts a "safe" result produced by an older engine.
-  var ENGINE_VERSION = '3';
+  var ENGINE_VERSION = '4';
   var TEXT_EXTS = new Set([
     'txt','md','markdown','log','csv','tsv','json','jsonl','xml','yaml','yml','toml','ini','conf','cfg','env','properties',
     'js','mjs','cjs','ts','tsx','jsx','css','scss','sass','less','html','htm','xhtml','svg','sql','sh','bash','zsh','fish','ps1',
@@ -45,8 +45,9 @@
   function redact(value) {
     var s = String(value || '').replace(/[\r\n\t]+/g, ' ').trim();
     if (!s) return '';
-    if (s.length <= 8) return s.slice(0, 2) + '…';
-    return s.slice(0, 4) + '…' + s.slice(-4);
+    if (s.length <= 4) return s.slice(0, 1) + '…';
+    if (s.length <= 8) return s.slice(0, 1) + '…' + s.slice(-1);
+    return s.slice(0, 2) + '…' + s.slice(-2);
   }
   function finding(type, severity, file, sample, detail) {
     return { type:type, severity:severity, file:String(file || '').slice(0, 512), sample:redact(sample), detail:String(detail || '').slice(0, 180) };

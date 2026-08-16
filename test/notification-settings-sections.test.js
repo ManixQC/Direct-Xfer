@@ -40,8 +40,8 @@ test('Security, Maintenance and System health remain server-enforced while syste
 });
 
 test('PWA cache revision includes notification Settings UI', () => {
-  assert.match(read('pwa/app.js'), /APP_BUILD = '2026\.08\.15-pwa289'/);
-  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.15-pwa289'/);
-  assert.match(read('pwa/index.html'), /app\.js\?v=273/);
-  assert.match(read('pwa/index.html'), /app\.css\?v=272/);
+  assert.match(read('pwa/app.js'), /APP_BUILD = '2026\.08\.16-pwa306'/);
+  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.16-pwa306'/);
+  assert.match(read('pwa/index.html'), /app\.js\?v=290/);
+  assert.match(read('pwa/index.html'), /app\.css\?v=274/);
 });

@@ -3,7 +3,7 @@
  * Shell versioning + network-aware updates. Upload/API requests are never cached.
  * Web Share Target batches are isolated so simultaneous shares cannot overwrite one another.
  */
-var VERSION = '2026.08.15-pwa289';
+var VERSION = '2026.08.16-pwa306';
 var SHELL_CACHE = 'dx-pwa-shell-' + VERSION;
 var RUNTIME_CACHE = 'dx-pwa-runtime-' + VERSION;
 var SHARE_CACHE = 'dx-share-v2';
@@ -13,12 +13,12 @@ var SHARE_CACHE = 'dx-share-v2';
 var SHELL = [
   '/app/launch',
   '/direct-xfer-pwa-shell.html',
-  '/app/app.css?v=272',
+  '/app/app.css?v=274',
   '/app/theme-init.js?v=269',
   '/app/login-vault.js?v=269',
-  '/app/dlp-local.js?v=269',
+  '/app/dlp-local.js?v=270',
   '/download-resume.js?v=269',
-  '/app/app.js?v=273',
+  '/app/app.js?v=290',
   '/direct-xfer-pwa.webmanifest',
   '/direct-xfer-pwa-en.webmanifest',
   '/direct-xfer-pwa-es.webmanifest',
@@ -187,14 +187,14 @@ function bgUploadUrl(record, offset) {
 function bgFatalStatus(status) { return [400, 401, 403, 404, 410, 413, 415, 422].indexOf(Number(status)) !== -1; }
 async function bgMarkFatal(db, record, code) {
   record.state = 'error'; record.errorCode = code || 'background-upload'; record.backgroundReady = false; record.resumeOnOpen = false;
-  record.backgroundFailedAt = Date.now();
+  record.backgroundFailedAt = Date.now(); record.lastCheckpointAt=Date.now(); record.recoveryReason=code || 'background-upload'; record.recoveryAttempts=Math.max(0,Number(record.recoveryAttempts)||0)+1;
   await bgQueuePut(db, record);
   return { failed: true };
 }
 async function bgMarkComplete(db, record, response) {
   var sourcePath = record.opfsPath || null, preparedPath = record.preparedOpfsPath || null;
   record.state = 'done-background'; record.sentBytes = Number(record.upSize) || 0; record.resumeOnOpen = false; record.backgroundReady = false;
-  record.backgroundCompletedAt = Date.now(); record.backgroundResponse = response && typeof response === 'object' ? response : null;
+  record.backgroundCompletedAt = Date.now(); record.lastCheckpointAt=Date.now(); record.recoveredAt=Date.now(); record.recoveryReason='background-complete'; record.backgroundResponse = response && typeof response === 'object' ? response : null;
   record.file = null; record.preparedBlob = null; record.opfsPath = null; record.preparedOpfsPath = null; record.preparedUsesSource = false;
   await bgQueuePut(db, record);
   await Promise.all([bgDeleteOpfs(sourcePath), preparedPath && preparedPath !== sourcePath ? bgDeleteOpfs(preparedPath) : Promise.resolve()]);
@@ -240,7 +240,7 @@ async function bgUploadOne(db, record) {
     if (response.ok) return bgMarkComplete(db, record, body);
     if (response.status === 409 && Number(body.offset) >= 0) {
       var next = Math.min(uploadSize, Math.max(0, Number(body.offset)));
-      if (next > offset) { offset = next; failures = 0; record.sentBytes = offset; await bgQueuePut(db, record); continue; }
+      if (next > offset) { offset = next; failures = 0; record.sentBytes = offset; record.lastServerOffset=offset; record.lastCheckpointAt=Date.now(); await bgQueuePut(db, record); continue; }
       failures++;
       if (failures >= 3) throw new Error('background-busy');
       continue;

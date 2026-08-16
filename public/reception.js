@@ -18,6 +18,7 @@
       threadTitle: '💬 Discussion', threadHint: 'Échangez avec le destinataire de ce lien.', threadEmpty: 'Aucun message pour l’instant.',
       threadYou: 'Vous', threadOwner: 'Destinataire', threadName: 'Votre nom (facultatif)', threadPlaceholder: 'Écrire un message…',
       threadSend: 'Envoyer', threadSending: 'Envoi…', threadError: 'Envoi impossible, réessayez.', threadRate: 'Trop de messages, patientez un instant.',
+      overall: 'Total', remaining: 'restant', avgSpeed: 'moy.', currentFiles: 'En cours', alreadySent: 'déjà envoyé ✓', resumedFrom: 'reprise depuis', duplicateFound: 'Doublon détecté : {name}\n1 = Remplacer l’existant\n2 = Conserver les deux\n3 = Ignorer', duplicateFoundReject: 'Doublon détecté : {name}\nLa politique du lien interdit de conserver une deuxième copie.\nOK = Remplacer l’existant · Annuler = Ignorer', duplicateChecking: 'vérification du doublon…', duplicateIgnored: 'doublon ignoré', duplicateReplace: 'remplacement…', duplicateKeep: 'conserver les deux',
       proxyWarn: '⚠ L’envoi a échoué après plusieurs tentatives. Si le serveur est derrière un reverse proxy (Nginx, Traefik, Apache…), vérifiez sa configuration : mise en tampon des requêtes désactivée et limites de taille/délai suffisantes pour les gros fichiers.',
     },
     en: {
@@ -33,6 +34,7 @@
       threadTitle: '💬 Conversation', threadHint: 'Chat with the owner of this link.', threadEmpty: 'No messages yet.',
       threadYou: 'You', threadOwner: 'Recipient', threadName: 'Your name (optional)', threadPlaceholder: 'Write a message…',
       threadSend: 'Send', threadSending: 'Sending…', threadError: 'Could not send, try again.', threadRate: 'Too many messages, please wait a moment.',
+      overall: 'Total', remaining: 'remaining', avgSpeed: 'avg.', currentFiles: 'Current', alreadySent: 'already sent ✓', resumedFrom: 'resume from', duplicateFound: 'Duplicate found: {name}\n1 = Replace existing\n2 = Keep both\n3 = Ignore', duplicateFoundReject: 'Duplicate found: {name}\nThis link policy does not allow a second copy.\nOK = Replace existing · Cancel = Ignore', duplicateChecking: 'checking duplicate…', duplicateIgnored: 'duplicate ignored', duplicateReplace: 'replacing…', duplicateKeep: 'keep both',
       proxyWarn: '⚠ The upload failed after several attempts. If the server is behind a reverse proxy (Nginx, Traefik, Apache…), check its configuration: disable request buffering and allow large enough body-size / timeout limits for big files.',
     },
     es: {
@@ -48,6 +50,7 @@
       threadTitle: '💬 Conversación', threadHint: 'Chatea con el destinatario de este enlace.', threadEmpty: 'Aún no hay mensajes.',
       threadYou: 'Tú', threadOwner: 'Destinatario', threadName: 'Tu nombre (opcional)', threadPlaceholder: 'Escribe un mensaje…',
       threadSend: 'Enviar', threadSending: 'Enviando…', threadError: 'No se pudo enviar, inténtalo de nuevo.', threadRate: 'Demasiados mensajes, espera un momento.',
+      overall: 'Total', remaining: 'restante', avgSpeed: 'prom.', currentFiles: 'En curso', alreadySent: 'ya enviado ✓', resumedFrom: 'reanudar desde', duplicateFound: 'Duplicado detectado: {name}\n1 = Reemplazar existente\n2 = Conservar ambos\n3 = Ignorar', duplicateFoundReject: 'Duplicado detectado: {name}\nLa política del enlace no permite una segunda copia.\nAceptar = Reemplazar existente · Cancelar = Ignorar', duplicateChecking: 'comprobando duplicado…', duplicateIgnored: 'duplicado omitido', duplicateReplace: 'reemplazando…', duplicateKeep: 'conservar ambos',
       proxyWarn: '⚠ El envío falló tras varios intentos. Si el servidor está detrás de un proxy inverso (Nginx, Traefik, Apache…), revisa su configuración: desactiva el almacenamiento en búfer de las peticiones y permite límites de tamaño/tiempo suficientes para archivos grandes.',
     },
   };
@@ -104,9 +107,11 @@
   var listTools = document.getElementById('up-list-tools');
   var listCount = document.getElementById('up-list-count');
   var clearBtn = document.getElementById('up-clear');
+  var overall = document.getElementById('up-overall');
   if (!input || !sendBtn || !list) return;
 
   var items = [];
+  var batchStartedAt = 0;
   var uploadFolder = '';
   var folderStrings = cfg.folderStrings || {};
 
@@ -134,6 +139,27 @@
     } else {
       listTools.hidden = true;
     }
+  }
+
+  function updateOverallProgress() {
+    if (!overall) return;
+    var active = items.filter(function (it) { return it.state !== 'skipped' && it.state !== 'cancelled'; });
+    if (!active.length) { overall.hidden = true; overall.textContent = ''; return; }
+    var total = active.reduce(function (n,it) { return n + Math.max(0, Number(it.upSize != null ? it.upSize : it.file.size) || 0); }, 0);
+    var sent = active.reduce(function (n,it) { var size=Math.max(0,Number(it.upSize != null ? it.upSize : it.file.size)||0); return n + (it.state === 'done' ? size : Math.min(size, Math.max(0,Number(it.sentBytes)||0))); }, 0);
+    var remain = Math.max(0,total-sent), now=Date.now();
+    var sessionSent = active.reduce(function (n,it) {
+      var size=Math.max(0,Number(it.upSize != null ? it.upSize : it.file.size)||0);
+      var current=it.state === 'done' ? size : Math.min(size,Math.max(0,Number(it.sentBytes)||0));
+      return n + Math.max(0, current - Math.min(size, Math.max(0, Number(it.sessionBaseBytes)||0)));
+    },0);
+    var avg = batchStartedAt && now>batchStartedAt && sessionSent>0 ? sessionSent/((now-batchStartedAt)/1000) : active.reduce(function(n,it){return n+(Number(it.instantBps)||0);},0);
+    var pct = total ? Math.min(100,Math.round(sent/total*100)) : 100;
+    var current = active.filter(function(it){return it.state==='sending';}).map(function(it){return it.file&&it.file.name||it.upName||'';}).filter(Boolean).slice(0,3);
+    overall.hidden=false; overall.innerHTML='';
+    var title=document.createElement('strong'); title.textContent=t('overall')+' · '+pct+'%';
+    var detail=document.createElement('span'); detail.textContent=(current.length?t('currentFiles')+' : '+current.join(', ')+' · ':'')+fmtBytes(sent)+' / '+fmtBytes(total)+' · '+t('remaining')+' '+fmtBytes(remain)+(avg>0?' · '+t('avgSpeed')+' '+fmtBytes(avg)+'/s'+(remain>0?' · '+fmtEta(remain/avg):''):'');
+    var bar=document.createElement('div'); bar.className='up-overall-bar'; var fill=document.createElement('i'); fill.style.width=pct+'%'; bar.appendChild(fill); overall.append(title,detail,bar);
   }
 
   function fmtBytes(b) {
@@ -289,6 +315,7 @@
     var hasMsg = !!(msgEl && msgEl.value.trim());
     sendBtn.disabled = !(items.some(function (it) { return it.state === 'waiting'; }) || hasMsg);
     updateListTools();
+    updateOverallProgress();
   }
 
   // Posts the visitor's optional message (once) before the files are uploaded.
@@ -361,7 +388,7 @@
 
       var item = {
         file: f, relPath: relPath, row: row, fill: fill, status: status,
-        speed: speed, eta: eta, xhr: null, state: reason ? 'skipped' : 'waiting',
+        speed: speed, eta: eta, xhr: null, state: reason ? 'skipped' : 'waiting', sentBytes: 0, sessionBaseBytes: 0, instantBps: 0, avgBps: 0, startedAt: 0, sha256: '', duplicateAction: '',
       };
 
       // Optional per-file message (sent once the file is received).
@@ -496,7 +523,7 @@
   var CHUNK_SIZE = 8 * 1024 * 1024; // per-request upload chunk (bounded for proxies)
 
   function lsKeyFor(it) {
-    return LS_PREFIX + token + '|' + destinationPath(it.relPath) + '|' + it.file.size + '|' + (it.file.lastModified || 0);
+    return LS_PREFIX + token + '|' + destinationPath(it.relPath) + '|' + it.file.size + '|' + (it.file.lastModified || 0) + '|' + (it.resumeFingerprint || 'nofp');
   }
   function genUploadId() {
     var alpha = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
@@ -524,21 +551,24 @@
     try { if (it.lsKey) localStorage.removeItem(it.lsKey); } catch (_) {}
   }
 
-  // Asks the server how many bytes it already holds for this upload id.
-  function fetchOffset(id) {
+  // Asks the server how many bytes it holds and whether that upload id was fully
+  // committed. A full-size .part is NOT the same thing as a completed receipt.
+  function fetchUploadStatus(id) {
     return fetch('/u/' + encodeURIComponent(token) + '/upload-status?id=' + encodeURIComponent(id), {
-      credentials: 'same-origin',
+      credentials: 'same-origin', cache: 'no-store',
     }).then(function (r) {
-      if (!r.ok) return 0;
-      return r.json().then(function (d) { return Math.max(0, (d && d.offset) || 0); });
-    }).catch(function () { return 0; });
+      if (!r.ok) return { offset:0, complete:false, response:null };
+      return r.json().then(function (d) {
+        return { offset:Math.max(0, Number(d && d.offset) || 0), complete:!!(d && d.complete), response:d && d.response ? d.response : null };
+      });
+    }).catch(function () { return { offset:0, complete:false, response:null }; });
   }
 
   // Fatal (non-resumable) server rejections: stop retrying and show the reason.
   function isFatalCode(code) {
     return code === 'ext-blocked' || code === 'ext-not-allowed' || code === 'file-too-large' ||
       code === 'too-large' || code === 'quota-full' || code === 'storage-cap' || code === 'max-files' ||
-      code === 'infected' || code === 'content-blocked' || code === 'sender-required' ||
+      code === 'infected' || code === 'content-blocked' || code === 'sender-required' || code === 'hash-mismatch' || code === 'hash-failed' ||
       code === 'revoked' || code === 'locked' || code === 'stopped';
   }
 
@@ -568,6 +598,38 @@
     return encCtxPromise;
   }
 
+  function hexDigest(buf) { return Array.prototype.map.call(new Uint8Array(buf), function (b) { return b.toString(16).padStart(2,'0'); }).join(''); }
+  function sha256File(file) {
+    if (!window.crypto || !crypto.subtle || !file || file.size > 256 * 1024 * 1024) return Promise.resolve('');
+    return file.arrayBuffer().then(function (buf) { return crypto.subtle.digest('SHA-256', buf); }).then(hexDigest).catch(function () { return ''; });
+  }
+  function resumeFingerprint(file, fullSha) {
+    if (fullSha) return Promise.resolve('sha-' + fullSha.slice(0, 32));
+    if (!window.crypto || !crypto.subtle || !file || typeof file.slice !== 'function') return Promise.resolve('meta-' + file.size + '-' + (file.lastModified || 0));
+    var sample = 64 * 1024, head = file.slice(0, Math.min(sample, file.size)), tail = file.slice(Math.max(0, file.size - sample), file.size);
+    return Promise.all([head.arrayBuffer(), tail.arrayBuffer()]).then(function (parts) {
+      var meta = new TextEncoder().encode(String(file.size) + ':' + String(file.lastModified || 0) + ':');
+      var a = new Uint8Array(parts[0]), b = new Uint8Array(parts[1]), joined = new Uint8Array(meta.length + a.length + b.length);
+      joined.set(meta, 0); joined.set(a, meta.length); joined.set(b, meta.length + a.length);
+      return crypto.subtle.digest('SHA-256', joined).then(function (digest) { return 'sample-' + hexDigest(digest).slice(0, 32); });
+    }).catch(function () { return 'meta-' + file.size + '-' + (file.lastModified || 0); });
+  }
+  function duplicatePreflight(it) {
+    if (ENC || !it.sha256) return Promise.resolve('');
+    it.status.textContent = t('duplicateChecking');
+    return fetch('/u/' + encodeURIComponent(token) + '/duplicate-check?sha256=' + encodeURIComponent(it.sha256), { credentials:'same-origin', cache:'no-store' })
+      .then(function (r) { return r.ok ? r.json() : { duplicate:false }; }).then(function (d) {
+        if (!d || !d.duplicate) return '';
+        if (d.policy === 'reject') {
+          return window.confirm(t('duplicateFoundReject').replace('{name}', d.existingName || it.file.name)) ? 'replace' : 'ignore';
+        }
+        var answer = window.prompt(t('duplicateFound').replace('{name}', d.existingName || it.file.name), '3');
+        if (answer === '1') return 'replace';
+        if (answer === '2') return 'keep';
+        return 'ignore';
+      }).catch(function () { return ''; });
+  }
+
   // Sets it.upBlob / it.upName / it.upSize / it.upId — the actual bytes to upload.
   // Plaintext: the file itself with a stable (resume-after-reload) id. Encrypted:
   // a DXE container with an opaque name and a fresh per-session id (re-encryption
@@ -575,8 +637,13 @@
   function prepareUpload(it) {
     if (!ENC) {
       it.upBlob = it.file; it.upName = destinationPath(it.relPath); it.messagePath = it.upName; it.upSize = it.file.size;
-      it.upId = uploadIdFor(it);
-      return Promise.resolve();
+      return sha256File(it.file).then(function (sha) {
+        it.sha256 = sha || '';
+        return resumeFingerprint(it.file, it.sha256);
+      }).then(function (fingerprint) {
+        it.resumeFingerprint = fingerprint || ''; it.upId = uploadIdFor(it);
+        return duplicatePreflight(it);
+      }).then(function (choice) { it.duplicateAction = choice || ''; if (choice === 'ignore') it.skipDuplicate = true; });
     }
     it.status.textContent = t('encrypting');
     it.status.className = 'upstatus';
@@ -601,7 +668,10 @@
     it.state = 'sending';
     it.status.textContent = '0%';
     it.status.className = 'upstatus';
-    return prepareUpload(it).then(function () { return runUpload(it); }, function (err) {
+    return prepareUpload(it).then(function () {
+      if (it.skipDuplicate) { it.state='skipped'; it.status.textContent=t('duplicateIgnored'); it.status.className='upstatus'; updateOverallProgress(); return; }
+      return runUpload(it);
+    }, function (err) {
       it.state = 'error';
       it.status.className = 'upstatus err';
       it.status.textContent =
@@ -631,20 +701,25 @@
         var xhr = new XMLHttpRequest();
         it.xhr = xhr;
         var qs = '?path=' + encodeURIComponent(it.upName) +
-          '&id=' + encodeURIComponent(id) + '&size=' + size + '&offset=' + offset + senderParam();
+          '&id=' + encodeURIComponent(id) + '&size=' + size + '&offset=' + offset + senderParam() +
+          (it.sha256 ? '&sha256=' + encodeURIComponent(it.sha256) : '') + (it.duplicateAction ? '&duplicate=' + encodeURIComponent(it.duplicateAction) : '');
         xhr.open('POST', '/u/' + encodeURIComponent(token) + '/upload' + qs);
         xhr.upload.onprogress = function (e) {
           if (!e.lengthComputable) return;
-          var sent = offset + e.loaded;
+          var sent = offset + e.loaded; it.sentBytes = sent;
           var p = size > 0 ? Math.round((sent / size) * 100) : 100;
-          it.fill.style.width = p + '%';
-          it.status.textContent = p + '%';
+          it.fill.style.width = p + '%'; it.status.textContent = p + '%';
           var elapsed = (Date.now() - it.startTime) / 1000;
           if (elapsed > 0.4) {
-            var speed = e.loaded / elapsed; // bytes/s for this chunk
-            it.speed.textContent = '↑ ' + fmtBytes(speed) + '/s';
+            var speed = e.loaded / elapsed; it.instantBps = speed;
+            if (!it.startedAt) it.startedAt = Date.now();
+            var totalElapsed = Math.max(.001,(Date.now()-it.startedAt)/1000);
+            var sessionBytes = Math.max(0, sent - Math.max(0, Number(it.sessionBaseBytes)||0));
+            it.avgBps = sessionBytes / totalElapsed;
+            it.speed.textContent = '↑ ' + fmtBytes(speed) + '/s · ' + t('avgSpeed') + ' ' + fmtBytes(it.avgBps) + '/s';
             if (speed > 0 && sent < size) it.eta.textContent = fmtEta((size - sent) / speed);
           }
+          updateOverallProgress();
         };
         xhr.onabort = function () { it.state = 'cancelled'; resolve({ cancelled: true }); };
         xhr.onload = function () {
@@ -674,13 +749,21 @@
 
     function finishOk(resp) {
       clearMeta(it);
-      clearUploadId(it);
-      it.state = 'done';
+      // Keep the stable id: upload-status can confirm the completed receipt after a
+      // reload, so already-finished files are skipped while unfinished ones resume.
+      it.state = 'done'; it.sentBytes = size; it.instantBps = 0;
       it.fill.style.width = '100%';
       it.status.textContent = t('done');
       it.status.className = 'upstatus ok';
       if (resp) updateLimits(resp);
+      updateOverallProgress();
       sendFileMessage(it);
+    }
+    function finishAlreadySent(resp) {
+      clearMeta(it);
+      it.state = 'done'; it.sentBytes = size; it.instantBps = 0;
+      it.fill.style.width = '100%'; it.status.textContent = t('alreadySent'); it.status.className = 'upstatus ok';
+      it.speed.textContent = ''; it.eta.textContent = ''; if (resp) updateLimits(resp); updateOverallProgress();
     }
 
     // Chunk loop: each accepted chunk advances the offset with a full retry budget;
@@ -712,10 +795,15 @@
         }
         it.speed.textContent = ''; it.eta.textContent = '';
         it.status.textContent = t('resuming');
-        var nextOffset = (r.offset != null) ? Promise.resolve(Math.max(0, r.offset)) : fetchOffset(id);
-        return nextOffset.then(function (o) {
+        var statusPromise = (r.offset != null && r.offset < size)
+          ? Promise.resolve({ offset:Math.max(0, r.offset), complete:false, response:null })
+          : fetchUploadStatus(id);
+        return statusPromise.then(function (st) {
           if (it.state === 'cancelled') return;
-          if (o > size) o = size;
+          var o = Math.max(0, Math.min(Number(st.offset) || 0, size));
+          if (st.complete && o >= size) return finishAlreadySent(st.response);
+          // offset==size but complete=false means a crash left a full .part. Send an
+          // empty finalization request so the server scans, commits and accounts it.
           return new Promise(function (res) { setTimeout(res, 600); })
             .then(function () { return loop(o, attemptsLeft - 1); });
         });
@@ -725,11 +813,14 @@
     // Start from whatever the server already holds (covers resume-after-reload). A
     // brand-new id has nothing on the server, so skip the round-trip and start at 0;
     // if we're ever wrong the server replies 409 offset-mismatch and the loop resyncs.
-    var startAt = it.resumeCandidate ? fetchOffset(id) : Promise.resolve(0);
-    return startAt.then(function (o) {
+    var startAt = it.resumeCandidate ? fetchUploadStatus(id) : Promise.resolve({ offset:0, complete:false, response:null });
+    return startAt.then(function (st) {
       if (it.state === 'cancelled') return;
-      if (o > size) o = size;
-      return loop(o, RESUME_ATTEMPTS);
+      var raw = Math.max(0, Number(st.offset) || 0), o = Math.min(raw, size);
+      it.sentBytes = o; it.sessionBaseBytes = o; it.startedAt = Date.now();
+      if (st.complete && o >= size) return finishAlreadySent(st.response);
+      if (o > 0) { it.status.textContent = t('resumedFrom') + ' ' + fmtBytes(o); it.resumeWasUsed = true; }
+      updateOverallProgress(); return loop(o, RESUME_ATTEMPTS);
     });
   }
 
@@ -770,6 +861,7 @@
     sendBtn.disabled = true;
     if (newFolderBtn) newFolderBtn.disabled = true;
     window.__dxTransferActive = true;
+    batchStartedAt = Date.now(); updateOverallProgress();
     var pending = items.filter(function (it) { return it.state === 'waiting'; });
     var n = Math.max(1, Math.min(UPLOAD_CONCURRENCY, pending.length));
     // Attach the visitor's note first, then upload the files through a worker pool.

@@ -47,7 +47,7 @@ test('edited bytes replace the same token and regenerate image variants', () => 
   assert.match(body, /uploadGeneratedImageVariants\(photo\.token, variants\)/);
   assert.match(body, /applyUpdatedImageRecord\(updated\)/);
   assert.match(server, /app\.post\('\/app\/image\/:token\/replace'/);
-  assert.match(server, /archiveCurrentPhotoVersion\(photo\)/);
+  assert.match(server, /archiveCurrentPhotoVersion\(photo, \{ reason:'edit'/);
   assert.match(server, /res\.json\(\{ ok: true, image: pwaPhotoPayload\(req, photo\)/);
 });
 

@@ -163,6 +163,7 @@ const TLS_REFRESH_INTERVAL_MS = 60 * 1000;
 let ACTIVE_TLS_MODE = 'http'; // http | provided | local-ca | local-ca-degraded
 let activeTlsLeafFingerprint = '';
 let activeTlsLeafExpiresAt = 0;
+let activeTlsLeafPem = ''; // exact leaf certificate currently loaded in the HTTPS listener
 let activeTlsCaFingerprint = '';
 let activeTlsCaPem = '';
 let activeProvidedTlsExpiresAt = 0;
@@ -578,6 +579,7 @@ function loadTlsOptions() {
       const x = validateProvidedTlsPair(cert, key);
       ACTIVE_TLS_MODE = 'provided';
       activeTlsLeafFingerprint = x.fingerprint256 || certificateFingerprint256(cert);
+      activeTlsLeafPem = cert.toString('utf8');
       activeProvidedTlsMaterialFingerprint = tlsMaterialFingerprint(cert, key);
       activeProvidedTlsExpiresAt = Date.parse(x.validTo) || 0;
       return { cert, key, minVersion:'TLSv1.2' };
@@ -593,6 +595,7 @@ function loadTlsOptions() {
     activeTlsCaPem = ca.certPem;
     activeTlsCaFingerprint = ca.fingerprint || certificateFingerprint256(ca.certPem);
     activeTlsLeafFingerprint = certificateFingerprint256(leaf.certPem);
+    activeTlsLeafPem = leaf.certPem;
     activeTlsLeafExpiresAt = leaf.cert.validity.notAfter.getTime();
     return { cert:leaf.certPem, key:leaf.keyPem, minVersion:'TLSv1.2' };
   } catch (e) {
@@ -602,6 +605,7 @@ function loadTlsOptions() {
       activeTlsCaPem = degraded.ca && degraded.ca.certPem || '';
       activeTlsCaFingerprint = degraded.ca && degraded.ca.fingerprint || '';
       activeTlsLeafFingerprint = certificateFingerprint256(degraded.certPem);
+      activeTlsLeafPem = degraded.certPem;
       activeTlsLeafExpiresAt = degraded.cert.validity.notAfter.getTime();
       console.error('[tls] Local CA signing is unavailable; using the existing server certificate temporarily:', e.message);
       return { cert:degraded.certPem, key:degraded.keyPem, minVersion:'TLSv1.2' };
@@ -616,16 +620,21 @@ function refreshProvidedTlsServerContext(server) {
     const x = validateProvidedTlsPair(cert, key);
     const fingerprint = x.fingerprint256 || certificateFingerprint256(cert);
     const materialFingerprint = tlsMaterialFingerprint(cert, key);
-    activeProvidedTlsExpiresAt = Date.parse(x.validTo) || 0;
+    const providedExpiresAt = Date.parse(x.validTo) || 0;
     // Compare the complete certificate-chain + private-key material, not only
     // the leaf fingerprint. ACME clients can legitimately replace an
     // intermediate chain while keeping the same leaf certificate.
     if (materialFingerprint && materialFingerprint !== activeProvidedTlsMaterialFingerprint) {
       server.setSecureContext({ cert, key, minVersion:'TLSv1.2' });
       activeTlsLeafFingerprint = fingerprint;
+      activeTlsLeafPem = cert.toString('utf8');
       activeProvidedTlsMaterialFingerprint = materialFingerprint;
+      activeProvidedTlsExpiresAt = providedExpiresAt;
       console.log('[tls] reloaded the provided TLS certificate/key chain without interrupting existing connections.');
       return true;
+    }
+    if (materialFingerprint && materialFingerprint === activeProvidedTlsMaterialFingerprint) {
+      activeProvidedTlsExpiresAt = providedExpiresAt;
     }
   } catch (e) {
     // External ACME/certificate writers may update the two files a fraction of a
@@ -649,13 +658,20 @@ function refreshLocalTlsServerContext(server) {
       return false;
     }
     const leaf = ensureLocalServerCertificate(ca), fingerprint = certificateFingerprint256(leaf.certPem);
-    activeTlsLeafExpiresAt = leaf.cert.validity.notAfter.getTime();
+    const leafExpiresAt = leaf.cert.validity.notAfter.getTime();
     let changed = false;
     if (fingerprint && fingerprint !== activeTlsLeafFingerprint) {
       server.setSecureContext({ cert:leaf.certPem, key:leaf.keyPem, minVersion:'TLSv1.2' });
+      // Commit observable live-context metadata only after setSecureContext succeeds.
+      // Otherwise diagnostics/health could claim a new expiry while the listener is
+      // still serving the previous certificate.
       activeTlsLeafFingerprint = fingerprint;
+      activeTlsLeafPem = leaf.certPem;
+      activeTlsLeafExpiresAt = leafExpiresAt;
       changed = true;
       console.log('[tls] refreshed the active LAN server certificate without interrupting existing connections.');
+    } else if (fingerprint && fingerprint === activeTlsLeafFingerprint) {
+      activeTlsLeafExpiresAt = leafExpiresAt;
     }
     if (wasDegraded) {
       ACTIVE_TLS_MODE = 'local-ca';
@@ -1415,6 +1431,8 @@ function startTransfer(req, meta, expectedBytes) {
     ownerId: null,
     ownerName: null,
     abort: null, // set by the caller to allow aborting
+    resumed: !!meta.resumed,
+    resumeOffset: Math.max(0, Number(meta.resumeOffset) || 0),
   };
   const transferShare = meta.shareId ? getById(meta.shareId) : null;
   if (transferShare) {
@@ -1521,7 +1539,7 @@ function flushNotifyBucket(key) {
   const where = b.countries.size ? ` · ${[...b.countries].slice(0, 6).join(', ')}` : '';
   const subject = `${APP_NAME} — ${b.count} ${label}: ${name}`;
   const message = `${icon} ${APP_NAME} — ${b.count} ${label} on "${name}" (${formatBytes(b.bytes)}) from ${b.ips.size} IP(s)${where}`;
-  dispatch(b.kind, subject, message, { name, kind: b.kind, count: b.count, bytes: b.bytes, ips: b.ips.size, aggregated: true, shareId: b.last && b.last.shareId || null });
+  dispatch(b.kind, subject, message, { name, kind: b.kind, count: b.count, bytes: b.bytes, ips: b.ips.size, aggregated: true, shareId: b.last && b.last.shareId || null }, { suppressWebPush:!!(b.last && b.last.suppressWebPush) });
 }
 function notify(kind, info) {
   if (!notifyEnabled(kind)) return;
@@ -1568,7 +1586,7 @@ function emitNotify(kind, info) {
   dispatch(kind, subject, message, {
     name: info.name, bytes: info.bytes, ip: info.ip, country: info.country || null, file: info.file || null, sender: info.sender || null,
     shareId: info.shareId || null,
-  }); // fire-and-forget
+  }, { suppressWebPush:!!info.suppressWebPush }); // fire-and-forget
 }
 
 // "link likely leaked" detection. Per share, keep an in-memory rolling
@@ -1697,7 +1715,7 @@ function dispatch(kind, subject, message, payload, opts = {}) {
   const wh = effectiveWebhook();
   if (wh.url) sendWebhook(wh.url, wh.format, message, kind, payload);
   if (emailConfigured()) sendMail(subject, message);
-  if (webPushActive()) {
+  if (webPushActive() && !opts.suppressWebPush) {
     let accountIds = Array.isArray(opts.pushAccountIds) ? opts.pushAccountIds.map(String).filter(Boolean) : null;
     if (accountIds === null) {
       // Web Push subscriptions are personal/account-scoped. Never fan a share event
@@ -2061,6 +2079,8 @@ function endTransfer(t, completed, reason = null) {
     endedAt,
     completed: !!completed,
     reason: completed ? null : String(reason || t.failureReason || 'interrupted').slice(0, 80),
+    resumed: !!t.resumed,
+    resumeOffset: Math.max(0, Number(t.resumeOffset) || 0),
     avgBps: durationMs > 0 ? Math.round((t.bytes / durationMs) * 1000) : 0,
     members: Array.isArray(t.members) && t.members.length ? t.members.slice(0,500) : undefined,
     membersTruncated: !!t.membersTruncated,
@@ -2095,12 +2115,13 @@ function endTransfer(t, completed, reason = null) {
   // a few bytes had already been streamed. Failed center events are restricted to
   // real full-download transfers (`notify`) and reception uploads.
   const centerInteresting = !!(centerShare && (completed ? meaningfulCompletedTransfer : ((t.direction || 'down') === 'up' || !!t.notify)));
+  let primaryCenterNotification = null;
   if (centerInteresting) {
     const geo = { country:t.country || null, countryCode:t.countryCode || null, flag:t.flag || null };
     const failureReason = String(reason || t.failureReason || 'interrupted');
     const abandoned = !completed && Number(t.bytes || 0) > 0 && /^(?:aborted|connection-closed|timeout|stopped|cancelled|client-closed)$/.test(failureReason);
     const primaryType = completed ? 'transfer-complete' : abandoned ? ((t.direction || 'down') === 'up' ? 'upload-abandoned' : 'download-abandoned') : 'transfer-failed';
-    addShareCenterNotification(centerShare, primaryType, {
+    primaryCenterNotification = addShareCenterNotification(centerShare, primaryType, {
       name:t.name || centerShare.name || '', bytes:Number(t.bytes)||0, ip:t.ip ? pubIp(t.ip) : null, country:t.country || null, flag:t.flag || '🌐', sender:t.sender || null,
       reason:completed ? null : failureReason, detail:(t.direction || 'down') === 'up' ? 'upload' : 'download', durationMs:abandoned ? durationMs : 0,
       dedupeKey:completed ? null : `${primaryType}:${t.id}`,
@@ -2130,6 +2151,7 @@ function endTransfer(t, completed, reason = null) {
   if (completed && t.notify) {
     notify(t.direction === 'up' ? 'received' : 'downloaded', {
       name: t.name, ip: t.ip, country: t.country, bytes: t.bytes, sender: t.sender || null, shareId: t.shareId || null,
+      suppressWebPush:!!(primaryCenterNotification && primaryCenterNotification.priority === 'low'),
     });
   }
   if (completed && (t.direction || 'down') === 'down') noteLeakSignal(t);
@@ -2532,7 +2554,8 @@ function activityEventForClient(event) {
   }
   const resourceType = event.resourceType || (share && share.type) || detailType || auditType || null;
   const source = event.source || (event.deviceId || /^PWA(?::|$)/i.test(String(event.actor || '')) || /via PWA/i.test(String(event.detail || '')) ? 'pwa' : 'standard');
-  return { ...event, resourceType, source };
+  const device = event.deviceId ? pwaDevices().find((row) => row && String(row.id || '') === String(event.deviceId)) : null;
+  return { ...event, resourceType, source, deviceName:device ? (device.name || null) : null, shareName:share ? (share.name || null) : null, correlationId:event.shareId || null };
 }
 function sanitizeActivityLog(raw) {
   if (!Array.isArray(raw)) return [];
@@ -3280,7 +3303,7 @@ function shareChangeSnapshot(s) {
     pinned: !!s.pinned, archived: !!s.archived, autoArchivedAt: Number(s.autoArchivedAt) || null, tags: Array.isArray(s.tags) ? s.tags.slice() : [], color: s.color || '',
     adminNote: s.adminNote || '', note: s.note || '', descriptionMd: s.descriptionMd || '', hasPassword: !!s.pwHash, maxDownloads: s.maxDownloads || null,
     expiryReminderHours: s.expiryReminderHours == null ? null : Number(s.expiryReminderHours), firstUseExpirySeconds: Number(s.firstUseExpirySeconds) || 0, inactiveExpirySeconds: Number(s.inactiveExpirySeconds) || 0,
-    maxVisitors: s.maxVisitors || 0, rateKBps: s.rateBps > 0 ? Math.round(s.rateBps / 1024) : 0,
+    maxVisitors: parseMaxVisitors(s.maxVisitors), rateKBps: s.rateBps > 0 ? Math.round(s.rateBps / 1024) : 0,
     allowZip: s.allowZip !== false, noPreview: !!s.noPreview, burnAfterDownload: !!s.burnAfterDownload,
     allowDelete: !!s.allowDelete, favorite: !!s.favorite,
     geoMode: s.geoMode || null, geoCountries: Array.isArray(s.geoCountries) ? s.geoCountries.slice() : [],
@@ -3524,7 +3547,78 @@ function softDeleteShare(id, req, persistAfter=true, undoSpec=null) {
   try{scheduleSearchReindex();}catch(_){} return rec;
 }
 function trashRecordVisible(req,rec){ if(!rec||!rec.share)return false; return req.session.role!=='operator'||(!!rec.share.ownerId&&rec.share.ownerId===req.session.accountId); }
-function trashPublicRecord(rec){ const sh=rec.share||{}; return {id:rec.id,deletedAt:rec.deletedAt||0,deletedBy:rec.deletedBy||null,shareId:sh.id,name:sh.name||'',type:sh.type||'',ownerName:sh.ownerName||null,createdAt:sh.createdAt||0,logicalBytes:shareLogicalBytes(sh),expiresAt:shareEffectiveExpiry(sh)||null,restorable:true}; }
+async function trashManagedPurgeMetrics(sh) {
+  let bytes=0, itemCount=0; const seen=new Set();
+  async function addPath(candidate) {
+    if (!candidate) return; const abs=path.resolve(String(candidate)); if (seen.has(abs)) return; seen.add(abs);
+    let st; try { st=await fs.promises.stat(abs); } catch (_) { return; }
+    if (st.isFile()) { bytes+=Math.max(0,Number(st.size)||0); itemCount+=1; return; }
+    if (st.isDirectory()) { const m=await folderMetrics(abs); bytes+=Math.max(0,Number(m.bytes)||0); itemCount+=Math.max(0,Number(m.files)||0); }
+  }
+  if (state.meta && Array.isArray(state.meta.pending)) {
+    for (const row of state.meta.pending) if (row && row.shareId === sh.id) await addPath(path.join(PENDING_DIR,row.id));
+  }
+  if (sh.encPath) await addPath(sh.encPath);
+  if (sh.type === 'photo') {
+    for (const candidate of photoVariantPaths(sh.token,'thumb')) await addPath(candidate);
+    for (const candidate of photoVariantPaths(sh.token,'micro')) await addPath(candidate);
+    for (const candidate of photoOriginalPaths(sh)) await addPath(candidate);
+    await addPath(photoAdaptivePath(sh.token,'webp')); await addPath(photoAdaptivePath(sh.token,'avif'));
+    await addPath(photoVersionDir(sh.token));
+  }
+  if (['inbox','collab'].includes(sh.type) && sh.relDir && !managedInboxDirStillReferenced(sh)) {
+    try { await addPath(resolveWithin(INBOX_DIR,sh.relDir)); } catch (_) {}
+  }
+  return { bytes, itemCount };
+}
+async function trashPurgeImpact(rec) {
+  const sh = rec && rec.share || {}, dependencies = [];
+  const managed = await trashManagedPurgeMetrics(sh);
+  if (sh.type === 'photo') {
+    const albums = listShares().filter((row) => row && row.type === 'album' && Array.isArray(row.members) && row.members.includes(sh.token)).length;
+    if (albums) dependencies.push(`${albums} album(s)`);
+    const versions = Array.isArray(sh.photoVersions) ? sh.photoVersions.length : 0;
+    if (versions) dependencies.push(`${versions} version(s)`);
+  }
+  if (['inbox','collab'].includes(sh.type) && managedInboxDirStillReferenced(sh)) dependencies.push('données partagées avec un autre lien');
+  const rules = accountList().reduce((n,acc)=>n+accountCustomNotificationRules(acc.id).filter((rule)=>rule && String(rule.shareId||'')===String(sh.id||'')).length,0);
+  if (rules) dependencies.push(`${rules} règle(s) de notification`);
+  return { bytes:managed.bytes, itemCount:managed.itemCount, dependencyCount:dependencies.length, dependencies };
+}
+async function trashPublicRecord(rec){ const sh=rec.share||{}, purgeImpact=await trashPurgeImpact(rec); return {id:rec.id,deletedAt:rec.deletedAt||0,deletedBy:rec.deletedBy||null,shareId:sh.id,name:sh.name||'',type:sh.type||'',ownerName:sh.ownerName||null,createdAt:sh.createdAt||0,logicalBytes:shareLogicalBytes(sh),expiresAt:shareEffectiveExpiry(sh)||null,restorable:true,purgeImpact}; }
+
+async function trashRestoreAlternatives(sh) {
+  if (!sh || !['file','folder'].includes(sh.type) || !sh.hostPath) return [];
+  const wantDir = sh.type === 'folder', wanted = path.basename(String(sh.hostPath || '')).toLowerCase(), out = [];
+  let original; try { original = hostToContainer(sh.hostPath); } catch (_) { return []; }
+  const roots = [path.dirname(original), path.dirname(path.dirname(original))];
+  for (const root of roots) {
+    let entries; try { entries = await fs.promises.readdir(root, { withFileTypes:true }); } catch (_) { continue; }
+    for (const ent of entries.slice(0,200)) {
+      if (!!ent.isDirectory() !== wantDir) continue;
+      const name = String(ent.name || ''), low = name.toLowerCase();
+      if (wanted && low !== wanted && !low.includes(wanted.replace(/\.[^.]+$/,''))) continue;
+      const abs = path.join(root,name); try { await assertRealWithin(HOST_ROOT,abs); } catch (_) { continue; }
+      let host; try { host = containerToHost(abs); } catch (_) { continue; }
+      if (host && host !== sh.hostPath && !out.includes(host)) out.push(host);
+      if (out.length >= 5) return out;
+    }
+  }
+  return out;
+}
+async function trashRestoreAssessment(rec) {
+  const sh = rec && rec.share; if (!sh) return { available:false, reason:'not-found', alternatives:[] };
+  const availability = await shareReactivationAvailability(sh);
+  return { available:!!availability.available, reason:availability.reason || null, alternatives:availability.available ? [] : await trashRestoreAlternatives(sh) };
+}
+async function applyTrashRestoreAlternative(sh, alternativePath) {
+  if (!sh || !alternativePath || !['file','folder'].includes(sh.type)) return false;
+  const item = await resolveHostItem(String(alternativePath));
+  if (!item || (sh.type === 'folder' && item.type !== 'folder') || (sh.type === 'file' && item.type !== 'file')) return false;
+  sh.hostPath=item.hostPath; sh.size=item.size == null ? sh.size : item.size;
+  if (sh.type === 'file') sh.items=[{hostPath:item.hostPath,name:item.name,size:item.size,type:'file'}];
+  invalidateShareLogicalBytes(sh.id); return true;
+}
 
 // --- Undoable action log (#89). A bounded, persisted, chronological record of the
 // most recent destructive admin actions, each carrying a serializable descriptor
@@ -4651,7 +4745,25 @@ function isNewLoginDevice(acc, key) {
   if (acc.knownDevices.length > KNOWN_DEVICES_MAX) acc.knownDevices = acc.knownDevices.slice(-KNOWN_DEVICES_MAX);
   return true;
 }
+function invalidateSessionSid(sid) {
+  if (!sid) return false;
+  const existed = sessions.delete(sid);
+  // Session-only PWA SSE streams must lose access at the same instant as the
+  // underlying admin session (logout, password reset, explicit revocation).
+  // Paired-device streams deliberately have no dxPwaSessionSid and survive a
+  // browser-session logout because the device is a separate durable principal.
+  try { closePwaEventStreamsForSession(sid); } catch (_) {}
+  return existed;
+}
+function pruneDeadSessions(now = Date.now()) {
+  // Successful logins are intentionally allowed from multiple devices, but idle
+  // expired sessions must not accumulate forever if those clients never return.
+  for (const [sid, sess] of sessions) {
+    if (!sess || now > Number(sess.expires || 0) || (sess.accountId && !getAccountById(sess.accountId))) invalidateSessionSid(sid);
+  }
+}
 function createSession(req, res, account) {
+  pruneDeadSessions();
   const sid = crypto.randomBytes(32).toString('hex');
   const csrf = crypto.randomBytes(32).toString('hex');
   const authenticatedAt = Date.now();
@@ -4659,9 +4771,12 @@ function createSession(req, res, account) {
     csrf,
     expires: authenticatedAt + sessionTtlMs(),
     authenticatedAt,
+    lastSeenAt: authenticatedAt,
     accountId: account ? account.id : null,
     username: account ? account.username : null,
     role: account ? account.role : null,
+    ip: clientIp(req),
+    ua: String((req && req.headers && req.headers['user-agent']) || '').slice(0, 400),
   });
   const maxAge = Math.floor(sessionTtlMs() / 1000);
   // SameSite=Lax (not Strict): an installed PWA launched from the Android home
@@ -5178,9 +5293,51 @@ function initAuditChain() {
   }
 }
 
+function auditStructuredDetail(code, params, fallback) {
+  const clean = {};
+  if (params && typeof params === 'object') {
+    for (const [key, value] of Object.entries(params)) {
+      if (!/^[a-zA-Z0-9_.-]{1,48}$/.test(String(key))) continue;
+      if (value == null) clean[key] = null;
+      else if (typeof value === 'number' || typeof value === 'boolean') clean[key] = value;
+      else clean[key] = String(value).replace(/[\r\n\t]+/g, ' ').slice(0, 120);
+    }
+  }
+  const payload = { code:String(code || '').slice(0,80), params:clean };
+  if (fallback) payload.fallback = String(fallback).replace(/[\r\n\t]+/g, ' ').slice(0,120);
+  const encode = () => '@dxlog:' + JSON.stringify(payload);
+  let encoded = encode();
+  if (encoded.length <= 300) return encoded;
+
+  // Never truncate the serialized JSON itself: an invalid @dxlog record cannot
+  // be translated by either UI even though its HMAC is still valid. Progressively
+  // reduce optional prose/string parameters, then drop least-important parameters
+  // until the record is both bounded and valid JSON.
+  delete payload.fallback;
+  payload.truncated = true;
+  for (const maxLen of [80, 48, 24, 12]) {
+    for (const key of Object.keys(payload.params)) {
+      if (typeof payload.params[key] === 'string') payload.params[key] = payload.params[key].slice(0, maxLen);
+    }
+    encoded = encode();
+    if (encoded.length <= 300) return encoded;
+  }
+  const keys = Object.keys(payload.params);
+  while (keys.length && encoded.length > 300) {
+    delete payload.params[keys.pop()];
+    encoded = encode();
+  }
+  // code + an empty params object always fits the bound, but keep a defensive
+  // fallback that is still valid structured JSON if this format changes later.
+  if (encoded.length > 300) return '@dxlog:' + JSON.stringify({ code:String(code || '').slice(0,48), params:{}, truncated:true });
+  return encoded;
+}
 function logAudit(action, opts) {
   opts = opts || {};
   const acc = opts.account || null;
+  const detailValue = opts.detail && typeof opts.detail === 'object' && opts.detail.code
+    ? auditStructuredDetail(opts.detail.code, opts.detail.params, opts.detail.fallback)
+    : (opts.detail != null ? String(opts.detail).slice(0, 300) : null);
   const entry = {
     at: Date.now(),
     action: action,
@@ -5188,7 +5345,7 @@ function logAudit(action, opts) {
     actorId: acc ? acc.id : null,
     role: acc ? acc.role : null,
     ip: opts.ip || null,
-    detail: opts.detail != null ? String(opts.detail).slice(0, 300) : null,
+    detail: detailValue,
   };
   if (!appendAuditChainEntry(entry)) return null;
   if (!Array.isArray(state.audit)) state.audit = [];
@@ -5232,7 +5389,7 @@ function maybeSecurityAlert(entry) {
 // Audit an action performed by the currently-authenticated account (from req).
 function auditReq(req, action, detail) {
   const s = (req && req.session) || {};
-  logAudit(action, {
+  return logAudit(action, {
     account: s.accountId ? getAccountById(s.accountId) : null,
     username: s.username,
     ip: clientIp(req),
@@ -5242,7 +5399,7 @@ function auditReq(req, action, detail) {
 
 function destroySession(req, res) {
   const { sid } = parseCookies(req);
-  if (sid) sessions.delete(sid);
+  if (sid) invalidateSessionSid(sid);
   res.setHeader('Set-Cookie', `sid=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0${secureCookie(req)}`);
 }
 
@@ -5252,18 +5409,21 @@ function getSession(req) {
   const s = sessions.get(sid);
   if (!s) return null;
   if (Date.now() > s.expires) {
-    sessions.delete(sid);
+    invalidateSessionSid(sid);
     return null;
   }
   // A session whose account was deleted is no longer valid.
   if (s.accountId && !getAccountById(s.accountId)) {
-    sessions.delete(sid);
+    invalidateSessionSid(sid);
     return null;
   }
+  s.lastSeenAt = Date.now();
   return {
     sid, csrf: s.csrf, expires: s.expires,
     authenticatedAt: Number(s.authenticatedAt) || 0,
+    lastSeenAt: Number(s.lastSeenAt) || 0,
     accountId: s.accountId, username: s.username, role: s.role,
+    ip: s.ip || null, ua: s.ua || '',
   };
 }
 
@@ -5436,12 +5596,12 @@ function verifyTotpOrRecoveryFor(acc, input) {
 // password change so the account's other sessions are logged out).
 function clearOtherSessionsOfAccount(accountId, keepSid) {
   for (const [sid, s] of sessions) {
-    if (sid !== keepSid && s.accountId === accountId) sessions.delete(sid);
+    if (sid !== keepSid && s.accountId === accountId) invalidateSessionSid(sid);
   }
 }
 // Invalidates all sessions of an account (used when the account is deleted).
 function clearSessionsOfAccount(accountId) {
-  for (const [sid, s] of sessions) if (s.accountId === accountId) sessions.delete(sid);
+  for (const [sid, s] of [...sessions]) if (s.accountId === accountId) invalidateSessionSid(sid);
 }
 
 // Periodic housekeeping. Expired-link lifecycle is configurable: links may be
@@ -5495,7 +5655,7 @@ async function runExpiredLinkLifecycle(now = Date.now()) {
 }
 const authCleanup = setInterval(() => {
   const now = Date.now();
-  for (const [sid, s] of sessions) if (now > s.expires) sessions.delete(sid);
+  for (const [sid, s] of [...sessions]) if (now > s.expires) invalidateSessionSid(sid);
   for (const [ip, r] of loginAttempts) {
     // Drop failures that fell out of the sliding window, then forget idle IPs.
     if (r.fails) r.fails = r.fails.filter((ts) => now - ts < FAIL_WINDOW_MS);
@@ -5804,6 +5964,7 @@ const PUB = {
     inboxHint: 'Cliquez ou glissez vos fichiers ici',
     inboxHint2: 'Sélection multiple acceptée',
     inboxSend: 'Envoyer',
+    inboxRestrictions: 'Avant l’envoi', inboxRestrictionsHint: 'Vérifiez les limites de ce lien avant de choisir vos fichiers.', inboxDuplicatePolicy: 'Doublons : choix Remplacer / Conserver les deux / Ignorer avant l’envoi', inboxModeratedPolicy: 'Les fichiers attendent l’approbation du destinataire.', inboxSenderPolicy: 'Le nom de l’expéditeur est obligatoire.', inboxExecPolicy: 'Les exécutables détectés sont bloqués.',
     inboxPickFiles: '📄 Fichiers',
     inboxPickFolder: '📁 Dossier',
     newFolder: '📁 Nouveau dossier',
@@ -5946,6 +6107,7 @@ const PUB = {
     inboxHint: 'Click or drop your files here',
     inboxHint2: 'Multiple files supported',
     inboxSend: 'Send',
+    inboxRestrictions: 'Before uploading', inboxRestrictionsHint: 'Check this link’s limits before choosing files.', inboxDuplicatePolicy: 'Duplicates: choose Replace / Keep both / Ignore before upload', inboxModeratedPolicy: 'Files wait for recipient approval.', inboxSenderPolicy: 'Sender name is required.', inboxExecPolicy: 'Detected executable files are blocked.',
     inboxPickFiles: '📄 Files',
     inboxPickFolder: '📁 Folder',
     newFolder: '📁 New folder',
@@ -6088,6 +6250,7 @@ const PUB = {
     inboxHint: 'Haz clic o arrastra tus archivos aquí',
     inboxHint2: 'Selección múltiple admitida',
     inboxSend: 'Enviar',
+    inboxRestrictions: 'Antes de subir', inboxRestrictionsHint: 'Revisa los límites de este enlace antes de elegir archivos.', inboxDuplicatePolicy: 'Duplicados: elige Reemplazar / Conservar ambos / Ignorar antes de subir', inboxModeratedPolicy: 'Los archivos esperan la aprobación del destinatario.', inboxSenderPolicy: 'El nombre del remitente es obligatorio.', inboxExecPolicy: 'Los ejecutables detectados se bloquean.',
     inboxPickFiles: '📄 Archivos',
     inboxPickFolder: '📁 Carpeta',
     newFolder: '📁 Nueva carpeta',
@@ -6550,7 +6713,7 @@ function downloadEtaHtml(bytes, L) {
 // The current visitor is already counted by recordAndCheckVisitor before render,
 // so the figure reflects how many NEW visitors may still open the link.
 function visitorSlotsHtml(share, L) {
-  const cap = Math.max(0, Math.floor(Number(share.maxVisitors) || 0));
+  const cap = parseMaxVisitors(share.maxVisitors);
   if (cap <= 0) return '';
   const used = Array.isArray(share.visitors) ? share.visitors.length : 0;
   const left = Math.max(0, cap - used);
@@ -6945,6 +7108,11 @@ function inboxPage(lang, share) {
     encStrings: share.encrypted ? { encrypting: L.encEncrypting, passRequired: L.encPassRequired, keyMissing: L.encKeyMissing } : null,
     groupBySender: !!share.groupBySender, // ask the visitor for a name → per-sender subfolder
     requireSenderName: !!share.requireSenderName, // the name is mandatory
+    rejectDuplicates: !!share.rejectDuplicates,
+    blockExecutables: !!share.blockExecutables,
+    moderated: !!share.moderated,
+    maxFilesPerSender: share.maxFilesPerSender || 0,
+    maxBytesPerSender: share.maxBytesPerSender || 0,
     senderRequiredMsg: L.senderRequired,
     folderStrings: {
       prompt: L.newFolderPrompt, created: L.folderCreated, fail: L.folderCreateFail,
@@ -6957,6 +7125,13 @@ function inboxPage(lang, share) {
   const accept = cfg.allowExt.length ? ` accept="${esc(cfg.allowExt.map((e) => '.' + e).join(','))}"` : '';
   const limits = inboxLimitsText(L, share);
   const limitsHtml = limits ? `<p class="up-limits muted">${limits}</p>` : '';
+  const preflightBits = [];
+  if (limits) preflightBits.push(`<div class="up-preflight-limits">${limits}</div>`);
+  if (share.rejectDuplicates) preflightBits.push(`<div>♻ ${esc(L.inboxDuplicatePolicy)}</div>`);
+  if (share.requireSenderName) preflightBits.push(`<div>👤 ${esc(L.inboxSenderPolicy)}</div>`);
+  if (share.blockExecutables) preflightBits.push(`<div>🛡 ${esc(L.inboxExecPolicy)}</div>`);
+  if (share.moderated) preflightBits.push(`<div>🕓 ${esc(L.inboxModeratedPolicy)}</div>`);
+  const preflightHtml = `<section class="up-preflight"><strong>${esc(L.inboxRestrictions)}</strong><span class="muted">${esc(L.inboxRestrictionsHint)}</span>${preflightBits.length ? `<div class="up-preflight-grid">${preflightBits.join('')}</div>` : ''}</section>`;
   // Admin instructions shown to the visitor (multi-line, plain text).
   const noteHtml = shareNoteHtml(share);
   // End-to-end encryption banner + (passphrase mode) a passphrase field.
@@ -6980,6 +7155,7 @@ function inboxPage(lang, share) {
   ${noteHtml}
   ${encHtml}
   ${(share.groupBySender || share.requireSenderName) ? `<label class="up-msg-label" for="up-sender">${esc(L.senderLabel)}${share.requireSenderName ? ' <span class="req">*</span>' : ''}</label><input type="text" id="up-sender" class="up-msg" maxlength="60" autocomplete="name"${share.requireSenderName ? ' required aria-required="true"' : ''} placeholder="${esc(L.senderPh)}">` : ''}
+  ${preflightHtml}
   <label class="up-drop" id="up-drop">
     <input type="file" id="up-input" multiple hidden${accept}>
     <span class="up-drop-ico">⬆</span>
@@ -6993,7 +7169,7 @@ function inboxPage(lang, share) {
     <button type="button" id="up-new-folder" class="btn ghost sm">${esc(L.newFolder)}</button>
   </div>
   <p id="up-folder-current" class="up-folder-current" hidden></p>
-  ${limitsHtml}
+  <div id="up-overall" class="up-overall" hidden></div>
   <div id="up-list-tools" class="up-list-tools" hidden>
     <span id="up-list-count" class="up-list-count muted"></span>
     <button type="button" id="up-clear" class="btn ghost sm"></button>
@@ -7006,7 +7182,7 @@ function inboxPage(lang, share) {
 ${receptionThreadEnabled(share) ? '<div class="card up-thread-card" id="up-thread" hidden></div>' : ''}
 <script>window.DX_INBOX=${jsonForScript(cfg)};</script>
 ${cryptoScript}
-<script src="/reception.js"></script>`;
+<script src="/reception.js?v=16101"></script>`;
   return pageShell(lang, share.name, body);
 }
 
@@ -7315,10 +7491,18 @@ function requireActiveShare(req, res, opts) {
 }
 
 // Track distinct (masked) visitor IPs and enforce a per-link cap.
+// The persisted visitor set is deliberately bounded: a very large configured
+// limit must never turn shares.json into an attacker-controlled unbounded IP log.
+const VISITORS_MAX = 20000;
+function parseMaxVisitors(v) {
+  const n = Math.floor(Number(v) || 0);
+  return Number.isFinite(n) && n > 0 ? Math.min(VISITORS_MAX, n) : 0;
+}
 // Returns false (and revokes the share) once a NEW visitor arrives beyond the
 // limit; an IP already counted always passes, so a visitor keeps their access.
 function recordAndCheckVisitor(s, req) {
-  const cap = Math.max(0, Math.floor(Number(s.maxVisitors) || 0));
+  const cap = parseMaxVisitors(s.maxVisitors);
+  if (s.maxVisitors && Number(s.maxVisitors) !== cap) { s.maxVisitors = cap; scheduleFlush(); }
   if (cap <= 0) return true; // unlimited
   const ip = maskIp(clientIp(req));
   if (!Array.isArray(s.visitors)) s.visitors = [];
@@ -7339,8 +7523,7 @@ function recordAndCheckVisitor(s, req) {
 }
 
 // Distinct-visitor set is bounded so a scraped/leaked link can't grow shares.json
-// without limit; the unique-visitor count saturates at this many.
-const VISITORS_MAX = 20000;
+// without limit; the unique-visitor count saturates at VISITORS_MAX.
 function recordVisitorIp(s, ip) {
   if (!Array.isArray(s.visitors)) s.visitors = [];
   if (s.visitors.includes(ip)) return false;
@@ -8104,7 +8287,8 @@ function recordDlpQuarantine(req, scan, source, inputPath, displayName) {
     username:session && session.username ? String(session.username).slice(0,80) : (req && req.pwaDevice && req.pwaDevice.name ? ('PWA: ' + String(req.pwaDevice.name)).slice(0,80) : null),
     deviceId:req && req.pwaDevice && req.pwaDevice.id ? String(req.pwaDevice.id).slice(0,120) : null,
     ip:req ? maskIp(clientIp(req)) : null,
-    dlp:scan ? { count:Number(scan.count)||0, highest:scan.highest||null, types:Array.isArray(scan.types)?scan.types.slice(0,30):[], incomplete:!!scan.incomplete } : null,
+    dlp:scan ? { count:Number(scan.count)||0, highest:scan.highest||null, types:Array.isArray(scan.types)?scan.types.slice(0,30):[], incomplete:!!scan.incomplete,
+      findings:Array.isArray(scan.findings)?scan.findings.slice(0,20).map((f)=>({type:String(f.type||'').slice(0,60),severity:String(f.severity||'').slice(0,16),file:String(f.file||'').slice(0,256),sample:String(f.sample||'').slice(0,80),detail:String(f.detail||'').slice(0,160)})):[] } : null,
     file:null,
   };
   let src = null, dst = null;
@@ -8154,6 +8338,7 @@ function dlpDecision(req, res, body, scan, source, quarantine) {
   const mode = dlpEffectiveAction(settings, scan);
   const override = !!(body && body.dlpOverride === true);
   const detail = `${source || 'share'}: ${scan.count || 0} finding(s), incomplete=${incomplete ? 'yes' : 'no'}, skipped=${scan.filesSkipped || 0}, ocrErrors=${scan.ocrErrors || 0}, ocrUnavailable=${ocrUnavailable ? 'yes' : 'no'}, scanErrors=${scan.scanErrors || 0}, archiveIncomplete=${scan.incompleteEntries || 0} — ${(scan.types || []).join(', ')}`;
+  const structuredDlpDetail = { code:'dlp-result', params:{ source:source || 'share', count:scan.count || 0, highest:scan.highest || 'none', incomplete:!!incomplete, types:(scan.types || []).join(', ') }, fallback:detail };
   if (scan.count) {
     addRequestCenterNotification(req, 'dlp-detected', {
       count:scan.count || 0, detail:`${source || 'share'} · ${(scan.types || []).join(', ') || 'sensitive'}`, source:source || 'share',
@@ -8172,7 +8357,7 @@ function dlpDecision(req, res, body, scan, source, quarantine) {
   }
   if (mode === 'block') {
     addRequestCenterNotification(req, 'dlp-blocked', { count:scan.count || 0, detail:`${source || 'share'} · ${(scan.types || []).join(', ') || 'sensitive'}`, source:source || 'share', dedupeKey:`dlp-blocked:${source || 'share'}:${maskIp(clientIp(req))}:${Math.floor(Date.now()/60000)}`, dedupeWindowMs:2*60000 });
-    auditReq(req, 'dlp-blocked', detail);
+    auditReq(req, 'dlp-blocked', structuredDlpDetail);
     res.status(403).json({ error:'dlp-blocked', dlp:scan }); return true;
   }
   if (mode === 'quarantine') {
@@ -8188,16 +8373,17 @@ function dlpDecision(req, res, body, scan, source, quarantine) {
     res.status(423).json({ error:'dlp-quarantined', quarantineId:q.id, dlp:scan }); return true;
   }
   if (mode === 'warn' && !override) {
-    auditReq(req, 'dlp-warning', detail);
+    auditReq(req, 'dlp-warning', structuredDlpDetail);
     res.status(409).json({ error:'dlp-warning', dlp:scan }); return true;
   }
-  auditReq(req, mode === 'warn' ? 'dlp-overridden' : 'dlp-detected', detail);
+  auditReq(req, mode === 'warn' ? 'dlp-overridden' : 'dlp-detected', structuredDlpDetail);
   return false;
 }
 function applyDlpSummary(share, scan) {
   if (!share || !scan || (!scan.count && !scan.incomplete)) return;
   share.dlp = { scannedAt:Date.now(), count:scan.count || 0, highest:scan.highest || null, types:scan.types || [], truncated:!!scan.truncated, incomplete:!!scan.incomplete,
-    filesScanned:scan.filesScanned || 0, filesSkipped:scan.filesSkipped || 0, ocrErrors:scan.ocrErrors || 0, ocrUnavailable:!!scan.ocrUnavailable, scanErrors:scan.scanErrors || 0, incompleteEntries:scan.incompleteEntries || 0 };
+    filesScanned:scan.filesScanned || 0, filesSkipped:scan.filesSkipped || 0, ocrErrors:scan.ocrErrors || 0, ocrUnavailable:!!scan.ocrUnavailable, scanErrors:scan.scanErrors || 0, incompleteEntries:scan.incompleteEntries || 0,
+    findings:Array.isArray(scan.findings) ? scan.findings.slice(0,20).map((f) => ({ type:String(f.type||'').slice(0,60), severity:String(f.severity||'').slice(0,16), file:String(f.file||'').slice(0,256), sample:String(f.sample||'').slice(0,80), detail:String(f.detail||'').slice(0,160) })) : [] };
 }
 
 async function walkUniversalFiles(absDir, relBase, onFile, budget) {
@@ -8297,6 +8483,43 @@ function universalSearchStatus() {
   return { ready: (universalSearchIndex.docs || []).length > 0 || !!universalSearchIndex.builtAt, building: searchIndexBuilding, builtAt: universalSearchIndex.builtAt || 0,
     indexed: (universalSearchIndex.docs || []).length, truncated: !!universalSearchIndex.truncated, error: searchIndexError, ocr };
 }
+function universalSearchVisibleDocs(canAccess) {
+  const allow = typeof canAccess === 'function' ? canAccess : () => true;
+  const rows = [];
+  for (const doc of (universalSearchIndex.docs || [])) {
+    if (!doc) continue;
+    const share = getById(doc.shareId);
+    if (!universalSearchShareEligible(share) || !allow(share, doc)) continue;
+    rows.push(doc);
+  }
+  return rows;
+}
+function universalSearchScopedStatus(canAccess, includeGlobalDiagnostics) {
+  const status = universalSearchStatus();
+  const docs = universalSearchVisibleDocs(canAccess);
+  const visibleOcr = docs.reduce((n, doc) => n + (doc && doc.ocr ? 1 : 0), 0);
+  const out = { ...status, indexed:docs.length };
+  if (!includeGlobalDiagnostics) {
+    // Operators must not learn global file/OCR counts or raw index errors belonging
+    // to other accounts. Keep capability flags and viewer-scoped counters only.
+    const ocr = status.ocr || {};
+    out.error = status.error ? 'index-error' : '';
+    out.ocr = {
+      enabled:!!ocr.enabled,
+      available:!!ocr.available,
+      langs:ocr.langs || SEARCH_OCR_LANGS,
+      pdfAvailable:ocr.pdfAvailable == null ? undefined : !!ocr.pdfAvailable,
+      missingLanguages:Array.isArray(ocr.missingLanguages) ? ocr.missingLanguages.slice(0, 16) : [],
+      processed:0,
+      cached:visibleOcr,
+      errors:0,
+      deferred:0,
+      eligible:docs.length,
+      current:'',
+    };
+  }
+  return out;
+}
 function universalSearchShareEligible(share) {
   return !!(share && !share.revoked && share.type !== 'secret' && !share.encrypted);
 }
@@ -8321,7 +8544,6 @@ function universalSearchQuery(q, req, limit, options) {
   if (candidates == null) candidates = new Set(universalSearchDocs.keys());
   const out = [];
   for (const id of candidates) {
-    if (out.length >= limit) break;
     const d = universalSearchDocs.get(id); if (!d) continue;
     const share = getById(d.shareId);
     if (typeFilter && String((share && share.type) || d.type || '').toLowerCase() !== typeFilter) continue;
@@ -8336,11 +8558,18 @@ function universalSearchQuery(q, req, limit, options) {
     const p = pos >= 0 ? pos : (literalPositions.length ? Math.min(...literalPositions) : 0);
     const start = Math.max(0, p - 60), end = Math.min(hay.length, p + Math.max(normalized.length, 20) + 120);
     let matches = 0, i = pos; if (normalized && i >= 0) while (i >= 0 && matches < 999) { matches++; i = hay.indexOf(normalized, i + Math.max(1, normalized.length)); }
+    const fileNorm = normalizeSearchText(d.file || '').trim(), baseNorm = normalizeSearchText(path.basename(String(d.file || ''))).trim(), shareNorm = normalizeSearchText(share.name || d.shareName || '').trim();
+    const filenameMatchRank = baseNorm===normalized ? 3 : baseNorm.startsWith(normalized) ? 2 : (baseNorm.includes(normalized) || fileNorm.includes(normalized)) ? 1 : 0;
+    let relevanceScore = pos >= 0 ? 30 : 12;
+    if (filenameMatchRank === 3) relevanceScore += 120; else if (filenameMatchRank === 2) relevanceScore += 80; else if (filenameMatchRank === 1) relevanceScore += 55;
+    if (shareNorm === normalized) relevanceScore += 70; else if (shareNorm.includes(normalized)) relevanceScore += 25;
+    if (d.ocr) relevanceScore -= 8;
     out.push({ shareId:d.shareId, shareName:share.name || d.shareName, type:share.type || d.type, token:share.token || d.token, file:d.file, line:0, matches:matches || 1,
       snippet:(start>0?'…':'') + hay.slice(start,end).replace(/\s+/g,' ').trim() + (end<hay.length?'…':''), kind:d.kind, ext:d.ext, size:d.size, mtime:d.mtime,
-      ocr:!!d.ocr, ocrSource:d.ocrSource || null });
+      ocr:!!d.ocr, ocrSource:d.ocrSource || null, relevanceScore, filenameMatchRank, matchField:filenameMatchRank?'filename':(d.ocr?'ocr':'content'), highlightTerms:[normalized].concat(tokens).filter(Boolean).slice(0,8) });
   }
-  return out;
+  out.sort((a,b) => Number(b.relevanceScore||0)-Number(a.relevanceScore||0) || String(a.file||'').localeCompare(String(b.file||'')));
+  return out.slice(0, limit);
 }
 function semanticSnippetPosition(hay, qTerms, normalizedQuery) {
   let best = normalizedQuery ? hay.indexOf(normalizedQuery) : -1;
@@ -8387,6 +8616,10 @@ function universalSemanticSearchQuery(q, req, limit, options) {
     const hay = (d.metaText || '') + '\n' + (d.searchText || '');
     const exactPos = hay.indexOf(normalized);
     if (exactPos >= 0) score += 8;
+    const fileNorm = normalizeSearchText(d.file || '').trim(), baseNorm = normalizeSearchText(path.basename(String(d.file || ''))).trim();
+    const filenameMatchRank = baseNorm===normalized ? 3 : baseNorm.startsWith(normalized) ? 2 : (baseNorm.includes(normalized) || fileNorm.includes(normalized)) ? 1 : 0;
+    if (filenameMatchRank === 3) score += 30; else if (filenameMatchRank === 2) score += 20; else if (filenameMatchRank === 1) score += 12;
+    if (d.ocr) score -= 1.5;
     for (const tok of searchTokens(normalized)) if (hay.includes(tok)) score += 0.75;
     score += (matched / qTerms.length) * 4;
     const queryTokens = searchTokens(normalized);
@@ -8402,7 +8635,8 @@ function universalSemanticSearchQuery(q, req, limit, options) {
     const start = Math.max(0, p - 70), end = Math.min(snippetHay.length, p + Math.max(normalized.length, 24) + 150);
     scored.push({ score, result:{ shareId:d.shareId, shareName:share.name || d.shareName, type:share.type || d.type, token:share.token || d.token, file:d.file,
       line:0, matches:matched, snippet:(start>0?'…':'') + snippetHay.slice(start,end).replace(/\s+/g,' ').trim() + (end<snippetHay.length?'…':''), kind:d.kind, ext:d.ext,
-      size:d.size, mtime:d.mtime, ocr:!!d.ocr, ocrSource:d.ocrSource || null, semantic:true, semanticScore:Math.round(score * 100) / 100 } });
+      size:d.size, mtime:d.mtime, ocr:!!d.ocr, ocrSource:d.ocrSource || null, semantic:true, semanticScore:Math.round(score * 100) / 100,
+      relevanceScore:Math.round(score * 100) / 100, filenameMatchRank, matchField:filenameMatchRank?'filename':(d.ocr?'ocr':'content'), highlightTerms:[normalized].concat(queryTokens).filter(Boolean).slice(0,8) } });
   }
   scored.sort((a,b) => b.score - a.score || String(a.result.file).localeCompare(String(b.result.file)));
   return scored.slice(0, limit).map((x) => x.result);
@@ -8412,6 +8646,11 @@ function universalSemanticSearchQuery(q, req, limit, options) {
 // links, accounts and operational logs. Sensitive account fields are never
 // exposed; operators remain scoped to their own links and activity.
 function globalSearchText(value) { return normalizeSearchText(String(value == null ? '' : value)); }
+function globalSearchIso(value) {
+  if (value == null || value === '') return '';
+  const d = new Date(value);
+  return Number.isFinite(d.getTime()) ? d.toISOString() : '';
+}
 function globalSearchMatch(hay, needle) {
   const text = globalSearchText(hay), q = globalSearchText(needle).trim();
   if (!q) return null;
@@ -8455,7 +8694,7 @@ function globalMetadataSearch(q, req, limit, options) {
   if (scopes.has('users') && includeAdminMeta) {
     for (const acc of accountList()) {
       if (!acc) continue;
-      const hay = [acc.username, acc.role, acc.lastLoginAt ? new Date(acc.lastLoginAt).toISOString() : '', acc.createdAt ? new Date(acc.createdAt).toISOString() : ''].filter(Boolean).join(' · ');
+      const hay = [acc.username, acc.role, globalSearchIso(acc.lastLoginAt), globalSearchIso(acc.createdAt)].filter(Boolean).join(' · ');
       const hit = globalSearchMatch(hay, q); if (!hit) continue;
       push(hit.score + (globalSearchText(acc.username) === globalSearchText(q).trim() ? 20 : 0), {
         scope:'user', kind:'user', shareId:null, shareName:acc.username || 'user', type:'user', token:'', file:acc.role || 'user',
@@ -8471,14 +8710,14 @@ function globalMetadataSearch(q, req, limit, options) {
     for (const e of (state.audit || []).slice(0, 500)) {
       if (!e) continue;
       if (!canSeeGlobalLogs && username && normUsername(e.actor || e.username || '') !== normUsername(username)) continue;
-      const hay = [e.action, e.actor || e.username, e.role, e.ip, e.detail, e.at ? new Date(e.at).toISOString() : ''].filter(Boolean).join(' · ');
+      const hay = [e.action, e.actor || e.username, e.role, e.ip, e.detail, globalSearchIso(e.at)].filter(Boolean).join(' · ');
       const hit = globalSearchMatch(hay, q); if (!hit) continue;
       push(hit.score, { scope:'log', kind:'audit', shareId:null, shareName:e.action || 'audit', type:'log', token:'', file:(e.actor || e.username || 'system'), snippet:hit.snippet, at:Number(e.at) || null, action:e.action || '', actor:e.actor || e.username || '' });
     }
     for (const h of (state.history || []).slice(0, 1000)) {
       if (!h) continue;
       if (!canSeeGlobalLogs && (!h.shareId || !visibleShareIds.has(h.shareId))) continue;
-      const hay = [h.name, h.shareId, h.direction, h.status, h.failureReason, h.sender, h.ip, h.country, h.at ? new Date(h.at).toISOString() : ''].filter(Boolean).join(' · ');
+      const hay = [h.name, h.shareId, h.direction, h.status, h.failureReason, h.sender, h.ip, h.country, globalSearchIso(h.at)].filter(Boolean).join(' · ');
       const hit = globalSearchMatch(hay, q); if (!hit) continue;
       const sh = h.shareId ? getById(h.shareId) : null;
       push(hit.score - 1, { scope:'log', kind:'transfer', shareId:h.shareId || null, shareName:(sh && sh.name) || h.name || 'transfer', type:'log', token:sh && sh.token || '', file:h.direction === 'up' ? 'Upload' : 'Download', snippet:hit.snippet, at:Number(h.at) || null, path:sh ? linkPrefix(sh) + sh.token : null });
@@ -8486,7 +8725,7 @@ function globalMetadataSearch(q, req, limit, options) {
     for (const e of (state.activityLog || []).slice(0, 1000)) {
       if (!e || e.kind === 'audit') continue; // audit rows above already cover mirrored audit activity
       if (!canSeeGlobalLogs && (!e.shareId || !visibleShareIds.has(e.shareId))) continue;
-      const hay = [e.name,e.kind,e.status,e.detail,e.ip,e.actor,e.accountId,e.deviceId,e.shareId,e.direction,e.at ? new Date(e.at).toISOString() : ''].filter(Boolean).join(' · ');
+      const hay = [e.name,e.kind,e.status,e.detail,e.ip,e.actor,e.accountId,e.deviceId,e.shareId,e.direction,globalSearchIso(e.at)].filter(Boolean).join(' · ');
       const hit = globalSearchMatch(hay, q); if (!hit) continue;
       const sh = e.shareId ? getById(e.shareId) : null;
       push(hit.score - 0.5, { scope:'log', kind:'activity', shareId:e.shareId || null, shareName:(sh && sh.name) || e.name || 'activity', type:'log', token:sh && sh.token || '', file:'Activity', snippet:hit.snippet, at:Number(e.at) || null, path:sh ? linkPrefix(sh) + sh.token : null });
@@ -8494,7 +8733,7 @@ function globalMetadataSearch(q, req, limit, options) {
   }
 
   rows.sort((a,b) => b.score - a.score || String(a.row.shareName || '').localeCompare(String(b.row.shareName || '')));
-  return rows.slice(0, max).map((x) => x.row);
+  return rows.slice(0, max).map((x) => ({ ...x.row, relevanceScore:Number(x.score) || 0, matchField:x.row.matchField || 'metadata', highlightTerms:x.row.highlightTerms || [globalSearchText(q).trim()].filter(Boolean) }));
 }
 
 function initUniversalSearchIndex() {
@@ -9364,6 +9603,7 @@ async function servePhoto(req, res, variant) {
   if (dot > 0) token = token.slice(0, dot); // strip a cosmetic /i/<token>.jpg extension
   const s = getByToken(token);
   if (!s || s.type !== 'photo' || !isActive(s)) return sendError(req, res, 404, 'fileNotFound');
+  res.setHeader('X-Direct-Xfer-Image-Revision', String(photoCacheRevision(s)));
   // Reject foreign embeds before password/visitor processing so a blocked site
   // cannot probe protected images or consume visitor-limit capacity.
   if (!hotlinkAllowed(req, s)) return sendError(req, res, 403, 'hotlinkBlocked');
@@ -9403,7 +9643,7 @@ async function servePhoto(req, res, variant) {
     streamFile(req, res, abs, s.name, () => notePhotoView(s, req, kind), null, {
       inline: true,
       contentType: ct,
-      cacheControl: restrictedCache || variant ? 'no-store' : PHOTO_PUBLIC_CACHE,
+      cacheControl: restrictedCache || variant ? 'no-store' : ((s.editedAt || s.replacedAt || s.restoredAt || s.cacheInvalidatedAt) ? 'public, max-age=0, must-revalidate' : PHOTO_PUBLIC_CACHE),
     });
   } catch (e) {
     sendError(req, res, e.code === 'ENOENT' ? 404 : 403, 'fileUnavailable');
@@ -10125,12 +10365,12 @@ function inboxRejectReason(s, name, sizeHint, opts = {}) {
   const pending = pendingUsageForShare(s, opts.excludePendingId || null);
   const usedFiles = Math.max(0, Number(s.downloads) || 0) + pending.files;
   const usedBytes = Math.max(0, Number(s.bytesReceived) || 0) + pending.bytes;
-  if (s.maxFiles > 0 && usedFiles >= s.maxFiles) {
+  if (!opts.replacingExisting && s.maxFiles > 0 && usedFiles >= s.maxFiles) {
     addShareCenterNotification(s, 'reception-quota-reached', { reason:'files', count:usedFiles, limit:Number(s.maxFiles), dedupeKey:`reception-quota:${s.id}:files:${s.maxFiles}` });
     return 'max-files';
   }
   if (s.maxFileBytes > 0 && sizeHint > 0 && sizeHint > s.maxFileBytes) return 'file-too-large';
-  if (s.maxTotalBytes > 0 && sizeHint > 0 && usedBytes + sizeHint > s.maxTotalBytes) {
+  if (s.maxTotalBytes > 0 && sizeHint > 0 && usedBytes + (opts.replacingExisting ? 0 : sizeHint) > s.maxTotalBytes) {
     if (usedBytes >= Number(s.maxTotalBytes)) maybeCenterReceptionQuota(s);
     return 'quota-full';
   }
@@ -10150,14 +10390,56 @@ function inboxRejectStatus(reason) {
 // Per-link content-hash memory so a reception link can refuse a file
 // whose bytes already arrived. Bounded so a scraped link can't grow shares.json.
 const RECEPTION_HASH_MAX = 20000;
-function receptionHashSeen(s, sha) {
-  return !!(sha && s.receivedHashes && s.receivedHashes[sha]);
+function receptionHashEntry(s, sha) {
+  return sha && s && s.receivedHashes && s.receivedHashes[sha] ? s.receivedHashes[sha] : null;
 }
-function rememberReceptionHash(s, sha) {
+function receptionHashSeen(s, sha) {
+  const entry = receptionHashEntry(s, sha);
+  if (!entry) return false;
+  // Path-aware entries are only duplicates while the referenced file still exists.
+  // Self-destruct/retention/manual deletion must not permanently poison the hash set.
+  if (entry && typeof entry === 'object' && entry.path) return !!receptionDuplicateStoredPath(s, sha);
+  return true; // legacy numeric entries have no path to validate
+}
+function receptionRelativeStoredPath(dest) {
+  if (!dest) return '';
+  try {
+    const rel = path.relative(INBOX_DIR, String(dest)).replace(/\\/g, '/');
+    if (!rel || rel === '..' || rel.startsWith('../') || path.isAbsolute(rel)) return '';
+    return rel.slice(0, 800);
+  } catch (_) { return ''; }
+}
+function rememberReceptionHash(s, sha, dest = '') {
   if (!sha) return;
   if (!s.receivedHashes || typeof s.receivedHashes !== 'object') s.receivedHashes = {};
   if (s.receivedHashes[sha] === undefined && Object.keys(s.receivedHashes).length >= RECEPTION_HASH_MAX) return;
-  s.receivedHashes[sha] = 1;
+  const rel = receptionRelativeStoredPath(dest);
+  // Old installations stored the number 1. Preserve compatibility while enriching
+  // new entries with the stored relative path used by duplicate preflight/replace.
+  s.receivedHashes[sha] = rel ? { path: rel, at: Date.now() } : (s.receivedHashes[sha] || 1);
+}
+function receptionDuplicateStoredPath(s, sha) {
+  const entry = receptionHashEntry(s, sha);
+  const rel = entry && typeof entry === 'object' ? String(entry.path || '') : '';
+  if (!rel) return null;
+  try {
+    const target = resolveWithin(INBOX_DIR, rel);
+    const root = resolveWithin(INBOX_DIR, s.relDir || '');
+    const rr = path.relative(root, target);
+    if (rr === '..' || rr.startsWith('..' + path.sep) || path.isAbsolute(rr)) return null;
+    const st = fs.statSync(target);
+    if (!st.isFile()) throw Object.assign(new Error('not-file'), { code:'ENOENT' });
+    return target;
+  } catch (e) {
+    // Newer entries know the physical path. Prune it lazily when the file was
+    // removed by self-destruct/retention/admin cleanup so future uploads are not
+    // reported as duplicates forever.
+    if (s && s.receivedHashes && typeof s.receivedHashes === 'object' && s.receivedHashes[sha] && typeof s.receivedHashes[sha] === 'object') {
+      delete s.receivedHashes[sha];
+      scheduleFlush();
+    }
+    return null;
+  }
 }
 // Returns 'duplicate' (and remembers the hash otherwise) for a stored reception
 // file, or null when the link does not de-duplicate. Runs inside the share lock.
@@ -10167,7 +10449,7 @@ async function receptionDuplicateReason(s, storedPath, clientSha) {
   if (!sha) { try { sha = await hashFileSha256(storedPath); } catch (_) { sha = ''; } }
   if (!sha) return null; // can't hash → don't block
   if (receptionHashSeen(s, sha)) return 'duplicate';
-  rememberReceptionHash(s, sha);
+  rememberReceptionHash(s, sha, storedPath);
   return null;
 }
 
@@ -10242,8 +10524,8 @@ function perSenderRejectReason(s, req, senderName, sizeHint, opts = {}) {
   const pending = pendingUsageForSender(s, key, opts.excludePendingId || null);
   const usedFiles = Math.max(0, Number(st.files) || 0) + pending.files;
   const usedBytes = Math.max(0, Number(st.bytes) || 0) + pending.bytes;
-  if (fCap && usedFiles >= fCap) return 'sender-file-limit';
-  if (bCap && sizeHint > 0 && usedBytes + sizeHint > bCap) return 'sender-storage-cap';
+  if (!opts.replacingExisting && fCap && usedFiles >= fCap) return 'sender-file-limit';
+  if (bCap && sizeHint > 0 && usedBytes + (opts.replacingExisting ? 0 : sizeHint) > bCap) return 'sender-storage-cap';
   return null;
 }
 function bumpSenderStatByKey(s, key, size) {
@@ -10485,7 +10767,7 @@ function applyReceptionAccountingState(s, opts = {}) {
   const senderKey = opts.senderKey ? String(opts.senderKey) : null;
   const dest = opts.dest ? String(opts.dest) : '';
   const expireSec = Math.max(0, Number(opts.expireSec) || 0);
-  if (s.rejectDuplicates && sha) rememberReceptionHash(s, sha);
+  if (sha) rememberReceptionHash(s, sha, dest);
   s.bytesReceived = Math.max(0, Number(s.bytesReceived) || 0) + size;
   const beforeDownloads = Math.max(0, Number(s.downloads) || 0);
   s.downloads = beforeDownloads + 1;
@@ -12253,8 +12535,33 @@ function receptionUploadConfig(s) {
     blockExt: Array.isArray(s.blockExt) ? s.blockExt : [],
     enc: s.encrypted ? { on: true, mode: s.encMode || 'key' } : null,
     groupBySender: !!s.groupBySender,
+    requireSenderName: !!s.requireSenderName,
+    rejectDuplicates: !!s.rejectDuplicates,
+    blockExecutables: !!s.blockExecutables,
+    moderated: !!s.moderated,
+    maxFilesPerUpload: s.maxFilesPerUpload || 0,
+    maxFilesPerSender: s.maxFilesPerSender || 0,
+    maxBytesPerSender: s.maxBytesPerSender || 0,
   };
 }
+function handleUploadDuplicateCheck(req, res) {
+  const s = getByToken(req.params.token);
+  if (!acceptsUpload(s) || !isActive(s)) return res.status(403).json({ error:'revoked' });
+  if (s.pwHash && !isUnlocked(req, s)) return res.status(401).json({ error:'locked' });
+  const sha = validSha256Hex(req.query.sha256);
+  if (!sha) return res.status(400).json({ error:'invalid-sha256' });
+  const duplicate = receptionHashSeen(s, sha);
+  const stored = duplicate ? receptionDuplicateStoredPath(s, sha) : null;
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({
+    duplicate,
+    existingName: stored ? path.basename(stored) : null,
+    policy: s.rejectDuplicates ? 'reject' : 'allow',
+  });
+}
+downloadRouter.get('/u/:token/duplicate-check', handleUploadDuplicateCheck);
+downloadRouter.get('/c/:token/duplicate-check', handleUploadDuplicateCheck);
+
 function handleUploadStatus(req, res) {
   const s = getByToken(req.params.token);
   if (!acceptsUpload(s) || !isActive(s)) return res.status(403).json({ error: 'revoked' });
@@ -12324,6 +12631,8 @@ async function handleUpload(req, res) {
   const uploadId = id ? scopedUploadId(s, id) : null;
   const expireSec = clampExpireSec(req.query.expire); // optional per-file self-destruct
   const clientSha256 = validSha256Hex(req.query.sha256);
+  const duplicateAction = /^(keep|replace)$/.test(String(req.query.duplicate || '').toLowerCase())
+    ? String(req.query.duplicate).toLowerCase() : '';
 
   // Return the original success for an exact retry after a lost response. Reusing
   // the same id for different bytes/path is a client error and must never silently
@@ -12337,11 +12646,15 @@ async function handleUpload(req, res) {
     return res.json({ ...completedReceipt.response, ok:true, complete:true, duplicate:true });
   }
 
-  // Quota / filter gate (uses the announced total size).
-  const reason = inboxRejectReason(s, relForCheck, total);
+  // Quota / filter gate (uses the announced total size). An exact Replace may
+  // reuse an existing logical slot, but the client SHA is only provisional here:
+  // the completed bytes are re-hashed before the final quota decision below.
+  const preflightReplaceTarget = duplicateAction === 'replace' && clientSha256 ? receptionDuplicateStoredPath(s, clientSha256) : null;
+  const preflightReplacingExisting = !!preflightReplaceTarget;
+  const reason = inboxRejectReason(s, relForCheck, total, { replacingExisting:preflightReplacingExisting });
   if (reason) { req.resume(); return res.status(inboxRejectStatus(reason)).json({ error: reason }); }
   // Per-sender quota (announced size; re-checked with the real size below).
-  const senderReason = perSenderRejectReason(s, req, senderName, total);
+  const senderReason = perSenderRejectReason(s, req, senderName, total, { replacingExisting:preflightReplacingExisting });
   if (senderReason) { req.resume(); return res.status(inboxRejectStatus(senderReason)).json({ error: senderReason }); }
   if (!beginPublicUpload(req, res)) return;
 
@@ -12402,6 +12715,8 @@ async function handleUpload(req, res) {
       dir = resolveWithin(INBOX_DIR, [s.relDir || '', ...senderSegs, ...parsed.dirSegs].join('/'));
       await fs.promises.mkdir(dir, { recursive: true });
     } catch (_) {
+      try { await fs.promises.unlink(part); } catch (_) {}
+      if (transfer && transfer.uploadId) uploadTransfers.delete(transfer.uploadId);
       endTransfer(transfer, false, 'inbox-dir');
       if (!res.headersSent) res.status(500).json({ error: 'inbox-dir' });
       return;
@@ -12412,30 +12727,68 @@ async function handleUpload(req, res) {
       let size = 0;
       try { size = (await fs.promises.stat(part)).size; }
       catch (_) { return { error: 'write-error' }; }
-      const finalReason = inboxRejectReason(s, relForCheck, size) || perSenderRejectReason(s, req, senderName, size);
-      if (finalReason) return { error: finalReason };
+      // A client hash is only a performance hint until the complete server-side
+      // partial has been hashed. Never let a forged hash select a Replace target.
+      let verifiedSha256 = clientSha256;
+      if (clientSha256) {
+        try { verifiedSha256 = await hashFileSha256(part); } catch (_) { return { error:'hash-failed' }; }
+        if (verifiedSha256 !== clientSha256) return { error:'hash-mismatch' };
+      }
       // Optionally tag the stored filename with the sender name.
       const storeName = (s.tagBySender && senderName) ? senderTaggedName(senderName, parsed.filename) : parsed.filename;
-      let target;
-      try { target = await reserveUniqueUploadPath(dir, storeName); }
-      catch (_) { return { error: 'write-error' }; }
+      const duplicateKnown = verifiedSha256 ? receptionHashSeen(s, verifiedSha256) : false;
+      const duplicateTarget = duplicateKnown ? receptionDuplicateStoredPath(s, verifiedSha256) : null;
+      if (s.rejectDuplicates && duplicateKnown && (duplicateAction === 'keep' || (duplicateAction === 'replace' && !duplicateTarget))) return { error:'duplicate' };
+      const replacingExisting = duplicateAction === 'replace' && !!duplicateTarget;
+      const finalReason = inboxRejectReason(s, relForCheck, size, { replacingExisting }) || perSenderRejectReason(s, req, senderName, size, { replacingExisting });
+      if (finalReason) return { error: finalReason };
+      let target = null, replacedBackup = null, replaced = false;
+      let replacedExpiryHad = false, replacedExpiryBefore = null;
+      if (duplicateAction === 'replace' && duplicateTarget) {
+        target = duplicateTarget;
+        const expiryMap = state.meta && state.meta.fileExpiry && typeof state.meta.fileExpiry === 'object' ? state.meta.fileExpiry : null;
+        if (expiryMap && Object.prototype.hasOwnProperty.call(expiryMap, target)) {
+          replacedExpiryHad = true;
+          replacedExpiryBefore = JSON.parse(JSON.stringify(expiryMap[target]));
+        }
+        replacedBackup = target + '.dxreplace-' + crypto.randomBytes(5).toString('hex');
+        try { await fs.promises.rename(target, replacedBackup); }
+        catch (e) { if (!e || e.code !== 'ENOENT') return { error:'write-error' }; replacedBackup = null; }
+      } else {
+        try { target = await reserveUniqueUploadPath(dir, storeName); }
+        catch (_) { return { error: 'write-error' }; }
+      }
       try {
         await fs.promises.rename(part, target);
       } catch (_) {
         try { await fs.promises.copyFile(part, target); await fs.promises.unlink(part); }
         catch (e) {
           try { await fs.promises.unlink(target); } catch (_) {}
+          if (replacedBackup) { try { await fs.promises.rename(replacedBackup, target); } catch (_) {} }
           return { error: 'write-error' };
         }
       }
-      // Refuse a byte-for-byte duplicate already received on this link.
-      const dupReason = await receptionDuplicateReason(s, target, clientSha256);
-      if (dupReason) { try { await fs.promises.unlink(target); } catch (_) {} return { error: dupReason }; }
+      if (duplicateAction !== 'keep' && duplicateAction !== 'replace') {
+        // With no explicit duplicate action, enforce the link's configured duplicate policy.
+        // Explicit Keep/Replace choices have already been validated against that policy above.
+        const dupReason = await receptionDuplicateReason(s, target, clientSha256);
+        if (dupReason) {
+          try { await fs.promises.unlink(target); } catch (_) {}
+          if (replacedBackup) { try { await fs.promises.rename(replacedBackup, target); } catch (_) {} }
+          return { error: dupReason };
+        }
+      }
+      if (duplicateAction === 'replace' && duplicateTarget) {
+        // Exact-content replacement does not consume another file/quota slot.
+        rememberReceptionHash(s, verifiedSha256, target);
+        replaced = true;
+        return { target, size, accounting:null, replaced, replacedBackup, replacedExpiryHad, replacedExpiryBefore };
+      }
       const accounting = applyReceptionAccountingState(s, {
-        size, senderKey:uploadSenderKey(s, req, senderName), sha:clientSha256,
+        size, senderKey:uploadSenderKey(s, req, senderName), sha:verifiedSha256,
         dest:target, expireSec,
       });
-      return { target, size, accounting };
+      return { target, size, accounting, replaced, replacedBackup };
     });
     if (outcome.error) {
       try { await fs.promises.unlink(part); } catch (_) {}
@@ -12450,14 +12803,30 @@ async function handleUpload(req, res) {
     }
     const target = outcome.target;
     if (transfer && transfer.uploadId) uploadTransfers.delete(transfer.uploadId);
+    // Replacing an existing file is a new deposit lifecycle for that path: refresh
+    // its self-destruct timer (or clear the old one when no expiry was requested).
+    if (outcome.replaced) {
+      const expiryMap = fileExpiryMap();
+      if (expireSec > 0) expiryMap[target] = { expiresAt:Date.now() + expireSec * 1000, shareId:s.id || null, accountId:notificationAccountIdForShare(s) || null, name:String(path.basename(target)).slice(0,240) };
+      else delete expiryMap[target];
+    }
     if (!persistNow()) {
       rollbackReceptionAccountingState(s, beforeShare, target);
-      await rollbackAcceptedUploadFile(target, part);
+      if (outcome.replaced) {
+        const expiryMap = fileExpiryMap();
+        if (outcome.replacedExpiryHad) expiryMap[target] = outcome.replacedExpiryBefore;
+        else delete expiryMap[target];
+      }
+      if (outcome.replacedBackup) {
+        try { await fs.promises.unlink(target); } catch (_) {}
+        try { await fs.promises.rename(outcome.replacedBackup, target); } catch (_) {}
+      } else await rollbackAcceptedUploadFile(target, part);
       endTransfer(transfer, false, 'write-error');
       if (!res.headersSent) res.status(503).json({ error:'write-error' });
       return;
     }
-    finalizeReceptionAccountingEffects(s, outcome.accounting);
+    if (outcome.accounting) finalizeReceptionAccountingEffects(s, outcome.accounting);
+    if (outcome.replacedBackup) { try { await fs.promises.unlink(outcome.replacedBackup); } catch (_) {} }
     if (clientSha256) verifyAndRememberDedupe(target);
     recordRansomwareEvent(req, 'upload', displayName, 1);
     scheduleSearchReindex();
@@ -12466,7 +12835,7 @@ async function handleUpload(req, res) {
     endTransfer(transfer, true);
     if (!res.headersSent) {
       const response = {
-        ok: true, complete: true, name: path.basename(target),
+        ok: true, complete: true, name: path.basename(target), replaced: !!outcome.replaced,
         filesReceived: s.downloads || 0, bytesReceived: s.bytesReceived || 0,
       };
       rememberCompletedUpload(uploadId, total, relForCheck, response);
@@ -12502,6 +12871,10 @@ async function handleUpload(req, res) {
     }
     transfer.lastActivity = Date.now();
     transfer.bytes = offset; // cumulative baseline; this chunk adds on top
+    if (offset > 0 || onDisk > 0) {
+      transfer.resumed = true;
+      transfer.resumeOffset = Math.max(Number(transfer.resumeOffset) || 0, offset, onDisk);
+    }
 
     if (onDisk >= total) { // already complete (client retrying after a lost reply)
       transfer.bytes = total; req.resume();
@@ -12532,7 +12905,7 @@ async function handleUpload(req, res) {
       if (written > total) return fail('file-too-large', false);
       if (maxUp > 0 && written > maxUp) return fail('too-large', false);
       if (s.maxFileBytes > 0 && written > s.maxFileBytes) return fail('file-too-large', false);
-      if (s.maxTotalBytes > 0 && (s.bytesReceived || 0) + written > s.maxTotalBytes) return fail('quota-full', false);
+      if (s.maxTotalBytes > 0 && (s.bytesReceived || 0) + (preflightReplacingExisting ? 0 : written) > s.maxTotalBytes) return fail('quota-full', false);
     });
     req.on('aborted', () => fail('aborted', true));
     req.on('error', () => fail('aborted', true));
@@ -13093,7 +13466,7 @@ function decorateShare(s, req) {
     maxDownloads: s.maxDownloads,
     downloadsUsed: s.downloads || 0, // raw quota counter; dashboard stats may have a reset baseline
     downloads: Math.max(0, (s.downloads || 0) - shareStatsBaseline(s).downloads),
-    maxVisitors: s.maxVisitors || 0, // 0 = unlimited
+    maxVisitors: parseMaxVisitors(s.maxVisitors), // 0 = unlimited
     notifyDownloadThreshold: s.notifyDownloadThreshold || 0, // download-goal alert (0 = off)
     downloadThresholdReached: !!s.downloadThresholdNotifiedAt,
     uniqueVisitorsUsed: Array.isArray(s.visitors) ? s.visitors.length : 0,
@@ -13135,11 +13508,13 @@ function decorateShare(s, req) {
     photo: s.type === 'photo' ? (() => {
       const ib = getSettings().imageBase || base;
       const ps = photoStatsOf(s);
+      const rev = photoCacheRevision(s);
+      const qv = '?v=' + encodeURIComponent(rev);
       return {
         ext: photoExt(s),
-        imgUrl: ib ? ib + '/i/' + s.token + '.' + photoExt(s) : ('/i/' + s.token + '.' + photoExt(s)),
-        thumbUrl: ib ? ib + '/i/' + s.token + '/thumb' : ('/i/' + s.token + '/thumb'),
-        microUrl: ib ? ib + '/i/' + s.token + '/micro' : ('/i/' + s.token + '/micro'),
+        imgUrl: (ib ? ib + '/i/' + s.token + '.' + photoExt(s) : ('/i/' + s.token + '.' + photoExt(s))) + qv,
+        thumbUrl: (ib ? ib + '/i/' + s.token + '/thumb' : ('/i/' + s.token + '/thumb')) + qv,
+        microUrl: (ib ? ib + '/i/' + s.token + '/micro' : ('/i/' + s.token + '/micro')) + qv,
         hasThumb: !!s.thumb,
         hasMicro: !!s.micro,
         fullViews: ps.full.v || 0,
@@ -13152,6 +13527,9 @@ function decorateShare(s, req) {
         h: s.h || null,
         uploadDeviceName: photoUploadDeviceName(s),
         metadataRemoved: !!s.metadataRemoved,
+        cacheRevision: photoCacheRevision(s),
+        versionCount: Array.isArray(s.versions) ? s.versions.length : 0,
+        editHistoryCount: Array.isArray(s.editHistory) ? s.editHistory.length : 0,
       };
     })() : null,
     // Shareable image gallery: a public /g/<token> page over member images.
@@ -13234,6 +13612,12 @@ function decorateShare(s, req) {
       blockExt: Array.isArray(s.blockExt) ? s.blockExt : [],
       note: s.note || '',
       blockExecutables: !!s.blockExecutables,
+      groupBySender: !!s.groupBySender,
+      tagBySender: !!s.tagBySender,
+      rejectDuplicates: !!s.rejectDuplicates,
+      requireSenderName: !!s.requireSenderName,
+      maxFilesPerSender: s.maxFilesPerSender || 0,
+      maxBytesPerSender: s.maxBytesPerSender || 0,
       moderated: !!s.moderated,
     } : undefined,
     // Files awaiting moderation for this link (id, name, size, ip, at).
@@ -13636,6 +14020,55 @@ adminRouter.post('/security/anomalies/unblock', requireFullAdmin, (req, res) => 
   }
   if (existed || linkExisted) auditReq(req, 'ransomware-unblocked', [ip, shareId].filter(Boolean).join(' / '));
   res.json({ ok: true, unblocked: existed || linkExisted });
+});
+
+const SECURITY_HISTORY_ACTIONS = new Set([
+  'login','login-fail','login-2fa-fail','logout','password-changed','password-reset','2fa-enabled','2fa-disabled',
+  'account-created','account-deleted','account-renamed','ransomware-blocked','ransomware-unblocked','dlp-blocked','dlp-warning',
+  'dlp-overridden','dlp-detected','passkey-added','passkey-removed','passkey-login','passkey-login-fail','passkeys-disabled',
+  'pwa-device-paired','pwa-device-revoked','session-revoked','settings-changed','diagnostic-fix-requested','diagnostic-fix','diagnostic-fix-failed'
+]);
+function sessionPublicHandle(sid) { return crypto.createHash('sha256').update('dx-session:' + String(sid || '')).digest('hex').slice(0,24); }
+function sessionBrowserLabel(ua) {
+  ua = String(ua || '');
+  const browser = /FxiOS\/(\d+)/i.test(ua) ? 'Firefox' : /Firefox\/(\d+)/i.test(ua) ? 'Firefox'
+    : /EdgiOS\/(\d+)/i.test(ua) || /EdgA?\/(\d+)/i.test(ua) ? 'Edge'
+    : /CriOS\/(\d+)/i.test(ua) || /Chrome\/(\d+)/i.test(ua) ? 'Chrome'
+    : /OPiOS\/(\d+)/i.test(ua) || /OPR\/(\d+)/i.test(ua) ? 'Opera'
+    : /Safari\//i.test(ua) ? 'Safari' : 'Browser';
+  const os = /Android/i.test(ua) ? 'Android' : /iPhone|iPad|iPod/i.test(ua) ? 'iOS/iPadOS' : /Windows/i.test(ua) ? 'Windows' : /Mac OS X/i.test(ua) ? 'macOS' : /Linux/i.test(ua) ? 'Linux' : '';
+  return [browser, os].filter(Boolean).join(' · ');
+}
+adminRouter.get('/security/overview', requireAuditAccess, (req, res) => {
+  pruneDeadSessions();
+  const currentSid = req.session && req.session.sid;
+  const activeSessions = [];
+  const now = Date.now();
+  for (const [sid, sess] of sessions) {
+    if (!sess || now > Number(sess.expires || 0)) continue;
+    activeSessions.push({
+      id:sessionPublicHandle(sid), current:sid === currentSid, username:sess.username || null, role:sess.role || null,
+      ip:pubIp(sess.ip || ''), device:sessionBrowserLabel(sess.ua), userAgent:String(sess.ua || '').slice(0,220),
+      authenticatedAt:Number(sess.authenticatedAt)||0, lastSeenAt:Number(sess.lastSeenAt)||Number(sess.authenticatedAt)||0, expires:Number(sess.expires)||0,
+    });
+  }
+  activeSessions.sort((a,b)=>(b.lastSeenAt||0)-(a.lastSeenAt||0));
+  const history = (state.audit || []).filter((e)=>e && SECURITY_HISTORY_ACTIONS.has(String(e.action || ''))).slice(0,200);
+  res.json({ sessions:activeSessions, history, canRevoke:['owner','admin'].includes(req.session.role) });
+});
+adminRouter.delete('/security/sessions/:id', requireFullAdmin, (req, res) => {
+  const wanted = String(req.params.id || '');
+  let foundSid = null, found = null;
+  for (const [sid, sess] of sessions) if (sessionPublicHandle(sid) === wanted) { foundSid=sid; found=sess; break; }
+  if (!foundSid || !found) return res.status(404).json({ error:'not-found' });
+  const current = foundSid === req.session.sid;
+  const audited = auditReq(req, 'session-revoked', { code:'session-revoked', params:{ username:found.username || '', device:sessionBrowserLabel(found.ua), current }, fallback:'session revoked' });
+  // Revocation is security-sensitive. If the signed audit chain cannot durably
+  // record the action, keep the session alive and report the storage failure.
+  if (!audited) return res.status(503).json({ error:'audit-write-failed' });
+  invalidateSessionSid(foundSid);
+  if (current) res.setHeader('Set-Cookie', `sid=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0${secureCookie(req)}`);
+  res.json({ ok:true, current });
 });
 
 // Recent audit entries (any authenticated admin may read).
@@ -15156,13 +15589,20 @@ adminRouter.get('/shares/list-export', (req, res) => {
 });
 
 // Recoverable trash (manual deletions).
-adminRouter.get('/trash',(req,res)=>{const items=trashItems().filter((r)=>trashRecordVisible(req,r)).map(trashPublicRecord);res.json({items,retentionDays:Math.max(0,Number(getSettings().trashRetentionDays)||0),count:items.length});});
+adminRouter.get('/trash',async(req,res)=>{try{const items=await Promise.all(trashItems().filter((r)=>trashRecordVisible(req,r)).map(trashPublicRecord));res.json({items,retentionDays:Math.max(0,Number(getSettings().trashRetentionDays)||0),count:items.length,purgeSummary:{bytes:items.reduce((n,r)=>n+Math.max(0,Number(r.purgeImpact&&r.purgeImpact.bytes)||0),0),items:items.length,dependencies:items.reduce((n,r)=>n+Math.max(0,Number(r.purgeImpact&&r.purgeImpact.dependencyCount)||0),0)}});}catch(e){console.error('[trash] impact failed:',e&&e.message);res.status(500).json({error:'trash-impact-failed'});}});
 adminRouter.get('/trash/:id/change-history',(req,res)=>{const rec=trashItems().find((r)=>r&&r.id===req.params.id);if(!rec||!trashRecordVisible(req,rec)||!rec.share)return res.status(404).json({error:'not-found'});res.json({id:rec.share.id,name:rec.share.name||'',entries:Array.isArray(rec.share.changeHistory)?rec.share.changeHistory.slice(0,SHARE_CHANGE_HISTORY_MAX):[]});});
-adminRouter.post('/trash/:id/restore',(req,res)=>{
+adminRouter.post('/trash/:id/restore',async(req,res)=>{
   const list=trashItems(); const i=list.findIndex((r)=>r&&r.id===req.params.id);
   if(i<0||!trashRecordVisible(req,list[i]))return res.status(404).json({error:'not-found'});
   const original=JSON.parse(JSON.stringify(list[i]));
-  const rec=list.splice(i,1)[0],sh=restoreTrashRecord(rec);
+  const rec=list[i], assessment=await trashRestoreAssessment(rec);
+  if(!assessment.available){
+    const alternative=String(req.body&&req.body.alternativePath||'').trim();
+    if(!alternative)return res.status(409).json({error:'restore-location-missing',assessment});
+    try{if(!await applyTrashRestoreAlternative(rec.share,alternative))return res.status(400).json({error:'invalid-alternative',assessment});}
+    catch(_){return res.status(400).json({error:'invalid-alternative',assessment});}
+  }
+  list.splice(i,1); const sh=restoreTrashRecord(rec);
   recordShareChange(sh,req,'restored',[],null);
   if(!persistNow()){
     detachActiveShare(sh);
@@ -15197,200 +15637,181 @@ adminRouter.post('/undo/:id', (req, res) => {
 async function detailedShareStatsPayload(s, req) {
   const now = Date.now();
   const decorated = decorateShare(s, req);
-  const aggregate = displayStatsForShare(s) || {
-    name: s.name || '', type: s.type || '', count: 0, bytes: 0, up: 0, down: 0,
-    completed: 0, interrupted: 0, lastAt: 0,
-  };
   const statsBaseline = shareStatsBaseline(s);
-  const retained = (state.history || [])
+  const retainedAll = (state.history || [])
     .filter((r) => r && r.shareId === s.id && (!statsBaseline.at || Number(r.endedAt || r.startedAt || 0) > statsBaseline.at))
     .sort((a, b) => (b.endedAt || b.startedAt || 0) - (a.endedAt || a.startedAt || 0));
+
+  const rawPeriod = String((req && req.query && (req.query.period || req.query.days)) || '14').toLowerCase();
+  const days = rawPeriod === 'all' || rawPeriod === '0' ? 0 : ([1,7,14,30].includes(Number(rawPeriod)) ? Number(rawPeriod) : 14);
+  const spanMs = days ? days * 86400000 : 0;
+  const cutoff = days ? now - spanMs : 0;
+  const previousCutoff = days ? cutoff - spanMs : 0;
+  const retained = days ? retainedAll.filter((r) => Number(r.endedAt || r.startedAt || 0) >= cutoff) : retainedAll;
+  const previous = days ? retainedAll.filter((r) => {
+    const at = Number(r.endedAt || r.startedAt || 0);
+    return at >= previousCutoff && at < cutoff;
+  }) : [];
+
+  function aggregateRows(rows) {
+    const out = { count:0, bytes:0, up:0, down:0, completed:0, interrupted:0, lastAt:0, firstAt:0, successRate:0, averageBytes:0, averageBps:0, resumed:0 };
+    let duration = 0;
+    for (const r of rows) {
+      out.count += 1;
+      out.bytes += Math.max(0, Number(r.bytes) || 0);
+      out[r.direction === 'up' ? 'up' : 'down'] += 1;
+      out[r.completed ? 'completed' : 'interrupted'] += 1;
+      if (r.resumed) out.resumed += 1;
+      const at = Number(r.endedAt || r.startedAt) || 0;
+      if (!out.lastAt || at > out.lastAt) out.lastAt = at;
+      const first = Number(r.startedAt || r.endedAt) || 0;
+      if (!out.firstAt || (first && first < out.firstAt)) out.firstAt = first;
+      duration += Math.max(0, Number(r.durationMs) || 0);
+    }
+    out.successRate = out.count ? Math.round((out.completed / out.count) * 1000) / 10 : 0;
+    out.averageBytes = out.count ? Math.round(out.bytes / out.count) : 0;
+    out.averageBps = duration > 0 ? Math.round((out.bytes / duration) * 1000) : 0;
+    return out;
+  }
+
+  let aggregate = aggregateRows(retained);
+  // Lifetime view preserves the durable aggregate even when old journal rows have
+  // already aged out of retention. Average speed/firstAt still use retained rows.
+  if (!days) {
+    const durable = displayStatsForShare(s) || {};
+    const durableCount = Math.max(0, Number(durable.count) || 0);
+    aggregate = {
+      ...aggregate,
+      count: durableCount,
+      bytes: Math.max(0, Number(durable.bytes) || 0),
+      up: Math.max(0, Number(durable.up) || 0),
+      down: Math.max(0, Number(durable.down) || 0),
+      completed: Math.max(0, Number(durable.completed) || 0),
+      interrupted: Math.max(0, Number(durable.interrupted) || 0),
+      lastAt: Math.max(Number(durable.lastAt) || 0, aggregate.lastAt || 0),
+    };
+    aggregate.successRate = aggregate.count ? Math.round((aggregate.completed / aggregate.count) * 1000) / 10 : 0;
+    aggregate.averageBytes = aggregate.count ? Math.round(aggregate.bytes / aggregate.count) : 0;
+  }
+  const previousAggregate = aggregateRows(previous);
+  const pctChange = (current, prior) => {
+    current = Number(current) || 0; prior = Number(prior) || 0;
+    if (!prior) return current ? 100 : 0;
+    return Math.round(((current - prior) / prior) * 1000) / 10;
+  };
+  const comparison = days ? {
+    available: true,
+    days,
+    previous: previousAggregate,
+    delta: {
+      countPct: pctChange(aggregate.count, previousAggregate.count),
+      bytesPct: pctChange(aggregate.bytes, previousAggregate.bytes),
+      completedPct: pctChange(aggregate.completed, previousAggregate.completed),
+      interruptedPct: pctChange(aggregate.interrupted, previousAggregate.interrupted),
+      successRatePoints: Math.round((aggregate.successRate - previousAggregate.successRate) * 10) / 10,
+      speedPct: pctChange(aggregate.averageBps, previousAggregate.averageBps),
+    },
+  } : { available:false };
+
   const live = [...activeTransfers.values()]
     .filter((t) => t && t.shareId === s.id)
     .map((t) => ({
-      id: t.id,
-      name: t.name || s.name || '',
-      direction: t.direction === 'up' ? 'up' : 'down',
-      bytes: t.bytes || 0,
-      expectedBytes: t.expectedBytes || 0,
-      startedAt: t.startedAt || 0,
-      lastActivity: t.lastActivity || t.startedAt || 0,
-      ip: pubIp(t.ip || ''),
-      ipName: ipNameFor(pubIp(t.ip || '')),
-      country: t.country || null,
-      flag: t.flag || null,
-      recipient: t.recipientName || null,
+      id:t.id, name:t.name || s.name || '', direction:t.direction === 'up' ? 'up' : 'down',
+      bytes:t.bytes || 0, expectedBytes:t.expectedBytes || 0, startedAt:t.startedAt || 0,
+      lastActivity:t.lastActivity || t.startedAt || 0, ip:pubIp(t.ip || ''), ipName:ipNameFor(pubIp(t.ip || '')),
+      country:t.country || null, flag:t.flag || null, recipient:t.recipientName || null,
+      resumed:!!t.resumed, resumeOffset:Math.max(0, Number(t.resumeOffset) || 0),
     }));
 
-  const totalDurationMs = retained.reduce((sum, r) => sum + Math.max(0, Number(r.durationMs) || 0), 0);
-  const retainedBytes = retained.reduce((sum, r) => sum + Math.max(0, Number(r.bytes) || 0), 0);
-  const completed = Number(aggregate.completed) || 0;
-  const count = Number(aggregate.count) || 0;
-  const successRate = count ? Math.round((completed / count) * 1000) / 10 : 0;
-
-  const countryMap = new Map();
-  const clientMap = new Map();
+  const countryMap = new Map(), clientMap = new Map(), failureMap = new Map();
   for (const r of retained) {
     const countryKey = r.countryCode || r.country || 'unknown';
-    const country = countryMap.get(countryKey) || {
-      code: r.countryCode || null,
-      name: r.country || 'Unknown',
-      flag: r.flag || null,
-      count: 0,
-      bytes: 0,
-    };
-    country.count += 1;
-    country.bytes += Math.max(0, Number(r.bytes) || 0);
-    countryMap.set(countryKey, country);
-
+    const country = countryMap.get(countryKey) || { code:r.countryCode || null, name:r.country || 'Unknown', flag:r.flag || null, count:0, bytes:0 };
+    country.count += 1; country.bytes += Math.max(0, Number(r.bytes) || 0); countryMap.set(countryKey, country);
     const displayIp = pubIp(r.ip || '') || '—';
     const clientKey = ipNameFor(displayIp) || displayIp;
-    const client = clientMap.get(clientKey) || { label: clientKey, count: 0, bytes: 0 };
-    client.count += 1;
-    client.bytes += Math.max(0, Number(r.bytes) || 0);
-    clientMap.set(clientKey, client);
+    const client = clientMap.get(clientKey) || { label:clientKey, count:0, bytes:0 };
+    client.count += 1; client.bytes += Math.max(0, Number(r.bytes) || 0); clientMap.set(clientKey, client);
+    if (!r.completed) {
+      const reason = String(r.reason || 'interrupted').slice(0,80);
+      const row = failureMap.get(reason) || { reason, count:0, bytes:0, lastAt:0 };
+      row.count += 1; row.bytes += Math.max(0, Number(r.bytes) || 0); row.lastAt = Math.max(row.lastAt, Number(r.endedAt || r.startedAt) || 0);
+      failureMap.set(reason, row);
+    }
   }
 
-  const dayMs = 86400000;
-  const timelineStart = new Date(now);
-  timelineStart.setHours(0, 0, 0, 0);
-  timelineStart.setTime(timelineStart.getTime() - 13 * dayMs);
-  const timeline = Array.from({ length: 14 }, (_, i) => {
-    const at = timelineStart.getTime() + i * dayMs;
-    return { at, day: new Date(at).toISOString().slice(0, 10), count: 0, bytes: 0, completed: 0, interrupted: 0, up: 0, down: 0 };
-  });
-  for (const r of retained) {
-    const at = Number(r.endedAt || r.startedAt) || 0;
-    const idx = Math.floor((at - timelineStart.getTime()) / dayMs);
-    if (idx < 0 || idx >= timeline.length) continue;
-    const point = timeline[idx];
-    point.count += 1;
-    point.bytes += Math.max(0, Number(r.bytes) || 0);
-    point[r.completed ? 'completed' : 'interrupted'] += 1;
-    point[r.direction === 'up' ? 'up' : 'down'] += 1;
+  function buildTimeline() {
+    if (days === 1) {
+      const bucketMs = 3600000, startAt = cutoff;
+      const points = Array.from({length:24}, (_,i) => ({ at:startAt+i*bucketMs, day:new Date(startAt+i*bucketMs).toISOString().slice(11,16), count:0, bytes:0, completed:0, interrupted:0, up:0, down:0 }));
+      for (const r of retained) { const at=Number(r.endedAt||r.startedAt)||0, idx=Math.min(23,Math.floor((at-startAt)/bucketMs)); if(idx<0)continue; const p=points[idx]; p.count++;p.bytes+=Math.max(0,Number(r.bytes)||0);p[r.completed?'completed':'interrupted']++;p[r.direction==='up'?'up':'down']++; }
+      return { granularity:'hour', points };
+    }
+    let count = days || 30;
+    let startAt;
+    if (days) {
+      count = days;
+      startAt = cutoff;
+    } else {
+      const oldest = retainedAll.length ? Number(retainedAll[retainedAll.length-1].startedAt || retainedAll[retainedAll.length-1].endedAt) || now : now;
+      const spanDays = Math.max(1, Math.ceil((now-oldest)/86400000)+1);
+      count = Math.min(30, spanDays);
+      const bucketDays = Math.max(1, Math.ceil(spanDays/count));
+      const bucketMs = bucketDays*86400000;
+      startAt = Math.floor(oldest/bucketMs)*bucketMs;
+      const points = Array.from({length:count},(_,i)=>({at:startAt+i*bucketMs,day:new Date(startAt+i*bucketMs).toISOString().slice(0,10),count:0,bytes:0,completed:0,interrupted:0,up:0,down:0}));
+      for (const r of retainedAll) { const at=Number(r.endedAt||r.startedAt)||0,idx=Math.min(count-1,Math.floor((at-startAt)/bucketMs)); if(idx<0)continue;const p=points[idx];p.count++;p.bytes+=Math.max(0,Number(r.bytes)||0);p[r.completed?'completed':'interrupted']++;p[r.direction==='up'?'up':'down']++; }
+      return { granularity:bucketDays===1?'day':'multi-day', bucketDays, points };
+    }
+    const points=Array.from({length:count},(_,i)=>({at:startAt+i*86400000,day:new Date(startAt+i*86400000).toISOString().slice(0,10),count:0,bytes:0,completed:0,interrupted:0,up:0,down:0}));
+    for(const r of retained){const at=Number(r.endedAt||r.startedAt)||0,idx=Math.min(points.length-1,Math.floor((at-startAt)/86400000));if(idx<0)continue;const p=points[idx];p.count++;p.bytes+=Math.max(0,Number(r.bytes)||0);p[r.completed?'completed':'interrupted']++;p[r.direction==='up'?'up':'down']++;}
+    return { granularity:'day', points };
   }
+  const timelineData = buildTimeline();
 
   const items = shareItems(s) || [];
-  const logicalBytes = items.reduce((sum, item) => sum + Math.max(0, Number(item.size) || 0), 0)
-    || Math.max(0, Number(s.size) || 0);
+  const logicalBytes = items.reduce((sum,item)=>sum+Math.max(0,Number(item.size)||0),0) || Math.max(0,Number(s.size)||0);
   const effectiveExpiresAt = Number(decorated.effectiveExpiresAt) || Number(shareEffectiveExpiry(s)) || 0;
   const expired = !!(effectiveExpiresAt && now > effectiveExpiresAt);
   const status = s.revoked ? 'revoked' : s.disabled ? 'paused' : isScheduled(s) ? 'scheduled' : expired ? 'expired' : isActive(s) ? 'active' : 'inactive';
-  const quota = [];
-  if (s.maxDownloads > 0) quota.push({ kind: 'downloads', used: s.downloads || 0, max: s.maxDownloads });
-  if (s.maxVisitors > 0) quota.push({ kind: 'visitors', used: Array.isArray(s.visitors) ? s.visitors.length : 0, max: s.maxVisitors });
-  if ((s.type === 'inbox' || s.type === 'collab') && s.maxTotalBytes > 0) quota.push({ kind: 'bytes', used: s.bytesReceived || 0, max: s.maxTotalBytes });
-  if ((s.type === 'inbox' || s.type === 'collab') && s.maxFiles > 0) quota.push({ kind: 'files', used: s.downloads || 0, max: s.maxFiles });
+  const quota=[];
+  if(s.maxDownloads>0)quota.push({kind:'downloads',used:s.downloads||0,max:s.maxDownloads});
+  { const visitorCap=parseMaxVisitors(s.maxVisitors); if(visitorCap>0)quota.push({kind:'visitors',used:Array.isArray(s.visitors)?Math.min(s.visitors.length,VISITORS_MAX):0,max:visitorCap}); }
+  if((s.type==='inbox'||s.type==='collab')&&s.maxTotalBytes>0)quota.push({kind:'bytes',used:s.bytesReceived||0,max:s.maxTotalBytes});
+  if((s.type==='inbox'||s.type==='collab')&&s.maxFiles>0)quota.push({kind:'files',used:s.downloads||0,max:s.maxFiles});
 
-  let image = null;
-  if (s.type === 'photo') {
-    const ps = photoStatsOf(s);
-    const metaFor = async (kind) => {
-      let file = null;
-      if (kind === 'full') {
-        file = firstExistingPhotoFile(photoOriginalPaths(s));
-        if (!file && s.hostPath) {
-          try { file = hostToContainer(s.hostPath); await assertRealWithin(HOST_ROOT, file); } catch (_) { file = null; }
-        }
-      } else {
-        file = firstExistingPhotoFile(photoVariantPaths(s.token, kind));
-      }
-      let size = kind === 'full' ? (Number(s.size) || null) : null;
-      let dim = kind === 'full' && s.w && s.h ? { w: s.w, h: s.h } : null;
-      if (file) {
-        try { size = fs.statSync(file).size; } catch (_) {}
-        try { dim = imageDimensions(file) || dim; } catch (_) {}
-      }
-      const st = ps[kind] || { v: 0, u: [] };
-      return {
-        kind,
-        views: Number(st.v) || 0,
-        visitors: Array.isArray(st.u) ? st.u.length : 0,
-        lastAt: Number(st.lastAt) || 0,
-        size: size || 0,
-        w: dim && dim.w ? dim.w : null,
-        h: dim && dim.h ? dim.h : null,
-        present: !!file,
-      };
+  let image=null;
+  if(s.type==='photo'){
+    const ps=photoStatsOf(s);
+    const metaFor=async(kind)=>{
+      let file=null;
+      if(kind==='full'){file=firstExistingPhotoFile(photoOriginalPaths(s));if(!file&&s.hostPath){try{file=hostToContainer(s.hostPath);await assertRealWithin(HOST_ROOT,file);}catch(_){file=null;}}}
+      else file=firstExistingPhotoFile(photoVariantPaths(s.token,kind));
+      let size=kind==='full'?(Number(s.size)||null):null,dim=kind==='full'&&s.w&&s.h?{w:s.w,h:s.h}:null;
+      if(file){try{size=fs.statSync(file).size;}catch(_){}try{dim=imageDimensions(file)||dim;}catch(_){}}
+      const st=ps[kind]||{v:0,u:[]}; const views=Number(st.v)||0;
+      return {kind,views,visitors:Array.isArray(st.u)?st.u.length:0,lastAt:Number(st.lastAt)||0,size:size||0,w:dim&&dim.w?dim.w:null,h:dim&&dim.h?dim.h:null,present:!!file,bandwidthBytes:views*Math.max(0,Number(size)||0)};
     };
-    const variants = {
-      full: await metaFor('full'),
-      thumb: await metaFor('thumb'),
-      micro: await metaFor('micro'),
-    };
-    const recentViews = await detailedPhotoRecentViews(s, 50);
-    image = {
-      ext: photoExt(s),
-      totalViews: variants.full.views + variants.thumb.views + variants.micro.views,
-      totalVisitors: variants.full.visitors + variants.thumb.visitors + variants.micro.visitors,
-      totalStorageBytes: variants.full.size + variants.thumb.size + variants.micro.size,
-      variants,
-      recentViews,
-    };
+    const variants={full:await metaFor('full'),thumb:await metaFor('thumb'),micro:await metaFor('micro')};
+    const recentViews=await detailedPhotoRecentViews(s,50); const totalViews=variants.full.views+variants.thumb.views+variants.micro.views;
+    for(const v of Object.values(variants))v.viewSharePct=totalViews?Math.round((v.views/totalViews)*1000)/10:0;
+    const uniqueImageVisitors = new Set();
+    for (const kind of ['full','thumb','micro']) { const st=ps[kind]||{}; if (Array.isArray(st.u)) for (const visitor of st.u) if (visitor) uniqueImageVisitors.add(visitor); }
+    image={ext:photoExt(s),totalViews,totalVisitors:uniqueImageVisitors.size,totalStorageBytes:variants.full.size+variants.thumb.size+variants.micro.size,totalBandwidthBytes:variants.full.bandwidthBytes+variants.thumb.bandwidthBytes+variants.micro.bandwidthBytes,variants,recentViews};
   }
 
-  const recent = retained.slice(0, 50).map((r) => {
-    const displayIp = pubIp(r.ip || '');
-    return {
-      at: r.endedAt || r.startedAt || 0,
-      startedAt: r.startedAt || 0,
-      direction: r.direction === 'up' ? 'up' : 'down',
-      name: r.name || '',
-      recipient: r.recipientName || null,
-      ip: displayIp || null,
-      ipName: ipNameFor(displayIp),
-      country: r.country || null,
-      countryCode: r.countryCode || null,
-      flag: r.flag || null,
-      bytes: r.bytes || 0,
-      durationMs: r.durationMs || 0,
-      avgBps: r.avgBps || 0,
-      completed: !!r.completed,
-      reason: r.reason || null,
-    };
-  });
+  const recent=retained.slice(0,50).map((r)=>{const displayIp=pubIp(r.ip||'');return{at:r.endedAt||r.startedAt||0,startedAt:r.startedAt||0,direction:r.direction==='up'?'up':'down',name:r.name||'',recipient:r.recipientName||null,ip:displayIp||null,ipName:ipNameFor(displayIp),country:r.country||null,countryCode:r.countryCode||null,flag:r.flag||null,bytes:r.bytes||0,durationMs:r.durationMs||0,avgBps:r.avgBps||0,completed:!!r.completed,reason:r.reason||null,resumed:!!r.resumed,resumeOffset:Math.max(0,Number(r.resumeOffset)||0)};});
 
   return {
-    share: {
-      id: s.id,
-      name: s.name || '',
-      type: s.type || '',
-      status,
-      active: isActive(s),
-      createdAt: s.createdAt || 0,
-      startsAt: s.startsAt || 0,
-      expiresAt: s.expiresAt || 0,
-      effectiveExpiresAt,
-      ownerName: s.ownerName || null,
-      url: s.type === 'photo' && decorated.photo ? decorated.photo.imgUrl : decorated.url,
-      path: s.hostPath || s.relDir || null,
-      tags: Array.isArray(s.tags) ? s.tags : [],
-      itemCount: items.length || decorated.itemCount || 0,
-      logicalBytes,
-      views: Math.max(0, (Number(s.views) || 0) - statsBaseline.views),
-      uniqueVisitors: Math.max(0, (Array.isArray(s.visitors) ? s.visitors.length : 0) - statsBaseline.visitors),
-      downloads: Math.max(0, (Number(s.downloads) || 0) - statsBaseline.downloads),
-    },
-    aggregate: {
-      count,
-      bytes: Number(aggregate.bytes) || 0,
-      up: Number(aggregate.up) || 0,
-      down: Number(aggregate.down) || 0,
-      completed,
-      interrupted: Number(aggregate.interrupted) || 0,
-      lastAt: Number(aggregate.lastAt) || 0,
-      firstAt: retained.length ? (retained[retained.length - 1].startedAt || retained[retained.length - 1].endedAt || 0) : 0,
-      successRate,
-      averageBytes: count ? Math.round((Number(aggregate.bytes) || 0) / count) : 0,
-      averageBps: totalDurationMs > 0 ? Math.round((retainedBytes / totalDurationMs) * 1000) : 0,
-    },
-    quota,
-    live,
-    timeline,
-    countries: [...countryMap.values()].sort((a, b) => b.count - a.count || b.bytes - a.bytes).slice(0, 12),
-    clients: [...clientMap.values()].sort((a, b) => b.count - a.count || b.bytes - a.bytes).slice(0, 12),
-    recent,
-    image,
+    period:{days,label:days?String(days)+'d':'all',startAt:cutoff||null,endAt:now,granularity:timelineData.granularity,bucketDays:timelineData.bucketDays||1},
+    comparison,
+    share:{id:s.id,name:s.name||'',type:s.type||'',status,active:isActive(s),createdAt:s.createdAt||0,startsAt:s.startsAt||0,expiresAt:s.expiresAt||0,effectiveExpiresAt,ownerName:s.ownerName||null,url:s.type==='photo'&&decorated.photo?decorated.photo.imgUrl:decorated.url,path:s.hostPath||s.relDir||null,tags:Array.isArray(s.tags)?s.tags:[],itemCount:items.length||decorated.itemCount||0,logicalBytes,views:Math.max(0,(Number(s.views)||0)-statsBaseline.views),uniqueVisitors:Math.max(0,(Array.isArray(s.visitors)?s.visitors.length:0)-statsBaseline.visitors),downloads:Math.max(0,(Number(s.downloads)||0)-statsBaseline.downloads)},
+    aggregate,
+    quota,live,timeline:timelineData.points,
+    countries:[...countryMap.values()].sort((a,b)=>b.count-a.count||b.bytes-a.bytes).slice(0,12),
+    clients:[...clientMap.values()].sort((a,b)=>b.count-a.count||b.bytes-a.bytes).slice(0,12),
+    failureReasons:[...failureMap.values()].sort((a,b)=>b.count-a.count||b.lastAt-a.lastAt).slice(0,12),
+    recent,image,
   };
 }
 
@@ -15669,7 +16090,7 @@ adminRouter.post('/shares', async (req, res) => {
     if (note) share.note = note;
   }
   // Auto-revoke after N distinct visitors (0 / absent = unlimited).
-  const maxVisitors = Math.max(0, parseInt(body.maxVisitors, 10) || 0);
+  const maxVisitors = parseMaxVisitors(body.maxVisitors);
   if (maxVisitors > 0) share.maxVisitors = maxVisitors;
   // Download-goal alert — notify once when completed downloads reach N (0 = off).
   const dlThreshold = Math.max(0, Math.floor(Number(body.notifyDownloadThreshold) || 0));
@@ -15824,6 +16245,8 @@ function handleAdminPhotoVariantUpload(req, res, s, kind, maxBytes) {
       if (dims && dims.w > 0 && dims.h > 0) { s[kind + 'W'] = dims.w; s[kind + 'H'] = dims.h; }
       else { delete s[kind + 'W']; delete s[kind + 'H']; }
       try { s[kind + 'MetaMtimeMs'] = Math.floor(fs.statSync(dest).mtimeMs || 0); } catch (_) { delete s[kind + 'MetaMtimeMs']; }
+      bumpPhotoCacheRevision(s);
+      addPhotoEditHistory(s, 'variant', ['resize-' + kind], { variant:kind, w:dims&&dims.w||null, h:dims&&dims.h||null, size });
       if (!persistNow()) {
         restorePlainObject(s, before);
         try { fs.unlinkSync(dest); } catch (_) {}
@@ -15846,6 +16269,35 @@ function handleAdminPhotoVariantUpload(req, res, s, kind, maxBytes) {
   });
   req.pipe(ws);
 }
+function handlePhotoAdaptiveUpload(req, res, s, fmt, maxBytes) {
+  const key = `${s.id}:adaptive-${fmt}`;
+  if (adminPhotoFullWrites.has(String(s.id)) || adminPhotoVariantWrites.has(key)) { req.resume(); return res.status(409).json({ error:'variant-busy' }); }
+  adminPhotoVariantWrites.add(key);
+  let released=false; const release=()=>{ if(!released){released=true;adminPhotoVariantWrites.delete(key);} };
+  res.once('finish',release); res.once('close',release);
+  const dest=photoAdaptivePath(s.token,fmt), tmp=dest+'.upload-'+crypto.randomBytes(6).toString('hex');
+  streamToFileBounded(req,res,tmp,maxBytes,(size)=>{
+    const before=JSON.parse(JSON.stringify(s)); let backup=null;
+    try {
+      try { if(fs.statSync(dest).isFile()){backup=dest+'.backup-'+crypto.randomBytes(6).toString('hex');fs.renameSync(dest,backup);} } catch(e){if(e.code!=='ENOENT')throw e;}
+      fs.renameSync(tmp,dest);
+      const dims=imageDimensions(dest), prefix=fmt==='webp'?'adaptiveWebp':'adaptiveAvif';
+      s[prefix]=true; s[prefix+'Size']=size;
+      if(dims&&dims.w>0&&dims.h>0){s[prefix+'W']=dims.w;s[prefix+'H']=dims.h;}else{delete s[prefix+'W'];delete s[prefix+'H'];}
+      bumpPhotoCacheRevision(s);
+      addPhotoEditHistory(s,'variant',['adaptive-'+fmt],{variant:fmt,w:dims&&dims.w||null,h:dims&&dims.h||null,size});
+      if(!persistNow()){
+        restorePlainObject(s,before); try{fs.unlinkSync(dest);}catch(_){} if(backup){try{fs.renameSync(backup,dest);}catch(_){}}
+        return res.status(503).json({error:'write-error',persisted:false});
+      }
+      if(backup){try{fs.unlinkSync(backup);}catch(e){console.error('[photo-adaptive] old variant cleanup failed:',e&&e.message);}}
+      res.json({ok:true,persisted:true,bytes:size,w:dims&&dims.w||null,h:dims&&dims.h||null,revision:photoCacheRevision(s)});
+    } catch(e) {
+      restorePlainObject(s,before); try{fs.unlinkSync(tmp);}catch(_){} try{fs.unlinkSync(dest);}catch(_){} if(backup){try{fs.renameSync(backup,dest);}catch(_){}}
+      if(!res.headersSent)res.status(500).json({error:'adaptive-failed'});
+    }
+  });
+}
 
 adminRouter.post('/photos/:id/thumb', (req, res) => {
   const s=getById(req.params.id);
@@ -15863,6 +16315,39 @@ adminRouter.post('/photos/:id/micro', (req, res) => {
 // current version is archived first, the variant files/flags are cleared so the
 // gallery lazily regenerates Mini/Micro, and the new bytes are DLP-scanned exactly
 // like a fresh upload (the client resubmits with ?dlpOverride=1 to confirm a warn).
+// Authenticated standard-admin preview used by history / before-after UI.
+// It deliberately bypasses the public /i/ route so management previews do not
+// increment public view or visitor counters.
+adminRouter.get('/photos/:id/preview', (req,res) => {
+  const photo=getById(req.params.id); if(!photo||photo.type!=='photo'||!ownsShare(req,photo))return res.status(404).end();
+  const file=firstExistingPhotoFile(photoOriginalPaths(photo)); if(!file)return res.status(404).end();
+  return streamFile(req,res,file,photo.name||('image.'+photoExt(photo)),null,null,{inline:true,cacheControl:'no-store'});
+});
+
+adminRouter.get('/photos/:id/versions', (req, res) => {
+  const photo=getById(req.params.id); if(!photo||photo.type!=='photo'||!ownsShare(req,photo))return res.status(404).json({error:'not-found'});
+  res.setHeader('Cache-Control','no-store');
+  res.json({ current:{name:photo.name,size:photo.size||0,w:photo.w||null,h:photo.h||null,revision:photoCacheRevision(photo)}, versions:(photo.versions||[]).map((v)=>({id:v.id,at:v.at,name:v.name,size:v.size,w:v.w,h:v.h,metadataRemoved:!!v.metadataRemoved,original:!!v.original,reason:v.reason||'edit',operations:Array.isArray(v.operations)?v.operations:[]})), history:Array.isArray(photo.editHistory)?photo.editHistory.slice(0,50):[] });
+});
+adminRouter.get('/photos/:id/versions/:versionId/preview', (req,res) => {
+  const photo=getById(req.params.id); if(!photo||photo.type!=='photo'||!ownsShare(req,photo))return res.status(404).end();
+  const version=(photo.versions||[]).find((v)=>v.id===req.params.versionId); if(!version)return res.status(404).end();
+  const file=firstExistingPhotoFile([path.join(photoVersionDir(photo.token),version.id,'full.'+version.ext)]); if(!file)return res.status(404).end();
+  return streamFile(req,res,file,version.name||('version.'+version.ext),null,null,{inline:true,cacheControl:'no-store'});
+});
+adminRouter.post('/photos/:id/restore/:versionId', async (req,res) => {
+  const photo=getById(req.params.id); if(!photo||photo.type!=='photo'||!ownsShare(req,photo))return res.status(404).json({error:'not-found'});
+  const mutationKey=String(photo.id);
+  if(adminPhotoFullWrites.has(mutationKey)||adminPhotoHasVariantWrite(mutationKey))return res.status(409).json({error:'image-busy'});
+  adminPhotoFullWrites.add(mutationKey); let mutationReleased=false; const releaseMutation=()=>{if(!mutationReleased){mutationReleased=true;adminPhotoFullWrites.delete(mutationKey);}}; res.once('finish',releaseMutation);res.once('close',releaseMutation);
+  const version=(photo.versions||[]).find((v)=>v.id===req.params.versionId); if(!version)return res.status(404).json({error:'version-not-found'});
+  let tx; try{tx=restorePhotoVersion(photo,version);}catch(_){return res.status(500).json({error:'archive-failed'});} if(!tx)return res.status(404).json({error:'version-not-found'});
+  if(!persistNow()){restorePlainObject(photo,tx.before);if(tx.archivedVersion){try{fs.rmSync(path.join(photoVersionDir(photo.token),tx.archivedVersion.id),{recursive:true,force:true});}catch(_){}}try{fs.unlinkSync(tx.newDest);}catch(_){}return res.status(503).json({error:'write-error'});}
+  cleanupPhotoVersionStorage(photo);
+  try{await unlinkManagedPathsStrict(tx.oldManagedPaths);}catch(e){console.error('[photo-restore] cleanup failed:',e&&e.message);}
+  auditReq(req,'image-version-restored',(photo.name||photo.id)+' · '+version.id); res.json({ok:true,share:decorateShare(photo,req)});
+});
+
 adminRouter.post('/photos/:id/replace', (req, res) => {
   const s = getById(req.params.id);
   if (!s || s.type !== 'photo' || !ownsShare(req, s)) { req.resume(); return res.status(404).json({ error: 'not-found' }); }
@@ -15892,19 +16377,24 @@ adminRouter.post('/photos/:id/replace', (req, res) => {
       if (duplicate && !/^(1|true|yes|on)$/i.test(String(req.query.duplicateOverride || ''))) { fs.unlink(dest, () => {}); return res.status(409).json({ error:'duplicate-content', duplicate:duplicatePhotoPayload(duplicate,req,false), sha256 }); }
       const before = JSON.parse(JSON.stringify(s));
       const oldManagedPaths = [...photoOriginalPaths(s), ...photoVariantPaths(s.token, 'thumb'), ...photoVariantPaths(s.token, 'micro'), photoAdaptivePath(s.token, 'webp'), photoAdaptivePath(s.token, 'avif')];
+      const editOperations = cleanPhotoEditOperations(req.query.ops);
       let archivedVersion = null;
-      try { archivedVersion = archiveCurrentPhotoVersion(s); } catch (e) { fs.unlink(dest, () => {}); return res.status(500).json({ error: 'archive-failed' }); }
+      try { archivedVersion = archiveCurrentPhotoVersion(s, { reason:'edit', operations:editOperations }); } catch (e) { fs.unlink(dest, () => {}); return res.status(500).json({ error: 'archive-failed' }); }
       s.imgPath = fname; s.ext = ext; s.size = size; s.contentSha256 = sha256;
       if (String(req.query.metadataRemoved || '') === '1') s.metadataRemoved = true;
       const dims = imageDimensions(dest); if (dims && dims.w > 0 && dims.h > 0) { s.w = dims.w; s.h = dims.h; }
       delete s.thumb; delete s.micro; delete s.adaptiveWebp; delete s.adaptiveAvif; delete s.thumbSize; delete s.microSize; delete s.thumbW; delete s.thumbH; delete s.microW; delete s.microH; delete s.thumbMetaMtimeMs; delete s.microMetaMtimeMs;
-      s.editedAt = Date.now(); applyDlpSummary(s, scan);
+      s.editedAt = Date.now();
+      bumpPhotoCacheRevision(s);
+      addPhotoEditHistory(s, 'edit', editOperations.length ? editOperations : ['replace'], { from:{w:before.w||null,h:before.h||null,size:before.size||0}, to:{w:s.w||null,h:s.h||null,size:s.size||0} });
+      applyDlpSummary(s, scan);
       if (!persistNow()) {
         for (const key of Object.keys(s)) delete s[key]; Object.assign(s, before);
         if (archivedVersion) { try { fs.rmSync(path.join(photoVersionDir(s.token), archivedVersion.id), { recursive:true, force:true }); } catch (_) {} }
         try { fs.unlinkSync(dest); } catch (_) {}
         return res.status(503).json({ error:'write-error' });
       }
+      cleanupPhotoVersionStorage(s);
       try { await unlinkManagedPathsStrict(oldManagedPaths); } catch (e) { console.error('[photo-edit] old file cleanup failed:', e && e.message); }
       addShareCenterNotification(s,'image-full-replaced',{name:s.name,bytes:size,dedupeKey:`image-replaced:${s.id}:${s.editedAt}`});
       auditReq(req, 'photo-edited', s.name);
@@ -15915,12 +16405,12 @@ adminRouter.post('/photos/:id/replace', (req, res) => {
 
 // Streams one image selected in the authenticated host-file picker back to the
 // admin browser so it can be re-encoded locally before sharing. This endpoint is
-adminRouter.get('/dlp/quarantine', (req, res) => {
+adminRouter.get('/dlp/quarantine', requireAuditAccess, (req, res) => {
   const records = dlpQuarantineRecords().slice().reverse().map((r) => ({ ...r, file: r.file ? true : false }));
   res.setHeader('Cache-Control','no-store');
   res.json({ records });
 });
-adminRouter.delete('/dlp/quarantine/:id', (req, res) => {
+adminRouter.delete('/dlp/quarantine/:id', requireFullAdmin, (req, res) => {
   const list = dlpQuarantineRecords(); const idx = list.findIndex((r) => r.id === String(req.params.id || ''));
   if (idx < 0) return res.status(404).json({ error:'not-found' });
   const rec = list[idx];
@@ -16232,11 +16722,14 @@ adminRouter.post('/shares/:id/clone', async (req, res) => {
   for (const key of [
     'id', 'token', 'createdAt', 'downloads', 'revoked', 'disabled',
     'burnedAt', 'burnedReason', 'visitors', 'views', 'expiryWarnedAt', 'downloadLimitReachedAt',
-    'messages', 'pending', 'recipients', 'encPath', 'ownerId', 'ownerName',
+    'messages', 'pending', 'recipients', 'encPath', 'ownerId', 'ownerName', 'ownerDeviceId',
     'pstats', 'bytesReceived', 'pinned', 'archived', 'autoArchivedAt', 'favorite', 'changeHistory', 'lastViewAt', 'lastUseAt', 'lastDownload', 'lastUpload', 'firstUsedAt', 'firstUseExpiresAt', 'firstUseExpiryWarnedDeadline', 'expirySetAt', 'inactiveExpiryWarnedDeadline', 'statsBaseline', 'adminComments', 'editedAt',
     'firstViewNotifiedAt', 'firstViewKind', 'firstViewIp', 'firstViewPushPending', 'firstViewPushQueuedAt', 'firstViewPushAcceptedAt', 'downloadThresholdNotifiedAt',
     'centerFirstDepositAt', 'centerProtectedFirstAccessAt', 'centerNotificationCountries',
     'centerViewMilestones', 'centerDownloadMilestones', 'centerVisitorAgents', 'centerExpiredDeadline',
+    'receivedHashes', 'senderStats', 'versions', 'editHistory', 'cacheRevision', 'cacheInvalidatedAt',
+    'ipDownloads', 'bytesServed', 'firstViewPushAcceptedCount', 'centerFileSignature', 'centerFileFingerprint',
+    'retentionReason', 'retentionRevokedAt', 'uploadDeviceName', 'uploadSource',
   ]) delete clone[key];
 
   clone.name = nextName;
@@ -16305,9 +16798,29 @@ adminRouter.post('/shares/:id/clone', async (req, res) => {
           copiedPhotoFiles.push(microDestination);
         }
       }
+      for (const fmt of ['webp','avif']) {
+        const prefix = fmt === 'webp' ? 'adaptiveWebp' : 'adaptiveAvif';
+        for (const suffix of ['', 'Size', 'W', 'H']) delete clone[prefix + suffix];
+        if (!source[prefix]) continue;
+        const srcAdaptive = photoAdaptivePath(source.token, fmt);
+        const dstAdaptive = photoAdaptivePath(clone.token, fmt);
+        try {
+          if (srcAdaptive && dstAdaptive && (await fs.promises.stat(srcAdaptive)).isFile()) {
+            await copyPhotoFile(srcAdaptive, dstAdaptive);
+            copiedPhotoFiles.push(dstAdaptive);
+            clone[prefix] = true;
+            clone[prefix + 'Size'] = Math.max(0, Number(source[prefix + 'Size']) || (await fs.promises.stat(dstAdaptive)).size || 0);
+            if (source[prefix + 'W']) clone[prefix + 'W'] = source[prefix + 'W'];
+            if (source[prefix + 'H']) clone[prefix + 'H'] = source[prefix + 'H'];
+          }
+        } catch (_) {
+          for (const suffix of ['', 'Size', 'W', 'H']) delete clone[prefix + suffix];
+        }
+      }
     }
 
     stampOwner(clone, req);
+    if (clone.type === 'photo') stampPhotoUploadDevice(clone, req, 'web');
     applyNewShareLifetimePolicy(clone);
     const record = addShare(clone, req, { action: 'created-from-duplicate', fields: ['name'], before: { name: source.name || '' } }, false);
     if (!persistNow()) { detachActiveShare(record); const e = new Error('write-error'); e.code = 'WRITE_ERROR'; throw e; }
@@ -16602,7 +17115,7 @@ adminRouter.patch('/shares/:id', (req, res) => {
     changed.push('burnAfterDownload');
   }
   if (body.maxVisitors !== undefined) {
-    const mv = Math.max(0, parseInt(body.maxVisitors, 10) || 0);
+    const mv = parseMaxVisitors(body.maxVisitors);
     const current = Math.max(0, Number(s.maxVisitors) || 0);
     if (mv !== current) { if (mv > 0) s.maxVisitors = mv; else delete s.maxVisitors; changed.push('maxVisitors'); }
   }
@@ -16737,6 +17250,41 @@ adminRouter.patch('/shares/:id', (req, res) => {
     if (body.allowFeedback) s.allowFeedback = true; else delete s.allowFeedback;
     changed.push(body.allowFeedback ? 'allowFeedback' : 'allowFeedbackOff');
   }
+  // Reception/collaboration rules are editable after creation. This keeps the
+  // link identity/token while allowing quotas, filters and safety policy to evolve.
+  if (s.type === 'inbox' || s.type === 'collab') {
+    let invalidReceptionRule = false;
+    const editPositiveInt = (key, value) => {
+      if (value === undefined) return;
+      const raw = Number(value);
+      if (!Number.isFinite(raw) || raw < 0 || raw > Number.MAX_SAFE_INTEGER) { invalidReceptionRule = true; return; }
+      const next = Math.floor(raw);
+      const cur = Math.max(0, Number(s[key]) || 0);
+      if (next !== cur) { if (next) s[key] = next; else delete s[key]; changed.push(key); }
+    };
+    editPositiveInt('maxFiles', body.maxFiles);
+    editPositiveInt('maxFilesPerUpload', body.maxFilesPerUpload);
+    editPositiveInt('maxFileBytes', body.maxFileBytes);
+    editPositiveInt('maxTotalBytes', body.maxTotalBytes);
+    editPositiveInt('maxFilesPerSender', body.maxFilesPerSender);
+    editPositiveInt('maxBytesPerSender', body.maxBytesPerSender);
+    if (invalidReceptionRule) return res.status(400).json({ error:'invalid-reception-rule' });
+    for (const key of ['allowExt','blockExt']) {
+      if (body[key] !== undefined) {
+        const next = normExtList(body[key]);
+        const cur = Array.isArray(s[key]) ? s[key] : [];
+        if (next.join('\0') !== cur.join('\0')) { if (next.length) s[key] = next; else delete s[key]; changed.push(key); }
+      }
+    }
+    for (const key of ['groupBySender','tagBySender','rejectDuplicates','requireSenderName','blockExecutables','moderated']) {
+      if (typeof body[key] === 'boolean' && body[key] !== !!s[key]) { if (body[key]) s[key] = true; else delete s[key]; changed.push(key); }
+    }
+    if (s.type === 'collab' && typeof body.allowDelete === 'boolean') {
+      const next = !!body.allowDelete && !!s.pwHash;
+      if (next !== !!s.allowDelete) { if (next) s.allowDelete = true; else delete s.allowDelete; changed.push('allowDelete'); }
+    }
+  }
+
   if (Array.isArray(body.tags)) {
     const tags = normalizeTags(body.tags);
     if (tags.join('\x00') !== (Array.isArray(s.tags) ? s.tags : []).join('\x00')) {
@@ -16958,7 +17506,12 @@ adminRouter.patch('/shares/:id/items/order', (req, res) => {
 
 // Indexed universal search. Queries no longer walk the filesystem;
 // they hit the persistent in-memory inverted index and are filtered by share ownership.
-adminRouter.get('/search/status', (req, res) => res.json(universalSearchStatus()));
+adminRouter.get('/search/status', (req, res) => {
+  const role = req.session && req.session.role;
+  const globalView = role === 'owner' || role === 'admin' || role === 'auditor';
+  const canAccess = (share) => universalSearchShareEligible(share) && ownsShare(req, share);
+  res.json(universalSearchScopedStatus(canAccess, globalView));
+});
 adminRouter.post('/search/reindex', requireFullAdmin, (req, res) => {
   if (!searchIndexBuilding) buildUniversalSearchIndex().catch(() => {});
   auditReq(req, 'search-reindex', 'manual rebuild requested');
@@ -16976,24 +17529,43 @@ adminRouter.get('/search', async (req, res) => {
   const semantic = /^(1|true|yes|on)$/i.test(String(req.query.semantic || ''));
   const requestedScope = String(req.query.scope || '').trim().toLowerCase();
   const scope = ['all','content','links','users','logs'].includes(requestedScope) ? requestedScope : (type ? 'content' : 'all');
-  let contentResults = [];
+  let contentResults = [], metadataResults = [];
+  const warnings = [];
   if (scope === 'all' || scope === 'content') {
-    contentResults = semantic
-      ? universalSemanticSearchQuery(q, req, limit, { type }).map((r) => ({ ...r, scope:'content' }))
-      : universalSearchQuery(q, req, limit, { type }).map((r) => ({ ...r, scope:'content' }));
+    try {
+      contentResults = semantic
+        ? universalSemanticSearchQuery(q, req, limit, { type }).map((r) => ({ ...r, scope:'content' }))
+        : universalSearchQuery(q, req, limit, { type }).map((r) => ({ ...r, scope:'content' }));
+    } catch (e) {
+      warnings.push('content-index');
+      console.error('[search] content query failed:', e && e.message);
+    }
   }
   const metadataScopes = scope === 'all' ? ['links','users','logs'] : (scope === 'content' ? [] : [scope]);
-  const metadataResults = metadataScopes.length ? globalMetadataSearch(q, req, limit, { scopes:metadataScopes }) : [];
-  // Metadata hits are cheap and highly actionable, so surface them first; content
-  // hits keep their indexed/semantic ordering after them.
-  const results = metadataResults.concat(contentResults).slice(0, limit);
+  if (metadataScopes.length) {
+    try {
+      metadataResults = globalMetadataSearch(q, req, limit, { scopes:metadataScopes });
+    } catch (e) {
+      warnings.push('metadata');
+      console.error('[search] metadata query failed:', e && e.message);
+    }
+  }
+  // Rank all result families together. Exact/prefix filename hits receive the
+  // strongest content scores, so an actionable exact filename is never buried
+  // behind an approximate OCR/log metadata hit.
+  const results = metadataResults.concat(contentResults).sort((a,b) =>
+    Number(b.filenameMatchRank || 0) - Number(a.filenameMatchRank || 0)
+    || Number(b.relevanceScore || b.semanticScore || 0) - Number(a.relevanceScore || a.semanticScore || 0)
+    || String(a.file || a.shareName || '').localeCompare(String(b.file || b.shareName || ''))
+  ).slice(0, limit);
   const visibleCount = (universalSearchIndex.docs || []).reduce((n, d) => {
     const share = getById(d.shareId);
     const typeOk = !type || String((share && share.type) || d.type || '').toLowerCase() === type;
     return n + (typeOk && universalSearchShareEligible(share) && ownsShare(req, share) ? 1 : 0);
   }, 0);
   res.json({ query:q, results, semantic, scope, scanned:visibleCount, indexed:visibleCount, builtAt:universalSearchIndex.builtAt || 0,
-    building:searchIndexBuilding, truncated:results.length >= limit || !!universalSearchIndex.truncated, indexError:searchIndexError });
+    building:searchIndexBuilding, truncated:results.length >= limit || !!universalSearchIndex.truncated, indexError:searchIndexError,
+    degraded:warnings.length > 0, warnings });
 });
 
 // --- Nominative sub-links (recipients) -------------------------------------
@@ -18166,6 +18738,102 @@ async function diagnosticTcp(host, port, timeoutMs) {
     socket.once('connect', () => finish(true)); socket.once('error', (e) => finish(false, String(e.code || e.message || e)));
   });
 }
+function tlsCertificateDiagnostics() {
+  const out = { mode:ACTIVE_TLS_MODE, active:ACTIVE_TLS_MODE !== 'http', minProtocol:'TLSv1.2', restartRequired:!!tlsCertificateRestartRequired };
+  if (!out.active) return { ...out, status:'info', reason:'http-only', fixable:false };
+  try {
+    // Diagnose the certificate loaded in the live HTTPS context, not merely the
+    // files currently on disk. Certificate managers commonly update cert/key in
+    // separate writes; Direct-Xfer deliberately keeps serving the last known-good
+    // context until a complete pair validates.
+    let certBytes = activeTlsLeafPem ? Buffer.from(activeTlsLeafPem) : null;
+    if (!certBytes) {
+      if (ACTIVE_TLS_MODE === 'provided' && TLS_CERT) certBytes = fs.readFileSync(TLS_CERT);
+      else if (localCaModeActive()) certBytes = readManagedTlsFile(localCaPaths().serverCert);
+    }
+    if (!certBytes) throw new Error('active certificate unavailable');
+    const x = new crypto.X509Certificate(certBytes);
+    const validFrom = Date.parse(x.validFrom) || 0, validTo = Date.parse(x.validTo) || 0, now = Date.now();
+    const sanText = String(x.subjectAltName || '');
+    const sans = sanText ? sanText.split(/,\s*/).map((v)=>v.trim()).filter(Boolean).slice(0,50) : [];
+    const subject = String(x.subject || '');
+    const issuer = String(x.issuer || '');
+    let bits = null, keyType = null, namedCurve = null;
+    try {
+      keyType = x.publicKey && x.publicKey.asymmetricKeyType || null;
+      const kd = x.publicKey && x.publicKey.asymmetricKeyDetails || {};
+      bits = kd.modulusLength || null; namedCurve = kd.namedCurve || null;
+    } catch (_) {}
+    const expiring = !!(validTo && validTo <= now + 14 * TLS_DAY_MS);
+    const expired = !!(validTo && validTo <= now);
+    const notYet = !!(validFrom && validFrom > now + 5*60000);
+    let ca = null, chainValid = null;
+    if (localCaModeActive()) {
+      const caStatus = localCaStatus(false);
+      ca = { fingerprint:caStatus.fingerprint || activeTlsCaFingerprint || '', expiresAt:caStatus.expiresAt || 0, signingAvailable:!!caStatus.signingAvailable, error:caStatus.error || null };
+      try {
+        if (activeTlsCaPem) {
+          const caX = new crypto.X509Certificate(activeTlsCaPem);
+          chainValid = !!x.verify(caX.publicKey);
+        }
+      } catch (_) { chainValid = false; }
+    }
+
+    // Inspect disk material separately. A mismatch is actionable but must not be
+    // presented as the certificate currently served to clients.
+    let disk = null;
+    try {
+      if (ACTIVE_TLS_MODE === 'provided' && TLS_CERT && TLS_KEY) {
+        const diskCert = fs.readFileSync(TLS_CERT), diskKey = fs.readFileSync(TLS_KEY);
+        const dx = validateProvidedTlsPair(diskCert, diskKey);
+        const fp = dx.fingerprint256 || certificateFingerprint256(diskCert);
+        const materialFingerprint = tlsMaterialFingerprint(diskCert, diskKey);
+        disk = {
+          readable:true, valid:true, fingerprint:fp, materialFingerprint,
+          // A provided PEM can keep the same leaf while its intermediate chain or
+          // private-key material changes. Compare the complete material that
+          // setSecureContext consumes, not only the leaf fingerprint.
+          matchesActive:!!materialFingerprint && materialFingerprint === activeProvidedTlsMaterialFingerprint
+        };
+      } else if (localCaModeActive()) {
+        const paths = localCaPaths();
+        const diskCert = readManagedTlsFile(paths.serverCert), diskKey = readManagedTlsFile(paths.serverKey);
+        // Parsing the certificate alone is insufficient: detect a missing,
+        // corrupt or mismatched private key before calling the material healthy.
+        tls.createSecureContext({ cert:diskCert, key:diskKey, minVersion:'TLSv1.2' });
+        const dx = new crypto.X509Certificate(diskCert), fp = dx.fingerprint256 || certificateFingerprint256(diskCert);
+        let signedByActiveCa = null;
+        if (activeTlsCaPem) {
+          try { signedByActiveCa = !!dx.verify(new crypto.X509Certificate(activeTlsCaPem).publicKey); }
+          catch (_) { signedByActiveCa = false; }
+        }
+        disk = {
+          readable:true, valid:signedByActiveCa !== false, fingerprint:fp,
+          matchesActive:fp === (x.fingerprint256 || activeTlsLeafFingerprint || ''),
+          signedByActiveCa
+        };
+        if (signedByActiveCa === false) throw new Error('managed server certificate is not signed by the active Local CA');
+      }
+    } catch (e) { disk = { readable:false, valid:false, matchesActive:false, error:String(e && e.message || e).slice(0,180) }; }
+
+    let status = expired || notYet || chainValid === false ? 'bad' : expiring || out.restartRequired ? 'warn' : 'ok';
+    let reason = expired?'expired':notYet?'not-yet-valid':chainValid===false?'issuer-chain-invalid':expiring?'expiring-soon':out.restartRequired?'restart-required':null;
+    if (ACTIVE_TLS_MODE === 'local-ca-degraded') { status = 'bad'; reason = 'ca-signing-unavailable'; }
+    if (disk && (!disk.valid || !disk.matchesActive) && status === 'ok') { status = 'warn'; reason = !disk.valid ? 'disk-material-invalid-active-context-kept' : 'disk-material-pending-reload'; }
+    const fixable = ['local-ca','local-ca-degraded'].includes(ACTIVE_TLS_MODE) && !out.restartRequired && !!(ca && ca.signingAvailable) && reason !== 'issuer-chain-invalid';
+    return { ...out, status, subject, issuer, sans, validFrom, validTo, fingerprint:x.fingerprint256 || activeTlsLeafFingerprint || '', serialNumber:x.serialNumber || '', signatureAlgorithm:x.signatureAlgorithm || null,
+      publicKeyBits:bits, publicKeyType:keyType, namedCurve, ca, chainValid, disk, fixable,
+      reason:reason || (chainValid === true ? 'ok' : null) };
+  } catch (e) {
+    return { ...out, status:'bad', reason:'certificate-read-failed', error:String(e && e.message || e), fixable:false };
+  }
+}
+function safeDiagnosticFixFor(check) {
+  if (!check) return null;
+  if (check.id === 'search-index' && check.status !== 'ok') return { action:'search-reindex' };
+  if (check.id === 'tls-certificate' && check.status !== 'ok' && check.fixable === true) return { action:'tls-refresh' };
+  return null;
+}
 adminRouter.post('/diagnostics/run', requireFullAdmin, async (req, res) => {
   const startedAt = Date.now(); const checks = [];
   const add = (id, group, status, data) => checks.push({ id, group, status, ...(data || {}) });
@@ -18181,7 +18849,9 @@ adminRouter.post('/diagnostics/run', requireFullAdmin, async (req, res) => {
 
   const audit = verifyAuditChain(); add('audit-chain', 'security', audit && audit.ok ? 'ok' : 'bad', { integrity:audit });
   const search = universalSearchStatus();
-  add('search-index', 'search', search.error ? 'bad' : search.ready ? 'ok' : 'warn', { indexed:search.indexed || 0, building:!!search.building, builtAt:search.builtAt || 0, error:search.error || null });
+  const searchStatus = search.error ? 'bad' : search.ready ? 'ok' : 'warn';
+  add('search-index', 'search', searchStatus, { indexed:search.indexed || 0, building:!!search.building, builtAt:search.builtAt || 0, error:search.error || null,
+    fix:searchStatus !== 'ok' ? { action:'search-reindex' } : null });
   const tools = await detectSearchOcrTools().catch(() => ({ tesseract:false, pdftoppm:false, missingLanguages:SEARCH_OCR_LANGS.split('+') }));
   add('ocr', 'search', !SEARCH_OCR_ENABLED ? 'info' : (tools.tesseract && !(tools.missingLanguages || []).length) ? 'ok' : 'warn', { enabled:SEARCH_OCR_ENABLED, tesseract:!!tools.tesseract, pdf:!!tools.pdftoppm, langs:SEARCH_OCR_LANGS, missingLanguages:tools.missingLanguages || [] });
 
@@ -18192,6 +18862,8 @@ adminRouter.post('/diagnostics/run', requireFullAdmin, async (req, res) => {
   const auditKeyStatus = auditKeyMigrationStatus && auditKeyMigrationStatus.ok === false ? 'bad' : 'ok';
   add('audit-key', 'security', auditKeyStatus, { mode:auditActiveKeyMode, migration:auditKeyMigrationStatus, localKeyAccepted:auditActiveKeyMode === 'local-file' });
   add('data-encryption', 'security', DATA_KEY ? 'ok' : 'info', { enabled:!!DATA_KEY });
+  const tlsDiag = tlsCertificateDiagnostics();
+  add('tls-certificate', 'security', tlsDiag.status || 'info', { ...tlsDiag, fix:safeDiagnosticFixFor({ id:'tls-certificate', ...tlsDiag }) });
 
   const wh = effectiveWebhook(); add('webhook', 'notifications', wh.url ? (lastWebhook && lastWebhook.ok === false ? 'warn' : 'ok') : 'info', { configured:!!wh.url, last:lastWebhook || null });
   add('email', 'notifications', emailConfigured() ? (lastEmail && lastEmail.ok === false ? 'warn' : 'ok') : 'info', { configured:emailConfigured(), last:lastEmail || null });
@@ -18207,14 +18879,53 @@ adminRouter.post('/diagnostics/run', requireFullAdmin, async (req, res) => {
   add('public-port', 'network', !target ? 'warn' : portCheck && portCheck.open === true ? 'ok' : portCheck && portCheck.open === false ? 'bad' : 'warn', { target:target ? target.label : null, result:portCheck });
   const proxyDetected = !!(req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || req.headers['forwarded'] || req.headers['x-forwarded-proto']);
   const proxyStatus = proxyDetected && !TRUST_PROXY ? 'bad' : (!proxyDetected && TRUST_PROXY ? 'warn' : 'ok');
-  add('reverse-proxy', 'network', proxyStatus, { detected:proxyDetected, trustProxy:!!TRUST_PROXY, protocol:req.protocol, secure:!!req.secure, host:req.get('host') || null });
+  const proxyBase = normalizeLinkBase(PUBLIC_URL || getSettings().linkBase || '');
+  const xfProto = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim().toLowerCase();
+  const xfHost = String(req.headers['x-forwarded-host'] || '').split(',')[0].trim();
+  const xfPort = String(req.headers['x-forwarded-port'] || '').split(',')[0].trim();
+  add('reverse-proxy', 'network', proxyStatus, { detected:proxyDetected, trustProxy:!!TRUST_PROXY, protocol:req.protocol, secure:!!req.secure, host:req.get('host') || null,
+    forwardedProto:xfProto || null, forwardedHost:xfHost || null, forwardedPort:xfPort || null, configuredBase:proxyBase || null });
 
   const summary = { ok:checks.filter((c) => c.status === 'ok').length, warn:checks.filter((c) => c.status === 'warn').length, bad:checks.filter((c) => c.status === 'bad').length, info:checks.filter((c) => c.status === 'info').length };
-  auditReq(req, 'diagnostics-run', `ok=${summary.ok} warn=${summary.warn} bad=${summary.bad}`);
+  auditReq(req, 'diagnostics-run', { code:'diagnostics-run', params:{ ok:summary.ok, warn:summary.warn, bad:summary.bad }, fallback:`ok=${summary.ok} warn=${summary.warn} bad=${summary.bad}` });
   res.json({ checks, summary, startedAt, finishedAt:Date.now(), storageReport });
 });
 
-adminRouter.get('/network', async (req, res) => {
+adminRouter.post('/diagnostics/fix', requireFullAdmin, async (req, res) => {
+  const action = String(req.body && req.body.action || '');
+  try {
+    if (action === 'search-reindex') {
+      const requested = auditReq(req, 'diagnostic-fix-requested', { code:'diagnostic-fix-requested', params:{ action }, fallback:'search index rebuild requested' });
+      if (!requested) return res.status(503).json({ error:'audit-write-failed', action });
+      scheduleSearchReindex();
+      return res.json({ ok:true, action, message:'scheduled' });
+    }
+    if (action === 'tls-refresh') {
+      const before = tlsCertificateDiagnostics();
+      if (!safeDiagnosticFixFor({ id:'tls-certificate', ...before })) return res.status(409).json({ error:'not-fixable', tls:before });
+      // Record intent before mutating the live TLS context. If durable signed
+      // audit storage is unavailable, do not perform a security-sensitive fix.
+      const requested = auditReq(req, 'diagnostic-fix-requested', { code:'diagnostic-fix-requested', params:{ action, status:before.status, reason:before.reason || '' }, fallback:'TLS certificate refresh requested' });
+      if (!requested) return res.status(503).json({ error:'audit-write-failed', action, tls:before });
+      const changed = refreshLocalTlsServerContext(typeof server !== 'undefined' ? server : null);
+      const after = tlsCertificateDiagnostics();
+      const resolved = after.status === 'ok';
+      const audited = auditReq(req, resolved ? 'diagnostic-fix' : 'diagnostic-fix-failed', {
+        code:resolved ? 'diagnostic-fix' : 'diagnostic-fix-failed',
+        params:{ action, changed:!!changed, status:after.status, error:resolved ? '' : (after.reason || 'not-resolved') },
+        fallback:resolved ? 'TLS certificate refresh applied' : 'TLS certificate refresh did not resolve the diagnostic'
+      });
+      if (!audited) return res.status(503).json({ error:'audit-write-failed', action, changed:!!changed, tls:after });
+      return res.status(resolved ? 200 : 409).json({ ok:resolved, action, changed:!!changed, tls:after, error:resolved ? undefined : 'fix-not-resolved' });
+    }
+    return res.status(400).json({ error:'unsupported-fix' });
+  } catch (e) {
+    auditReq(req, 'diagnostic-fix-failed', { code:'diagnostic-fix-failed', params:{ action, error:String(e && e.message || e).slice(0,100) }, fallback:'diagnostic fix failed' });
+    return res.status(500).json({ error:'fix-failed', detail:String(e && e.message || e).slice(0,160) });
+  }
+});
+
+adminRouter.get('/network', requireAuditAccess, async (req, res) => {
   const locals = getLocalIPv4s();
   const publicIp = await getPublicIP().catch(() => null);
   const target = externalTarget(req);
@@ -18253,7 +18964,7 @@ adminRouter.post('/network/port-check', async (req, res) => {
 // Reverse-proxy diagnostic: inspects the forwarding headers actually received on
 // THIS admin request and reports whether the proxy is wired correctly (real
 // visitor IP, HTTPS propagation, host) against the server's TRUST_PROXY setting.
-adminRouter.get('/network/proxy-check', (req, res) => {
+adminRouter.get('/network/proxy-check', requireAuditAccess, (req, res) => {
   const requestedBase = typeof req.query.base === 'string' ? req.query.base.trim() : '';
   const testedBase = requestedBase ? normalizeLinkBase(requestedBase) : null;
   const h = req.headers || {};
@@ -18271,13 +18982,16 @@ adminRouter.get('/network/proxy-check', (req, res) => {
   const xffRaw = pick('x-forwarded-for') || '';
   const forwardedForChain = xffRaw.split(',').map((s) => s.trim()).filter(Boolean);
   const xfProto = (pick('x-forwarded-proto') || '').split(',')[0].trim().toLowerCase();
+  const xfHost = (pick('x-forwarded-host') || '').split(',')[0].trim();
+  const xfPort = (pick('x-forwarded-port') || '').split(',')[0].trim();
   const proxyDetected = !!(xffRaw || headers['x-real-ip'] || headers['forwarded'] || xfProto ||
     headers['cf-connecting-ip'] || headers['via'] || headers['x-forwarded-server']);
 
   // Best-effort identification of the proxy software from its fingerprints.
   let detectedProxy = null;
   if (headers['cf-connecting-ip'] || headers['cf-ray']) detectedProxy = 'Cloudflare';
-  else if (/traefik/i.test(headers['x-forwarded-server'] || '') || headers['x-forwarded-server']) detectedProxy = 'Traefik';
+  else if (/traefik/i.test(headers['x-forwarded-server'] || '') || /traefik/i.test(headers['via'] || '')) detectedProxy = 'Traefik';
+  else if (headers['x-forwarded-server']) detectedProxy = 'Reverse proxy (' + headers['x-forwarded-server'].slice(0,80) + ')';
   else if (/\bvarnish\b/i.test(headers['via'] || '')) detectedProxy = 'Varnish';
   else if (headers['via']) detectedProxy = headers['via'];
 
@@ -18304,10 +19018,20 @@ adminRouter.get('/network/proxy-check', (req, res) => {
     add('warn', 'no-proto', {});
   }
 
-  // Host propagation.
+  // Host/protocol/port propagation against the configured public base when available.
   if (headers['x-forwarded-host'] && headers['x-forwarded-host'] !== pick('host')) {
     add('info', 'host-diff', { pub: headers['x-forwarded-host'], internal: pick('host') || '?' });
   }
+  let expected = null;
+  try { if (testedBase) expected = new URL(testedBase); else { const base = normalizeLinkBase(PUBLIC_URL || getSettings().linkBase || ''); if (base) expected = new URL(base); } } catch (_) {}
+  if (proxyDetected && !xfHost) add('warn', 'no-forwarded-host', {});
+  if (expected) {
+    if (xfHost && xfHost.toLowerCase() !== expected.host.toLowerCase()) add('warn', 'base-host-mismatch', { expected:expected.host, got:xfHost });
+    if (xfProto && xfProto !== expected.protocol.replace(':','')) add('warn', 'base-proto-mismatch', { expected:expected.protocol.replace(':',''), got:xfProto });
+    const expectedPort = expected.port || (expected.protocol === 'https:' ? '443' : '80');
+    if (xfPort && xfPort !== expectedPort) add('warn', 'base-port-mismatch', { expected:expectedPort, got:xfPort });
+  }
+  if (proxyDetected && !xffRaw && !headers['x-real-ip'] && !headers['cf-connecting-ip'] && !headers['forwarded']) add('warn', 'no-client-ip-header', {});
 
   // Peer sanity.
   if (proxyDetected && remoteAddr && !isPrivateIp(remoteAddr)) {
@@ -18317,8 +19041,11 @@ adminRouter.get('/network/proxy-check', (req, res) => {
     add('info', 'multi-hop', { n: forwardedForChain.length, chain: forwardedForChain.join(' → ') });
   }
 
-  // Large-upload reminder (not detectable from headers, always relevant here).
-  add('info', 'buffering', {});
+  // Streaming and large-upload reminders cannot be fully inferred from request
+  // headers, but surfacing the Direct-Xfer requirements makes the proxy
+  // diagnostic actionable instead of merely reporting forwarding headers.
+  add('info', 'sse-streaming', { endpoint:'/api/activity/stream', accelBuffering:'no', heartbeatSeconds:20 });
+  add('info', 'buffering', { requestBuffering:false, serverUploadLimit:'application-defined' });
 
   const verdict = checks.some((c) => c.level === 'bad') ? 'bad'
     : checks.some((c) => c.level === 'warn') ? 'warn' : 'ok';
@@ -18337,6 +19064,11 @@ adminRouter.get('/network/proxy-check', (req, res) => {
     testedBase,
     host: pick('host'),
     forwardedForChain,
+    forwardedProto:xfProto || null,
+    forwardedHost:xfHost || null,
+    forwardedPort:xfPort || null,
+    expectedBase: expected ? expected.toString().replace(/\/$/,'') : null,
+    httpVersion:req.httpVersion || null,
     headers,
     checks,
   });
@@ -19068,6 +19800,52 @@ function pwaHttpsInstallUrl() {
   return origin.startsWith('https://') ? origin + '/app' : '';
 }
 
+// Installation-state discovery for the standard UI. Chromium on Android can
+// query an installed PWA from a page outside its /app/ scope when the page has a
+// relationship manifest and the PWA origin exposes the matching Digital Asset
+// Link. Keep both documents dynamic so reverse-proxy host/port deployments use
+// the exact origin currently visible to the browser.
+function pwaDetectionOrigin(req) {
+  const host = String((req && req.get && req.get('host')) || '').split(',')[0].trim();
+  if (!host || /[\r\n]/.test(host)) return '';
+  try { return new URL(`${externalProto(req)}://${host}`).origin; } catch (_) { return ''; }
+}
+// Same-browser fallback for the standard mobile install invitation. The PWA's
+// durable public device marker is HttpOnly; expose only whether that exact paired
+// device has actually been observed running in standalone (installed) mode.
+const PWA_INSTALL_HEARTBEAT_MAX_AGE_MS = 180 * 24 * 60 * 60 * 1000;
+app.get('/pwa/install-state', (req, res) => {
+  const device = getPwaPublicDevice(req);
+  const seenAt = Math.max(0, Number(device && device.installedStandaloneSeenAt) || 0);
+  const installed = seenAt > 0 && Date.now() - seenAt <= PWA_INSTALL_HEARTBEAT_MAX_AGE_MS;
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ installed });
+});
+
+app.get('/admin-pwa-detect.webmanifest', (req, res) => {
+  const origin = pwaDetectionOrigin(req);
+  res.setHeader('Cache-Control', 'no-store');
+  res.type('application/manifest+json').json({
+    // Keep these URLs aligned with the manifests actually linked by /app/.
+    // Direct-Xfer can switch the manifest for FR/EN/ES, and Chromium only
+    // considers the first three related applications, so declare exactly those.
+    related_applications: origin ? [
+      { platform:'webapp', url: origin + '/direct-xfer-pwa.webmanifest' },
+      { platform:'webapp', url: origin + '/direct-xfer-pwa-en.webmanifest' },
+      { platform:'webapp', url: origin + '/direct-xfer-pwa-es.webmanifest' },
+    ] : [],
+    prefer_related_applications: false,
+  });
+});
+app.get('/.well-known/assetlinks.json', (req, res) => {
+  const origin = pwaDetectionOrigin(req);
+  res.setHeader('Cache-Control', 'no-store');
+  res.type('application/json').json(origin ? [{
+    relation: ['delegate_permission/common.query_webapk'],
+    target: { namespace:'web', site: origin + '/admin-pwa-detect.webmanifest' },
+  }] : []);
+});
+
 // Installability diagnostics used by the mobile login and PWA. PUBLIC_URL is
 // already the externally advertised base, so returning its HTTPS /app URL does
 // not reveal any private configuration.
@@ -19424,6 +20202,18 @@ function bindPasskeyToDevice(passkey, deviceId) {
 }
 function publicPasskey(p, currentDeviceId) {
   const deviceIds = passkeyDeviceIds(p);
+  const devices = deviceIds.map((id) => {
+    const device = pwaDevices().find((row) => row && timingSafeEqualStr(String(row.id || ''), String(id))) || null;
+    return {
+      id,
+      name:device ? (device.name || 'Direct-Xfer PWA') : 'Appareil révoqué',
+      platform:device ? (device.platform || device.userAgent || null) : null,
+      createdAt:device ? Math.max(0, Number(device.createdAt) || 0) : 0,
+      lastUsedAt:device ? Math.max(0, Number(device.lastUsedAt) || 0) : 0,
+      current:!!(currentDeviceId && timingSafeEqualStr(String(id), String(currentDeviceId))),
+      available:!!device,
+    };
+  });
   return {
     id: p.id,
     name: p.name || 'Biometrics',
@@ -19431,7 +20221,17 @@ function publicPasskey(p, currentDeviceId) {
     lastUsedAt: p.lastUsedAt || 0,
     currentDevice: passkeyBoundToDevice(p, currentDeviceId),
     deviceCount: deviceIds.length,
+    devices,
   };
+}
+function unbindPasskeyDevice(passkey, deviceId) {
+  if (!passkey || !deviceId) return false;
+  const before = passkeyDeviceIds(passkey), next = before.filter((id) => !timingSafeEqualStr(String(id), String(deviceId)));
+  if (next.length === before.length) return false;
+  passkey.deviceIds = next;
+  if (passkey.deviceId && timingSafeEqualStr(String(passkey.deviceId), String(deviceId))) passkey.deviceId = next[0] || null;
+  if (!passkey.deviceId) delete passkey.deviceId;
+  return true;
 }
 
 // --- Passwordless sign-in (public, like /app/login) ------------------------
@@ -19623,6 +20423,21 @@ app.post('/app/webauthn/register/verify', pwaJsonParser, (req, res) => {
   } catch (e) {
     res.status(400).json({ error: 'invalid-attestation' });
   }
+});
+app.delete('/app/webauthn/passkeys/:id/devices/:deviceId', (req, res) => {
+  const acc = freshPasskeyManagementAccount(req, res);
+  if (!acc) return;
+  const id = String(req.params.id || ''), deviceId = String(req.params.deviceId || '');
+  const key = accountPasskeys(acc).find((row) => row && timingSafeEqualStr(String(row.id || ''), id));
+  if (!key) return res.status(404).json({ error:'passkey-not-found' });
+  const passkeysBefore = JSON.parse(JSON.stringify(accountPasskeys(acc)));
+  if (!unbindPasskeyDevice(key, deviceId)) return res.status(404).json({ error:'device-not-found' });
+  if (!passkeyDeviceIds(key).length) acc.passkeys = accountPasskeys(acc).filter((row) => row !== key);
+  if (!persistNow()) { acc.passkeys = passkeysBefore; return res.status(503).json({ error:'write-error' }); }
+  clearWebauthnChallengesForAccount(acc.id);
+  auditReq(req, 'passkey-device-removed', `${(key.name || 'Biometrics')} · ${deviceId.slice(0,12)}`);
+  res.setHeader('Cache-Control','no-store');
+  res.json({ ok:true, passkeys:accountPasskeys(acc).map((row) => publicPasskey(row, req.pwaDevice && req.pwaDevice.id)) });
 });
 app.delete('/app/webauthn/passkeys/:id', (req, res) => {
   const acc = freshPasskeyManagementAccount(req, res);
@@ -20060,6 +20875,8 @@ function publicNotification(n) {
     device:n.device || null, username:n.username || null, version:n.version || null, latest:n.latest || null,
     source:n.source || null, action:n.action || null, url:n.url || null,
     durationMs:Math.max(0, Number(n.durationMs)||0), previous:n.previous || null, current:n.current || null,
+    groupCount:Math.max(1, Number(n.groupCount)||1), groupFirstAt:Math.max(0, Number(n.groupFirstAt)||Number(n.at)||0),
+    priority:n.priority || 'normal', priorityReason:n.priorityReason || null,
     readAt:Math.max(0, Number(n.readAt)||0), unread:!(Number(n.readAt)>0),
   };
 }
@@ -20309,6 +21126,38 @@ function pruneCustomNotificationRuleStateForShareId(shareId) {
   if (changed) scheduleFlush();
   return { rulesRemoved, triggerEntriesRemoved };
 }
+const NOTIFICATION_GROUP_WINDOW_MS = 10 * 60 * 1000;
+const NOTIFICATION_GROUPABLE_TYPES = new Set(['transfer-complete','transfer-failed','received-file-ready','download-abandoned','upload-abandoned','resume-impossible','link-new-visitor','new-country','image-first-view']);
+function notificationGroupKey(type, data) {
+  if (!NOTIFICATION_GROUPABLE_TYPES.has(String(type || ''))) return null;
+  const target = String((data && (data.token || data.name || data.source)) || '').trim();
+  if (!target) return null;
+  return [String(type), target, String((data && data.reason) || '')].join(':').slice(0,240);
+}
+function adaptiveNotificationPriority(accountId, type, data, severity, now) {
+  const category = String((data && data.category) || centerNotificationDefaults(type)[0]);
+  const rows = notificationCenterStore().filter((n) => n && String(n.accountId) === String(accountId) && Number(n.at) >= now - 15*60*1000);
+  const sameTarget = rows.filter((n) => n.type === type && (!data.token || String(n.token || '') === String(data.token))).reduce((n,row)=>n+Math.max(1,Number(row.groupCount)||1),0);
+  const securityBurst = rows.filter((n) => String(n.category) === 'security').reduce((n,row)=>n+Math.max(1,Number(row.groupCount)||1),0);
+  if ((['transfer-failed','upload-abandoned','download-abandoned','resume-impossible'].includes(type) && sameTarget >= 2) || (category === 'security' && securityBurst >= 3)) {
+    return { severity:'critical', priority:'urgent', reason:'repeated-failures' };
+  }
+  if (severity === 'critical') return { severity, priority:'urgent', reason:null };
+  if (severity === 'warning') return { severity, priority:'high', reason:null };
+  if (NOTIFICATION_GROUPABLE_TYPES.has(type) && sameTarget >= 5) return { severity, priority:'low', reason:'routine-burst' };
+  return { severity, priority:'normal', reason:null };
+}
+function mergeGroupedNotification(rec, data, now, priority) {
+  const previousAt = Number(rec.at) || now;
+  rec.at = now; rec.groupCount = Math.max(1, Number(rec.groupCount)||1) + 1;
+  rec.groupFirstAt = Math.max(0, Number(rec.groupFirstAt)||previousAt);
+  rec.bytes = Math.max(0, Number(rec.bytes)||0) + Math.max(0, Number(data.bytes)||0);
+  if (data.count) rec.count = Math.max(0, Number(rec.count)||0) + Math.max(0, Number(data.count)||0);
+  for (const key of ['ip','country','flag','detail','reason','sender','device','username','source','action','url','variant']) if (data[key] != null) rec[key] = String(data[key]).slice(0, key === 'detail' ? 500 : 160);
+  rec.readAt = null; rec.priority = priority.priority; rec.priorityReason = priority.reason;
+  if (priority.severity === 'critical') rec.severity = 'critical';
+  return rec;
+}
 function addCenterNotification(accountId, type, data = {}) {
   accountId = String(accountId || '');
   if (!accountId || !type) return null;
@@ -20325,9 +21174,15 @@ function addCenterNotification(accountId, type, data = {}) {
   if (dedupeKey && notificationDedupeSeen(accountId, dedupeKey, now, dedupeWindowMs)) {
     return list.find((n) => String(n.accountId) === accountId && n.dedupeKey === dedupeKey) || null;
   }
+  const priority = adaptiveNotificationPriority(accountId, String(type), data, String(data.severity || defaultSeverity), now);
+  const groupKey = notificationGroupKey(type, data);
+  if (groupKey) {
+    const grouped = list.find((n) => n && String(n.accountId) === accountId && n.groupKey === groupKey && !(Number(n.readAt)>0) && now - Number(n.at || 0) <= NOTIFICATION_GROUP_WINDOW_MS);
+    if (grouped) { mergeGroupedNotification(grouped, data, now, priority); persist(); return grouped; }
+  }
   const rec = {
     id:crypto.randomBytes(12).toString('hex'), accountId, type:String(type).slice(0,80), at:now,
-    category, severity:String(data.severity || defaultSeverity).slice(0,20),
+    category, severity:String(priority.severity || data.severity || defaultSeverity).slice(0,20), priority:priority.priority, priorityReason:priority.reason,
     name:String(data.name || '').slice(0,240), token:data.token ? String(data.token).slice(0,160) : null,
     variant:data.variant ? String(data.variant).slice(0,24) : null, ip:data.ip ? String(data.ip).slice(0,100) : null,
     country:data.country ? String(data.country).slice(0,100) : null, flag:data.flag ? String(data.flag).slice(0,16) : '🌐',
@@ -20342,6 +21197,7 @@ function addCenterNotification(accountId, type, data = {}) {
     // New center entries start unread. readAt is server-owned and is changed only
     // when an authenticated client actually opens its notification panel.
     readAt:null,
+    groupKey, groupCount:1, groupFirstAt:now,
     dedupeKey, dedupeWindowMs,
   };
   list.unshift(rec);
@@ -20556,7 +21412,7 @@ function noteCenterAutoDisabled(s, reason) {
   // a second auto-disable notification instead of being suppressed forever.
   let trigger = '';
   if (reason === 'download-limit') trigger = String(Math.max(0, Number(s.maxDownloads) || 0));
-  else if (reason === 'visitor-limit') trigger = String(Math.max(0, Number(s.maxVisitors) || 0));
+  else if (reason === 'visitor-limit') trigger = String(parseMaxVisitors(s.maxVisitors));
   else if (reason === 'bandwidth-limit') trigger = String(Math.max(0, Number(s.maxBytesServed) || 0));
   else if (reason === 'one-time-download') trigger = String(Math.max(0, Number(s.burnedAt) || Date.now()));
   addShareCenterNotification(s, 'link-auto-disabled', { reason, dedupeKey:`auto-disabled:${s.id}:${reason}:${trigger}` });
@@ -20815,6 +21671,15 @@ function notificationLinkUrlForRequest(n, req, accountId) {
   if (share.type === 'photo' && decorated.photo && decorated.photo.imgUrl) return decorated.photo.imgUrl;
   return decorated.url || null;
 }
+function notificationManageUrlForRequest(n, req, accountId) {
+  if (!req || !n || !n.token) return null;
+  const share = getByToken(String(n.token));
+  if (!share || String(notificationAccountIdForShare(share) || '') !== String(accountId || '')) return null;
+  const isPwa = String(req.path || req.originalUrl || '').startsWith('/app/');
+  if (isPwa) return `/app/?action=${share.type === 'photo' || share.type === 'album' ? 'images' : 'shares'}&focus=${encodeURIComponent(share.token)}`;
+  if (share.type === 'photo' || share.type === 'album') return `/images?image=${encodeURIComponent(share.token)}&from=notification`;
+  return `/?focusShare=${encodeURIComponent(share.id)}&from=notification`;
+}
 function notificationsForAccount(accountId, req) {
   accountId = String(accountId || '');
   if (!accountId) return [];
@@ -20828,7 +21693,7 @@ function notificationsForAccount(accountId, req) {
     // an Updates alert after the user unchecked “Mises à jour”.
     .filter((n) => !muted.has(String((n && n.category) || 'system_health')))
     .sort((a, b) => Number(b.at || 0) - Number(a.at || 0))
-    .map((n) => ({ ...publicNotification(n), linkUrl:notificationLinkUrlForRequest(n, req, accountId) }));
+    .map((n) => ({ ...publicNotification(n), linkUrl:notificationLinkUrlForRequest(n, req, accountId), manageUrl:notificationManageUrlForRequest(n, req, accountId) }));
 }
 function markNotificationsReadForAccount(accountId, requestedIds, persistAfter = true) {
   accountId = String(accountId || '');
@@ -21056,13 +21921,56 @@ function notifyFirstPhotoView(s, req, kind, ip, geo) {
   });
   logAudit('image-first-view', { username: 'system', ip: clientIp(req), detail: `${s.name || s.token} · ${variant}` });
 }
+function closePwaEventStreamsForSession(sid) {
+  if (!sid || typeof inboxEventSubs === 'undefined') return;
+  const doomed = new Set();
+  for (const set of inboxEventSubs.values()) for (const res of set) {
+    if (res && res.dxPwaSessionSid === sid) doomed.add(res);
+  }
+  for (const res of doomed) dropPwaEventStream(res);
+}
+function pwaEventStreamValidator(req) {
+  const deviceId = req.pwaDevice && req.pwaDevice.id;
+  if (deviceId) {
+    const initialOwner = pwaDeviceResolvedAccount(req.pwaDevice);
+    const accountId = initialOwner && initialOwner.id;
+    return function () {
+      if (!accountId) return false;
+      const device = pwaDevices().find((d) => d && d.id === deviceId);
+      if (!device || device.sessionLockedAt) return false;
+      const owner = pwaDeviceResolvedAccount(device);
+      return !!(owner && String(owner.id) === String(accountId) && getAccountById(accountId));
+    };
+  }
+  if (req.pwaSession && req.pwaSession.sid) return presenceSessionValidator(req.pwaSession.sid);
+  return function () { return false; };
+}
+function pwaEventStreamAuthorized(res) {
+  return !!(res && typeof res.dxPwaEventValidate === 'function' && res.dxPwaEventValidate());
+}
+function dropPwaEventStream(res) {
+  if (!res) return;
+  const keys = Array.isArray(res.dxPwaEventKeys) ? res.dxPwaEventKeys : [];
+  for (const k of keys) {
+    const set = inboxEventSubs.get(k);
+    if (set) { set.delete(res); if (!set.size) inboxEventSubs.delete(k); }
+  }
+  try { if (!res.writableEnded) res.end(); } catch (_) {}
+}
 function emitPwaOwnerEvent(s, evt, push) {
   const keys = ownerKeysForShare(s);
   if (!keys.length) return 0;
   const frame = 'data: ' + JSON.stringify(evt) + '\n\n';
+  const delivered = new Set(); // one EventSource can be indexed by both dev:* and acc:*
   for (const k of keys) {
     const set = inboxEventSubs.get(k);
-    if (set) for (const res of set) { try { res.write(frame); } catch (_) {} }
+    if (!set) continue;
+    for (const res of [...set]) {
+      if (delivered.has(res)) continue;
+      if (!pwaEventStreamAuthorized(res)) { dropPwaEventStream(res); continue; }
+      try { res.write(frame); delivered.add(res); } catch (_) { dropPwaEventStream(res); }
+    }
+    if (!set.size) inboxEventSubs.delete(k);
   }
   if (push) {
     try { return sendPwaPush(keys, { kind: evt.type || 'pwa', title: evt.title || APP_NAME, body: evt.body || '', url: evt.url || '/app/#images', token: evt.token || null }); } catch (_) { return 0; }
@@ -21096,21 +22004,34 @@ function emitInboxEvent(s, evt) {
 // Live event stream for the signed-in device/account (cookie-authenticated).
 app.get('/app/events', (req, res) => {
   const keys = pwaOwnerKeys(req);
-  if (!keys.length) return res.status(403).end();
+  const validate = pwaEventStreamValidator(req);
+  if (!keys.length || !validate()) return res.status(403).end();
   res.writeHead(200, {
     'Content-Type': 'text/event-stream; charset=utf-8',
     'Cache-Control': 'no-store',
     'Connection': 'keep-alive',
     'X-Accel-Buffering': 'no', // keep proxies (nginx) from buffering the stream
   });
+  res.dxPwaEventValidate = validate;
+  res.dxPwaEventKeys = keys.slice();
+  res.dxPwaSessionSid = (!req.pwaDevice && req.pwaSession && req.pwaSession.sid) ? req.pwaSession.sid : null;
   res.write('retry: 5000\n\n');
   res.write(': connected\n\n');
   for (const k of keys) { if (!inboxEventSubs.has(k)) inboxEventSubs.set(k, new Set()); inboxEventSubs.get(k).add(res); }
-  const ping = setInterval(() => { try { res.write(': ping\n\n'); } catch (_) {} }, 25000);
-  req.on('close', () => {
+  let closed = false;
+  const cleanup = () => {
+    if (closed) return;
+    closed = true;
     clearInterval(ping);
     for (const k of keys) { const set = inboxEventSubs.get(k); if (set) { set.delete(res); if (!set.size) inboxEventSubs.delete(k); } }
-  });
+  };
+  const ping = setInterval(() => {
+    if (!validate()) { cleanup(); try { if (!res.writableEnded) res.end(); } catch (_) {} return; }
+    try { res.write(': ping\n\n'); } catch (_) { cleanup(); }
+  }, 25000);
+  if (ping.unref) ping.unref();
+  req.on('close', cleanup);
+  res.on('close', cleanup);
 });
 
 // Public VAPID key so the PWA can create a push subscription.
@@ -21458,6 +22379,8 @@ function pwaPhotoPayload(req, share) {
   const active = isActive(share, now);
   const effectiveExpiresAt = shareEffectiveExpiry(share);
   const expired = !!effectiveExpiresAt && now > effectiveExpiresAt;
+  const rev = photoCacheRevision(share);
+  const qv = '?v=' + encodeURIComponent(rev);
   return {
     token: share.token,
     name: share.name,
@@ -21468,9 +22391,9 @@ function pwaPhotoPayload(req, share) {
     expired,
     disabled: !!share.disabled,
     status: active ? 'active' : expired ? 'expired' : share.disabled ? 'disabled' : 'inactive',
-    imgUrl: ib + '/i/' + share.token + '.' + photoExt(share),
-    thumbUrl: ib + '/i/' + share.token + '/thumb',
-    microUrl: ib + '/i/' + share.token + '/micro',
+    imgUrl: ib + '/i/' + share.token + '.' + photoExt(share) + qv,
+    thumbUrl: ib + '/i/' + share.token + '/thumb' + qv,
+    microUrl: ib + '/i/' + share.token + '/micro' + qv,
     favorite: !!share.favorite,
     tags: Array.isArray(share.tags) ? share.tags.slice(0, 20) : [],
     note: share.adminNote || '',
@@ -21482,15 +22405,17 @@ function pwaPhotoPayload(req, share) {
     firstViewNotifiedAt: share.firstViewNotifiedAt || null,
     retentionReason: share.retentionReason || null,
     metadataRemoved: !!share.metadataRemoved,
-    autoUrl: ib + '/i/' + share.token + '/auto',
+    autoUrl: ib + '/i/' + share.token + '/auto' + qv,
     previewUrls: {
-      auto: '/app/image/' + encodeURIComponent(share.token) + '/preview/auto',
-      full: '/app/image/' + encodeURIComponent(share.token) + '/preview/full',
-      thumb: '/app/image/' + encodeURIComponent(share.token) + '/preview/thumb',
-      micro: '/app/image/' + encodeURIComponent(share.token) + '/preview/micro',
+      auto: '/app/image/' + encodeURIComponent(share.token) + '/preview/auto' + qv,
+      full: '/app/image/' + encodeURIComponent(share.token) + '/preview/full' + qv,
+      thumb: '/app/image/' + encodeURIComponent(share.token) + '/preview/thumb' + qv,
+      micro: '/app/image/' + encodeURIComponent(share.token) + '/preview/micro' + qv,
     },
     adaptive: { webp: !!share.adaptiveWebp, avif: !!share.adaptiveAvif },
+    cacheRevision: rev,
     versionCount: Array.isArray(share.versions) ? share.versions.length : 0,
+    editHistoryCount: Array.isArray(share.editHistory) ? share.editHistory.length : 0,
     totals: { views: totalViews, visitors: uniqueVisitors.size, bytes: (fullBytes || 0) + (thumbBytes || 0) + (microBytes || 0) },
     variants: {
       full: { ...full, bytes: fullBytes, ready: true, views: stats.full.v || 0, visitors: Array.isArray(stats.full.u) ? stats.full.u.length : 0 },
@@ -21687,15 +22612,22 @@ app.get('/app/image/:token/stats-detail', async (req, res) => {
   const photo = pwaPhotoPayload(req, share);
   const ps = photoStatsOf(share);
   const variants = {};
+  let detailedTotalViews = 0, detailedBandwidth = 0;
   for (const kind of ['full', 'thumb', 'micro']) {
     const base = photo.variants && photo.variants[kind] ? photo.variants[kind] : {};
     const variantStats = ps[kind] || {};
+    const views = Math.max(0, Number(base.views != null ? base.views : variantStats.v) || 0);
+    const bytes = Math.max(0, Number(base.bytes) || 0);
     variants[kind] = {
       ...base,
+      views,
+      bandwidthBytes: views * bytes,
       lastAt: Number(variantStats.lastAt) || 0,
       present: kind === 'full' ? true : base.ready !== false,
     };
+    detailedTotalViews += views; detailedBandwidth += variants[kind].bandwidthBytes;
   }
+  for (const variant of Object.values(variants)) variant.viewSharePct = detailedTotalViews ? Math.round((variant.views / detailedTotalViews) * 1000) / 10 : 0;
   res.setHeader('Cache-Control', 'no-store');
   res.json({
     token: photo.token,
@@ -21709,7 +22641,7 @@ app.get('/app/image/:token/stats-detail', async (req, res) => {
     note: photo.note || '',
     maxViews: Math.max(0, Number(photo.maxViews) || 0),
     hasPassword: !!photo.hasPassword,
-    totals: photo.totals || { views: 0, visitors: 0, bytes: 0 },
+    totals: { ...(photo.totals || { views: 0, visitors: 0, bytes: 0 }), bandwidthBytes:detailedBandwidth },
     variants,
     recentViews: await detailedPhotoRecentViews(share, 50),
   });
@@ -22248,9 +23180,37 @@ function streamToFileBounded(req, res, dest, maxBytes, onDone) {
   });
   req.pipe(ws);
 }
-function archiveCurrentPhotoVersion(photo) {
+function photoCacheRevision(photo) {
+  return Math.max(1, Number(photo && photo.cacheRevision) || 1);
+}
+function bumpPhotoCacheRevision(photo) {
+  photo.cacheRevision = photoCacheRevision(photo) + 1;
+  photo.cacheInvalidatedAt = Date.now();
+  return photo.cacheRevision;
+}
+function cleanPhotoEditOperations(raw) {
+  const source = Array.isArray(raw) ? raw : String(raw || '').split(',');
+  return source.map((x) => String(x || '').replace(/[\r\n\t]/g,' ').trim().slice(0,80)).filter(Boolean).slice(0,20);
+}
+function addPhotoEditHistory(photo, action, operations, detail = {}) {
+  if (!Array.isArray(photo.editHistory)) photo.editHistory = [];
+  photo.editHistory.unshift({ at:Date.now(), action:String(action||'edit').slice(0,40), operations:cleanPhotoEditOperations(operations), ...detail });
+  if (photo.editHistory.length > 50) photo.editHistory.length = 50;
+}
+function ensurePhotoOriginalVersionMarker(photo) {
+  if (!photo || !Array.isArray(photo.versions) || !photo.versions.length || photo.versions.some((v) => v && v.original)) return;
+  const archivedActions = Array.isArray(photo.editHistory) ? photo.editHistory.filter((h) => h && (h.action === 'edit' || h.action === 'restore')).length : 0;
+  // Before retention ever trimmed a version, the number of archive-producing
+  // edits/restores cannot exceed the number of retained versions. In that safe
+  // migration case the oldest retained version is the true original.
+  if (archivedActions <= photo.versions.length) photo.versions[photo.versions.length - 1].original = true;
+}
+function archiveCurrentPhotoVersion(photo, meta = {}) {
   const source = firstExistingPhotoFile(photoOriginalPaths(photo));
   if (!source) return null;
+  if (!Array.isArray(photo.versions)) photo.versions = [];
+  ensurePhotoOriginalVersionMarker(photo);
+  const isOriginal = photo.versions.length === 0;
   const id = Date.now().toString(36) + '-' + crypto.randomBytes(4).toString('hex');
   const dir = path.join(photoVersionDir(photo.token), id); fs.mkdirSync(dir, { recursive: true });
   const ext = photoExt(photo);
@@ -22263,19 +23223,31 @@ function archiveCurrentPhotoVersion(photo) {
     try { fs.rmSync(dir, { recursive:true, force:true }); } catch (_) {}
     throw e;
   }
-  const version = { id, at: Date.now(), name: photo.name, ext, size: photo.size || 0, w: photo.w || null, h: photo.h || null, metadataRemoved: !!photo.metadataRemoved, thumb: !!photo.thumb, thumbSize: photo.thumbSize || 0, thumbW: photo.thumbW || null, thumbH: photo.thumbH || null, micro: !!photo.micro, microSize: photo.microSize || 0, microW: photo.microW || null, microH: photo.microH || null, adaptiveWebp: !!photo.adaptiveWebp, adaptiveAvif: !!photo.adaptiveAvif };
-  if (!Array.isArray(photo.versions)) photo.versions = [];
+  const version = { id, at: Date.now(), name: photo.name, ext, size: photo.size || 0, w: photo.w || null, h: photo.h || null, metadataRemoved: !!photo.metadataRemoved, thumb: !!photo.thumb, thumbSize: photo.thumbSize || 0, thumbW: photo.thumbW || null, thumbH: photo.thumbH || null, micro: !!photo.micro, microSize: photo.microSize || 0, microW: photo.microW || null, microH: photo.microH || null, adaptiveWebp: !!photo.adaptiveWebp, adaptiveAvif: !!photo.adaptiveAvif, reason:String(meta.reason || 'edit').slice(0,40), operations:cleanPhotoEditOperations(meta.operations), original:isOriginal };
+  if (validSha256Hex(photo.contentSha256)) version.contentSha256 = String(photo.contentSha256).toLowerCase();
+  if (photo.dlp && typeof photo.dlp === 'object') version.dlp = JSON.parse(JSON.stringify(photo.dlp));
   photo.versions.unshift(version);
-  // Never drop metadata for a version whose directory could not be deleted. A
-  // failed cleanup may temporarily keep >10 versions, but it cannot create an
-  // untracked orphan that retention/storage accounting will miss forever.
+  // Trim metadata now, but delete physical version directories only AFTER the
+  // share state has been persisted successfully. That keeps rollback lossless if
+  // shares.json cannot be written after an edit/restore.
   while (photo.versions.length > 10) {
-    const old = photo.versions[photo.versions.length - 1];
-    try { fs.rmSync(path.join(photoVersionDir(photo.token), old.id), { recursive:true, force:true }); }
-    catch (e) { console.error('[photo-version] trim failed:', old.id, e && e.message); break; }
-    photo.versions.pop();
+    let removeIndex = photo.versions.length - 1;
+    if (photo.versions[removeIndex] && photo.versions[removeIndex].original) removeIndex -= 1;
+    if (removeIndex < 0) break;
+    photo.versions.splice(removeIndex, 1);
   }
   return version;
+}
+function cleanupPhotoVersionStorage(photo) {
+  if (!photo || !photo.token) return;
+  const dir = photoVersionDir(photo.token);
+  const keep = new Set((Array.isArray(photo.versions) ? photo.versions : []).map((v) => String(v && v.id || '')).filter(Boolean));
+  let names = []; try { names = fs.readdirSync(dir); } catch (_) { return; }
+  for (const name of names) {
+    if (keep.has(name) || !/^[A-Za-z0-9_-]{6,96}$/.test(name)) continue;
+    try { fs.rmSync(path.join(dir, name), { recursive:true, force:true }); }
+    catch (e) { console.error('[photo-version] cleanup failed:', name, e && e.message); }
+  }
 }
 function restorePhotoVersion(photo, version) {
   const dir = path.join(photoVersionDir(photo.token), version.id);
@@ -22287,28 +23259,41 @@ function restorePhotoVersion(photo, version) {
   try { fs.copyFileSync(full, newDest); }
   catch (_) { return null; }
   let archivedVersion = null;
-  try { archivedVersion = archiveCurrentPhotoVersion(photo); }
+  try { archivedVersion = archiveCurrentPhotoVersion(photo, { reason:'restore', operations:['restore'] }); }
   catch (e) {
     try { fs.unlinkSync(newDest); } catch (_) {}
     for (const key of Object.keys(photo)) delete photo[key]; Object.assign(photo, before);
     throw e;
   }
   photo.imgPath = newName; photo.ext = version.ext; photo.name = version.name; photo.size = version.size; photo.w = version.w; photo.h = version.h;
+  if (validSha256Hex(version.contentSha256)) photo.contentSha256 = String(version.contentSha256).toLowerCase(); else delete photo.contentSha256;
+  if (version.dlp && typeof version.dlp === 'object') photo.dlp = JSON.parse(JSON.stringify(version.dlp)); else delete photo.dlp;
   if (version.metadataRemoved) photo.metadataRemoved = true; else delete photo.metadataRemoved;
   // Active variants are deliberately regenerated lazily from the restored full image.
   // Copying them into token-named live paths before the metadata commit would mutate
   // currently served bytes and make rollback impossible if shares.json cannot be saved.
   for (const key of ['thumb','thumbSize','thumbW','thumbH','thumbMetaMtimeMs','micro','microSize','microW','microH','microMetaMtimeMs','adaptiveWebp','adaptiveWebpSize','adaptiveWebpW','adaptiveWebpH','adaptiveAvif','adaptiveAvifSize','adaptiveAvifW','adaptiveAvifH']) delete photo[key];
   photo.restoredAt = Date.now();
+  bumpPhotoCacheRevision(photo);
+  addPhotoEditHistory(photo, 'restore', ['restore'], { versionId:version.id, from:{ w:before.w||null,h:before.h||null,size:before.size||0 }, to:{ w:photo.w||null,h:photo.h||null,size:photo.size||0 } });
   return { before, oldManagedPaths, archivedVersion, newDest };
 }
 app.get('/app/image/:token/versions', (req, res) => {
   const photo = pwaPhotoByToken(req, req.params.token); if (!photo) return res.status(404).json({ error: 'not-found' });
-  res.setHeader('Cache-Control', 'no-store'); res.json({ versions: (photo.versions || []).map((v) => ({ id: v.id, at: v.at, name: v.name, size: v.size, w: v.w, h: v.h, metadataRemoved: !!v.metadataRemoved })) });
+  res.setHeader('Cache-Control', 'no-store'); res.json({ current:{ name:photo.name,size:photo.size||0,w:photo.w||null,h:photo.h||null,revision:photoCacheRevision(photo) }, versions: (photo.versions || []).map((v) => ({ id: v.id, at: v.at, name: v.name, size: v.size, w: v.w, h: v.h, metadataRemoved: !!v.metadataRemoved, original:!!v.original, reason:v.reason||'edit', operations:Array.isArray(v.operations)?v.operations:[] })), history:Array.isArray(photo.editHistory)?photo.editHistory.slice(0,50):[] });
+});
+app.get('/app/image/:token/versions/:versionId/preview', (req,res) => {
+  const photo=pwaPhotoByToken(req,req.params.token); if(!photo)return res.status(404).end();
+  const version=(photo.versions||[]).find((v)=>v.id===req.params.versionId); if(!version)return res.status(404).end();
+  const file=firstExistingPhotoFile([path.join(photoVersionDir(photo.token),version.id,'full.'+version.ext)]); if(!file)return res.status(404).end();
+  return streamFile(req,res,file,version.name||('version.'+version.ext),null,null,{inline:true,cacheControl:'no-store'});
 });
 app.post('/app/image/:token/restore/:versionId', pwaJsonParser, (req, res) => {
   (async () => {
     const photo = pwaPhotoByToken(req, req.params.token); if (!photo) return res.status(404).json({ error: 'not-found' });
+    const mutationKey=String(photo.id);
+    if(adminPhotoFullWrites.has(mutationKey)||adminPhotoHasVariantWrite(mutationKey))return res.status(409).json({error:'image-busy'});
+    adminPhotoFullWrites.add(mutationKey); let mutationReleased=false; const releaseMutation=()=>{if(!mutationReleased){mutationReleased=true;adminPhotoFullWrites.delete(mutationKey);}}; res.once('finish',releaseMutation);res.once('close',releaseMutation);
     const version = (photo.versions || []).find((v) => v.id === req.params.versionId); if (!version) return res.status(404).json({ error: 'version-not-found' });
     let tx;
     try { tx = restorePhotoVersion(photo, version); }
@@ -22320,6 +23305,7 @@ app.post('/app/image/:token/restore/:versionId', pwaJsonParser, (req, res) => {
       try { fs.unlinkSync(tx.newDest); } catch (_) {}
       return res.status(503).json({ error:'write-error' });
     }
+    cleanupPhotoVersionStorage(photo);
     try { await unlinkManagedPathsStrict(tx.oldManagedPaths); }
     catch (e) { console.error('[pwa-photo-restore] old file cleanup failed:', e && e.message); }
     pwaAuditReq(req, 'image-version-restored', `via PWA — ${photo.name || photo.token} · ${version.id}`);
@@ -22328,6 +23314,9 @@ app.post('/app/image/:token/restore/:versionId', pwaJsonParser, (req, res) => {
 });
 app.post('/app/image/:token/replace', (req, res) => {
   const photo = pwaPhotoByToken(req, req.params.token); if (!photo) return res.status(404).json({ error: 'not-found' });
+  const mutationKey=String(photo.id);
+  if(adminPhotoFullWrites.has(mutationKey)||adminPhotoHasVariantWrite(mutationKey)){req.resume();return res.status(409).json({error:'image-busy'});}
+  adminPhotoFullWrites.add(mutationKey); let mutationReleased=false; const releaseMutation=()=>{if(!mutationReleased){mutationReleased=true;adminPhotoFullWrites.delete(mutationKey);}}; res.once('finish',releaseMutation);res.once('close',releaseMutation);
   let ext = (String(req.query.name || photo.name || 'image.jpg').split('.').pop() || '').toLowerCase(); if (ext === 'jpeg') ext = 'jpg';
   if (!PWA_IMG_EXT.test(ext)) return res.status(400).json({ error: 'not-image' });
   const fname = crypto.randomBytes(12).toString('hex') + '.' + ext; const dest = path.join(FULL_IMAGES_DIR, fname);
@@ -22345,19 +23334,24 @@ app.post('/app/image/:token/replace', (req, res) => {
       if (duplicate && !/^(1|true|yes|on)$/i.test(String(req.query.duplicateOverride || ''))) { fs.unlink(dest, () => {}); return res.status(409).json({ error:'duplicate-content', duplicate:duplicatePhotoPayload(duplicate,req,true), sha256 }); }
       const before = JSON.parse(JSON.stringify(photo));
       const oldManagedPaths = [...photoOriginalPaths(photo), ...photoVariantPaths(photo.token, 'thumb'), ...photoVariantPaths(photo.token, 'micro'), photoAdaptivePath(photo.token, 'webp'), photoAdaptivePath(photo.token, 'avif')];
+      const editOperations = cleanPhotoEditOperations(req.query.ops);
       let archivedVersion = null;
-      try { archivedVersion = archiveCurrentPhotoVersion(photo); } catch (e) { fs.unlink(dest, () => {}); return res.status(500).json({ error: 'archive-failed' }); }
+      try { archivedVersion = archiveCurrentPhotoVersion(photo, { reason:'edit', operations:editOperations }); } catch (e) { fs.unlink(dest, () => {}); return res.status(500).json({ error: 'archive-failed' }); }
       photo.imgPath = fname; photo.ext = ext; photo.size = size; photo.contentSha256 = sha256; photo.name = nextName;
       if (String(req.query.metadataRemoved || '') === '1') photo.metadataRemoved = true; else delete photo.metadataRemoved;
       const dims = imageDimensions(dest); if (dims) { photo.w = dims.w; photo.h = dims.h; }
       delete photo.thumb; delete photo.micro; delete photo.adaptiveWebp; delete photo.adaptiveAvif; delete photo.thumbSize; delete photo.microSize; delete photo.thumbW; delete photo.thumbH; delete photo.microW; delete photo.microH; delete photo.thumbMetaMtimeMs; delete photo.microMetaMtimeMs;
-      photo.replacedAt = Date.now(); applyDlpSummary(photo, scan);
+      photo.replacedAt = Date.now();
+      bumpPhotoCacheRevision(photo);
+      addPhotoEditHistory(photo, 'edit', editOperations.length ? editOperations : ['replace'], { from:{w:before.w||null,h:before.h||null,size:before.size||0}, to:{w:photo.w||null,h:photo.h||null,size:photo.size||0} });
+      applyDlpSummary(photo, scan);
       if (!persistNow()) {
         for (const key of Object.keys(photo)) delete photo[key]; Object.assign(photo, before);
         if (archivedVersion) { try { fs.rmSync(path.join(photoVersionDir(photo.token), archivedVersion.id), { recursive:true, force:true }); } catch (_) {} }
         try { fs.unlinkSync(dest); } catch (_) {}
         return res.status(503).json({ error:'write-error' });
       }
+      cleanupPhotoVersionStorage(photo);
       try { await unlinkManagedPathsStrict(oldManagedPaths); } catch (e) { console.error('[pwa-photo-replace] old file cleanup failed:', e && e.message); }
       addShareCenterNotification(photo,'image-full-replaced',{name:photo.name,bytes:size,dedupeKey:`image-replaced:${photo.id}:${photo.replacedAt}`});
       pwaAuditReq(req, 'image-replaced', `via PWA — ${photo.name || photo.token} · ${size} bytes`);
@@ -22367,14 +23361,8 @@ app.post('/app/image/:token/replace', (req, res) => {
 });
 app.post('/app/image/:token/adaptive/:format', (req, res) => {
   const photo = pwaPhotoByToken(req, req.params.token); const fmt = String(req.params.format || '').toLowerCase();
-  if (!photo || !/^(webp|avif)$/.test(fmt)) return res.status(404).json({ error: 'not-found' });
-  const dest = photoAdaptivePath(photo.token, fmt);
-  streamToFileBounded(req, res, dest, IMAGE_MAX_BYTES, (size) => {
-    const dims = imageDimensions(dest); photo[fmt === 'webp' ? 'adaptiveWebp' : 'adaptiveAvif'] = true; photo[fmt === 'webp' ? 'adaptiveWebpSize' : 'adaptiveAvifSize'] = size;
-    if (dims) { photo[fmt === 'webp' ? 'adaptiveWebpW' : 'adaptiveAvifW'] = dims.w; photo[fmt === 'webp' ? 'adaptiveWebpH' : 'adaptiveAvifH'] = dims.h; }
-    if (!persistNow()) return res.status(503).json({ error:'write-error', persisted:false });
-    res.json({ ok: true, persisted:true, bytes: size, w: dims && dims.w, h: dims && dims.h });
-  });
+  if (!photo || !/^(webp|avif)$/.test(fmt)) { req.resume(); return res.status(404).json({ error: 'not-found' }); }
+  return handlePhotoAdaptiveUpload(req,res,photo,fmt,IMAGE_MAX_BYTES);
 });
 
 app.post('/app/image', (req, res) => {
@@ -22417,35 +23405,13 @@ app.post('/app/image', (req, res) => {
 });
 app.post('/app/image/:token/thumb', (req, res) => {
   const s = getByToken(req.params.token);
-  if (!s || s.type !== 'photo' || !canManagePwaImage(req, s)) return res.status(404).json({ error: 'not-found' });
-  const dest = path.join(THUMBS_DIR, s.token + '.jpg');
-  streamToFileBounded(req, res, dest, THUMB_MAX_BYTES, (size) => {
-    const dims = imageDimensions(dest);
-    const wasVariant = !!s.thumb;
-    s.thumb = true;
-    s.thumbSize = size;
-    if (dims) { s.thumbW = dims.w; s.thumbH = dims.h; } else { delete s.thumbW; delete s.thumbH; }
-    try { s.thumbMetaMtimeMs = Math.floor(fs.statSync(dest).mtimeMs || 0); } catch (_) { delete s.thumbMetaMtimeMs; }
-    if (wasVariant) addShareCenterNotification(s,'image-variant-regenerated',{variant:'thumb',bytes:size,dedupeKey:`variant-regenerated:${s.id}:thumb:${Math.floor(Date.now()/60000)}`,dedupeWindowMs:60000});
-    scheduleFlush();
-    res.json({ ok: true, w: dims ? dims.w : null, h: dims ? dims.h : null, bytes: size });
-  });
+  if (!s || s.type !== 'photo' || !canManagePwaImage(req, s)) { req.resume(); return res.status(404).json({ error: 'not-found' }); }
+  return handleAdminPhotoVariantUpload(req,res,s,'thumb',THUMB_MAX_BYTES);
 });
 app.post('/app/image/:token/micro', (req, res) => {
   const s = getByToken(req.params.token);
-  if (!s || s.type !== 'photo' || !canManagePwaImage(req, s)) return res.status(404).json({ error: 'not-found' });
-  const dest = path.join(MICROS_DIR, s.token + '.jpg');
-  streamToFileBounded(req, res, dest, MICRO_MAX_BYTES, (size) => {
-    const dims = imageDimensions(dest);
-    const wasVariant = !!s.micro;
-    s.micro = true;
-    s.microSize = size;
-    if (dims) { s.microW = dims.w; s.microH = dims.h; } else { delete s.microW; delete s.microH; }
-    try { s.microMetaMtimeMs = Math.floor(fs.statSync(dest).mtimeMs || 0); } catch (_) { delete s.microMetaMtimeMs; }
-    if (wasVariant) addShareCenterNotification(s,'image-variant-regenerated',{variant:'micro',bytes:size,dedupeKey:`variant-regenerated:${s.id}:micro:${Math.floor(Date.now()/60000)}`,dedupeWindowMs:60000});
-    scheduleFlush();
-    res.json({ ok: true, w: dims ? dims.w : null, h: dims ? dims.h : null, bytes: size });
-  });
+  if (!s || s.type !== 'photo' || !canManagePwaImage(req, s)) { req.resume(); return res.status(404).json({ error: 'not-found' }); }
+  return handleAdminPhotoVariantUpload(req,res,s,'micro',MICRO_MAX_BYTES);
 });
 // Revoke a share the PWA created — a reception link (inbox) or an image link
 // (photo). Authorization reuses the per-image ownership rules: only the account
@@ -22573,7 +23539,7 @@ app.post('/app/host/shares', pwaJsonParser, async (req, res) => {
     const note = body.note.replace(/\r\n/g, '\n').trim().slice(0, 2000);
     if (note) share.note = note;
   }
-  const maxVisitors = Math.max(0, parseInt(body.maxVisitors, 10) || 0);
+  const maxVisitors = parseMaxVisitors(body.maxVisitors);
   if (maxVisitors > 0) share.maxVisitors = maxVisitors;
   // 1.51.0 — PWA parity with the standard dashboard's organization metadata.
   if (body.color !== undefined) {
@@ -22702,7 +23668,7 @@ app.post('/app/host/shares/:token/clone', pwaJsonParser, async (req, res) => {
   const requested=String(body.name||'').replace(/[\r\n\t]+/g,' ').trim().slice(0,200);
   const name=requested||((source.name||'Share')+' (copy)').slice(0,200);
   const clone=JSON.parse(JSON.stringify(source));
-  for(const key of ['id','token','createdAt','downloads','revoked','disabled','burnedAt','burnedReason','visitors','views','messages','pending','recipients','ownerId','ownerName','ownerDeviceId','pstats','bytesReceived','pinned','archived','autoArchivedAt','favorite','changeHistory','lastViewAt','lastUseAt','lastDownload','lastUpload','firstUsedAt','firstUseExpiresAt','statsBaseline','adminComments','editedAt']) delete clone[key];
+  for(const key of ['id','token','createdAt','downloads','revoked','disabled','burnedAt','burnedReason','visitors','views','messages','pending','recipients','ownerId','ownerName','ownerDeviceId','pstats','bytesReceived','pinned','archived','autoArchivedAt','favorite','changeHistory','lastViewAt','lastUseAt','lastDownload','lastUpload','firstUsedAt','firstUseExpiresAt','firstUseExpiryWarnedDeadline','expirySetAt','inactiveExpiryWarnedDeadline','statsBaseline','adminComments','editedAt','firstViewNotifiedAt','firstViewKind','firstViewIp','firstViewPushPending','firstViewPushQueuedAt','firstViewPushAcceptedAt','downloadThresholdNotifiedAt','centerFirstDepositAt','centerProtectedFirstAccessAt','centerNotificationCountries','centerViewMilestones','centerDownloadMilestones','centerVisitorAgents','centerExpiredDeadline','receivedHashes','senderStats','expiryWarnedAt','downloadLimitReachedAt','ipDownloads','bytesServed','firstViewPushAcceptedCount','centerFileSignature','centerFileFingerprint','retentionReason','retentionRevokedAt']) delete clone[key];
   clone.name=name; clone.downloads=0; clone.revoked=false;
   let freshDir=null;
   try {
@@ -22724,16 +23690,25 @@ app.post('/app/host/shares/:token/clone', pwaJsonParser, async (req, res) => {
 
 // Global recoverable Trash in the PWA: images, receptions, collaboration links
 // and host shares all land in the same server-side lifecycle store.
-app.get('/app/trash', (req, res) => {
+app.get('/app/trash', async (req, res) => {
   if (!req.pwaSession && !req.pwaDevice) return res.status(403).json({ error:'auth-required' });
-  const items=trashItems().filter((rec)=>rec&&rec.share&&canManagePwaImage(req,rec.share)).map(trashPublicRecord);
-  res.setHeader('Cache-Control','no-store');
-  res.json({items,retentionDays:Math.max(0,Number(getSettings().trashRetentionDays)||0),count:items.length,canPurge:pwaViewerIsAdmin(req)});
+  try {
+    const items=await Promise.all(trashItems().filter((rec)=>rec&&rec.share&&canManagePwaImage(req,rec.share)).map(trashPublicRecord));
+    res.setHeader('Cache-Control','no-store');
+    res.json({items,retentionDays:Math.max(0,Number(getSettings().trashRetentionDays)||0),count:items.length,canPurge:pwaViewerIsAdmin(req),purgeSummary:{bytes:items.reduce((n,r)=>n+Math.max(0,Number(r.purgeImpact&&r.purgeImpact.bytes)||0),0),items:items.length,dependencies:items.reduce((n,r)=>n+Math.max(0,Number(r.purgeImpact&&r.purgeImpact.dependencyCount)||0),0)}});
+  } catch (e) { console.error('[pwa trash] impact failed:',e&&e.message); res.status(500).json({error:'trash-impact-failed'}); }
 });
-app.post('/app/trash/:id/restore', pwaJsonParser, (req, res) => {
+app.post('/app/trash/:id/restore', pwaJsonParser, async (req, res) => {
   const list=trashItems(); const i=list.findIndex((r)=>r&&r.id===req.params.id);
   if(i<0||!list[i].share||!canManagePwaImage(req,list[i].share))return res.status(404).json({error:'not-found'});
-  const original=JSON.parse(JSON.stringify(list[i])); const rec=list.splice(i,1)[0], sh=restoreTrashRecord(rec);
+  const original=JSON.parse(JSON.stringify(list[i])); const rec=list[i], assessment=await trashRestoreAssessment(rec);
+  if(!assessment.available){
+    const alternative=String(req.body&&req.body.alternativePath||'').trim();
+    if(!alternative)return res.status(409).json({error:'restore-location-missing',assessment});
+    try{if(!await applyTrashRestoreAlternative(rec.share,alternative))return res.status(400).json({error:'invalid-alternative',assessment});}
+    catch(_){return res.status(400).json({error:'invalid-alternative',assessment});}
+  }
+  list.splice(i,1); const sh=restoreTrashRecord(rec);
   recordShareChange(sh,req,'restored',[],null);
   if(!persistNow()){detachActiveShare(sh);list.splice(Math.min(i,list.length),0,original);reindex();shareLogicalBytesCache.clear();return res.status(503).json({error:'write-error'});}
   scheduleSearchReindex();
@@ -22793,17 +23768,30 @@ app.post('/app/undo/:id', pwaJsonParser, (req, res) => {
 app.get('/app/search', async (req, res) => {
   if (!req.pwaSession && !req.pwaDevice) return res.status(403).json({ error:'auth-required' });
   const q=String(req.query.q||'').trim(); if(q.length<2)return res.status(400).json({error:'query-too-short'});
-  if(!universalSearchIndex.builtAt&&!searchIndexBuilding){try{await buildUniversalSearchIndex();}catch(_){}}
+  if(!universalSearchIndex.builtAt&&!searchIndexBuilding){try{await buildUniversalSearchIndex();}catch(_){} }
   const limit=Math.min(100,Math.max(1,parseInt(req.query.limit,10)||60));
   const semantic=/^(1|true|yes|on)$/i.test(String(req.query.semantic||''));
   const session=req.pwaSession||null, creator=req.pwaDevice?pwaDeviceCreatorAccount(req.pwaDevice):null;
   const role=(session&&session.role)||(creator&&creator.role)||''; const username=(session&&session.username)||(creator&&creator.username)||'';
   const canShare=(share)=>!!(share&&canManagePwaImage(req,share));
-  const content=(semantic?universalSemanticSearchQuery(q,req,limit,{canAccess:canShare}):universalSearchQuery(q,req,limit,{canAccess:canShare})).map((r)=>({...r,scope:'content'}));
-  const meta=globalMetadataSearch(q,req,limit,{canShare,role,username,includeAdminMeta:pwaViewerIsAdmin(req),scopes:['links','users','logs']});
-  const results=meta.concat(content).slice(0,limit);
+  let content=[], meta=[]; const warnings=[];
+  try {
+    content=(semantic?universalSemanticSearchQuery(q,req,limit,{canAccess:canShare}):universalSearchQuery(q,req,limit,{canAccess:canShare})).map((r)=>({...r,scope:'content'}));
+  } catch (e) {
+    warnings.push('content-index');
+    console.error('[pwa search] content query failed:', e && e.message);
+  }
+  try {
+    meta=globalMetadataSearch(q,req,limit,{canShare,role,username,includeAdminMeta:pwaViewerIsAdmin(req),scopes:['links','users','logs']});
+  } catch (e) {
+    warnings.push('metadata');
+    console.error('[pwa search] metadata query failed:', e && e.message);
+  }
+  const results=meta.concat(content).sort((a,b)=>Number(b.filenameMatchRank||0)-Number(a.filenameMatchRank||0)||Number(b.relevanceScore||b.semanticScore||0)-Number(a.relevanceScore||a.semanticScore||0)||String(a.file||a.shareName||'').localeCompare(String(b.file||b.shareName||''))).slice(0,limit);
+  const globalView=pwaViewerIsAdmin(req)||role==='auditor';
+  const scopedStatus=universalSearchScopedStatus(canShare,globalView);
   res.setHeader('Cache-Control','no-store');
-  res.json({query:q,semantic,scope:'all',results,indexed:(universalSearchIndex.docs||[]).length,builtAt:universalSearchIndex.builtAt||0,building:searchIndexBuilding});
+  res.json({query:q,semantic,scope:'all',results,indexed:scopedStatus.indexed,builtAt:scopedStatus.builtAt||0,building:searchIndexBuilding,degraded:warnings.length>0,warnings});
 });
 
 // Live "downloading now" presence for the PWA. Same data as the /api
@@ -23031,9 +24019,17 @@ function updatePwaDeviceClientInfo(device, req) {
   const version = String(req.query && req.query.version || '').replace(/[^0-9A-Za-z._+-]/g, '').slice(0, 40);
   const build = String(req.query && req.query.build || '').replace(/[\r\n\t]+/g, ' ').trim().slice(0, 80);
   const platform = detectClientPlatform(ua);
+  const standalone = String(req.query && req.query.standalone || '') === '1';
   let changed = false;
   for (const [key, value] of [['platform',platform],['userAgent',ua],['appVersion',version],['appBuild',build]]) {
     if (value && device[key] !== value) { device[key] = value; changed = true; }
+  }
+  if (standalone) {
+    const now = Date.now();
+    if (!device.installedStandaloneSeenAt || now - Number(device.installedStandaloneSeenAt || 0) > 3600000) {
+      device.installedStandaloneSeenAt = now;
+      changed = true;
+    }
   }
   if (changed) scheduleFlush();
   return changed;
@@ -23556,9 +24552,12 @@ function printStartupBanner() {
   const centerHealthTimer = setInterval(() => { try { checkCenterSystemHealth(); } catch (_) {} }, 5 * 60 * 1000);
   if (centerHealthTimer && centerHealthTimer.unref) centerHealthTimer.unref();
   console.log('');
-  console.log('  ┌─────────────────────────────────────────────┐');
-  console.log('  │       Direct-Xfer — HTTP(S) file sharing      │');
-  console.log('  └─────────────────────────────────────────────┘');
+  const bannerTitle = 'Direct-Xfer — HTTP(S) file sharing';
+  const bannerSidePadding = 6;
+  const bannerInnerWidth = bannerTitle.length + (bannerSidePadding * 2);
+  console.log('  ┌' + '─'.repeat(bannerInnerWidth) + '┐');
+  console.log('  │' + ' '.repeat(bannerSidePadding) + bannerTitle + ' '.repeat(bannerSidePadding) + '│');
+  console.log('  └' + '─'.repeat(bannerInnerWidth) + '┘');
   console.log(`  • Version          : v${APP_VERSION}`);
   // The server binds to BIND (all interfaces by default). For the banner we show
   // the address admins actually reach: the LAN IP when LOCAL_IP is set and BIND
@@ -23651,7 +24650,14 @@ function printStartupBanner() {
       `  • Admin access     : ${ADMIN_ALLOW_ANY ? 'ALL NETWORKS (ADMIN_ALLOW_ANY)' : 'local network only'}`
     );
   }
-  if (PUBLIC_URL) console.log(`  • Public URL       : ${PUBLIC_URL}  (reverse proxy)`);
+  const startupSettings = getSettings();
+  // Match primaryBase(): the domain configured in the UI overrides PUBLIC_URL.
+  // Otherwise the banner could advertise a different host from the URLs Direct-Xfer
+  // actually generates after an administrator changes the public-domain setting.
+  const startupPublicUrl = startupSettings.linkBase || PUBLIC_URL || '';
+  if (startupPublicUrl) console.log(`  • Public URL       : ${startupPublicUrl}${startupSettings.linkBase ? '  (configured)' : '  (reverse proxy)'}`);
+  const publicImgUrl = startupSettings.imageBase || startupPublicUrl;
+  if (publicImgUrl) console.log(`  • Public IMG URL   : ${publicImgUrl}${startupSettings.imageBase ? '  (Images)' : '  (same public base)'}`);
   if (TRUST_PROXY) console.log(`  • Reverse proxy    : enabled (trust proxy = ${TRUST_PROXY})`);
   if (getSettings().shutdownAfterDownload) {
     console.log('  • Auto-shutdown    : ARMED (stops after the next complete download)');

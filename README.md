@@ -384,7 +384,6 @@ services:
     # Unraid: show the logo + a clickable "WebUI" link (Docker tab). [IP] and
     # [PORT:55750] are substituted by Unraid. Use https:// if you enable TLS_* below.
     labels:
-      net.unraid.docker.managed: "composeman"
       net.unraid.docker.webui: "http://[IP]:[PORT:55750]/"
       net.unraid.docker.icon: "https://raw.githubusercontent.com/ManixQC/Direct-Xfer/refs/heads/main/unraid/direct-xfer.png"
     ports:

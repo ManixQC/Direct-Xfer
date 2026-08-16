@@ -101,6 +101,10 @@ test('encrypted full backup preserves the Local CA trust anchor; plaintext backu
     assert.equal(new crypto.X509Certificate(fs.readFileSync(path.join(dst.data,'tls','local-ca-cert.pem'))).fingerprint256,sourceFingerprint);
   } finally {
     for(const c of [srcChild,plainChild,staleChild,dstChild,restartChild])await stop(c).catch(()=>{});
+    // Node 22 may keep HTTP(S) agent sockets alive briefly after the final Local-CA
+    // request. Explicitly destroy them so this integration test exits deterministically.
+    try { https.globalAgent.destroy(); } catch (_) {}
+    try { http.globalAgent.destroy(); } catch (_) {}
     fs.rmSync(tmp,{recursive:true,force:true});
   }
 });

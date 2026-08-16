@@ -41,5 +41,5 @@ test('standard and PWA image stats share the same full-IP/country enrichment pat
   assert.match(server, /async function detailedPhotoRecentViews\(share, limit = 50\)/);
   assert.match(server, /ip: v\.ip \? \(v\.ipFull \? pubIp\(v\.ip\) : v\.ip\) : null/);
   assert.match(server, /flag: flag \|\| \(countryCode \? flagFromCode\(countryCode\) : null\)/);
-  assert.match(server, /const recentViews = await detailedPhotoRecentViews\(s, 50\)/);
+  assert.match(server, /const recentViews\s*=\s*await detailedPhotoRecentViews\(s,\s*50\)/);
 });

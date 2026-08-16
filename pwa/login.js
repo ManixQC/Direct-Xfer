@@ -409,6 +409,14 @@
         !!navigator.standalone || document.referrer.indexOf('android-app://') === 0;
     } catch (_) { return false; }
   }
+  function rememberInstalledPwa() {
+    try { localStorage.setItem('dx-pwa-installed', String(Date.now())); } catch (_) {}
+    try {
+      document.cookie = 'dx_pwa_installed=' + encodeURIComponent(String(Date.now())) + '; Path=/; Max-Age=15552000; SameSite=Lax' +
+        (location.protocol === 'https:' ? '; Secure' : '');
+    } catch (_) {}
+  }
+  if (isStandaloneApp()) rememberInstalledPwa();
   function isIosBrowser() {
     var ua = navigator.userAgent || '';
     return /iPad|iPhone|iPod/i.test(ua) || (/Macintosh/i.test(ua) && Number(navigator.maxTouchPoints || 0) > 1);
@@ -481,6 +489,7 @@
   });
   window.addEventListener('appinstalled', function () {
     deferredInstallPrompt = null;
+    rememberInstalledPwa();
     if (installWarning) installWarning.classList.add('hidden');
     updateMobileInstallButton();
   });
@@ -489,7 +498,7 @@
   // from creating a simple home-screen shortcut with no WebAPK/share-target
   // integration when the user installs before signing in.
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/direct-xfer-pwa-sw.js?v=269', { scope: '/app/' }).catch(function () {});
+    navigator.serviceWorker.register('/direct-xfer-pwa-sw.js?v=274', { scope: '/app/' }).catch(function () {});
   }
   hydrateRememberedLogin().finally(function () { ((rememberPassword.checked && password.value) ? password : user).focus(); });
 })();

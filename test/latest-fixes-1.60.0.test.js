@@ -17,28 +17,28 @@ const workflow = read('.github','workflows','build-windows-csharp.yml');
 test('detailed share stats expose the effective lifecycle expiry and an expired status', () => {
   assert.match(server, /const effectiveExpiresAt = Number\(decorated\.effectiveExpiresAt\)/);
   assert.match(server, /expired \? 'expired' : isActive\(s\)/);
-  assert.match(server, /expiresAt: s\.expiresAt \|\| 0,\s*effectiveExpiresAt,/);
+  assert.match(server, /expiresAt:s\.expiresAt\|\|0,effectiveExpiresAt,/);
   assert.match(admin, /'stats\.expired': 'Expiré'/);
   assert.match(pwa, /shareStatsExpired:'Expiré'/);
   assert.match(pwa, /sh\.effectiveExpiresAt\|\|sh\.expiresAt/);
 });
 
 test('standard and PWA stats ignore stale async responses after another modal action', () => {
-  assert.match(admin, /let detailedStatsRequestSerial = 0/);
-  assert.match(admin, /requestSerial !== detailedStatsRequestSerial \|\| overlay\.classList\.contains\('hidden'\)/);
-  assert.match(admin, /closeDetailedStats\(\) \{ detailedStatsRequestSerial \+= 1;/);
+  assert.match(admin, /let detailedStatsContext = \{ share: null, period: '14', requestSeq: 0 \}/);
+  assert.match(admin, /seq !== detailedStatsContext\.requestSeq/);
+  assert.match(admin, /closeDetailedStats\(\) \{ detailedStatsContext\.requestSeq \+= 1;/);
   assert.match(pwa, /var detailedStatsRequestSerial = 0/);
   assert.match(pwa, /requestSerial !== detailedStatsRequestSerial/);
   assert.match(pwa, /closeImageDetailedStats\(\) \{ detailedStatsRequestSerial \+= 1;/);
 });
 
 test('current shell cache keys deliver the corrected admin and PWA scripts', () => {
-  assert.match(html, /style\.css\?v=275/);
-  assert.match(html, /app\.js\?v=275/);
-  assert.match(pwaHtml, /app\.js\?v=273/);
-  assert.match(pwaHtml, /v1\.60\.0 · pwa289/);
-  assert.match(sw, /VERSION = '2026\.08\.15-pwa289'/);
-  assert.match(sw, /app\/app\.js\?v=273/);
+  assert.match(html, /style\.css\?v=286/);
+  assert.match(html, /app\.js\?v=292/);
+  assert.match(pwaHtml, /app\.js\?v=290/);
+  assert.match(pwaHtml, /v1\.62\.2 · pwa306/);
+  assert.match(sw, /VERSION = '2026\.08\.16-pwa306'/);
+  assert.match(sw, /app\/app\.js\?v=290/);
 });
 
 test('Windows workflow release-critical test paths all exist', () => {

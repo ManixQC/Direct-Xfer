@@ -20,9 +20,15 @@ const swSource = fs.readFileSync(path.join(root, 'pwa', 'sw.js'), 'utf8');
 test('login mobile-app link appears only on the full admin login opened from a mobile client', () => {
   assert.match(adminHtml, /id="login-view"[\s\S]*class="pwa-cta login-pwa[^"]*"[^>]+href="\/app"/);
   assert.match(adminCss, /\.pwa-cta\s*\{\s*display:\s*none;/);
-  assert.match(adminCss, /html\.is-mobile #login-view \.login-pwa,\s*\nbody\.is-mobile #login-view \.login-pwa\s*\{[^}]*display:\s*inline-flex/s);
+  assert.match(adminCss, /html\.is-mobile #login-view \.login-pwa,\s*\nbody\.is-mobile #login-view \.login-pwa,[\s\S]*?display:\s*inline-flex/s);
   assert.doesNotMatch(adminCss, /(?:^|\n)\.login-pwa,?\s*(?:\n|\{)/);
   assert.doesNotMatch(adminCss, /@media[^}]*max-width[^}]*\.pwa-cta[^}]*display:\s*inline-flex/s);
+});
+
+test('standard authenticated view exposes the mobile install link only to detected mobile clients', () => {
+  assert.match(adminHtml, /id="app-view"[\s\S]*class="pwa-cta pwa-install-cta[^"]*"[^>]+href="\/app\/"[^>]+data-i18n="pwa\.installApp"/);
+  assert.match(adminCss, /html\.is-mobile\.pwa-install-offer #app-view \.pwa-install-cta,\s*\nbody\.is-mobile\.pwa-install-offer #app-view \.pwa-install-cta\s*\{[^}]*display:\s*inline-flex/s);
+  assert.doesNotMatch(adminCss, /(?:^|\n)\.pwa-install-cta\s*\{[^}]*display:\s*inline-flex/s);
 });
 
 test('mobile PWA keeps an install entry visible on secure mobile browsers while Chrome prepares the native prompt', () => {

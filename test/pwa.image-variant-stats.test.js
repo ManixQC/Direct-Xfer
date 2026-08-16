@@ -44,15 +44,16 @@ test('server returns dimensions and views\/visitors for all three variants', () 
   assert.match(server, /full: \{ \.\.\.full, bytes: fullBytes, ready: true, views:/);
   assert.match(server, /thumb: \{ \.\.\.thumb, bytes: thumbBytes, ready: !!share\.thumb, views:/);
   assert.match(server, /micro: \{ \.\.\.micro, bytes: microBytes, ready: !!share\.micro, views:/);
-  assert.match(server, /s\.thumbSize = size/);
-  assert.match(server, /s\.thumbW = dims\.w; s\.thumbH = dims\.h/);
-  assert.match(server, /s\.microSize = size/);
-  assert.match(server, /s\.microW = dims\.w; s\.microH = dims\.h/);
+  assert.match(server, /s\[kind \+ 'Size'\] = size/);
+  assert.match(server, /s\[kind \+ 'W'\] = dims\.w; s\[kind \+ 'H'\] = dims\.h/);
+  assert.match(server, /handleAdminPhotoVariantUpload\(req,res,s,'thumb'/);
+  assert.match(server, /handleAdminPhotoVariantUpload\(req,res,s,'micro'/);
 });
 
 test('standard-admin Mini/Micro rewrites refresh the metadata consumed by PWA cards', () => {
-  assert.match(server, /adminRouter\.post\('\/photos\/:id\/thumb'[\s\S]*?s\.thumbSize = size;[\s\S]*?s\.thumbW = dims\.w; s\.thumbH = dims\.h;[\s\S]*?s\.thumbMetaMtimeMs = Math\.floor\(fs\.statSync\(dest\)\.mtimeMs \|\| 0\)/);
-  assert.match(server, /adminRouter\.post\('\/photos\/:id\/micro'[\s\S]*?s\.microSize = size;[\s\S]*?s\.microW = dims\.w; s\.microH = dims\.h;[\s\S]*?s\.microMetaMtimeMs = Math\.floor\(fs\.statSync\(dest\)\.mtimeMs \|\| 0\)/);
+  assert.match(server, /function handleAdminPhotoVariantUpload[\s\S]*?s\[kind \+ 'Size'\] = size;[\s\S]*?s\[kind \+ 'W'\] = dims\.w; s\[kind \+ 'H'\] = dims\.h;[\s\S]*?s\[kind \+ 'MetaMtimeMs'\] = Math\.floor\(fs\.statSync\(dest\)\.mtimeMs \|\| 0\)/);
+  assert.match(server, /adminRouter\.post\('\/photos\/:id\/thumb'[\s\S]*?handleAdminPhotoVariantUpload\(req,res,s,'thumb'/);
+  assert.match(server, /adminRouter\.post\('\/photos\/:id\/micro'[\s\S]*?handleAdminPhotoVariantUpload\(req,res,s,'micro'/);
   assert.match(server, /const stale = !w \|\| !h \|\| !knownMtime \|\| \(diskMtime && knownMtime !== diskMtime\) \|\| \(diskBytes && bytes !== diskBytes\)/);
   assert.match(server, /readVariantMeta\('thumb', 'thumbW', 'thumbH', 'thumbSize', 'thumbMetaMtimeMs'/);
   assert.match(server, /readVariantMeta\('micro', 'microW', 'microH', 'microSize', 'microMetaMtimeMs'/);

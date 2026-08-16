@@ -16,12 +16,12 @@
        paired with a stale app.js/app.css from a previous version's service-worker cache
        (that mix threw on removed elements and broke the icon styling). Bump ?v in
        lock-step with sw.js VERSION on every release. -->
-  <link rel="stylesheet" href="/app/app.css?v=272">
+  <link rel="stylesheet" href="/app/app.css?v=274">
   <script src="/app/theme-init.js?v=269"></script>
   <script src="/dxcrypto.js?v=269" defer></script>
-  <script src="/app/dlp-local.js?v=269" defer></script>
+  <script src="/app/dlp-local.js?v=270" defer></script>
   <script src="/download-resume.js?v=269" defer></script>
-  <script src="/app/app.js?v=273" defer></script>
+  <script src="/app/app.js?v=290" defer></script>
   <title>Direct-Xfer — Envoyer</title>
 </head>
 <body>
@@ -103,6 +103,7 @@
   </header>
 
   <main class="wrap">
+    <div id="long-operation" class="long-operation hidden" role="status" aria-live="polite"><div><strong id="long-operation-label">Traitement…</strong><span id="long-operation-detail" class="muted sm"></span></div><progress id="long-operation-progress" max="100" value="0"></progress></div>
     <div id="pwa-panel-heading" class="panel-heading" role="status" aria-live="polite">
       <span id="pwa-panel-kicker" class="lbl" data-i18n="navSend">Envoyer</span>
       <span id="pwa-panel-summary" class="panel-summary" data-i18n="navSendHint">Préparer et envoyer des fichiers vers une destination.</span>
@@ -215,9 +216,8 @@
         <label class="pick"><span class="ico">📷</span><span data-i18n="takePhoto">Prendre une photo</span>
           <input id="pick-camera" type="file" accept="image/*" capture="environment" hidden>
         </label>
-        <label class="pick"><span class="ico">📄</span><span data-i18n="chooseFiles">Choisir des fichiers</span>
-          <input id="pick-files" type="file" hidden multiple>
-        </label>
+        <button type="button" id="pick-files-btn" class="pick"><span class="ico">📄</span><span data-i18n="chooseFiles">Choisir des fichiers</span></button>
+        <input id="pick-files" type="file" accept="*/*" hidden multiple>
         <label class="pick"><span class="ico">📁</span><span data-i18n="chooseFolder">Choisir un dossier</span>
           <input id="pick-folder" type="file" webkitdirectory directory hidden multiple>
         </label>
@@ -749,6 +749,13 @@
           <option value="system" data-i18n="serverActivityKindSystem">Système</option>
         </select>
         <select id="server-activity-share" class="compact-select server-activity-kind" aria-label="Partage"><option value="" data-i18n="serverActivityShareAll">Tous les partages</option></select>
+        <input id="server-activity-actor" type="search" class="history-search activity-compact" autocomplete="off" placeholder="Utilisateur" data-i18n-placeholder="serverActivityActor">
+        <input id="server-activity-ip" type="search" class="history-search activity-compact" autocomplete="off" placeholder="IP">
+        <select id="server-activity-device" class="compact-select server-activity-kind"><option value="" data-i18n="serverActivityDevice">Appareil/source</option><option value="standard">Standard</option><option value="pwa">PWA</option></select>
+        <select id="server-activity-result" class="compact-select server-activity-kind"><option value="" data-i18n="serverActivityResult">Résultat</option><option value="ok">OK</option><option value="error">Erreur</option><option value="restored">Restauré</option><option value="deleted">Supprimé</option></select>
+        <select id="server-activity-period" class="compact-select server-activity-kind"><option value="" data-i18n="serverActivityPeriod">Période</option><option value="24" data-i18n="serverActivity24h">24 h</option><option value="168" data-i18n="serverActivity7d">7 jours</option><option value="720" data-i18n="serverActivity30d">30 jours</option></select>
+        <select id="server-activity-direction" class="compact-select server-activity-kind"><option value="" data-i18n="serverActivityDirection">Sens</option><option value="up">↑</option><option value="down">↓</option></select>
+        <label class="activity-filter-check"><input id="server-activity-correlate" type="checkbox" checked><span data-i18n="serverActivityCorrelate">Regrouper par partage</span></label>
         <label class="activity-filter-check"><input id="server-activity-images" type="checkbox"><span data-i18n="serverActivityImagesOnly">Images seulement</span></label>
         <label class="activity-filter-check"><input id="server-activity-pwa" type="checkbox"><span data-i18n="serverActivityPwaOnly">PWA seulement</span></label>
         <label class="activity-filter-check"><input id="server-activity-hide-routine" type="checkbox"><span data-i18n="serverActivityHideRoutine">Masquer système routinier</span></label>
@@ -880,6 +887,14 @@
             <div id="settings-notification-rule-list" class="notification-rule-list"></div>
           </div>
         </div>
+        <div class="setting-row diagnostic-setting-row">
+          <div><strong data-i18n="bgSyncTitle">Synchronisation en arrière-plan</strong><p id="background-sync-status" class="muted sm" role="status" aria-live="polite"></p></div>
+          <div class="button-row compact-buttons"><button id="background-sync-refresh" class="btn ghost sm" type="button" data-i18n="bgSyncRefresh">Actualiser le diagnostic</button><button id="background-sync-run" class="btn ghost sm" type="button" data-i18n="bgSyncRun">Relancer maintenant</button></div>
+        </div>
+        <div class="setting-row diagnostic-setting-row">
+          <div><strong data-i18n="installDiagTitle">État de l’application</strong><p id="pwa-install-diagnostic" class="muted sm" role="status" aria-live="polite"></p></div>
+          <div class="button-row compact-buttons"><button id="pwa-install-refresh" class="btn ghost sm" type="button" data-i18n="installDiagRefresh">Vérifier</button></div>
+        </div>
         <div class="setting-row">
           <div>
             <strong data-i18n="sessionStats">Cette session</strong>
@@ -995,7 +1010,7 @@
       </div>
     </details>
 
-    <p class="foot">Direct-Xfer · <span data-i18n="companionApp">application compagnon</span> · <span id="build-tag" class="muted">v1.60.0 · pwa289</span></p>
+    <p class="foot">Direct-Xfer · <span data-i18n="companionApp">application compagnon</span> · <span id="build-tag" class="muted">v1.62.2 · pwa306</span></p>
   </main>
 
   <nav id="pwa-bottom-nav" class="pwa-bottom-nav" aria-label="Navigation principale" data-i18n-aria="navMain">

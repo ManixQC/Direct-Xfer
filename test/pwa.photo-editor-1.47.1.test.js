@@ -25,7 +25,7 @@ test('short taps draw and interrupted gestures roll back cleanly', () => {
   assert.match(app, /paintSolidBrushSegment\(annStart, annStart, brushSize, '#000'\)/);
   assert.match(app, /function cancelAnnGesture\(\)[\s\S]*?restoreAnnSnapshot\(annUndoStack\[annUndoStack\.length - 1\]\)/);
   assert.match(app, /addEventListener\('touchcancel', cancelAnnGesture\)/);
-  assert.match(app, /if \(annGestureChanged\) pushAnnUndo\(\)/);
+  assert.match(app, /if \(annGestureChanged\) \{ pushAnnUndo\(\)/);
 });
 
 test('undo snapshots restore geometry-changing edits and clear returns to the source image', () => {
@@ -46,11 +46,11 @@ test('editor blocks conflicting mutations while detection runs and preserves wor
 });
 
 test('1.51.2 PWA build and resource identifiers stay synchronized', () => {
-  assert.equal(pkg.version, '1.60.0');
-  assert.match(app, /APP_VERSION = '1\.60\.0'/);
-  assert.match(app, /APP_BUILD = '2026\.08\.15-pwa289'/);
-  assert.match(sw, /VERSION = '2026\.08\.15-pwa289'/);
-  assert.match(html, /v1\.60\.0 · pwa289/);
-  assert.match(html, /\/app\/app\.js\?v=273/);
-  assert.match(sw, /\/app\/app\.js\?v=273/);
+  assert.equal(pkg.version, '1.62.2');
+  assert.match(app, /APP_VERSION = '1\.62\.2'/);
+  assert.match(app, /APP_BUILD = '2026\.08\.16-pwa306'/);
+  assert.match(sw, /VERSION = '2026\.08\.16-pwa306'/);
+  assert.match(html, /v1\.62\.2 · pwa306/);
+  assert.match(html, /\/app\/app\.js\?v=290/);
+  assert.match(sw, /\/app\/app\.js\?v=290/);
 });

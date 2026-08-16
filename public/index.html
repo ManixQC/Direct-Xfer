@@ -15,7 +15,8 @@
         document.documentElement.setAttribute('data-theme', t);
       })();
     </script>
-    <link rel="stylesheet" href="/style.css?v=275" />
+    <link rel="manifest" href="/admin-pwa-detect.webmanifest" />
+    <link rel="stylesheet" href="/style.css?v=286" />
   </head>
   <body>
     <!-- ===================== Login ===================== -->
@@ -96,7 +97,7 @@
       <header class="topbar">
         <div class="brand admin-brand"><img class="brand-logo brand-home" src="/logo.svg" alt="" role="link" tabindex="0" data-i18n-title="menu.backToShares" title="Back to shares" /> <span class="brand-home" role="link" tabindex="0" data-i18n-title="menu.backToShares" title="Back to shares" data-i18n="app.name">Direct-Xfer</span></div>
         <div class="topbar-menus">
-          <a class="pwa-cta btn ghost sm" href="/app/" data-i18n="pwa.openApp" title="Mobile send app">📱 Mobile send app</a>
+          <a class="pwa-cta pwa-install-cta btn ghost sm" href="/app/" data-i18n="pwa.installApp" data-i18n-title="pwa.installApp" title="Install mobile app">📲 Install mobile app</a>
           <div class="activity-menu">
             <button id="activity-btn" class="icon-btn user-btn activity-launch-btn" aria-label="Activity" data-i18n-aria="activity.sectionTitle" data-i18n-title="activity.sectionTitle" title="Activity" aria-controls="activity-page">
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
@@ -195,6 +196,7 @@
               <button id="change-pw-btn" class="dropdown-item" role="menuitem" data-i18n="menu.changePassword">🔑 Change password</button>
               <button id="twofactor-btn" class="dropdown-item" role="menuitem" data-i18n="menu.twoFactor">🛡 Two-factor authentication (2FA)</button>
               <button id="accounts-btn" class="dropdown-item hidden" role="menuitem" data-i18n="menu.accounts">👥 Admin accounts</button>
+              <button id="security-btn" class="dropdown-item" role="menuitem" data-i18n="menu.securityCenter">🔐 Security & sessions</button>
               <button id="audit-btn" class="dropdown-item" role="menuitem" data-i18n="menu.audit">📋 Audit log</button>
               <button id="decrypt-btn" class="dropdown-item" role="menuitem" data-i18n="menu.decrypt">🔓 Decrypt a .dxe file</button>
               <button id="shutdown-server-btn" class="dropdown-item" role="menuitem" data-i18n="menu.shutdown">⏻ Shut down server</button>
@@ -269,15 +271,25 @@
         <div class="card-head shares-head">
           <h2 class="shares-title"><span data-i18n="sh.title">Active shares</span> <span id="share-count" class="count">0</span></h2>
           <div class="head-actions">
-            <button id="search-toggle-btn" class="btn ghost sm" data-i18n="search.btn" title="Search file contents">🔎 Search contents</button>
-            <button id="trash-btn" class="btn ghost sm" type="button"><span data-i18n="trash.open">🗑 Trash</span> <span id="trash-count-badge" class="count">0</span></button>
-            <button id="links-export-csv" class="btn ghost sm" data-i18n="sh.exportCsv" title="Export the links list as CSV">⬇ Links CSV</button>
-            <button id="links-export-json" class="btn ghost sm" data-i18n="sh.exportJson" title="Export the links list as JSON">⬇ Links JSON</button>
-            <button id="new-enc-btn" class="btn ghost sm" data-i18n="enc.newShare">🔒 Encrypted share</button>
-            <button id="new-secret-btn" class="btn ghost sm" data-i18n="secret.new">🔑 Secret note</button>
-            <button id="new-inbox-btn" class="btn ghost sm" data-i18n="sh.newInbox">＋ Reception link</button>
-            <button id="new-collab-btn" class="btn ghost sm" data-i18n="sh.newCollab">🔁 Collaboration link</button>
             <button id="new-share-btn" class="btn sm" data-i18n="sh.new">＋ New share</button>
+            <div id="share-create-menu" class="share-action-menu">
+              <button id="share-create-menu-btn" class="btn ghost sm share-action-menu-trigger share-action-menu-plus" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="share-create-menu-panel" data-i18n-aria="sh.moreCreateAria">+</button>
+              <div id="share-create-menu-panel" class="share-action-menu-panel hidden" role="menu" aria-labelledby="share-create-menu-btn">
+                <button id="new-collab-btn" class="btn ghost sm" type="button" role="menuitem" data-i18n="sh.newCollab">🔁 Collaboration link</button>
+                <button id="new-inbox-btn" class="btn ghost sm" type="button" role="menuitem" data-i18n="sh.newInbox">＋ Reception link</button>
+                <button id="new-secret-btn" class="btn ghost sm" type="button" role="menuitem" data-i18n="secret.new">🔑 Secret note</button>
+                <button id="new-enc-btn" class="btn ghost sm" type="button" role="menuitem" data-i18n="enc.newShare">🔒 Encrypted share</button>
+              </div>
+            </div>
+            <div id="share-config-menu" class="share-action-menu">
+              <button id="share-config-menu-btn" class="btn ghost sm share-action-menu-trigger" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="share-config-menu-panel" aria-label="Config" title="Config" data-i18n-aria="sh.actionConfig" data-i18n-title="sh.actionConfig"><span aria-hidden="true">⚙</span></button>
+              <div id="share-config-menu-panel" class="share-action-menu-panel hidden" role="menu" aria-labelledby="share-config-menu-btn">
+                <button id="search-toggle-btn" class="btn ghost sm" type="button" role="menuitem" data-i18n="search.btn" title="Search file contents">🔎 Search contents</button>
+                <button id="trash-btn" class="btn ghost sm" type="button" role="menuitem"><span data-i18n="trash.open">🗑 Trash</span> <span id="trash-count-badge" class="count">0</span></button>
+                <button id="links-export-csv" class="btn ghost sm" type="button" role="menuitem" data-i18n="sh.exportCsv" title="Export the links list as CSV">⬇ Links CSV</button>
+                <button id="links-export-json" class="btn ghost sm" type="button" role="menuitem" data-i18n="sh.exportJson" title="Export the links list as JSON">⬇ Links JSON</button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -367,10 +379,6 @@
           </select>
           <button id="shares-archived-toggle" type="button" class="btn ghost sm" aria-pressed="false" data-i18n="sh.showArchived">🗄 Archives</button>
           <button id="shares-pinned-toggle" type="button" class="btn ghost sm" aria-pressed="false" data-i18n="sh.pinnedOnly">★ Épinglés</button>
-          <div class="ui-view-toggle" role="group" aria-label="Display mode">
-            <button id="shares-view-list" class="btn ghost sm view-mode-btn active" type="button" aria-pressed="true" data-i18n-title="view.list" title="List view">☷</button>
-            <button id="shares-view-grid" class="btn ghost sm view-mode-btn" type="button" aria-pressed="false" data-i18n-title="view.grid" title="Grid view">▦</button>
-          </div>
           <button id="shares-density-toggle" class="btn ghost sm density-toggle" type="button" aria-pressed="false" data-i18n-title="sh.densityTip" title="Density: compact / comfortable">↕</button>
           <button type="button" id="bulk-select-page" class="btn ghost sm" data-i18n="sh.bulkSelectPage">☑ Select page</button>
           <div id="shares-bulk" class="shares-bulk hidden">
@@ -387,7 +395,7 @@
             <button type="button" id="bulk-revoke" class="btn danger sm" data-i18n="sh.bulkRevoke">Revoke</button>
           </div>
         </div>
-        <div id="shares-list" class="shares-list view-list" data-view="list"></div>
+        <div id="shares-list" class="shares-list"></div>
         <div id="shares-pagination" class="shares-pagination hidden" aria-live="polite">
           <button id="shares-page-prev" type="button" class="btn ghost sm" data-i18n="sh.pagePrev">← Previous</button>
           <span id="shares-page-label" class="muted sm"></span>
@@ -469,6 +477,13 @@
             <option value="system" data-i18n="activity.kindSystem">Système</option>
           </select>
           <select id="activity-section-share" class="activity-section-select" data-i18n-aria="activity.shareAria" aria-label="Partage"><option value="" data-i18n="activity.shareAll">Tous les partages</option></select>
+          <input id="activity-section-actor" class="activity-section-search compact" type="search" autocomplete="off" data-i18n-ph="activity.actor" placeholder="Utilisateur" />
+          <input id="activity-section-ip" class="activity-section-search compact" type="search" autocomplete="off" data-i18n-ph="activity.ip" placeholder="IP" />
+          <select id="activity-section-device" class="activity-section-select"><option value="" data-i18n="activity.device">Appareil/source</option><option value="standard">Standard</option><option value="pwa">PWA</option></select>
+          <select id="activity-section-result" class="activity-section-select"><option value="" data-i18n="activity.result">Résultat</option><option value="ok">OK</option><option value="error">Erreur</option><option value="restored">Restauré</option><option value="deleted">Supprimé</option></select>
+          <select id="activity-section-period" class="activity-section-select"><option value="" data-i18n="activity.period">Période</option><option value="24" data-i18n="activity.24h">24 h</option><option value="168" data-i18n="activity.7d">7 jours</option><option value="720" data-i18n="activity.30d">30 jours</option></select>
+          <select id="activity-section-direction" class="activity-section-select"><option value="" data-i18n="activity.direction">Sens</option><option value="up" data-i18n="activity.up">Envoi</option><option value="down" data-i18n="activity.down">Téléchargement</option></select>
+          <label class="activity-check"><input id="activity-correlate" type="checkbox" checked /> <span data-i18n="activity.correlate">Regrouper par partage</span></label>
           <label class="activity-check"><input id="activity-images-only" type="checkbox" /> <span data-i18n="activity.imagesOnly">Images seulement</span></label>
           <label class="activity-check"><input id="activity-pwa-only" type="checkbox" /> <span data-i18n="activity.pwaOnly">PWA seulement</span></label>
           <label class="activity-check"><input id="activity-hide-routine" type="checkbox" /> <span data-i18n="activity.hideRoutine">Masquer le système routinier</span></label>
@@ -1071,7 +1086,7 @@
           <p class="muted sm smart-expiry-hint" data-i18n="sh.smartExpiryHint">Smart expiry: when several limits are enabled, the link expires as soon as the first one is reached (date, downloads, first use or inactivity).</p>
           <label>
             <span data-i18n="pk.maxVisitors">Max unique visitors</span>
-            <input id="opt-maxvisitors" type="number" min="0" data-i18n-ph="pk.unlimited" placeholder="unlimited" />
+            <input id="opt-maxvisitors" type="number" min="0" max="20000" data-i18n-ph="pk.unlimited" placeholder="unlimited" />
           </label>
           <label>
             <span data-i18n="pk.dlThreshold">Notify at N downloads</span>
@@ -1204,7 +1219,7 @@
           </label>
           <label>
             <span data-i18n="pk.maxVisitors">Max unique visitors</span>
-            <input id="edit-maxvisitors" type="number" min="0" data-i18n-ph="pk.unlimited" placeholder="unlimited" />
+            <input id="edit-maxvisitors" type="number" min="0" max="20000" data-i18n-ph="pk.unlimited" placeholder="unlimited" />
           </label>
           <label>
             <span data-i18n="pk.dlThreshold">Notify at N downloads</span>
@@ -1258,6 +1273,28 @@
             <input id="edit-feedback" type="checkbox" />
             <span data-i18n="pk.allowFeedback">Allow moderated visitor comments</span>
           </label>
+          <div id="edit-reception-options" class="access-rules hidden">
+            <div class="cfg-section" data-i18n="ed.receptionRules">Règles de réception / collaboration</div>
+            <div class="fld-grid">
+              <label class="fld"><span data-i18n="inbox.maxFiles">Fichiers max</span><input id="edit-rx-maxfiles" type="number" min="0" /></label>
+              <label class="fld"><span data-i18n="inbox.maxFilesPerUpload">Fichiers max / envoi</span><input id="edit-rx-maxfilesupload" type="number" min="0" /></label>
+              <label class="fld"><span data-i18n="inbox.maxFileSize">Taille max / fichier (Mo)</span><input id="edit-rx-maxfilemb" type="number" min="0" step="1" /></label>
+              <label class="fld"><span data-i18n="inbox.maxTotalSize">Quota total (Mo)</span><input id="edit-rx-maxtotalmb" type="number" min="0" step="1" /></label>
+              <label class="fld"><span data-i18n="inbox.maxFilesPerSender">Fichiers max / expéditeur</span><input id="edit-rx-maxfilessender" type="number" min="0" /></label>
+              <label class="fld"><span data-i18n="inbox.maxBytesPerSender">Quota / expéditeur (Mo)</span><input id="edit-rx-maxmbsender" type="number" min="0" step="1" /></label>
+              <label class="fld"><span data-i18n="inbox.allowExt">Types autorisés</span><input id="edit-rx-allowext" type="text" autocomplete="off" placeholder="pdf, jpg, png" /></label>
+              <label class="fld"><span data-i18n="inbox.blockExt">Types bloqués</span><input id="edit-rx-blockext" type="text" autocomplete="off" placeholder="exe, bat" /></label>
+            </div>
+            <div class="edit-rx-checks">
+              <label class="opt-check"><input id="edit-rx-groupsender" type="checkbox" /><span data-i18n="inbox.groupSender">Ranger par expéditeur</span></label>
+              <label class="opt-check"><input id="edit-rx-tagsender" type="checkbox" /><span data-i18n="inbox.tagSender">Préfixer avec l’expéditeur</span></label>
+              <label class="opt-check"><input id="edit-rx-rejectdup" type="checkbox" /><span data-i18n="ed.rejectDuplicates">Refuser les doublons</span></label>
+              <label class="opt-check"><input id="edit-rx-requiresender" type="checkbox" /><span data-i18n="ed.requireSender">Nom de l’expéditeur obligatoire</span></label>
+              <label class="opt-check"><input id="edit-rx-blockexec" type="checkbox" /><span data-i18n="ed.blockExecutables">Bloquer les exécutables détectés</span></label>
+              <label class="opt-check"><input id="edit-rx-moderated" type="checkbox" /><span data-i18n="ed.moderated">Approbation avant publication</span></label>
+              <label id="edit-rx-allowdelete-row" class="opt-check hidden"><input id="edit-rx-allowdelete" type="checkbox" /><span data-i18n="collab.allowDelete">Autoriser les visiteurs à supprimer du contenu</span></label>
+            </div>
+          </div>
           <div class="access-rules">
             <div class="cfg-section" data-i18n="acc.title">Access rules (geo / IP)</div>
             <div class="fld-grid">
@@ -1982,6 +2019,22 @@
       </div>
     </div>
 
+    <!-- ===================== Security & active sessions ===================== -->
+    <div id="security-overlay" class="overlay hidden">
+      <div class="modal modal-wide" role="dialog" aria-modal="true" aria-labelledby="security-title">
+        <div class="modal-head">
+          <h3 id="security-title" data-i18n="security.title">Security & active sessions</h3>
+          <button id="security-close" class="icon-btn" aria-label="Close">✕</button>
+        </div>
+        <p class="muted sm" data-i18n="security.hint">Review signed-in browsers/devices and recent security-sensitive events.</p>
+        <div class="security-summary" id="security-summary"></div>
+        <div class="cfg-section" data-i18n="security.sessions">Active sessions</div>
+        <div id="security-sessions" class="security-session-list"></div>
+        <div class="cfg-section" data-i18n="security.history">Security history</div>
+        <div id="security-history" class="audit-list security-history-list"></div>
+      </div>
+    </div>
+
     <!-- ===================== Audit log (modal) ===================== -->
     <div id="audit-overlay" class="overlay hidden">
       <div class="modal" role="dialog" aria-modal="true">
@@ -1995,6 +2048,18 @@
           <button id="audit-verify" type="button" class="btn ghost xs" data-i18n="audit.verify">Verify</button>
         </div>
         <div id="audit-list" class="audit-list"></div>
+      </div>
+    </div>
+
+    <!-- ===================== DLP explanation ===================== -->
+    <div id="dlp-details-overlay" class="overlay hidden">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="dlp-details-title">
+        <div class="modal-head">
+          <h3 id="dlp-details-title" data-i18n="dlp.detailsTitle">DLP detection details</h3>
+          <button id="dlp-details-close" class="icon-btn" aria-label="Close">✕</button>
+        </div>
+        <p id="dlp-details-summary" class="muted sm"></p>
+        <div id="dlp-details-list" class="dlp-details-list"></div>
       </div>
     </div>
 
@@ -2843,6 +2908,6 @@
     <div id="toast" class="toast hidden"></div>
     <script src="/login-vault.js"></script>
     <script src="/dxcrypto.js"></script>
-    <script src="/app.js?v=275"></script>
+    <script src="/app.js?v=292"></script>
   </body>
 </html>

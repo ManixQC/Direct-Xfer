@@ -26,11 +26,11 @@ test('file-selection browser is deliberately larger in create-share modal', () =
 test('1.55.3 release metadata is synchronized', () => {
   const pkg = JSON.parse(read('package.json'));
   const lock = JSON.parse(read('package-lock.json'));
-  assert.equal(pkg.version, '1.60.0');
-  assert.equal(lock.version, '1.60.0');
-  assert.equal(lock.packages[''].version, '1.60.0');
-  assert.match(read('pwa/app.js'), /APP_VERSION = '1\.60\.0'/);
-  assert.match(read('pwa/app.js'), /APP_BUILD = '2026\.08\.15-pwa289'/);
-  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.15-pwa289'/);
-  assert.match(read('pwa/index.html'), /v1\.60\.0 · pwa289/);
+  assert.equal(pkg.version, '1.62.2');
+  assert.equal(lock.version, '1.62.2');
+  assert.equal(lock.packages[''].version, '1.62.2');
+  assert.match(read('pwa/app.js'), /APP_VERSION = '1\.62\.2'/);
+  assert.match(read('pwa/app.js'), /APP_BUILD = '2026\.08\.16-pwa306'/);
+  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.16-pwa306'/);
+  assert.match(read('pwa/index.html'), /v1\.62\.2 · pwa306/);
 });

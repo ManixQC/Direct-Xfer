@@ -1,8 +1,8 @@
 'use strict';
 
-// Reveal the companion PWA links on phones and touch-first tablets.
-// Do not rely on the user-agent alone: iPadOS desktop mode and some Android
-// WebViews report a desktop UA. CSS also provides a responsive fallback.
+// Reveal companion PWA links on phones and touch-first tablets. The explicit
+// install invitation is only shown after Direct-Xfer has confirmed that the
+// companion PWA is not already installed on this device.
 (function initMobilePwaLinks() {
   const mobileQueries = [
     '(max-width: 900px)',
@@ -11,6 +11,10 @@
     '(hover: none)',
     '(any-hover: none)',
   ];
+  const PWA_INSTALLED_KEY = 'dx-pwa-installed';
+  const PWA_INSTALLED_COOKIE = 'dx_pwa_installed';
+  const PWA_INSTALL_MARKER_MAX_AGE_MS = 180 * 24 * 60 * 60 * 1000;
+  let installDetectionSeq = 0;
 
   function queryMatches(query) {
     try { return !!(window.matchMedia && window.matchMedia(query).matches); }
@@ -38,27 +42,111 @@
     }
   }
 
-  function applyMobileClientClass() {
-    const mobile = isMobileClient();
+  function hasInstalledMarker() {
+    const now = Date.now();
+    try { const at = Number(localStorage.getItem(PWA_INSTALLED_KEY) || 0); if (at > 0 && now - at <= PWA_INSTALL_MARKER_MAX_AGE_MS) return true; } catch (_) {}
+    try {
+      const part = document.cookie.split(';').map((x) => x.trim()).find((x) => x.startsWith(PWA_INSTALLED_COOKIE + '='));
+      const at = part ? Number(decodeURIComponent(part.slice(PWA_INSTALLED_COOKIE.length + 1))) : 0;
+      return at > 0 && now - at <= PWA_INSTALL_MARKER_MAX_AGE_MS;
+    } catch (_) { return false; }
+  }
+
+  function setInstalledMarker(installed) {
+    try {
+      if (installed) localStorage.setItem(PWA_INSTALLED_KEY, String(Date.now()));
+      else localStorage.removeItem(PWA_INSTALLED_KEY);
+    } catch (_) {}
+    try {
+      const secure = location.protocol === 'https:' ? '; Secure' : '';
+      document.cookie = PWA_INSTALLED_COOKIE + '=' + (installed ? encodeURIComponent(String(Date.now())) : '') + '; Path=/; SameSite=Lax' + secure +
+        (installed ? '; Max-Age=15552000' : '; Max-Age=0');
+    } catch (_) {}
+  }
+
+  async function hasServerStandalonePwaMarker() {
+    // A paired installed PWA records a server-side standalone heartbeat. This
+    // survives a browser API false-negative and also repairs markers that an older
+    // Direct-Xfer build may have cleared. The endpoint reveals only a boolean and
+    // validates the existing HttpOnly dxpwaid marker server-side.
+    try {
+      const response = await Promise.race([
+        fetch('/pwa/install-state', { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('install-state-timeout')), 1800)),
+      ]);
+      if (!response || !response.ok) return false;
+      const data = await response.json();
+      return !!(data && data.installed);
+    } catch (_) { return false; }
+  }
+
+  async function isCompanionPwaInstalled() {
+    // Positive evidence is sticky. getInstalledRelatedApps() is useful when the
+    // browser can verify the WebAPK relationship, but an empty array is NOT enough
+    // to erase a marker: Chrome returns [] whenever out-of-scope relationship
+    // validation is unavailable or mismatched, even if the PWA is still installed.
+    const localInstalled = hasInstalledMarker();
+    const serverInstalledPromise = hasServerStandalonePwaMarker();
+    if (typeof navigator.getInstalledRelatedApps === 'function' && window.isSecureContext) {
+      try {
+        const apps = await navigator.getInstalledRelatedApps();
+        const browserInstalled = Array.isArray(apps) && apps.some((app) => app && app.platform === 'webapp');
+        if (browserInstalled) {
+          setInstalledMarker(true);
+          return true;
+        }
+      } catch (_) {}
+    }
+    const serverInstalled = await serverInstalledPromise;
+    if (serverInstalled) {
+      setInstalledMarker(true);
+      return true;
+    }
+    return localInstalled;
+  }
+
+  function applyMobileClass(mobile) {
     document.documentElement.classList.toggle('is-mobile', mobile);
     if (document.body) document.body.classList.toggle('is-mobile', mobile);
   }
 
-  applyMobileClientClass();
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', applyMobileClientClass, { once: true });
+  function applyInstallOffer(show) {
+    document.documentElement.classList.toggle('pwa-install-offer', !!show);
+    if (document.body) document.body.classList.toggle('pwa-install-offer', !!show);
   }
-  window.addEventListener('resize', applyMobileClientClass, { passive: true });
-  window.addEventListener('orientationchange', applyMobileClientClass, { passive: true });
+
+  async function refreshMobilePwaLinks() {
+    const seq = ++installDetectionSeq;
+    const mobile = isMobileClient();
+    applyMobileClass(mobile);
+    // Keep the install CTA hidden while installation state is being resolved so
+    // an already-installed user never sees a brief invitation flash.
+    applyInstallOffer(false);
+    if (!mobile) return;
+    const installed = await isCompanionPwaInstalled();
+    if (seq !== installDetectionSeq || !isMobileClient()) return;
+    applyInstallOffer(!installed);
+  }
+
+  refreshMobilePwaLinks();
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', refreshMobilePwaLinks, { once: true });
+  }
+  window.addEventListener('pageshow', refreshMobilePwaLinks, { passive: true });
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) refreshMobilePwaLinks();
+  });
+  window.addEventListener('resize', refreshMobilePwaLinks, { passive: true });
+  window.addEventListener('orientationchange', refreshMobilePwaLinks, { passive: true });
   if (window.visualViewport) {
-    window.visualViewport.addEventListener('resize', applyMobileClientClass, { passive: true });
+    window.visualViewport.addEventListener('resize', refreshMobilePwaLinks, { passive: true });
   }
   if (window.matchMedia) {
     mobileQueries.forEach((query) => {
       try {
         const media = window.matchMedia(query);
-        if (media.addEventListener) media.addEventListener('change', applyMobileClientClass);
-        else if (media.addListener) media.addListener(applyMobileClientClass);
+        if (media.addEventListener) media.addEventListener('change', refreshMobilePwaLinks);
+        else if (media.addListener) media.addListener(refreshMobilePwaLinks);
       } catch (_) {}
     });
   }
@@ -227,6 +315,7 @@ const I18N = {
     'setup.images': 'Le dossier d’images « /Images » est encore à sa valeur par défaut (/PATH/TO/CONFIGURE) — non relié à un vrai dossier de l’hôte.',
     'setup.hint': 'Configurez les volumes dans docker-compose.yml (remplacez /PATH/TO/CONFIGURE).',
     'pwa.openApp': '📱 App d’envoi mobile',
+    'pwa.installApp': '📲 Installer l’application mobile',
     'login.password': 'Mot de passe',
     'login.submit': 'Se connecter',
     'login.invalid': 'Identifiant ou mot de passe invalide.',
@@ -996,6 +1085,8 @@ const I18N = {
     'tr.zipTitle': 'Plusieurs fichiers regroupés et téléchargés dans une seule archive .zip',
     'sh.title': 'Partages en cours',
     'sh.new': '＋ Nouveau partage',
+    'sh.moreCreateAria': 'Plus de types de partage',
+    'sh.actionConfig': 'Config',
     'sh.newInbox': '＋ Lien de réception',
     'sh.newCollab': '🔁 Lien de collaboration',
     'sh.secret': 'Note secrète',
@@ -1105,6 +1196,8 @@ const I18N = {
     'inbox.tagSender': 'Préfixer le nom des fichiers reçus avec le nom de l’expéditeur', 'inbox.maxFilesPerSender': 'Fichiers max / expéditeur', 'inbox.maxBytesPerSender': 'Quota / expéditeur (Mo)',
     'inbox.notePh': 'ex. Merci d’envoyer le contrat signé en PDF.',
     'inbox.create': 'Créer le lien',
+    'ed.receptionRules':'Règles de réception / collaboration', 'ed.rejectDuplicates':'Refuser les doublons exacts', 'ed.requireSender':'Nom de l’expéditeur obligatoire', 'ed.blockExecutables':'Bloquer les exécutables détectés', 'ed.moderated':'Approbation avant publication',
+    'photo.versions':'Versions', 'photo.versionsHint':'Versions non destructives et historique des modifications', 'photo.versionsFail':'Impossible de charger les versions', 'photo.noVersions':'Aucune version antérieure.', 'photo.history':'Historique des modifications', 'photo.compareBeforeAfter':'Avant / Après', 'photo.restoreVersion':'Restaurer', 'photo.revertOriginal':'Revenir à l’original', 'photo.restoreConfirm':'Restaurer cette version ?', 'photo.restored':'Version restaurée ✓', 'photo.restoreFail':'Échec de la restauration',
     'sh.noteLabel': 'Consigne :',
     'sh.msgsLabel': 'Messages reçus ({n}) :',
     'sh.msgsMore': '+ {n} autre(s)',
@@ -1132,6 +1225,9 @@ const I18N = {
     'stats.overview': 'Vue d’ensemble',
     'stats.details': 'Informations du partage',
     'stats.activity14': 'Activité des 14 derniers jours',
+    'stats.activityPeriod': 'Activité sur la période',
+    'stats.period': 'Période', 'stats.24h':'24 h', 'stats.7d':'7 jours', 'stats.14d':'14 jours', 'stats.30d':'30 jours', 'stats.all':'Depuis la création', 'stats.periodHint':'les indicateurs suivent la période choisie',
+    'stats.comparison':'Comparaison avec la période précédente', 'stats.comparisonHint':'Évolution par rapport à une période de même durée.', 'stats.failureReasons':'Causes des interruptions', 'stats.resumed':'Repris', 'stats.bandwidth':'Bande passante estimée', 'stats.viewShare':'Part des vues',
     'stats.recent': 'Activité récente',
     'stats.countries': 'Pays principaux',
     'stats.clients': 'Clients principaux',
@@ -1799,6 +1895,7 @@ const I18N = {
     'setup.images': 'The images folder “/Images” is still at its default (/PATH/TO/CONFIGURE) — not pointed at a real host folder.',
     'setup.hint': 'Configure the volumes in docker-compose.yml (replace /PATH/TO/CONFIGURE).',
     'pwa.openApp': '📱 Mobile send app',
+    'pwa.installApp': '📲 Install mobile app',
     'login.password': 'Password',
     'login.submit': 'Log in',
     'login.invalid': 'Invalid username or password.',
@@ -2567,6 +2664,8 @@ const I18N = {
     'tr.zipTitle': 'Multiple files bundled into a single .zip archive',
     'sh.title': 'Active shares',
     'sh.new': '＋ New share',
+    'sh.moreCreateAria': 'More share types',
+    'sh.actionConfig': 'Config',
     'sh.newInbox': '＋ Reception link',
     'sh.newCollab': '🔁 Collaboration link',
     'sh.secret': 'Secret note',
@@ -2676,6 +2775,8 @@ const I18N = {
     'inbox.tagSender': 'Prefix received filenames with the sender name', 'inbox.maxFilesPerSender': 'Max files / sender', 'inbox.maxBytesPerSender': 'Quota / sender (MB)',
     'inbox.notePh': 'e.g. Please send the signed contract as a PDF.',
     'inbox.create': 'Create link',
+    'ed.receptionRules':'Reception / collaboration rules', 'ed.rejectDuplicates':'Reject exact duplicates', 'ed.requireSender':'Require sender name', 'ed.blockExecutables':'Block detected executables', 'ed.moderated':'Approve before publishing',
+    'photo.versions':'Versions', 'photo.versionsHint':'Non-destructive versions and edit history', 'photo.versionsFail':'Could not load versions', 'photo.noVersions':'No previous version.', 'photo.history':'Edit history', 'photo.compareBeforeAfter':'Before / After', 'photo.restoreVersion':'Restore', 'photo.revertOriginal':'Revert to original', 'photo.restoreConfirm':'Restore this version?', 'photo.restored':'Version restored ✓', 'photo.restoreFail':'Restore failed',
     'sh.noteLabel': 'Note:',
     'sh.msgsLabel': 'Messages received ({n}):',
     'sh.msgsMore': '+ {n} more',
@@ -2703,6 +2804,9 @@ const I18N = {
     'stats.overview': 'Overview',
     'stats.details': 'Share information',
     'stats.activity14': 'Activity over the last 14 days',
+    'stats.activityPeriod': 'Activity over the period',
+    'stats.period': 'Period', 'stats.24h':'24 hours', 'stats.7d':'7 days', 'stats.14d':'14 days', 'stats.30d':'30 days', 'stats.all':'Since creation', 'stats.periodHint':'metrics follow the selected period',
+    'stats.comparison':'Compared with previous period', 'stats.comparisonHint':'Change versus a period of the same length.', 'stats.failureReasons':'Interruption reasons', 'stats.resumed':'Resumed', 'stats.bandwidth':'Estimated bandwidth', 'stats.viewShare':'Share of views',
     'stats.recent': 'Recent activity',
     'stats.countries': 'Top countries',
     'stats.clients': 'Top clients',
@@ -3369,6 +3473,7 @@ const I18N = {
     'setup.images': 'La carpeta de imágenes «/Images» sigue con su valor por defecto (/PATH/TO/CONFIGURE): no apunta a una carpeta real del host.',
     'setup.hint': 'Configura los volúmenes en docker-compose.yml (reemplaza /PATH/TO/CONFIGURE).',
     'pwa.openApp': '📱 App de envío móvil',
+    'pwa.installApp': '📲 Instalar la aplicación móvil',
     'login.password': 'Contraseña',
     'login.submit': 'Iniciar sesión',
     'login.invalid': 'Usuario o contraseña no válidos.',
@@ -4138,6 +4243,8 @@ const I18N = {
     'tr.zipTitle': 'Varios archivos agrupados en un solo archivo .zip',
     'sh.title': 'Comparticiones activas',
     'sh.new': '＋ Nueva compartición',
+    'sh.moreCreateAria': 'Más tipos de compartición',
+    'sh.actionConfig': 'Config',
     'sh.newInbox': '＋ Enlace de recepción',
     'sh.newCollab': '🔁 Enlace de colaboración',
     'sh.secret': 'Nota secreta',
@@ -4247,6 +4354,8 @@ const I18N = {
     'inbox.tagSender': 'Anteponer el nombre del remitente al archivo recibido', 'inbox.maxFilesPerSender': 'Archivos máx. / remitente', 'inbox.maxBytesPerSender': 'Cuota / remitente (MB)',
     'inbox.notePh': 'ej. Envíe el contrato firmado en PDF.',
     'inbox.create': 'Crear enlace',
+    'ed.receptionRules':'Reglas de recepción / colaboración', 'ed.rejectDuplicates':'Rechazar duplicados exactos', 'ed.requireSender':'Nombre del remitente obligatorio', 'ed.blockExecutables':'Bloquear ejecutables detectados', 'ed.moderated':'Aprobar antes de publicar',
+    'photo.versions':'Versiones', 'photo.versionsHint':'Versiones no destructivas e historial de edición', 'photo.versionsFail':'No se pudieron cargar las versiones', 'photo.noVersions':'No hay versión anterior.', 'photo.history':'Historial de edición', 'photo.compareBeforeAfter':'Antes / Después', 'photo.restoreVersion':'Restaurar', 'photo.revertOriginal':'Volver al original', 'photo.restoreConfirm':'¿Restaurar esta versión?', 'photo.restored':'Versión restaurada ✓', 'photo.restoreFail':'Error al restaurar',
     'sh.noteLabel': 'Instrucción:',
     'sh.msgsLabel': 'Mensajes recibidos ({n}):',
     'sh.msgsMore': '+ {n} más',
@@ -4274,6 +4383,9 @@ const I18N = {
     'stats.overview': 'Resumen',
     'stats.details': 'Información del enlace',
     'stats.activity14': 'Actividad de los últimos 14 días',
+    'stats.activityPeriod': 'Actividad del período',
+    'stats.period': 'Período', 'stats.24h':'24 h', 'stats.7d':'7 días', 'stats.14d':'14 días', 'stats.30d':'30 días', 'stats.all':'Desde la creación', 'stats.periodHint':'las métricas siguen el período elegido',
+    'stats.comparison':'Comparación con el período anterior', 'stats.comparisonHint':'Cambio frente a un período de la misma duración.', 'stats.failureReasons':'Motivos de interrupción', 'stats.resumed':'Reanudado', 'stats.bandwidth':'Ancho de banda estimado', 'stats.viewShare':'Porcentaje de vistas',
     'stats.recent': 'Actividad reciente',
     'stats.countries': 'Países principales',
     'stats.clients': 'Clientes principales',
@@ -4782,6 +4894,68 @@ const I18N = {
   },
 };
 
+Object.assign(I18N.fr, {
+  'activity.actor':'Utilisateur', 'activity.ip':'IP', 'activity.device':'Appareil/source', 'activity.result':'Résultat', 'activity.period':'Période', 'activity.direction':'Sens', 'activity.correlate':'Regrouper par partage',
+  'activity.any':'Tous', 'activity.24h':'24 h', 'activity.7d':'7 jours', 'activity.30d':'30 jours', 'activity.up':'Envoi', 'activity.down':'Téléchargement',
+  'trash.impact':'Impact : {count} élément(s) · {bytes}', 'trash.dependencies':'Dépendances : {value}', 'trash.noDependencies':'aucune',
+  'trash.smartRestore':'Emplacement original introuvable. Alternative proposée : {path}. Restaurer vers cet emplacement ?', 'trash.chooseRestore':'Saisissez un autre chemin hôte à restaurer :',
+  'trash.purgeConfirmImpact':'Supprimer définitivement « {name} » ? Libération : {bytes} · {count} élément(s){deps}. Cette action est irréversible.',
+  'trash.purgeAllImpact':'Supprimer définitivement {count} élément(s) et libérer {bytes}{deps} ? Cette action est irréversible.'
+});
+Object.assign(I18N.en, {
+  'activity.actor':'User', 'activity.ip':'IP', 'activity.device':'Device/source', 'activity.result':'Result', 'activity.period':'Period', 'activity.direction':'Direction', 'activity.correlate':'Group by share',
+  'activity.any':'All', 'activity.24h':'24 h', 'activity.7d':'7 days', 'activity.30d':'30 days', 'activity.up':'Upload', 'activity.down':'Download',
+  'trash.impact':'Impact: {count} item(s) · {bytes}', 'trash.dependencies':'Dependencies: {value}', 'trash.noDependencies':'none',
+  'trash.smartRestore':'Original location is missing. Suggested alternative: {path}. Restore there?', 'trash.chooseRestore':'Enter another host path to restore:',
+  'trash.purgeConfirmImpact':'Permanently delete “{name}”? Free: {bytes} · {count} item(s){deps}. This cannot be undone.',
+  'trash.purgeAllImpact':'Permanently delete {count} item(s) and free {bytes}{deps}? This cannot be undone.'
+});
+Object.assign(I18N.es, {
+  'activity.actor':'Usuario', 'activity.ip':'IP', 'activity.device':'Dispositivo/origen', 'activity.result':'Resultado', 'activity.period':'Período', 'activity.direction':'Dirección', 'activity.correlate':'Agrupar por recurso',
+  'activity.any':'Todos', 'activity.24h':'24 h', 'activity.7d':'7 días', 'activity.30d':'30 días', 'activity.up':'Subida', 'activity.down':'Descarga',
+  'trash.impact':'Impacto: {count} elemento(s) · {bytes}', 'trash.dependencies':'Dependencias: {value}', 'trash.noDependencies':'ninguna',
+  'trash.smartRestore':'Falta la ubicación original. Alternativa sugerida: {path}. ¿Restaurar allí?', 'trash.chooseRestore':'Introduce otra ruta del host:',
+  'trash.purgeConfirmImpact':'¿Eliminar definitivamente «{name}»? Liberará {bytes} · {count} elemento(s){deps}. No se puede deshacer.',
+  'trash.purgeAllImpact':'¿Eliminar definitivamente {count} elemento(s) y liberar {bytes}{deps}? No se puede deshacer.'
+});
+
+Object.assign(I18N.fr, {
+  'menu.securityCenter':'🔐 Sécurité et sessions',
+  'security.title':'Sécurité et sessions actives','security.hint':'Consultez les navigateurs/appareils connectés et les événements de sécurité récents.','security.sessions':'Sessions actives','security.history':'Historique de sécurité','security.none':'Aucune session active.','security.noHistory':'Aucun événement de sécurité récent.','security.current':'Session actuelle','security.revoke':'Déconnecter','security.revokeConfirm':'Déconnecter cette session ?','security.revokeFail':'Impossible de déconnecter cette session.','security.sessionCount':'{n} session(s) active(s)','security.lastSeen':'Dernière activité','security.signedIn':'Connexion','security.expires':'Expiration','security.ua':'Navigateur/appareil',
+  'dlp.detailsTitle':'Détails de la détection DLP','dlp.detailsSummary':'{n} détection(s) · niveau maximal {level}','dlp.detailsNone':'Aucun détail de règle conservé pour cette ancienne analyse.','dlp.rule':'Règle','dlp.file':'Fichier','dlp.sample':'Extrait masqué','dlp.reason':'Pourquoi cette règle','dlp.showDetails':'Voir les détails DLP',
+  'dlp.rule.private-key':'Clé privée','dlp.rule.aws-access-key':'Identifiant de clé AWS','dlp.rule.github-token':'Jeton GitHub','dlp.rule.slack-token':'Jeton Slack','dlp.rule.jwt':'Jeton JWT','dlp.rule.password':'Mot de passe assigné','dlp.rule.api-secret':'Secret / jeton API','dlp.rule.payment-card':'Numéro de carte de paiement','dlp.rule.canadian-sin':'NAS canadien','dlp.rule.iban':'IBAN','dlp.rule.identity-document':'Document d’identité','dlp.rule.confidential-marker':'Marqueur de confidentialité',
+  'dlp.reason.private-key':'Du matériel de clé privée a été détecté.','dlp.reason.aws-access-key':'Un identifiant de clé d’accès AWS correspond au format connu.','dlp.reason.github-token':'Un jeton GitHub correspond à un format de secret connu.','dlp.reason.slack-token':'Un jeton Slack correspond à un format de secret connu.','dlp.reason.jwt':'Une chaîne au format JSON Web Token a été détectée.','dlp.reason.password':'Une valeur de mot de passe assignée a été détectée.','dlp.reason.api-secret':'Une valeur ressemblant à une clé API ou un jeton secret a été détectée.','dlp.reason.payment-card':'Le numéro correspond à un format de carte et passe la validation de Luhn.','dlp.reason.canadian-sin':'Le numéro est présenté comme NAS/SIN et passe la validation de Luhn.','dlp.reason.iban':'La valeur correspond à un IBAN valide selon le contrôle mod-97.','dlp.reason.identity-document':'Un identifiant de document officiel a été trouvé avec un contexte explicite.','dlp.reason.confidential-marker':'Un marqueur de confidentialité explicite est présent.',
+  'diag.fix':'Corriger','diag.fixing':'Correction…','diag.fixed':'Correction appliquée; diagnostic relancé.','diag.fixFailed':'Correction automatique impossible.','diag.details':'Détails','diag.check.tls-certificate':'Certificat TLS / chaîne de confiance','diag.tls.subject':'Sujet / CN','diag.tls.issuer':'Autorité émettrice','diag.tls.sans':'SAN','diag.tls.validity':'Validité','diag.tls.fingerprint':'Empreinte SHA-256','diag.tls.key':'Clé publique','diag.tls.mode':'Mode TLS','diag.tls.ca':'CA locale','diag.tls.protocol':'Protocole minimal','diag.tls.reason':'État exact',
+  'proxy.forwardedProto':'X-Forwarded-Proto','proxy.forwardedHost':'X-Forwarded-Host','proxy.forwardedPort':'X-Forwarded-Port','proxy.expectedBase':'Base publique attendue','proxy.httpVersion':'Version HTTP','proxy.msg.no-forwarded-host':'Le proxy est détecté mais X-Forwarded-Host est absent. Transmettez le host public pour que Direct-Xfer puisse reconstruire des URL fiables.','proxy.msg.base-host-mismatch':'Le host transmis ({got}) ne correspond pas à la base publique configurée ({expected}).','proxy.msg.base-proto-mismatch':'Le protocole transmis ({got}) ne correspond pas à la base publique ({expected}).','proxy.msg.base-port-mismatch':'Le port transmis ({got}) ne correspond pas au port public attendu ({expected}).','proxy.msg.no-client-ip-header':'Le proxy est détecté mais aucun en-tête fiable d’IP visiteur n’est transmis (X-Forwarded-For, X-Real-IP, Forwarded ou CF-Connecting-IP).','proxy.msg.sse-streaming':'SSE temps réel : l’endpoint {endpoint} désactive le buffering applicatif (X-Accel-Buffering: {accelBuffering}) et émet un heartbeat toutes les {heartbeatSeconds} s. Vérifiez que le reverse proxy ne remet pas en tampon cette réponse.',
+  'auditA.session-revoked':'Session déconnectée','auditA.diagnostic-fix-requested':'Correction diagnostic demandée','auditA.diagnostic-fix':'Correction diagnostic','auditA.diagnostic-fix-failed':'Échec de correction diagnostic','auditA.tls-refresh':'Renouvellement TLS',
+  'diag.tls.chain':'Chaîne de signature','diag.tls.disk':'Matériel sur disque','diag.tls.active':'Contexte actif','diag.tls.diskMatch':'Identique au contexte actif','diag.tls.diskDifferent':'Différent du contexte actif','diag.tls.diskInvalid':'Invalide','diag.tls.signingOk':'Signature disponible','diag.tls.signingUnavailable':'Signature indisponible','diag.tls.reason.ok':'Valide','diag.tls.reason.expired':'Certificat expiré','diag.tls.reason.not-yet-valid':'Certificat pas encore valide','diag.tls.reason.issuer-chain-invalid':'Signature de la CA locale invalide','diag.tls.reason.expiring-soon':'Expiration prochaine','diag.tls.reason.restart-required':'Redémarrage requis pour activer la nouvelle racine','diag.tls.reason.ca-signing-unavailable':'Clé de signature de la CA locale indisponible','diag.tls.reason.disk-material-invalid-active-context-kept':'Matériel TLS sur disque invalide; le dernier contexte valide reste actif','diag.tls.reason.disk-material-pending-reload':'Matériel TLS sur disque différent; rechargement en attente','diag.tls.reason.certificate-read-failed':'Lecture du certificat actif impossible',
+  'log.session-revoked':'Session de {username} déconnectée ({device})','log.diagnostic-fix-requested':'Correction diagnostic « {action} » demandée','log.dlp-result':'DLP {source} : {count} détection(s), niveau {highest} · {types}','log.diagnostics-run':'Diagnostic : {ok} OK, {warn} avertissement(s), {bad} erreur(s)','log.diagnostic-fix':'Correction diagnostic « {action} » appliquée','log.diagnostic-fix-failed':'Correction diagnostic « {action} » échouée : {error}'
+});
+Object.assign(I18N.en, {
+  'menu.securityCenter':'🔐 Security & sessions',
+  'security.title':'Security & active sessions','security.hint':'Review signed-in browsers/devices and recent security-sensitive events.','security.sessions':'Active sessions','security.history':'Security history','security.none':'No active sessions.','security.noHistory':'No recent security event.','security.current':'Current session','security.revoke':'Sign out','security.revokeConfirm':'Sign out this session?','security.revokeFail':'Unable to sign out this session.','security.sessionCount':'{n} active session(s)','security.lastSeen':'Last activity','security.signedIn':'Signed in','security.expires':'Expires','security.ua':'Browser/device',
+  'dlp.detailsTitle':'DLP detection details','dlp.detailsSummary':'{n} finding(s) · highest severity {level}','dlp.detailsNone':'No rule details were retained for this older scan.','dlp.rule':'Rule','dlp.file':'File','dlp.sample':'Redacted excerpt','dlp.reason':'Why this rule matched','dlp.showDetails':'View DLP details',
+  'dlp.rule.private-key':'Private key','dlp.rule.aws-access-key':'AWS access-key ID','dlp.rule.github-token':'GitHub token','dlp.rule.slack-token':'Slack token','dlp.rule.jwt':'JWT token','dlp.rule.password':'Password assignment','dlp.rule.api-secret':'API secret/token','dlp.rule.payment-card':'Payment-card number','dlp.rule.canadian-sin':'Canadian SIN','dlp.rule.iban':'IBAN','dlp.rule.identity-document':'Identity document','dlp.rule.confidential-marker':'Confidentiality marker',
+  'dlp.reason.private-key':'Private-key material was detected.','dlp.reason.aws-access-key':'An AWS access-key identifier matches the known format.','dlp.reason.github-token':'A GitHub token matches a known secret format.','dlp.reason.slack-token':'A Slack token matches a known secret format.','dlp.reason.jwt':'A JSON Web Token-shaped value was detected.','dlp.reason.password':'An assigned password value was detected.','dlp.reason.api-secret':'A value resembling an API key or secret token was detected.','dlp.reason.payment-card':'The number matches a payment-card shape and passes the Luhn check.','dlp.reason.canadian-sin':'The number is presented as a SIN/NAS and passes the Luhn check.','dlp.reason.iban':'The value matches an IBAN and passes the mod-97 check.','dlp.reason.identity-document':'An official-document identifier was found with explicit context.','dlp.reason.confidential-marker':'An explicit confidentiality marker is present.',
+  'diag.fix':'Fix','diag.fixing':'Fixing…','diag.fixed':'Fix applied; diagnostics rerun.','diag.fixFailed':'Automatic fix failed.','diag.details':'Details','diag.check.tls-certificate':'TLS certificate / trust chain','diag.tls.subject':'Subject / CN','diag.tls.issuer':'Issuer','diag.tls.sans':'SANs','diag.tls.validity':'Validity','diag.tls.fingerprint':'SHA-256 fingerprint','diag.tls.key':'Public key','diag.tls.mode':'TLS mode','diag.tls.ca':'Local CA','diag.tls.protocol':'Minimum protocol','diag.tls.reason':'Exact state',
+  'proxy.forwardedProto':'X-Forwarded-Proto','proxy.forwardedHost':'X-Forwarded-Host','proxy.forwardedPort':'X-Forwarded-Port','proxy.expectedBase':'Expected public base','proxy.httpVersion':'HTTP version','proxy.msg.no-forwarded-host':'A proxy is detected but X-Forwarded-Host is missing. Forward the public host so Direct-Xfer can reconstruct reliable URLs.','proxy.msg.base-host-mismatch':'Forwarded host ({got}) does not match the configured public base ({expected}).','proxy.msg.base-proto-mismatch':'Forwarded protocol ({got}) does not match the public base ({expected}).','proxy.msg.base-port-mismatch':'Forwarded port ({got}) does not match the expected public port ({expected}).','proxy.msg.no-client-ip-header':'A proxy is detected but no reliable visitor-IP header is forwarded (X-Forwarded-For, X-Real-IP, Forwarded or CF-Connecting-IP).','proxy.msg.sse-streaming':'Real-time SSE: {endpoint} disables application buffering (X-Accel-Buffering: {accelBuffering}) and emits a heartbeat every {heartbeatSeconds}s. Make sure the reverse proxy does not buffer this response again.',
+  'auditA.session-revoked':'Session signed out','auditA.diagnostic-fix-requested':'Diagnostic fix requested','auditA.diagnostic-fix':'Diagnostic fix','auditA.diagnostic-fix-failed':'Diagnostic fix failed','auditA.tls-refresh':'TLS refresh',
+  'diag.tls.chain':'Signature chain','diag.tls.disk':'On-disk material','diag.tls.active':'Active context','diag.tls.diskMatch':'Matches active context','diag.tls.diskDifferent':'Differs from active context','diag.tls.diskInvalid':'Invalid','diag.tls.signingOk':'Signing available','diag.tls.signingUnavailable':'Signing unavailable','diag.tls.reason.ok':'Valid','diag.tls.reason.expired':'Certificate expired','diag.tls.reason.not-yet-valid':'Certificate is not valid yet','diag.tls.reason.issuer-chain-invalid':'Local-CA signature is invalid','diag.tls.reason.expiring-soon':'Certificate expires soon','diag.tls.reason.restart-required':'Restart required to activate the new trust anchor','diag.tls.reason.ca-signing-unavailable':'Local-CA signing key is unavailable','diag.tls.reason.disk-material-invalid-active-context-kept':'On-disk TLS material is invalid; the last valid context remains active','diag.tls.reason.disk-material-pending-reload':'On-disk TLS material differs; reload is pending','diag.tls.reason.certificate-read-failed':'Unable to read the active certificate',
+  'log.session-revoked':'Signed out {username} session ({device})','log.diagnostic-fix-requested':'Diagnostic fix “{action}” requested','log.dlp-result':'DLP {source}: {count} finding(s), severity {highest} · {types}','log.diagnostics-run':'Diagnostics: {ok} OK, {warn} warning(s), {bad} error(s)','log.diagnostic-fix':'Diagnostic fix “{action}” applied','log.diagnostic-fix-failed':'Diagnostic fix “{action}” failed: {error}'
+});
+Object.assign(I18N.es, {
+  'menu.securityCenter':'🔐 Seguridad y sesiones',
+  'security.title':'Seguridad y sesiones activas','security.hint':'Consulta navegadores/dispositivos conectados y eventos recientes de seguridad.','security.sessions':'Sesiones activas','security.history':'Historial de seguridad','security.none':'No hay sesiones activas.','security.noHistory':'No hay eventos de seguridad recientes.','security.current':'Sesión actual','security.revoke':'Cerrar sesión','security.revokeConfirm':'¿Cerrar esta sesión?','security.revokeFail':'No se pudo cerrar esta sesión.','security.sessionCount':'{n} sesión(es) activa(s)','security.lastSeen':'Última actividad','security.signedIn':'Inicio','security.expires':'Caduca','security.ua':'Navegador/dispositivo',
+  'dlp.detailsTitle':'Detalles de detección DLP','dlp.detailsSummary':'{n} detección(es) · gravedad máxima {level}','dlp.detailsNone':'No se conservaron detalles de reglas para este análisis antiguo.','dlp.rule':'Regla','dlp.file':'Archivo','dlp.sample':'Extracto ocultado','dlp.reason':'Por qué coincidió esta regla','dlp.showDetails':'Ver detalles DLP',
+  'dlp.rule.private-key':'Clave privada','dlp.rule.aws-access-key':'ID de clave AWS','dlp.rule.github-token':'Token GitHub','dlp.rule.slack-token':'Token Slack','dlp.rule.jwt':'Token JWT','dlp.rule.password':'Asignación de contraseña','dlp.rule.api-secret':'Secreto/token API','dlp.rule.payment-card':'Número de tarjeta','dlp.rule.canadian-sin':'SIN/NAS canadiense','dlp.rule.iban':'IBAN','dlp.rule.identity-document':'Documento de identidad','dlp.rule.confidential-marker':'Marcador de confidencialidad',
+  'dlp.reason.private-key':'Se detectó material de clave privada.','dlp.reason.aws-access-key':'Un identificador de clave AWS coincide con el formato conocido.','dlp.reason.github-token':'Un token de GitHub coincide con un formato secreto conocido.','dlp.reason.slack-token':'Un token de Slack coincide con un formato secreto conocido.','dlp.reason.jwt':'Se detectó un valor con formato JSON Web Token.','dlp.reason.password':'Se detectó un valor asignado a una contraseña.','dlp.reason.api-secret':'Se detectó un valor parecido a una clave API o token secreto.','dlp.reason.payment-card':'El número tiene formato de tarjeta y supera la validación de Luhn.','dlp.reason.canadian-sin':'El número se presenta como SIN/NAS y supera la validación de Luhn.','dlp.reason.iban':'El valor coincide con un IBAN y supera la comprobación mod-97.','dlp.reason.identity-document':'Se encontró un identificador de documento oficial con contexto explícito.','dlp.reason.confidential-marker':'Hay un marcador explícito de confidencialidad.',
+  'diag.fix':'Corregir','diag.fixing':'Corrigiendo…','diag.fixed':'Corrección aplicada; diagnóstico relanzado.','diag.fixFailed':'No se pudo aplicar la corrección automática.','diag.details':'Detalles','diag.check.tls-certificate':'Certificado TLS / cadena de confianza','diag.tls.subject':'Sujeto / CN','diag.tls.issuer':'Emisor','diag.tls.sans':'SAN','diag.tls.validity':'Validez','diag.tls.fingerprint':'Huella SHA-256','diag.tls.key':'Clave pública','diag.tls.mode':'Modo TLS','diag.tls.ca':'CA local','diag.tls.protocol':'Protocolo mínimo','diag.tls.reason':'Estado exacto',
+  'proxy.forwardedProto':'X-Forwarded-Proto','proxy.forwardedHost':'X-Forwarded-Host','proxy.forwardedPort':'X-Forwarded-Port','proxy.expectedBase':'Base pública esperada','proxy.httpVersion':'Versión HTTP','proxy.msg.no-forwarded-host':'Se detecta un proxy pero falta X-Forwarded-Host. Reenvía el host público para reconstruir URL fiables.','proxy.msg.base-host-mismatch':'El host reenviado ({got}) no coincide con la base pública configurada ({expected}).','proxy.msg.base-proto-mismatch':'El protocolo reenviado ({got}) no coincide con la base pública ({expected}).','proxy.msg.base-port-mismatch':'El puerto reenviado ({got}) no coincide con el puerto público esperado ({expected}).','proxy.msg.no-client-ip-header':'Se detecta un proxy pero no se reenvía ninguna cabecera fiable de IP visitante.','proxy.msg.sse-streaming':'SSE en tiempo real: {endpoint} desactiva el búfer de la aplicación (X-Accel-Buffering: {accelBuffering}) y emite un heartbeat cada {heartbeatSeconds} s. Comprueba que el proxy inverso no vuelva a almacenar esta respuesta en búfer.',
+  'auditA.session-revoked':'Sesión cerrada','auditA.diagnostic-fix-requested':'Corrección de diagnóstico solicitada','auditA.diagnostic-fix':'Corrección de diagnóstico','auditA.diagnostic-fix-failed':'Error de corrección de diagnóstico','auditA.tls-refresh':'Renovación TLS',
+  'diag.tls.chain':'Cadena de firma','diag.tls.disk':'Material en disco','diag.tls.active':'Contexto activo','diag.tls.diskMatch':'Igual al contexto activo','diag.tls.diskDifferent':'Distinto del contexto activo','diag.tls.diskInvalid':'No válido','diag.tls.signingOk':'Firma disponible','diag.tls.signingUnavailable':'Firma no disponible','diag.tls.reason.ok':'Válido','diag.tls.reason.expired':'Certificado caducado','diag.tls.reason.not-yet-valid':'El certificado aún no es válido','diag.tls.reason.issuer-chain-invalid':'La firma de la CA local no es válida','diag.tls.reason.expiring-soon':'El certificado caduca pronto','diag.tls.reason.restart-required':'Se requiere reinicio para activar la nueva raíz de confianza','diag.tls.reason.ca-signing-unavailable':'La clave de firma de la CA local no está disponible','diag.tls.reason.disk-material-invalid-active-context-kept':'El material TLS en disco no es válido; se mantiene el último contexto válido','diag.tls.reason.disk-material-pending-reload':'El material TLS en disco es diferente; la recarga está pendiente','diag.tls.reason.certificate-read-failed':'No se pudo leer el certificado activo',
+  'log.session-revoked':'Sesión de {username} cerrada ({device})','log.diagnostic-fix-requested':'Corrección de diagnóstico «{action}» solicitada','log.dlp-result':'DLP {source}: {count} detección(es), gravedad {highest} · {types}','log.diagnostics-run':'Diagnóstico: {ok} OK, {warn} aviso(s), {bad} error(es)','log.diagnostic-fix':'Corrección de diagnóstico «{action}» aplicada','log.diagnostic-fix-failed':'Corrección de diagnóstico «{action}» fallida: {error}'
+});
+
 const LOCALES = { fr: 'fr-FR', en: 'en-US', es: 'es-419' };
 
 // ------------------------------------------------------------------
@@ -4813,7 +4987,6 @@ const UI_PREFS_DEFAULTS = Object.freeze({
   shareShowArchived: false,
   shareSort: 'new',
   sharePageSize: '25',
-  shareView: 'list',
   photoSearch: '',
   photoSort: 'new',
   photoFormat: '',
@@ -4921,7 +5094,6 @@ const state = {
   sharePage: 0,
   sharePageIds: [],
   bulkShareBusy: false,
-  shareView: uiPrefChoice('shareView', ['list', 'grid'], 'list'),
   shareDensity: uiPrefChoice('shareDensity', ['comfortable', 'compact'], 'comfortable'), // Admin-table density toggle
   selShares: new Set(), // selected share ids for bulk actions
   pendingShareDeletion: null, // one recoverable deletion: { id, timer, committing, promise }
@@ -5005,18 +5177,6 @@ function syncViewButtons(prefix, view) {
   });
 }
 
-function setShareView(view, persist = true) {
-  state.shareView = view === 'grid' ? 'grid' : 'list';
-  const list = $('shares-list');
-  if (list) {
-    list.classList.toggle('view-grid', state.shareView === 'grid');
-    list.classList.toggle('view-list', state.shareView === 'list');
-    list.dataset.view = state.shareView;
-  }
-  syncViewButtons('shares', state.shareView);
-  if (persist) updateUiPrefs({ shareView: state.shareView });
-}
-
 // Admin-table density toggle (compact / comfortable). The class lives on
 // the persistent #shares-list container (children are replaced on each render, the
 // element is not), so it survives re-renders like the view-list/view-grid class.
@@ -5090,7 +5250,6 @@ function applyUiPreferencesToControls() {
   const stripExif = $('photos-strip-exif');
   if (stripExif) stripExif.checked = state.photoStripExif;
 
-  setShareView(state.shareView, false);
   setShareDensity(state.shareDensity, false);
   setPhotoView(state.photoView, false);
 }
@@ -5884,7 +6043,11 @@ function pulseNotificationsBell() {
 function announceNewNotifications(fresh) {
   if (!fresh || !fresh.length) return;
   pulseNotificationsBell();
-  const newest = fresh.slice().sort((a, b) => Number(b.at || 0) - Number(a.at || 0))[0];
+  // Adaptive low-priority events stay visible in the center/badge but are no
+  // longer intrusive. Prefer the newest actionable event for toast/sound.
+  const actionable = fresh.filter((n) => n && n.priority !== 'low');
+  if (!actionable.length) return;
+  const newest = actionable.slice().sort((a, b) => Number(b.at || 0) - Number(a.at || 0))[0];
   if (newest) toast('🔔 ' + notificationTitleText(newest), (newest.severity === 'critical' || newest.severity === 'warning') ? 'warn' : '');
   if (notificationsSoundOn) playNotificationSound();
 }
@@ -5894,6 +6057,8 @@ const NOTIFICATIONS_PAGE_SIZE = 20;
 let notificationsShown = NOTIFICATIONS_PAGE_SIZE;
 // The share/link/image a notification refers to, resolved from the
 // account's currently-loaded shares so link actions never target a stale id.
+function consumeFocusQueryParam(name){try{const u=new URL(location.href);if(!u.searchParams.has(name))return;u.searchParams.delete(name);if(u.searchParams.get('from')==='notification')u.searchParams.delete('from');history.replaceState(history.state||null,'',u.pathname+(u.search?'?'+u.searchParams.toString():'')+u.hash);}catch(_){}}
+function focusShareFromLocation(){try{const id=new URLSearchParams(location.search).get('focusShare');if(!id)return;const node=document.querySelector('[data-share-id="'+CSS.escape(id)+'"]');if(node){consumeFocusQueryParam('focusShare');node.classList.add('notification-focus');node.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(()=>node.classList.remove('notification-focus'),5000);}}catch(_){}}
 function notificationShare(n) {
   if (!n || !n.token) return null;
   return (state.allShares || []).find((s) => s && s.token === n.token) || null;
@@ -5901,6 +6066,7 @@ function notificationShare(n) {
 // Take the operator to the section a notification is about.
 function openNotificationTarget(n) {
   closeNotificationsMenu();
+  if (n && n.manageUrl) { try { window.location.assign(String(n.manageUrl)); return; } catch (_) {} }
   const cat = String((n && n.category) || ''), type = String((n && n.type) || '');
   if (cat === 'images' || type.indexOf('image') === 0 || type === 'ocr-failed') { openImagesPage(); return; }
   if (['system','system_health','maintenance','network','restarts','updates','pwa'].includes(cat)) { void openConfigModal(); return; }
@@ -5956,7 +6122,9 @@ function renderNotifications() {
     const isUnread = n && (n.unread === true || !(Number(n.readAt)>0));
     const row = el('div', { class:'notification-item notification-'+(n.severity||'info')+(isUnread?' notification-unread':'') });
     const main = el('div', { class:'notification-item-main' });
-    main.appendChild(el('div', { class:'notification-item-title', text:notificationTypeIcon(n)+' '+notificationTitleText(n) }));
+    const titleText=notificationTypeIcon(n)+' '+notificationTitleText(n)+(Number(n.groupCount)>1?' ×'+Number(n.groupCount):'');
+    main.appendChild(el('div', { class:'notification-item-title', text:titleText }));
+    if(n.priority==='urgent'||n.priority==='high')main.appendChild(el('span',{class:'notification-priority '+n.priority,text:n.priority==='urgent'?'⚠ priorité urgente':'↑ priorité élevée'}));
     const metaEl = el('div', { class:'notification-item-meta', text:notificationMetaText(n) });
     if (n.at) metaEl.setAttribute('title', formatDate(n.at)); // absolute date on hover
     main.appendChild(metaEl);
@@ -7576,6 +7744,7 @@ function renderStorageReport(report) {
   const body = rows.map((r) => `<div class="storage-report-row"><div><strong>${dashEsc(t('storagepart.' + r.key))}</strong><span>${dashEsc(t('dash.filesN', { n:r.files || 0 }))}${r.reclaimableBytes ? ' · ' + dashEsc(t('dash.storageReportReclaimable')) + ': ' + dashEsc(formatBytes(r.reclaimableBytes)) : ''}</span></div><div class="storage-report-value"><strong>${dashEsc(formatBytes(r.bytes || 0))}</strong><div class="storage-report-bar"><i style="width:${Math.max(1, Math.round(((r.bytes || 0) / max) * 100))}%"></i></div></div></div>`).join('');
   box.innerHTML = summary + `<div class="storage-report-list">${body}</div>` + (report.truncated ? `<p class="muted sm dashboard-scan-note">${dashEsc(t('dash.scanTruncated', { n:'25 000+' }))}</p>` : '');
 }
+function diagnosticTlsReason(reason){const key='diag.tls.reason.'+String(reason||'ok');const v=t(key);return v===key?String(reason||'OK'):v;}
 function diagnosticDetail(c) {
   if (!c) return '';
   if (c.id === 'disk-space' && c.total) return `${c.pct || 0}% · ${formatBytes(c.free || 0)} free`;
@@ -7585,7 +7754,8 @@ function diagnosticDetail(c) {
   if (c.id === 'web-push') return `${c.subscriptions || 0} subscription(s)`;
   if (c.id === 'pwa-assets') return c.missing && c.missing.length ? `missing: ${c.missing.join(', ')}` : `${c.pairedDevices || 0} paired device(s)`;
   if (c.id === 'public-port') return `${c.target || '—'}${c.result && c.result.error ? ' · ' + c.result.error : ''}`;
-  if (c.id === 'reverse-proxy') return `${c.detected ? 'proxy detected' : 'direct'} · ${c.secure ? 'HTTPS' : 'HTTP'}`;
+  if (c.id === 'reverse-proxy') return `${c.detected ? 'proxy detected' : 'direct'} · ${c.secure ? 'HTTPS' : 'HTTP'}${c.forwardedHost?' · '+c.forwardedHost:''}`;
+  if (c.id === 'tls-certificate') return `${c.mode || 'http'} · ${c.validTo ? formatDate(c.validTo) : '—'} · ${diagnosticTlsReason(c.reason)}${c.error ? ' · '+c.error : ''}`;
   if (c.path) return c.path + (c.error ? ' · ' + c.error : '');
   if (c.error) return String(c.error);
   return '';
@@ -7602,7 +7772,10 @@ function renderDiagnostics(data) {
   const sum = data.summary || {};
   const order = ['storage','security','search','notifications','pwa','network'];
   const groups = order.map((group) => ({ group, rows:(data.checks || []).filter((c) => c.group === group) })).filter((g) => g.rows.length);
-  box.innerHTML = `<div class="diag-summary"><strong>${dashEsc(t('diag.summary', { ok:sum.ok || 0, warn:sum.warn || 0, bad:sum.bad || 0 }))}</strong><span>${data.finishedAt ? dashEsc(formatDate(data.finishedAt)) : ''}</span></div>` + groups.map((g) => `<section class="diag-group"><h4>${dashEsc(t('diag.group.' + g.group))}</h4>${g.rows.map((c) => `<div class="diag-row diag-${dashEsc(c.status || 'info')}"><span class="diag-dot"></span><div><strong>${dashEsc(t('diag.check.' + c.id))}</strong><span>${dashEsc(diagnosticDetail(c))}</span></div><b>${dashEsc(t('diag.status.' + (c.status || 'info')))}</b></div>`).join('')}</section>`).join('');
+  const detailRows=(c)=>{const rows=[];if(c.id==='tls-certificate'){const keyText=c.publicKeyBits?`${c.publicKeyType||'RSA'} ${c.publicKeyBits} bits`:c.namedCurve?`${c.publicKeyType||'EC'} · ${c.namedCurve}`:(c.publicKeyType||'—');rows.push([t('diag.tls.mode'),c.mode||'—'],[t('diag.tls.protocol'),c.minProtocol||'—'],[t('diag.tls.subject'),c.subject||'—'],[t('diag.tls.issuer'),c.issuer||'—'],[t('diag.tls.sans'),(c.sans||[]).join(', ')||'—'],[t('diag.tls.validity'),`${c.validFrom?formatDate(c.validFrom):'—'} → ${c.validTo?formatDate(c.validTo):'—'}`],[t('diag.tls.fingerprint'),c.fingerprint||'—'],[t('diag.tls.key'),keyText],[t('diag.tls.chain'),c.chainValid===null||c.chainValid===undefined?'—':(c.chainValid?'OK':'INVALID')],[t('diag.tls.reason'),diagnosticTlsReason(c.reason)]);if(c.ca)rows.push([t('diag.tls.ca'),[c.ca.fingerprint,c.ca.signingAvailable?t('diag.tls.signingOk'):c.ca.error||t('diag.tls.signingUnavailable')].filter(Boolean).join(' · ')]);if(c.disk)rows.push([t('diag.tls.disk'),c.disk.valid?(c.disk.matchesActive?t('diag.tls.diskMatch'):`${t('diag.tls.diskDifferent')} · ${c.disk.fingerprint||'—'}`):`${t('diag.tls.diskInvalid')} · ${c.disk.error||'—'}`]);}if(c.id==='reverse-proxy'){rows.push([t('proxy.forwardedProto'),c.forwardedProto||'—'],[t('proxy.forwardedHost'),c.forwardedHost||'—'],[t('proxy.forwardedPort'),c.forwardedPort||'—'],[t('proxy.expectedBase'),c.configuredBase||'—']);}return rows;};
+  const rowHtml=(c)=>{const extra=detailRows(c),details=extra.length?`<details class="diag-extra"><summary>${dashEsc(t('diag.details'))}</summary>${extra.map(([a,b])=>`<div><span>${dashEsc(a)}</span><code>${dashEsc(String(b))}</code></div>`).join('')}</details>`:'';const fix=c.fix&&c.fix.action?`<button type="button" class="btn ghost xs diag-fix-btn" data-diag-fix="${dashEsc(c.fix.action)}">${dashEsc(t('diag.fix'))}</button>`:'';return `<div class="diag-row diag-${dashEsc(c.status || 'info')}"><span class="diag-dot"></span><div><strong>${dashEsc(t('diag.check.' + c.id))}</strong><span>${dashEsc(diagnosticDetail(c))}</span>${details}</div><div class="diag-row-actions"><b>${dashEsc(t('diag.status.' + (c.status || 'info')))}</b>${fix}</div></div>`;};
+  box.innerHTML = `<div class="diag-summary"><strong>${dashEsc(t('diag.summary', { ok:sum.ok || 0, warn:sum.warn || 0, bad:sum.bad || 0 }))}</strong><span>${data.finishedAt ? dashEsc(formatDate(data.finishedAt)) : ''}</span></div>` + groups.map((g) => `<section class="diag-group"><h4>${dashEsc(t('diag.group.' + g.group))}</h4>${g.rows.map(rowHtml).join('')}</section>`).join('');
+  box.querySelectorAll('.diag-fix-btn').forEach((button)=>button.addEventListener('click',async()=>{const action=button.dataset.diagFix;if(!action)return;button.disabled=true;button.textContent=t('diag.fixing');try{await api('POST','/api/diagnostics/fix',{action});toast(t('diag.fixed'),'ok');await runDiagnostics();}catch(_){toast(t('diag.fixFailed'),'err');button.disabled=false;button.textContent=t('diag.fix');}}));
 }
 async function runDiagnostics() {
   if (state.diagnosticsRunning) return;
@@ -8140,6 +8313,10 @@ if (idashFilterReset) idashFilterReset.addEventListener('click', () => {
 // Network
 // ------------------------------------------------------------------
 async function loadNetwork() {
+  // Network/proxy diagnostics are global operational metadata. Operators are
+  // intentionally scoped to their own shares, so do not probe a forbidden
+  // endpoint on every login/language change (which also caused a spurious toast).
+  if (state.role === 'operator') return;
   try {
     const n = await api('GET', '/api/network');
     state.port = n.port;
@@ -8225,7 +8402,12 @@ function renderProxyResult(r, boxEl) {
   fact(t('proxy.remoteAddr'), (r.remoteAddr || '—') + (r.remoteIsPrivate === false ? ' · ' + t('proxy.publicPeerTag') : ''));
   fact(t('proxy.protocol'), (r.protocol || '—') + (r.secure ? ' 🔒' : ''));
   if (r.testedBase) fact(t('proxy.target'), r.testedBase);
+  if (r.expectedBase) fact(t('proxy.expectedBase'), r.expectedBase);
   fact(t('proxy.host'), r.host || '—');
+  fact(t('proxy.forwardedProto'), r.forwardedProto || '—');
+  fact(t('proxy.forwardedHost'), r.forwardedHost || '—');
+  fact(t('proxy.forwardedPort'), r.forwardedPort || '—');
+  if(r.httpVersion) fact(t('proxy.httpVersion'), r.httpVersion);
   box.appendChild(facts);
 
   // Analysis lines.
@@ -9338,11 +9520,179 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && $('edit-overlay') && !$('edit-overlay').classList.contains('hidden')) closeEditModal();
 });
 
+// Compact action menus in the Active shares header. The original action
+// buttons keep their IDs/handlers; only their presentation is grouped.
+function initShareActionMenus() {
+  const menuIds = ['share-create-menu', 'share-config-menu'];
+  const menuItemSelector = '[role="menuitem"]';
+
+  const visibleItems = (panel) => Array.from(panel ? panel.querySelectorAll(menuItemSelector) : []).filter((item) => {
+    if (!item || item.disabled || item.classList.contains('hidden')) return false;
+    if (item.getAttribute('aria-hidden') === 'true') return false;
+    return true;
+  });
+
+  const setActiveItem = (panel, item, focus) => {
+    visibleItems(panel).forEach((entry) => entry.setAttribute('tabindex', entry === item ? '0' : '-1'));
+    if (focus && item) item.focus({ preventScroll: true });
+  };
+
+  const closeMenu = (menu, options = {}) => {
+    if (!menu) return;
+    const panel = menu.querySelector('.share-action-menu-panel');
+    const trigger = menu.querySelector('.share-action-menu-trigger');
+    if (panel) {
+      panel.classList.add('hidden');
+      panel.classList.remove('open-upward');
+      visibleItems(panel).forEach((item) => item.setAttribute('tabindex', '-1'));
+    }
+    if (trigger) trigger.setAttribute('aria-expanded', 'false');
+    if (options.returnFocus && trigger && !trigger.classList.contains('hidden')) {
+      trigger.focus({ preventScroll: true });
+    }
+  };
+
+  const closeAll = (except) => menuIds.forEach((id) => {
+    const menu = $(id);
+    if (menu && menu !== except) closeMenu(menu);
+  });
+
+  const placePanel = (menu) => {
+    const panel = menu && menu.querySelector('.share-action-menu-panel');
+    const trigger = menu && menu.querySelector('.share-action-menu-trigger');
+    if (!panel || !trigger || panel.classList.contains('hidden')) return;
+    panel.classList.remove('open-upward');
+    panel.style.removeProperty('--share-action-menu-max-height');
+    // Wait until the panel has its real dimensions. Prefer the side with enough
+    // room; when neither side can fit the entire menu, choose the larger side
+    // and cap the panel height so its contents remain scrollable in-viewport.
+    // This avoids cut-off menus on phones/tablets in landscape mode.
+    const rect = panel.getBoundingClientRect();
+    const triggerRect = trigger.getBoundingClientRect();
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+    if (!viewportHeight) return;
+    const roomAbove = Math.max(0, triggerRect.top - 8);
+    const roomBelow = Math.max(0, viewportHeight - triggerRect.bottom - 8);
+    const desiredHeight = Math.min(rect.height, 360, Math.max(0, viewportHeight - 24));
+    const openUpward = roomBelow < desiredHeight && roomAbove > roomBelow;
+    const available = Math.max(0, openUpward ? roomAbove : roomBelow);
+    panel.classList.toggle('open-upward', openUpward);
+    panel.style.setProperty('--share-action-menu-max-height', Math.max(48, Math.floor(available)) + 'px');
+  };
+
+  const openMenu = (menu, options = {}) => {
+    if (!menu) return;
+    const trigger = menu.querySelector('.share-action-menu-trigger');
+    const panel = menu.querySelector('.share-action-menu-panel');
+    if (!trigger || !panel) return;
+    closeAll(menu);
+    panel.classList.remove('hidden');
+    trigger.setAttribute('aria-expanded', 'true');
+    const items = visibleItems(panel);
+    const item = options.last ? items[items.length - 1] : items[0];
+    if (item) setActiveItem(panel, item, !!options.focusItem);
+    requestAnimationFrame(() => placePanel(menu));
+  };
+
+  menuIds.forEach((id) => {
+    const menu = $(id);
+    if (!menu) return;
+    const trigger = menu.querySelector('.share-action-menu-trigger');
+    const panel = menu.querySelector('.share-action-menu-panel');
+    if (!trigger || !panel) return;
+
+    visibleItems(panel).forEach((item) => item.setAttribute('tabindex', '-1'));
+
+    trigger.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const opening = panel.classList.contains('hidden');
+      if (!opening) {
+        closeMenu(menu);
+        return;
+      }
+      // Keyboard-generated clicks use detail=0. Focus the first menu item for
+      // keyboard users; pointer users keep focus on the trigger and Tab enters
+      // the menu naturally through the roving tabindex item.
+      openMenu(menu, { focusItem: event.detail === 0 });
+    });
+
+    trigger.addEventListener('keydown', (event) => {
+      if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+      event.preventDefault();
+      openMenu(menu, { focusItem: true, last: event.key === 'ArrowUp' });
+    });
+
+    panel.addEventListener('keydown', (event) => {
+      const items = visibleItems(panel);
+      if (!items.length) return;
+      const current = items.indexOf(document.activeElement);
+      let next = null;
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeMenu(menu, { returnFocus: true });
+        return;
+      }
+      if (event.key === 'Home') next = items[0];
+      else if (event.key === 'End') next = items[items.length - 1];
+      else if (event.key === 'ArrowDown') next = items[(current + 1 + items.length) % items.length];
+      else if (event.key === 'ArrowUp') next = items[(current - 1 + items.length) % items.length];
+      if (!next) return;
+      event.preventDefault();
+      setActiveItem(panel, next, true);
+    });
+
+    panel.addEventListener('click', (event) => {
+      const action = event.target.closest(menuItemSelector);
+      if (!action) return;
+      closeMenu(menu);
+      // Some grouped actions (search and exports in particular) do not move
+      // focus themselves. Never leave keyboard focus inside a now-hidden menu.
+      setTimeout(() => {
+        const active = document.activeElement;
+        if (active === action || menu.contains(active) || active === document.body || active === document.documentElement) {
+          trigger.focus({ preventScroll: true });
+        }
+      }, 0);
+    });
+
+    menu.addEventListener('focusout', () => {
+      // focusout fires before the browser has necessarily focused the next Tab
+      // target. A macrotask avoids closing the panel during that transition.
+      setTimeout(() => {
+        if (!menu.contains(document.activeElement)) closeMenu(menu);
+      }, 0);
+    });
+  });
+
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest('.share-action-menu')) closeAll(null);
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+    menuIds.forEach((id) => {
+      const menu = $(id);
+      if (!menu) return;
+      const panel = menu.querySelector('.share-action-menu-panel');
+      if (panel && !panel.classList.contains('hidden')) closeMenu(menu, { returnFocus: true });
+    });
+  });
+  window.addEventListener('resize', () => menuIds.forEach((id) => placePanel($(id))), { passive: true });
+  // Role changes can hide an entire grouped action menu. Expose a tiny closer so
+  // applyRole() can reset aria/tabindex state before hiding the active control.
+  window.dxCloseShareActionMenus = () => closeAll(null);
+}
+
+initShareActionMenus();
+
 // Role-based UI gating (server enforces the real access; this just hides what a
 // role can't use). auditor = read-only; operator = no settings/accounts.
 function applyRole(role) {
   role = role || state.role || '';
   applySessionIdentity();
+  const previousRole = document.body.dataset.role || '';
+  if (previousRole && previousRole !== role && typeof window.dxCloseShareActionMenus === 'function') {
+    window.dxCloseShareActionMenus();
+  }
   document.body.dataset.role = role;
   const show = (id, on) => { const el2 = $(id); if (el2) el2.classList.toggle('hidden', !on); };
   const isFull = role === 'owner' || role === 'admin' || !role;
@@ -9350,6 +9700,8 @@ function applyRole(role) {
   show('config-btn', isFull);         // global settings: owner/admin only
   show('search-reindex', isFull);
   show('new-share-btn', canCreate);
+  show('share-create-menu', canCreate);
+  show('share-config-menu', true);
   show('new-inbox-btn', canCreate);
   show('new-collab-btn', canCreate);
   show('new-secret-btn', canCreate && (window.DXCrypto && window.DXCrypto.available));
@@ -9359,6 +9711,7 @@ function applyRole(role) {
   show('history-clear-btn', isFull);
   show('live-activity-btn', isFull || role === 'auditor');
   show('activity-btn', isFull || role === 'auditor');
+  show('security-btn', isFull || role === 'auditor');
   if (isFull || role === 'auditor') { if (activityPageOpen() || !state.activityInitialized) loadActivityRecent().catch(() => {}); ensureActivityStream(); }
   else stopActivityStream();
   show('trash-purge-all', isFull);
@@ -10193,10 +10546,21 @@ function renderShares(shares) {
   let shown = shares.filter((s) => {
     if (!!s.archived !== !!state.shareShowArchived) return false;
     if (state.sharePinnedOnly && !s.pinned) return false;
-    if (q && !((s.name || '').toLowerCase().includes(q)
-        || (s.adminNote || '').toLowerCase().includes(q)
-        || (s.descriptionMd || '').toLowerCase().includes(q)
-        || (Array.isArray(s.tags) && s.tags.some((tg) => tg.toLowerCase().includes(q))))) return false;
+    if (q) {
+      const hay = [
+        s.name, s.adminNote, s.descriptionMd, s.note, s.type, s.path, s.hostPath, s.relDir,
+        s.lastDownload && s.lastDownload.ip, s.lastDownload && s.lastDownload.country, s.lastDownload && s.lastDownload.name,
+        s.lastUpload && s.lastUpload.ip, s.lastUpload && s.lastUpload.country, s.lastUpload && s.lastUpload.name,
+        ...(Array.isArray(s.tags) ? s.tags : []),
+        ...(Array.isArray(s.items) ? s.items.map((it) => it && it.name) : []),
+        ...(Array.isArray(s.recipients) ? s.recipients.flatMap((r) => [r && r.name, r && r.lastViewIp, r && r.lastViewCountry]) : []),
+        ...((s.inbox && Array.isArray(s.inbox.allowExt)) ? s.inbox.allowExt : []),
+        ...((s.inbox && Array.isArray(s.inbox.blockExt)) ? s.inbox.blockExt : []),
+        ...((s.collab && Array.isArray(s.collab.allowExt)) ? s.collab.allowExt : []),
+        ...((s.collab && Array.isArray(s.collab.blockExt)) ? s.collab.blockExt : []),
+      ].filter(Boolean).map((v) => String(v).toLowerCase());
+      if (!hay.some((v) => v.includes(q))) return false;
+    }
     if (typeF && s.type !== typeF) return false;
     if (statusF === 'active' && !s.active) return false;
     if (statusF === 'inactive' && s.active) return false;
@@ -10309,7 +10673,7 @@ function renderShares(shares) {
     );
     if (s.pinned) badges.appendChild(el('span', { class: 'badge pinned-badge', text: t('sh.pinned') }));
     if (s.archived) badges.appendChild(el('span', { class: 'badge archived-badge', text: t('sh.archived') }));
-    if (s.dlp && (s.dlp.count || s.dlp.incomplete)) badges.appendChild(el('span', { class: 'badge dlp-badge', text:s.dlp.incomplete && !s.dlp.count ? 'DLP ?' : t('dlp.badge', { n:s.dlp.count }), attrs:{ title:s.dlp.incomplete ? t('dlp.incompleteConfirm', { skipped:s.dlp.filesSkipped || 0, ocr:s.dlp.ocrErrors || 0, scan:s.dlp.scanErrors || 0 }) : (s.dlp.types || []).join(', ') } }));
+    if (s.dlp && (s.dlp.count || s.dlp.incomplete)) { const db=el(Array.isArray(s.dlp.findings)&&s.dlp.findings.length?'button':'span', { class: 'badge dlp-badge', text:s.dlp.incomplete && !s.dlp.count ? 'DLP ?' : t('dlp.badge', { n:s.dlp.count }), attrs:{ title:Array.isArray(s.dlp.findings)&&s.dlp.findings.length?t('dlp.showDetails'):(s.dlp.incomplete ? t('dlp.incompleteConfirm', { skipped:s.dlp.filesSkipped || 0, ocr:s.dlp.ocrErrors || 0, scan:s.dlp.scanErrors || 0 }) : (s.dlp.types || []).join(', ')), type:'button' } }); if(db.tagName==='BUTTON')db.addEventListener('click',(ev)=>{ev.preventDefault();ev.stopPropagation();showDlpDetails(s.dlp);}); badges.appendChild(db); }
     const totalUsage = Math.max(Number(s.views) || 0, Number(s.downloads) || 0, Number(s.stats && s.stats.count) || 0);
     const downloadable = s.type === 'file' || s.type === 'folder';
     if (downloadable && (Number(s.downloadsUsed) || 0) === 0) badges.appendChild(el('span', { class: 'badge never-used', text: t('sh.neverDownloaded') }));
@@ -10644,6 +11008,7 @@ function renderShares(shares) {
   });
   applySharePresence();
   updateBulkBar();
+  setTimeout(focusShareFromLocation,0);
 }
 
 // --- Moderation queue (files awaiting approval) ---
@@ -10785,9 +11150,6 @@ if ($('shares-pinned-toggle')) $('shares-pinned-toggle').addEventListener('click
   const b=$('shares-pinned-toggle'); b.classList.toggle('active',state.sharePinnedOnly); b.setAttribute('aria-pressed',state.sharePinnedOnly?'true':'false');
   state.selShares = new Set(); state.sharePage=0; if (state.allShares) renderShares(state.allShares);
 });
-[['shares-view-list', 'list'], ['shares-view-grid', 'grid']].forEach(([id, mode]) => {
-  if ($(id)) $(id).addEventListener('click', () => setShareView(mode));
-});
 // Density toggle for the admin links table (compact / comfortable).
 if ($('shares-density-toggle')) $('shares-density-toggle').addEventListener('click', () => setShareDensity(state.shareDensity === 'compact' ? 'comfortable' : 'compact'));
 
@@ -10842,6 +11204,8 @@ async function runContentSearch() {
     st.textContent = (e.data && e.data.error === 'query-too-short') ? t('search.tooShort') : t('search.fail');
   }
 }
+function normalizedHighlightMap(text){const locale=LOCALES[state.lang]||'en-US',map=[],parts=[];let offset=0;for(const ch of String(text||'')){const folded=ch.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase(locale);for(let i=0;i<folded.length;i++){parts.push(folded[i]);map.push({start:offset,end:offset+ch.length});}offset+=ch.length;}return {text:parts.join(''),map};}
+function appendSearchHighlight(node,text,terms){text=String(text||'');const locale=LOCALES[state.lang]||'en-US',folded=normalizedHighlightMap(text);terms=(Array.isArray(terms)?terms:[]).map((x)=>String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLocaleLowerCase(locale)).filter(Boolean).sort((a,b)=>b.length-a.length);if(!terms.length||!folded.text){node.textContent=text;return;}const ranges=[];terms.forEach((term)=>{let from=0;while(from<=folded.text.length-term.length){const at=folded.text.indexOf(term,from);if(at<0)break;const first=folded.map[at],last=folded.map[at+term.length-1];if(first&&last)ranges.push([first.start,last.end]);from=at+Math.max(1,term.length);}});if(!ranges.length){node.textContent=text;return;}ranges.sort((a,b)=>a[0]-b[0]||b[1]-a[1]);const merged=[];ranges.forEach((r)=>{const last=merged[merged.length-1];if(last&&r[0]<=last[1])last[1]=Math.max(last[1],r[1]);else merged.push(r.slice());});let pos=0;merged.forEach((r)=>{if(r[0]>pos)node.appendChild(document.createTextNode(text.slice(pos,r[0])));node.appendChild(el('mark',{text:text.slice(r[0],r[1])}));pos=r[1];});if(pos<text.length)node.appendChild(document.createTextNode(text.slice(pos)));}
 function renderSearchResults(r) {
   const out = $('search-results'), st = $('search-status');
   out.textContent = '';
@@ -10854,7 +11218,7 @@ function renderSearchResults(r) {
     const row = el('div', { class: 'search-hit' });
     const head = el('div', { class: 'sh-hit-head' });
     head.appendChild(el('span', { class: 'sh-hit-share', text: m.shareName || '—' }));
-    head.appendChild(el('span', { class: 'sh-hit-file', text: String(m.file || '') + (m.line ? ' :' + m.line : '') }));
+    const fileEl=el('span',{class:'sh-hit-file'});appendSearchHighlight(fileEl,String(m.file||'')+(m.line?' :'+m.line:''),m.highlightTerms);head.appendChild(fileEl);
     const scopeLabel = m.scope === 'user' ? t('search.kindUser') : m.scope === 'log' ? t('search.kindLog') : m.scope === 'link' ? t('search.kindLink') : null;
     if (scopeLabel) head.appendChild(el('span', { class: 'badge', text: scopeLabel }));
     else if (m.kind) head.appendChild(el('span', { class: 'badge', text: String(m.kind).toUpperCase() + (m.size ? ' · ' + fmtBytes(m.size) : '') }));
@@ -10865,7 +11229,7 @@ function renderSearchResults(r) {
     if (!link && m.scope !== 'user' && m.scope !== 'log' && m.token) link = m.type === 'photo' ? ('/images?image=' + encodeURIComponent(m.token)) : ((prefix[m.type] || '/s/') + m.token);
     if (link) head.appendChild(el('a', { class: 'btn ghost xs sh-hit-open', text: t('sh.open'), attrs: { href: link, target: '_blank', rel: 'noopener' } }));
     row.appendChild(head);
-    row.appendChild(el('div', { class: 'sh-hit-snip', text: m.snippet }));
+    const snip=el('div',{class:'sh-hit-snip'});appendSearchHighlight(snip,m.snippet,m.highlightTerms);row.appendChild(snip);
     out.appendChild(row);
   });
 }
@@ -10873,8 +11237,8 @@ if ($('search-run')) $('search-run').addEventListener('click', runContentSearch)
 if ($('search-input')) $('search-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); runContentSearch(); } });
 
 // Export the links list (state + counters) as CSV / JSON.
-if ($('links-export-csv')) $('links-export-csv').addEventListener('click', () => window.open('/api/shares/list-export?format=csv', '_blank'));
-if ($('links-export-json')) $('links-export-json').addEventListener('click', () => window.open('/api/shares/list-export?format=json', '_blank'));
+if ($('links-export-csv')) $('links-export-csv').addEventListener('click', () => window.open('/api/shares/list-export?format=csv', '_blank', 'noopener'));
+if ($('links-export-json')) $('links-export-json').addEventListener('click', () => window.open('/api/shares/list-export?format=json', '_blank', 'noopener'));
 
 // --- Keyboard shortcuts ---
 function anyOverlayOpen() { return !!document.querySelector('.overlay:not(.hidden)'); }
@@ -11089,7 +11453,7 @@ function openPhotoEditor(s) {
   foot.appendChild(cancel); foot.appendChild(save); modal.appendChild(foot);
   overlay.appendChild(modal); document.body.appendChild(overlay);
 
-  const ed = { img: null, angle: 0, flipH: false, ratio: 'free', crop: null, scale: 1, dispW: 0, dispH: 0, baked: null, drag: null };
+  const ed = { img: null, angle: 0, flipH: false, ratio: 'free', crop: null, scale: 1, dispW: 0, dispH: 0, baked: null, drag: null, ops: [] };
   const ctx = canvas.getContext('2d');
   const MAXW = 560, MAXH = 430;
   function rebake() {
@@ -11153,10 +11517,10 @@ function openPhotoEditor(s) {
   function onUp() { if (ed.drag && ed.crop && (ed.crop.w < 6 || ed.crop.h < 6)) ed.crop = null; ed.drag = null; redraw(); }
   canvas.addEventListener('mousedown', onDown); window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);
   canvas.addEventListener('touchstart', onDown, { passive: false }); canvas.addEventListener('touchmove', onMove, { passive: false }); canvas.addEventListener('touchend', onUp);
-  rotL.addEventListener('click', () => { ed.angle = (ed.angle + 270) % 360; rebake(); });
-  rotR.addEventListener('click', () => { ed.angle = (ed.angle + 90) % 360; rebake(); });
-  flip.addEventListener('click', () => { ed.flipH = !ed.flipH; rebake(); });
-  resetBtn.addEventListener('click', () => { ed.angle = 0; ed.flipH = false; ed.crop = null; setRatio('free'); rebake(); });
+  rotL.addEventListener('click', () => { ed.angle = (ed.angle + 270) % 360; ed.ops.push('rotate-left'); rebake(); });
+  rotR.addEventListener('click', () => { ed.angle = (ed.angle + 90) % 360; ed.ops.push('rotate-right'); rebake(); });
+  flip.addEventListener('click', () => { ed.flipH = !ed.flipH; ed.ops.push('flip-horizontal'); rebake(); });
+  resetBtn.addEventListener('click', () => { ed.angle = 0; ed.flipH = false; ed.crop = null; ed.ops = []; setRatio('free'); rebake(); });
   function onKey(e) { if (e.key === 'Escape') close(); }
   function close() {
     window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); document.removeEventListener('keydown', onKey);
@@ -11181,7 +11545,8 @@ function openPhotoEditor(s) {
       const mime = isPng ? 'image/png' : 'image/jpeg', ext = isPng ? 'png' : 'jpg';
       const blob = await new Promise((resolve, reject) => out.toBlob((b) => (b ? resolve(b) : reject(new Error('encode'))), mime, isPng ? undefined : 0.92));
       const uploadName = String(s.name || 'image').replace(/\.[^.]+$/, '') + '.' + ext;
-      const base = '/api/photos/' + encodeURIComponent(s.id) + '/replace?name=' + encodeURIComponent(uploadName);
+      const operations = ed.ops.slice(); if (ed.crop && ed.crop.w > 4 && ed.crop.h > 4) operations.push('crop-' + Math.round(sw) + 'x' + Math.round(sh));
+      const base = '/api/photos/' + encodeURIComponent(s.id) + '/replace?name=' + encodeURIComponent(uploadName) + '&ops=' + encodeURIComponent(operations.join(','));
       let requestUrl = base, resp = await sendEditedPhoto(requestUrl, blob), duplicateApproved = false, dlpApproved = false;
       for (let guard = 0; resp.status === 409 && guard < 3; guard++) {
         let issue = null; try { issue = await resp.clone().json(); } catch (_) {}
@@ -11198,6 +11563,7 @@ function openPhotoEditor(s) {
       if (!resp.ok) {
         const denied = await resp.clone().json().catch(() => ({}));
         const err = new Error(denied.error || 'save');
+        if (denied.dlp) showDlpDetails(denied.dlp,t('dlp.detailsTitle'));
         if (denied.error === 'dlp-blocked') err.dxReason = t('dlp.blocked');
         else if (denied.error === 'dlp-quarantined') err.dxReason = t('dlp.quarantined');
         else if (denied.error === 'dlp-quarantine-failed') err.dxReason = t('dlp.quarantineFailed');
@@ -11451,7 +11817,8 @@ function statsTimeline(points) {
     const raw = Number(point.bytes) || Number(point.count) || 0;
     bar.style.height = (raw ? Math.max(6, Math.round((raw / max) * 100)) : 2) + '%';
     cell.appendChild(bar);
-    cell.appendChild(el('span', { text: String(point.day || '').slice(5) }));
+    const rawLabel = String(point.day || '');
+    cell.appendChild(el('span', { text: /^\d{2}:\d{2}$/.test(rawLabel) ? rawLabel : rawLabel.slice(5) }));
     chart.appendChild(cell);
   });
   return chart;
@@ -11469,6 +11836,22 @@ function statsTypeLabel(type) {
   return key ? t(key) : (type || t('stats.unknown'));
 }
 
+let detailedStatsContext = { share: null, period: '14', requestSeq: 0 };
+function statsDeltaText(value, suffix = '%') {
+  const n = Number(value) || 0; return (n > 0 ? '+' : '') + n + suffix;
+}
+function statsPeriodToolbar(data) {
+  const wrap = el('div', { class: 'stats-period-toolbar' });
+  wrap.appendChild(el('span', { class:'muted sm', text:t('stats.period') }));
+  const select = el('select', { class:'stats-period-select' });
+  [['1',t('stats.24h')],['7',t('stats.7d')],['14',t('stats.14d')],['30',t('stats.30d')],['all',t('stats.all')]].forEach(([value,label]) => {
+    const o=el('option',{text:label,attrs:{value}}); if(String(detailedStatsContext.period)===value)o.selected=true; select.appendChild(o);
+  });
+  select.addEventListener('change',()=>{ detailedStatsContext.period=select.value; if(detailedStatsContext.share) loadDetailedStats(detailedStatsContext.share, select.value); });
+  wrap.appendChild(select);
+  if (data && data.period) wrap.appendChild(el('span',{class:'muted sm',text:t('stats.periodHint')}));
+  return wrap;
+}
 function renderDetailedStats(data) {
   const body = $('stats-body');
   body.textContent = '';
@@ -11479,6 +11862,7 @@ function renderDetailedStats(data) {
   const sh = data.share;
   const ag = data.aggregate || {};
   const image = data.image;
+  body.appendChild(statsPeriodToolbar(data));
 
   const overview = statsSection(t('stats.overview'));
   const metrics = el('div', { class: 'stats-metrics' });
@@ -11490,8 +11874,19 @@ function renderDetailedStats(data) {
   metrics.appendChild(statsMetric('👤', ((image && image.totalVisitors) || sh.uniqueVisitors || 0).toLocaleString(), t('stats.visitors')));
   if (image) metrics.appendChild(statsMetric('🗄', formatBytes(image.totalStorageBytes || sh.logicalBytes || 0), t('stats.storage')));
   else metrics.appendChild(statsMetric('⬇', (sh.downloads || 0).toLocaleString(), t('stats.downloads')));
+  metrics.appendChild(statsMetric('↻', (ag.resumed || 0).toLocaleString(), t('stats.resumed')));
   overview.appendChild(metrics);
   body.appendChild(overview);
+
+  if (data.comparison && data.comparison.available) {
+    const cmp = statsSection(t('stats.comparison')); const d = data.comparison.delta || {};
+    const grid = el('div',{class:'stats-comparison-grid'});
+    grid.appendChild(statsMetric('🔄', statsDeltaText(d.countPct), t('stats.transfers')));
+    grid.appendChild(statsMetric('💾', statsDeltaText(d.bytesPct), t('stats.volume')));
+    grid.appendChild(statsMetric('✅', statsDeltaText(d.successRatePoints, ' pt'), t('stats.success')));
+    grid.appendChild(statsMetric('⚡', statsDeltaText(d.speedPct), t('stats.speed')));
+    cmp.appendChild(grid); cmp.appendChild(el('p',{class:'muted sm',text:t('stats.comparisonHint')})); body.appendChild(cmp);
+  }
 
   const details = statsSection(t('stats.details'));
   details.appendChild(statsDefinitionGrid([
@@ -11540,6 +11935,8 @@ function renderDetailedStats(data) {
       card.appendChild(el('span', { text: t('stats.storage') + ': ' + formatBytes(v.size || 0) }));
       card.appendChild(el('span', { text: t('stats.views') + ': ' + (v.views || 0).toLocaleString() }));
       card.appendChild(el('span', { text: t('stats.visitors') + ': ' + (v.visitors || 0).toLocaleString() }));
+      card.appendChild(el('span', { text: t('stats.bandwidth') + ': ' + formatBytes(v.bandwidthBytes || 0) }));
+      card.appendChild(el('span', { text: t('stats.viewShare') + ': ' + (v.viewSharePct || 0) + '%' }));
       card.appendChild(el('span', { text: t('stats.lastView') + ': ' + (v.lastAt ? formatDate(v.lastAt) : '—') }));
       variants.appendChild(card);
     });
@@ -11555,7 +11952,7 @@ function renderDetailedStats(data) {
       row.appendChild(el('span', { class: 'stats-event-icon', text: event.direction === 'up' ? '⬆' : '⬇' }));
       const main = el('div', { class: 'stats-event-main' });
       main.appendChild(el('strong', { text: event.name || sh.name }));
-      main.appendChild(el('span', { text: formatBytes(event.bytes || 0) + (event.expectedBytes ? ' / ' + formatBytes(event.expectedBytes) : '') + ' · ' + (event.ipName || event.ip || '—') }));
+      main.appendChild(el('span', { text: [(event.resumed ? '↻ ' + t('stats.resumed') : ''), formatBytes(event.bytes || 0) + (event.expectedBytes ? ' / ' + formatBytes(event.expectedBytes) : ''), (event.ipName || event.ip || '—')].filter(Boolean).join(' · ') }));
       row.appendChild(main);
       list.appendChild(row);
     });
@@ -11563,7 +11960,7 @@ function renderDetailedStats(data) {
     body.appendChild(section);
   }
 
-  const timeline = statsSection(t('stats.activity14'));
+  const timeline = statsSection(t('stats.activityPeriod'));
   timeline.appendChild(statsTimeline(data.timeline || []));
   body.appendChild(timeline);
 
@@ -11574,6 +11971,12 @@ function renderDetailedStats(data) {
   clients.appendChild(statsBreakdown(data.clients || [], (row) => (row.count || 0).toLocaleString()));
   split.append(countries, clients);
   body.appendChild(split);
+
+  if (Array.isArray(data.failureReasons) && data.failureReasons.length) {
+    const failures = statsSection(t('stats.failureReasons'));
+    failures.appendChild(statsBreakdown(data.failureReasons.map((r)=>({label:transferFailureLabel(r.reason),count:r.count,bytes:r.bytes})), (r)=>(r.count||0)+' · '+formatBytes(r.bytes||0)));
+    body.appendChild(failures);
+  }
 
   const recentSection = statsSection(t('stats.recent'));
   const recentList = el('div', { class: 'stats-events' });
@@ -11586,7 +11989,9 @@ function renderDetailedStats(data) {
       const main = el('div', { class: 'stats-event-main' });
       const client = [event.flag, event.ipName || event.ip, event.country, event.recipient ? '👤 ' + event.recipient : ''].filter(Boolean).join(' · ');
       main.appendChild(el('strong', { text: event.name || sh.name }));
-      main.appendChild(el('span', { text: [formatBytes(event.bytes || 0), fmtDuration(event.durationMs || 0), fmtBps(event.avgBps || 0), client].filter(Boolean).join(' · ') }));
+      const detailBits = [formatBytes(event.bytes || 0), fmtDuration(event.durationMs || 0), fmtBps(event.avgBps || 0), client];
+      if (event.resumed) detailBits.unshift('↻ ' + t('stats.resumed') + (event.resumeOffset ? ' ' + formatBytes(event.resumeOffset) : ''));
+      main.appendChild(el('span', { text: detailBits.filter(Boolean).join(' · ') }));
       if (!event.completed && event.reason) main.appendChild(el('small', { text: transferFailureLabel(event.reason) }));
       row.appendChild(main);
       row.appendChild(el('time', { text: event.at ? timeAgo(event.at) : '—' }));
@@ -11619,26 +12024,22 @@ function renderDetailedStats(data) {
   }
 }
 
-let detailedStatsRequestSerial = 0;
-async function openDetailedStats(s) {
-  const overlay = $('stats-overlay');
-  const body = $('stats-body');
-  const requestSerial = ++detailedStatsRequestSerial;
-  $('stats-title').textContent = t('stats.title');
-  $('stats-subtitle').textContent = s && s.name ? s.name : '';
-  body.textContent = t('stats.loading');
-  body.scrollTop = 0;
-  overlay.classList.remove('hidden');
+async function loadDetailedStats(s, period) {
+  const seq = ++detailedStatsContext.requestSeq;
+  const body = $('stats-body'); body.textContent = t('stats.loading');
   try {
-    const data = await api('GET', '/api/shares/' + encodeURIComponent(s.id) + '/stats-detail');
-    if (requestSerial !== detailedStatsRequestSerial || overlay.classList.contains('hidden')) return;
+    const data = await api('GET', '/api/shares/' + encodeURIComponent(s.id) + '/stats-detail?period=' + encodeURIComponent(period || '14'));
+    if (seq !== detailedStatsContext.requestSeq) return;
     renderDetailedStats(data);
-    body.scrollTop = 0;
-  } catch (_) {
-    if (requestSerial === detailedStatsRequestSerial && !overlay.classList.contains('hidden')) body.textContent = t('stats.fail');
-  }
+  } catch (_) { if (seq === detailedStatsContext.requestSeq) body.textContent = t('stats.fail'); }
 }
-function closeDetailedStats() { detailedStatsRequestSerial += 1; $('stats-overlay').classList.add('hidden'); }
+async function openDetailedStats(s) {
+  detailedStatsContext.share = s; detailedStatsContext.period = detailedStatsContext.period || '14';
+  $('stats-title').textContent = t('stats.title'); $('stats-subtitle').textContent = s.name || '';
+  $('stats-overlay').classList.remove('hidden');
+  await loadDetailedStats(s, detailedStatsContext.period);
+}
+function closeDetailedStats() { detailedStatsContext.requestSeq += 1; detailedStatsContext.share = null; $('stats-overlay').classList.add('hidden'); }
 
 // Per-link access log modal.
 async function openAccessLog(s) {
@@ -11722,10 +12123,11 @@ document.addEventListener('keydown', (e) => {
 
 
 // Recoverable trash UI.
+async function restoreTrashSmart(id,row){try{await api('POST','/api/trash/'+encodeURIComponent(id)+'/restore',{});return true;}catch(err){const data=err&&err.data||err&&err.body||null;if(!(data&&data.error==='restore-location-missing'))throw err;const alternatives=data.assessment&&Array.isArray(data.assessment.alternatives)?data.assessment.alternatives:[];let path=alternatives[0]||'';if(path&&confirm(t('trash.smartRestore',{path}))){}else{path=prompt(t('trash.chooseRestore'),path||'')||'';}if(!path)throw err;await api('POST','/api/trash/'+encodeURIComponent(id)+'/restore',{alternativePath:path});return true;}}
 async function loadTrash(){
   const body=$('trash-body');if(!body)return;body.textContent=t('filehist.loading');
   try{
-    const data=await api('GET','/api/trash'),items=(data&&data.items)||[];
+    const data=await api('GET','/api/trash'),items=(data&&data.items)||[];state.trashPurgeSummary=data&&data.purgeSummary||null;
     const valid=new Set(items.map((r)=>r.id));for(const id of [...state.trashSelection])if(!valid.has(id))state.trashSelection.delete(id);
     const badge=$('trash-count-badge');if(badge)badge.textContent=String(items.length);
     body.textContent='';if($('trash-subtitle'))$('trash-subtitle').textContent=t('trash.retention',{n:data.retentionDays||0});
@@ -11737,10 +12139,10 @@ async function loadTrash(){
         const check=el('input',{class:'trash-select',attrs:{type:'checkbox','aria-label':t('trash.select')}});check.checked=state.trashSelection.has(r.id);
         check.addEventListener('change',()=>{if(check.checked)state.trashSelection.add(r.id);else state.trashSelection.delete(r.id);row.classList.toggle('selected',check.checked);updateSelected();});row.appendChild(check);
       }
-      main.appendChild(el('strong',{text:r.name||'—'}));main.appendChild(el('span',{class:'muted sm',text:[r.type||'',formatBytes(r.logicalBytes||0),r.deletedAt?timeAgo(r.deletedAt):''].filter(Boolean).join(' · ')}));if(r.deletedBy)main.appendChild(el('span',{class:'muted xs',text:r.deletedBy}));
+      main.appendChild(el('strong',{text:r.name||'—'}));main.appendChild(el('span',{class:'muted sm',text:[r.type||'',formatBytes(r.logicalBytes||0),r.deletedAt?timeAgo(r.deletedAt):''].filter(Boolean).join(' · ')}));const impact=r.purgeImpact||{};main.appendChild(el('span',{class:'muted xs trash-impact',text:t('trash.impact',{count:impact.itemCount||1,bytes:formatBytes(impact.bytes!=null?impact.bytes:(r.logicalBytes||0))})}));main.appendChild(el('span',{class:'muted xs trash-deps',text:t('trash.dependencies',{value:(impact.dependencies&&impact.dependencies.length)?impact.dependencies.join(', '):t('trash.noDependencies')})}));if(r.deletedBy)main.appendChild(el('span',{class:'muted xs',text:r.deletedBy}));
       const acts=el('div',{class:'trash-actions'});const historyBtn=el('button',{class:'btn ghost sm',text:t('sh.historyBtn')});historyBtn.addEventListener('click',()=>openShareChangeHistory({id:r.shareId,name:r.name,trashId:r.id}));acts.appendChild(historyBtn);
-      if(state.role!=='auditor'){const restore=el('button',{class:'btn sm',text:t('trash.restore')});restore.addEventListener('click',async()=>{try{await api('POST','/api/trash/'+encodeURIComponent(r.id)+'/restore',{});state.trashSelection.delete(r.id);toast(t('trash.restoreOk'),'ok');await loadTrash();loadUndoPreview();refreshShares();}catch(_){toast(t('trash.restoreFail'),'err');}});acts.appendChild(restore);}
-      if(state.role==='owner'||state.role==='admin'){const purge=el('button',{class:'btn danger sm',text:t('trash.purge')});purge.addEventListener('click',async()=>{if(!confirm(t('trash.purgeConfirm',{name:r.name||''})))return;try{await api('DELETE','/api/trash/'+encodeURIComponent(r.id));state.trashSelection.delete(r.id);toast(t('trash.purgeOk'),'ok');loadTrash();loadUndoPreview();refreshShares();}catch(_){toast(t('trash.purgeFail'),'err');}});acts.appendChild(purge);}
+      if(state.role!=='auditor'){const restore=el('button',{class:'btn sm',text:t('trash.restore')});restore.addEventListener('click',async()=>{try{await restoreTrashSmart(r.id,r);state.trashSelection.delete(r.id);toast(t('trash.restoreOk'),'ok');await loadTrash();loadUndoPreview();refreshShares();}catch(_){toast(t('trash.restoreFail'),'err');}});acts.appendChild(restore);}
+      if(state.role==='owner'||state.role==='admin'){const purge=el('button',{class:'btn danger sm',text:t('trash.purge')});purge.addEventListener('click',async()=>{const imp=r.purgeImpact||{},deps=imp.dependencyCount?' · '+t('trash.dependencies',{value:(imp.dependencies||[]).join(', ')}):'';if(!confirm(t('trash.purgeConfirmImpact',{name:r.name||'',bytes:formatBytes(imp.bytes!=null?imp.bytes:(r.logicalBytes||0)),count:imp.itemCount||1,deps})))return;try{await api('DELETE','/api/trash/'+encodeURIComponent(r.id));state.trashSelection.delete(r.id);toast(t('trash.purgeOk'),'ok');loadTrash();loadUndoPreview();refreshShares();}catch(_){toast(t('trash.purgeFail'),'err');}});acts.appendChild(purge);}
       row.append(main,acts);body.appendChild(row);
     });updateSelected();
   }catch(_){
@@ -11755,12 +12157,12 @@ async function restoreSelectedTrash(){
   const ids=[...state.trashSelection];if(!ids.length)return;
   const btn=$('trash-restore-selected');if(btn)btn.disabled=true;
   let ok=0,failed=0;
-  for(const id of ids){try{await api('POST','/api/trash/'+encodeURIComponent(id)+'/restore',{});state.trashSelection.delete(id);ok++;}catch(_){failed++;}}
+  for(const id of ids){try{await restoreTrashSmart(id,null);state.trashSelection.delete(id);ok++;}catch(_){failed++;}}
   if(ok)toast(t('trash.restoreSelectedOk',{n:ok}),'ok');if(failed)toast(t('trash.restoreSelectedFail',{n:failed}),'err');
   await loadTrash();loadUndoPreview();refreshShares();
 }
 function openTrash(){$('trash-overlay').classList.remove('hidden');loadTrash();}function closeTrash(){$('trash-overlay').classList.add('hidden');}
-if($('trash-btn'))$('trash-btn').addEventListener('click',openTrash);if($('trash-close'))$('trash-close').addEventListener('click',closeTrash);if($('trash-overlay'))$('trash-overlay').addEventListener('click',(e)=>{if(e.target===$('trash-overlay'))closeTrash();});if($('trash-restore-selected'))$('trash-restore-selected').addEventListener('click',restoreSelectedTrash);if($('trash-purge-all'))$('trash-purge-all').addEventListener('click',async()=>{if(!confirm(t('trash.purgeAllConfirm')))return;try{await api('DELETE','/api/trash');state.trashSelection.clear();toast(t('trash.purgeOk'),'ok');loadTrash();loadUndoPreview();refreshShares();}catch(_){toast(t('trash.purgeFail'),'err');}});
+if($('trash-btn'))$('trash-btn').addEventListener('click',openTrash);if($('trash-close'))$('trash-close').addEventListener('click',closeTrash);if($('trash-overlay'))$('trash-overlay').addEventListener('click',(e)=>{if(e.target===$('trash-overlay'))closeTrash();});if($('trash-restore-selected'))$('trash-restore-selected').addEventListener('click',restoreSelectedTrash);if($('trash-purge-all'))$('trash-purge-all').addEventListener('click',async()=>{const sum=state.trashPurgeSummary||{},deps=sum.dependencies?' · '+t('trash.dependencies',{value:String(sum.dependencies)}):'';if(!confirm(t('trash.purgeAllImpact',{count:sum.items||0,bytes:formatBytes(sum.bytes||0),deps})))return;try{await api('DELETE','/api/trash');state.trashSelection.clear();toast(t('trash.purgeOk'),'ok');loadTrash();loadUndoPreview();refreshShares();}catch(_){toast(t('trash.purgeFail'),'err');}});
 
 // Undoable-action history (#89), merged directly into the Activity tab.
 // There is deliberately no separate card/modal in the standard UI: the durable
@@ -11857,7 +12259,7 @@ const LOG_VALUE_TRANSLATIONS = {
   en:{'active':'active','completed':'completed','interrupted':'interrupted','deleted':'deleted','restored':'restored','purged':'permanently deleted','reactivated':'reactivated','clean':'clean','infected':'infected','error':'error','restarted':'restarted','recovered':'recovered','updated':'updated','message':'message','thread-reply':'thread reply','access-request':'access request','feedback':'feedback','locked-out':'locked after too many attempts','paired device':'paired device','new device':'new device','known device':'known device','device renamed':'device renamed','PWA session locked':'PWA session locked','manual rebuild requested':'manual reindex requested','visitor message':'visitor message','visitor thread reply':'visitor thread reply','access request submitted':'access request submitted','feedback submitted':'feedback submitted','Contenu modifié':'Content modified','none muted':'nothing muted','failed':'failed','no-channel':'no channel','open':'open','closed':'closed','unknown':'unknown'},
   es:{'active':'activo','completed':'completado','interrupted':'interrumpido','deleted':'eliminado','restored':'restaurado','purged':'eliminado definitivamente','reactivated':'reactivado','clean':'limpio','infected':'infectado','error':'error','restarted':'reiniciado','recovered':'recuperado','updated':'actualizado','message':'mensaje','thread-reply':'respuesta a la conversación','access-request':'solicitud de acceso','feedback':'comentario','locked-out':'bloqueado tras demasiados intentos','paired device':'dispositivo emparejado','new device':'nuevo dispositivo','known device':'dispositivo conocido','device renamed':'dispositivo renombrado','PWA session locked':'sesión PWA bloqueada','manual rebuild requested':'reindexación manual solicitada','visitor message':'mensaje del visitante','visitor thread reply':'respuesta del visitante','access request submitted':'solicitud de acceso enviada','feedback submitted':'comentario enviado','Content modified':'Contenido modificado','Contenu modifié':'Contenido modificado','none muted':'ninguna categoría silenciada','failed':'fallido','no-channel':'sin canal','open':'abierto','closed':'cerrado','unknown':'desconocido'}
 };
-const AUDIT_ACTION_LABELS_EXTRA = {"fr":{"notification-rule-reused":"Règle de notification réutilisée","storage-connector-upload":"Téléversement vers le stockage terminé","storage-connector-download":"Téléchargement depuis le stockage terminé","storage-connector-done":"Opération de stockage terminée","storage-connector-failed":"Opération de stockage échouée"},"en":{"notification-rule-reused":"Notification rule reused","storage-connector-upload":"Storage upload completed","storage-connector-download":"Storage download completed","storage-connector-done":"Storage operation completed","storage-connector-failed":"Storage operation failed"},"es":{"notification-rule-reused":"Regla de notificación reutilizada","storage-connector-upload":"Carga al almacenamiento completada","storage-connector-download":"Descarga desde el almacenamiento completada","storage-connector-done":"Operación de almacenamiento completada","storage-connector-failed":"Operación de almacenamiento fallida"}};
+const AUDIT_ACTION_LABELS_EXTRA = {"fr":{"notification-rule-reused":"Règle de notification réutilisée","storage-connector-upload":"Téléversement vers le stockage terminé","storage-connector-download":"Téléchargement depuis le stockage terminé","storage-connector-done":"Opération de stockage terminée","storage-connector-failed":"Opération de stockage échouée","image-version-restored":"Version d’image restaurée","passkey-device-removed":"Appareil biométrique retiré"},"en":{"notification-rule-reused":"Notification rule reused","storage-connector-upload":"Storage upload completed","storage-connector-download":"Storage download completed","storage-connector-done":"Storage operation completed","storage-connector-failed":"Storage operation failed","image-version-restored":"Image version restored","passkey-device-removed":"Biometric device removed"},"es":{"notification-rule-reused":"Regla de notificación reutilizada","storage-connector-upload":"Carga al almacenamiento completada","storage-connector-download":"Descarga desde el almacenamiento completada","storage-connector-done":"Operación de almacenamiento completada","storage-connector-failed":"Operación de almacenamiento fallida","image-version-restored":"Versión de imagen restaurada","passkey-device-removed":"Dispositivo biométrico eliminado"}};
 function localizedAuditAction(action){
   const raw=String(action||'');
   const key='auditA.'+raw, translated=t(key);
@@ -11866,9 +12268,26 @@ function localizedAuditAction(action){
   return (AUDIT_ACTION_LABELS[lang]&&AUDIT_ACTION_LABELS[lang][raw])||(AUDIT_ACTION_LABELS_EXTRA[lang]&&AUDIT_ACTION_LABELS_EXTRA[lang][raw])||raw.replace(/-/g,' ');
 }
 const LOG_VALUE_TRANSLATIONS_EXTRA = {"fr":{"queued":"en file","pending":"en attente","paused-all":"tous mis en pause","resumed-all":"tous réactivés","thread-reply":"réponse à la discussion","access-request":"demande d’accès","feedback":"commentaire","message":"message"},"en":{"queued":"queued","pending":"pending","paused-all":"all paused","resumed-all":"all resumed","thread-reply":"thread reply","access-request":"access request","feedback":"feedback","message":"message"},"es":{"queued":"en cola","pending":"pendiente","paused-all":"todos pausados","resumed-all":"todos reanudados","thread-reply":"respuesta a la conversación","access-request":"solicitud de acceso","feedback":"comentario","message":"mensaje"}};
+function localizedStructuredLogParams(code,params){
+  const out={...(params&&typeof params==='object'?params:{})};
+  if(code==='dlp-result'){
+    const sev={low:'cfg.dlpLow',medium:'cfg.dlpMedium',high:'cfg.dlpHigh',critical:'cfg.dlpCritical',none:null};
+    if(Object.prototype.hasOwnProperty.call(sev,String(out.highest||''))) out.highest=sev[String(out.highest)]?t(sev[String(out.highest)]):'—';
+    if(out.types)out.types=String(out.types).split(/,\s*/).filter(Boolean).map((v)=>dlpRuleLabel(v)).join(', ');
+  }
+  if((code==='diagnostic-fix-requested'||code==='diagnostic-fix'||code==='diagnostic-fix-failed')&&out.action)out.action=localizedAuditAction(String(out.action));
+  return out;
+}
 function localizedLogText(value){
   if(value===null||value===undefined)return '';
   let raw=String(value), lang=state.lang==='fr'?'fr':state.lang==='es'?'es':'en';
+  if(raw.startsWith('@dxlog:')){
+    try{
+      const rec=JSON.parse(raw.slice(7)), key='log.'+String(rec.code||''), translated=t(key,localizedStructuredLogParams(String(rec.code||''),rec.params||{}));
+      if(translated!==key)return translated;
+      if(rec.fallback)return String(rec.fallback);
+    }catch(_){}
+  }
   const exact=LOG_VALUE_TRANSLATIONS[lang]||{}, extra=LOG_VALUE_TRANSLATIONS_EXTRA[lang]||{};
   if(Object.prototype.hasOwnProperty.call(exact,raw))return exact[raw];
   if(Object.prototype.hasOwnProperty.call(extra,raw))return extra[raw];
@@ -11924,10 +12343,12 @@ function activitySearchText(e){return [localizedActivityName(e),e&&e.kind,locali
 function activityIsPwa(e){return !!(e&&(e.source==='pwa'||e.deviceId||/^PWA(?::|$)/i.test(String(e.actor||''))||/via PWA/i.test(String(e.detail||''))));}
 function activityIsImage(e){if(!e)return false;const action=String(e.name||e.status||'');if(/^(photo|photos|image|album)(?:-|$)/i.test(action))return true;if(/^(photo|album)$/i.test(String(e.resourceType||e.detail||'')))return true;const sh=(state.allShares||[]).find((x)=>x&&e.shareId&&String(x.id)===String(e.shareId));return !!(sh&&(sh.type==='photo'||sh.type==='album'));}
 function activityIsRoutineSystem(e){const n=String(e&&e.name||'').toLowerCase(),k=String(e&&e.kind||'').toLowerCase();return k==='ocr-start'||k==='ocr-complete'||['server-restarted','server-shutdown'].includes(n);}
-function refreshActivityShareOptions(){const sel=$('activity-section-share');if(!sel)return;const current=sel.value;const map=new Map();activityEventsWithUndo().forEach((e)=>{if(e&&e.shareId&&!map.has(String(e.shareId)))map.set(String(e.shareId),e.name||e.shareId);});sel.innerHTML='';sel.appendChild(el('option',{text:t('activity.shareAll'),attrs:{value:''}}));[...map.entries()].sort((a,b)=>String(a[1]).localeCompare(String(b[1]))).forEach(([id,name])=>sel.appendChild(el('option',{text:name+' · '+id.slice(0,8),attrs:{value:id}})));if([...sel.options].some((o)=>o.value===current))sel.value=current;}
-function filteredActivityEvents(){const locale=LOCALES[state.lang]||'en-US';const search=String(($('activity-section-search')&&$('activity-section-search').value)||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLocaleLowerCase(locale);const kind=String(($('activity-section-kind')&&$('activity-section-kind').value)||'');const share=String(($('activity-section-share')&&$('activity-section-share').value)||'');const images=!!($('activity-images-only')&&$('activity-images-only').checked),pwa=!!($('activity-pwa-only')&&$('activity-pwa-only').checked),hideRoutine=!!($('activity-hide-routine')&&$('activity-hide-routine').checked);return activityEventsWithUndo().filter((e)=>(!kind||activityGroup(e)===kind)&&(!share||String(e.shareId||'')===share)&&(!images||activityIsImage(e))&&(!pwa||activityIsPwa(e))&&(!hideRoutine||!activityIsRoutineSystem(e))&&(!search||activitySearchText(e).includes(search)));}
+function refreshActivityShareOptions(){const sel=$('activity-section-share');if(!sel)return;const current=sel.value;const map=new Map();activityEventsWithUndo().forEach((e)=>{if(e&&e.shareId&&!map.has(String(e.shareId)))map.set(String(e.shareId),e.shareName||e.name||e.shareId);});sel.innerHTML='';sel.appendChild(el('option',{text:t('activity.shareAll'),attrs:{value:''}}));[...map.entries()].sort((a,b)=>String(a[1]).localeCompare(String(b[1]))).forEach(([id,name])=>sel.appendChild(el('option',{text:name+' · '+id.slice(0,8),attrs:{value:id}})));if([...sel.options].some((o)=>o.value===current))sel.value=current;}
+function activityResultMatches(e,want){if(!want)return true;const text=String([e&&e.status,e&&e.detail,e&&e.name].filter(Boolean).join(' ')).toLowerCase();if(want==='ok')return /ok|done|complete|completed|success|created|updated|sent|ready/.test(text);if(want==='error')return /error|fail|failed|interrupt|abandon|blocked|denied|impossible/.test(text);if(want==='restored')return /restor|reactivat/.test(text);if(want==='deleted')return /delete|deleted|purge|purged|revok|trash/.test(text);return text.includes(String(want).toLowerCase());}
+function filteredActivityEvents(){const locale=LOCALES[state.lang]||'en-US';const norm=(v)=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLocaleLowerCase(locale);const search=norm($('activity-section-search')&&$('activity-section-search').value),actor=norm($('activity-section-actor')&&$('activity-section-actor').value),ip=norm($('activity-section-ip')&&$('activity-section-ip').value);const kind=String(($('activity-section-kind')&&$('activity-section-kind').value)||''),share=String(($('activity-section-share')&&$('activity-section-share').value)||''),device=String(($('activity-section-device')&&$('activity-section-device').value)||''),result=norm($('activity-section-result')&&$('activity-section-result').value),direction=String(($('activity-section-direction')&&$('activity-section-direction').value)||''),period=Math.max(0,Number(($('activity-section-period')&&$('activity-section-period').value)||0)),cutoff=period?Date.now()-period*3600000:0;const images=!!($('activity-images-only')&&$('activity-images-only').checked),pwa=!!($('activity-pwa-only')&&$('activity-pwa-only').checked),hideRoutine=!!($('activity-hide-routine')&&$('activity-hide-routine').checked);return activityEventsWithUndo().filter((e)=>(!kind||activityGroup(e)===kind)&&(!share||String(e.shareId||'')===share)&&(!device||String(e.source||'')===device)&&(!direction||e.direction===direction)&&(!cutoff||Number(e.at)>=cutoff)&&(!actor||norm([e.actor,e.accountId].filter(Boolean).join(' ')).includes(actor))&&(!ip||norm(e.ip).includes(ip))&&activityResultMatches(e,result)&&(!images||activityIsImage(e))&&(!pwa||activityIsPwa(e))&&(!hideRoutine||!activityIsRoutineSystem(e))&&(!search||activitySearchText(e).includes(search)));}
 function renderActivityRows(body,list,limit){if(!body)return;body.textContent='';const rows=(list||[]).slice(0,limit);if(!rows.length){body.appendChild(el('div',{class:'empty',text:t('activity.empty')}));return;}rows.forEach((e)=>{const row=el('div',{class:'activity-row '+String(e.kind||'')+(e._undo?' has-undo':'')});row.appendChild(el('span',{class:'activity-icon',text:activityIcon(e.kind,e.status)}));const main=el('div',{class:'activity-main'});main.appendChild(el('strong',{text:localizedActivityName(e)}));main.appendChild(el('span',{class:'muted sm',text:[e.direction==='up'?'⬆':e.direction==='down'?'⬇':'',e.bytes?formatBytes(e.bytes):'',localizedLogText(e.status),e.ip||'',localizedLogText(e.detail),e.actor||''].filter(Boolean).join(' · ')}));if(e._undo){const undo=e._undo,tools=el('div',{class:'activity-undo-tools'}),status=undoStatusText(undo);tools.appendChild(el('span',{class:'activity-undo-label muted sm',text:status||undoTypeLabel(undo)}));if(undoCanRun(undo)){const b=el('button',{class:'btn sm activity-undo-btn',text:t('undo.btn'),attrs:{type:'button'}});b.addEventListener('click',()=>runUndoFromActivity(undo,b));tools.appendChild(b);}main.appendChild(tools);}row.append(main,el('time',{attrs:{title:e.at?formatDate(e.at):''},text:e.at?timeAgo(e.at):'—'}));body.appendChild(row);});}
-function renderActivity(){const combined=activityEventsWithUndo();refreshActivityShareOptions();renderActivityRows($('activity-body'),combined,500);const filtered=filteredActivityEvents();const sectionLimit=activityPageOpen()?1000:30;renderActivityRows($('activity-section-body'),filtered,sectionLimit);const count=$('activity-section-count');if(count)count.textContent=String(state.activityRetained||state.activityEvents.length||0);const summary=$('activity-section-summary');if(summary)summary.textContent=t('activity.summary',{shown:Math.min(filtered.length,sectionLimit),total:combined.length});}
+function renderCorrelatedActivity(body,list,limit){if(!body)return;body.textContent='';const groups=[],map=new Map();(list||[]).slice(0,limit).forEach((e)=>{const key=e.correlationId||e.shareId||('single:'+e.id);let g=map.get(key);if(!g){g={key,name:e.shareName||e.shareId||e.name||localizedActivityName(e),events:[]};map.set(key,g);groups.push(g);}g.events.push(e);});if(!groups.length){body.appendChild(el('div',{class:'empty',text:t('activity.empty')}));return;}groups.forEach((g)=>{g.events.sort((a,b)=>(Number(a.at)||0)-(Number(b.at)||0));if(g.events.length===1&&!g.events[0].shareId){const tmp=el('div');renderActivityRows(tmp,g.events,1);while(tmp.firstChild)body.appendChild(tmp.firstChild);return;}const wrap=el('div',{class:'activity-thread'}),head=el('div',{class:'activity-thread-head'});head.append(el('strong',{text:g.name||'—'}),el('span',{class:'badge',text:String(g.events.length)}));wrap.appendChild(head);const timeline=el('div',{class:'activity-thread-timeline'});renderActivityRows(timeline,g.events,g.events.length);wrap.appendChild(timeline);body.appendChild(wrap);});}
+function renderActivity(){const combined=activityEventsWithUndo();refreshActivityShareOptions();renderActivityRows($('activity-body'),combined,500);const filtered=filteredActivityEvents();const sectionLimit=activityPageOpen()?1000:30;const correlate=!!($('activity-correlate')&&$('activity-correlate').checked);(correlate?renderCorrelatedActivity:renderActivityRows)($('activity-section-body'),filtered,sectionLimit);const count=$('activity-section-count');if(count)count.textContent=String(state.activityRetained||state.activityEvents.length||0);const summary=$('activity-section-summary');if(summary)summary.textContent=t('activity.summary',{shown:Math.min(filtered.length,sectionLimit),total:combined.length});}
 function mergeActivityEvents(events){const map=new Map();(state.activityEvents||[]).forEach((e)=>{if(e&&e.id)map.set(e.id,e);});(Array.isArray(events)?events:[]).forEach((e)=>{if(e&&e.id)map.set(e.id,e);});state.activityEvents=Array.from(map.values()).sort((a,b)=>(Number(b.at)||0)-(Number(a.at)||0));if(state.activityEvents.length>1000)state.activityEvents.length=1000;renderActivity();}
 function activityMayHaveUndo(e){const name=String(e&&e.name||''),kind=String(e&&e.kind||''),status=String(e&&e.status||'');return !!(UNDO_TYPE_KEY[name]||name==='action-undone'||(kind==='trash'&&status==='deleted'));}
 function addActivityEvent(e){if(!e||!e.id)return;const existed=(state.activityEvents||[]).some((x)=>x.id===e.id);state.activityEvents=(state.activityEvents||[]).filter((x)=>x.id!==e.id);state.activityEvents.unshift(e);if(state.activityEvents.length>1000)state.activityEvents.length=1000;const retained=Number(state.activityRetained)||0;state.activityRetained=existed?Math.max(retained,state.activityEvents.length):Math.min(2000,Math.max(state.activityEvents.length,retained+1));renderActivity();if(activityMayHaveUndo(e))loadUndoActivityItems().catch(()=>{});}
@@ -11940,10 +12361,11 @@ function closeLiveActivity(){$('activity-overlay').classList.add('hidden');}
 if($('live-activity-btn'))$('live-activity-btn').addEventListener('click',openLiveActivity);
 if($('activity-section-refresh'))$('activity-section-refresh').addEventListener('click',()=>loadActivityRecent().catch(()=>{}));
 if($('activity-section-search'))$('activity-section-search').addEventListener('input',renderActivity);
+['activity-section-actor','activity-section-ip'].forEach((id)=>{if($(id))$(id).addEventListener('input',renderActivity);});
 if($('activity-section-kind'))$('activity-section-kind').addEventListener('change',renderActivity);
-['activity-section-share','activity-images-only','activity-pwa-only','activity-hide-routine'].forEach((id)=>{if($(id))$(id).addEventListener('change',()=>{if(id==='activity-hide-routine')try{localStorage.setItem('dx-activity-hide-routine',$(id).checked?'1':'0');}catch(_){}renderActivity();});});
+['activity-section-share','activity-section-device','activity-section-result','activity-section-period','activity-section-direction','activity-correlate','activity-images-only','activity-pwa-only','activity-hide-routine'].forEach((id)=>{if($(id))$(id).addEventListener('change',()=>{if(id==='activity-hide-routine')try{localStorage.setItem('dx-activity-hide-routine',$(id).checked?'1':'0');}catch(_){}renderActivity();});});
 if($('activity-hide-routine'))try{$('activity-hide-routine').checked=localStorage.getItem('dx-activity-hide-routine')==='1';}catch(_){}
-if($('activity-section-reset'))$('activity-section-reset').addEventListener('click',()=>{if($('activity-section-search'))$('activity-section-search').value='';if($('activity-section-kind'))$('activity-section-kind').value='';if($('activity-section-share'))$('activity-section-share').value='';if($('activity-images-only'))$('activity-images-only').checked=false;if($('activity-pwa-only'))$('activity-pwa-only').checked=false;if($('activity-hide-routine'))$('activity-hide-routine').checked=false;try{localStorage.removeItem('dx-activity-hide-routine');}catch(_){}renderActivity();});
+if($('activity-section-reset'))$('activity-section-reset').addEventListener('click',()=>{['activity-section-search','activity-section-actor','activity-section-ip'].forEach((id)=>{if($(id))$(id).value='';});['activity-section-kind','activity-section-share','activity-section-device','activity-section-result','activity-section-period','activity-section-direction'].forEach((id)=>{if($(id))$(id).value='';});if($('activity-correlate'))$('activity-correlate').checked=true;if($('activity-images-only'))$('activity-images-only').checked=false;if($('activity-pwa-only'))$('activity-pwa-only').checked=false;if($('activity-hide-routine'))$('activity-hide-routine').checked=false;try{localStorage.removeItem('dx-activity-hide-routine');}catch(_){}renderActivity();});
 if($('activity-close'))$('activity-close').addEventListener('click',closeLiveActivity);if($('activity-overlay'))$('activity-overlay').addEventListener('click',(e)=>{if(e.target===$('activity-overlay'))closeLiveActivity();});if($('activity-clear'))$('activity-clear').addEventListener('click',()=>{state.activityEvents=[];renderActivity();});
 document.addEventListener('keydown',(e)=>{if(e.key!=='Escape')return;if($('trash-overlay')&&!$('trash-overlay').classList.contains('hidden'))closeTrash();if($('undo-overlay')&&!$('undo-overlay').classList.contains('hidden'))closeUndo();if($('file-history-overlay')&&!$('file-history-overlay').classList.contains('hidden'))closeFileHistory();if($('activity-overlay')&&!$('activity-overlay').classList.contains('hidden'))closeLiveActivity();if($('received-overlay')&&!$('received-overlay').classList.contains('hidden'))closeReceivedFiles();});
 
@@ -13288,6 +13710,7 @@ function renderPhotos(photos) {
   if (requestedToken) {
     const requested = [...list.querySelectorAll('.photo-card')].find((card) => card.dataset.token === requestedToken);
     if (requested && !requested.dataset.urlFocused) {
+      consumeFocusQueryParam('image');
       requested.dataset.urlFocused = '1'; requested.classList.add('url-focused');
       setTimeout(() => { try { requested.scrollIntoView({ block:'center', behavior:'smooth' }); } catch (_) { try { requested.scrollIntoView(); } catch (_) {} } }, 0);
     }
@@ -13641,6 +14064,8 @@ function buildPhotoCard(s) {
       const editBtn = el('button', { class: 'btn ghost sm', text: t('photo.edit'), attrs: { title: t('photo.editTitle') } });
       editBtn.addEventListener('click', () => openPhotoEditor(s));
       actions.appendChild(editBtn);
+      const versionsBtn = el('button', { class:'btn ghost sm', text:t('photo.versions'), attrs:{title:t('photo.versionsHint')} });
+      versionsBtn.addEventListener('click', () => openPhotoVersions(s)); actions.appendChild(versionsBtn);
     }
     // Copy the full image's pixels to the clipboard (hidden where the
     // ClipboardItem image API is unavailable, e.g. non-secure contexts / older browsers).
@@ -13659,6 +14084,23 @@ function buildPhotoCard(s) {
     card.appendChild(actions);
     if (isPendingDelete) card.appendChild(pendingShareDeletionBar(s));
     return card;
+}
+
+async function openPhotoVersions(s) {
+  let data; try { data = await api('GET','/api/photos/'+encodeURIComponent(s.id)+'/versions'); } catch (_) { toast(t('photo.versionsFail'),'err'); return; }
+  const versions = Array.isArray(data.versions) ? data.versions : [];
+  const overlay=el('div',{class:'overlay photo-versions-overlay',attrs:{role:'dialog','aria-modal':'true'}}), modal=el('div',{class:'modal photo-versions-modal'});
+  const head=el('div',{class:'modal-head'}); head.appendChild(el('h3',{text:t('photo.versions')})); const close=el('button',{class:'icon-btn',text:'✕',attrs:{type:'button'}}); head.appendChild(close); modal.appendChild(head);
+  modal.appendChild(el('p',{class:'muted sm',text:t('photo.versionsHint')}));
+  const compare=el('div',{class:'photo-before-after hidden'}); const cmpStage=el('div',{class:'photo-ba-stage'});
+  const cur=el('img',{class:'photo-ba-current',attrs:{alt:'After'}}), beforeWrap=el('div',{class:'photo-ba-before'}), before=el('img',{attrs:{alt:'Before'}}); beforeWrap.appendChild(before); cmpStage.append(cur,beforeWrap);
+  const range=el('input',{class:'photo-ba-range',attrs:{type:'range',min:'0',max:'100',value:'50','aria-label':t('photo.compareBeforeAfter')}}); range.addEventListener('input',()=>{beforeWrap.style.width=range.value+'%';}); compare.append(cmpStage,range); modal.appendChild(compare);
+  const list=el('div',{class:'photo-version-list'});
+  const revision=(data.current&&data.current.revision)||((s.photo&&s.photo.cacheRevision)||1); cur.src='/api/photos/'+encodeURIComponent(s.id)+'/preview?v='+encodeURIComponent(revision);
+  versions.forEach((v,i)=>{ const row=el('div',{class:'photo-version-row'}); const meta=el('div',{class:'photo-version-meta'}); meta.appendChild(el('strong',{text:v.original?t('photo.original'):formatDate(v.at)})); meta.appendChild(el('span',{text:[v.w&&v.h?v.w+'×'+v.h:'',formatBytes(v.size||0),(v.operations||[]).join(' · ')].filter(Boolean).join(' · ')})); const actions=el('div',{class:'photo-version-actions'}); const cmp=el('button',{class:'btn ghost sm',text:t('photo.compareBeforeAfter')}); cmp.addEventListener('click',()=>{before.src='/api/photos/'+encodeURIComponent(s.id)+'/versions/'+encodeURIComponent(v.id)+'/preview?ts='+Date.now();beforeWrap.style.width=range.value+'%';compare.classList.remove('hidden');compare.scrollIntoView({behavior:'smooth',block:'nearest'});}); const restore=el('button',{class:'btn ghost sm',text:v.original?t('photo.revertOriginal'):t('photo.restoreVersion')}); restore.addEventListener('click',async()=>{if(!confirm(t('photo.restoreConfirm')))return;restore.disabled=true;try{await api('POST','/api/photos/'+encodeURIComponent(s.id)+'/restore/'+encodeURIComponent(v.id),{});toast(t('photo.restored'),'ok');overlay.remove();await refreshShares();}catch(_){toast(t('photo.restoreFail'),'err');restore.disabled=false;}}); actions.append(cmp,restore);row.append(meta,actions);list.appendChild(row);});
+  if(!versions.length)list.appendChild(el('div',{class:'empty',text:t('photo.noVersions')})); modal.appendChild(list);
+  const history=Array.isArray(data.history)?data.history:[]; if(history.length){const sec=el('section',{class:'photo-edit-history'});sec.appendChild(el('h4',{text:t('photo.history')}));history.forEach((h)=>sec.appendChild(el('div',{class:'photo-history-row',text:formatDate(h.at)+' · '+(h.operations&&h.operations.length?h.operations.join(' · '):h.action)})));modal.appendChild(sec);}
+  overlay.appendChild(modal);document.body.appendChild(overlay);const shut=()=>overlay.remove();close.addEventListener('click',shut);overlay.addEventListener('click',(e)=>{if(e.target===overlay)shut();});
 }
 
 // Public image galleries. Renders the album shares (created from a
@@ -14378,17 +14820,26 @@ function toggleItem(entry, row) {
   updateSelectionUI();
 }
 
+function dlpRuleLabel(type){const key='dlp.rule.'+String(type||'');const v=t(key);return v===key?String(type||'DLP').replace(/-/g,' '):v;}
+function dlpRuleReason(f){const key='dlp.reason.'+String(f&&f.type||'');const v=t(key);return v===key?String(f&&f.detail||'—'):v;}
+function dlpFindingLines(d,limit){return (d&&Array.isArray(d.findings)?d.findings:[]).slice(0,limit||5).map((f)=>`${dlpRuleLabel(f.type)} · ${f.file||'—'} · ${f.sample||'—'} · ${dlpRuleReason(f)}`);}
+function closeDlpDetails(){const o=$('dlp-details-overlay');if(o)o.classList.add('hidden');}
+function showDlpDetails(d,title){const o=$('dlp-details-overlay'),list=$('dlp-details-list'),sum=$('dlp-details-summary'),head=$('dlp-details-title');if(!o||!list)return;if(head)head.textContent=title||t('dlp.detailsTitle');if(sum)sum.textContent=t('dlp.detailsSummary',{n:d&&d.count||0,level:d&&d.highest||'—'});list.textContent='';const findings=d&&Array.isArray(d.findings)?d.findings:[];if(!findings.length){list.appendChild(el('div',{class:'empty',text:t('dlp.detailsNone')}));}else findings.forEach((f)=>{const row=el('div',{class:'dlp-detail-row'});row.appendChild(el('strong',{text:dlpRuleLabel(f.type)}));const grid=el('div',{class:'dlp-detail-grid'});[[t('dlp.file'),f.file||'—'],[t('dlp.sample'),f.sample||'—'],[t('dlp.reason'),dlpRuleReason(f)]].forEach(([a,b])=>{const cell=el('div',{class:'dlp-detail-cell'});cell.append(el('span',{class:'muted sm',text:a}),el('span',{text:b}));grid.appendChild(cell);});row.appendChild(grid);list.appendChild(row);});o.classList.remove('hidden');}
+if($('dlp-details-close'))$('dlp-details-close').addEventListener('click',closeDlpDetails);
+if($('dlp-details-overlay'))$('dlp-details-overlay').addEventListener('click',(e)=>{if(e.target===$('dlp-details-overlay'))closeDlpDetails();});
+
 function confirmDlpWarning(data) {
   const d = data && data.dlp;
   if (!d || (!d.count && !d.incomplete)) return false;
   // The scan's only gap is the OCR tool not being installed on the server — a
   // clearer message than "incomplete (0 skipped, 0 OCR errors, …)".
   const onlyOcrUnavailable = d.ocrUnavailable && !d.count && !d.filesSkipped && !d.ocrErrors && !d.scanErrors && !d.incompleteEntries && !d.truncated;
-  const msg = onlyOcrUnavailable
+  let msg = onlyOcrUnavailable
     ? t('dlp.ocrUnavailableConfirm')
     : d.incomplete
       ? t('dlp.incompleteConfirm', { skipped:d.filesSkipped || 0, ocr:d.ocrErrors || 0, scan:d.scanErrors || 0, archive:d.incompleteEntries || 0 })
       : t('dlp.warningConfirm', { n:d.count || 0, level:d.highest || '—', files:d.filesScanned || 0 });
+  const lines=dlpFindingLines(d,5); if(lines.length) msg += '\n\n' + lines.join('\n');
   return window.confirm(msg);
 }
 async function apiWithDlpOverride(method, url, payload) {
@@ -14397,6 +14848,7 @@ async function apiWithDlpOverride(method, url, payload) {
     if (e && e.data && e.data.error === 'dlp-warning' && confirmDlpWarning(e.data)) {
       return api(method, url, Object.assign({}, payload || {}, { dlpOverride:true }));
     }
+    if(e&&e.data&&['dlp-blocked','dlp-quarantined','dlp-quarantine-failed'].includes(e.data.error)&&e.data.dlp)showDlpDetails(e.data.dlp,t('dlp.detailsTitle'));
     throw e;
   }
 }
@@ -15136,6 +15588,20 @@ setTimeout(loadMeta, 12000); // re-check so a freshly-started server surfaces an
     }
   });
 
+  // ---------------- Security center & active sessions ----------------
+  function closeSecurity(){const o=$('security-overlay');if(o)o.classList.add('hidden');}
+  function renderSecurityOverview(data){
+    const sessionsBox=$('security-sessions'),historyBox=$('security-history'),summary=$('security-summary');
+    if(summary)summary.textContent=t('security.sessionCount',{n:(data.sessions||[]).length});
+    if(sessionsBox){sessionsBox.textContent='';const rows=data.sessions||[];if(!rows.length)sessionsBox.appendChild(el('div',{class:'empty',text:t('security.none')}));else rows.forEach((sess)=>{const row=el('div',{class:'security-session-row'+(sess.current?' current':'')});const main=el('div',{class:'security-session-main'});const title=el('div',{class:'security-session-title'});title.append(el('strong',{text:sess.username||'—'}));if(sess.current)title.append(el('span',{class:'badge',text:t('security.current')}));main.append(title,el('span',{class:'muted sm',text:[sess.device||'—',sess.ip||'—'].join(' · ')}),el('span',{class:'muted sm',text:`${t('security.signedIn')}: ${sess.authenticatedAt?formatDate(sess.authenticatedAt):'—'} · ${t('security.lastSeen')}: ${sess.lastSeenAt?timeAgo(sess.lastSeenAt):'—'} · ${t('security.expires')}: ${sess.expires?formatDate(sess.expires):'—'}`}));row.appendChild(main);if(data.canRevoke){const b=el('button',{class:'btn ghost sm',text:t('security.revoke'),attrs:{type:'button'}});b.addEventListener('click',async()=>{if(!confirm(t('security.revokeConfirm')))return;b.disabled=true;try{const r=await api('DELETE','/api/security/sessions/'+encodeURIComponent(sess.id));if(r.current){location.reload();return;}await loadSecurityOverview();}catch(_){toast(t('security.revokeFail'),'err');b.disabled=false;}});row.appendChild(b);}sessionsBox.appendChild(row);});}
+    if(historyBox){historyBox.textContent='';const rows=data.history||[];if(!rows.length)historyBox.appendChild(el('div',{class:'empty',text:t('security.noHistory')}));else rows.forEach((e2)=>{const row=el('div',{class:'audit-row'});row.appendChild(el('span',{class:'audit-act',text:localizedAuditAction(e2.action)}));const mid=el('div',{class:'audit-mid'}),who=el('div',{class:'audit-who'});who.appendChild(el('span',{class:'audit-actor',text:e2.actor||'—'}));if(e2.detail)who.appendChild(el('span',{class:'audit-detail',text:localizedLogText(e2.detail)}));mid.append(who,el('div',{class:'audit-meta',text:(e2.ip?e2.ip+' · ':'')+formatDate(e2.at)}));row.appendChild(mid);historyBox.appendChild(row);});}
+  }
+  async function loadSecurityOverview(){try{renderSecurityOverview(await api('GET','/api/security/overview'));}catch(e){if(e.message!=='not-authenticated')toast(t('audit.loadFail'),'err');}}
+  async function openSecurity(){closeUserMenu();const o=$('security-overlay');if(o)o.classList.remove('hidden');await loadSecurityOverview();}
+  if($('security-btn'))$('security-btn').addEventListener('click',openSecurity);
+  if($('security-close'))$('security-close').addEventListener('click',closeSecurity);
+  if($('security-overlay'))$('security-overlay').addEventListener('click',(e)=>{if(e.target===$('security-overlay'))closeSecurity();});
+
   // ---------------- Audit log ----------------
   function closeAudit() { $('audit-overlay').classList.add('hidden'); }
   async function openAudit() {
@@ -15200,6 +15666,8 @@ setTimeout(loadMeta, 12000); // re-check so a freshly-started server surfaces an
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
     if ($('accounts-overlay') && !$('accounts-overlay').classList.contains('hidden')) closeAccounts();
+    if ($('security-overlay') && !$('security-overlay').classList.contains('hidden')) closeSecurity();
+    if ($('dlp-details-overlay') && !$('dlp-details-overlay').classList.contains('hidden')) closeDlpDetails();
     if ($('audit-overlay') && !$('audit-overlay').classList.contains('hidden')) closeAudit();
   });
 })();
@@ -15254,6 +15722,22 @@ function openEditModal(s) {
   $('edit-ipmode').value = s.ipMode || 'off';
   $('edit-iplist').value = Array.isArray(s.ipList) ? s.ipList.join(', ') : '';
   if ($('edit-note')) $('edit-note').value = s.note || '';
+  const rx = s.inbox || s.collab || null;
+  if ($('edit-reception-options')) $('edit-reception-options').classList.toggle('hidden', !rx);
+  if (rx) {
+    $('edit-rx-maxfiles').value = rx.maxFiles || '';
+    $('edit-rx-maxfilesupload').value = rx.maxFilesPerUpload || '';
+    $('edit-rx-maxfilemb').value = rx.maxFileBytes ? String(Math.round(rx.maxFileBytes / 1048576 * 100) / 100) : '';
+    $('edit-rx-maxtotalmb').value = rx.maxTotalBytes ? String(Math.round(rx.maxTotalBytes / 1048576 * 100) / 100) : '';
+    $('edit-rx-maxfilessender').value = rx.maxFilesPerSender || '';
+    $('edit-rx-maxmbsender').value = rx.maxBytesPerSender ? String(Math.round(rx.maxBytesPerSender / 1048576 * 100) / 100) : '';
+    $('edit-rx-allowext').value = Array.isArray(rx.allowExt) ? rx.allowExt.join(', ') : '';
+    $('edit-rx-blockext').value = Array.isArray(rx.blockExt) ? rx.blockExt.join(', ') : '';
+    $('edit-rx-groupsender').checked = !!rx.groupBySender; $('edit-rx-tagsender').checked = !!rx.tagBySender;
+    $('edit-rx-rejectdup').checked = !!rx.rejectDuplicates; $('edit-rx-requiresender').checked = !!rx.requireSenderName;
+    $('edit-rx-blockexec').checked = !!rx.blockExecutables; $('edit-rx-moderated').checked = !!rx.moderated;
+    $('edit-rx-allowdelete').checked = !!rx.allowDelete; $('edit-rx-allowdelete-row').classList.toggle('hidden', s.type !== 'collab');
+  }
   $('edit-error').classList.add('hidden');
   $('edit-overlay').classList.remove('hidden');
 }
@@ -15298,6 +15782,18 @@ if ($('edit-save')) $('edit-save').addEventListener('click', async () => {
     ipMode: $('edit-ipmode').value,
     ipList: $('edit-iplist').value,
   };
+  if ($('edit-reception-options') && !$('edit-reception-options').classList.contains('hidden')) {
+    const mb = (id) => Math.max(0, Math.round((parseFloat($(id).value) || 0) * 1048576));
+    payload.maxFiles = parseInt($('edit-rx-maxfiles').value, 10) || 0;
+    payload.maxFilesPerUpload = parseInt($('edit-rx-maxfilesupload').value, 10) || 0;
+    payload.maxFileBytes = mb('edit-rx-maxfilemb'); payload.maxTotalBytes = mb('edit-rx-maxtotalmb');
+    payload.maxFilesPerSender = parseInt($('edit-rx-maxfilessender').value, 10) || 0; payload.maxBytesPerSender = mb('edit-rx-maxmbsender');
+    payload.allowExt = $('edit-rx-allowext').value; payload.blockExt = $('edit-rx-blockext').value;
+    payload.groupBySender = $('edit-rx-groupsender').checked; payload.tagBySender = $('edit-rx-tagsender').checked;
+    payload.rejectDuplicates = $('edit-rx-rejectdup').checked; payload.requireSenderName = $('edit-rx-requiresender').checked;
+    payload.blockExecutables = $('edit-rx-blockexec').checked; payload.moderated = $('edit-rx-moderated').checked;
+    payload.allowDelete = $('edit-rx-allowdelete').checked;
+  }
   // Expiry: 'keep' leaves it untouched; any other value re-sets it (0 = never).
   const exp = $('edit-expiry').value;
   if (exp !== 'keep') payload.expiresInSeconds = parseInt(exp, 10) || 0;

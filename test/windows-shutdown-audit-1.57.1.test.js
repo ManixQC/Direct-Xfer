@@ -41,7 +41,7 @@ function waitHealth(port, child, outputRef) {
 }
 
 test('Windows C# launcher exits independently while ServerHost owns bounded server shutdown', () => {
-  assert.match(launcher, /RuntimeAppBuild = "1\.60\.0-launcher35-csharp"/);
+  assert.match(launcher, /RuntimeAppBuild = "1\.62\.2-launcher43-csharp"/);
   assert.match(launcher, /RequestExit\(\)/);
   assert.match(launcher, /lock \(_exitSync\)/);
   assert.doesNotMatch(launcher, /SignalServerHostStop\(\)|WaitForProcessExit\(session\.hostPid|SystemEvents\.SessionEnding/);

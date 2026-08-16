@@ -1,13 +1,15 @@
 /* ============================================================
    Direct-Xfer — navy blue theme
    ============================================================ */
-/* Companion PWA shortcut on the full administration login.
-   It is hidden by default and revealed only when this PC/full interface is
-   opened from a detected phone or touch-first tablet. A narrow desktop window
-   must not make the link appear. */
+/* Companion PWA shortcuts on the full administration login and authenticated
+   standard view. They are hidden by default and revealed only when the full
+   interface is opened from a detected phone or touch-first tablet. A narrow
+   desktop window must not make them appear. */
 .pwa-cta { display: none; }
 html.is-mobile #login-view .login-pwa,
-body.is-mobile #login-view .login-pwa {
+body.is-mobile #login-view .login-pwa,
+html.is-mobile.pwa-install-offer #app-view .pwa-install-cta,
+body.is-mobile.pwa-install-offer #app-view .pwa-install-cta {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -796,21 +798,101 @@ code {
   gap: 8px;
   flex-wrap: wrap;
 }
+.shares-head {
+  align-items: center;
+}
 .shares-head .head-actions {
   flex: 1 1 auto;
   min-width: 0;
+  display: flex;
   justify-content: flex-end;
-  flex-wrap: nowrap;
-  gap: 6px;
-  overflow-x: auto;
-  scrollbar-width: thin;
+  align-items: center;
+  gap: 8px;
+  overflow: visible;
+  padding: 0;
 }
-.shares-head .head-actions .btn.sm {
-  flex: 0 0 auto;
+.shares-head .head-actions > .btn.sm,
+.shares-head .head-actions > .share-action-menu > .btn.sm {
   width: auto;
   padding-inline: 10px;
   font-size: 0.8rem;
   white-space: nowrap;
+}
+/* The primary create-share action remains 35% larger than the compact actions. */
+.shares-head .head-actions #new-share-btn.btn.sm {
+  padding-block: 10.8px;
+  padding-inline: 13.5px;
+  font-size: 1.08rem;
+}
+.share-action-menu {
+  position: relative;
+  flex: 0 0 auto;
+}
+.share-action-menu-trigger {
+  min-height: 36px;
+}
+.share-action-menu-plus {
+  min-width: 42px;
+  font-size: 1.2rem !important;
+  font-weight: 800;
+  line-height: 1;
+}
+.share-action-menu-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 90;
+  display: grid;
+  gap: 6px;
+  min-width: 235px;
+  max-width: min(310px, calc(100vw - 28px));
+  max-height: min(360px, calc(100dvh - 24px), var(--share-action-menu-max-height, 360px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card-2);
+  box-shadow: var(--shadow);
+}
+.share-action-menu-panel.hidden {
+  display: none !important;
+}
+.share-action-menu-panel.open-upward {
+  top: auto;
+  bottom: calc(100% + 8px);
+}
+.share-action-menu-panel .btn.sm {
+  width: 100%;
+  justify-content: flex-start;
+  text-align: left;
+  white-space: normal;
+}
+.share-action-menu-panel .count {
+  margin-left: auto;
+}
+@media (max-width: 760px) {
+  .shares-head {
+    flex-wrap: wrap;
+    align-items: stretch;
+  }
+  .shares-head .head-actions {
+    flex: 1 1 100%;
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+  .shares-head .head-actions #new-share-btn.btn.sm {
+    flex: 1 1 auto;
+  }
+  .share-action-menu-panel {
+    right: auto;
+    left: 0;
+  }
+  #share-config-menu .share-action-menu-panel {
+    left: auto;
+    right: 0;
+  }
 }
 .badge.inbox {
   background: rgba(56, 211, 155, 0.18);
@@ -3141,21 +3223,6 @@ body[data-role="auditor"] .share-actions .stats-btn { display: inline-flex !impo
   box-shadow: 0 0 0 2px var(--accent-soft);
 }
 
-.shares-list.view-list {
-  display: flex;
-  flex-direction: column;
-}
-.shares-list.view-grid {
-  /* Keep the grid visibly distinct from the stacked list on normal desktop
-     widths. The old 430px minimum often collapsed to a single column, making
-     the Grid button appear to do nothing. */
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
-  align-items: start;
-}
-.shares-list.view-grid > .share { min-width: 0; }
-.shares-list.view-grid > .empty { grid-column: 1 / -1; }
-
 /* Admin links table density toggle. Compact tightens card padding,
    inner margins and the list gap; comfortable (no class) is the default. */
 .shares-list.density-compact { gap: 7px; }
@@ -3182,7 +3249,6 @@ body[data-role="auditor"] .share-actions .stats-btn { display: inline-flex !impo
 }
 
 @media (max-width: 620px) {
-  .shares-list.view-grid { grid-template-columns: 1fr; }
   .ui-view-toggle { margin-left: auto; }
   .photos-list.view-list .photo-thumb { aspect-ratio: 4 / 3; max-height: none; }
 }
@@ -3814,3 +3880,19 @@ body[data-role="auditor"] .album-url .clone-btn {
 /* 1.57.4 — local CA trust details */
 .cfg-subcard{margin:.55rem 0 .8rem;padding:.75rem .85rem;border:1px solid var(--border);border-radius:10px;background:var(--panel-2,var(--panel,#111827))}
 .cfg-subcard code{overflow-wrap:anywhere;word-break:break-word}
+
+
+/* 1.61.0 — advanced share editing, period stats and non-destructive image versions. */
+.edit-rx-checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 16px;margin-top:10px}.stats-period-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 14px}.stats-period-select{min-width:150px}.stats-comparison-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.photo-versions-modal{width:min(900px,96vw);max-height:90vh;overflow:auto}.photo-version-list{display:grid;gap:9px;margin-top:12px}.photo-version-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px;border:1px solid var(--border-soft);border-radius:10px}.photo-version-meta{display:grid;gap:3px;min-width:0}.photo-version-meta span{color:var(--muted);font-size:.76rem;overflow-wrap:anywhere}.photo-version-actions{display:flex;gap:7px;flex-wrap:wrap}.photo-before-after{margin:14px 0}.photo-ba-stage{position:relative;overflow:hidden;max-height:520px;border-radius:12px;background:var(--inset)}.photo-ba-stage>img,.photo-ba-before img{display:block;width:100%;height:auto;max-height:520px;object-fit:contain}.photo-ba-before{position:absolute;left:0;top:0;bottom:0;width:50%;overflow:hidden;border-right:2px solid #fff}.photo-ba-before img{width:auto;min-width:100%;max-width:none;height:100%;object-fit:contain;object-position:left center}.photo-ba-range{width:100%;margin-top:8px}.photo-edit-history{margin-top:18px}.photo-history-row{padding:7px 0;border-bottom:1px solid var(--border-soft);font-size:.8rem}.hidden.photo-before-after{display:none!important}@media(max-width:760px){.edit-rx-checks,.stats-comparison-grid{grid-template-columns:1fr}.photo-version-row{align-items:flex-start;flex-direction:column}.photo-version-actions{width:100%}}
+
+
+/* 1.61.0 — reception preflight and aggregate upload progress. */
+.up-preflight{display:grid;gap:7px;margin:12px 0;padding:12px;border:1px solid var(--border-soft);border-radius:12px;background:var(--panel-2)}.up-preflight>span{font-size:.78rem}.up-preflight-grid{display:grid;gap:5px;font-size:.78rem}.up-preflight-limits{font-weight:600}.up-overall{display:grid;gap:5px;margin:10px 0;padding:10px 12px;border-radius:10px;background:var(--panel-2);border:1px solid var(--border-soft)}.up-overall>span{font-size:.78rem;color:var(--muted)}.up-overall-bar{height:8px;border-radius:99px;background:var(--inset);overflow:hidden}.up-overall-bar i{display:block;height:100%;border-radius:inherit;background:var(--accent);transition:width .15s ease}
+
+
+/* 1.61.0 wave 2 — advanced activity, notification priority, search highlights and trash impact. */
+.activity-section-search.compact{max-width:150px}.activity-thread{border:1px solid var(--border-soft);border-radius:12px;padding:10px;margin-bottom:10px}.activity-thread-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}.activity-thread-timeline{display:grid;gap:4px}.notification-priority{display:inline-flex;width:max-content;font-size:.68rem;font-weight:700;margin-top:3px}.notification-priority.urgent{color:var(--danger)}.notification-priority.high{color:var(--warn)}.search-hit mark{background:color-mix(in srgb,var(--accent) 26%,transparent);color:inherit;border-radius:3px;padding:0 1px}.trash-impact{font-weight:650}.trash-deps{overflow-wrap:anywhere}.notification-focus{outline:3px solid color-mix(in srgb,var(--accent) 55%,transparent);outline-offset:3px;animation:dx-focus-pulse 1.1s ease-in-out 2}@keyframes dx-focus-pulse{50%{outline-width:6px}}@media(max-width:760px){.activity-section-search.compact{max-width:none;width:100%}}
+
+
+/* 1.61.0 wave 3 — security sessions, explainable DLP and diagnostic actions. */
+.modal-wide{width:min(980px,calc(100vw - 28px));max-width:980px}.security-summary{display:flex;gap:10px;align-items:center;margin:4px 0 12px;font-weight:700}.security-session-list{display:grid;gap:8px;max-height:310px;overflow:auto}.security-session-row{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:10px 12px;border:1px solid var(--border-soft);border-radius:12px;background:var(--panel-2)}.security-session-row.current{outline:1px solid color-mix(in srgb,var(--accent) 55%,transparent)}.security-session-main{display:grid;gap:3px;min-width:0}.security-session-title{display:flex;gap:7px;align-items:center;flex-wrap:wrap}.security-history-list{max-height:360px;overflow:auto}.dlp-badge:is(button){border:0;cursor:pointer;font:inherit}.dlp-details-list{display:grid;gap:10px;max-height:58vh;overflow:auto}.dlp-detail-row{border:1px solid var(--border-soft);background:var(--panel-2);border-radius:12px;padding:11px;display:grid;gap:8px}.dlp-detail-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.dlp-detail-cell{min-width:0;display:grid;gap:3px}.dlp-detail-cell>span:last-child{overflow-wrap:anywhere}.diag-row-actions{display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap}.diag-extra{margin-top:6px}.diag-extra>summary{cursor:pointer;color:var(--muted);font-size:.75rem}.diag-extra>div{display:grid;grid-template-columns:minmax(110px,.7fr) minmax(0,1.6fr);gap:8px;margin-top:5px;font-size:.72rem}.diag-extra code{white-space:normal;overflow-wrap:anywhere}.diag-fix-btn{white-space:nowrap}@media(max-width:700px){.security-session-row{align-items:flex-start;flex-direction:column}.security-session-row>.btn{align-self:flex-end}.dlp-detail-grid{grid-template-columns:1fr}.diag-row{grid-template-columns:auto minmax(0,1fr)}.diag-row-actions{grid-column:2;justify-content:flex-start}}

@@ -130,6 +130,21 @@ test('paired-device PWA stats works without a live admin browser session and mat
   assert.deepEqual(pwaData.quota, [{ kind: 'downloads', used: 0, max: 3 }]);
 });
 
+test('1.62.2 detailed stats accepts 24h, 7d and lifetime periods in standard and PWA routes', async () => {
+  for (const period of ['1', '7', 'all']) {
+    const standard = await fetch(`${base}/api/shares/${encodeURIComponent(createdShare.id)}/stats-detail?period=${period}`, { headers: { Cookie: adminCookie }, cache: 'no-store' });
+    const pwa = await fetch(`${base}/app/host/shares/${encodeURIComponent(createdShare.token)}/stats-detail?period=${period}`, { headers: { Cookie: deviceCookie }, cache: 'no-store' });
+    assert.equal(standard.status, 200); assert.equal(pwa.status, 200);
+    const a = await body(standard), b = await body(pwa);
+    assert.equal(a.period.days, period === 'all' ? 0 : Number(period));
+    assert.equal(b.period.days, a.period.days);
+    assert.equal(b.period.granularity, a.period.granularity);
+    if (period === '1') assert.equal(a.timeline.length, 24);
+    assert.deepEqual(b.comparison, a.comparison);
+    assert.ok(Array.isArray(a.failureReasons));
+  }
+});
+
 test('detailed stats reports the effective expiry as expired once the link actually expires', async () => {
   const waitMs = Math.max(0, Number(createdShare.effectiveExpiresAt || createdShare.expiresAt) - Date.now() + 150);
   await new Promise((resolve) => setTimeout(resolve, waitMs));

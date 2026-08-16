@@ -6,7 +6,7 @@ const path = require('node:path');
 const ROOT = path.resolve(__dirname, '..');
 const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
 
-test('1.62.2 create-share dialog has a bounded Firefox-safe scroll body', () => {
+test('1.62.3 create-share dialog has a bounded Firefox-safe scroll body', () => {
   const css = read('public/style.css');
   assert.match(css, /\.picker-modal\s*\{[\s\S]*height:\s*var\(--dx-picker-modal-height[\s\S]*overflow:\s*hidden[\s\S]*display:\s*grid/);
   assert.match(css, /\.picker-body\s*\{[\s\S]*overflow-y:\s*auto[\s\S]*scrollbar-width:\s*auto/);
@@ -26,15 +26,15 @@ test('picker uses visualViewport height so zoom and virtual keyboards cannot tra
   assert.match(js, /visualViewport\.addEventListener\('resize'/);
 });
 
-test('1.62.2 release identifiers are synchronized', () => {
+test('1.62.3 release identifiers are synchronized', () => {
   const pkg = JSON.parse(read('package.json'));
   const lock = JSON.parse(read('package-lock.json'));
-  assert.equal(pkg.version, '1.62.2');
-  assert.equal(lock.version, '1.62.2');
-  assert.equal(lock.packages[''].version, '1.62.2');
-  assert.match(read('pwa/app.js'), /APP_VERSION = '1\.62\.2'/);
-  assert.match(read('pwa/app.js'), /APP_BUILD = '2026\.08\.16-pwa306'/);
-  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.16-pwa306'/);
+  assert.equal(pkg.version, '1.62.3');
+  assert.equal(lock.version, '1.62.3');
+  assert.equal(lock.packages[''].version, '1.62.3');
+  assert.match(read('pwa/app.js'), /APP_VERSION = '1\.62\.3'/);
+  assert.match(read('pwa/app.js'), /APP_BUILD = '2026\.08\.16-pwa307'/);
+  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.16-pwa307'/);
   assert.match(read('pwa/index.html'), /app\.js\?v=290/);
-  assert.match(read('windows-launcher/Program.cs'), /RuntimeAppBuild\s*= "1\.62\.2-launcher43-csharp"/);
+  assert.match(read('windows-launcher/Program.cs'), /RuntimeAppBuild\s*= "1\.62\.3-launcher44-csharp"/);
 });

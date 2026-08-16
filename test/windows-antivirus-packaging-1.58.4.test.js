@@ -10,9 +10,9 @@ const project = fs.readFileSync(path.join(root, 'windows-launcher', 'DirectXfer.
 const hostProject = fs.readFileSync(path.join(root, 'windows-server-host', 'DirectXfer.ServerHost.csproj'), 'utf8');
 const expectedNodeHash = '3602f2bb1a10f2cbab4c36886218a33c1ab3db87290e73b033c46c77147d0237';
 
-test('1.62.2 launcher is a conventional C# WinForms UI with no Go launcher left', () => {
-  assert.match(launcher, /const string AppVersion = "1\.62\.2"/);
-  assert.match(launcher, /const string RuntimeAppBuild = "1\.62\.2-launcher43-csharp"/);
+test('1.62.3 launcher is a conventional C# WinForms UI with no Go launcher left', () => {
+  assert.match(launcher, /const string AppVersion = "1\.62\.3"/);
+  assert.match(launcher, /const string RuntimeAppBuild = "1\.62\.3-launcher44-csharp"/);
   assert.match(project, /<OutputType>WinExe<\/OutputType>/);
   assert.match(project, /<TargetFrameworkVersion>v4\.8<\/TargetFrameworkVersion>/);
   assert.match(project, /System\.Windows\.Forms/);

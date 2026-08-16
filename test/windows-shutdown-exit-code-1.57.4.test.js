@@ -44,7 +44,7 @@ function waitReady(port, token, child, getOutput) {
 test('successful launcher shutdown releases the listener cleanly before any last-resort child kill', {timeout:20000}, async () => {
   assert.match(server, /process\.exit\(Number\(code\) === 0 \? 0 : 1\)/);
   assert.doesNotMatch(server, /process\.kill\(process\.pid, 'SIGKILL'\)/);
-  assert.match(launcher, /RuntimeAppBuild = "1\.62\.2-launcher43-csharp"/);
+  assert.match(launcher, /RuntimeAppBuild = "1\.62\.3-launcher44-csharp"/);
   assert.match(host, /ConsumeCleanShutdownMarker\(\)/);
   assert.doesNotMatch(launcher, /terminateProcessTree\(0\)/);
   assert.doesNotMatch(launcher, /TerminateJobObject/);

@@ -8,13 +8,13 @@ const read = (...parts) => fs.readFileSync(path.join(root, ...parts), 'utf8');
 const css = read('public','style.css');
 const app = read('public','app.js');
 
-test('1.62.2 create-share modal is a three-zone bounded grid', () => {
+test('1.62.3 create-share modal is a three-zone bounded grid', () => {
   assert.match(css, /Create-share picker layout \(1\.58\.3\)/);
   assert.match(css, /\.picker-modal\s*\{[\s\S]*display:\s*grid;[\s\S]*grid-template-rows:\s*auto minmax\(0, 1fr\) auto/);
   assert.match(css, /\.picker-body\s*\{[\s\S]*min-height:\s*0;[\s\S]*overflow-y:\s*auto/);
 });
 
-test('1.62.2 file picker targets ten visible rows plus parent row', () => {
+test('1.62.3 file picker targets ten visible rows plus parent row', () => {
   assert.match(css, /--dx-picker-row-height:\s*44px/);
   assert.match(css, /--dx-picker-browser-height:\s*442px/);
   assert.match(css, /\.browser-list\.has-parent\s*\{[\s\S]*calc\(var\(--dx-picker-browser-height[^\n]*\+ var\(--dx-picker-row-height\)\)/);
@@ -24,15 +24,15 @@ test('1.62.2 file picker targets ten visible rows plus parent row', () => {
   assert.match(app, /list\.classList\.toggle\('has-parent'/);
 });
 
-test('1.62.2 release identifiers are synchronized', () => {
+test('1.62.3 release identifiers are synchronized', () => {
   const pkg = JSON.parse(read('package.json'));
   const lock = JSON.parse(read('package-lock.json'));
-  assert.equal(pkg.version, '1.62.2');
-  assert.equal(lock.version, '1.62.2');
-  assert.equal(lock.packages[''].version, '1.62.2');
-  assert.match(read('pwa','app.js'), /APP_VERSION = '1\.62\.2'/);
-  assert.match(read('pwa','app.js'), /APP_BUILD = '2026\.08\.16-pwa306'/);
-  assert.match(read('pwa','sw.js'), /VERSION = '2026\.08\.16-pwa306'/);
-  assert.match(read('pwa','index.html'), /v1\.62\.2 · pwa306/);
-  assert.match(read('windows-launcher','Program.cs'), /RuntimeAppBuild\s*=\s*"1\.62\.2-launcher43-csharp"/);
+  assert.equal(pkg.version, '1.62.3');
+  assert.equal(lock.version, '1.62.3');
+  assert.equal(lock.packages[''].version, '1.62.3');
+  assert.match(read('pwa','app.js'), /APP_VERSION = '1\.62\.3'/);
+  assert.match(read('pwa','app.js'), /APP_BUILD = '2026\.08\.16-pwa307'/);
+  assert.match(read('pwa','sw.js'), /VERSION = '2026\.08\.16-pwa307'/);
+  assert.match(read('pwa','index.html'), /v1\.62\.3 · pwa307/);
+  assert.match(read('windows-launcher','Program.cs'), /RuntimeAppBuild\s*=\s*"1\.62\.3-launcher44-csharp"/);
 });

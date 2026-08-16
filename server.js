@@ -10404,7 +10404,14 @@ function receptionHashSeen(s, sha) {
 function receptionRelativeStoredPath(dest) {
   if (!dest) return '';
   try {
-    const rel = path.relative(INBOX_DIR, String(dest)).replace(/\\/g, '/');
+    // On Windows, fs.realpath()/realpath.native may yield a namespaced path
+    // (\\?\D:\...) while INBOX_DIR is a regular drive path (D:\...).
+    // path.relative() then treats them as unrelated roots and returns an absolute
+    // path, which made the durable duplicate entry fall back to legacy value `1`.
+    // Normalize both sides to the same namespace before deriving the stored path.
+    const inboxRoot = path.toNamespacedPath(path.resolve(INBOX_DIR));
+    const resolvedDest = path.toNamespacedPath(path.resolve(String(dest)));
+    const rel = path.relative(inboxRoot, resolvedDest).replace(/\\/g, '/');
     if (!rel || rel === '..' || rel.startsWith('../') || path.isAbsolute(rel)) return '';
     return rel.slice(0, 800);
   } catch (_) { return ''; }

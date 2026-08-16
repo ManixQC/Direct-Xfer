@@ -70,12 +70,12 @@ test('global search spans content, links, users and logs with explicit scopes', 
 test('1.51.2 release and PWA shell identifiers stay synchronized', () => {
   const pkg = JSON.parse(read('package.json'));
   const lock = JSON.parse(read('package-lock.json'));
-  assert.equal(pkg.version, '1.62.2');
-  assert.equal(lock.version, '1.62.2');
-  assert.equal(lock.packages[''].version, '1.62.2');
-  assert.match(pwa, /APP_VERSION = '1\.62\.2'/);
-  assert.match(pwa, /APP_BUILD = '2026\.08\.16-pwa306'/);
-  assert.match(read('pwa', 'sw.js'), /VERSION = '2026\.08\.16-pwa306'/);
-  assert.match(pwaHtml, /v1\.62\.2 · pwa306/);
+  assert.equal(pkg.version, '1.62.3');
+  assert.equal(lock.version, '1.62.3');
+  assert.equal(lock.packages[''].version, '1.62.3');
+  assert.match(pwa, /APP_VERSION = '1\.62\.3'/);
+  assert.match(pwa, /APP_BUILD = '2026\.08\.16-pwa307'/);
+  assert.match(read('pwa', 'sw.js'), /VERSION = '2026\.08\.16-pwa307'/);
+  assert.match(pwaHtml, /v1\.62\.3 · pwa307/);
   assert.match(pwaHtml, /app\.js\?v=290/);
 });

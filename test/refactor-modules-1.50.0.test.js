@@ -76,10 +76,10 @@ test('1.51.2 release identifiers remain synchronized', () => {
   const app = fs.readFileSync(path.join(root, 'pwa', 'app.js'), 'utf8');
   const sw = fs.readFileSync(path.join(root, 'pwa', 'sw.js'), 'utf8');
   const html = fs.readFileSync(path.join(root, 'pwa', 'index.html'), 'utf8');
-  assert.equal(pkg.version, '1.62.2');
-  assert.match(app, /APP_VERSION = '1\.62\.2'/);
-  assert.match(app, /APP_BUILD = '2026\.08\.16-pwa306'/);
-  assert.match(sw, /VERSION = '2026\.08\.16-pwa306'/);
-  assert.match(html, /v1\.62\.2 · pwa306/);
+  assert.equal(pkg.version, '1.62.3');
+  assert.match(app, /APP_VERSION = '1\.62\.3'/);
+  assert.match(app, /APP_BUILD = '2026\.08\.16-pwa307'/);
+  assert.match(sw, /VERSION = '2026\.08\.16-pwa307'/);
+  assert.match(html, /v1\.62\.3 · pwa307/);
   assert.match(html, /app\.js\?v=290/);
 });

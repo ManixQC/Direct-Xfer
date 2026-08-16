@@ -3,7 +3,7 @@
  * Shell versioning + network-aware updates. Upload/API requests are never cached.
  * Web Share Target batches are isolated so simultaneous shares cannot overwrite one another.
  */
-var VERSION = '2026.08.16-pwa306';
+var VERSION = '2026.08.16-pwa307';
 var SHELL_CACHE = 'dx-pwa-shell-' + VERSION;
 var RUNTIME_CACHE = 'dx-pwa-runtime-' + VERSION;
 var SHARE_CACHE = 'dx-share-v2';

@@ -2,14 +2,14 @@
 #if EnvAppVersion != ""
   #define AppVersion EnvAppVersion
 #else
-  #define AppVersion "1.62.2"
+  #define AppVersion "1.62.3"
 #endif
 
 #define EnvSourceDir GetEnv("DX_INNO_SOURCE_DIR")
 #if EnvSourceDir != ""
   #define SourceDir EnvSourceDir
 #else
-  #define SourceDir "..\dist\Direct-Xfer-1.62.2-Windows-CSharp"
+  #define SourceDir "..\dist\Direct-Xfer-1.62.3-Windows-CSharp"
 #endif
 
 #define EnvOutputDir GetEnv("DX_INNO_OUTPUT_DIR")
@@ -63,7 +63,7 @@ Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription:
 
 [InstallDelete]
 ; Runtime trees are immutable build artifacts. Purge them before an upgrade so
-; removed dependencies/assets from an older release cannot survive beside 1.62.2.
+; removed dependencies/assets from an older release cannot survive beside 1.62.3.
 Type: filesandordirs; Name: "{app}\runtime\app"
 Type: filesandordirs; Name: "{app}\runtime\node"
 

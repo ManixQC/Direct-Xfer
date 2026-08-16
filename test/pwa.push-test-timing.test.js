@@ -28,9 +28,9 @@ test('server timestamp crosses the encrypted push payload into the service-worke
   assert.match(app, /pushDeliveryMs\(receipt, sentAt\)/);
 });
 
-test('push delivery window is 30 seconds and release is forced to pwa306/v238', () => {
-  assert.match(app, /APP_BUILD = '2026\.08\.16-pwa306'/);
+test('push delivery window is 30 seconds and release is forced to pwa307/v238', () => {
+  assert.match(app, /APP_BUILD = '2026\.08\.16-pwa307'/);
   assert.match(app, /waitForPushReceipt\(testId, 30000\)/);
-  assert.match(sw, /VERSION = '2026\.08\.16-pwa306'/);
+  assert.match(sw, /VERSION = '2026\.08\.16-pwa307'/);
   assert.match(sw, /app\.js\?v=290/);
 });

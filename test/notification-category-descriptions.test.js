@@ -28,8 +28,8 @@ test('PWA notification Settings renders localized descriptions for every categor
 });
 
 test('PWA cache is refreshed for notification category descriptions', () => {
-  assert.match(read('pwa/app.js'), /APP_BUILD = '2026\.08\.16-pwa306'/);
-  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.16-pwa306'/);
+  assert.match(read('pwa/app.js'), /APP_BUILD = '2026\.08\.16-pwa307'/);
+  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.16-pwa307'/);
   assert.match(read('pwa/index.html'), /app\.js\?v=290/);
   assert.match(read('pwa/index.html'), /app\.css\?v=274/);
 });

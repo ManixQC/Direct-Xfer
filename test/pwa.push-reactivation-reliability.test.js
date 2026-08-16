@@ -41,8 +41,8 @@ test('Push diagnostic distinguishes vendor acceptance from real service-worker d
 });
 
 test('reliability fix is forced onto installed PWAs', () => {
-  assert.match(app, /APP_BUILD = '2026\.08\.16-pwa306'/);
+  assert.match(app, /APP_BUILD = '2026\.08\.16-pwa307'/);
   assert.match(html, /app\.js\?v=290/);
-  assert.match(sw, /pwa306/);
+  assert.match(sw, /pwa307/);
   assert.match(sw, /app\.js\?v=290/);
 });

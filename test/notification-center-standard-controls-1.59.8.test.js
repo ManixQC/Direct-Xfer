@@ -43,7 +43,7 @@ test('sound state toggles the masked icon without replacing its content', () => 
   assert.match(css, /\.notification-head-btn\.notification-sound-on \.notification-sound-glyph[\s\S]*notification-volume-on\.svg/);
 });
 
-test('standard admin assets are cache-busted for the 1.62.2 notification fix', () => {
+test('standard admin assets are cache-busted for the 1.62.3 notification fix', () => {
   assert.match(html, /\/style\.css\?v=286/);
   assert.match(html, /\/app\.js\?v=292/);
 });

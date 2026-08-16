@@ -24,9 +24,9 @@ jobs:
     runs-on: windows-2025
 
     env:
-      DX_VERSION: '1.62.2'
-      DX_RUNTIME_BUILD: '1.62.2-launcher43-csharp'
-      DX_SERVER_HOST_BUILD: '1.62.2-serverhost16-csharp'
+      DX_VERSION: '1.62.3'
+      DX_RUNTIME_BUILD: '1.62.3-launcher44-csharp'
+      DX_SERVER_HOST_BUILD: '1.62.3-serverhost17-csharp'
       DX_NODE_VERSION: '24.19.0'
       DX_NODE_EXE_SHA256: '3602f2bb1a10f2cbab4c36886218a33c1ab3db87290e73b033c46c77147d0237'
       INNO_VERSION: '6.7.3'
@@ -68,7 +68,7 @@ jobs:
             'test/windows-csharp-runtime-layout-1.58.4.test.js',
             'test/windows-inno-installer-1.58.4.test.js',
             'test/windows-password-copy-history-tooltip-1.58.4.test.js',
-            'test/recent-changes-ultra-audit-1.62.2.test.js',
+            'test/recent-changes-ultra-audit-1.62.3.test.js',
             'test/windows-launcher-hardening-1.59.4.test.js',
             'test/windows-server-host-split-1.59.4.test.js',
             'test/admin-favicon-1.59.4.test.js',
@@ -107,12 +107,12 @@ jobs:
             'test/release-1.62.0-share-action-menus-audit.test.js',
             'test/release-1.62.0-hour-audit.test.js',
             'test/release-1.62.0-hour-audit.integration.test.js',
-            'test/release-1.62.2-startup-banner.integration.test.js',
-            'test/release-1.62.2-universal-search-resilience.test.js',
-            'test/release-1.62.2-universal-search-resilience.integration.test.js',
-            'test/release-1.62.2-search-scope-audit.test.js',
-            'test/release-1.62.2-search-scope-audit.integration.test.js',
-            'test/release-1.62.2.test.js'
+            'test/release-1.62.3-startup-banner.integration.test.js',
+            'test/release-1.62.3-universal-search-resilience.test.js',
+            'test/release-1.62.3-universal-search-resilience.integration.test.js',
+            'test/release-1.62.3-search-scope-audit.test.js',
+            'test/release-1.62.3-search-scope-audit.integration.test.js',
+            'test/release-1.62.3.test.js'
           )
 
           $missingTests = @($criticalTests | Where-Object { -not (Test-Path -LiteralPath $_ -PathType Leaf) })

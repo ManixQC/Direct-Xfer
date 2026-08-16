@@ -17,14 +17,14 @@ function normalizedSha(relative) {
   return crypto.createHash('sha256').update(Buffer.from(text, 'utf8')).digest('hex');
 }
 
-test('1.62.2 Windows server metadata is synchronized', () => {
-  assert.match(host, /AppVersion = "1\.62\.2"/);
-  assert.match(host, /RuntimeAppBuild = "1\.62\.2-launcher43-csharp"/);
-  assert.match(host, /HostVersion = "1\.62\.2-serverhost16-csharp"/);
-  assert.match(launcher, /RuntimeAppBuild = "1\.62\.2-launcher43-csharp"/);
-  assert.match(launcher, /ServerHostBuild = "1\.62\.2-serverhost16-csharp"/);
-  assert.match(workflow, /DX_VERSION: '1\.62\.2'/);
-  assert.match(workflow, /DX_SERVER_HOST_BUILD: '1\.62\.2-serverhost16-csharp'/);
+test('1.62.3 Windows server metadata is synchronized', () => {
+  assert.match(host, /AppVersion = "1\.62\.3"/);
+  assert.match(host, /RuntimeAppBuild = "1\.62\.3-launcher44-csharp"/);
+  assert.match(host, /HostVersion = "1\.62\.3-serverhost17-csharp"/);
+  assert.match(launcher, /RuntimeAppBuild = "1\.62\.3-launcher44-csharp"/);
+  assert.match(launcher, /ServerHostBuild = "1\.62\.3-serverhost17-csharp"/);
+  assert.match(workflow, /DX_VERSION: '1\.62\.3'/);
+  assert.match(workflow, /DX_SERVER_HOST_BUILD: '1\.62\.3-serverhost17-csharp'/);
 });
 
 test('startup timeout is recoverable and no longer marks the ServerHost as intentionally stopped', () => {
@@ -90,7 +90,7 @@ test('private ready and shutdown routes are loopback-only as well as token authe
   assert.match(shutdown[0], /Cache-Control', 'no-store/);
 });
 
-test('all ServerHost critical runtime hashes match the exact normalized 1.62.2 runtime files', () => {
+test('all ServerHost critical runtime hashes match the exact normalized 1.62.3 runtime files', () => {
   for (const relative of ['package.json','package-lock.json','server.js','public/app.js','pwa/app.js','node_modules/express/package.json']) {
     const escaped = relative.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const match = host.match(new RegExp('\\{ "' + escaped + '", "([0-9a-f]{64})" \\}'));

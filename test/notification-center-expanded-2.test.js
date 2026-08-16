@@ -42,8 +42,8 @@ test('service and push recovery hooks are wired',()=>{
 });
 
 test('PWA shell is refreshed for the expanded center',()=>{
-  assert.match(pwa,/APP_BUILD = '2026\.08\.16-pwa306'/);
-  assert.match(read('pwa/sw.js'),/VERSION = '2026\.08\.16-pwa306'/);
+  assert.match(pwa,/APP_BUILD = '2026\.08\.16-pwa307'/);
+  assert.match(read('pwa/sw.js'),/VERSION = '2026\.08\.16-pwa307'/);
   assert.match(read('pwa/index.html'),/app\.js\?v=290/);
 });
 

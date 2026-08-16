@@ -21,6 +21,6 @@ test('GitHub artifact contains launcher, ServerHost and portable directory direc
   assert.match(workflow, /include-hidden-files: true/);
   assert.doesNotMatch(workflow, /Compress-Archive/);
   assert.match(workflow, /Portable package is incomplete/);
-  assert.match(workflow, /1\.62\.2-launcher43-csharp/);
+  assert.match(workflow, /1\.62\.3-launcher44-csharp/);
   assert.match(workflow, /Direct-Xfer\.ServerHost\.exe/);
 });

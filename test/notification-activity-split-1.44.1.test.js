@@ -43,10 +43,10 @@ test('PWA notification settings/filter expose detailed categories and no Expand 
   assert.doesNotMatch(app, /toggleAllCards|updateToggleCardsLabel/);
 });
 
-test('release/cache are advanced to 1.51.2 pwa308 v238', () => {
-  assert.equal(JSON.parse(read('package.json')).version, '1.62.4');
-  assert.match(read('pwa/app.js'), /APP_VERSION = '1\.62\.4'/);
-  assert.match(read('pwa/app.js'), /APP_BUILD = '2026\.08\.16-pwa308'/);
-  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.16-pwa308'/);
-  assert.match(read('pwa/index.html'), /app\.js\?v=290/);
+test('release/cache are advanced to 1.51.2 pwa317 v238', () => {
+  assert.equal(JSON.parse(read('package.json')).version, '1.63.4');
+  assert.match(read('pwa/app.js'), /APP_VERSION = '1\.63\.4'/);
+  assert.match(read('pwa/app.js'), /APP_BUILD = '2026\.08\.16-pwa317'/);
+  assert.match(read('pwa/sw.js'), /VERSION = '2026\.08\.16-pwa317'/);
+  assert.match(read('pwa/index.html'), /app\.js\?v=297/);
 });

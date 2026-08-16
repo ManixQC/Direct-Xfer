@@ -10,10 +10,10 @@ const issPath = path.join(root, 'installer', 'Direct-Xfer.iss');
 const workflow = fs.readFileSync(workflowPath, 'utf8');
 const iss = fs.readFileSync(issPath, 'utf8');
 
-test('Inno Setup project produces the requested 1.62.4 installer name', () => {
+test('Inno Setup project produces the requested 1.63.4 installer name', () => {
   assert.equal(fs.existsSync(issPath), true);
   assert.match(iss, /OutputBaseFilename=Direct-Xfer-Setup-\{#AppVersion\}/);
-  assert.match(iss, /#define AppVersion "1\.62\.4"/);
+  assert.match(iss, /#define AppVersion "1\.63\.4"/);
   assert.match(iss, /GetEnv\("DX_INNO_APP_VERSION"\)/);
   assert.match(workflow, /Direct-Xfer-Setup-\$\{\{ env\.DX_VERSION \}\}/);
   assert.match(workflow, /Direct-Xfer-Setup-\$env:DX_VERSION\.exe/);

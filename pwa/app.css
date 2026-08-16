@@ -189,12 +189,29 @@ input:disabled, select:disabled { opacity: .62; cursor: not-allowed; }
    ("Visages et plaques", "Télécharger QR"…) on phones wider than 560px. */
 .field.compact select { width: 100%; min-width: 0; }
 .form-panel { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-soft); }
-.checkline { display: flex; gap: 9px; align-items: flex-start; color: var(--text); font-size: .88rem; margin-top: 12px; }
-/* Keep the box aligned to the FIRST text line (labels can wrap to two lines, so a plain
-   align-items:center would float the box into the gap). flex-start alone top-aligns the
-   18px box against the taller/shorter line box, leaving it visibly off the text's optical
-   centre; the calc recentres it on that single line whatever the line-height resolves to. */
-.checkline input { flex: 0 0 auto; width: 18px; height: 18px; margin-top: calc((1lh - 18px) / 2); accent-color: var(--accent); }
+.checkline {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  column-gap: 9px;
+  align-items: start;
+  color: var(--text);
+  font-size: .88rem;
+  line-height: 1.4;
+  margin-top: 12px;
+  min-width: 0;
+}
+/* Keep checkboxes optically aligned with the FIRST line of their label.
+   A fixed 1px offset is deliberately used instead of the CSS `lh` unit: Android WebView/
+   Chromium font metrics can round `1lh` differently depending on font scaling, which made
+   a few boxes appear too high or too low next to wrapped labels. */
+.checkline input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin: 1px 0 0;
+  align-self: start;
+  accent-color: var(--accent);
+}
+.checkline > span { min-width: 0; line-height: 1.4; overflow-wrap: anywhere; }
 .dest-status { font-size: .82rem; margin: 8px 0 0; }
 .enc-title { margin: 0 0 6px; font-weight: 700; color: var(--accent-2); }
 
@@ -1544,7 +1561,7 @@ input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; a
 /* Folder rows carry a standalone select checkbox next to a navigate button. */
 .share-row.is-dir { display: flex; align-items: center; }
 .share-row.is-dir .share-entry { flex: 1; min-width: 0; }
-.share-check { width: 18px; height: 18px; flex: 0 0 auto; margin-left: 12px; accent-color: var(--accent); }
+.share-check { width: 18px; height: 18px; flex: 0 0 auto; margin: 0 0 0 12px; align-self: center; accent-color: var(--accent); }
 .share-entry {
   display: flex; align-items: center; gap: 10px; width: 100%;
   padding: 11px 12px; background: none; border: 0; color: var(--text);
@@ -1555,7 +1572,7 @@ input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; a
 .share-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .share-size { flex: 0 0 auto; }
 .share-chevron { flex: 0 0 auto; color: var(--faint); font-size: 1.2rem; }
-.share-entry input[type="checkbox"] { width: 18px; height: 18px; flex: 0 0 auto; accent-color: var(--accent); }
+.share-entry input[type="checkbox"] { width: 18px; height: 18px; flex: 0 0 auto; margin: 0; align-self: center; accent-color: var(--accent); }
 
 .share-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
 .share-link-row {
@@ -1920,22 +1937,30 @@ input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; a
 @media(max-width:760px){.action-history-section .share-library-head{align-items:flex-start}.action-history-section .share-library-head>.push{margin-left:0;width:100%;justify-content:flex-start}.action-history-row{align-items:flex-start}.action-history-row .share-link-actions{width:100%}}
 
 /* 1.53.1 — persistent server activity inside the PWA Activity tab. */
-.server-activity-card{min-width:0}
-.server-activity-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
-.server-activity-head h2{margin:0;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
-.server-activity-head p{margin:4px 0 0}
-.server-activity-tools{display:grid;grid-template-columns:minmax(180px,1fr) minmax(150px,220px) auto auto;gap:8px;align-items:center;margin:10px 0}
+/* Activity layout: every field and event card must remain fully inside the PWA viewport. */
+.server-activity-card{min-width:0;overflow:visible}
+.server-activity-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px;min-width:0}
+.server-activity-head>div:first-child{min-width:0}
+.server-activity-head h2{margin:0;display:flex;align-items:center;gap:7px;flex-wrap:wrap;overflow-wrap:anywhere}
+.server-activity-head p{margin:4px 0 0;overflow-wrap:anywhere}
+/* The PWA content is capped at 720px. Four intrinsic-width columns overflowed on
+   tablets and narrow windows, clipping the right side of filter controls. */
+.server-activity-tools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:center;margin:10px 0;min-width:0;max-width:100%}
+.server-activity-tools>:not(.sr-only){min-width:0;max-width:100%;width:100%}
 .server-activity-tools .history-search{margin:0;min-width:0}
 .server-activity-kind{width:100%;min-width:0}
-.server-activity-summary{justify-self:end;white-space:nowrap}
-.server-activity-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px}
-.server-activity-row time{white-space:nowrap}
-.server-activity-list{max-height:440px;overflow:auto;scrollbar-gutter:stable}
-.server-activity-row{grid-template-columns:30px minmax(0,1fr);align-items:flex-start}
-.server-activity-icon{font-size:1rem;line-height:1.35;text-align:center}
-@media (max-width:620px){.server-activity-head{flex-direction:column}.server-activity-head .btn{width:100%}.server-activity-tools{grid-template-columns:1fr}.server-activity-summary{justify-self:start}.server-activity-list{max-height:none}.server-activity-row{grid-template-columns:auto minmax(0,1fr)}.server-activity-row time{grid-column:2}}
-.activity-filter-check{display:inline-flex;align-items:center;gap:6px;font-size:.82rem;white-space:nowrap}.activity-filter-check input{accent-color:var(--accent)}
-@media(max-width:700px){.activity-filter-check{width:100%}}
+.server-activity-tools .btn{width:auto;justify-self:start}
+.server-activity-summary{grid-column:1/-1;justify-self:start;white-space:normal;overflow-wrap:anywhere}
+.server-activity-list{display:grid;grid-template-columns:minmax(0,1fr);max-height:440px;overflow-y:auto;overflow-x:auto;scrollbar-gutter:stable;min-width:0;width:100%;max-width:100%}
+.server-activity-row{display:grid;grid-template-columns:30px minmax(0,1fr) auto;align-items:flex-start;gap:8px 10px;min-width:0;width:100%;max-width:100%;overflow:visible}
+.server-activity-icon{font-size:1rem;line-height:1.35;text-align:center;min-width:0}
+.server-activity-row .history-main{min-width:0;width:100%;overflow:visible}
+.server-activity-row .history-main strong{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;word-break:break-word;line-height:1.35}
+.server-activity-row .history-meta{white-space:normal;overflow:visible;overflow-wrap:anywhere;word-break:break-word;line-height:1.4;min-width:0}
+.server-activity-row time{white-space:nowrap;justify-self:end;max-width:100%;font-size:.72rem;color:var(--faint)}
+.server-activity-group-head{max-width:100%;white-space:normal;overflow-wrap:anywhere;word-break:break-word}
+.activity-filter-check{display:grid;grid-template-columns:18px minmax(0,1fr);column-gap:7px;align-items:start;font-size:.82rem;line-height:1.4;white-space:normal;overflow-wrap:anywhere;min-width:0}.activity-filter-check input[type="checkbox"]{width:18px;height:18px;accent-color:var(--accent);margin:0;align-self:start}.activity-filter-check span{min-width:0;line-height:1.4;overflow-wrap:anywhere}
+@media (max-width:620px){.server-activity-head{flex-direction:column}.server-activity-head .btn{width:100%}.server-activity-tools{grid-template-columns:minmax(0,1fr)}.server-activity-tools .btn{width:100%;justify-self:stretch}.server-activity-summary{grid-column:auto}.server-activity-list{max-height:none}.server-activity-row{grid-template-columns:26px minmax(0,1fr)}.server-activity-row time{grid-column:2;justify-self:start;white-space:normal}.activity-filter-check{width:100%}}
 
 .share-created-link{display:flex;align-items:center;gap:.55rem;flex-wrap:wrap;margin-top:.65rem;padding:.65rem .75rem;border:1px solid var(--border);border-radius:12px;background:var(--surface-2)}
 .share-created-link code{flex:1;min-width:12rem;overflow-wrap:anywhere;word-break:break-word}
@@ -1950,3 +1975,28 @@ input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; a
 .long-operation{position:sticky;top:8px;z-index:75;display:grid;grid-template-columns:minmax(0,1fr) minmax(100px,220px);align-items:center;gap:12px;margin:8px 0 12px;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:var(--panel);box-shadow:0 8px 24px rgba(0,0,0,.2)}.long-operation>div{display:grid;gap:2px}.long-operation progress{width:100%}.diagnostic-setting-row p{max-width:760px;overflow-wrap:anywhere}.passkey-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}.passkey-device-list{grid-column:1/-1;display:grid;gap:6px;padding:7px 0 0 12px}.passkey-device-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 9px;border-left:2px solid var(--border);background:var(--panel-2);border-radius:0 8px 8px 0}.passkey-device-row.current{border-left-color:var(--accent)}.passkey-device-main{display:grid;gap:2px}.notification-priority{margin-left:6px;font-size:.72rem}.notification-priority.urgent{color:var(--danger)}.notification-priority.high{color:var(--warn)}.server-activity-group-head{position:sticky;top:0;z-index:1;padding:7px 9px;margin-top:8px;border-radius:8px;background:var(--panel-2);font-weight:700;font-size:.78rem}.activity-compact{max-width:145px}.share-search-hit mark{background:color-mix(in srgb,var(--accent) 28%,transparent);color:inherit;border-radius:3px}.trash-impact{font-weight:650}@media(max-width:700px){.long-operation{grid-template-columns:1fr}.activity-compact{max-width:none;width:100%}.passkey-row{grid-template-columns:1fr}.passkey-device-list{grid-column:1}}
 
 .notification-focus{outline:3px solid color-mix(in srgb,var(--accent) 55%,transparent);outline-offset:3px;animation:dx-pwa-focus-pulse 1.1s ease-in-out 2}@keyframes dx-pwa-focus-pulse{50%{outline-width:6px}}
+
+/* Activity — real-time active transfers (PWA parity with standard dashboard). */
+.pwa-live-transfers{min-width:0;max-width:100%;overflow:visible}
+.pwa-live-transfers-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px;min-width:0}
+.pwa-live-transfers-head>div:first-child{min-width:0}
+.pwa-live-transfers-head h2,.pwa-live-transfers-head h3{margin:0;display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:1.5rem;overflow-wrap:anywhere}
+.pwa-live-transfers-head p{margin:4px 0 0}
+.pwa-live-transfers-head .live-dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 0 color-mix(in srgb,var(--ok) 40%,transparent);animation:pwa-live-pulse 1.8s infinite}.pwa-live-transfers-head .live-dot.offline{background:var(--danger);box-shadow:none;animation:none}
+@keyframes pwa-live-pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--ok) 42%,transparent)}70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
+.pwa-live-transfers-list{display:grid;gap:8px;min-width:0}
+.pwa-live-transfer{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:9px;align-items:start;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--panel);min-width:0;width:100%;max-width:100%;overflow:visible}
+.pwa-live-transfer.stalled{border-color:color-mix(in srgb,var(--warn) 55%,var(--border))}.pwa-live-transfer.stopping{opacity:.72}.pwa-live-transfer.offline{border-style:dashed}
+.pwa-live-flag{font-size:1.05rem;line-height:1.4}
+.pwa-live-main{display:grid;gap:6px;min-width:0}
+.pwa-live-name{display:flex;align-items:center;gap:6px;min-width:0;font-weight:700;flex-wrap:wrap}
+.pwa-live-name-text{min-width:0;white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;word-break:break-word}
+.pwa-live-stalled,.pwa-live-resumed,.pwa-live-stopping,.pwa-live-stale{padding:2px 6px;border-radius:999px;font-size:.68rem;font-weight:800;white-space:nowrap}.pwa-live-stalled{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}.pwa-live-resumed{background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent)}.pwa-live-stopping,.pwa-live-stale{background:color-mix(in srgb,var(--muted) 15%,transparent);color:var(--muted)}
+.pwa-live-progress{height:6px;border-radius:999px;overflow:hidden;background:var(--border)}
+.pwa-live-progress>i{display:block;height:100%;background:var(--accent);border-radius:inherit;transition:width .2s ease}
+.pwa-live-meta{display:flex;flex-wrap:wrap;gap:4px 9px;color:var(--muted);font-size:.76rem;line-height:1.35;min-width:0}
+.pwa-live-meta span{min-width:0;max-width:100%;overflow-wrap:anywhere;word-break:break-word}
+.pwa-live-stop{width:34px;height:34px;padding:0;border-radius:9px;display:grid;place-items:center;align-self:center}
+.pwa-live-transfers-empty{padding:10px 4px;text-align:center;color:var(--muted)}
+@media(max-width:620px){.pwa-live-transfers-head{flex-direction:column}.pwa-live-transfer{grid-template-columns:auto minmax(0,1fr) auto;padding:9px}.pwa-live-meta{font-size:.73rem}.pwa-live-stop{width:32px;height:32px}.server-activity-list{overflow:visible}}
+@media(prefers-reduced-motion:reduce){.pwa-live-transfers-head .live-dot{animation:none}.pwa-live-progress>i{transition:none}}

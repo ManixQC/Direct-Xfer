@@ -57,5 +57,5 @@ test('role changes close grouped menus before role-gated actions are hidden', ()
 
 test('standard assets are cache-busted for the audit fixes', () => {
   assert.match(html, /style\.css\?v=286/);
-  assert.match(html, /app\.js\?v=292/);
+  assert.match(html, /app\.js\?v=297/);
 });

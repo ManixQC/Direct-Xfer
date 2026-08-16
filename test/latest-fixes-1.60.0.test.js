@@ -34,11 +34,11 @@ test('standard and PWA stats ignore stale async responses after another modal ac
 
 test('current shell cache keys deliver the corrected admin and PWA scripts', () => {
   assert.match(html, /style\.css\?v=286/);
-  assert.match(html, /app\.js\?v=292/);
-  assert.match(pwaHtml, /app\.js\?v=290/);
-  assert.match(pwaHtml, /v1\.62\.4 · pwa308/);
-  assert.match(sw, /VERSION = '2026\.08\.16-pwa308'/);
-  assert.match(sw, /app\/app\.js\?v=290/);
+  assert.match(html, /app\.js\?v=297/);
+  assert.match(pwaHtml, /app\.js\?v=297/);
+  assert.match(pwaHtml, /v1\.63\.4 · pwa317/);
+  assert.match(sw, /VERSION = '2026\.08\.16-pwa317'/);
+  assert.match(sw, /app\/app\.js\?v=297/);
 });
 
 test('Windows workflow release-critical test paths all exist', () => {

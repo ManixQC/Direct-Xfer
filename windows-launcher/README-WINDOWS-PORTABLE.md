@@ -1,4 +1,4 @@
-# Direct-Xfer 1.62.4 — Windows C# / WinForms
+# Direct-Xfer 1.63.4 — Windows C# / WinForms
 
 La distribution Windows utilise désormais **deux exécutables C#/.NET Framework 4.8 x64 distincts** :
 
@@ -21,8 +21,8 @@ Le flux normal ne demande pas d’exécuter de fichier `.cmd`, `.bat` ou `.ps1` 
 
 Identifiants internes :
 
-- launcher : `1.62.4-launcher45-csharp`
-- server host : `1.62.4-serverhost18-csharp`
+- launcher : `1.63.4-launcher52-csharp`
+- server host : `1.63.4-serverhost25-csharp`
 
 ## Compilation sans script local
 
@@ -30,8 +30,8 @@ Identifiants internes :
 
 Le workflow `.github/workflows/build-windows-csharp.yml` compile **les deux projets x64**, prépare le runtime portable puis génère :
 
-- l’artefact `Direct-Xfer-1.62.4-Windows-CSharp` ;
-- l’installateur `Direct-Xfer-Setup-1.62.4.exe`.
+- l’artefact `Direct-Xfer-1.63.4-Windows-CSharp` ;
+- l’installateur `Direct-Xfer-Setup-1.63.4.exe`.
 
 ### Visual Studio
 

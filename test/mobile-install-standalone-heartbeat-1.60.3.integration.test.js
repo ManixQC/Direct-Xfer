@@ -31,7 +31,7 @@ test('standalone PWA heartbeat hides the standard install invitation through the
     r=await fetch(base+'/pwa/install-state',{headers:{Cookie:marker}});
     assert.deepEqual(await r.json(),{installed:false},'pairing alone must not pretend the PWA is installed');
 
-    const status=await fetch(base+'/app/device/status?version=1.62.4&build=2026.08.16-pwa308&standalone=1',{headers:{Cookie:dxpwa,Accept:'application/json'}});
+    const status=await fetch(base+'/app/device/status?version=1.63.4&build=2026.08.16-pwa317&standalone=1',{headers:{Cookie:dxpwa,Accept:'application/json'}});
     assert.equal(status.status,200,output);
     r=await fetch(base+'/pwa/install-state',{headers:{Cookie:marker}});
     assert.deepEqual(await r.json(),{installed:true});

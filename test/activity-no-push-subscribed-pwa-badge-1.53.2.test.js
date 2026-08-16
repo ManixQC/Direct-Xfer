@@ -28,11 +28,11 @@ test('PWA Activity tab has no count bubble and no activity badge calculation', (
 });
 
 test('release is 1.54.0 with a fresh PWA cache', () => {
-  assert.equal(JSON.parse(read('package.json')).version, '1.62.4');
-  assert.equal(JSON.parse(read('package-lock.json')).version, '1.62.4');
-  assert.match(read('pwa', 'app.js'), /APP_VERSION = '1\.62\.4'/);
-  assert.match(read('pwa', 'app.js'), /APP_BUILD = '2026\.08\.16-pwa308'/);
-  assert.match(read('pwa', 'sw.js'), /VERSION = '2026\.08\.16-pwa308'/);
-  assert.match(read('pwa', 'index.html'), /app\.js\?v=290/);
-  assert.match(read('pwa', 'sw.js'), /app\.js\?v=290/);
+  assert.equal(JSON.parse(read('package.json')).version, '1.63.4');
+  assert.equal(JSON.parse(read('package-lock.json')).version, '1.63.4');
+  assert.match(read('pwa', 'app.js'), /APP_VERSION = '1\.63\.4'/);
+  assert.match(read('pwa', 'app.js'), /APP_BUILD = '2026\.08\.16-pwa317'/);
+  assert.match(read('pwa', 'sw.js'), /VERSION = '2026\.08\.16-pwa317'/);
+  assert.match(read('pwa', 'index.html'), /app\.js\?v=297/);
+  assert.match(read('pwa', 'sw.js'), /app\.js\?v=297/);
 });

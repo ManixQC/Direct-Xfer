@@ -16,12 +16,12 @@
        paired with a stale app.js/app.css from a previous version's service-worker cache
        (that mix threw on removed elements and broke the icon styling). Bump ?v in
        lock-step with sw.js VERSION on every release. -->
-  <link rel="stylesheet" href="/app/app.css?v=274">
+  <link rel="stylesheet" href="/app/app.css?v=280">
   <script src="/app/theme-init.js?v=269"></script>
   <script src="/dxcrypto.js?v=269" defer></script>
   <script src="/app/dlp-local.js?v=270" defer></script>
   <script src="/download-resume.js?v=269" defer></script>
-  <script src="/app/app.js?v=290" defer></script>
+  <script src="/app/app.js?v=297" defer></script>
   <title>Direct-Xfer — Envoyer</title>
 </head>
 <body>
@@ -728,6 +728,19 @@
       </div>
     </section>
 
+    <section class="card pwa-live-transfers" data-pwa-panel="activity" aria-labelledby="pwa-live-transfers-title">
+      <div class="pwa-live-transfers-head">
+        <div>
+          <h2 id="pwa-live-transfers-title"><span class="live-dot" aria-hidden="true"></span><span data-i18n="liveTransfersTitle">Transferts en cours</span> <span id="pwa-live-transfers-count" class="count">0</span></h2>
+          <p class="muted sm" data-i18n="liveTransfersHint">Suivi en direct des transferts actifs sur le serveur.</p>
+        </div>
+        <span id="pwa-live-transfers-updated" class="muted sm" aria-live="off"></span>
+      </div>
+      <div id="pwa-live-transfers-list" class="pwa-live-transfers-list" aria-live="off">
+        <p class="muted sm" data-i18n="liveTransfersLoading">Chargement des transferts en cours…</p>
+      </div>
+    </section>
+
     <section class="card server-activity-card" id="server-activity-card" data-pwa-panel="activity">
       <div class="server-activity-head">
         <div>
@@ -1010,7 +1023,7 @@
       </div>
     </details>
 
-    <p class="foot">Direct-Xfer · <span data-i18n="companionApp">application compagnon</span> · <span id="build-tag" class="muted">v1.62.4 · pwa308</span></p>
+    <p class="foot">Direct-Xfer · <span data-i18n="companionApp">application compagnon</span> · <span id="build-tag" class="muted">v1.63.4 · pwa317</span></p>
   </main>
 
   <nav id="pwa-bottom-nav" class="pwa-bottom-nav" aria-label="Navigation principale" data-i18n-aria="navMain">

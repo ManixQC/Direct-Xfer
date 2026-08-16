@@ -9,8 +9,8 @@
 (function () {
   // Build tag, shown in the footer so a user can confirm at a glance which version
   // is actually running after an update. Keep it in lock-step with sw.js VERSION.
-  var APP_VERSION = '1.62.4';
-  var APP_BUILD = '2026.08.16-pwa308';
+  var APP_VERSION = '1.63.4';
+  var APP_BUILD = '2026.08.16-pwa317';
   // Upload blocks are deliberately small on mobile. A number of reverse proxies
   // still default to a 1 MiB request-body limit; an 8 MiB first block can therefore
   // be rejected before the browser emits any useful progress event, which looks like
@@ -575,6 +575,17 @@ Object.assign(STRINGS.es, {
   serverActivityActor:'Usuario', serverActivityIp:'IP', serverActivityDevice:'Dispositivo/origen', serverActivityResult:'Resultado', serverActivityPeriod:'Período', serverActivityDirection:'Dirección', serverActivityCorrelate:'Agrupar por recurso', serverActivity24h:'24 h', serverActivity7d:'7 días', serverActivity30d:'30 días',
   sharesTrashImpact:'Impacto: {count} elemento(s) · {bytes}', sharesTrashDependencies:'Dependencias: {value}', sharesTrashNoDependencies:'ninguna', sharesTrashSmartRestore:'Falta la ubicación original. ¿Usar «{path}»?', sharesTrashChooseRestore:'Otra ruta del host:'
 });
+// 1.63.4 — audited live server transfers inside the PWA Activity section.
+Object.assign(STRINGS.fr, {
+  liveTransfersTitle:'Transferts en cours', liveTransfersHint:'Suivi en direct des transferts actifs sur le serveur.', liveTransfersLoading:'Chargement des transferts en cours…', liveTransfersEmpty:'Aucun transfert en cours.', liveTransfersLoadFail:'Impossible de charger les transferts en cours.', liveTransfersUpdated:'Mis à jour à {time}', liveTransfersStalled:'Inactif', liveTransfersResumed:'Repris', liveTransfersStopping:'Arrêt…', liveTransfersOffline:'Flux en direct indisponible', liveTransfersStale:'Dernières données connues', liveTransfersRemaining:'restant', liveTransfersStop:'Arrêter le transfert', liveTransfersStopConfirm:'Arrêter ce transfert en cours ?', liveTransfersStopOk:'Transfert arrêté', liveTransfersStopFail:'Impossible d’arrêter le transfert'
+});
+Object.assign(STRINGS.en, {
+  liveTransfersTitle:'Transfers in progress', liveTransfersHint:'Live view of active transfers on the server.', liveTransfersLoading:'Loading active transfers…', liveTransfersEmpty:'No transfer in progress.', liveTransfersLoadFail:'Could not load active transfers.', liveTransfersUpdated:'Updated at {time}', liveTransfersStalled:'Stalled', liveTransfersResumed:'Resumed', liveTransfersStopping:'Stopping…', liveTransfersOffline:'Live feed unavailable', liveTransfersStale:'Last known data', liveTransfersRemaining:'remaining', liveTransfersStop:'Stop transfer', liveTransfersStopConfirm:'Stop this transfer in progress?', liveTransfersStopOk:'Transfer stopped', liveTransfersStopFail:'Could not stop the transfer'
+});
+Object.assign(STRINGS.es, {
+  liveTransfersTitle:'Transferencias en curso', liveTransfersHint:'Seguimiento en directo de las transferencias activas del servidor.', liveTransfersLoading:'Cargando transferencias activas…', liveTransfersEmpty:'No hay transferencias en curso.', liveTransfersLoadFail:'No se pudieron cargar las transferencias activas.', liveTransfersUpdated:'Actualizado a las {time}', liveTransfersStalled:'Inactiva', liveTransfersResumed:'Reanudada', liveTransfersStopping:'Deteniendo…', liveTransfersOffline:'Flujo en directo no disponible', liveTransfersStale:'Últimos datos conocidos', liveTransfersRemaining:'restante', liveTransfersStop:'Detener transferencia', liveTransfersStopConfirm:'¿Detener esta transferencia en curso?', liveTransfersStopOk:'Transferencia detenida', liveTransfersStopFail:'No se pudo detener la transferencia'
+});
+
 Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', imgCompareBeforeAfter:'Comparer avant/après', imgRestoreOriginal:'Revenir à l’original', imgCurrentVersion:'Version actuelle', imgVersionOperations:'Opérations', imgClose:'Fermer', imgRestoreConfirm:'Restaurer cette version ?', imgOriginal:'Originale' });
   Object.assign(STRINGS.en, { imgVersionHistory:'Edit history', imgCompareBeforeAfter:'Compare before/after', imgRestoreOriginal:'Revert to original', imgCurrentVersion:'Current version', imgVersionOperations:'Operations', imgClose:'Close', imgRestoreConfirm:'Restore this version?', imgOriginal:'Original' });
   Object.assign(STRINGS.es, { imgVersionHistory:'Historial de modificaciones', imgCompareBeforeAfter:'Comparar antes/después', imgRestoreOriginal:'Volver al original', imgCurrentVersion:'Versión actual', imgVersionOperations:'Operaciones', imgClose:'Cerrar', imgRestoreConfirm:'¿Restaurar esta versión?', imgOriginal:'Original' });
@@ -609,6 +620,7 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
     $('dest-save-btn').textContent = editingToken ? t('updateDestination') : t('saveDestination');
     renderDests(); renderQueue(); renderHistory(); renderDeviceStatus();
     if (typeof renderPwaServerActivity === 'function') renderPwaServerActivity();
+    if (typeof renderPwaLiveTransfers === 'function') renderPwaLiveTransfers();
     if (notificationPrefsLoaded) renderPwaNotificationPrefs();
     if (typeof updateSessionStats === 'function') updateSessionStats();
     if (typeof updateSendBtn === 'function') updateSendBtn();
@@ -621,6 +633,13 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
   var serverActivityEvents = [];
   var serverActivityRetained = 0;
   var serverActivityLoading = false;
+  var pwaLiveTransfers = [];
+  var pwaLiveTransfersLoading = false;
+  var pwaLiveTransfersGeneratedAt = 0;
+  var pwaLiveTransfersError = false;
+  var pwaLiveTransfersRequestSeq = 0;
+  var pwaLiveTransfersRequestController = null;
+  var pwaLiveTransferSamples = Object.create(null);
   var PWA_PANEL_KEYS = {
     send: { label: 'navSend', hint: 'navSendHint' },
     images: { label: 'navImages', hint: 'navImagesHint' },
@@ -665,7 +684,7 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
     var meta = PWA_PANEL_KEYS[panel];
     if ($('pwa-panel-kicker')) $('pwa-panel-kicker').textContent = t(meta.label);
     if ($('pwa-panel-summary')) $('pwa-panel-summary').textContent = t(meta.hint);
-    if (panel === 'activity') { loadPwaServerActivity(false).catch(function () {}); startPwaActivityRefresh(); } else stopPwaActivityRefresh();
+    if (panel === 'activity') { loadPwaServerActivity(false).catch(function () {}); loadPwaLiveTransfers(false).catch(function () {}); startPwaActivityRefresh(); } else stopPwaActivityRefresh();
     if (panel === 'settings' && $('settings-card')) { $('settings-card').open = true; if (!notificationPrefsLoaded) loadPwaNotificationPrefs(); else renderPwaNotificationPrefs(); if(!notificationRulesLoaded)loadPwaNotificationRules(); else renderPwaNotificationRules(); }
     if (panel === 'images') {
       refreshImageStats(false).catch(function () {});
@@ -6353,6 +6372,170 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
   function pwaServerActivityIsRoutine(e){var n=String(e&&e.name||'').toLowerCase(),k=String(e&&e.kind||'').toLowerCase();return k==='ocr-start'||k==='ocr-complete'||n==='server-restarted'||n==='server-shutdown';}
   function refreshPwaActivityShareOptions(){var sel=$('server-activity-share');if(!sel)return;var current=sel.value,map={};serverActivityEvents.forEach(function(e){if(e&&e.shareId&&!map[e.shareId])map[e.shareId]=e.shareName||e.name||e.shareId;});sel.innerHTML='';var all=document.createElement('option');all.value='';all.textContent=t('serverActivityShareAll');sel.appendChild(all);Object.keys(map).sort(function(a,b){return String(map[a]).localeCompare(String(map[b]));}).forEach(function(id){var o=document.createElement('option');o.value=id;o.textContent=map[id]+' · '+id.slice(0,8);sel.appendChild(o);});if([].slice.call(sel.options).some(function(o){return o.value===current;}))sel.value=current;}
   function pwaActivityResultMatches(e,want){if(!want)return true;var text=String([e&&e.status,e&&e.detail,e&&e.name].filter(Boolean).join(' ')).toLowerCase();if(want==='ok')return /ok|done|complete|completed|success|created|updated|sent|ready/.test(text);if(want==='error')return /error|fail|failed|interrupt|abandon|blocked|denied|impossible/.test(text);if(want==='restored')return /restor|reactivat/.test(text);if(want==='deleted')return /delete|deleted|purge|purged|revok|trash/.test(text);return text.indexOf(String(want).toLowerCase())!==-1;}
+  function pwaLiveTransferDuration(ms) {
+    return fmtClock(Math.max(0, Number(ms) || 0) / 1000);
+  }
+  function samplePwaLiveTransfers(rows, generatedAt) {
+    var at = Math.max(1, Number(generatedAt) || Date.now());
+    var next = Object.create(null);
+    rows.forEach(function (tf) {
+      if (!tf || !tf.id) return;
+      var bytes = Math.max(0, Number(tf.bytes) || 0);
+      var zipBytes = Math.max(0, Number(tf.zipProcessedBytes) || 0);
+      var prev = pwaLiveTransferSamples[tf.id];
+      var liveBps = Math.max(0, Number(tf.avgBps) || 0);
+      var liveZipBps = Number(tf.durationMs) > 0 ? (zipBytes / Number(tf.durationMs)) * 1000 : 0;
+      if (prev && at > prev.at) {
+        var elapsed = (at - prev.at) / 1000;
+        if (elapsed >= 0.2 && bytes >= prev.bytes) liveBps = Math.max(0, Math.round((bytes - prev.bytes) / elapsed));
+        if (elapsed >= 0.2 && zipBytes >= prev.zipBytes) liveZipBps = Math.max(0, Math.round((zipBytes - prev.zipBytes) / elapsed));
+      }
+      if (tf.stalled) { liveBps = 0; liveZipBps = 0; }
+      tf.liveBps = liveBps;
+      tf.liveZipBps = liveZipBps;
+      next[tf.id] = { at:at, bytes:bytes, zipBytes:zipBytes };
+    });
+    pwaLiveTransferSamples = next;
+    return rows;
+  }
+  function renderPwaLiveTransfers() {
+    var list = $('pwa-live-transfers-list'); if (!list) return;
+    // The list refreshes every two seconds. Preserve keyboard focus across DOM
+    // replacement and keep the rapidly changing rows out of ARIA live regions,
+    // otherwise a focused Stop control vanishes and screen readers re-announce the
+    // complete transfer list on every poll.
+    var focusedTransferId = '';
+    var focused = document.activeElement;
+    if (focused && focused.classList && focused.classList.contains('pwa-live-stop') && focused.closest) {
+      var focusedRow = focused.closest('.pwa-live-transfer');
+      if (focusedRow) focusedTransferId = String(focusedRow.getAttribute('data-transfer-id') || '');
+    }
+    list.innerHTML = '';
+    list.setAttribute('aria-busy', pwaLiveTransfersLoading ? 'true' : 'false');
+    var count = $('pwa-live-transfers-count'); if (count) count.textContent = String(pwaLiveTransfers.length);
+    var section = list.closest ? list.closest('.pwa-live-transfers') : null;
+    var liveDot = section && section.querySelector ? section.querySelector('.live-dot') : null;
+    if (liveDot) {
+      liveDot.classList.toggle('offline', !!pwaLiveTransfersError);
+      liveDot.title = pwaLiveTransfersError ? t('liveTransfersOffline') : t('liveTransfersTitle');
+    }
+    var updated = $('pwa-live-transfers-updated');
+    if (updated) {
+      if (pwaLiveTransfersError) updated.textContent = t('liveTransfersLoadFail');
+      else if (pwaLiveTransfersGeneratedAt) {
+        var stamp = '—'; try { stamp = new Date(pwaLiveTransfersGeneratedAt).toLocaleTimeString(lang === 'fr' ? 'fr-CA' : lang === 'es' ? 'es-ES' : 'en-US', { hour:'2-digit', minute:'2-digit', second:'2-digit' }); } catch (_) {}
+        updated.textContent = t('liveTransfersUpdated', { time:stamp });
+      } else updated.textContent = '';
+    }
+    if (!pwaLiveTransfers.length) {
+      var empty = document.createElement('div'); empty.className = 'pwa-live-transfers-empty sm'; empty.textContent = pwaLiveTransfersError ? t('liveTransfersLoadFail') : (pwaLiveTransfersLoading ? t('liveTransfersLoading') : t('liveTransfersEmpty')); list.appendChild(empty); return;
+    }
+    pwaLiveTransfers.forEach(function (tf) {
+      var up = tf.direction === 'up', isZip = !!tf.isZip, feedOffline = !!pwaLiveTransfersError;
+      var total = Math.max(0, Number(tf.expectedBytes) || 0), done = Math.max(0, Number(tf.bytes) || 0);
+      // A failed poll leaves the last successful snapshot visible for context, but
+      // stale throughput/ETA and mutation controls must not masquerade as live data.
+      var displayBps = feedOffline ? 0 : Math.max(0, Number(tf.liveBps != null ? tf.liveBps : tf.avgBps) || 0);
+      var etaBps = displayBps;
+      if (isZip && Number(tf.zipTotalBytes) > 0) { total = Number(tf.zipTotalBytes) || 0; done = Math.max(0, Number(tf.zipProcessedBytes) || 0); etaBps = Math.max(0, Number(tf.liveZipBps) || 0); }
+      var pct = total > 0 ? Math.min(100, Math.max(0, Math.round((done / total) * 100))) : null;
+      var row = document.createElement('div'); row.className = 'pwa-live-transfer' + (tf.stalled ? ' stalled' : '') + (tf.stopping ? ' stopping' : '') + (feedOffline ? ' offline' : ''); row.setAttribute('data-transfer-id', String(tf.id || ''));
+      var flag = document.createElement('span'); flag.className = 'pwa-live-flag'; flag.textContent = tf.flag || '🌐'; row.appendChild(flag);
+      var main = document.createElement('div'); main.className = 'pwa-live-main';
+      var name = document.createElement('div'); name.className = 'pwa-live-name';
+      var ico = document.createElement('span'); ico.textContent = up ? '📥' : (isZip ? '🗜️' : '📄'); name.appendChild(ico);
+      var nameText = document.createElement('span'); nameText.className = 'pwa-live-name-text'; nameText.textContent = tf.name || '—'; name.appendChild(nameText);
+      if (tf.resumed) { var resumed = document.createElement('span'); resumed.className = 'pwa-live-resumed'; resumed.textContent = t('liveTransfersResumed'); name.appendChild(resumed); }
+      if (tf.stalled) { var stalled = document.createElement('span'); stalled.className = 'pwa-live-stalled'; stalled.textContent = t('liveTransfersStalled'); name.appendChild(stalled); }
+      if (tf.stopping) { var stopping = document.createElement('span'); stopping.className = 'pwa-live-stopping'; stopping.textContent = t('liveTransfersStopping'); name.appendChild(stopping); }
+      if (feedOffline) { var stale = document.createElement('span'); stale.className = 'pwa-live-stale'; stale.textContent = t('liveTransfersStale'); name.appendChild(stale); }
+      main.appendChild(name);
+      if (pct !== null) {
+        var bar = document.createElement('div'); bar.className = 'pwa-live-progress'; bar.setAttribute('role','progressbar'); bar.setAttribute('aria-valuemin','0'); bar.setAttribute('aria-valuemax','100'); bar.setAttribute('aria-valuenow',String(pct));
+        var fill = document.createElement('i'); fill.style.width = pct + '%'; bar.appendChild(fill); main.appendChild(bar);
+      }
+      var meta = document.createElement('div'); meta.className = 'pwa-live-meta';
+      var who = [tf.ipName, tf.ip].filter(Boolean).join(' · '); if (who) { var ip = document.createElement('span'); ip.textContent = who; meta.appendChild(ip); }
+      if (tf.country) { var country = document.createElement('span'); country.textContent = tf.country; meta.appendChild(country); }
+      var speed = document.createElement('span'); speed.textContent = (up ? '↑ ' : '↓ ') + fmtBytes(displayBps) + '/s'; meta.appendChild(speed);
+      var volume = document.createElement('span'); volume.textContent = pct === null ? fmtBytes(done) : fmtBytes(done) + ' / ' + fmtBytes(total) + ' (' + pct + '%)'; meta.appendChild(volume);
+      if (pct !== null && etaBps > 0 && done < total) { var eta = document.createElement('span'); eta.textContent = '⏳ ' + fmtEta((total - done) / etaBps) + ' ' + t('liveTransfersRemaining'); meta.appendChild(eta); }
+      var elapsed = document.createElement('span'); elapsed.textContent = '⏱ ' + pwaLiveTransferDuration(tf.durationMs); meta.appendChild(elapsed);
+      main.appendChild(meta); row.appendChild(main);
+      if (tf.canStop && !feedOffline) { var stop = document.createElement('button'); stop.type = 'button'; stop.className = 'btn danger pwa-live-stop'; stop.textContent = '✕'; stop.title = t('liveTransfersStop'); stop.setAttribute('aria-label', t('liveTransfersStop')); stop.addEventListener('click', function () { stopPwaLiveTransfer(tf, stop); }); row.appendChild(stop); }
+      list.appendChild(row);
+    });
+    if (focusedTransferId) {
+      var candidates = list.querySelectorAll('.pwa-live-transfer');
+      for (var fi = 0; fi < candidates.length; fi += 1) {
+        if (String(candidates[fi].getAttribute('data-transfer-id') || '') !== focusedTransferId) continue;
+        var restored = candidates[fi].querySelector('.pwa-live-stop');
+        if (restored) { try { restored.focus({ preventScroll:true }); } catch (_) { try { restored.focus(); } catch (_) {} } }
+        break;
+      }
+    }
+  }
+  function cancelPwaLiveTransferLoad() {
+    pwaLiveTransfersRequestSeq += 1;
+    if (pwaLiveTransfersRequestController) { try { pwaLiveTransfersRequestController.abort(); } catch (_) {} }
+    pwaLiveTransfersRequestController = null;
+    pwaLiveTransfersLoading = false;
+  }
+  async function loadPwaLiveTransfers(force) {
+    if (pwaLiveTransfersLoading && !force) return false;
+    if (force && pwaLiveTransfersRequestController) { try { pwaLiveTransfersRequestController.abort(); } catch (_) {} }
+    var seq = ++pwaLiveTransfersRequestSeq;
+    var controller = window.AbortController ? new AbortController() : null;
+    pwaLiveTransfersRequestController = controller;
+    pwaLiveTransfersLoading = true;
+    if (force || !pwaLiveTransfers.length) renderPwaLiveTransfers();
+    try {
+      var r = await fetchWithTimeout('/app/activity/transfers', { credentials:'same-origin', cache:'no-store', signal:controller ? controller.signal : undefined }, 7000);
+      if (seq !== pwaLiveTransfersRequestSeq) return false;
+      if (!r.ok) throw new Error('transfers-' + r.status);
+      var data = await r.json();
+      if (seq !== pwaLiveTransfersRequestSeq) return false;
+      pwaLiveTransfersGeneratedAt = Math.max(0, Number(data.generatedAt) || Date.now());
+      pwaLiveTransfers = samplePwaLiveTransfers(Array.isArray(data.transfers) ? data.transfers : [], pwaLiveTransfersGeneratedAt);
+      pwaLiveTransfersError = false;
+      return true;
+    } catch (_) {
+      if (seq === pwaLiveTransfersRequestSeq) {
+        pwaLiveTransfersError = true;
+        // Do not calculate an apparent "instantaneous" speed across an outage.
+        // The first good snapshot after reconnect starts a fresh sampling window.
+        pwaLiveTransferSamples = Object.create(null);
+      }
+      return false;
+    } finally {
+      if (seq === pwaLiveTransfersRequestSeq) {
+        pwaLiveTransfersLoading = false;
+        pwaLiveTransfersRequestController = null;
+        renderPwaLiveTransfers();
+      }
+    }
+  }
+  async function stopPwaLiveTransfer(tf, button) {
+    if (!tf || !tf.id || !window.confirm(t('liveTransfersStopConfirm'))) return;
+    var previousCanStop = !!tf.canStop;
+    tf.canStop = false; tf.stopping = true;
+    if (button) button.disabled = true;
+    renderPwaLiveTransfers();
+    try {
+      var r = await appMutate('/app/activity/transfers/' + encodeURIComponent(tf.id) + '/stop', 'application/json', '{}', { timeoutMs:8000 });
+      if (r.status === 404) { await loadPwaLiveTransfers(true); return; }
+      if (!r.ok) throw new Error('stop-' + r.status);
+      toast(t('liveTransfersStopOk'), 'ok');
+      await loadPwaLiveTransfers(true);
+      loadPwaServerActivity(true).catch(function () {});
+    } catch (_) {
+      tf.stopping = false; tf.canStop = previousCanStop;
+      toast(t('liveTransfersStopFail'), 'err');
+      if (button) button.disabled = false;
+      renderPwaLiveTransfers();
+    }
+  }
+
   function renderPwaServerActivity() {
     var list = $('server-activity-list'); if (!list) return;
     refreshPwaActivityShareOptions(); list.innerHTML = '';
@@ -6364,10 +6547,10 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
     var imagesOnly=!!($('server-activity-images')&&$('server-activity-images').checked), pwaOnly=!!($('server-activity-pwa')&&$('server-activity-pwa').checked), hideRoutine=!!($('server-activity-hide-routine')&&$('server-activity-hide-routine').checked);
     var rows = serverActivityEvents.filter(function (e) { return (!kind || pwaServerActivityGroup(e) === kind) && (!share || String(e.shareId||'')===share) && (!device||String(e.source||'')===device) && (!direction||e.direction===direction) && (!cutoff||Number(e.at)>=cutoff) && (!actor||normActivity((e.actor||'')+' '+(e.accountId||'')).indexOf(actor)!==-1) && (!ip||normActivity(e.ip).indexOf(ip)!==-1) && pwaActivityResultMatches(e,result) && (!imagesOnly || pwaServerActivityIsImage(e)) && (!pwaOnly || pwaServerActivityIsPwa(e)) && (!hideRoutine || !pwaServerActivityIsRoutine(e)) && (!q || pwaServerActivitySearchText(e).indexOf(q) !== -1); });
     if (!rows.length) { var empty = document.createElement('p'); empty.className = 'muted sm'; empty.textContent = t('serverActivityEmpty'); list.appendChild(empty); }
-    var correlate=!!($('server-activity-correlate')&&$('server-activity-correlate').checked), rendered=rows.slice(0,1000),lastCorrelation=null;
-    if(correlate){var latestByCorrelation=Object.create(null);rendered.forEach(function(e){var k=String(e.correlationId||e.shareId||('single:'+e.id)),at=Number(e.at)||0;latestByCorrelation[k]=Math.max(latestByCorrelation[k]||0,at);});rendered.sort(function(a,b){var ak=String(a.correlationId||a.shareId||('single:'+a.id)),bk=String(b.correlationId||b.shareId||('single:'+b.id));if(ak===bk)return Number(a.at)-Number(b.at);return Number(latestByCorrelation[bk]||0)-Number(latestByCorrelation[ak]||0)||ak.localeCompare(bk);});}
+    var correlate=!!($('server-activity-correlate')&&$('server-activity-correlate').checked), rendered=rows.slice(0,1000),lastCorrelation=null,correlationCounts=Object.create(null);
+    if(correlate){var latestByCorrelation=Object.create(null);rendered.forEach(function(e){var k=String(e.correlationId||e.shareId||('single:'+e.id)),at=Number(e.at)||0;latestByCorrelation[k]=Math.max(latestByCorrelation[k]||0,at);var visibleKey=String(e.correlationId||e.shareId||'');if(visibleKey)correlationCounts[visibleKey]=(correlationCounts[visibleKey]||0)+1;});rendered.sort(function(a,b){var ak=String(a.correlationId||a.shareId||('single:'+a.id)),bk=String(b.correlationId||b.shareId||('single:'+b.id));if(ak===bk)return Number(a.at)-Number(b.at);return Number(latestByCorrelation[bk]||0)-Number(latestByCorrelation[ak]||0)||ak.localeCompare(bk);});}
     rendered.forEach(function (e) {
-      var correlation=String(e.correlationId||e.shareId||'');if(correlate&&correlation&&correlation!==lastCorrelation){var gh=document.createElement('div');gh.className='server-activity-group-head';gh.textContent=(e.shareName||e.name||correlation)+' · '+rendered.filter(function(x){return String(x.correlationId||x.shareId||'')===correlation;}).length;list.appendChild(gh);lastCorrelation=correlation;}
+      var correlation=String(e.correlationId||e.shareId||'');if(correlate&&correlation&&correlation!==lastCorrelation){var gh=document.createElement('div');gh.className='server-activity-group-head';gh.textContent=(e.shareName||e.name||correlation)+' · '+String(correlationCounts[correlation]||1);list.appendChild(gh);lastCorrelation=correlation;}
       var row = document.createElement('div'); row.className = 'history-row server-activity-row ' + String(e.kind || '');
       var icon = document.createElement('span'); icon.className = 'server-activity-icon'; icon.textContent = pwaServerActivityIcon(e); row.appendChild(icon);
       var main = document.createElement('div'); main.className = 'history-main';
@@ -6407,15 +6590,20 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
     } finally { serverActivityLoading = false; }
   }
   var pwaActivityRefreshTimer = null;
+  var pwaLiveTransfersTimer = null;
+  var PWA_LIVE_TRANSFERS_POLL_MS = 5000;
   function startPwaActivityRefresh() {
-    if (pwaActivityRefreshTimer) return;
-    pwaActivityRefreshTimer = setInterval(function () {
+    if (!pwaActivityRefreshTimer) pwaActivityRefreshTimer = setInterval(function () {
       if (activePwaPanel === 'activity' && document.visibilityState !== 'hidden') loadPwaServerActivity(false).catch(function () {});
     }, 10000);
+    if (!pwaLiveTransfersTimer) pwaLiveTransfersTimer = setInterval(function () {
+      if (activePwaPanel === 'activity' && document.visibilityState !== 'hidden') loadPwaLiveTransfers(false).catch(function () {});
+    }, PWA_LIVE_TRANSFERS_POLL_MS);
   }
   function stopPwaActivityRefresh() {
-    if (!pwaActivityRefreshTimer) return;
-    clearInterval(pwaActivityRefreshTimer); pwaActivityRefreshTimer = null;
+    if (pwaActivityRefreshTimer) { clearInterval(pwaActivityRefreshTimer); pwaActivityRefreshTimer = null; }
+    if (pwaLiveTransfersTimer) { clearInterval(pwaLiveTransfersTimer); pwaLiveTransfersTimer = null; }
+    cancelPwaLiveTransferLoad();
   }
 
   function resendFromHistory(h) {
@@ -6641,13 +6829,18 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
   // Authenticated PWA mutation. A 403 usually means the CSRF token went stale (an
   // old value that used to get cached by the service worker, or a rotated session);
   // refresh device status once to pick up a fresh token and retry.
-  async function appMutate(url, contentType, body) {
+  async function appMutate(url, contentType, body, requestOptions) {
     if (!deviceInfo) await fetchDeviceStatus();
+    requestOptions = requestOptions || {};
     // Keep every JSON mutation syntactically valid, including action-only routes.
     // This avoids proxy/browser differences around Content-Type: application/json
     // combined with an absent request body.
     if (/^application\/json(?:\s*;|$)/i.test(String(contentType || '')) && body == null) body = '{}';
-    var r = await fetch(url, { method: 'POST', credentials: 'same-origin', headers: appMutationHeaders(contentType), body: body });
+    var sendMutation = function () {
+      var opts = { method: 'POST', credentials: 'same-origin', headers: appMutationHeaders(contentType), body: body };
+      return requestOptions.timeoutMs ? fetchWithTimeout(url, opts, requestOptions.timeoutMs) : fetch(url, opts);
+    };
+    var r = await sendMutation();
     // Only retry an actual stale-CSRF response. Other 403s (DLP block, role,
     // origin, revoked capability, etc.) are deliberate policy decisions and must
     // never cause the same upload to be sent a second time.
@@ -6655,7 +6848,7 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
       var err = null; try { err = await r.clone().json(); } catch (_) {}
       if (err && err.error === 'invalid-csrf') {
         await fetchDeviceStatus();
-        r = await fetch(url, { method: 'POST', credentials: 'same-origin', headers: appMutationHeaders(contentType), body: body });
+        r = await sendMutation();
       }
     }
     return r;
@@ -8846,6 +9039,71 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
         !!navigator.standalone || document.referrer.indexOf('android-app://') === 0;
     } catch (_) { return false; }
   }
+
+  // Installed-PWA exit guard: require two Back close requests within a short window.
+  // CloseWatcher handles Android's Back gesture/button directly, so unlike the old
+  // history-based pattern this does not manufacture session-history entries that can
+  // accumulate and force extra Back presses. Chrome/Chromium has supported this close
+  // request primitive on Android since Chrome 126.
+  var PWA_BACK_EXIT_WINDOW_MS = 2000;
+  var pwaBackExitWatcher = null;
+  var pwaBackExitLastAt = 0;
+  var pwaBackExitResetTimer = null;
+  var pwaBackExitClosing = false;
+
+  function markPwaBackExitFirstPress() {
+    pwaBackExitLastAt = Date.now();
+    if (pwaBackExitResetTimer) clearTimeout(pwaBackExitResetTimer);
+    pwaBackExitResetTimer = setTimeout(function () { pwaBackExitLastAt = 0; pwaBackExitResetTimer = null; }, PWA_BACK_EXIT_WINDOW_MS);
+    toast(t('backExit'), 'warn');
+  }
+
+  function armPwaDoubleBackExitWatcher() {
+    if (pwaBackExitClosing || pwaBackExitWatcher || !isStandaloneApp() || typeof window.CloseWatcher !== 'function') return false;
+    var watcher;
+    try { watcher = new window.CloseWatcher(); } catch (_) { return false; }
+    pwaBackExitWatcher = watcher;
+    watcher.addEventListener('cancel', function (event) {
+      var recent = pwaBackExitLastAt > 0 && (Date.now() - pwaBackExitLastAt) <= PWA_BACK_EXIT_WINDOW_MS;
+      // A recent first press means this is the confirmation press: do not cancel it.
+      if (recent) return;
+      // When the platform permits cancellation, consume this Back request as press #1.
+      if (event.cancelable) {
+        event.preventDefault();
+        markPwaBackExitFirstPress();
+      }
+    });
+    watcher.addEventListener('close', function () {
+      if (pwaBackExitWatcher === watcher) pwaBackExitWatcher = null;
+      var recent = pwaBackExitLastAt > 0 && (Date.now() - pwaBackExitLastAt) <= PWA_BACK_EXIT_WINDOW_MS;
+      if (recent) {
+        pwaBackExitClosing = true;
+        pwaBackExitLastAt = 0;
+        if (pwaBackExitResetTimer) { clearTimeout(pwaBackExitResetTimer); pwaBackExitResetTimer = null; }
+        try { window.close(); } catch (_) {}
+        // If the browser refuses script-close, keep the PWA usable instead of leaving
+        // it with no close watcher. A subsequent Back request can start a fresh pair.
+        setTimeout(function () {
+          if (!window.closed && document.visibilityState !== 'hidden') {
+            pwaBackExitClosing = false;
+            armPwaDoubleBackExitWatcher();
+          }
+        }, 250);
+        return;
+      }
+      // Some launches have no cancellable history-action activation yet. In that case
+      // the first Back request closes the watcher itself; treat it as press #1 and re-arm.
+      markPwaBackExitFirstPress();
+      setTimeout(armPwaDoubleBackExitWatcher, 0);
+    });
+    return true;
+  }
+
+  function installPwaDoubleBackExit() {
+    // Non-standalone browser tabs keep their normal browser Back semantics.
+    if (!isStandaloneApp()) return false;
+    return armPwaDoubleBackExitWatcher();
+  }
   function rememberInstalledPwa() {
     try { localStorage.setItem('dx-pwa-installed', String(Date.now())); } catch (_) {}
     try {
@@ -8980,7 +9238,7 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
   function registerServiceWorker() {
     if (!navigator.serviceWorker || typeof navigator.serviceWorker.register !== 'function') return;
     navigator.serviceWorker.addEventListener('controllerchange', refreshToNewVersion);
-    var registrationPromise = navigator.serviceWorker.register('/direct-xfer-pwa-sw.js?v=274', { scope: '/app/' }).then(function (reg) {
+    var registrationPromise = navigator.serviceWorker.register('/direct-xfer-pwa-sw.js?v=275', { scope: '/app/' }).then(function (reg) {
       swReg = reg;
       navigator.serviceWorker.ready.then(function () {
         swReadyForInstall = true;
@@ -10574,61 +10832,19 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
       e.preventDefault(); e.returnValue = '';
       return '';
     });
-    // Android back button: a single press dismisses whatever dialog/overlay is open;
-    // on the bare app view it shows a warning and only a SECOND press within a short
-    // window actually leaves the app (the classic "press back again to exit"). We keep
-    // one throwaway history entry on top as a guard — each back press pops it and fires
-    // popstate, where we decide whether to restore the guard or let the app close. A PWA
-    // cannot close itself programmatically (history.back() at the root entry is a no-op),
-    // so the exit works by leaving the guard OFF, letting the next back reach the root
-    // where Android closes the window. Only wired for the installed / standalone PWA — a
-    // normal browser tab keeps its native back button untouched.
-    if (isStandaloneApp()) {
-      var pwaExitTimer = null;
-      var pushBackGuard = function () { try { history.pushState({ dxBack: true }, ''); } catch (_) {} };
-      // Dismiss the topmost open overlay, mirroring the Escape-key priority above.
-      var dismissTopOverlay = function () {
-        if (scanning || !$('qr-overlay').classList.contains('hidden')) { stopScan(); return true; }
-        var closers = [
-          ['privacy-overlay', closePrivacyInspector], ['ocr-overlay', closeOcr], ['image-stats-overlay', closeImageDetailedStats], ['compare-overlay', closeCompare], ['lightbox-overlay', closeLightbox], ['cmd-overlay', closeCmd], ['annotate-overlay', closeAnnotate],
-          ['voice-overlay', closeVoice], ['multisend-overlay', closeMultiSend], ['destqr-overlay', closeDestQr],
-          ['help-overlay', closeHelp], ['pair-overlay', closePairingDialog], ['received-overlay', closeReceivedDialog],
-          ['dest-form', closeDestForm], ['create-form', closeCreateForm]
-        ];
-        for (var i = 0; i < closers.length; i++) {
-          var el = $(closers[i][0]);
-          if (el && !el.classList.contains('hidden')) { closers[i][1](); return true; }
-        }
-        return false;
-      };
-      if (!(history.state && history.state.dxBack)) pushBackGuard();
-      window.addEventListener('popstate', function () {
-        // Landing back ON the guard entry means we RETURNED from a forward navigation —
-        // e.g. an image opened in the same window via "view", then dismissed with back.
-        // The guard is still in place and we are safely back in the app, so this is NOT
-        // an exit attempt. (Treating it as one made the first back-from-image warn and
-        // disarm the guard, so the next back closed the PWA instead of returning to it.)
-        if (history.state && history.state.dxBack) return;
-        // A back press consumed our guard and moved us to the app's base entry.
-        if (dismissTopOverlay()) { if (pwaExitTimer) { clearTimeout(pwaExitTimer); pwaExitTimer = null; } pushBackGuard(); return; }
-        if (hasActiveTransferRisk()) {
-          toast(t('transferActiveExit'), 'warn');
-          if (pwaExitTimer) { clearTimeout(pwaExitTimer); pwaExitTimer = null; }
-          pushBackGuard();
-          return;
-        }
-        // Bare app view: warn now. The guard is already popped, so a prompt second back
-        // reaches the root entry and Android closes the PWA. If no second press arrives,
-        // re-arm the guard so a later back warns again instead of exiting silently.
-        toast(t('backExit'), 'warn');
-        if (pwaExitTimer) clearTimeout(pwaExitTimer);
-        pwaExitTimer = setTimeout(function () { pwaExitTimer = null; pushBackGuard(); }, 2500);
-      });
-    }
+    // Installed PWA navigation deliberately uses the platform-native Back behavior.
+    // Older builds inserted a synthetic history guard and required a second Back press
+    // to leave the app; repeated guard entries could make exiting require even more
+    // presses. Do not add artificial history entries at the app root. Existing history
+    // is left to Android/Chrome, while beforeunload above still protects active transfers.
     document.addEventListener('visibilitychange', function () {
       if (document.visibilityState === 'visible') {
         if (sending || ($('keep-awake') && $('keep-awake').checked)) acquireWake();
         checkSessionAutoLock();
+        if (activePwaPanel === 'activity') {
+          loadPwaLiveTransfers(true).catch(function () {});
+          loadPwaServerActivity(false).catch(function () {});
+        }
       }
     });
     ['pointerdown', 'keydown', 'touchstart'].forEach(function (eventName) {
@@ -10697,7 +10913,7 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
     // Render the release immediately. It remains visible even if restoration of a
     // legacy transfer later fails, which also makes update diagnostics reliable.
     renderBuildTag();
-    lang = detectLang(); bindEvents(); initPwaNavigation(); installPullToRefresh(); registerServiceWorker(); loadInstallInfo();
+    lang = detectLang(); bindEvents(); initPwaNavigation(); installPwaDoubleBackExit(); installPullToRefresh(); registerServiceWorker(); loadInstallInfo();
     try {
       $('auto-resume').checked = localStorage.getItem('dx-pwa-auto-resume') !== '0';
       $('concurrency-select').value = localStorage.getItem('dx-pwa-concurrency') || (isMobileLike() ? '1' : '2');

@@ -44,9 +44,9 @@ test('server exposes out-of-scope Android PWA relationship documents without har
 });
 
 test('PWA shell build advances so installed clients receive the marker code', () => {
-  assert.match(read('pwa','app.js'), /APP_BUILD = '2026\.08\.16-pwa308'/);
-  assert.match(read('pwa','sw.js'), /VERSION = '2026\.08\.16-pwa308'/);
-  assert.match(read('pwa','index.html'), /v1\.62\.4 · pwa308/);
+  assert.match(read('pwa','app.js'), /APP_BUILD = '2026\.08\.16-pwa317'/);
+  assert.match(read('pwa','sw.js'), /VERSION = '2026\.08\.16-pwa317'/);
+  assert.match(read('pwa','index.html'), /v1\.63\.4 · pwa317/);
 });
 
 test('installed-PWA detection uses the real install manifest URLs and accepts the verified webapp result', () => {
@@ -59,5 +59,5 @@ test('installed-PWA detection uses the real install manifest URLs and accepts th
   assert.doesNotMatch(server, /related_applications:[\s\S]{0,240}\/app\/manifest\.webmanifest/);
   assert.match(app, /apps\.some\(\(app\) => app && app\.platform === 'webapp'\)/);
   assert.doesNotMatch(app, /url\.indexOf\('\/app\/manifest'\)/);
-  assert.match(html, /app\.js\?v=292/);
+  assert.match(html, /app\.js\?v=297/);
 });

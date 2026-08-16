@@ -39,7 +39,7 @@ test('device-only status lists all devices paired to its account', async()=>{
 
   for (const current of [phone, tablet]) {
     const isPhone=current===phone;
-    const statusUrl=`${base}/app/device/status?version=${encodeURIComponent('1.62.4')}&build=${encodeURIComponent('2026.08.16-pwa308')}`;
+    const statusUrl=`${base}/app/device/status?version=${encodeURIComponent('1.63.4')}&build=${encodeURIComponent('2026.08.16-pwa317')}`;
     const r=await fetch(statusUrl,{headers:{Cookie:current.cookie,'User-Agent':isPhone?'Mozilla/5.0 (Linux; Android 16; Pixel 9) AppleWebKit/537.36 Chrome/140 Mobile Safari/537.36':'Mozilla/5.0 (Linux; Android 16; Tablet) AppleWebKit/537.36 Chrome/140 Safari/537.36'},cache:'no-store'});
     assert.equal(r.status,200); const status=await body(r);
     assert.equal(status.paired,true);
@@ -50,7 +50,7 @@ test('device-only status lists all devices paired to its account', async()=>{
     const currentDevice=status.devices.find(d=>d.current);
     assert.equal(currentDevice.id,current.id);
     assert.equal(currentDevice.platform,'android');
-    assert.equal(currentDevice.appVersion,'1.62.4');
-    assert.equal(currentDevice.appBuild,'2026.08.16-pwa308');
+    assert.equal(currentDevice.appVersion,'1.63.4');
+    assert.equal(currentDevice.appBuild,'2026.08.16-pwa317');
   }
 });

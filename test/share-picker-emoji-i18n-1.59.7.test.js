@@ -35,7 +35,7 @@ test('create and edit share forms still use pk.emoji instead of a hardcoded labe
   assert.match(html, /id="edit-emoji"/);
 });
 
-test('1.62.4 admin script is cache-busted after translation update', () => {
+test('1.63.4 admin script is cache-busted after translation update', () => {
   const html = read('public', 'index.html');
-  assert.match(html, /<script src="\/app\.js\?v=292"><\/script>/);
+  assert.match(html, /<script src="\/app\.js\?v=297"><\/script>/);
 });

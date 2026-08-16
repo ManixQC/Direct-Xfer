@@ -29,6 +29,7 @@ const { hashPassword, parseHash, verifyPassword } = require('./lib/auth-utils');
 const { previewInfo, imageContentType, photoExt, imageDimensions, parseExifTiff, readPhotoMetadata } = require('./lib/photo-utils');
 const { SUBTITLE_MAX_BYTES, srtToVtt, subtitleTracksFor } = require('./lib/subtitle-utils');
 const { readZipEntries, readFileCapped } = require('./lib/file-content-utils');
+const { openFd, closeFd, statFd, readFd } = require('./lib/fd-utils');
 const { renderKind, highlightCode, renderMarkdown } = require('./lib/text-render');
 const { SEMANTIC_GROUPS, normalizeSearchText, searchTokens, semanticStem, semanticTerms } = require('./lib/search-utils');
 const {
@@ -1433,6 +1434,9 @@ function startTransfer(req, meta, expectedBytes) {
     abort: null, // set by the caller to allow aborting
     resumed: !!meta.resumed,
     resumeOffset: Math.max(0, Number(meta.resumeOffset) || 0),
+    transient: !!meta.transient, // physical fragment of one resumable logical transfer; never journal it
+    stopRequested: false,
+    ended: false,
   };
   const transferShare = meta.shareId ? getById(meta.shareId) : null;
   if (transferShare) {
@@ -1460,7 +1464,7 @@ function startTransfer(req, meta, expectedBytes) {
   const rc = rtok ? recipientByToken.get(rtok) : null;
   if (rc && rc.recipient) { t.recipientToken = rc.recipient.token; t.recipientName = rc.recipient.name; }
   activeTransfers.set(id, t);
-  emitLiveActivity('transfer-start', { shareId:t.shareId, name:t.name, direction:t.direction, bytes:0, ip:pubIp(t.ip || ''), status:'active' });
+  if (!t.transient) emitLiveActivity('transfer-start', { shareId:t.shareId, name:t.name, direction:t.direction, bytes:0, ip:pubIp(t.ip || ''), status:'active' });
   schedulePresenceBroadcast(); // a new download may have started
   return t;
 }
@@ -2053,9 +2057,15 @@ function recordRecipientView(req) {
 
 // Ends a transfer and archives it in the history (completed or not).
 function endTransfer(t, completed, reason = null) {
-  if (!t) return;
+  // Several stream/error/abort events may race on the same transfer (especially
+  // when an administrator stops it from a live view). Archive/account exactly once.
+  if (!t || t.ended) return;
+  t.ended = true;
   activeTransfers.delete(t.id);
   schedulePresenceBroadcast(); // a download in progress just ended
+  // Resumable-download fragments are live telemetry only. The logical completed
+  // download is recorded once by completeManagedDownload(), never once per range.
+  if (t.transient) return;
   const endedAt = Date.now();
   const durationMs = endedAt - t.startedAt;
   const record = {
@@ -2226,7 +2236,7 @@ function listTransfers(allowedShareIds) {
         country: t.country,
         countryCode: t.countryCode,
         flag: t.flag,
-        bytes: t.bytes,
+        bytes: Number.isFinite(t.progressBytes) ? Math.max(0, t.progressBytes) : t.bytes,
         expectedBytes: t.expectedBytes || 0,
         isZip: !!t.isZip,
         zipTotalBytes: t.zipTotalBytes || 0,
@@ -2237,8 +2247,29 @@ function listTransfers(allowedShareIds) {
         stalled: durationMs >= TRANSFER_STALL_MS && idleMs >= TRANSFER_STALL_MS,
         stallThresholdMs: TRANSFER_STALL_MS,
         avgBps: durationMs > 0 ? Math.round((t.bytes / durationMs) * 1000) : 0,
+        resumed: !!t.resumed,
+        stopping: !!t.stopRequested,
+        stoppable: typeof t.abort === 'function' && !t.stopRequested && !t.ended,
       };
     });
+}
+
+function requestActiveTransferStop(t) {
+  if (!t || t.ended || !activeTransfers.has(t.id)) return { ok:false, error:'not-found' };
+  // Make repeated taps/requests idempotent while the underlying socket is closing.
+  if (t.stopRequested) return { ok:true, stopping:true, alreadyRequested:true };
+  if (typeof t.abort !== 'function') return { ok:false, error:'not-stoppable' };
+  const previousFailureReason = t.failureReason;
+  t.stopRequested = true;
+  t.failureReason = 'stopped';
+  try {
+    t.abort();
+    return { ok:true, stopping:true };
+  } catch (_) {
+    t.stopRequested = false;
+    t.failureReason = previousFailureReason;
+    return { ok:false, error:'stop-failed' };
+  }
 }
 
 function listHistory(allowedShareIds) {
@@ -7840,17 +7871,17 @@ async function extractPdfSearchText(abs) {
   return out.join(' ').replace(/\s+/g, ' ').slice(0, SEARCH_INDEX_CONTENT_CAP);
 }
 async function extractSelectedZipText(abs, wanted) {
-  let fh;
+  let fd = null;
   try {
-    fh = await fs.promises.open(abs, 'r'); const st = await fh.stat();
+    fd = await openFd(abs, 'r'); const st = await statFd(fd);
     if (st.size < 22 || st.size > 512 * 1024 * 1024) return '';
     const tailLen = Math.min(st.size, 65557), tail = Buffer.alloc(tailLen);
-    await fh.read(tail, 0, tailLen, st.size - tailLen);
+    await readFd(fd, tail, 0, tailLen, st.size - tailLen);
     let eocd = -1; for (let i = tail.length - 22; i >= 0; i--) if (tail.readUInt32LE(i) === 0x06054b50) { eocd = i; break; }
     if (eocd < 0) return '';
     const cdSize = tail.readUInt32LE(eocd + 12), cdOffset = tail.readUInt32LE(eocd + 16);
     if (cdOffset === 0xffffffff || cdSize > 16 * 1024 * 1024) return '';
-    const cd = Buffer.alloc(Math.min(cdSize, st.size - cdOffset)); await fh.read(cd, 0, cd.length, cdOffset);
+    const cd = Buffer.alloc(Math.min(cdSize, st.size - cdOffset)); await readFd(fd, cd, 0, cd.length, cdOffset);
     let p = 0, total = 0; const chunks = [];
     while (p + 46 <= cd.length && total < 8 * 1024 * 1024) {
       if (cd.readUInt32LE(p) !== 0x02014b50) break;
@@ -7858,10 +7889,10 @@ async function extractSelectedZipText(abs, wanted) {
       const nameLen = cd.readUInt16LE(p + 28), extraLen = cd.readUInt16LE(p + 30), commentLen = cd.readUInt16LE(p + 32), localOff = cd.readUInt32LE(p + 42);
       const name = cd.toString('utf8', p + 46, p + 46 + nameLen);
       if (wanted(name) && compSize <= 4 * 1024 * 1024 && uncomp <= 8 * 1024 * 1024 && localOff !== 0xffffffff) {
-        const lh = Buffer.alloc(30); await fh.read(lh, 0, 30, localOff);
+        const lh = Buffer.alloc(30); await readFd(fd, lh, 0, 30, localOff);
         if (lh.readUInt32LE(0) === 0x04034b50) {
           const ln = lh.readUInt16LE(26), le = lh.readUInt16LE(28), data = Buffer.alloc(compSize);
-          await fh.read(data, 0, compSize, localOff + 30 + ln + le);
+          await readFd(fd, data, 0, compSize, localOff + 30 + ln + le);
           let dec = null;
           if (method === 0) dec = data; else if (method === 8) { try { dec = zlib.inflateRawSync(data, { maxOutputLength: 8 * 1024 * 1024 }); } catch (_) {} }
           if (dec) { total += dec.length; chunks.push(xmlToSearchText(dec.toString('utf8'))); }
@@ -7871,7 +7902,7 @@ async function extractSelectedZipText(abs, wanted) {
     }
     return chunks.join(' ').slice(0, SEARCH_INDEX_CONTENT_CAP);
   } catch (_) { return ''; }
-  finally { if (fh) try { await fh.close(); } catch (_) {} }
+  finally { if (fd !== null) try { await closeFd(fd); } catch (_) {} }
 }
 async function extractZipTextContent(abs, options) {
   options = options || {};
@@ -7880,13 +7911,13 @@ async function extractZipTextContent(abs, options) {
   const maxTotalBytes = Math.max(16384, Math.min(SEARCH_INDEX_CONTENT_CAP, Number(options.maxTotalBytes) || SEARCH_INDEX_CONTENT_CAP));
   const withMeta = !!options.withMeta;
   const result = (text, extra) => withMeta ? { text:String(text || ''), truncated:!!(extra && extra.truncated), incompleteEntries:Number(extra && extra.incompleteEntries) || 0, totalEntries:Number(extra && extra.totalEntries) || 0, entriesVisited:Number(extra && extra.entriesVisited) || 0 } : String(text || '');
-  let fh;
+  let fd = null;
   try {
-    fh = await fs.promises.open(abs, 'r');
-    const st = await fh.stat();
+    fd = await openFd(abs, 'r');
+    const st = await statFd(fd);
     if (st.size < 22 || st.size > 512 * 1024 * 1024) return result('', { truncated:true, incompleteEntries:1 });
     const tailLen = Math.min(st.size, 65557), tail = Buffer.alloc(tailLen);
-    await fh.read(tail, 0, tailLen, st.size - tailLen);
+    await readFd(fd, tail, 0, tailLen, st.size - tailLen);
     let eocd = -1;
     for (let i = tail.length - 22; i >= 0; i--) if (tail.readUInt32LE(i) === 0x06054b50) { eocd = i; break; }
     if (eocd < 0) return result('', { truncated:true, incompleteEntries:1 });
@@ -7896,7 +7927,7 @@ async function extractZipTextContent(abs, options) {
       return result('', { truncated:true, incompleteEntries:1, totalEntries });
     }
     const cd = Buffer.alloc(Math.min(cdSize, Math.max(0, st.size - cdOffset)));
-    await fh.read(cd, 0, cd.length, cdOffset);
+    await readFd(fd, cd, 0, cd.length, cdOffset);
     let p = 0, visited = 0, total = 0, incompleteEntries = 0, truncated = false;
     const chunks = [];
     while (p + 46 <= cd.length && visited < maxEntries && total < maxTotalBytes) {
@@ -7912,10 +7943,10 @@ async function extractZipTextContent(abs, options) {
         else if ((compSize > maxEntryBytes || uncomp > maxEntryBytes || localOff === 0xffffffff) && textNamed) incompleteEntries++;
         else if (!(flags & 1) && compSize <= maxEntryBytes && uncomp <= maxEntryBytes && localOff !== 0xffffffff && (method === 0 || method === 8)) {
           try {
-            const lh = Buffer.alloc(30); await fh.read(lh, 0, 30, localOff);
+            const lh = Buffer.alloc(30); await readFd(fd, lh, 0, 30, localOff);
             if (lh.readUInt32LE(0) !== 0x04034b50) throw new Error('zip-local-header');
             const ln = lh.readUInt16LE(26), le = lh.readUInt16LE(28), data = Buffer.alloc(compSize);
-            await fh.read(data, 0, compSize, localOff + 30 + ln + le);
+            await readFd(fd, data, 0, compSize, localOff + 30 + ln + le);
             let dec = null;
             if (method === 0) dec = data; else { try { dec = zlib.inflateRawSync(data, { maxOutputLength:maxEntryBytes }); } catch (_) {} }
             if (!dec && textNamed) incompleteEntries++;
@@ -7936,7 +7967,7 @@ async function extractZipTextContent(abs, options) {
     if (visited < totalEntries) { truncated = true; incompleteEntries += Math.max(1, totalEntries - visited); }
     return result(chunks.join('\n').slice(0, maxTotalBytes), { truncated, incompleteEntries, totalEntries, entriesVisited:visited });
   } catch (_) { return result('', { truncated:true, incompleteEntries:1 }); }
-  finally { if (fh) try { await fh.close(); } catch (_) {} }
+  finally { if (fd !== null) try { await closeFd(fd); } catch (_) {} }
 }
 
 function runSearchOcrCommand(bin, args, options) {
@@ -8959,6 +8990,24 @@ function mergeDownloadRanges(ranges, start, end) {
 function downloadRangesComplete(ranges, total) {
   return total === 0 || (Array.isArray(ranges) && ranges.length === 1 && ranges[0][0] === 0 && ranges[0][1] >= total - 1);
 }
+function downloadRangesCoveredBytes(ranges, total) {
+  const cap = Math.max(0, Number(total) || 0);
+  if (!cap || !Array.isArray(ranges)) return 0;
+  const rows = ranges.map((row) => {
+    if (!Array.isArray(row) || !Number.isSafeInteger(row[0]) || !Number.isSafeInteger(row[1]) || row[0] > row[1]) return null;
+    const from = Math.max(0, Math.min(cap - 1, row[0]));
+    const to = Math.max(0, Math.min(cap - 1, row[1]));
+    return to >= from ? [from, to] : null;
+  }).filter(Boolean).sort((a, b) => a[0] - b[0]);
+  let bytes = 0, from = -1, to = -1;
+  for (const row of rows) {
+    if (from < 0) { from = row[0]; to = row[1]; continue; }
+    if (row[0] <= to + 1) { to = Math.max(to, row[1]); continue; }
+    bytes += to - from + 1; from = row[0]; to = row[1];
+  }
+  if (from >= 0) bytes += to - from + 1;
+  return Math.min(cap, bytes);
+}
 function getDownloadResumeSession(req, absPath, stat, transferMeta, filename, resumeScope) {
   const id = validDownloadResumeId(req.headers['x-direct-xfer-resume-id']);
   const scope = String((transferMeta && transferMeta.shareId) || resumeScope || '').trim().slice(0, 240);
@@ -9137,15 +9186,44 @@ function streamFile(req, res, absPath, filename, onServed, transferMeta, serveOp
     // Managed chunks are physical fragments of one logical download. Recording
     // each fragment as a transfer would pollute history and per-link counters;
     // completeManagedDownload() writes the single logical transfer instead.
-    const transfer = transferMeta && !managedResume.session ? startTransfer(req, transferMeta, end - start + 1) : null;
+    // Track managed Range/resume fragments in activeTransfers too so both live
+    // dashboards show what is actually moving. They are marked transient and are
+    // never written to history/stats; completeManagedDownload() records the single
+    // logical transfer after all ranges have arrived.
+    const managedSession = managedResume.session || null;
+    const managedPriorRanges = managedSession && Array.isArray(managedSession.ranges)
+      ? managedSession.ranges.filter((row) => Array.isArray(row) && row[1] >= start && row[0] <= end).slice().sort((a, b) => Number(a[0]) - Number(b[0]))
+      : [];
+    const managedBaselineBytes = managedSession ? downloadRangesCoveredBytes(managedSession.ranges, total) : 0;
+    const transfer = transferMeta
+      ? startTransfer(req, { ...transferMeta, resumed:!!managedSession && (managedBaselineBytes > 0 || start > 0), resumeOffset:managedSession && (managedBaselineBytes > 0 || start > 0) ? start : 0, transient:!!managedSession }, managedSession ? total : end - start + 1)
+      : null;
     if (transfer) {
-      transfer.notify = isFullGet; // only notify a complete download
+      transfer.notify = isFullGet; // only notify a complete non-managed download
+      if (managedSession) transfer.progressBytes = managedBaselineBytes;
       if (burnClaim) transfer.burnClaim = burnClaim;
       if (transfer.notify) noteCenterConcurrentDownloadStart(transfer);
       transfer.abort = () => {
         try { stream.destroy(); if (throttle) throttle.destroy(); res.destroy(); } catch (_) {}
       };
-      stream.on('data', (chunk) => { transfer.bytes += chunk.length; transfer.lastActivity = Date.now(); });
+      let managedCursor = start;
+      stream.on('data', (chunk) => {
+        transfer.bytes += chunk.length;
+        if (managedSession) {
+          const chunkStart = managedCursor;
+          const chunkEnd = Math.min(end, chunkStart + chunk.length - 1);
+          let overlap = 0;
+          for (const row of managedPriorRanges) {
+            if (row[0] > chunkEnd) break;
+            if (row[1] < chunkStart) continue;
+            overlap += Math.max(0, Math.min(chunkEnd, row[1]) - Math.max(chunkStart, row[0]) + 1);
+          }
+          const novel = Math.max(0, chunkEnd - chunkStart + 1 - overlap);
+          transfer.progressBytes = Math.min(total, Math.max(0, Number(transfer.progressBytes) || 0) + novel);
+          managedCursor = chunkEnd + 1;
+        }
+        transfer.lastActivity = Date.now();
+      });
     }
     stream.on('error', () => {
       if (transfer) transfer.failureReason = 'read-error';
@@ -9180,17 +9258,17 @@ function streamFile(req, res, absPath, filename, onServed, transferMeta, serveOp
 // ETA: archiver's own 'progress' event is unreliable for a live, piped download.
 function countingFileStream(absPath, onBytes) {
   return Readable.from((async function* () {
-    const fh = await fs.promises.open(absPath, 'r');
+    // Create the ReadStream only when the archive starts consuming this entry.
+    // autoClose + destroy() covers normal completion, errors and aborted ZIPs
+    // without relying on FileHandle garbage-collection cleanup.
+    const stream = fs.createReadStream(absPath, { highWaterMark: 64 * 1024 });
     try {
-      while (true) {
-        const buf = Buffer.allocUnsafe(64 * 1024);
-        const { bytesRead } = await fh.read(buf, 0, buf.length, null);
-        if (!bytesRead) break;
-        if (onBytes) onBytes(bytesRead);
-        yield bytesRead === buf.length ? buf : buf.subarray(0, bytesRead);
+      for await (const buf of stream) {
+        if (onBytes) onBytes(buf.length);
+        yield buf;
       }
     } finally {
-      await fh.close();
+      stream.destroy();
     }
   })());
 }
@@ -10231,12 +10309,12 @@ async function inboxContentReason(s, absPath) {
   if (!s || !s.blockExecutables) return null;
   let fd = null;
   try {
-    fd = await fs.promises.open(absPath, 'r');
+    fd = await openFd(absPath, 'r');
     const buf = Buffer.alloc(8);
-    const { bytesRead } = await fd.read(buf, 0, 8, 0);
+    const { bytesRead } = await readFd(fd, buf, 0, 8, 0);
     if (sniffExecutable(buf.subarray(0, bytesRead))) return 'content-blocked';
   } catch (_) {}
-  finally { if (fd) try { await fd.close(); } catch (_) {} }
+  finally { if (fd !== null) try { await closeFd(fd); } catch (_) {} }
   return null;
 }
 // Server-wide reception storage cap. Per-link quotas (maxTotalBytes)
@@ -10597,8 +10675,14 @@ async function reserveUniqueUploadPath(dir, filename) {
   let i = 1;
   while (true) {
     try {
-      const handle = await fs.promises.open(candidate, 'wx', 0o600);
-      await handle.close();
+      const fd = await openFd(candidate, 'wx', 0o600);
+      try { await closeFd(fd); }
+      catch (closeError) {
+        // A reserved placeholder whose descriptor could not be closed must not
+        // be handed to the upload path as if reservation completed cleanly.
+        try { await fs.promises.unlink(candidate); } catch (_) {}
+        throw closeError;
+      }
       return candidate;
     } catch (e) {
       if (!e || e.code !== 'EEXIST') throw e;
@@ -11771,13 +11855,13 @@ function readLogTail(maxBytes) {
 // Non-blocking variant for HTTP handlers. Reading and parsing a busy 8–16 MB
 // journal must not pause downloads and uploads on Node's single event loop.
 async function readLogTailAsync(maxBytes) {
-  let fh;
+  let fd = null;
   try {
-    fh = await fs.promises.open(LOG_FILE, 'r');
-    const size = (await fh.stat()).size;
+    fd = await openFd(LOG_FILE, 'r');
+    const size = (await statFd(fd)).size;
     const want = Math.min(size, maxBytes);
     const buf = Buffer.alloc(want);
-    if (want > 0) await fh.read(buf, 0, want, size - want);
+    if (want > 0) await readFd(fd, buf, 0, want, size - want);
     let text = buf.toString('utf8');
     if (want < size) {
       const nl = text.indexOf('\n');
@@ -11787,7 +11871,7 @@ async function readLogTailAsync(maxBytes) {
   } catch (_) {
     return [];
   } finally {
-    if (fh) try { await fh.close(); } catch (_) {}
+    if (fd !== null) try { await closeFd(fd); } catch (_) {}
   }
 }
 
@@ -12417,11 +12501,11 @@ function makeDedupeRanges(size, nonce) {
   return ranges;
 }
 async function readDedupeRange(filePath, offset, length) {
-  const fh = await fs.promises.open(filePath, 'r');
+  const fd = await openFd(filePath, 'r');
   try {
-    const buf = Buffer.alloc(length), got = await fh.read(buf, 0, length, offset);
+    const buf = Buffer.alloc(length), got = await readFd(fd, buf, 0, length, offset);
     return got.bytesRead === length ? buf : buf.subarray(0, got.bytesRead);
-  } finally { await fh.close().catch(() => {}); }
+  } finally { await closeFd(fd).catch(() => {}); }
 }
 async function verifyDedupeProof(challenge, proof) {
   if (!challenge || !Array.isArray(proof) || proof.length !== challenge.ranges.length) return false;
@@ -12945,8 +13029,17 @@ async function handleUpload(req, res) {
       }
       if (!res.headersSent) { try { res.status(inboxRejectStatus(reason2)).json({ error: reason2 || 'aborted' }); } catch (_) {} }
     };
-    // Admin stop → block further chunks and drop the partial.
-    transfer.abort = () => { stoppedUploads.set(uploadId, Date.now() + 3600 * 1000); fail('stopped', false); };
+    // Admin/PWA stop must remain effective even BETWEEN resumable chunks. After a
+    // network drop `failed` is already true and the previous closure used to turn
+    // into a no-op, leaving the partial file + live row around until timeout.
+    transfer.abort = () => {
+      stoppedUploads.set(uploadId, Date.now() + 3600 * 1000);
+      if (!failed) { fail('stopped', false); return; }
+      uploadsInFlight.delete(uploadId);
+      uploadTransfers.delete(uploadId);
+      try { fs.unlink(part, () => {}); } catch (_) {}
+      endTransfer(transfer, false, 'stopped');
+    };
 
     req.on('end', () => { reqEnded = true; });
     req.on('close', () => { if (!reqEnded && !failed) fail('aborted', true); }); // keep .part for resume
@@ -17970,12 +18063,10 @@ adminRouter.post('/transfers/:id/stop', (req, res) => {
   if (req.session.role === 'operator' && !ownsShare(req, getById(t.shareId))) {
     return res.status(403).json({ error: 'forbidden' });
   }
-  t.failureReason = 'stopped';
-  if (typeof t.abort === 'function') {
-    try { t.abort(); } catch (_) {}
-  }
-  auditReq(req, 'transfer-stopped', `${t.name || t.shareId || t.id} · ${t.direction || 'transfer'}`);
-  res.json({ ok: true });
+  const stopped = requestActiveTransferStop(t);
+  if (!stopped.ok) return res.status(stopped.error === 'not-found' ? 404 : stopped.error === 'not-stoppable' ? 409 : 500).json({ error:stopped.error });
+  if (!stopped.alreadyRequested) auditReq(req, 'transfer-stopped', `${t.name || t.shareId || t.id} · ${t.direction || 'transfer'}`);
+  res.json(stopped);
 });
 
 // Per-link statistics (aggregates), including links that were later revoked.
@@ -21469,6 +21560,7 @@ function noteCenterAutoDisabled(s, reason) {
 }
 
 const centerVolumeTrackers = new Map();
+const CENTER_HIGH_DOWNLOAD_VOLUME_BYTES = 100 * 1024 * 1024 * 1024; // 100 GB, within the 15-minute traffic window
 const centerViralTrackers = new Map();
 const CENTER_UNUSED_MS = 30 * DAY_MS;
 function noteCenterVisitorDevice(s, req) {
@@ -21506,8 +21598,8 @@ function noteCenterHighVolume(s, bytes) {
   if (centerVolumeTrackers.size > 2000) {
     for (const [k,v] of [...centerVolumeTrackers].sort((a,b)=>(a[1].lastSeenAt||0)-(b[1].lastSeenAt||0)).slice(0,centerVolumeTrackers.size-1800)) centerVolumeTrackers.delete(k);
   }
-  const total=tr.events.reduce((a,e)=>a+e.bytes,0), baseline=Math.max(50*1024*1024, Math.max(1, Number(s.size)||0)*5);
-  if (total >= baseline && now-tr.alertedAt>30*60000) {
+  const total=tr.events.reduce((a,e)=>a+e.bytes,0);
+  if (total >= CENTER_HIGH_DOWNLOAD_VOLUME_BYTES && now-tr.alertedAt>30*60000) {
     tr.alertedAt=now; addShareCenterNotification(s,'high-download-volume',{bytes:total,count:tr.events.length,detail:`${formatBytes(total)} / 15 min`,dedupeKey:`high-volume:${s.id}:${Math.floor(now/(30*60000))}`});
   }
 }
@@ -22604,6 +22696,44 @@ function pwaCanSeeActivityEvent(req, event) {
   // Its activity view is deliberately scoped to records it can manage.
   return false;
 }
+function pwaCanSeeActiveTransfer(req, transfer) {
+  if (!transfer) return false;
+  const session = req.pwaSession || null;
+  if (pwaViewerIsAdmin(req) || (session && session.role === 'auditor')) return true;
+  const share = transfer.shareId ? getById(String(transfer.shareId)) : null;
+  return !!(share && canManagePwaImage(req, share));
+}
+function pwaCanStopActiveTransfer(req, transfer) {
+  const session = req.pwaSession || null;
+  if (session && session.role === 'auditor') return false;
+  return !!(pwaCanSeeActiveTransfer(req, transfer) && transfer && typeof transfer.abort === 'function' && !transfer.stopRequested && !transfer.ended);
+}
+function pwaLiveTransfersForRequest(req) {
+  if (pwaViewerIsAdmin(req) || (req.pwaSession && req.pwaSession.role === 'auditor')) {
+    return listTransfers(null).map((row) => ({ ...row, canStop:pwaCanStopActiveTransfer(req, activeTransfers.get(row.id)) }));
+  }
+  const allowed = new Set();
+  for (const transfer of activeTransfers.values()) {
+    if (pwaCanSeeActiveTransfer(req, transfer) && transfer.shareId) allowed.add(transfer.shareId);
+  }
+  return listTransfers(allowed).map((row) => ({ ...row, canStop:pwaCanStopActiveTransfer(req, activeTransfers.get(row.id)) }));
+}
+app.get('/app/activity/transfers', (req, res) => {
+  const transfers = pwaLiveTransfersForRequest(req);
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ transfers, stalledCount:transfers.filter((row) => row.stalled).length, stallThresholdMs:TRANSFER_STALL_MS, generatedAt:Date.now() });
+});
+app.post('/app/activity/transfers/:id/stop', pwaJsonParser, (req, res) => {
+  const transfer = activeTransfers.get(req.params.id);
+  if (!transfer || !pwaCanSeeActiveTransfer(req, transfer)) return res.status(404).json({ error:'not-found' });
+  const session = req.pwaSession || null;
+  if (session && session.role === 'auditor') return res.status(403).json({ error:'forbidden' });
+  const stopped = requestActiveTransferStop(transfer);
+  if (!stopped.ok) return res.status(stopped.error === 'not-found' ? 404 : stopped.error === 'not-stoppable' ? 409 : 500).json({ error:stopped.error });
+  if (!stopped.alreadyRequested) pwaAuditReq(req, 'transfer-stopped', `via PWA — ${transfer.name || transfer.shareId || transfer.id} · ${transfer.direction || 'transfer'}`);
+  res.json(stopped);
+});
+
 app.get('/app/activity/recent', (req, res) => {
   const limit = Math.max(1, Math.min(1000, parseInt(req.query.limit, 10) || 500));
   const visible = (Array.isArray(state.activityLog) ? state.activityLog : []).filter((event) => pwaCanSeeActivityEvent(req, event));

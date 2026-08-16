@@ -71,7 +71,7 @@ test('TLS diagnostics expose certificate identity, validity, trust and safe fixe
 });
 
 test('PWA build/cache was advanced to deliver DLP explanation changes', () => {
-  assert.match(pwa, /2026\.08\.16-pwa308/);
-  assert.match(sw, /2026\.08\.16-pwa308/);
-  assert.match(sw, /\/app\/app\.js\?v=290/);
+  assert.match(pwa, /2026\.08\.16-pwa317/);
+  assert.match(sw, /2026\.08\.16-pwa317/);
+  assert.match(sw, /\/app\/app\.js\?v=297/);
 });

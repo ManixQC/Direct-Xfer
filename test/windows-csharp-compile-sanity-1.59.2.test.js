@@ -7,7 +7,7 @@ const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const launcher = fs.readFileSync(path.join(root, 'windows-launcher', 'Program.cs'), 'utf8');
 
-test('1.62.4 initial-password dialog uses legal C# var declarations', () => {
+test('1.63.4 initial-password dialog uses legal C# var declarations', () => {
   assert.match(launcher, /var username = GetString\(payload, "username"\);\s*var password = GetString\(payload, "password"\);/);
   assert.doesNotMatch(launcher, /var\s+username\s*=.*?,\s*password\s*=/);
 });

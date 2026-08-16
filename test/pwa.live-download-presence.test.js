@@ -133,6 +133,18 @@ test('a download in progress is reflected per-link on /api and /app presence, th
     assert.ok(await pollPresence(adminCookie, '/api', share.id, 1), 'admin presence should show 1 in progress\n' + logs);
     assert.ok(await pollPresence(deviceCookie, '/app', share.id, 1), 'PWA presence should show 1 in progress');
 
+    // Activity parity: the PWA live-transfer feed exposes the same active transfer
+    // while applying its own paired-device/session authorization server-side.
+    const pwaLive = await fetch(`${base}/app/activity/transfers`, { headers: { Cookie: deviceCookie }, cache: 'no-store' });
+    assert.equal(pwaLive.status, 200, JSON.stringify(await json(pwaLive.clone())));
+    const pwaLiveBody = await json(pwaLive);
+    assert.ok(Array.isArray(pwaLiveBody.transfers));
+    const active = pwaLiveBody.transfers.find((tf) => tf && tf.name === 'big.bin' && tf.direction === 'down');
+    assert.ok(active, 'PWA Activity live transfers should expose the in-progress download');
+    assert.equal(active.canStop, true, 'owner-paired PWA may stop its visible active transfer');
+    assert.ok(Number(active.bytes) >= 0);
+    assert.ok(Number(active.durationMs) >= 0);
+
     // SSE: the stream must deliver a presence event with the same count.
     const sse = await fetch(`${base}/api/shares/presence/stream`, { headers: { Cookie: adminCookie, Accept: 'text/event-stream' } });
     assert.equal(sse.status, 200);
@@ -154,6 +166,19 @@ test('a download in progress is reflected per-link on /api and /app presence, th
     }
     try { await sseReader.cancel(); } catch (_) {}
     assert.equal(gotCount, 1, 'SSE presence event should report 1 in progress');
+
+    // The owner-paired PWA gets the same stop capability as the standard live
+    // transfer view, protected by the normal /app Origin + CSRF checks.
+    const deviceStatus = await fetch(`${base}/app/device/status`, { headers: { Cookie: deviceCookie }, cache: 'no-store' });
+    assert.equal(deviceStatus.status, 200);
+    const deviceCsrf = (await json(deviceStatus)).csrf;
+    assert.ok(deviceCsrf);
+    const stop = await fetch(`${base}/app/activity/transfers/${encodeURIComponent(active.id)}/stop`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': deviceCsrf, Cookie: deviceCookie, Origin: base },
+      body: '{}',
+    });
+    assert.equal(stop.status, 200, JSON.stringify(await json(stop.clone())));
   } finally {
     ac.abort();
     try { await reader.cancel(); } catch (_) {}

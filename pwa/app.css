@@ -1303,7 +1303,7 @@ body.privacy-names .preview-name { letter-spacing: .04em; }
   margin: 0 auto;
   padding: 7px max(8px, env(safe-area-inset-right)) max(7px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
   display: grid;
-  /* Five tabs (send, images, shares, activity, settings) on a single row. */
+  /* Five tabs for regular sessions; owner/admin gains System Health as a sixth tab. */
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 4px;
   border-top: 1px solid var(--border);
@@ -1313,6 +1313,15 @@ body.privacy-names .preview-name { letter-spacing: .04em; }
   -webkit-backdrop-filter: blur(18px);
   z-index: 55;
 }
+
+.pwa-bottom-nav.has-system-health { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.pwa-nav-item > span:not(.pwa-nav-icon):not(.pwa-nav-badge) {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .pwa-nav-item {
   position: relative;
   min-width: 0;
@@ -1333,7 +1342,7 @@ body.privacy-names .preview-name { letter-spacing: .04em; }
 }
 .pwa-nav-item .pwa-nav-icon { display: inline-flex; align-items: center; justify-content: center; line-height: 0; }
 /* Inline SVG icons on a shared 24×24 grid render at an identical size (unlike text
-   glyphs from different Unicode blocks, which varied). One box size controls all five. */
+   glyphs from different Unicode blocks, which varied). One box size controls all six. */
 .pwa-nav-item .pwa-nav-icon svg { width: 22px; height: 22px; display: block; }
 .pwa-nav-item.active {
   color: var(--accent-2);
@@ -1373,8 +1382,8 @@ body.privacy-names .preview-name { letter-spacing: .04em; }
   .destination-toolbar .btn.dest-new { grid-column: span 2; width: 100%; min-width: 0; }
   .panel-heading { display: grid; gap: 2px; margin-top: 1px; }
   .panel-summary { font-size: .76rem; }
-  .pwa-nav-item { min-height: 57px; font-size: .66rem; padding-inline: 1px; }
-  .pwa-nav-item .pwa-nav-icon svg { width: 20px; height: 20px; }
+  .pwa-nav-item { min-height: 57px; font-size: .62rem; padding-inline: 0; }
+  .pwa-nav-item .pwa-nav-icon svg { width: 19px; height: 19px; }
   .pwa-bottom-nav { gap: 3px; padding-inline: 4px; }
   .details-card[data-pwa-panel] > summary { display: none; }
   .details-card[data-pwa-panel] { padding-top: 14px; }

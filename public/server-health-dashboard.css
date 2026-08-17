@@ -9,3 +9,32 @@
 @media(max-width:1100px){.server-health-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.server-health-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:760px){.server-health-panel{margin:10px}.server-health-overview{grid-template-columns:1fr}.server-health-grid{grid-template-columns:1fr}.server-health-wide{grid-column:auto}.server-health-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.server-health-actions{justify-content:flex-start}.server-health-row{grid-template-columns:1fr;gap:2px}.server-health-row strong{text-align:left}.server-health-history{min-height:210px}.server-health-history svg{height:210px}}
 @media(max-width:430px){.server-health-kpis{grid-template-columns:1fr}.server-health-score{align-items:flex-start}.server-health-head{display:block}.server-health-actions{margin-top:10px}}
+
+/* Santé Système vit maintenant dans une page autonome : les séparateurs .dash-section
+   ne sont plus des éléments d'une grille. Neutraliser la marge négative héritée du
+   dashboard évite que les cartes suivantes remontent sur leurs titres. */
+.server-health-panel > .dash-section{
+  display:block;
+  position:relative;
+  z-index:1;
+  margin:22px 0 10px;
+  padding:12px 2px 0;
+  line-height:1.35;
+  min-height:1.35em;
+  overflow:visible;
+}
+.server-health-panel > .dash-section:first-of-type{margin-top:18px}
+.server-health-panel .chart-panel{
+  min-height:0;
+  overflow:visible;
+}
+.server-health-panel .chart-title{
+  flex:0 0 auto;
+  min-height:1.35em;
+  line-height:1.35;
+  overflow:visible;
+  overflow-wrap:anywhere;
+}
+@media(max-width:760px){
+  .server-health-panel > .dash-section{margin:18px 0 9px;padding-top:10px}
+}

@@ -25040,7 +25040,7 @@ app.get('/api/meta', (req, res) => {
     update: {
       available: !!updateState.available,
       latest: updateState.available ? updateState.latest : null,
-      url: updateState.available ? `https://hub.docker.com/r/${UPDATE_REPO}` : null,
+      url: updateState.available ? 'https://github.com/ManixQC/Direct-Xfer' : null,
     },
     // Login-page setup warning: are the reception / images folders still on the
     // container's ephemeral filesystem (default, un-mapped volume)? Booleans only.

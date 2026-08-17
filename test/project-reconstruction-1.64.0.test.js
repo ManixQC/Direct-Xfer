@@ -26,12 +26,12 @@ test('source tree does not keep a redundant prebuilt Windows runtime', () => {
   assert.ok(workflow.includes("Copy-Item @('package.json','package-lock.json','server.js') $app"));
   assert.ok(workflow.includes("Copy-Item @('lib','public','pwa','scripts','security','node_modules') $app -Recurse"));
 });
-test('Windows metadata targets 1.64.2 and current runtime hashes', () => {
+test('Windows metadata targets 1.64.8 and current runtime hashes', () => {
   const launcher = read('windows-launcher/Program.cs');
   const host = read('windows-server-host/Program.cs');
-  assert.match(launcher, /AppVersion = "1\.64\.2"/);
-  assert.match(launcher, /RuntimeAppBuild = "1\.64\.2-launcher54-csharp"/);
-  assert.match(host, /HostVersion = "1\.64\.2-serverhost27-csharp"/);
+  assert.match(launcher, /AppVersion = "1\.64\.8"/);
+  assert.match(launcher, /RuntimeAppBuild = "1\.64\.8-launcher58-csharp"/);
+  assert.match(host, /HostVersion = "1\.64\.8-serverhost31-csharp"/);
   for (const rel of ['package.json','package-lock.json','server.js','public/app.js','pwa/app.js']) {
     assert.ok(host.includes(normalizedSha(rel)), rel + ' hash');
   }

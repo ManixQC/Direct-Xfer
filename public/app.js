@@ -5092,7 +5092,10 @@ const state = {
   historyReloadPending: false,
   photoHistoryLoadPromise: null,
   historyRenderTimer: null,
-  allShares: [], // last-rendered shares, for client-side filtering
+  allShares: [], // merged scoped inventories, for client-side filtering/actions
+  linkShares: [], // non-image inventory from /api/shares?scope=links
+  imageShares: [], // photo/album inventory from /api/shares?scope=images
+  lastSharesScope: '',
   sharePresenceCounts: Object.create(null),
   sharePresenceSource: null,
   shareFilter: uiPrefText('shareFilter'), // name/tag filter text
@@ -5330,7 +5333,7 @@ function previewFileKind(name) {
 }
 function isPreviewableVideo(name) { return previewFileKind(name) === 'video'; }
 function isPreviewableFile(name) { return !!previewFileKind(name); }
-const REFRESH_MS = 3000;
+const REFRESH_MS = 5000; // 1.64.1: lower idle polling overhead; live downloads use SSE
 const DASH_REFRESH_MS = 60000; // dashboard analytics refresh (reads the journal)
 const DASH_LIVE_REFRESH_MS = 2000; // lightweight active-transfer refresh
 const SHARE_DELETE_UNDO_MS = 5000;
@@ -5757,6 +5760,7 @@ function clearAuthenticatedClientState() {
   state.undoItems = [];
   state.undoLoading = false;
   state.allShares = [];
+  state.linkShares = []; state.imageShares = []; state.lastSharesScope = '';
   state.photosData = [];
   state.albumsData = [];
   state.historyData = [];
@@ -6144,7 +6148,7 @@ function notificationActions(n) {
   // Once /api/shares has loaded for the current account, its active inventory is
   // authoritative. Do not fall back to the historical URL embedded in an old
   // notification when the share has since expired/revoked/been purged.
-  const linkUrl = (share && share.active !== false && share.url) || (!state.sharesLoaded && n && n.linkUrl) || null;
+  const linkUrl = (share && share.active !== false && share.url) || (n && n.linkUrl) || null;
   if (linkUrl) {
     out.push({ label: t('notifications.action.copyLink'), run: () => { copy(linkUrl, t('notifications.linkCopied')); } });
   }
@@ -6829,6 +6833,11 @@ function showImagesView() {
   $('app-view').classList.add('hidden');
   placeUserMenu('images');
   $('images-page').classList.remove('hidden');
+  // The gallery is lazy while hidden; paint the latest cached image inventory now,
+  // then request an image-only snapshot immediately instead of waiting for the
+  // next generic polling tick.
+  renderImageSharesFromCache(state.imageShares);
+  if (!document.hidden && isLoggedIn()) refreshShares();
   loadPhotoHistory();
   document.title = t('app.name') + ' — ' + t('photo.title');
   window.scrollTo(0, 0);
@@ -6890,6 +6899,10 @@ function syncAdminRouteFromUrl() {
   placeUserMenu('admin');
   $('app-view').classList.remove('hidden');
   document.title = t('app.docTitle');
+  // Image-only rendering intentionally skipped the hidden standard cards. Force
+  // one fresh standard paint when returning home even if the payload is unchanged.
+  state.lastSharesJson = null;
+  if (!document.hidden) refreshShares();
 }
 
 window.addEventListener('popstate', syncAdminRouteFromUrl);
@@ -9903,7 +9916,7 @@ $('link-base').addEventListener('keydown', (e) => {
 });
 
 // ------------------------------------------------------------------
-// Shares: automatic refresh (3 s)
+// Shares: scoped automatic refresh (5 s)
 // ------------------------------------------------------------------
 function historyMetaSignature(meta) {
   const m = meta || {};
@@ -9957,11 +9970,29 @@ async function loadHistory() {
   }
 }
 
+function currentSharesScope() {
+  return imagesPageOpen() ? 'images' : 'links';
+}
+function mergeScopedShares(scope, shares) {
+  const rows = Array.isArray(shares) ? shares : [];
+  if (scope === 'images') state.imageShares = rows;
+  else state.linkShares = rows;
+  // Keep a merged cache for cross-view actions/notifications without forcing either
+  // endpoint to resend the other half of a large library.
+  state.allShares = state.linkShares.concat(state.imageShares);
+  return state.allShares;
+}
+function sharesPollingViewActive() {
+  // Activity and Dashboards have their own SSE/pollers. Continuing the large
+  // /api/shares snapshot in those hidden views wastes CPU, JSON parsing and DOM
+  // work. Images still consumes the share snapshot, so it remains active there.
+  return isLoggedIn() && !document.hidden && !activityPageOpen() && !dashboardsPageOpen();
+}
 function startPolling() {
   if (!state.pollTimer) {
-    refreshShares();
-    state.pollTimer = setInterval(refreshShares, REFRESH_MS);
-    state.historyRenderTimer = setInterval(renderHistoryPage, 60000);
+    if (sharesPollingViewActive()) refreshShares();
+    state.pollTimer = setInterval(() => { if (sharesPollingViewActive()) refreshShares(); }, REFRESH_MS);
+    state.historyRenderTimer = setInterval(() => { if (!document.hidden) renderHistoryPage(); }, 60000);
   }
   startSharePresence();
   if (dashboardsPageOpen()) startDashboardAutoRefresh(activeDashboardTab());
@@ -9985,6 +10016,9 @@ function stopPolling() {
   }
   stopSharePresence();
 }
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && sharesPollingViewActive()) refreshShares();
+});
 
 // Authoritative per-link download presence. SSE updates only the
 // affected badges, avoiding a full list re-render that could destroy inline edits.
@@ -10033,9 +10067,11 @@ async function refreshShares() {
   }
   const request = (async () => {
   const epoch = state.settingsEpoch;
+  const requestedScope = currentSharesScope();
   try {
-    const data = await api('GET', '/api/shares');
+    const data = await api('GET', '/api/shares?scope=' + encodeURIComponent(requestedScope));
     state.sharesLoaded = true;
+    const mergedShares = mergeScopedShares(requestedScope, data.shares);
     const trashBadge = $('trash-count-badge'); if (trashBadge) trashBadge.textContent = String(Math.max(0, Number(data.trashCount) || 0));
     if (state.connLost) {
       state.connLost = false;
@@ -10064,8 +10100,10 @@ async function refreshShares() {
     }
     const historySig = historyMetaSignature(data.historyMeta);
     if (historySig !== state.lastHistoryMetaSig) loadHistory();
-    const photoHistorySig = photoHistoryMetaSignature(data.photoHistoryMeta);
-    if (photoHistorySig !== state.lastPhotoHistoryMetaSig) loadPhotoHistory();
+    if (requestedScope === 'images' && data.photoHistoryMeta) {
+      const photoHistorySig = photoHistoryMetaSignature(data.photoHistoryMeta);
+      if (photoHistorySig !== state.lastPhotoHistoryMetaSig) loadPhotoHistory();
+    }
     // Don't rebuild the list while the user is typing in it (inline rename, adding
     // a recipient…) — a re-render would destroy the focused input mid-edit. We also
     // leave lastSharesJson stale so the render happens on the next poll after editing.
@@ -10080,9 +10118,15 @@ async function refreshShares() {
       || a.isContentEditable
     );
     const json = JSON.stringify(data.shares);
-    if (json !== state.lastSharesJson && !editingInList) {
+    const scopeStillVisible = requestedScope === currentSharesScope();
+    if ((json !== state.lastSharesJson || requestedScope !== state.lastSharesScope) && !editingInList && scopeStillVisible) {
       state.lastSharesJson = json;
-      renderShares(data.shares);
+      state.lastSharesScope = requestedScope;
+      renderShares(mergedShares);
+    } else if (!scopeStillVisible) {
+      // Navigation happened while the request was in flight. Keep its cache, but
+      // never paint the wrong scoped inventory into the newly opened page.
+      state.sharesRefreshPending = true;
     }
   } catch (e) {
     if (e.message === 'not-authenticated') {
@@ -10669,13 +10713,27 @@ function syncShareTagFilterOptions(shares) {
   else { select.value=''; if (wanted) { state.shareTag=''; updateUiPrefs({shareTag:''}); } }
 }
 
+function renderImageSharesFromCache(shares = state.allShares) {
+  if (!Array.isArray(shares)) return;
+  // Building image cards is one of the heaviest DOM operations in the standard
+  // bundle. Do it only while the Images page is actually visible; the main shares
+  // view must not build a hidden gallery containing hundreds/thousands of photos.
+  const albums = [], photos = [];
+  for (const s of shares) {
+    if (!s) continue;
+    if (s.type === 'album') albums.push(s);
+    else if (s.type === 'photo') photos.push(s);
+  }
+  renderAlbums(albums); // first: image filters depend on gallery membership
+  renderPhotos(photos);
+}
 function renderShares(shares) {
-  state.allShares = shares; // keep for client-side filtering
-  // Photos tab — render direct-image links in their own gallery and keep them out
-  // of the main links list.
-  // Galleries render first so their member lists are available to the image filters.
-  renderAlbums(shares.filter((s) => s.type === 'album')); // image galleries
-  renderPhotos(shares.filter((s) => s.type === 'photo'));
+  state.allShares = shares; // keep for client-side filtering and lazy Images paint
+  if (imagesPageOpen()) {
+    renderImageSharesFromCache(shares);
+    return; // the regular share cards are hidden on this page; don't build them too
+  }
+  // Keep image links out of the regular links list without constructing their DOM.
   shares = shares.filter((s) => s.type !== 'photo' && s.type !== 'album');
   syncShareTagFilterOptions(shares);
   const list = $('shares-list');

@@ -45,18 +45,43 @@
   document.addEventListener('keydown',e=>{ if(e.key==='Escape') document.querySelectorAll('.std-enh-overlay:not(.hidden)').forEach(closeOverlay); });
 
   // #39: reflect cached source-health state on cards without blocking rendering.
+  // Observe only direct card-list changes. Watching the full subtree while adding the
+  // health badge here creates a self-triggering MutationObserver loop (especially
+  // while the server initially reports `checking`) and can freeze the browser.
+  let backingDecoratePending=false;
   function decorateBackingHealth(){
-    (state().allShares||[]).forEach(s=>{
-      const card=document.querySelector('.share[data-share-id="'+CSS.escape(String(s.id))+'"]'); if(!card)return;
+    backingDecoratePending=false;
+    const shares=new Map((state().allShares||[]).map(s=>[String(s.id),s]));
+    document.querySelectorAll('#shares-list > .share[data-share-id]').forEach(card=>{
+      const s=shares.get(String(card.dataset.shareId)); if(!s)return;
       let badge=card.querySelector('.share-source-health');
       const status=s.backing&&s.backing.status;
-      if(status!=='missing'&&status!=='checking'){ if(badge)badge.remove(); card.classList.remove('share-source-missing'); return; }
-      if(!badge){badge=document.createElement('div');badge.className='share-source-health'; const badges=card.querySelector('.share-badges'); (badges||card).appendChild(badge);}
-      badge.textContent=status==='missing'?tr('sourceMissing'):tr('sourceChecking');
-      badge.classList.toggle('missing',status==='missing'); card.classList.toggle('share-source-missing',status==='missing');
+      if(status!=='missing'&&status!=='checking'){
+        if(badge)badge.remove();
+        if(card.classList.contains('share-source-missing'))card.classList.remove('share-source-missing');
+        return;
+      }
+      if(!badge){
+        badge=document.createElement('div');
+        badge.className='share-source-health';
+        const badges=card.querySelector('.share-badges');
+        (badges||card).appendChild(badge);
+      }
+      const text=status==='missing'?tr('sourceMissing'):tr('sourceChecking');
+      if(badge.textContent!==text)badge.textContent=text;
+      badge.classList.toggle('missing',status==='missing');
+      card.classList.toggle('share-source-missing',status==='missing');
     });
   }
-  const shareObserver=new MutationObserver(()=>decorateBackingHealth()); const shareList=document.getElementById('shares-list'); if(shareList)shareObserver.observe(shareList,{childList:true,subtree:true});
+  function scheduleBackingHealthDecoration(){
+    if(backingDecoratePending)return;
+    backingDecoratePending=true;
+    const schedule=typeof requestAnimationFrame==='function'?requestAnimationFrame:(fn)=>setTimeout(fn,0);
+    schedule(decorateBackingHealth);
+  }
+  const shareObserver=new MutationObserver(scheduleBackingHealthDecoration);
+  const shareList=document.getElementById('shares-list');
+  if(shareList)shareObserver.observe(shareList,{childList:true});
 
   // #16 context menu for shares.
   let contextShare=null;
@@ -81,14 +106,15 @@
 
   // #21 Needs-attention center.
   async function openTodo(){const root=overlay('todo-center-overlay',tr('todoTitle'));openOverlay(root);await renderTodo(root);}
-  async function renderTodo(root){const body=root.querySelector('.std-enh-body');body.innerHTML='<div class="empty">…</div>';try{const [live,dash,undos]=await Promise.all([dx.api('GET','/api/dashboard/live').catch(()=>({transfers:[]})),dx.api('GET','/api/dashboard?days=1').catch(()=>({recentErrors:[]})),dx.api('GET','/api/undo').catch(()=>({items:[]}))]);const items=[],now=Date.now();(state().allShares||[]).forEach(s=>{if(s.backing&&s.backing.status==='missing')items.push({kind:'bad',icon:'📁',title:tr('todoMissing'),detail:s.name,share:s});const exp=Number(s.effectiveExpiresAt)||0;if(s.active&&exp&&exp>now&&exp-now<86400000)items.push({kind:'warn',icon:'⏱',title:tr('todoExpiry'),detail:s.name+' · '+dx.timeAgo(exp),share:s});const pending=(s.accessPending||0)+(s.feedbackUnread||0);if(pending)items.push({kind:'warn',icon:'💬',title:tr('todoModeration'),detail:s.name+' · '+pending,share:s});});(live.transfers||[]).filter(x=>x.stalled).slice(0,10).forEach(x=>items.push({kind:'bad',icon:'⏸',title:tr('todoStalled'),detail:x.name||x.shareName||'—'}));(dash.recentErrors||[]).slice(0,5).forEach(x=>items.push({kind:'warn',icon:'⚠',title:tr('todoFailure'),detail:(x.name||'—')+' · '+(x.reason||'')}));(undos.items||[]).filter(x=>x.canUndo&&!x.undone).slice(0,5).forEach(x=>items.push({kind:'info',icon:'↶',title:tr('todoUndo'),detail:x.label||x.type,undo:x}));body.textContent='';if(!items.length){body.innerHTML='<div class="empty">'+tr('todoEmpty')+'</div>';return;}items.forEach(it=>{const row=document.createElement('button');row.type='button';row.className='todo-row todo-'+it.kind;row.innerHTML='<span class="todo-icon"></span><span class="todo-copy"><strong></strong><small></small></span>';row.querySelector('.todo-icon').textContent=it.icon;row.querySelector('strong').textContent=it.title;row.querySelector('small').textContent=it.detail;if(it.share)row.addEventListener('click',()=>{closeOverlay(root);dx.openShareDetails(it.share);});else if(it.undo)row.addEventListener('click',()=>{closeOverlay(root);openUndo();});else row.disabled=true;body.appendChild(row);});const rf=button('↻ '+tr('refresh'));rf.addEventListener('click',()=>renderTodo(root));body.appendChild(rf);}catch(_){body.innerHTML='<div class="empty">'+tr('todoEmpty')+'</div>';}}
+  async function renderTodo(root){const body=root.querySelector('.std-enh-body');body.innerHTML='<div class="empty">…</div>';try{const cachedDash=state().dashboardData;const [live,dash,undos]=await Promise.all([dx.api('GET','/api/dashboard/live').catch(()=>({transfers:[]})),cachedDash?Promise.resolve(cachedDash):dx.api('GET','/api/dashboard?days=1').catch(()=>({recentErrors:[]})),dx.api('GET','/api/undo').catch(()=>({items:[]}))]);const items=[],now=Date.now();(state().allShares||[]).forEach(s=>{if(s.backing&&s.backing.status==='missing')items.push({kind:'bad',icon:'📁',title:tr('todoMissing'),detail:s.name,share:s});const exp=Number(s.effectiveExpiresAt)||0;if(s.active&&exp&&exp>now&&exp-now<86400000)items.push({kind:'warn',icon:'⏱',title:tr('todoExpiry'),detail:s.name+' · '+dx.timeAgo(exp),share:s});const pending=(s.accessPending||0)+(s.feedbackUnread||0);if(pending)items.push({kind:'warn',icon:'💬',title:tr('todoModeration'),detail:s.name+' · '+pending,share:s});});(live.transfers||[]).filter(x=>x.stalled).slice(0,10).forEach(x=>items.push({kind:'bad',icon:'⏸',title:tr('todoStalled'),detail:x.name||x.shareName||'—'}));(dash.recentErrors||[]).slice(0,5).forEach(x=>items.push({kind:'warn',icon:'⚠',title:tr('todoFailure'),detail:(x.name||'—')+' · '+(x.reason||'')}));(undos.items||[]).filter(x=>x.canUndo&&!x.undone).slice(0,5).forEach(x=>items.push({kind:'info',icon:'↶',title:tr('todoUndo'),detail:x.label||x.type,undo:x}));body.textContent='';if(!items.length){body.innerHTML='<div class="empty">'+tr('todoEmpty')+'</div>';return;}items.forEach(it=>{const row=document.createElement('button');row.type='button';row.className='todo-row todo-'+it.kind;row.innerHTML='<span class="todo-icon"></span><span class="todo-copy"><strong></strong><small></small></span>';row.querySelector('.todo-icon').textContent=it.icon;row.querySelector('strong').textContent=it.title;row.querySelector('small').textContent=it.detail;if(it.share)row.addEventListener('click',()=>{closeOverlay(root);dx.openShareDetails(it.share);});else if(it.undo)row.addEventListener('click',()=>{closeOverlay(root);openUndo();});else row.disabled=true;body.appendChild(row);});const rf=button('↻ '+tr('refresh'));rf.addEventListener('click',()=>renderTodo(root));body.appendChild(rf);}catch(_){body.innerHTML='<div class="empty">'+tr('todoEmpty')+'</div>';}}
 
   function installHeaderButtons(){const head=document.querySelector('#shares-list')&&document.querySelector('.shares-head .head-actions');if(head&&!document.getElementById('todo-center-btn')){const b=button(tr('todo'));b.id='todo-center-btn';b.addEventListener('click',openTodo);head.insertBefore(b,head.firstChild);}const config=document.getElementById('share-config-menu-panel');if(config&&!document.getElementById('admin-undo-btn')){const b=button(tr('undo'));b.id='admin-undo-btn';b.setAttribute('role','menuitem');b.addEventListener('click',openUndo);config.appendChild(b);}}
 
   // #22 dedicated daily summary, independent from selected dashboard period.
   let dailyTimer=0;
   function ensureDailyCard(){let card=document.getElementById('dash-daily-summary-card');if(card)return card;const grid=document.querySelector('#dashboard-transfers-view .dash-priority-grid');if(!grid)return null;card=document.createElement('div');card.id='dash-daily-summary-card';card.className='chart-panel dash-wide dash-daily-summary';card.innerHTML='<div class="chart-title"></div><div class="dash-summary-grid"></div>';card.querySelector('.chart-title').textContent=tr('daily');grid.insertBefore(card,grid.firstChild);prepareDashboardWidget(card);return card;}
-  async function refreshDaily(){const page=document.getElementById('dashboards-page');if(!page||page.classList.contains('hidden'))return;try{const d=await dx.api('GET','/api/dashboard?days=1'),s=d.last24h||{},card=ensureDailyCard();if(!card)return;const values=[[tr('dailyTransfers'),s.transfers||0,'⇄'],[tr('dailyDownloads'),s.down||0,'↓'],[tr('dailyUploads'),s.up||0,'↑'],[tr('dailyVolume'),dx.formatBytes(s.bytes||0),'💾'],[tr('dailySuccess'),(s.successRate||0)+' %','✓'],[tr('dailyErrors'),s.interrupted||0,'⚠'],[tr('dailyVisitors'),s.uniqueVisitors||0,'👤'],[tr('dailyShares'),s.sharesCreated||0,'🔗']];const grid=card.querySelector('.dash-summary-grid');grid.textContent='';values.forEach(([label,value,icon])=>{const x=document.createElement('div');x.className='dash-mini-stat';x.innerHTML='<span class="dash-mini-ico"></span><div><strong></strong><span></span></div>';x.querySelector('.dash-mini-ico').textContent=icon;x.querySelector('strong').textContent=value;x.querySelector('div span').textContent=label;grid.appendChild(x);});}catch(_){}}
+  function renderDailyFromDashboard(d){const s=d&&d.last24h||{},card=ensureDailyCard();if(!card)return;const values=[[tr('dailyTransfers'),s.transfers||0,'⇄'],[tr('dailyDownloads'),s.down||0,'↓'],[tr('dailyUploads'),s.up||0,'↑'],[tr('dailyVolume'),dx.formatBytes(s.bytes||0),'💾'],[tr('dailySuccess'),(s.successRate||0)+' %','✓'],[tr('dailyErrors'),s.interrupted||0,'⚠'],[tr('dailyVisitors'),s.uniqueVisitors||0,'👤'],[tr('dailyShares'),s.sharesCreated||0,'🔗']];const grid=card.querySelector('.dash-summary-grid');grid.textContent='';values.forEach(([label,value,icon])=>{const x=document.createElement('div');x.className='dash-mini-stat';x.innerHTML='<span class="dash-mini-ico"></span><div><strong></strong><span></span></div>';x.querySelector('.dash-mini-ico').textContent=icon;x.querySelector('strong').textContent=value;x.querySelector('div span').textContent=label;grid.appendChild(x);});}
+  async function refreshDaily(){const page=document.getElementById('dashboards-page');if(!page||page.classList.contains('hidden'))return;try{let d=state().dashboardData;if(!d){await dx.loadDashboard();d=state().dashboardData;}if(d)renderDailyFromDashboard(d);}catch(_){}}
 
   // #45 customizable dashboard (drag, hide, resize) persisted per browser.
   const DASH_PREF_KEY='dx-standard-dashboard-layout-v1';let customizing=false,dragWidget=null;

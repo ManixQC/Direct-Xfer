@@ -1,6 +1,6 @@
 'use strict';
 (function () {
-  var BUILD = (window.__DX_PWA_RELEASE && window.__DX_PWA_RELEASE.build) || '2026.08.16-pwa325';
+  var BUILD = (window.__DX_PWA_RELEASE && window.__DX_PWA_RELEASE.build) || '2026.08.17-pwa326';
   var DB_NAME = 'direct-xfer-pwa';
   var HISTORY_STORE = 'history';
   var QUEUE_STORE = 'queue';

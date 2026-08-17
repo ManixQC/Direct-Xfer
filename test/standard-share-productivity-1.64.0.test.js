@@ -92,5 +92,16 @@ test('auditor tag controls are omitted from the DOM rather than only hidden with
 
 test('standard UI audit bumps asset cache keys for corrected resources', () => {
   assert.match(html, /style\.css\?v=289/);
-  assert.match(html, /app\.js\?v=302/);
+  assert.match(html, /app\.js\?v=304/);
+});
+
+
+test('source-health decoration cannot self-trigger a subtree MutationObserver loop', () => {
+  const productivity = fs.readFileSync(path.join(root, 'public', 'standard-productivity.js'), 'utf8');
+  const index = fs.readFileSync(path.join(root, 'public', 'index.html'), 'utf8');
+  assert.match(productivity, /shareObserver\.observe\(shareList,\{childList:true\}\)/);
+  assert.doesNotMatch(productivity, /shareObserver\.observe\([^\n]*subtree\s*:\s*true/);
+  assert.match(productivity, /if\(badge\.textContent!==text\)badge\.textContent=text/);
+  assert.match(productivity, /backingDecoratePending/);
+  assert.match(index, /standard-productivity\.js\?v=4/);
 });

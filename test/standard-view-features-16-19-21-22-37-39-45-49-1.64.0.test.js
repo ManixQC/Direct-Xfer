@@ -11,7 +11,7 @@ const read=(f)=>fs.readFileSync(path.join(root,f),'utf8');
 const app=read('public/app.js'), mod=read('public/standard-productivity.js'), html=read('public/index.html'), css=read('public/style.css'), server=read('server.js');
 
 test('standard view loads the isolated productivity module with bumped cache keys',()=>{
-  assert.match(html,/style\.css\?v=289/); assert.match(html,/app\.js\?v=302/); assert.match(html,/standard-productivity\.js\?v=1/);
+  assert.match(html,/style\.css\?v=289/); assert.match(html,/app\.js\?v=304/); assert.match(html,/standard-productivity\.js\?v=4/);
   assert.match(app,/window\.DXStandard = Object\.freeze/); assert.match(mod,/window\.DXStandard/);
 });
 
@@ -54,7 +54,7 @@ test('real server visitor probe detects a removed source and dashboard returns e
   const child=spawn(process.execPath,['server.js'],{cwd:root,env:{...process.env,PORT:String(port),HOST_ROOT:host,DATA_DIR:data,IMAGES_DIR:images,INBOX_DIR:inbox,ADMIN_USERNAME:'admin',ADMIN_PASSWORD:'AuditPass123!',UPDATE_CHECK:'false',PUBLIC_URL:''},stdio:['ignore','pipe','pipe']}); child.stdout.on('data',d=>logs.push(d.toString()));child.stderr.on('data',d=>logs.push(d.toString()));
   try{
     await waitFor(base+'/healthz',child,logs);
-    const asset=await fetch(base+'/standard-productivity.js?v=1');assert.equal(asset.status,200);assert.match(await asset.text(),/Needs-attention center|Centre À traiter/);
+    const asset=await fetch(base+'/standard-productivity.js?v=4');assert.equal(asset.status,200);assert.match(await asset.text(),/Needs-attention center|Centre À traiter/);
     const login=await fetch(base+'/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:'admin',password:'AuditPass123!'})});assert.equal(login.status,200);const body=await login.json(),cookie=cookieHeader(login),auth={Cookie:cookie},mut={Cookie:cookie,'X-CSRF-Token':body.csrf,Origin:base,'Content-Type':'application/json'};
     const create=await fetch(base+'/api/shares',{method:'POST',headers:mut,body:JSON.stringify({path:'/sample.txt'})});assert.equal(create.status,201,await create.clone().text());const created=await create.json();const id=created.share.id;
     let probe=await fetch(base+'/api/shares/'+encodeURIComponent(id)+'/visitor-test',{headers:auth});let pb=await probe.json();assert.equal(probe.status,200);assert.equal(pb.verdict,'ready');assert.equal(pb.expectedStatus,200);

@@ -563,6 +563,19 @@ function localCaStatus(createIfEnabled=false) {
     return { available:true, signingAvailable, fingerprint:ca.fingerprint, identities, expiresAt:ca.expiresAt, serverExpiresAt, error };
   } catch (e) { return { available:false, signingAvailable:false, fingerprint:'', error:e.message, identities }; }
 }
+// 1.64.1 — the standard /api/shares poll does not need to re-read and
+// re-parse CA/key/certificate files every few seconds. Cache this derived UI status
+// briefly; diagnostics and TLS activation still call localCaStatus() directly.
+let localCaStatusUiCache = { at:0, create:false, value:null };
+function localCaStatusForClient(createIfEnabled=false) {
+  const now = Date.now();
+  if (localCaStatusUiCache.value && localCaStatusUiCache.create === !!createIfEnabled && now - localCaStatusUiCache.at < 15000) return localCaStatusUiCache.value;
+  const value = localCaStatus(createIfEnabled);
+  localCaStatusUiCache = { at:now, create:!!createIfEnabled, value };
+  return value;
+}
+function invalidateLocalCaStatusUiCache() { localCaStatusUiCache = { at:0, create:false, value:null }; }
+
 function validateProvidedTlsPair(cert, key) {
   try {
     tls.createSecureContext({ cert, key, minVersion:'TLSv1.2' });
@@ -4368,6 +4381,7 @@ function getSettings() {
 }
 function setSettings(patch) {
   state.settings = { ...state.settings, ...(patch || {}) };
+  invalidateLocalCaStatusUiCache();
   mailerCache = null; // rebuild the SMTP transport if any mail setting changed
   persist();
   return getSettings();
@@ -4375,9 +4389,11 @@ function setSettings(patch) {
 function setSettingsDurable(patch) {
   const previous = state.settings;
   state.settings = { ...state.settings, ...(patch || {}) };
+  invalidateLocalCaStatusUiCache();
   mailerCache = null;
   if (persistNow()) return getSettings();
   state.settings = previous;
+  invalidateLocalCaStatusUiCache();
   mailerCache = null;
   return null;
 }
@@ -4437,7 +4453,7 @@ function settingsForClient(req, lite) {
     tlsProvidedCertificateExpiresAt: activeProvidedTlsExpiresAt || 0,
     tlsLocalCaEffective: !(TLS_CERT && TLS_KEY) && configuredSelfSignedTls(),
     tlsSelfSignedEffective: !(TLS_CERT && TLS_KEY) && configuredSelfSignedTls(), // legacy client compatibility
-    ...(() => { const ca = localCaStatus(!(TLS_CERT && TLS_KEY)); return {
+    ...(() => { const ca = localCaStatusForClient(!(TLS_CERT && TLS_KEY)); return {
       tlsLocalCaAvailable: ca.available,
       tlsLocalCaSigningAvailable: !!ca.signingAvailable,
       tlsLocalCaFingerprint: ca.fingerprint || '',
@@ -13636,11 +13652,11 @@ function primaryBase(req) {
   return '';
 }
 
-function decorateShare(s, req) {
+function decorateShare(s, req, context=null) {
   const active = isActive(s);
   const items = shareItems(s);
   const rel = linkPrefix(s) + s.token;
-  const base = primaryBase(req);
+  const base = context && Object.prototype.hasOwnProperty.call(context, 'base') ? context.base : primaryBase(req);
   return {
     id: s.id,
     token: s.token,
@@ -13812,8 +13828,8 @@ function decorateShare(s, req) {
       moderated: !!s.moderated,
     } : undefined,
     // Files awaiting moderation for this link (id, name, size, ip, at).
-    pending: (Array.isArray(state.meta && state.meta.pending) ? state.meta.pending : [])
-      .filter((p) => p.shareId === s.id)
+    pending: ((context && context.pendingByShareId && context.pendingByShareId.get(s.id)) ||
+      (Array.isArray(state.meta && state.meta.pending) ? state.meta.pending.filter((p) => p.shareId === s.id) : []))
       .map((p) => ({ id: p.id, name: p.name, size: p.size, ip: p.ip, at: p.at })),
     recipients: Array.isArray(s.recipients) ? s.recipients.map((r) => ({
       token: r.token,
@@ -14642,27 +14658,53 @@ adminRouter.post('/storage/jobs/:id/cancel', requireFullAdmin, (req, res) => {
 });
 
 adminRouter.get('/shares', async (req, res) => {
+  const requestedScope = String(req.query.scope || 'all').toLowerCase();
+  const scope = requestedScope === 'links' || requestedScope === 'images' ? requestedScope : 'all';
   let all = listShares();
+  if (scope === 'links') all = all.filter((s) => s.type !== 'photo' && s.type !== 'album');
+  else if (scope === 'images') all = all.filter((s) => s.type === 'photo' || s.type === 'album');
   // Operators only see the links they created; admins/owner/auditors see all.
   if (req.session.role === 'operator') all = all.filter((s) => ownsShare(req, s));
   const allowedShareIds = req.session.role === 'operator' ? new Set(all.map((s) => s.id)) : null;
   // Folder sizes cannot be represented by the creation-time stat alone. Never
   // block the high-frequency /shares poll on recursive disk walks: return the last
   // cached value immediately and refresh stale folders in a bounded background job.
-  const logicalSizeCandidates = all.filter(shareNeedsLogicalBytesScan);
+  const now = Date.now();
+  // Do not launch an I/O wave over the entire library on every poll. Only stale,
+  // non-running entries are eligible, and each request warms a bounded batch.
+  const logicalSizeCandidates = all.filter((s) => {
+    if (!shareNeedsLogicalBytesScan(s) || shareLogicalBytesRefreshes.has(s.id)) return false;
+    const cached = shareLogicalBytesCache.get(s.id);
+    return !cached || now - cached.at >= SHARE_LOGICAL_BYTES_CACHE_MS;
+  }).slice(0, 8);
   if (logicalSizeCandidates.length) void mapLimit(logicalSizeCandidates, 2, (s) => queueShareLogicalBytesRefresh(s)).catch(() => {});
-  const backingCandidates = all.filter(shareBackingHealthRelevant);
+  const backingCandidates = all.filter((s) => {
+    if (!shareBackingHealthRelevant(s) || shareBackingHealthRefreshes.has(s.id)) return false;
+    const cached = shareBackingHealthCache.get(s.id);
+    return !cached || now - cached.at >= SHARE_BACKING_HEALTH_CACHE_MS;
+  }).slice(0, 32);
   if (backingCandidates.length) void mapLimit(backingCandidates, 4, (s) => queueShareBackingHealthRefresh(s)).catch(() => {});
+
+  // Pending moderation used to scan the complete pending array once per share
+  // (O(shares × pending)). Index it once for this response instead.
+  const pendingByShareId = new Map();
+  for (const row of (Array.isArray(state.meta && state.meta.pending) ? state.meta.pending : [])) {
+    if (!row || !row.shareId) continue;
+    const bucket = pendingByShareId.get(row.shareId);
+    if (bucket) bucket.push(row); else pendingByShareId.set(row.shareId, [row]);
+  }
+  const base = primaryBase(req);
+  const decorateContext = { base, pendingByShareId };
   const shares = all
     .sort((a, b) => b.createdAt - a.createdAt)
-    .map((s) => decorateShare(s, req));
+    .map((s) => decorateShare(s, req, decorateContext));
   res.json({
     shares,
-    base: primaryBase(req),
+    base,
     settings: settingsForClient(req, true), // lite: omit the custom-logo data URL from the periodic poll
-    transfers: listTransfers(allowedShareIds),
+    transfers: listTransfers(scope === 'all' ? allowedShareIds : new Set(all.map((s) => s.id))),
     historyMeta: historyMeta(allowedShareIds),
-    photoHistoryMeta: photoHistoryMeta(req),
+    photoHistoryMeta: scope === 'links' ? null : photoHistoryMeta(req),
     trashCount: trashItems().filter((r) => trashRecordVisible(req, r)).length,
   });
 });

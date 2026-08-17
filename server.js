@@ -563,7 +563,7 @@ function localCaStatus(createIfEnabled=false) {
     return { available:true, signingAvailable, fingerprint:ca.fingerprint, identities, expiresAt:ca.expiresAt, serverExpiresAt, error };
   } catch (e) { return { available:false, signingAvailable:false, fingerprint:'', error:e.message, identities }; }
 }
-// 1.64.1 — the standard /api/shares poll does not need to re-read and
+// 1.64.2 — the standard /api/shares poll does not need to re-read and
 // re-parse CA/key/certificate files every few seconds. Cache this derived UI status
 // briefly; diagnostics and TLS activation still call localCaStatus() directly.
 let localCaStatusUiCache = { at:0, create:false, value:null };
@@ -19469,7 +19469,7 @@ adminRouter.post('/diagnostics/run', requireFullAdmin, async (req, res) => {
   add('public-port', 'network', !target ? 'warn' : portCheck && portCheck.open === true ? 'ok' : portCheck && portCheck.open === false ? 'bad' : 'warn', { target:target ? target.label : null, result:portCheck });
   const proxyDetected = !!(req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || req.headers['forwarded'] || req.headers['x-forwarded-proto']);
   const proxyStatus = proxyDetected && !TRUST_PROXY ? 'bad' : (!proxyDetected && TRUST_PROXY ? 'warn' : 'ok');
-  const proxyBase = normalizeLinkBase(PUBLIC_URL || getSettings().linkBase || '');
+  const proxyBase = normalizeLinkBase(getSettings().linkBase || PUBLIC_URL || '');
   const xfProto = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim().toLowerCase();
   const xfHost = String(req.headers['x-forwarded-host'] || '').split(',')[0].trim();
   const xfPort = String(req.headers['x-forwarded-port'] || '').split(',')[0].trim();
@@ -19612,14 +19612,54 @@ adminRouter.get('/network/proxy-check', requireAuditAccess, (req, res) => {
   if (headers['x-forwarded-host'] && headers['x-forwarded-host'] !== pick('host')) {
     add('info', 'host-diff', { pub: headers['x-forwarded-host'], internal: pick('host') || '?' });
   }
+  const proxySettings = getSettings();
+  const configuredMainBase = normalizeLinkBase(proxySettings.linkBase || PUBLIC_URL || '');
+  const configuredImageBase = normalizeLinkBase(proxySettings.imageBase || '');
   let expected = null;
-  try { if (testedBase) expected = new URL(testedBase); else { const base = normalizeLinkBase(PUBLIC_URL || getSettings().linkBase || ''); if (base) expected = new URL(base); } } catch (_) {}
+  try {
+    if (testedBase) expected = new URL(testedBase);
+    else if (configuredMainBase) expected = new URL(configuredMainBase);
+  } catch (_) {}
   if (proxyDetected && !xfHost) add('warn', 'no-forwarded-host', {});
+
+  // A proxy-check request always travels through the host used to open the admin
+  // interface. When the Images dashboard explicitly tests a distinct imageBase,
+  // X-Forwarded-Host therefore still describes the main admin host. Comparing it
+  // directly to imageBase would be a false positive. Treat that case as an
+  // informational alternate-domain check and validate proto/port against the
+  // actually observed configured main base instead.
+  let compareExpected = expected;
+  let alternatePublicBase = false;
+  let observedConfiguredBase = null;
+  if (xfHost) {
+    const candidateBases = [configuredMainBase, configuredImageBase].filter(Boolean);
+    for (const candidate of candidateBases) {
+      try {
+        const u = new URL(candidate);
+        if (u.host.toLowerCase() === xfHost.toLowerCase()) { observedConfiguredBase = u; break; }
+      } catch (_) {}
+    }
+  }
+  if (testedBase && expected && xfHost && xfHost.toLowerCase() !== expected.host.toLowerCase()) {
+    let testedIsConfiguredAlternate = false;
+    try { testedIsConfiguredAlternate = !!configuredImageBase && new URL(configuredImageBase).host.toLowerCase() === expected.host.toLowerCase(); } catch (_) {}
+    const currentHost = String(pick('host') || '').split(',')[0].trim().toLowerCase();
+    const observedIsCurrentAdminHost = currentHost && xfHost.toLowerCase() === currentHost;
+    if (testedIsConfiguredAlternate && (observedConfiguredBase || observedIsCurrentAdminHost)) {
+      alternatePublicBase = true;
+      compareExpected = observedConfiguredBase || null;
+      add('info', 'alternate-public-base', {
+        tested: expected.origin,
+        observed: observedConfiguredBase ? observedConfiguredBase.origin : ((req.protocol || 'http') + '://' + xfHost),
+      });
+    }
+  }
   if (expected) {
-    if (xfHost && xfHost.toLowerCase() !== expected.host.toLowerCase()) add('warn', 'base-host-mismatch', { expected:expected.host, got:xfHost });
-    if (xfProto && xfProto !== expected.protocol.replace(':','')) add('warn', 'base-proto-mismatch', { expected:expected.protocol.replace(':',''), got:xfProto });
-    const expectedPort = expected.port || (expected.protocol === 'https:' ? '443' : '80');
-    if (xfPort && xfPort !== expectedPort) add('warn', 'base-port-mismatch', { expected:expectedPort, got:xfPort });
+    if (!alternatePublicBase && xfHost && xfHost.toLowerCase() !== expected.host.toLowerCase()) add('warn', 'base-host-mismatch', { expected:expected.host, got:xfHost });
+    const protocolExpected = alternatePublicBase ? compareExpected : expected;
+    if (xfProto && protocolExpected && xfProto !== protocolExpected.protocol.replace(':','')) add('warn', 'base-proto-mismatch', { expected:protocolExpected.protocol.replace(':',''), got:xfProto });
+    const expectedPort = protocolExpected ? (protocolExpected.port || (protocolExpected.protocol === 'https:' ? '443' : '80')) : null;
+    if (xfPort && expectedPort && xfPort !== expectedPort) add('warn', 'base-port-mismatch', { expected:expectedPort, got:xfPort });
   }
   if (proxyDetected && !xffRaw && !headers['x-real-ip'] && !headers['cf-connecting-ip'] && !headers['forwarded']) add('warn', 'no-client-ip-header', {});
 
@@ -19658,6 +19698,8 @@ adminRouter.get('/network/proxy-check', requireAuditAccess, (req, res) => {
     forwardedHost:xfHost || null,
     forwardedPort:xfPort || null,
     expectedBase: expected ? expected.toString().replace(/\/$/,'') : null,
+    observedBase: observedConfiguredBase ? observedConfiguredBase.toString().replace(/\/$/,'') : null,
+    alternatePublicBase,
     httpVersion:req.httpVersion || null,
     headers,
     checks,
@@ -25029,6 +25071,12 @@ app.get('/activity', adminGuard, (req, res) => {
 
 // Independent dashboards page, protected by the same admin network guard.
 app.get('/dashboards', adminGuard, (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache');
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Dedicated System Health page, protected by the same admin network guard.
+app.get('/system-health', adminGuard, (req, res) => {
   res.setHeader('Cache-Control', 'no-cache');
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });

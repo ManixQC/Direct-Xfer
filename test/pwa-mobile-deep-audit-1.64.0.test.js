@@ -7,9 +7,9 @@ const root=path.resolve(__dirname,'..');
 const read=(f)=>fs.readFileSync(path.join(root,f),'utf8');
 const app=read('pwa/app.js'), sw=read('pwa/sw.js'), mobile=read('pwa/mobile-intelligence.js');
 
-test('1.64.1 release and pwa326 are synchronized',()=>{
-  assert.match(read('package.json'),/"version"\s*:\s*"1\.64\.1"/);
-  for(const f of ['pwa/app.js','pwa/index.html','pwa/sw.js','pwa/theme-init.js','pwa/admin-advanced.js','pwa/mobile-intelligence.js']) assert.match(read(f),/1\.64\.1|pwa326|v=326/);
+test('1.64.2 release and pwa326 are synchronized',()=>{
+  assert.match(read('package.json'),/"version"\s*:\s*"1\.64\.2"/);
+  for(const f of ['pwa/app.js','pwa/index.html','pwa/sw.js','pwa/theme-init.js','pwa/admin-advanced.js','pwa/mobile-intelligence.js']) assert.match(read(f),/1\.64\.2|pwa326|v=326/);
   assert.doesNotMatch(read('pwa/index.html')+read('pwa/sw.js'),/pwa324|v=324/);
 });
 

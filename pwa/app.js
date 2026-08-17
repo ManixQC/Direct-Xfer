@@ -9,7 +9,7 @@
 (function () {
   // Build tag, shown in the footer so a user can confirm at a glance which version
   // is actually running after an update. Keep it in lock-step with sw.js VERSION.
-  var APP_VERSION = '1.64.1';
+  var APP_VERSION = '1.64.2';
   var APP_BUILD = '2026.08.17-pwa326';
   // Upload blocks are deliberately small on mobile. A number of reverse proxies
   // still default to a 1 MiB request-body limit; an 8 MiB first block can therefore
@@ -575,7 +575,7 @@ Object.assign(STRINGS.es, {
   serverActivityActor:'Usuario', serverActivityIp:'IP', serverActivityDevice:'Dispositivo/origen', serverActivityResult:'Resultado', serverActivityPeriod:'Período', serverActivityDirection:'Dirección', serverActivityCorrelate:'Agrupar por recurso', serverActivity24h:'24 h', serverActivity7d:'7 días', serverActivity30d:'30 días',
   sharesTrashImpact:'Impacto: {count} elemento(s) · {bytes}', sharesTrashDependencies:'Dependencias: {value}', sharesTrashNoDependencies:'ninguna', sharesTrashSmartRestore:'Falta la ubicación original. ¿Usar «{path}»?', sharesTrashChooseRestore:'Otra ruta del host:'
 });
-// 1.64.1 — audited live server transfers inside the PWA Activity section.
+// 1.64.2 — audited live server transfers inside the PWA Activity section.
 Object.assign(STRINGS.fr, {
   liveTransfersTitle:'Transferts en cours', liveTransfersHint:'Suivi en direct des transferts actifs sur le serveur.', liveTransfersLoading:'Chargement des transferts en cours…', liveTransfersEmpty:'Aucun transfert en cours.', liveTransfersLoadFail:'Impossible de charger les transferts en cours.', liveTransfersUpdated:'Mis à jour à {time}', liveTransfersStalled:'Inactif', liveTransfersResumed:'Repris', liveTransfersStopping:'Arrêt…', liveTransfersOffline:'Flux en direct indisponible', liveTransfersStale:'Dernières données connues', liveTransfersRemaining:'restant', liveTransfersStop:'Arrêter le transfert', liveTransfersStopConfirm:'Arrêter ce transfert en cours ?', liveTransfersStopOk:'Transfert arrêté', liveTransfersStopFail:'Impossible d’arrêter le transfert'
 });

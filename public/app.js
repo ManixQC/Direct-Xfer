@@ -727,6 +727,8 @@ const I18N = {
     'dashboards.transfers': 'Transferts',
     'dashboards.images': 'Images',
     'dashboards.back': 'Retour',
+    'systemHealth.title': 'Santé Système',
+    'systemHealth.back': 'Retour',
     'dash.exportCsv': '⬇ Export CSV',
     'dash.filterDirection': 'Direction',
     'dash.filterStatus': 'Statut',
@@ -2307,6 +2309,8 @@ const I18N = {
     'dashboards.transfers': 'Transfers',
     'dashboards.images': 'Images',
     'dashboards.back': 'Back',
+    'systemHealth.title': 'System Health',
+    'systemHealth.back': 'Back',
     'dash.exportCsv': '⬇ Export CSV',
     'dash.filterDirection': 'Direction',
     'dash.filterStatus': 'Status',
@@ -3885,6 +3889,8 @@ const I18N = {
     'dashboards.transfers': 'Transferencias',
     'dashboards.images': 'Imágenes',
     'dashboards.back': 'Volver',
+    'systemHealth.title': 'Salud del sistema',
+    'systemHealth.back': 'Volver',
     'dash.exportCsv': '⬇ Exportar CSV',
     'dash.filterDirection': 'Dirección',
     'dash.filterStatus': 'Estado',
@@ -4926,7 +4932,7 @@ Object.assign(I18N.fr, {
   'dlp.rule.private-key':'Clé privée','dlp.rule.aws-access-key':'Identifiant de clé AWS','dlp.rule.github-token':'Jeton GitHub','dlp.rule.slack-token':'Jeton Slack','dlp.rule.jwt':'Jeton JWT','dlp.rule.password':'Mot de passe assigné','dlp.rule.api-secret':'Secret / jeton API','dlp.rule.payment-card':'Numéro de carte de paiement','dlp.rule.canadian-sin':'NAS canadien','dlp.rule.iban':'IBAN','dlp.rule.identity-document':'Document d’identité','dlp.rule.confidential-marker':'Marqueur de confidentialité',
   'dlp.reason.private-key':'Du matériel de clé privée a été détecté.','dlp.reason.aws-access-key':'Un identifiant de clé d’accès AWS correspond au format connu.','dlp.reason.github-token':'Un jeton GitHub correspond à un format de secret connu.','dlp.reason.slack-token':'Un jeton Slack correspond à un format de secret connu.','dlp.reason.jwt':'Une chaîne au format JSON Web Token a été détectée.','dlp.reason.password':'Une valeur de mot de passe assignée a été détectée.','dlp.reason.api-secret':'Une valeur ressemblant à une clé API ou un jeton secret a été détectée.','dlp.reason.payment-card':'Le numéro correspond à un format de carte et passe la validation de Luhn.','dlp.reason.canadian-sin':'Le numéro est présenté comme NAS/SIN et passe la validation de Luhn.','dlp.reason.iban':'La valeur correspond à un IBAN valide selon le contrôle mod-97.','dlp.reason.identity-document':'Un identifiant de document officiel a été trouvé avec un contexte explicite.','dlp.reason.confidential-marker':'Un marqueur de confidentialité explicite est présent.',
   'diag.fix':'Corriger','diag.fixing':'Correction…','diag.fixed':'Correction appliquée; diagnostic relancé.','diag.fixFailed':'Correction automatique impossible.','diag.details':'Détails','diag.check.tls-certificate':'Certificat TLS / chaîne de confiance','diag.tls.subject':'Sujet / CN','diag.tls.issuer':'Autorité émettrice','diag.tls.sans':'SAN','diag.tls.validity':'Validité','diag.tls.fingerprint':'Empreinte SHA-256','diag.tls.key':'Clé publique','diag.tls.mode':'Mode TLS','diag.tls.ca':'CA locale','diag.tls.protocol':'Protocole minimal','diag.tls.reason':'État exact',
-  'proxy.forwardedProto':'X-Forwarded-Proto','proxy.forwardedHost':'X-Forwarded-Host','proxy.forwardedPort':'X-Forwarded-Port','proxy.expectedBase':'Base publique attendue','proxy.httpVersion':'Version HTTP','proxy.msg.no-forwarded-host':'Le proxy est détecté mais X-Forwarded-Host est absent. Transmettez le host public pour que Direct-Xfer puisse reconstruire des URL fiables.','proxy.msg.base-host-mismatch':'Le host transmis ({got}) ne correspond pas à la base publique configurée ({expected}).','proxy.msg.base-proto-mismatch':'Le protocole transmis ({got}) ne correspond pas à la base publique ({expected}).','proxy.msg.base-port-mismatch':'Le port transmis ({got}) ne correspond pas au port public attendu ({expected}).','proxy.msg.no-client-ip-header':'Le proxy est détecté mais aucun en-tête fiable d’IP visiteur n’est transmis (X-Forwarded-For, X-Real-IP, Forwarded ou CF-Connecting-IP).','proxy.msg.sse-streaming':'SSE temps réel : l’endpoint {endpoint} désactive le buffering applicatif (X-Accel-Buffering: {accelBuffering}) et émet un heartbeat toutes les {heartbeatSeconds} s. Vérifiez que le reverse proxy ne remet pas en tampon cette réponse.',
+  'proxy.forwardedProto':'X-Forwarded-Proto','proxy.forwardedHost':'X-Forwarded-Host','proxy.forwardedPort':'X-Forwarded-Port','proxy.expectedBase':'Base publique attendue','proxy.httpVersion':'Version HTTP','proxy.msg.no-forwarded-host':'Le proxy est détecté mais X-Forwarded-Host est absent. Transmettez le host public pour que Direct-Xfer puisse reconstruire des URL fiables.','proxy.msg.base-host-mismatch':'Le host transmis ({got}) ne correspond pas à la base publique configurée ({expected}).','proxy.msg.alternate-public-base':'Le diagnostic passe actuellement par {observed}, tandis que {tested} est un domaine public distinct configuré pour Images. Le Host de cette requête ne peut pas valider le domaine Images ; utilisez son test d’accès externe pour vérifier ce domaine.','proxy.msg.base-proto-mismatch':'Le protocole transmis ({got}) ne correspond pas à la base publique ({expected}).','proxy.msg.base-port-mismatch':'Le port transmis ({got}) ne correspond pas au port public attendu ({expected}).','proxy.msg.no-client-ip-header':'Le proxy est détecté mais aucun en-tête fiable d’IP visiteur n’est transmis (X-Forwarded-For, X-Real-IP, Forwarded ou CF-Connecting-IP).','proxy.msg.sse-streaming':'SSE temps réel : l’endpoint {endpoint} désactive le buffering applicatif (X-Accel-Buffering: {accelBuffering}) et émet un heartbeat toutes les {heartbeatSeconds} s. Vérifiez que le reverse proxy ne remet pas en tampon cette réponse.',
   'auditA.session-revoked':'Session déconnectée','auditA.diagnostic-fix-requested':'Correction diagnostic demandée','auditA.diagnostic-fix':'Correction diagnostic','auditA.diagnostic-fix-failed':'Échec de correction diagnostic','auditA.tls-refresh':'Renouvellement TLS',
   'diag.tls.chain':'Chaîne de signature','diag.tls.disk':'Matériel sur disque','diag.tls.active':'Contexte actif','diag.tls.diskMatch':'Identique au contexte actif','diag.tls.diskDifferent':'Différent du contexte actif','diag.tls.diskInvalid':'Invalide','diag.tls.signingOk':'Signature disponible','diag.tls.signingUnavailable':'Signature indisponible','diag.tls.reason.ok':'Valide','diag.tls.reason.expired':'Certificat expiré','diag.tls.reason.not-yet-valid':'Certificat pas encore valide','diag.tls.reason.issuer-chain-invalid':'Signature de la CA locale invalide','diag.tls.reason.expiring-soon':'Expiration prochaine','diag.tls.reason.restart-required':'Redémarrage requis pour activer la nouvelle racine','diag.tls.reason.ca-signing-unavailable':'Clé de signature de la CA locale indisponible','diag.tls.reason.disk-material-invalid-active-context-kept':'Matériel TLS sur disque invalide; le dernier contexte valide reste actif','diag.tls.reason.disk-material-pending-reload':'Matériel TLS sur disque différent; rechargement en attente','diag.tls.reason.certificate-read-failed':'Lecture du certificat actif impossible',
   'log.session-revoked':'Session de {username} déconnectée ({device})','log.diagnostic-fix-requested':'Correction diagnostic « {action} » demandée','log.dlp-result':'DLP {source} : {count} détection(s), niveau {highest} · {types}','log.diagnostics-run':'Diagnostic : {ok} OK, {warn} avertissement(s), {bad} erreur(s)','log.diagnostic-fix':'Correction diagnostic « {action} » appliquée','log.diagnostic-fix-failed':'Correction diagnostic « {action} » échouée : {error}'
@@ -4938,7 +4944,7 @@ Object.assign(I18N.en, {
   'dlp.rule.private-key':'Private key','dlp.rule.aws-access-key':'AWS access-key ID','dlp.rule.github-token':'GitHub token','dlp.rule.slack-token':'Slack token','dlp.rule.jwt':'JWT token','dlp.rule.password':'Password assignment','dlp.rule.api-secret':'API secret/token','dlp.rule.payment-card':'Payment-card number','dlp.rule.canadian-sin':'Canadian SIN','dlp.rule.iban':'IBAN','dlp.rule.identity-document':'Identity document','dlp.rule.confidential-marker':'Confidentiality marker',
   'dlp.reason.private-key':'Private-key material was detected.','dlp.reason.aws-access-key':'An AWS access-key identifier matches the known format.','dlp.reason.github-token':'A GitHub token matches a known secret format.','dlp.reason.slack-token':'A Slack token matches a known secret format.','dlp.reason.jwt':'A JSON Web Token-shaped value was detected.','dlp.reason.password':'An assigned password value was detected.','dlp.reason.api-secret':'A value resembling an API key or secret token was detected.','dlp.reason.payment-card':'The number matches a payment-card shape and passes the Luhn check.','dlp.reason.canadian-sin':'The number is presented as a SIN/NAS and passes the Luhn check.','dlp.reason.iban':'The value matches an IBAN and passes the mod-97 check.','dlp.reason.identity-document':'An official-document identifier was found with explicit context.','dlp.reason.confidential-marker':'An explicit confidentiality marker is present.',
   'diag.fix':'Fix','diag.fixing':'Fixing…','diag.fixed':'Fix applied; diagnostics rerun.','diag.fixFailed':'Automatic fix failed.','diag.details':'Details','diag.check.tls-certificate':'TLS certificate / trust chain','diag.tls.subject':'Subject / CN','diag.tls.issuer':'Issuer','diag.tls.sans':'SANs','diag.tls.validity':'Validity','diag.tls.fingerprint':'SHA-256 fingerprint','diag.tls.key':'Public key','diag.tls.mode':'TLS mode','diag.tls.ca':'Local CA','diag.tls.protocol':'Minimum protocol','diag.tls.reason':'Exact state',
-  'proxy.forwardedProto':'X-Forwarded-Proto','proxy.forwardedHost':'X-Forwarded-Host','proxy.forwardedPort':'X-Forwarded-Port','proxy.expectedBase':'Expected public base','proxy.httpVersion':'HTTP version','proxy.msg.no-forwarded-host':'A proxy is detected but X-Forwarded-Host is missing. Forward the public host so Direct-Xfer can reconstruct reliable URLs.','proxy.msg.base-host-mismatch':'Forwarded host ({got}) does not match the configured public base ({expected}).','proxy.msg.base-proto-mismatch':'Forwarded protocol ({got}) does not match the public base ({expected}).','proxy.msg.base-port-mismatch':'Forwarded port ({got}) does not match the expected public port ({expected}).','proxy.msg.no-client-ip-header':'A proxy is detected but no reliable visitor-IP header is forwarded (X-Forwarded-For, X-Real-IP, Forwarded or CF-Connecting-IP).','proxy.msg.sse-streaming':'Real-time SSE: {endpoint} disables application buffering (X-Accel-Buffering: {accelBuffering}) and emits a heartbeat every {heartbeatSeconds}s. Make sure the reverse proxy does not buffer this response again.',
+  'proxy.forwardedProto':'X-Forwarded-Proto','proxy.forwardedHost':'X-Forwarded-Host','proxy.forwardedPort':'X-Forwarded-Port','proxy.expectedBase':'Expected public base','proxy.httpVersion':'HTTP version','proxy.msg.no-forwarded-host':'A proxy is detected but X-Forwarded-Host is missing. Forward the public host so Direct-Xfer can reconstruct reliable URLs.','proxy.msg.base-host-mismatch':'Forwarded host ({got}) does not match the configured public base ({expected}).','proxy.msg.alternate-public-base':'This diagnostic request currently travels through {observed}, while {tested} is a distinct public domain configured for Images. This request Host cannot validate the Images domain; use its external-access test to verify that domain.','proxy.msg.base-proto-mismatch':'Forwarded protocol ({got}) does not match the public base ({expected}).','proxy.msg.base-port-mismatch':'Forwarded port ({got}) does not match the expected public port ({expected}).','proxy.msg.no-client-ip-header':'A proxy is detected but no reliable visitor-IP header is forwarded (X-Forwarded-For, X-Real-IP, Forwarded or CF-Connecting-IP).','proxy.msg.sse-streaming':'Real-time SSE: {endpoint} disables application buffering (X-Accel-Buffering: {accelBuffering}) and emits a heartbeat every {heartbeatSeconds}s. Make sure the reverse proxy does not buffer this response again.',
   'auditA.session-revoked':'Session signed out','auditA.diagnostic-fix-requested':'Diagnostic fix requested','auditA.diagnostic-fix':'Diagnostic fix','auditA.diagnostic-fix-failed':'Diagnostic fix failed','auditA.tls-refresh':'TLS refresh',
   'diag.tls.chain':'Signature chain','diag.tls.disk':'On-disk material','diag.tls.active':'Active context','diag.tls.diskMatch':'Matches active context','diag.tls.diskDifferent':'Differs from active context','diag.tls.diskInvalid':'Invalid','diag.tls.signingOk':'Signing available','diag.tls.signingUnavailable':'Signing unavailable','diag.tls.reason.ok':'Valid','diag.tls.reason.expired':'Certificate expired','diag.tls.reason.not-yet-valid':'Certificate is not valid yet','diag.tls.reason.issuer-chain-invalid':'Local-CA signature is invalid','diag.tls.reason.expiring-soon':'Certificate expires soon','diag.tls.reason.restart-required':'Restart required to activate the new trust anchor','diag.tls.reason.ca-signing-unavailable':'Local-CA signing key is unavailable','diag.tls.reason.disk-material-invalid-active-context-kept':'On-disk TLS material is invalid; the last valid context remains active','diag.tls.reason.disk-material-pending-reload':'On-disk TLS material differs; reload is pending','diag.tls.reason.certificate-read-failed':'Unable to read the active certificate',
   'log.session-revoked':'Signed out {username} session ({device})','log.diagnostic-fix-requested':'Diagnostic fix “{action}” requested','log.dlp-result':'DLP {source}: {count} finding(s), severity {highest} · {types}','log.diagnostics-run':'Diagnostics: {ok} OK, {warn} warning(s), {bad} error(s)','log.diagnostic-fix':'Diagnostic fix “{action}” applied','log.diagnostic-fix-failed':'Diagnostic fix “{action}” failed: {error}'
@@ -4950,7 +4956,7 @@ Object.assign(I18N.es, {
   'dlp.rule.private-key':'Clave privada','dlp.rule.aws-access-key':'ID de clave AWS','dlp.rule.github-token':'Token GitHub','dlp.rule.slack-token':'Token Slack','dlp.rule.jwt':'Token JWT','dlp.rule.password':'Asignación de contraseña','dlp.rule.api-secret':'Secreto/token API','dlp.rule.payment-card':'Número de tarjeta','dlp.rule.canadian-sin':'SIN/NAS canadiense','dlp.rule.iban':'IBAN','dlp.rule.identity-document':'Documento de identidad','dlp.rule.confidential-marker':'Marcador de confidencialidad',
   'dlp.reason.private-key':'Se detectó material de clave privada.','dlp.reason.aws-access-key':'Un identificador de clave AWS coincide con el formato conocido.','dlp.reason.github-token':'Un token de GitHub coincide con un formato secreto conocido.','dlp.reason.slack-token':'Un token de Slack coincide con un formato secreto conocido.','dlp.reason.jwt':'Se detectó un valor con formato JSON Web Token.','dlp.reason.password':'Se detectó un valor asignado a una contraseña.','dlp.reason.api-secret':'Se detectó un valor parecido a una clave API o token secreto.','dlp.reason.payment-card':'El número tiene formato de tarjeta y supera la validación de Luhn.','dlp.reason.canadian-sin':'El número se presenta como SIN/NAS y supera la validación de Luhn.','dlp.reason.iban':'El valor coincide con un IBAN y supera la comprobación mod-97.','dlp.reason.identity-document':'Se encontró un identificador de documento oficial con contexto explícito.','dlp.reason.confidential-marker':'Hay un marcador explícito de confidencialidad.',
   'diag.fix':'Corregir','diag.fixing':'Corrigiendo…','diag.fixed':'Corrección aplicada; diagnóstico relanzado.','diag.fixFailed':'No se pudo aplicar la corrección automática.','diag.details':'Detalles','diag.check.tls-certificate':'Certificado TLS / cadena de confianza','diag.tls.subject':'Sujeto / CN','diag.tls.issuer':'Emisor','diag.tls.sans':'SAN','diag.tls.validity':'Validez','diag.tls.fingerprint':'Huella SHA-256','diag.tls.key':'Clave pública','diag.tls.mode':'Modo TLS','diag.tls.ca':'CA local','diag.tls.protocol':'Protocolo mínimo','diag.tls.reason':'Estado exacto',
-  'proxy.forwardedProto':'X-Forwarded-Proto','proxy.forwardedHost':'X-Forwarded-Host','proxy.forwardedPort':'X-Forwarded-Port','proxy.expectedBase':'Base pública esperada','proxy.httpVersion':'Versión HTTP','proxy.msg.no-forwarded-host':'Se detecta un proxy pero falta X-Forwarded-Host. Reenvía el host público para reconstruir URL fiables.','proxy.msg.base-host-mismatch':'El host reenviado ({got}) no coincide con la base pública configurada ({expected}).','proxy.msg.base-proto-mismatch':'El protocolo reenviado ({got}) no coincide con la base pública ({expected}).','proxy.msg.base-port-mismatch':'El puerto reenviado ({got}) no coincide con el puerto público esperado ({expected}).','proxy.msg.no-client-ip-header':'Se detecta un proxy pero no se reenvía ninguna cabecera fiable de IP visitante.','proxy.msg.sse-streaming':'SSE en tiempo real: {endpoint} desactiva el búfer de la aplicación (X-Accel-Buffering: {accelBuffering}) y emite un heartbeat cada {heartbeatSeconds} s. Comprueba que el proxy inverso no vuelva a almacenar esta respuesta en búfer.',
+  'proxy.forwardedProto':'X-Forwarded-Proto','proxy.forwardedHost':'X-Forwarded-Host','proxy.forwardedPort':'X-Forwarded-Port','proxy.expectedBase':'Base pública esperada','proxy.httpVersion':'Versión HTTP','proxy.msg.no-forwarded-host':'Se detecta un proxy pero falta X-Forwarded-Host. Reenvía el host público para reconstruir URL fiables.','proxy.msg.base-host-mismatch':'El host reenviado ({got}) no coincide con la base pública configurada ({expected}).','proxy.msg.alternate-public-base':'Esta solicitud de diagnóstico pasa actualmente por {observed}, mientras que {tested} es un dominio público distinto configurado para Imágenes. El Host de esta solicitud no puede validar el dominio de Imágenes; usa su prueba de acceso externo para comprobarlo.','proxy.msg.base-proto-mismatch':'El protocolo reenviado ({got}) no coincide con la base pública ({expected}).','proxy.msg.base-port-mismatch':'El puerto reenviado ({got}) no coincide con el puerto público esperado ({expected}).','proxy.msg.no-client-ip-header':'Se detecta un proxy pero no se reenvía ninguna cabecera fiable de IP visitante.','proxy.msg.sse-streaming':'SSE en tiempo real: {endpoint} desactiva el búfer de la aplicación (X-Accel-Buffering: {accelBuffering}) y emite un heartbeat cada {heartbeatSeconds} s. Comprueba que el proxy inverso no vuelva a almacenar esta respuesta en búfer.',
   'auditA.session-revoked':'Sesión cerrada','auditA.diagnostic-fix-requested':'Corrección de diagnóstico solicitada','auditA.diagnostic-fix':'Corrección de diagnóstico','auditA.diagnostic-fix-failed':'Error de corrección de diagnóstico','auditA.tls-refresh':'Renovación TLS',
   'diag.tls.chain':'Cadena de firma','diag.tls.disk':'Material en disco','diag.tls.active':'Contexto activo','diag.tls.diskMatch':'Igual al contexto activo','diag.tls.diskDifferent':'Distinto del contexto activo','diag.tls.diskInvalid':'No válido','diag.tls.signingOk':'Firma disponible','diag.tls.signingUnavailable':'Firma no disponible','diag.tls.reason.ok':'Válido','diag.tls.reason.expired':'Certificado caducado','diag.tls.reason.not-yet-valid':'El certificado aún no es válido','diag.tls.reason.issuer-chain-invalid':'La firma de la CA local no es válida','diag.tls.reason.expiring-soon':'El certificado caduca pronto','diag.tls.reason.restart-required':'Se requiere reinicio para activar la nueva raíz de confianza','diag.tls.reason.ca-signing-unavailable':'La clave de firma de la CA local no está disponible','diag.tls.reason.disk-material-invalid-active-context-kept':'El material TLS en disco no es válido; se mantiene el último contexto válido','diag.tls.reason.disk-material-pending-reload':'El material TLS en disco es diferente; la recarga está pendiente','diag.tls.reason.certificate-read-failed':'No se pudo leer el certificado activo',
   'log.session-revoked':'Sesión de {username} cerrada ({device})','log.diagnostic-fix-requested':'Corrección de diagnóstico «{action}» solicitada','log.dlp-result':'DLP {source}: {count} detección(es), gravedad {highest} · {types}','log.diagnostics-run':'Diagnóstico: {ok} OK, {warn} aviso(s), {bad} error(es)','log.diagnostic-fix':'Corrección de diagnóstico «{action}» aplicada','log.diagnostic-fix-failed':'Corrección de diagnóstico «{action}» fallida: {error}'
@@ -5135,7 +5141,7 @@ const state = {
   dashboardLiveData: null,
   dashTimer: null,
   dashLiveTimer: null,
-  dashboardTab: uiPrefChoice('dashboardTab', ['transfers', 'images', 'health'], 'transfers'),
+  dashboardTab: uiPrefChoice('dashboardTab', ['transfers', 'images'], 'transfers'),
   dashPeriod: uiPrefChoice('dashPeriod', ['1', '7', '30', '90', '365', 'all'], '30'), // dashboard window
   dashDirection: uiPrefChoice('dashDirection', ['', 'down', 'up'], ''),
   dashStatus: uiPrefChoice('dashStatus', ['', 'completed', 'interrupted'], ''),
@@ -5333,7 +5339,7 @@ function previewFileKind(name) {
 }
 function isPreviewableVideo(name) { return previewFileKind(name) === 'video'; }
 function isPreviewableFile(name) { return !!previewFileKind(name); }
-const REFRESH_MS = 5000; // 1.64.1: lower idle polling overhead; live downloads use SSE
+const REFRESH_MS = 5000; // 1.64.2: lower idle polling overhead; live downloads use SSE
 const DASH_REFRESH_MS = 60000; // dashboard analytics refresh (reads the journal)
 const DASH_LIVE_REFRESH_MS = 2000; // lightweight active-transfer refresh
 const SHARE_DELETE_UNDO_MS = 5000;
@@ -5451,9 +5457,13 @@ function setLang(lang) {
   // Keep the active independent page reflected in the browser tab.
   document.title = dashboardsPageOpen()
     ? (t('app.name') + ' — ' + t('dashboards.title'))
-    : imagesPageOpen()
-      ? (t('app.name') + ' — ' + t('photo.title'))
-      : t('app.docTitle');
+    : systemHealthPageOpen()
+      ? (t('app.name') + ' — ' + t('systemHealth.title'))
+      : activityPageOpen()
+        ? (t('app.name') + ' — ' + t('activity.sectionTitle'))
+        : imagesPageOpen()
+          ? (t('app.name') + ' — ' + t('photo.title'))
+          : t('app.docTitle');
   applyTranslations();
   updateNotificationsSoundBtn();
   renderNotifications();
@@ -5653,7 +5663,7 @@ function el(tag, opts = {}) {
 }
 
 function isLoggedIn() {
-  return ['app-view', 'images-page', 'dashboards-page', 'activity-page'].some((id) => {
+  return ['app-view', 'images-page', 'dashboards-page', 'system-health-page', 'activity-page'].some((id) => {
     const view = $(id);
     return !!view && !view.classList.contains('hidden');
   });
@@ -5794,6 +5804,7 @@ function clearAuthenticatedClientState() {
   // newly signed-in account can never reveal the previous account while offline.
   document.querySelectorAll('#dashboards-page .chart-body, #dashboards-page .dash-kpis, #dashboards-page .dashboard-alerts, #dashboards-page .dashboard-comparison, #dashboards-page .dashboard-users, #dashboards-page .dashboard-duplicates, #dashboards-page .dashboard-optimization, #dashboards-page .dash-live-list, #dashboards-page .dash-stalled-list, #dashboards-page .dash-summary-grid, #dashboards-page .dash-errors, #dashboards-page .dash-mini-body, #dashboards-page .imgdash-list').forEach((node) => { node.textContent = ''; });
   ['dash-updated','dash-live-updated','dash-filter-summary','dash-alert-count','dash-stalled-count','idash-updated','idash-filter-summary','idash-alert-count'].forEach((id) => { const node = $(id); if (node) node.textContent = ''; });
+  try { if (window.DirectXferServerHealth && typeof window.DirectXferServerHealth.clear === 'function') window.DirectXferServerHealth.clear(); } catch (_) {}
 }
 function showLogin() {
   state.authEpoch += 1;
@@ -5814,7 +5825,7 @@ function showLogin() {
     renderNotifications(); closeNotificationsMenu();
   } catch (_) {}
   placeUserMenu('admin');
-  ['images-page', 'dashboards-page', 'activity-page'].forEach((id) => {
+  ['images-page', 'dashboards-page', 'system-health-page', 'activity-page'].forEach((id) => {
     const page = $(id);
     if (page) page.classList.add('hidden');
   });
@@ -5828,7 +5839,7 @@ function showLogin() {
 }
 function showApp() {
   $('login-view').classList.add('hidden');
-  ['images-page', 'dashboards-page', 'activity-page'].forEach((id) => {
+  ['images-page', 'dashboards-page', 'system-health-page', 'activity-page'].forEach((id) => {
     const page = $(id);
     if (page) page.classList.add('hidden');
   });
@@ -6136,6 +6147,7 @@ function openNotificationTarget(n) {
   // transfers, security, activity). Close any sub-page so it becomes visible.
   if (typeof closeImagesPage === 'function') closeImagesPage();
   if (typeof hideDashboardsView === 'function' && typeof dashboardsPageOpen === 'function' && dashboardsPageOpen()) hideDashboardsView(true);
+  if (typeof hideSystemHealthView === 'function' && typeof systemHealthPageOpen === 'function' && systemHealthPageOpen()) hideSystemHealthView(true);
   try { window.scrollTo(0, 0); } catch (_) {}
 }
 // Contextual quick actions per notification, wired to existing safe
@@ -6567,6 +6579,7 @@ function placeUserMenu(view) {
     admin: '#app-view .topbar-menus',
     images: '#images-page .topbar-menus',
     dashboards: '#dashboards-page .topbar-menus',
+    systemHealth: '#system-health-page .topbar-menus',
     activity: '#activity-page .topbar-menus',
   };
   const target = document.querySelector(targets[view] || targets.admin);
@@ -6606,6 +6619,7 @@ function showActivityView() {
   stopDashboardAutoRefresh();
   const imagesPage = $('images-page'); if (imagesPage) imagesPage.classList.add('hidden');
   const dashboardsPage = $('dashboards-page'); if (dashboardsPage) dashboardsPage.classList.add('hidden');
+  const systemHealthPage = $('system-health-page'); if (systemHealthPage) systemHealthPage.classList.add('hidden');
   $('app-view').classList.add('hidden');
   placeUserMenu('activity');
   $('activity-page').classList.remove('hidden');
@@ -6658,13 +6672,12 @@ function dashboardsPageOpen() {
 function dashboardTabFromUrl() {
   try {
     const tab = new URLSearchParams(location.search).get('tab');
-    if (tab === 'images' || tab === 'transfers' || tab === 'health') return tab;
+    if (tab === 'images' || tab === 'transfers') return tab;
   } catch (_) {}
   return state.dashboardTab;
 }
 
 function activeDashboardTab() {
-  if ($('dashboard-health-tab') && $('dashboard-health-tab').classList.contains('active')) return 'health';
   return $('dashboard-images-tab') && $('dashboard-images-tab').classList.contains('active') ? 'images' : 'transfers';
 }
 
@@ -6682,11 +6695,7 @@ function stopDashboardAutoRefresh() {
 
 function startDashboardAutoRefresh(tab) {
   stopDashboardAutoRefresh();
-  tab = ['images','health'].includes(tab) ? tab : 'transfers';
-  if (tab === 'health') {
-    try { if (window.DirectXferServerHealth && typeof window.DirectXferServerHealth.start === 'function') window.DirectXferServerHealth.start(); } catch (_) {}
-    return;
-  }
+  tab = tab === 'images' ? 'images' : 'transfers';
   if (tab === 'images') {
     loadImagesDashboard();
     state.dashTimer = setInterval(loadImagesDashboard, DASH_REFRESH_MS);
@@ -6699,28 +6708,21 @@ function startDashboardAutoRefresh(tab) {
 }
 
 function setDashboardTab(tab, updateUrl = true) {
-  tab = ['images','health'].includes(tab) ? tab : 'transfers';
-  const role = state.settings && state.settings.role;
-  if (tab === 'health' && role && role !== 'owner' && role !== 'admin') tab = 'transfers';
+  tab = tab === 'images' ? 'images' : 'transfers';
   state.dashboardTab = tab;
   updateUiPrefs({ dashboardTab: tab });
   const transfersView = $('dashboard-transfers-view');
   const imagesView = $('dashboard-images-view');
-  const healthView = $('dashboard-health-view');
   const transfersTab = $('dashboard-transfers-tab');
   const imagesTab = $('dashboard-images-tab');
-  const healthTab = $('dashboard-health-tab');
-  if (!transfersView || !imagesView || !healthView || !transfersTab || !imagesTab || !healthTab) return;
+  if (!transfersView || !imagesView || !transfersTab || !imagesTab) return;
 
   transfersView.classList.toggle('hidden', tab !== 'transfers');
   imagesView.classList.toggle('hidden', tab !== 'images');
-  healthView.classList.toggle('hidden', tab !== 'health');
   transfersTab.classList.toggle('active', tab === 'transfers');
   imagesTab.classList.toggle('active', tab === 'images');
-  healthTab.classList.toggle('active', tab === 'health');
   transfersTab.setAttribute('aria-selected', tab === 'transfers' ? 'true' : 'false');
   imagesTab.setAttribute('aria-selected', tab === 'images' ? 'true' : 'false');
-  healthTab.setAttribute('aria-selected', tab === 'health' ? 'true' : 'false');
   startDashboardAutoRefresh(tab);
 
   if (updateUrl && dashboardsPageOpen() && location.pathname === DASHBOARDS_PATH) {
@@ -6735,6 +6737,8 @@ function showDashboardsView(tab = state.dashboardTab) {
   if (imagesPage) imagesPage.classList.add('hidden');
   const activityPage = $('activity-page');
   if (activityPage) activityPage.classList.add('hidden');
+  const systemHealthPage = $('system-health-page');
+  if (systemHealthPage) systemHealthPage.classList.add('hidden');
   $('app-view').classList.add('hidden');
   placeUserMenu('dashboards');
   $('dashboards-page').classList.remove('hidden');
@@ -6757,7 +6761,7 @@ function hideDashboardsView(showHome = true) {
 }
 
 function openDashboardsPage(tab = state.dashboardTab) {
-  tab = ['images','health'].includes(tab) ? tab : 'transfers';
+  tab = tab === 'images' ? 'images' : 'transfers';
   showDashboardsView(tab);
   const url = DASHBOARDS_PATH + (tab === 'transfers' ? '' : '?tab=' + encodeURIComponent(tab));
   try { history.pushState({ dxView: 'dashboards', dashTab: tab }, '', url); } catch (_) {}
@@ -6785,12 +6789,65 @@ if ($('dash-btn')) $('dash-btn').addEventListener('click', (e) => {
 if ($('dashboards-back')) $('dashboards-back').addEventListener('click', closeDashboardsPage);
 if ($('dashboard-transfers-tab')) $('dashboard-transfers-tab').addEventListener('click', () => setDashboardTab('transfers'));
 if ($('dashboard-images-tab')) $('dashboard-images-tab').addEventListener('click', () => setDashboardTab('images'));
-if ($('dashboard-health-tab')) $('dashboard-health-tab').addEventListener('click', () => setDashboardTab('health'));
 
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape' || !dashboardsPageOpen()) return;
   if (document.querySelector('.overlay:not(.hidden)')) return;
   closeDashboardsPage();
+});
+
+// --- System Health page — dedicated owner/admin full-page view ----------------
+const SYSTEM_HEALTH_PATH = '/system-health';
+
+function systemHealthPageOpen() {
+  const page = $('system-health-page');
+  return !!page && !page.classList.contains('hidden');
+}
+function showSystemHealthView() {
+  if (!['owner','admin',''].includes(state.role || '')) return false;
+  closeUserMenu();
+  stopDashboardAutoRefresh();
+  const imagesPage = $('images-page'); if (imagesPage) imagesPage.classList.add('hidden');
+  const dashboardsPage = $('dashboards-page'); if (dashboardsPage) dashboardsPage.classList.add('hidden');
+  const activityPage = $('activity-page'); if (activityPage) activityPage.classList.add('hidden');
+  $('app-view').classList.add('hidden');
+  placeUserMenu('systemHealth');
+  $('system-health-page').classList.remove('hidden');
+  document.title = t('app.name') + ' — ' + t('systemHealth.title');
+  try { if (window.DirectXferServerHealth && typeof window.DirectXferServerHealth.start === 'function') window.DirectXferServerHealth.start(); } catch (_) {}
+  window.scrollTo(0, 0);
+  return true;
+}
+function hideSystemHealthView(showHome = true) {
+  const page = $('system-health-page'); if (!page) return;
+  try { if (window.DirectXferServerHealth && typeof window.DirectXferServerHealth.stop === 'function') window.DirectXferServerHealth.stop(); } catch (_) {}
+  closeUserMenu();
+  page.classList.add('hidden');
+  if (showHome) {
+    placeUserMenu('admin');
+    $('app-view').classList.remove('hidden');
+    document.title = t('app.docTitle');
+  }
+}
+function openSystemHealthPage() {
+  if (systemHealthPageOpen()) return;
+  if (!showSystemHealthView()) return;
+  try { if (location.pathname !== SYSTEM_HEALTH_PATH) history.pushState({ dxView:'systemHealth' }, '', SYSTEM_HEALTH_PATH); } catch (_) {}
+}
+function closeSystemHealthPage() {
+  if (!systemHealthPageOpen()) return;
+  if (history.state && history.state.dxView === 'systemHealth') history.back();
+  else {
+    hideSystemHealthView();
+    if (location.pathname === SYSTEM_HEALTH_PATH) { try { history.replaceState({ dxView:'home' }, '', '/'); } catch (_) {} }
+  }
+}
+if ($('system-health-btn')) $('system-health-btn').addEventListener('click', (e) => { e.stopPropagation(); openSystemHealthPage(); });
+if ($('system-health-back')) $('system-health-back').addEventListener('click', closeSystemHealthPage);
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape' || !systemHealthPageOpen()) return;
+  if (document.querySelector('.overlay:not(.hidden)')) return;
+  closeSystemHealthPage();
 });
 
 // --- Images page (topbar icon) — its own full admin sub-page (<main id="images-page">),
@@ -6830,6 +6887,8 @@ function showImagesView() {
   if (dashboardsPage) dashboardsPage.classList.add('hidden');
   const activityPage = $('activity-page');
   if (activityPage) activityPage.classList.add('hidden');
+  const systemHealthPage = $('system-health-page');
+  if (systemHealthPage) systemHealthPage.classList.add('hidden');
   $('app-view').classList.add('hidden');
   placeUserMenu('images');
   $('images-page').classList.remove('hidden');
@@ -6888,6 +6947,10 @@ function syncAdminRouteFromUrl() {
     showDashboardsView(dashboardTabFromUrl());
     return;
   }
+  if (location.pathname === SYSTEM_HEALTH_PATH) {
+    if (showSystemHealthView()) return;
+    try { history.replaceState({ dxView:'home' }, '', '/'); } catch (_) {}
+  }
   if (location.pathname === IMAGES_PATH) {
     showImagesView();
     return;
@@ -6895,6 +6958,7 @@ function syncAdminRouteFromUrl() {
 
   hideActivityView(false);
   hideDashboardsView(false);
+  hideSystemHealthView(false);
   hideImagesView(false);
   placeUserMenu('admin');
   $('app-view').classList.remove('hidden');
@@ -6921,7 +6985,7 @@ if ($('images-back')) $('images-back').addEventListener('click', closeImagesPage
 // shares admin page, regardless of how the current sub-page was reached.
 function goToSharesHome() {
   if (!isLoggedIn()) return;
-  if (activityPageOpen() || dashboardsPageOpen() || imagesPageOpen()) {
+  if (activityPageOpen() || dashboardsPageOpen() || systemHealthPageOpen() || imagesPageOpen()) {
     try {
       if (location.pathname !== '/') history.pushState({ dxView: 'home' }, '', '/');
     } catch (_) {}
@@ -9795,6 +9859,7 @@ function applyRole(role) {
   show('history-clear-btn', isFull);
   show('live-activity-btn', isFull || role === 'auditor');
   show('activity-btn', isFull || role === 'auditor');
+  show('system-health-btn', isFull);
   show('security-btn', isFull || role === 'auditor');
   if (isFull || role === 'auditor') { if (activityPageOpen() || !state.activityInitialized) loadActivityRecent().catch(() => {}); ensureActivityStream(); }
   else stopActivityStream();
@@ -9986,7 +10051,7 @@ function sharesPollingViewActive() {
   // Activity and Dashboards have their own SSE/pollers. Continuing the large
   // /api/shares snapshot in those hidden views wastes CPU, JSON parsing and DOM
   // work. Images still consumes the share snapshot, so it remains active there.
-  return isLoggedIn() && !document.hidden && !activityPageOpen() && !dashboardsPageOpen();
+  return isLoggedIn() && !document.hidden && !activityPageOpen() && !dashboardsPageOpen() && !systemHealthPageOpen();
 }
 function startPolling() {
   if (!state.pollTimer) {
@@ -9996,6 +10061,7 @@ function startPolling() {
   }
   startSharePresence();
   if (dashboardsPageOpen()) startDashboardAutoRefresh(activeDashboardTab());
+  if (systemHealthPageOpen()) { try { if (window.DirectXferServerHealth && typeof window.DirectXferServerHealth.start === 'function') window.DirectXferServerHealth.start(); } catch (_) {} }
 }
 function stopPolling() {
   if (state.pollTimer) {

@@ -68,10 +68,11 @@ test('untrusted forwarding headers are not called a trusted proxy',()=>{
   assert.match(server,/proxy-untrusted/);
 });
 
-test('session loss purges privileged dashboard data and returns to a safe tab',()=>{
+test('session loss purges privileged System Health data and closes the protected page',()=>{
   assert.match(ui,/function clearSensitive\(\)/);
   assert.match(ui,/\[401,403\]\.includes\(e\.status\)/);
-  assert.match(ui,/dashboard-transfers-tab/);
+  assert.match(ui,/system-health-btn/);
+  assert.match(ui,/closeSystemHealthPage/);
   assert.match(ui,/state\.data=null;state\.diag=null/);
 });
 
@@ -106,7 +107,7 @@ test('automatic health export does not carry raw connector or notification trans
   assert.match(server,/lastWebhook\.error\?'failed':null/);
 });
 test('server health chrome is localized in all three languages and assets are cache-busted',()=>{
-  assert.match(html,/server-health-dashboard\.js\?v=2/);
+  assert.match(html,/server-health-dashboard\.js\?v=4/);
   assert.match(html,/server-health-dashboard\.css\?v=2/);
   assert.match(html,/data-health-text="cpuSystemTitle"/);
   assert.match(html,/data-health-aria="rangeAria"/);

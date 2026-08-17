@@ -1,6 +1,6 @@
 'use strict';
 (function () {
-  var RELEASE = (window.__DX_PWA_RELEASE && window.__DX_PWA_RELEASE.version) || '1.64.1';
+  var RELEASE = (window.__DX_PWA_RELEASE && window.__DX_PWA_RELEASE.version) || '1.64.2';
   var BUILD = (window.__DX_PWA_RELEASE && window.__DX_PWA_RELEASE.build) || '2026.08.17-pwa326';
   var MODE_KEY = 'dx-pwa-advanced-admin-enabled';
   var refreshTimer = 0;

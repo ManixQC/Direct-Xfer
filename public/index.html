@@ -16,7 +16,7 @@
       })();
     </script>
     <link rel="manifest" href="/admin-pwa-detect.webmanifest" />
-    <link rel="stylesheet" href="/style.css?v=289" />
+    <link rel="stylesheet" href="/style.css?v=291" />
     <link rel="stylesheet" href="/server-health-dashboard.css?v=2" />
   </head>
   <body>
@@ -99,17 +99,23 @@
         <div class="brand admin-brand"><img class="brand-logo brand-home" src="/logo.svg" alt="" role="link" tabindex="0" data-i18n-title="menu.backToShares" title="Back to shares" /> <span class="brand-home" role="link" tabindex="0" data-i18n-title="menu.backToShares" title="Back to shares" data-i18n="app.name">Direct-Xfer</span></div>
         <div class="topbar-menus">
           <a class="pwa-cta pwa-install-cta btn ghost sm" href="/app/" data-i18n="pwa.installApp" data-i18n-title="pwa.installApp" title="Install mobile app">📲 Install mobile app</a>
-          <div class="activity-menu">
-            <button id="activity-btn" class="icon-btn user-btn activity-launch-btn" aria-label="Activity" data-i18n-aria="activity.sectionTitle" data-i18n-title="activity.sectionTitle" title="Activity" aria-controls="activity-page">
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-              <span class="activity-launch-label" data-i18n="activity.sectionTitle">Activity</span>
-            </button>
-          </div>
           <div class="dash-menu">
             <button id="dash-btn" class="icon-btn user-btn" aria-label="Dashboards" data-i18n-title="dashboards.title" title="Dashboards" aria-controls="dashboards-page">
               <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
                 <path d="M4 20V10h4v10H4Zm6 0V4h4v16h-4Zm6 0v-7h4v7h-4Z" />
               </svg>
+            </button>
+          </div>
+          <div class="system-health-menu">
+            <button id="system-health-btn" class="icon-btn user-btn system-health-launch-btn hidden" aria-label="System Health" data-i18n-aria="systemHealth.title" data-i18n-title="systemHealth.title" title="System Health" aria-controls="system-health-page">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l2-5 4 10 2-5h6"/><path d="M5 5.5A8.5 8.5 0 1 1 3.5 15"/></svg>
+              <span class="system-health-launch-label" data-i18n="systemHealth.title">System Health</span>
+            </button>
+          </div>
+          <div class="activity-menu">
+            <button id="activity-btn" class="icon-btn user-btn activity-launch-btn" aria-label="Activity" data-i18n-aria="activity.sectionTitle" data-i18n-title="activity.sectionTitle" title="Activity" aria-controls="activity-page">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+              <span class="activity-launch-label" data-i18n="activity.sectionTitle">Activity</span>
             </button>
           </div>
           <div class="images-menu">
@@ -514,7 +520,6 @@
           <div class="dashboard-tabs" role="tablist" data-i18n-aria="dashboards.title" aria-label="Dashboards">
             <button id="dashboard-transfers-tab" class="btn ghost sm dashboard-tab active" type="button" role="tab" aria-selected="true" aria-controls="dashboard-transfers-view" data-i18n="dashboards.transfers">Transfers</button>
             <button id="dashboard-images-tab" class="btn ghost sm dashboard-tab" type="button" role="tab" aria-selected="false" aria-controls="dashboard-images-view" data-i18n="dashboards.images">Images</button>
-            <button id="dashboard-health-tab" class="btn ghost sm dashboard-tab hidden" type="button" role="tab" aria-selected="false" aria-controls="dashboard-health-view">Santé serveur</button>
           </div>
         </div>
       </header>
@@ -739,82 +744,6 @@
         </section>
       </section>
 
-      <section id="dashboard-health-view" class="dashboard-view hidden server-health-view" role="tabpanel" aria-labelledby="dashboard-health-tab">
-        <section class="card dashboard-panel server-health-panel">
-          <div class="card-head server-health-head">
-            <div>
-              <h2 id="server-health-title">Santé serveur</h2>
-              <p id="server-health-subtitle" class="muted sm">Supervision complète de l’instance Direct-Xfer.</p>
-            </div>
-            <div class="head-actions server-health-actions">
-              <div id="server-health-range" class="dash-period" role="group" aria-label="Période de l’historique" data-health-aria="rangeAria">
-                <button type="button" class="dp-btn active" data-range="24h" data-health-text="range24">24h</button>
-                <button type="button" class="dp-btn" data-range="7d" data-health-text="range7">7j</button>
-                <button type="button" class="dp-btn" data-range="30d" data-health-text="range30">30j</button>
-              </div>
-              <label class="server-health-auto"><input id="server-health-auto" type="checkbox" checked> <span id="server-health-auto-label">Auto 5 s</span></label>
-              <button id="server-health-export" class="btn ghost sm" type="button">⬇ JSON</button>
-              <button id="server-health-diagnostics" class="btn ghost sm" type="button">🩺 Diagnostic complet</button>
-              <button id="server-health-refresh" class="btn ghost sm" type="button">↻ Actualiser</button>
-            </div>
-          </div>
-
-          <div class="server-health-overview">
-            <div id="server-health-score" class="server-health-score" data-status="loading"><div class="server-health-score-ring"><strong>—</strong><span>/100</span></div><div><b id="server-health-status">Chargement…</b><span id="server-health-updated" class="muted sm"></span></div></div>
-            <div id="server-health-kpis" class="server-health-kpis" aria-live="polite"></div>
-          </div>
-
-          <div class="dash-section" data-health-text="globalSection">Alertes et état global</div>
-          <div class="server-health-grid server-health-grid-alerts">
-            <div class="chart-panel server-health-wide"><div class="chart-title"><span data-health-text="alertsTitle">Alertes actives</span><span id="server-health-alert-count" class="count">0</span></div><div id="server-health-alerts" class="server-health-alerts" aria-live="polite"></div></div>
-          </div>
-
-          <div class="dash-section" data-health-text="resourcesSection">Ressources système et processus</div>
-          <div class="server-health-grid">
-            <div class="chart-panel"><div class="chart-title" data-health-text="cpuSystemTitle">CPU système</div><div id="server-health-cpu" class="server-health-resource"></div></div>
-            <div class="chart-panel"><div class="chart-title" data-health-text="memorySystemTitle">Mémoire système</div><div id="server-health-ram" class="server-health-resource"></div></div>
-            <div class="chart-panel"><div class="chart-title" data-health-text="mainDiskTitle">Disque principal</div><div id="server-health-disk" class="server-health-resource"></div></div>
-            <div class="chart-panel"><div class="chart-title" data-health-text="processTitle">Processus Direct-Xfer</div><div id="server-health-process" class="server-health-resource"></div></div>
-            <div class="chart-panel"><div class="chart-title" data-health-text="eventLoopTitle">Boucle événementielle</div><div id="server-health-event-loop" class="server-health-resource"></div></div>
-            <div class="chart-panel"><div class="chart-title" data-health-text="uptimeTitle">Uptime &amp; charge</div><div id="server-health-uptime" class="server-health-resource"></div></div>
-            <div class="chart-panel server-health-wide"><div class="chart-title"><span data-health-text="historyTitle">Historique des ressources</span><span id="server-health-history-meta" class="muted sm"></span></div><div id="server-health-history" class="server-health-history"></div></div>
-          </div>
-
-          <div class="dash-section" data-health-text="storageSection">Stockage et volumes</div>
-          <div class="server-health-grid">
-            <div class="chart-panel server-health-wide"><div class="chart-title" data-health-text="volumesTitle">Volumes Direct-Xfer</div><div id="server-health-volumes" class="server-health-table-wrap"></div></div>
-            <div class="chart-panel"><div class="chart-title" data-health-text="backupTitle">Sauvegardes</div><div id="server-health-backup" class="server-health-list"></div></div>
-            <div class="chart-panel"><div class="chart-title" data-health-text="searchTitle">Recherche / OCR</div><div id="server-health-search" class="server-health-list"></div></div>
-          </div>
-
-          <div class="dash-section" data-health-text="workloadSection">Charge applicative</div>
-          <div class="server-health-grid">
-            <div class="chart-panel"><div class="chart-title" data-health-text="sharesTitle">Partages</div><div id="server-health-shares" class="server-health-list"></div></div>
-            <div class="chart-panel"><div class="chart-title" data-health-text="transfersTitle">Transferts</div><div id="server-health-transfers" class="server-health-list"></div></div>
-            <div class="chart-panel"><div class="chart-title" data-health-text="connectorsTitle">Connecteurs &amp; jobs</div><div id="server-health-connectors" class="server-health-list"></div></div>
-          </div>
-
-          <div class="dash-section" data-health-text="exposureSection">Réseau, TLS et exposition</div>
-          <div class="server-health-grid">
-            <div class="chart-panel"><div class="chart-title" data-health-text="networkTitle">Réseau / reverse proxy</div><div id="server-health-network" class="server-health-list"></div></div>
-            <div class="chart-panel"><div class="chart-title" data-health-text="tlsTitle">TLS / certificat</div><div id="server-health-tls" class="server-health-list"></div></div>
-            <div class="chart-panel"><div class="chart-title" data-health-text="notificationsTitle">Notifications</div><div id="server-health-notifications" class="server-health-list"></div></div>
-          </div>
-
-          <div class="dash-section" data-health-text="integritySection">Sécurité et intégrité</div>
-          <div class="server-health-grid">
-            <div class="chart-panel"><div class="chart-title" data-health-text="securityTitle">Sécurité</div><div id="server-health-security" class="server-health-list"></div></div>
-            <div class="chart-panel"><div class="chart-title" data-health-text="auditTitle">Audit signé</div><div id="server-health-audit" class="server-health-list"></div></div>
-            <div class="chart-panel"><div class="chart-title" data-health-text="runtimeTitle">Runtime</div><div id="server-health-runtime" class="server-health-list"></div></div>
-          </div>
-
-          <div class="dash-section" data-health-text="diagnosticSection">Diagnostic détaillé</div>
-          <div class="server-health-grid server-health-grid-alerts">
-            <div class="chart-panel server-health-wide"><div class="chart-title"><span data-health-text="diagnosticsTitle">Dernier diagnostic complet</span><span id="server-health-diag-summary" class="muted sm" data-health-text="notRun">Non exécuté</span></div><div id="server-health-diag" class="server-health-diagnostics"><div class="empty sm" data-health-text="diagNone">Cliquez sur « Diagnostic complet » pour exécuter les contrôles approfondis.</div></div></div>
-          </div>
-        </section>
-      </section>
-
       <section id="dashboard-images-view" class="dashboard-view hidden" role="tabpanel" aria-labelledby="dashboard-images-tab">
         <section id="images-dash" class="card dashboard-panel">
           <div class="card-head">
@@ -953,6 +882,101 @@
           </div>
         </section>
       </section>
+
+      <footer class="app-footer dashboards-footer">
+        Direct-Xfer <span class="app-year"></span> · <span class="app-version"></span>
+      </footer>
+    </main>
+
+    <!-- ===================== System Health (full page) ===================== -->
+    <main id="system-health-page" class="app-view system-health-page hidden">
+      <header class="topbar">
+        <div class="brand system-health-brand">
+          <button id="system-health-back" class="icon-btn" data-i18n-title="systemHealth.back" title="Back" aria-label="Back">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M15.5 4.5 8 12l7.5 7.5 1.4-1.4L10.8 12l6.1-6.1z"/></svg>
+          </button>
+          <img class="brand-logo brand-home" src="/logo.svg" alt="" role="link" tabindex="0" data-i18n-title="menu.backToShares" title="Back to shares" />
+          <span class="brand-home" role="link" tabindex="0" data-i18n-title="menu.backToShares" title="Back to shares" data-i18n="systemHealth.title">System Health</span>
+        </div>
+        <div class="topbar-menus"></div>
+      </header>
+
+      <section class="server-health-view">
+        <section class="card dashboard-panel server-health-panel">
+          <div class="card-head server-health-head">
+            <div>
+              <h2 id="server-health-title">Santé Système</h2>
+              <p id="server-health-subtitle" class="muted sm">Supervision complète de l’instance Direct-Xfer.</p>
+            </div>
+            <div class="head-actions server-health-actions">
+              <div id="server-health-range" class="dash-period" role="group" aria-label="Période de l’historique" data-health-aria="rangeAria">
+                <button type="button" class="dp-btn active" data-range="24h" data-health-text="range24">24h</button>
+                <button type="button" class="dp-btn" data-range="7d" data-health-text="range7">7j</button>
+                <button type="button" class="dp-btn" data-range="30d" data-health-text="range30">30j</button>
+              </div>
+              <label class="server-health-auto"><input id="server-health-auto" type="checkbox" checked> <span id="server-health-auto-label">Auto 5 s</span></label>
+              <button id="server-health-export" class="btn ghost sm" type="button">⬇ JSON</button>
+              <button id="server-health-diagnostics" class="btn ghost sm" type="button">🩺 Diagnostic complet</button>
+              <button id="server-health-refresh" class="btn ghost sm" type="button">↻ Actualiser</button>
+            </div>
+          </div>
+
+          <div class="server-health-overview">
+            <div id="server-health-score" class="server-health-score" data-status="loading"><div class="server-health-score-ring"><strong>—</strong><span>/100</span></div><div><b id="server-health-status">Chargement…</b><span id="server-health-updated" class="muted sm"></span></div></div>
+            <div id="server-health-kpis" class="server-health-kpis" aria-live="polite"></div>
+          </div>
+
+          <div class="dash-section" data-health-text="globalSection">Alertes et état global</div>
+          <div class="server-health-grid server-health-grid-alerts">
+            <div class="chart-panel server-health-wide"><div class="chart-title"><span data-health-text="alertsTitle">Alertes actives</span><span id="server-health-alert-count" class="count">0</span></div><div id="server-health-alerts" class="server-health-alerts" aria-live="polite"></div></div>
+          </div>
+
+          <div class="dash-section" data-health-text="resourcesSection">Ressources système et processus</div>
+          <div class="server-health-grid">
+            <div class="chart-panel"><div class="chart-title" data-health-text="cpuSystemTitle">CPU système</div><div id="server-health-cpu" class="server-health-resource"></div></div>
+            <div class="chart-panel"><div class="chart-title" data-health-text="memorySystemTitle">Mémoire système</div><div id="server-health-ram" class="server-health-resource"></div></div>
+            <div class="chart-panel"><div class="chart-title" data-health-text="mainDiskTitle">Disque principal</div><div id="server-health-disk" class="server-health-resource"></div></div>
+            <div class="chart-panel"><div class="chart-title" data-health-text="processTitle">Processus Direct-Xfer</div><div id="server-health-process" class="server-health-resource"></div></div>
+            <div class="chart-panel"><div class="chart-title" data-health-text="eventLoopTitle">Boucle événementielle</div><div id="server-health-event-loop" class="server-health-resource"></div></div>
+            <div class="chart-panel"><div class="chart-title" data-health-text="uptimeTitle">Uptime &amp; charge</div><div id="server-health-uptime" class="server-health-resource"></div></div>
+            <div class="chart-panel server-health-wide"><div class="chart-title"><span data-health-text="historyTitle">Historique des ressources</span><span id="server-health-history-meta" class="muted sm"></span></div><div id="server-health-history" class="server-health-history"></div></div>
+          </div>
+
+          <div class="dash-section" data-health-text="storageSection">Stockage et volumes</div>
+          <div class="server-health-grid">
+            <div class="chart-panel server-health-wide"><div class="chart-title" data-health-text="volumesTitle">Volumes Direct-Xfer</div><div id="server-health-volumes" class="server-health-table-wrap"></div></div>
+            <div class="chart-panel"><div class="chart-title" data-health-text="backupTitle">Sauvegardes</div><div id="server-health-backup" class="server-health-list"></div></div>
+            <div class="chart-panel"><div class="chart-title" data-health-text="searchTitle">Recherche / OCR</div><div id="server-health-search" class="server-health-list"></div></div>
+          </div>
+
+          <div class="dash-section" data-health-text="workloadSection">Charge applicative</div>
+          <div class="server-health-grid">
+            <div class="chart-panel"><div class="chart-title" data-health-text="sharesTitle">Partages</div><div id="server-health-shares" class="server-health-list"></div></div>
+            <div class="chart-panel"><div class="chart-title" data-health-text="transfersTitle">Transferts</div><div id="server-health-transfers" class="server-health-list"></div></div>
+            <div class="chart-panel"><div class="chart-title" data-health-text="connectorsTitle">Connecteurs &amp; jobs</div><div id="server-health-connectors" class="server-health-list"></div></div>
+          </div>
+
+          <div class="dash-section" data-health-text="exposureSection">Réseau, TLS et exposition</div>
+          <div class="server-health-grid">
+            <div class="chart-panel"><div class="chart-title" data-health-text="networkTitle">Réseau / reverse proxy</div><div id="server-health-network" class="server-health-list"></div></div>
+            <div class="chart-panel"><div class="chart-title" data-health-text="tlsTitle">TLS / certificat</div><div id="server-health-tls" class="server-health-list"></div></div>
+            <div class="chart-panel"><div class="chart-title" data-health-text="notificationsTitle">Notifications</div><div id="server-health-notifications" class="server-health-list"></div></div>
+          </div>
+
+          <div class="dash-section" data-health-text="integritySection">Sécurité et intégrité</div>
+          <div class="server-health-grid">
+            <div class="chart-panel"><div class="chart-title" data-health-text="securityTitle">Sécurité</div><div id="server-health-security" class="server-health-list"></div></div>
+            <div class="chart-panel"><div class="chart-title" data-health-text="auditTitle">Audit signé</div><div id="server-health-audit" class="server-health-list"></div></div>
+            <div class="chart-panel"><div class="chart-title" data-health-text="runtimeTitle">Runtime</div><div id="server-health-runtime" class="server-health-list"></div></div>
+          </div>
+
+          <div class="dash-section" data-health-text="diagnosticSection">Diagnostic détaillé</div>
+          <div class="server-health-grid server-health-grid-alerts">
+            <div class="chart-panel server-health-wide"><div class="chart-title"><span data-health-text="diagnosticsTitle">Dernier diagnostic complet</span><span id="server-health-diag-summary" class="muted sm" data-health-text="notRun">Non exécuté</span></div><div id="server-health-diag" class="server-health-diagnostics"><div class="empty sm" data-health-text="diagNone">Cliquez sur « Diagnostic complet » pour exécuter les contrôles approfondis.</div></div></div>
+          </div>
+        </section>
+      </section>
+
 
       <footer class="app-footer dashboards-footer">
         Direct-Xfer <span class="app-year"></span> · <span class="app-version"></span>
@@ -3002,8 +3026,8 @@
     <div id="toast" class="toast hidden"></div>
     <script src="/login-vault.js"></script>
     <script src="/dxcrypto.js"></script>
-    <script src="/app.js?v=304"></script>
+    <script src="/app.js?v=307"></script>
     <script src="/standard-productivity.js?v=4"></script>
-    <script src="/server-health-dashboard.js?v=2"></script>
+    <script src="/server-health-dashboard.js?v=4"></script>
   </body>
 </html>

@@ -9,19 +9,20 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="DX Envoyer">
-  <link id="app-manifest" rel="manifest" href="/direct-xfer-pwa.webmanifest?v=269">
+  <link id="app-manifest" rel="manifest" href="/direct-xfer-pwa.webmanifest?v=325">
   <link rel="icon" href="/app/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" sizes="180x180" href="/app/apple-touch-icon.png">
   <!-- Shell assets carry the ?v build query so a freshly-served index.html can never be
        paired with a stale app.js/app.css from a previous version's service-worker cache
        (that mix threw on removed elements and broke the icon styling). Bump ?v in
        lock-step with sw.js VERSION on every release. -->
-  <link rel="stylesheet" href="/app/app.css?v=280">
-  <script src="/app/theme-init.js?v=269"></script>
+  <link rel="stylesheet" href="/app/app.css?v=325">
+  <script src="/app/theme-init.js?v=270"></script>
   <script src="/dxcrypto.js?v=269" defer></script>
   <script src="/app/dlp-local.js?v=270" defer></script>
   <script src="/download-resume.js?v=269" defer></script>
-  <script src="/app/app.js?v=297" defer></script>
+  <script src="/app/app.js?v=325" defer></script>
+  <script src="/app/mobile-intelligence.js?v=325" defer></script>
   <title>Direct-Xfer — Envoyer</title>
 </head>
 <body>
@@ -396,6 +397,7 @@
           <div><span data-i18n="networkParallel">Parallèles</span><strong id="net-parallel">0</strong></div>
           <div><span data-i18n="networkRetries">Reprises</span><strong id="net-retries">0</strong></div>
           <div><span data-i18n="networkActive">Actifs</span><strong id="net-active">—</strong></div>
+          <div><span data-i18n="networkAdaptive">Adaptation</span><strong id="net-adaptive">Auto</strong></div>
         </div>
         <canvas id="network-rate-chart" class="network-rate-chart" height="96" aria-label="Historique du débit montant" data-i18n-aria="networkGraphLabel"></canvas>
         <div class="network-dashboard-foot"><div><p id="network-connection-detail" class="muted sm"></p><p id="network-last-test" class="muted sm" data-i18n="networkNotTested">Non testé</p></div><button id="network-test-btn" class="btn ghost sm" type="button" data-i18n="networkTestNow">Tester la connexion</button></div>
@@ -802,6 +804,20 @@
           <input id="wifi-only" type="checkbox">
           <span data-i18n="wifiOnly">Envoyer seulement en Wi-Fi</span>
         </label>
+        <label class="checkline" for="large-wifi-only">
+          <input id="large-wifi-only" type="checkbox">
+          <span data-i18n="largeWifiOnly">Gros transferts uniquement en Wi-Fi</span>
+        </label>
+        <label class="field compact" for="large-wifi-threshold">
+          <span data-i18n="largeWifiThreshold">Seuil gros transfert</span>
+          <select id="large-wifi-threshold">
+            <option value="50">50 Mo</option><option value="100" selected>100 Mo</option><option value="250">250 Mo</option><option value="500">500 Mo</option><option value="1024">1 Go</option>
+          </select>
+        </label>
+        <label class="checkline" for="persistent-transfer-notification">
+          <input id="persistent-transfer-notification" type="checkbox" checked>
+          <span data-i18n="persistentTransferNotification">Notification Android pendant les transferts actifs</span>
+        </label>
         <label class="checkline" for="confirm-mobile-data">
           <input id="confirm-mobile-data" type="checkbox" checked>
           <span data-i18n="confirmMobileData">Confirmer les gros envois sur données mobiles</span>
@@ -1023,7 +1039,7 @@
       </div>
     </details>
 
-    <p class="foot">Direct-Xfer · <span data-i18n="companionApp">application compagnon</span> · <span id="build-tag" class="muted">v1.63.4 · pwa317</span></p>
+    <p class="foot">Direct-Xfer · <span data-i18n="companionApp">application compagnon</span> · <span id="build-tag" class="muted">v1.64.0 · pwa325</span></p>
   </main>
 
   <nav id="pwa-bottom-nav" class="pwa-bottom-nav" aria-label="Navigation principale" data-i18n-aria="navMain">

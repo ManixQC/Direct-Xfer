@@ -128,19 +128,6 @@
   },
   "shortcuts": [
     {
-      "name": "Take a photo",
-      "short_name": "Photo",
-      "description": "Open Direct-Xfer to take and send a photo.",
-      "url": "/app/?action=camera",
-      "icons": [
-        {
-          "src": "/app/icon-192.png",
-          "sizes": "192x192",
-          "type": "image/png"
-        }
-      ]
-    },
-    {
       "name": "Choose files",
       "short_name": "Files",
       "description": "Open the file picker directly.",
@@ -154,7 +141,59 @@
       ]
     },
     {
-      "name": "Add a destination",
+      "name": "Take a photo",
+      "short_name": "Photo",
+      "description": "Open Direct-Xfer to take and send a photo.",
+      "url": "/app/?action=camera",
+      "icons": [
+        {
+          "src": "/app/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Voice search",
+      "short_name": "Voice",
+      "description": "Start universal search using the microphone.",
+      "url": "/app/?action=voice-search",
+      "icons": [
+        {
+          "src": "/app/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Activity",
+      "short_name": "Activity",
+      "description": "Open active transfers and the unified timeline.",
+      "url": "/app/?action=activity",
+      "icons": [
+        {
+          "src": "/app/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Quick widget",
+      "short_name": "Widget",
+      "description": "Open the compact transfer and quick-actions view.",
+      "url": "/app/?action=widget",
+      "icons": [
+        {
+          "src": "/app/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Add destination",
       "short_name": "Destination",
       "description": "Add a Direct-Xfer reception link.",
       "url": "/app/?action=destination",

@@ -128,6 +128,19 @@
   },
   "shortcuts": [
     {
+      "name": "Choisir des fichiers",
+      "short_name": "Fichiers",
+      "description": "Ouvrir directement le sélecteur de fichiers.",
+      "url": "/app/?action=files",
+      "icons": [
+        {
+          "src": "/app/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
       "name": "Prendre une photo",
       "short_name": "Photo",
       "description": "Ouvrir Direct-Xfer pour prendre puis envoyer une photo.",
@@ -141,10 +154,36 @@
       ]
     },
     {
-      "name": "Choisir des fichiers",
-      "short_name": "Fichiers",
-      "description": "Ouvrir directement le sélecteur de fichiers.",
-      "url": "/app/?action=files",
+      "name": "Recherche vocale",
+      "short_name": "Voix",
+      "description": "Lancer la recherche universelle avec le microphone.",
+      "url": "/app/?action=voice-search",
+      "icons": [
+        {
+          "src": "/app/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Activité",
+      "short_name": "Activité",
+      "description": "Ouvrir les transferts et la timeline unifiée.",
+      "url": "/app/?action=activity",
+      "icons": [
+        {
+          "src": "/app/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Widget rapide",
+      "short_name": "Widget",
+      "description": "Ouvrir la vue compacte des transferts et actions rapides.",
+      "url": "/app/?action=widget",
       "icons": [
         {
           "src": "/app/icon-192.png",

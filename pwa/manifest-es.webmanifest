@@ -128,22 +128,9 @@
   },
   "shortcuts": [
     {
-      "name": "Tomar una foto",
-      "short_name": "Foto",
-      "description": "Abre Direct-Xfer para tomar y enviar una foto.",
-      "url": "/app/?action=camera",
-      "icons": [
-        {
-          "src": "/app/icon-192.png",
-          "sizes": "192x192",
-          "type": "image/png"
-        }
-      ]
-    },
-    {
       "name": "Elegir archivos",
       "short_name": "Archivos",
-      "description": "Abre directamente el selector de archivos.",
+      "description": "Abrir directamente el selector de archivos.",
       "url": "/app/?action=files",
       "icons": [
         {
@@ -154,9 +141,61 @@
       ]
     },
     {
-      "name": "Añadir un destino",
+      "name": "Tomar una foto",
+      "short_name": "Foto",
+      "description": "Abrir Direct-Xfer para tomar y enviar una foto.",
+      "url": "/app/?action=camera",
+      "icons": [
+        {
+          "src": "/app/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Búsqueda por voz",
+      "short_name": "Voz",
+      "description": "Iniciar la búsqueda universal con el micrófono.",
+      "url": "/app/?action=voice-search",
+      "icons": [
+        {
+          "src": "/app/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Actividad",
+      "short_name": "Actividad",
+      "description": "Abrir transferencias activas y la cronología unificada.",
+      "url": "/app/?action=activity",
+      "icons": [
+        {
+          "src": "/app/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Widget rápido",
+      "short_name": "Widget",
+      "description": "Abrir la vista compacta de transferencias y acciones rápidas.",
+      "url": "/app/?action=widget",
+      "icons": [
+        {
+          "src": "/app/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Añadir destino",
       "short_name": "Destino",
-      "description": "Añade un enlace de recepción Direct-Xfer.",
+      "description": "Añadir un enlace de recepción Direct-Xfer.",
       "url": "/app/?action=destination",
       "icons": [
         {

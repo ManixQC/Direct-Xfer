@@ -7,8 +7,6 @@
   document.documentElement.setAttribute('data-theme', actual);
   document.documentElement.setAttribute('data-theme-mode', t);
 
-  // Apply a saved custom accent colour before first paint (avoids a flash of the
-  // default blue). Kept in sync with app.js applyAccent().
   try {
     var ac = localStorage.getItem('dx-accent');
     if (ac && /^#[0-9a-fA-F]{6}$/.test(ac)) {
@@ -17,6 +15,42 @@
     }
   } catch (_) {}
 
+  // 1.64.0: keep release metadata available before the large PWA bundle starts,
+  // and layer the administrator-only health surface in an isolated module.
+  var release = { version: '1.64.0', build: '2026.08.16-pwa325' };
+  window.__DX_PWA_RELEASE = release;
+  if (typeof window.fetch === 'function' && !window.__dxPwaReleaseFetchWrapped) {
+    window.__dxPwaReleaseFetchWrapped = true;
+    var nativeFetch = window.fetch;
+    window.fetch = function (input, init) {
+      if (typeof input === 'string' && input.indexOf('/app/device/status?') !== -1) {
+        try {
+          var u = new URL(input, location.origin);
+          if (u.origin === location.origin && u.pathname === '/app/device/status') {
+            u.searchParams.set('version', release.version);
+            u.searchParams.set('build', release.build);
+            input = u.pathname + u.search + u.hash;
+          }
+        } catch (_) {}
+      }
+      return nativeFetch.call(this, input, init);
+    };
+  }
+  if (!document.querySelector('script[data-dx-admin-advanced]')) {
+    var adminScript = document.createElement('script');
+    adminScript.src = '/app/admin-advanced.js?v=325';
+    adminScript.async = true;
+    adminScript.setAttribute('data-dx-admin-advanced', '1');
+    document.head.appendChild(adminScript);
+  }
+  if (!document.querySelector('script[data-dx-admin-audit-connectors]')) {
+    var auditConnectorScript = document.createElement('script');
+    auditConnectorScript.src = '/app/admin-audit-connectors.js?v=325';
+    auditConnectorScript.async = true;
+    auditConnectorScript.setAttribute('data-dx-admin-audit-connectors', '1');
+    document.head.appendChild(auditConnectorScript);
+  }
+
   var lastHeight = 0;
   var frame = 0;
   function syncClientViewport() {
@@ -24,10 +58,6 @@
     frame = requestAnimationFrame(function () {
       frame = 0;
       var viewport = window.visualViewport;
-      // visualViewport.height shrinks while the user pinch-zooms. Feeding that
-      // temporary value into the fixed app shell collapses the body and leaves
-      // only its blue background visible. Keep the last layout height during a
-      // pinch; keyboard and orientation resizes still update normally at scale 1.
       var pinching = !!(viewport && Number(viewport.scale || 1) > 1.01);
       if (pinching) {
         document.documentElement.classList.add('dx-pinching');

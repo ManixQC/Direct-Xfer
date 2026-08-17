@@ -4956,6 +4956,19 @@ Object.assign(I18N.es, {
   'log.session-revoked':'Sesión de {username} cerrada ({device})','log.diagnostic-fix-requested':'Corrección de diagnóstico «{action}» solicitada','log.dlp-result':'DLP {source}: {count} detección(es), gravedad {highest} · {types}','log.diagnostics-run':'Diagnóstico: {ok} OK, {warn} aviso(s), {bad} error(es)','log.diagnostic-fix':'Corrección de diagnóstico «{action}» aplicada','log.diagnostic-fix-failed':'Corrección de diagnóstico «{action}» fallida: {error}'
 });
 
+Object.assign(I18N.fr, {
+  'sh.tagAll':'Toutes les étiquettes','sh.tagFilterTitle':'Filtrer par étiquette','sh.details':'Détails','sh.detailsTitle':'Détails du partage','sh.detailsClose':'Fermer le panneau de détails','sh.detailsStatus':'État','sh.detailsType':'Type','sh.detailsSource':'Source','sh.detailsUsage':'Utilisation','sh.detailsDates':'Dates','sh.detailsPrivateNote':'Note administrative','sh.detailsDescription':'Description','sh.detailsNoNote':'Aucune note administrative','sh.detailsNoDescription':'Aucune description','sh.detailsKeyboard':'Entrée pour ouvrir les détails','sh.densityComfortable':'Densité confortable','sh.densityCompact':'Densité compacte','sh.densityUltra':'Densité très compacte','sh.densityTip3':'Changer la densité : confortable / compacte / très compacte',
+  'cfg.shareQuickActions':'Actions rapides sur les cartes de partage','cfg.shareQuickActionsHint':'Choisissez les raccourcis sous forme d’icônes affichés directement sur chaque carte. Toutes les actions restent disponibles dans le panneau de détails.','cfg.qaDetails':'Détails','cfg.qaCopy':'Copier le lien','cfg.qaOpen':'Ouvrir','cfg.qaStats':'Statistiques','cfg.qaEdit':'Configurer','cfg.qaClone':'Dupliquer','cfg.qaPause':'Pause / reprise'
+});
+Object.assign(I18N.en, {
+  'sh.tagAll':'All labels','sh.tagFilterTitle':'Filter by label','sh.details':'Details','sh.detailsTitle':'Share details','sh.detailsClose':'Close details panel','sh.detailsStatus':'Status','sh.detailsType':'Type','sh.detailsSource':'Source','sh.detailsUsage':'Usage','sh.detailsDates':'Dates','sh.detailsPrivateNote':'Administrative note','sh.detailsDescription':'Description','sh.detailsNoNote':'No administrative note','sh.detailsNoDescription':'No description','sh.detailsKeyboard':'Press Enter to open details','sh.densityComfortable':'Comfortable density','sh.densityCompact':'Compact density','sh.densityUltra':'Very compact density','sh.densityTip3':'Change density: comfortable / compact / very compact',
+  'cfg.shareQuickActions':'Quick actions on share cards','cfg.shareQuickActionsHint':'Choose the icon shortcuts shown directly on every share card. All actions remain available in the details panel.','cfg.qaDetails':'Details','cfg.qaCopy':'Copy link','cfg.qaOpen':'Open','cfg.qaStats':'Statistics','cfg.qaEdit':'Configure','cfg.qaClone':'Duplicate','cfg.qaPause':'Pause / resume'
+});
+Object.assign(I18N.es, {
+  'sh.tagAll':'Todas las etiquetas','sh.tagFilterTitle':'Filtrar por etiqueta','sh.details':'Detalles','sh.detailsTitle':'Detalles del recurso','sh.detailsClose':'Cerrar el panel de detalles','sh.detailsStatus':'Estado','sh.detailsType':'Tipo','sh.detailsSource':'Origen','sh.detailsUsage':'Uso','sh.detailsDates':'Fechas','sh.detailsPrivateNote':'Nota administrativa','sh.detailsDescription':'Descripción','sh.detailsNoNote':'Sin nota administrativa','sh.detailsNoDescription':'Sin descripción','sh.detailsKeyboard':'Pulsa Intro para abrir los detalles','sh.densityComfortable':'Densidad cómoda','sh.densityCompact':'Densidad compacta','sh.densityUltra':'Densidad muy compacta','sh.densityTip3':'Cambiar densidad: cómoda / compacta / muy compacta',
+  'cfg.shareQuickActions':'Acciones rápidas en las tarjetas','cfg.shareQuickActionsHint':'Elige los accesos directos con iconos que aparecen en cada tarjeta. Todas las acciones siguen disponibles en el panel de detalles.','cfg.qaDetails':'Detalles','cfg.qaCopy':'Copiar enlace','cfg.qaOpen':'Abrir','cfg.qaStats':'Estadísticas','cfg.qaEdit':'Configurar','cfg.qaClone':'Duplicar','cfg.qaPause':'Pausa / reanudar'
+});
+
 const LOCALES = { fr: 'fr-FR', en: 'en-US', es: 'es-419' };
 
 // ------------------------------------------------------------------
@@ -4980,6 +4993,7 @@ const UI_PREFS_DEFAULTS = Object.freeze({
   shareFilter: '',
   shareType: '',
   shareStatus: '',
+  shareTag: '',
   shareSize: '',
   shareDate: '',
   shareDateFrom: '',
@@ -4997,6 +5011,7 @@ const UI_PREFS_DEFAULTS = Object.freeze({
   photoStripExif: true,
   photoView: 'grid',
   shareDensity: 'comfortable',
+  shareQuickActions: 'details,copy,stats,edit,clone',
 });
 
 function readUiPrefs() {
@@ -5083,6 +5098,7 @@ const state = {
   shareFilter: uiPrefText('shareFilter'), // name/tag filter text
   shareType: uiPrefChoice('shareType', ['', 'file', 'folder', 'inbox', 'collab', 'secret'], ''), // type filter
   shareStatus: uiPrefChoice('shareStatus', ['', 'active', 'inactive'], ''), // status filter
+  shareTag: uiPrefText('shareTag'),
   shareSize: uiPrefChoice('shareSize', ['', 'small', 'medium', 'large'], ''),
   shareDate: uiPrefChoice('shareDate', ['', 'today', '7', '30', 'custom'], ''),
   shareDateFrom: uiPrefText('shareDateFrom'),
@@ -5094,7 +5110,10 @@ const state = {
   sharePage: 0,
   sharePageIds: [],
   bulkShareBusy: false,
-  shareDensity: uiPrefChoice('shareDensity', ['comfortable', 'compact'], 'comfortable'), // Admin-table density toggle
+  shareDensity: uiPrefChoice('shareDensity', ['comfortable', 'compact', 'ultra'], 'comfortable'), // 3-level admin-table density
+  shareQuickActions: uiPrefText('shareQuickActions') || 'details,copy,stats,edit,clone',
+  shareDetailsId: null,
+  shareDetailsRestoreFocus: null,
   selShares: new Set(), // selected share ids for bulk actions
   pendingShareDeletion: null, // one recoverable deletion: { id, timer, committing, promise }
   trashSelection: new Set(),
@@ -5113,7 +5132,7 @@ const state = {
   dashboardLiveData: null,
   dashTimer: null,
   dashLiveTimer: null,
-  dashboardTab: uiPrefChoice('dashboardTab', ['transfers', 'images'], 'transfers'),
+  dashboardTab: uiPrefChoice('dashboardTab', ['transfers', 'images', 'health'], 'transfers'),
   dashPeriod: uiPrefChoice('dashPeriod', ['1', '7', '30', '90', '365', 'all'], '30'), // dashboard window
   dashDirection: uiPrefChoice('dashDirection', ['', 'down', 'up'], ''),
   dashStatus: uiPrefChoice('dashStatus', ['', 'completed', 'interrupted'], ''),
@@ -5177,21 +5196,58 @@ function syncViewButtons(prefix, view) {
   });
 }
 
-// Admin-table density toggle (compact / comfortable). The class lives on
-// the persistent #shares-list container (children are replaced on each render, the
-// element is not), so it survives re-renders like the view-list/view-grid class.
+// Three-level density for the standard share list. Very compact mode deliberately
+// leaves the headline/meta + configurable quick icons visible and moves the long
+// action surface to the side details panel, so dense lists stay usable rather than
+// merely shrinking hit targets.
 function setShareDensity(density, persist = true) {
-  state.shareDensity = density === 'compact' ? 'compact' : 'comfortable';
+  state.shareDensity = ['comfortable','compact','ultra'].includes(density) ? density : 'comfortable';
   const list = $('shares-list');
-  if (list) list.classList.toggle('density-compact', state.shareDensity === 'compact');
+  if (list) {
+    list.classList.toggle('density-compact', state.shareDensity === 'compact');
+    list.classList.toggle('density-ultra', state.shareDensity === 'ultra');
+    list.dataset.density = state.shareDensity;
+  }
   const btn = $('shares-density-toggle');
   if (btn) {
-    const compact = state.shareDensity === 'compact';
-    btn.classList.toggle('active', compact);
-    btn.setAttribute('aria-pressed', compact ? 'true' : 'false');
+    const labels = { comfortable:t('sh.densityComfortable'), compact:t('sh.densityCompact'), ultra:t('sh.densityUltra') };
+    const glyphs = { comfortable:'▤', compact:'≡', ultra:'☷' };
+    btn.textContent = glyphs[state.shareDensity];
+    btn.classList.toggle('active', state.shareDensity !== 'comfortable');
+    btn.dataset.density = state.shareDensity;
+    btn.setAttribute('aria-label', labels[state.shareDensity]);
+    btn.setAttribute('title', labels[state.shareDensity] + ' · ' + t('sh.densityTip3'));
+    btn.setAttribute('aria-pressed', state.shareDensity === 'comfortable' ? 'false' : 'true');
   }
   if (persist) updateUiPrefs({ shareDensity: state.shareDensity });
 }
+
+const SHARE_QUICK_ACTION_IDS = ['details','copy','open','stats','edit','clone','pause'];
+function selectedShareQuickActions() {
+  if (state.shareQuickActions === 'none') return [];
+  const raw = String(state.shareQuickActions || '').split(',').map((x) => x.trim()).filter((x) => SHARE_QUICK_ACTION_IDS.includes(x));
+  return [...new Set(raw)].slice(0, SHARE_QUICK_ACTION_IDS.length);
+}
+function setShareQuickActions(ids, persist = true) {
+  const normalized = [...new Set((ids || []).filter((x) => SHARE_QUICK_ACTION_IDS.includes(x)))];
+  // Keep an explicit sentinel for an intentionally empty toolbar. An empty string
+  // means "preference absent" in uiPrefText(), so persisting '' would silently
+  // restore the defaults after the next reload.
+  state.shareQuickActions = normalized.length ? normalized.join(',') : 'none';
+  if (persist) updateUiPrefs({ shareQuickActions: state.shareQuickActions });
+  syncShareQuickActionConfig();
+  if (state.allShares) renderShares(state.allShares);
+}
+function syncShareQuickActionConfig() {
+  const selected = new Set(selectedShareQuickActions());
+  document.querySelectorAll('[data-share-quick-action]').forEach((input) => { input.checked = selected.has(input.getAttribute('data-share-quick-action')); });
+}
+function tagHue(tag) {
+  let h = 2166136261;
+  for (const ch of String(tag || '').toLocaleLowerCase()) { h ^= ch.codePointAt(0); h = Math.imul(h, 16777619); }
+  return Math.abs(h >>> 0) % 360;
+}
+function styleTagChip(node, tag) { if (node) node.style.setProperty('--tag-hue', String(tagHue(tag))); }
 
 function setPhotoView(view, persist = true) {
   state.photoView = view === 'list' ? 'list' : 'grid';
@@ -5209,6 +5265,7 @@ function applyUiPreferencesToControls() {
   setControlValue('shares-filter', state.shareFilter);
   setControlValue('shares-type', state.shareType);
   setControlValue('shares-status', state.shareStatus);
+  setControlValue('shares-tag', state.shareTag);
   setControlValue('shares-size', state.shareSize);
   setControlValue('shares-date', state.shareDate);
   setControlValue('shares-date-from', state.shareDateFrom);
@@ -5251,6 +5308,7 @@ function applyUiPreferencesToControls() {
   if (stripExif) stripExif.checked = state.photoStripExif;
 
   setShareDensity(state.shareDensity, false);
+  syncShareQuickActionConfig();
   setPhotoView(state.photoView, false);
 }
 // Safe admin-file previews. Scriptable documents are rendered as inert text,
@@ -6596,18 +6654,18 @@ function dashboardsPageOpen() {
 function dashboardTabFromUrl() {
   try {
     const tab = new URLSearchParams(location.search).get('tab');
-    if (tab === 'images' || tab === 'transfers') return tab;
+    if (tab === 'images' || tab === 'transfers' || tab === 'health') return tab;
   } catch (_) {}
   return state.dashboardTab;
 }
 
 function activeDashboardTab() {
-  return $('dashboard-images-tab') && $('dashboard-images-tab').classList.contains('active')
-    ? 'images'
-    : 'transfers';
+  if ($('dashboard-health-tab') && $('dashboard-health-tab').classList.contains('active')) return 'health';
+  return $('dashboard-images-tab') && $('dashboard-images-tab').classList.contains('active') ? 'images' : 'transfers';
 }
 
 function stopDashboardAutoRefresh() {
+  try { if (window.DirectXferServerHealth && typeof window.DirectXferServerHealth.stop === 'function') window.DirectXferServerHealth.stop(); } catch (_) {}
   if (state.dashTimer) {
     clearInterval(state.dashTimer);
     state.dashTimer = null;
@@ -6620,7 +6678,11 @@ function stopDashboardAutoRefresh() {
 
 function startDashboardAutoRefresh(tab) {
   stopDashboardAutoRefresh();
-  tab = tab === 'images' ? 'images' : 'transfers';
+  tab = ['images','health'].includes(tab) ? tab : 'transfers';
+  if (tab === 'health') {
+    try { if (window.DirectXferServerHealth && typeof window.DirectXferServerHealth.start === 'function') window.DirectXferServerHealth.start(); } catch (_) {}
+    return;
+  }
   if (tab === 'images') {
     loadImagesDashboard();
     state.dashTimer = setInterval(loadImagesDashboard, DASH_REFRESH_MS);
@@ -6633,25 +6695,32 @@ function startDashboardAutoRefresh(tab) {
 }
 
 function setDashboardTab(tab, updateUrl = true) {
-  tab = tab === 'images' ? 'images' : 'transfers';
+  tab = ['images','health'].includes(tab) ? tab : 'transfers';
+  const role = state.settings && state.settings.role;
+  if (tab === 'health' && role && role !== 'owner' && role !== 'admin') tab = 'transfers';
   state.dashboardTab = tab;
   updateUiPrefs({ dashboardTab: tab });
   const transfersView = $('dashboard-transfers-view');
   const imagesView = $('dashboard-images-view');
+  const healthView = $('dashboard-health-view');
   const transfersTab = $('dashboard-transfers-tab');
   const imagesTab = $('dashboard-images-tab');
-  if (!transfersView || !imagesView || !transfersTab || !imagesTab) return;
+  const healthTab = $('dashboard-health-tab');
+  if (!transfersView || !imagesView || !healthView || !transfersTab || !imagesTab || !healthTab) return;
 
   transfersView.classList.toggle('hidden', tab !== 'transfers');
   imagesView.classList.toggle('hidden', tab !== 'images');
+  healthView.classList.toggle('hidden', tab !== 'health');
   transfersTab.classList.toggle('active', tab === 'transfers');
   imagesTab.classList.toggle('active', tab === 'images');
+  healthTab.classList.toggle('active', tab === 'health');
   transfersTab.setAttribute('aria-selected', tab === 'transfers' ? 'true' : 'false');
   imagesTab.setAttribute('aria-selected', tab === 'images' ? 'true' : 'false');
+  healthTab.setAttribute('aria-selected', tab === 'health' ? 'true' : 'false');
   startDashboardAutoRefresh(tab);
 
   if (updateUrl && dashboardsPageOpen() && location.pathname === DASHBOARDS_PATH) {
-    const url = DASHBOARDS_PATH + (tab === 'images' ? '?tab=images' : '');
+    const url = DASHBOARDS_PATH + (tab === 'transfers' ? '' : '?tab=' + encodeURIComponent(tab));
     try { history.replaceState({ dxView: 'dashboards', dashTab: tab }, '', url); } catch (_) {}
   }
 }
@@ -6684,9 +6753,9 @@ function hideDashboardsView(showHome = true) {
 }
 
 function openDashboardsPage(tab = state.dashboardTab) {
-  tab = tab === 'images' ? 'images' : 'transfers';
+  tab = ['images','health'].includes(tab) ? tab : 'transfers';
   showDashboardsView(tab);
-  const url = DASHBOARDS_PATH + (tab === 'images' ? '?tab=images' : '');
+  const url = DASHBOARDS_PATH + (tab === 'transfers' ? '' : '?tab=' + encodeURIComponent(tab));
   try { history.pushState({ dxView: 'dashboards', dashTab: tab }, '', url); } catch (_) {}
 }
 
@@ -6712,6 +6781,7 @@ if ($('dash-btn')) $('dash-btn').addEventListener('click', (e) => {
 if ($('dashboards-back')) $('dashboards-back').addEventListener('click', closeDashboardsPage);
 if ($('dashboard-transfers-tab')) $('dashboard-transfers-tab').addEventListener('click', () => setDashboardTab('transfers'));
 if ($('dashboard-images-tab')) $('dashboard-images-tab').addEventListener('click', () => setDashboardTab('images'));
+if ($('dashboard-health-tab')) $('dashboard-health-tab').addEventListener('click', () => setDashboardTab('health'));
 
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape' || !dashboardsPageOpen()) return;
@@ -8518,6 +8588,7 @@ async function idleLockNow() {
 async function openConfigModal() {
   closeUserMenu();
   const s = state.settings || {};
+  syncShareQuickActionConfig();
   // Security — inactivity lock
   const on = state.idleLockMinutes > 0;
   $('cfg-idle-enable').checked = on;
@@ -10494,6 +10565,110 @@ async function openShareModeration(s) {
   moderationShare = s; const overlay = ensureModerationModal(); $('share-moderation-name').textContent = s.name || ''; overlay.classList.remove('hidden'); await loadModeration(s);
 }
 
+function shareTypeLabel(s) {
+  return s.type === 'inbox' ? t('sh.inbox') : s.type === 'collab' ? t('sh.collab') : s.type === 'folder' ? t('sh.folder') : s.type === 'secret' ? t('sh.secret') : t('sh.file');
+}
+function shareStatusLabel(s) {
+  if (s.revoked) return t('sh.revoke');
+  if (s.disabled) return t('sh.paused');
+  if (s.scheduled) return t('sh.scheduled');
+  return s.active ? t('sh.fActive') : t('sh.inactive');
+}
+function ensureShareDetailsDrawer() {
+  let drawer = $('share-details-drawer');
+  if (drawer) return drawer;
+  const backdrop = el('div',{class:'share-details-backdrop hidden',attrs:{id:'share-details-backdrop'}});
+  drawer = el('aside',{class:'share-details-drawer hidden',attrs:{id:'share-details-drawer',role:'dialog','aria-modal':'true','aria-labelledby':'share-details-heading'}});
+  drawer.innerHTML = '<div class="share-details-head"><div><div class="muted sm" data-share-details-kicker></div><h2 id="share-details-heading"></h2></div><button type="button" class="icon-btn" id="share-details-close">✕</button></div><div id="share-details-body" class="share-details-body"></div>';
+  document.body.append(backdrop,drawer);
+  $('share-details-close').setAttribute('aria-label',t('sh.detailsClose'));
+  $('share-details-close').addEventListener('click',closeShareDetails);
+  backdrop.addEventListener('click',closeShareDetails);
+  return drawer;
+}
+function closeShareDetails() {
+  const drawer=$('share-details-drawer'), backdrop=$('share-details-backdrop');
+  if(drawer)drawer.classList.add('hidden'); if(backdrop)backdrop.classList.add('hidden');
+  document.body.classList.remove('share-details-open');
+  const restore=state.shareDetailsRestoreFocus, shareId=state.shareDetailsId; state.shareDetailsId=null; state.shareDetailsRestoreFocus=null;
+  if(restore&&restore.isConnected&&typeof restore.focus==='function')restore.focus();
+  else if(shareId){
+    // Periodic share polling replaces card DOM nodes. Restore focus to the
+    // equivalent freshly-rendered action/card instead of dropping it to <body>.
+    const action=restore&&restore.getAttribute&&restore.getAttribute('data-quick-action');
+    const card=document.querySelector('[data-share-id="'+CSS.escape(String(shareId))+'"]');
+    const fallback=action&&card?card.querySelector('[data-quick-action="'+CSS.escape(action)+'"]'):card;
+    if(fallback&&typeof fallback.focus==='function')fallback.focus();
+  }
+}
+function detailsAction(label, icon, handler, danger=false) {
+  const b=el('button',{class:'btn '+(danger?'danger':'ghost')+' sm',text:icon+' '+label,attrs:{type:'button'}}); b.addEventListener('click',handler); return b;
+}
+function renderShareDetails(s) {
+  const drawer=ensureShareDetailsDrawer(), body=$('share-details-body'); if(!body||!s)return;
+  $('share-details-heading').textContent=s.name||'—';
+  const kicker=drawer.querySelector('[data-share-details-kicker]'); if(kicker)kicker.textContent=shareTypeLabel(s)+' · '+shareStatusLabel(s);
+  body.textContent='';
+  const badges=el('div',{class:'share-details-badges'});
+  badges.append(el('span',{class:'badge '+(s.type||''),text:shareTypeLabel(s)}),el('span',{class:'badge',text:shareStatusLabel(s)}));
+  if(s.pinned)badges.appendChild(el('span',{class:'badge pinned-badge',text:t('sh.pinned')})); body.appendChild(badges);
+  const grid=el('div',{class:'share-details-grid'});
+  const add=(label,value)=>{const item=el('div',{class:'share-details-metric'});item.append(el('span',{text:label}),el('strong',{text:value||'—'}));grid.appendChild(item);};
+  add(t('sh.detailsUsage'), t('sh.downloads')+' '+(s.downloads||0)+' · 👁 '+(s.views||0)+' · 👤 '+(s.uniqueVisitors||0));
+  add(t('sh.totalSize'), s.logicalBytesReady===false?'—':formatBytes(Math.max(0,Number(s.logicalBytes)||Number(s.size)||0)));
+  add(t('sh.created'), formatDate(s.createdAt));
+  add(t('sh.expires'), s.effectiveExpiresAt?formatDate(s.effectiveExpiresAt):t('sh.never'));
+  body.appendChild(grid);
+  if(s.url)body.appendChild(linkRow(t('sh.link'),s.url));
+  if(s.hostPath||s.relDir){const sec=el('section',{class:'share-details-section'});sec.append(el('h3',{text:t('sh.detailsSource')}),el('code',{text:s.hostPath||s.relDir}));body.appendChild(sec);}
+  const tagBox=tagsSection(s); if((s.tags||[]).length)body.appendChild(tagBox);
+  const note=el('section',{class:'share-details-section'});note.append(el('h3',{text:t('sh.detailsPrivateNote')}),el('p',{text:s.adminNote||t('sh.detailsNoNote')}));body.appendChild(note);
+  const desc=el('section',{class:'share-details-section'});desc.append(el('h3',{text:t('sh.detailsDescription')}),el('p',{text:s.descriptionMd||t('sh.detailsNoDescription')}));body.appendChild(desc);
+  const acts=el('div',{class:'share-details-actions'});
+  const mutable = state.role !== 'auditor';
+  if(mutable)acts.appendChild(detailsAction(s.pinned?t('sh.unpin'):t('sh.pin'),s.pinned?'★':'☆',async()=>{await toggleShareFlag(s,'pinned');}));
+  if(s.url)acts.appendChild(detailsAction(t('sh.copy'),'🔗',()=>copy(s.url)));
+  if(s.path)acts.appendChild(detailsAction(t('sh.open'),'↗',()=>window.open(s.path,'_blank','noopener')));
+  acts.appendChild(detailsAction(t('stats.button'),'📊',()=>openDetailedStats(s)));
+  if(mutable)acts.appendChild(detailsAction(t('sh.edit'),'⚙',()=>openEditModal(s)));
+  if(mutable&&!s.encrypted&&s.type!=='secret')acts.appendChild(detailsAction(t('sh.clone'),'⧉',(ev)=>cloneShare(s,ev.currentTarget)));
+  if(mutable)acts.appendChild(detailsAction(s.disabled?t('sh.resume'):t('sh.pause'),s.disabled?'▶':'⏸',()=>togglePause(s)));
+  body.appendChild(acts);
+}
+function openShareDetails(s,trigger) {
+  if(!s)return; state.shareDetailsId=s.id; state.shareDetailsRestoreFocus=trigger||document.activeElement;
+  const drawer=ensureShareDetailsDrawer(),backdrop=$('share-details-backdrop'); renderShareDetails(s);
+  drawer.classList.remove('hidden'); if(backdrop)backdrop.classList.remove('hidden'); document.body.classList.add('share-details-open');
+  const close=$('share-details-close'); if(close)close.focus({preventScroll:true});
+}
+function renderShareQuickActions(s, card) {
+  const bar=el('div',{class:'share-quick-actions',attrs:{'aria-label':t('cfg.shareQuickActions')}});
+  const add=(id,icon,label,run,available=true)=>{if(!available||!selectedShareQuickActions().includes(id))return;const b=el('button',{class:'share-quick-action',text:icon,attrs:{type:'button',title:label,'aria-label':label,'data-quick-action':id}});b.addEventListener('click',(e)=>{e.stopPropagation();run(b);});bar.appendChild(b);};
+  add('details','ⓘ',t('sh.details'),(b)=>openShareDetails(s,b));
+  add('copy','🔗',t('sh.copy'),()=>copy(s.url),!!s.url);
+  add('open','↗',t('sh.open'),()=>window.open(s.path,'_blank','noopener'),!!s.path);
+  add('stats','📊',t('stats.button'),()=>openDetailedStats(s));
+  const mutable = state.role !== 'auditor';
+  add('edit','⚙',t('sh.edit'),()=>openEditModal(s),mutable);
+  add('clone','⧉',t('sh.clone'),(b)=>cloneShare(s,b),mutable&&!s.encrypted&&s.type!=='secret');
+  add('pause',s.disabled?'▶':'⏸',s.disabled?t('sh.resume'):t('sh.pause'),()=>togglePause(s),mutable);
+  return bar;
+}
+function cardEventIsInteractive(target) { return !!(target&&target.closest&&target.closest('a,button,input,select,textarea,label,[contenteditable="true"],[draggable="true"]')); }
+
+function syncShareTagFilterOptions(shares) {
+  const select = $('shares-tag');
+  if (!select) return;
+  const tags = [...new Set((shares || []).flatMap((s) => Array.isArray(s.tags) ? s.tags : []).map((x) => String(x || '').trim()).filter(Boolean))]
+    .sort((a,b) => a.localeCompare(b, state.lang || undefined, { sensitivity:'base' }));
+  const wanted = String(state.shareTag || '');
+  select.replaceChildren();
+  const all = document.createElement('option'); all.value=''; all.textContent=t('sh.tagAll'); select.appendChild(all);
+  tags.forEach((tag) => { const o=document.createElement('option'); o.value=tag; o.textContent=tag; select.appendChild(o); });
+  if (wanted && tags.some((tag) => tag.toLocaleLowerCase() === wanted.toLocaleLowerCase())) select.value = tags.find((tag) => tag.toLocaleLowerCase() === wanted.toLocaleLowerCase());
+  else { select.value=''; if (wanted) { state.shareTag=''; updateUiPrefs({shareTag:''}); } }
+}
+
 function renderShares(shares) {
   state.allShares = shares; // keep for client-side filtering
   // Photos tab — render direct-image links in their own gallery and keep them out
@@ -10502,6 +10677,7 @@ function renderShares(shares) {
   renderAlbums(shares.filter((s) => s.type === 'album')); // image galleries
   renderPhotos(shares.filter((s) => s.type === 'photo'));
   shares = shares.filter((s) => s.type !== 'photo' && s.type !== 'album');
+  syncShareTagFilterOptions(shares);
   const list = $('shares-list');
   list.textContent = '';
   $('share-count').textContent = shares.length;
@@ -10537,6 +10713,7 @@ function renderShares(shares) {
   const q = (state.shareFilter || '').trim().toLowerCase();
   const typeF = state.shareType || '';
   const statusF = state.shareStatus || '';
+  const tagF = String(state.shareTag || '').toLocaleLowerCase();
   const sizeF = state.shareSize || '';
   const dateF = state.shareDate || '';
   const now = Date.now();
@@ -10564,6 +10741,7 @@ function renderShares(shares) {
     if (typeF && s.type !== typeF) return false;
     if (statusF === 'active' && !s.active) return false;
     if (statusF === 'inactive' && s.active) return false;
+    if (tagF && !(Array.isArray(s.tags) && s.tags.some((tag) => String(tag || '').toLocaleLowerCase() === tagF))) return false;
     const bytes = Math.max(0, Number(s.logicalBytes) || 0);
     if (sizeF === 'small' && bytes >= 100 * 1024 * 1024) return false;
     if (sizeF === 'medium' && (bytes < 100 * 1024 * 1024 || bytes > 1024 * 1024 * 1024)) return false;
@@ -10661,6 +10839,7 @@ function renderShares(shares) {
     const pinBtn = el('button', { class: 'share-head-action pin-toggle' + (s.pinned ? ' active' : ''), text: s.pinned ? '★' : '☆', attrs: { type: 'button', title: t(s.pinned ? 'sh.unpin' : 'sh.pin'), 'aria-pressed': s.pinned ? 'true' : 'false' } });
     pinBtn.addEventListener('click', () => toggleShareFlag(s, 'pinned'));
     headline.appendChild(pinBtn);
+    headline.appendChild(renderShareQuickActions(s, card));
     top.appendChild(headline);
     // All status/type/owner chips live in one wrapper so they wrap as a group beside
     // the name on wide screens and stack one-per-line under it on narrow phones.
@@ -11004,10 +11183,16 @@ function renderShares(shares) {
 
     if (isPendingDelete) card.appendChild(pendingShareDeletionBar(s));
 
+    card.classList.add('share-clickable');
+    card.tabIndex = 0;
+    card.setAttribute('aria-label', (s.name || '') + ' · ' + t('sh.detailsKeyboard'));
+    card.addEventListener('click', (e) => { if (!cardEventIsInteractive(e.target)) openShareDetails(s, card); });
+    card.addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && !cardEventIsInteractive(e.target)) { e.preventDefault(); openShareDetails(s, card); } });
     list.appendChild(card);
   });
   applySharePresence();
   updateBulkBar();
+  if (state.shareDetailsId) { const current = shares.find((row) => row.id === state.shareDetailsId); if (current) renderShareDetails(current); else closeShareDetails(); }
   setTimeout(focusShareFromLocation,0);
 }
 
@@ -11044,19 +11229,30 @@ async function moderate(id, action) {
 // --- Tags + bulk actions ---
 function tagsSection(s) {
   const box = el('div', { class: 'tags-row' });
+  const mutable = state.role !== 'auditor';
   (Array.isArray(s.tags) ? s.tags : []).forEach((tg) => {
-    const chip = el('span', { class: 'tag-chip', text: tg });
-    const x = el('button', { class: 'tag-x', text: '✕', attrs: { title: t('sh.tagRemove') } });
-    x.addEventListener('click', () => setShareTags(s, s.tags.filter((v) => v !== tg)));
-    chip.appendChild(x);
+    const chip = el('span', { class: 'tag-chip' }); styleTagChip(chip, tg);
+    const label = el('button', { class:'tag-label', text:tg, attrs:{type:'button', title:t('sh.tagFilterTitle') + ': ' + tg} });
+    label.addEventListener('click', () => {
+      state.shareTag = tg; state.sharePage = 0; updateUiPrefs({ shareTag:tg }); setControlValue('shares-tag', tg);
+      if (state.allShares) renderShares(state.allShares);
+    });
+    chip.appendChild(label);
+    if (mutable) {
+      const x = el('button', { class: 'tag-x', text: '✕', attrs: { title: t('sh.tagRemove'), 'aria-label':t('sh.tagRemove') + ' ' + tg } });
+      x.addEventListener('click', () => setShareTags(s, (s.tags || []).filter((v) => v !== tg)));
+      chip.appendChild(x);
+    }
     box.appendChild(chip);
   });
-  const add = el('button', { class: 'tag-add', text: '＋ ' + t('sh.tagAdd') });
-  add.addEventListener('click', () => {
-    const v = prompt(t('sh.tagPrompt'));
-    if (v && v.trim()) setShareTags(s, [...(s.tags || []), v.trim()]);
-  });
-  box.appendChild(add);
+  if (mutable) {
+    const add = el('button', { class: 'tag-add', text: '＋ ' + t('sh.tagAdd') });
+    add.addEventListener('click', () => {
+      const v = prompt(t('sh.tagPrompt'));
+      if (v && v.trim()) setShareTags(s, [...(s.tags || []), v.trim()]);
+    });
+    box.appendChild(add);
+  }
   return box;
 }
 async function setShareTags(s, tags) {
@@ -11113,7 +11309,7 @@ if ($('shares-filter')) $('shares-filter').addEventListener('input', (e) => {
   updateUiPrefs({ shareFilter: state.shareFilter });
   if (state.allShares) renderShares(state.allShares);
 });
-[['shares-type', 'shareType'], ['shares-status', 'shareStatus'], ['shares-size', 'shareSize'], ['shares-date', 'shareDate'], ['shares-sort', 'shareSort']].forEach(([id, key]) => {
+[['shares-type', 'shareType'], ['shares-status', 'shareStatus'], ['shares-tag', 'shareTag'], ['shares-size', 'shareSize'], ['shares-date', 'shareDate'], ['shares-sort', 'shareSort']].forEach(([id, key]) => {
   const elx = $(id);
   if (elx) elx.addEventListener('change', () => {
     state[key] = elx.value;
@@ -11150,8 +11346,14 @@ if ($('shares-pinned-toggle')) $('shares-pinned-toggle').addEventListener('click
   const b=$('shares-pinned-toggle'); b.classList.toggle('active',state.sharePinnedOnly); b.setAttribute('aria-pressed',state.sharePinnedOnly?'true':'false');
   state.selShares = new Set(); state.sharePage=0; if (state.allShares) renderShares(state.allShares);
 });
-// Density toggle for the admin links table (compact / comfortable).
-if ($('shares-density-toggle')) $('shares-density-toggle').addEventListener('click', () => setShareDensity(state.shareDensity === 'compact' ? 'comfortable' : 'compact'));
+// Density cycles through comfortable → compact → very compact.
+if ($('shares-density-toggle')) $('shares-density-toggle').addEventListener('click', () => { const order=['comfortable','compact','ultra']; setShareDensity(order[(order.indexOf(state.shareDensity)+1)%order.length]); });
+
+document.querySelectorAll('[data-share-quick-action]').forEach((input) => input.addEventListener('change', () => {
+  const ids=[...document.querySelectorAll('[data-share-quick-action]:checked')].map((node)=>node.getAttribute('data-share-quick-action'));
+  setShareQuickActions(ids);
+}));
+
 
 // --- Full-text content search ---
 if ($('cfg-never-expire-new')) $('cfg-never-expire-new').addEventListener('change', (e) => { if ($('cfg-def-expiry')) $('cfg-def-expiry').disabled = !!e.target.checked; });
@@ -11338,6 +11540,16 @@ async function openShareChangeHistory(s) {
 }
 if ($('share-history-close')) $('share-history-close').addEventListener('click', closeShareChangeHistory);
 if ($('share-history-overlay')) $('share-history-overlay').addEventListener('click',(e)=>{ if(e.target===$('share-history-overlay')) closeShareChangeHistory(); });
+document.addEventListener('keydown',(e)=>{
+  const drawer=$('share-details-drawer'); if(!drawer||drawer.classList.contains('hidden'))return;
+  if(e.key==='Escape'){ e.preventDefault(); closeShareDetails(); return; }
+  if(e.key==='Tab'){
+    const focusable=[...drawer.querySelectorAll('button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')].filter((node)=>node.offsetParent!==null);
+    if(!focusable.length)return; const first=focusable[0],last=focusable[focusable.length-1];
+    if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+    else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+  }
+});
 
 function linkRow(label, url) {
   const row = el('div', { class: 'link-row' });
@@ -15948,3 +16160,30 @@ async function renameIp(ip, current) {
     toast(t('ipn.fail'), 'err');
   }
 }
+
+// Public bridge for optional standard-view productivity modules. Keep the
+// surface intentionally narrow: it exposes existing, role-aware UI actions but
+// not authentication/session secrets.
+window.DXStandard = Object.freeze({
+  getState: () => state,
+  t,
+  api,
+  toast,
+  copy,
+  refreshShares,
+  openShareDetails,
+  openDetailedStats,
+  openEditModal,
+  cloneShare,
+  togglePause,
+  toggleShareFlag,
+  revokeShare,
+  openShareChangeHistory,
+  runDiagnostics,
+  renderDiagnostics,
+  loadDashboard,
+  loadDashboardLive,
+  formatBytes,
+  formatDate,
+  timeAgo,
+});

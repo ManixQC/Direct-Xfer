@@ -1,12 +1,14 @@
 {
   "name": "direct-xfer",
-  "version": "1.63.4",
+  "version": "1.64.0",
   "description": "Direct-Xfer — direct HTTP file sharing, no third-party server. Web interface, revocable shares, automatic IP detection and port testing.",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test"
+    "test": "node --test test/*.test.js",
+    "test:historical:restore": "node scripts/restore-historical-tests.js",
+    "test:historical": "node --test test-historical/*.test.js"
   },
   "engines": {
     "node": "20 || >=22"

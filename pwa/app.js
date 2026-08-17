@@ -9,8 +9,8 @@
 (function () {
   // Build tag, shown in the footer so a user can confirm at a glance which version
   // is actually running after an update. Keep it in lock-step with sw.js VERSION.
-  var APP_VERSION = '1.63.4';
-  var APP_BUILD = '2026.08.16-pwa317';
+  var APP_VERSION = '1.64.0';
+  var APP_BUILD = '2026.08.16-pwa325';
   // Upload blocks are deliberately small on mobile. A number of reverse proxies
   // still default to a 1 MiB request-body limit; an 8 MiB first block can therefore
   // be rejected before the browser emits any useful progress event, which looks like
@@ -154,7 +154,7 @@
       destLastUsed: 'utilisé {rel}', relNow: 'à l’instant', relMin: 'il y a {n} min', relHour: 'il y a {n} h', relDay: 'il y a {n} j',
       moveUp: '↑ Monter', moveDown: '↓ Descendre', shareApp: 'Partager l’application', appShareText: 'Envoyez-moi des fichiers avec Direct-Xfer',
       soundFinish: 'Son à la fin d’un envoi', densityLabel: 'Densité', densityNormal: 'Normale', densityCompact: 'Compacte', storageBarLabel: 'Stockage local utilisé',
-      wifiOnly: 'Envoyer seulement en Wi-Fi', waitingWifi: 'attente Wi-Fi', stripExif: 'Retirer les métadonnées (EXIF/GPS)',
+      wifiOnly: 'Envoyer seulement en Wi-Fi', largeWifiOnly: 'Gros transferts uniquement en Wi-Fi', largeWifiThreshold: 'Seuil gros transfert', persistentTransferNotification: 'Notification Android pendant les transferts actifs', transferNotifPermissionDenied: 'Les notifications sont bloquées pour ce site.', waitingWifi: 'attente Wi-Fi', stripExif: 'Retirer les métadonnées (EXIF/GPS)',
       zipBundle: '🗜 Regrouper en ZIP', zipDone: 'Archive ZIP créée ✓', zipNeedTwo: 'Sélectionnez au moins deux fichiers.', zipping: 'Création du ZIP…',
       voiceNote: 'Note vocale', recording: 'Enregistrement', recStop: '⏹ Arrêter', recAdd: 'Ajouter à la file', recMicFail: 'Micro indisponible',
       annotate: 'Annoter', editorBeforeShare: 'Modifier avant partage', annPan: '✋ Déplacer', annPen: '✏️ Stylo', annBlur: '🌫 Flou', annRedact: '⬛ Caviarder', annDetectFaces: '🙂 Détecter les visages', annDetectPlates: '▭ Détecter les plaques', annUndo: '↶ Défaire', annClear: 'Tout effacer', annApply: 'Appliquer',
@@ -186,7 +186,7 @@
       quotaNearFull: 'Quota bientôt atteint sur cette destination.',
       imgQrAll: '▦ QR groupé', imgQrTooBig: 'Trop de liens pour tenir dans un seul QR.', bulkShare: 'Partager',
       onlineStatus: 'En ligne', offlineStatus: 'Hors ligne', networkWifi: 'Wi-Fi', networkCellular: 'Données mobiles',
-      networkDashboard: 'Réseau en direct', networkDashboardHint: 'Débit, latence, chunks et reprises pendant les transferts.', networkTestNow: 'Tester la connexion', networkTesting: 'Test réseau…', networkTestDone: 'Réseau : {quality} · ↑ {up} · ↓ {down} · {latency} ms', networkTestFailed: 'Test réseau impossible — réglages automatiques conservés.', networkTestAuto: 'Gros transfert détecté : test réseau avant envoi…', networkLatency: 'Latence', networkUpload: 'Montant', networkDownload: 'Descendant', networkLiveRate: 'Débit actuel', networkChunk: 'Chunk', networkParallel: 'Parallèles', networkRetries: 'Reprises', networkActive: 'Actifs', networkQualityExcellent: 'excellent', networkQualityGood: 'bon', networkQualityFair: 'moyen', networkQualityPoor: 'faible', networkNotTested: 'Non testé', networkLastTest: 'Dernier test : {when}', networkGraphLabel: 'Historique du débit montant',
+      networkDashboard: 'Réseau en direct', networkDashboardHint: 'Débit, latence, chunks et reprises pendant les transferts.', networkTestNow: 'Tester la connexion', networkTesting: 'Test réseau…', networkTestDone: 'Réseau : {quality} · ↑ {up} · ↓ {down} · {latency} ms', networkTestFailed: 'Test réseau impossible — réglages automatiques conservés.', networkTestAuto: 'Gros transfert détecté : test réseau avant envoi…', networkLatency: 'Latence', networkUpload: 'Montant', networkDownload: 'Descendant', networkLiveRate: 'Débit actuel', networkChunk: 'Chunk', networkParallel: 'Parallèles', networkRetries: 'Reprises', networkActive: 'Actifs', networkAdaptive: 'Adaptation', networkAdaptiveAuto: 'Auto', networkAdaptiveSlow: 'Réseau lent · 1 flux', networkAdaptiveRecovering: 'Récupération', networkQualityExcellent: 'excellent', networkQualityGood: 'bon', networkQualityFair: 'moyen', networkQualityPoor: 'faible', networkNotTested: 'Non testé', networkLastTest: 'Dernier test : {when}', networkGraphLabel: 'Historique du débit montant',
       errorCenter: 'Centre d’erreurs', errorCenterHint: 'Diagnostic regroupé des échecs récents et des fichiers en erreur.', errorCenterEmpty: 'Aucune erreur récente.', errorCenterClear: 'Effacer le journal', errorCenterCopy: 'Copier le rapport', errorCenterRetry: 'Réessayer', errorCenterRetryAll: 'Réessayer toutes', errorCategoryProxy: 'Reverse proxy', errorCategoryQuota: 'Quota / stockage', errorCategoryNetwork: 'Connexion', errorCategoryServer: 'Serveur', errorCategoryAuth: 'Autorisation', errorCategoryFile: 'Fichier', errorCategoryOther: 'Autre', errorLogCleared: 'Journal d’erreurs effacé ✓', errorReportCopied: 'Rapport d’erreurs copié ✓', errorLocalStorage: 'Stockage local insuffisant ou indisponible.',
       resendLastBatch: '↺ Renvoyer le dernier lot', lastBatchUnavailable: 'Le dernier lot n’est plus disponible localement.', lastBatchRestored: '{n} fichier(s) du dernier lot restauré(s) ✓',
       copySummary: '⧉ Copier le résumé', shareResult: '📤 Partager le résultat', summaryCopied: 'Résumé copié ✓', noSummary: 'Aucun résumé de transfert disponible.',
@@ -264,7 +264,7 @@
       destLastUsed: 'used {rel}', relNow: 'just now', relMin: '{n} min ago', relHour: '{n} h ago', relDay: '{n} d ago',
       moveUp: '↑ Move up', moveDown: '↓ Move down', shareApp: 'Share the app', appShareText: 'Send me files with Direct-Xfer',
       soundFinish: 'Sound when an upload finishes', densityLabel: 'Density', densityNormal: 'Normal', densityCompact: 'Compact', storageBarLabel: 'Local storage used',
-      wifiOnly: 'Upload on Wi-Fi only', waitingWifi: 'waiting for Wi-Fi', stripExif: 'Remove metadata (EXIF/GPS)',
+      wifiOnly: 'Upload on Wi-Fi only', largeWifiOnly: 'Large transfers on Wi-Fi only', largeWifiThreshold: 'Large-transfer threshold', persistentTransferNotification: 'Android notification during active transfers', transferNotifPermissionDenied: 'Notifications are blocked for this site.', waitingWifi: 'waiting for Wi-Fi', stripExif: 'Remove metadata (EXIF/GPS)',
       zipBundle: '🗜 Bundle into ZIP', zipDone: 'ZIP archive created ✓', zipNeedTwo: 'Select at least two files.', zipping: 'Building ZIP…',
       voiceNote: 'Voice note', recording: 'Recording', recStop: '⏹ Stop', recAdd: 'Add to queue', recMicFail: 'Microphone unavailable',
       annotate: 'Annotate', editorBeforeShare: 'Edit before sharing', annPan: '✋ Pan', annPen: '✏️ Pen', annBlur: '🌫 Blur', annRedact: '⬛ Redact', annDetectFaces: '🙂 Detect faces', annDetectPlates: '▭ Detect plates', annUndo: '↶ Undo', annClear: 'Clear all', annApply: 'Apply',
@@ -296,7 +296,7 @@
       quotaNearFull: 'This destination’s quota is almost full.',
       imgQrAll: '▦ Combined QR', imgQrTooBig: 'Too many links to fit in one QR.', bulkShare: 'Share',
       onlineStatus: 'Online', offlineStatus: 'Offline', networkWifi: 'Wi-Fi', networkCellular: 'Mobile data',
-      networkDashboard: 'Live network', networkDashboardHint: 'Throughput, latency, chunks and retries during transfers.', networkTestNow: 'Test connection', networkTesting: 'Network test…', networkTestDone: 'Network: {quality} · ↑ {up} · ↓ {down} · {latency} ms', networkTestFailed: 'Network test failed — automatic defaults kept.', networkTestAuto: 'Large transfer detected: testing the network before upload…', networkLatency: 'Latency', networkUpload: 'Upload', networkDownload: 'Download', networkLiveRate: 'Live rate', networkChunk: 'Chunk', networkParallel: 'Parallel', networkRetries: 'Retries', networkActive: 'Active', networkQualityExcellent: 'excellent', networkQualityGood: 'good', networkQualityFair: 'fair', networkQualityPoor: 'poor', networkNotTested: 'Not tested', networkLastTest: 'Last test: {when}', networkGraphLabel: 'Upload throughput history',
+      networkDashboard: 'Live network', networkDashboardHint: 'Throughput, latency, chunks and retries during transfers.', networkTestNow: 'Test connection', networkTesting: 'Network test…', networkTestDone: 'Network: {quality} · ↑ {up} · ↓ {down} · {latency} ms', networkTestFailed: 'Network test failed — automatic defaults kept.', networkTestAuto: 'Large transfer detected: testing the network before upload…', networkLatency: 'Latency', networkUpload: 'Upload', networkDownload: 'Download', networkLiveRate: 'Live rate', networkChunk: 'Chunk', networkParallel: 'Parallel', networkRetries: 'Retries', networkActive: 'Active', networkAdaptive: 'Adaptation', networkAdaptiveAuto: 'Auto', networkAdaptiveSlow: 'Slow network · 1 stream', networkAdaptiveRecovering: 'Recovering', networkQualityExcellent: 'excellent', networkQualityGood: 'good', networkQualityFair: 'fair', networkQualityPoor: 'poor', networkNotTested: 'Not tested', networkLastTest: 'Last test: {when}', networkGraphLabel: 'Upload throughput history',
       errorCenter: 'Error center', errorCenterHint: 'Grouped diagnostics for recent failures and files currently in error.', errorCenterEmpty: 'No recent error.', errorCenterClear: 'Clear log', errorCenterCopy: 'Copy report', errorCenterRetry: 'Retry', errorCenterRetryAll: 'Retry all', errorCategoryProxy: 'Reverse proxy', errorCategoryQuota: 'Quota / storage', errorCategoryNetwork: 'Connection', errorCategoryServer: 'Server', errorCategoryAuth: 'Authorization', errorCategoryFile: 'File', errorCategoryOther: 'Other', errorLogCleared: 'Error log cleared ✓', errorReportCopied: 'Error report copied ✓', errorLocalStorage: 'Local storage is insufficient or unavailable.',
       resendLastBatch: '↺ Resend last batch', lastBatchUnavailable: 'The last batch is no longer available locally.', lastBatchRestored: '{n} file(s) from the last batch restored ✓',
       copySummary: '⧉ Copy summary', shareResult: '📤 Share result', summaryCopied: 'Summary copied ✓', noSummary: 'No transfer summary is available.',
@@ -375,7 +375,7 @@
       destLastUsed: 'usado {rel}', relNow: 'ahora mismo', relMin: 'hace {n} min', relHour: 'hace {n} h', relDay: 'hace {n} d',
       moveUp: '↑ Subir', moveDown: '↓ Bajar', shareApp: 'Compartir la aplicación', appShareText: 'Envíame archivos con Direct-Xfer',
       soundFinish: 'Sonido al terminar un envío', densityLabel: 'Densidad', densityNormal: 'Normal', densityCompact: 'Compacta', storageBarLabel: 'Almacenamiento local usado',
-      wifiOnly: 'Enviar solo con Wi-Fi', waitingWifi: 'esperando Wi-Fi', stripExif: 'Quitar metadatos (EXIF/GPS)',
+      wifiOnly: 'Enviar solo con Wi-Fi', largeWifiOnly: 'Transferencias grandes solo por Wi-Fi', largeWifiThreshold: 'Umbral de transferencia grande', persistentTransferNotification: 'Notificación Android durante transferencias activas', transferNotifPermissionDenied: 'Las notificaciones están bloqueadas para este sitio.', waitingWifi: 'esperando Wi-Fi', stripExif: 'Quitar metadatos (EXIF/GPS)',
       zipBundle: '🗜 Agrupar en ZIP', zipDone: 'Archivo ZIP creado ✓', zipNeedTwo: 'Selecciona al menos dos archivos.', zipping: 'Creando ZIP…',
       voiceNote: 'Nota de voz', recording: 'Grabando', recStop: '⏹ Detener', recAdd: 'Añadir a la cola', recMicFail: 'Micrófono no disponible',
       annotate: 'Anotar', editorBeforeShare: 'Editar antes de compartir', annPan: '✋ Mover', annPen: '✏️ Lápiz', annBlur: '🌫 Desenfoque', annRedact: '⬛ Censurar', annDetectFaces: '🙂 Detectar rostros', annDetectPlates: '▭ Detectar matrículas', annUndo: '↶ Deshacer', annClear: 'Borrar todo', annApply: 'Aplicar',
@@ -407,7 +407,7 @@
       quotaNearFull: 'La cuota de este destino está casi llena.',
       imgQrAll: '▦ QR combinado', imgQrTooBig: 'Demasiados enlaces para un solo QR.', bulkShare: 'Compartir',
       onlineStatus: 'En línea', offlineStatus: 'Sin conexión', networkWifi: 'Wi-Fi', networkCellular: 'Datos móviles',
-      networkDashboard: 'Red en directo', networkDashboardHint: 'Velocidad, latencia, bloques y reintentos durante las transferencias.', networkTestNow: 'Probar conexión', networkTesting: 'Prueba de red…', networkTestDone: 'Red: {quality} · ↑ {up} · ↓ {down} · {latency} ms', networkTestFailed: 'No se pudo probar la red — se conservan los ajustes automáticos.', networkTestAuto: 'Transferencia grande detectada: probando la red antes del envío…', networkLatency: 'Latencia', networkUpload: 'Subida', networkDownload: 'Bajada', networkLiveRate: 'Velocidad actual', networkChunk: 'Bloque', networkParallel: 'Paralelos', networkRetries: 'Reintentos', networkActive: 'Activos', networkQualityExcellent: 'excelente', networkQualityGood: 'buena', networkQualityFair: 'media', networkQualityPoor: 'baja', networkNotTested: 'Sin probar', networkLastTest: 'Última prueba: {when}', networkGraphLabel: 'Historial de velocidad de subida',
+      networkDashboard: 'Red en directo', networkDashboardHint: 'Velocidad, latencia, bloques y reintentos durante las transferencias.', networkTestNow: 'Probar conexión', networkTesting: 'Prueba de red…', networkTestDone: 'Red: {quality} · ↑ {up} · ↓ {down} · {latency} ms', networkTestFailed: 'No se pudo probar la red — se conservan los ajustes automáticos.', networkTestAuto: 'Transferencia grande detectada: probando la red antes del envío…', networkLatency: 'Latencia', networkUpload: 'Subida', networkDownload: 'Bajada', networkLiveRate: 'Velocidad actual', networkChunk: 'Bloque', networkParallel: 'Paralelos', networkRetries: 'Reintentos', networkActive: 'Activos', networkAdaptive: 'Adaptación', networkAdaptiveAuto: 'Auto', networkAdaptiveSlow: 'Red lenta · 1 flujo', networkAdaptiveRecovering: 'Recuperación', networkQualityExcellent: 'excelente', networkQualityGood: 'buena', networkQualityFair: 'media', networkQualityPoor: 'baja', networkNotTested: 'Sin probar', networkLastTest: 'Última prueba: {when}', networkGraphLabel: 'Historial de velocidad de subida',
       errorCenter: 'Centro de errores', errorCenterHint: 'Diagnóstico agrupado de fallos recientes y archivos con error.', errorCenterEmpty: 'No hay errores recientes.', errorCenterClear: 'Borrar registro', errorCenterCopy: 'Copiar informe', errorCenterRetry: 'Reintentar', errorCenterRetryAll: 'Reintentar todos', errorCategoryProxy: 'Proxy inverso', errorCategoryQuota: 'Cuota / almacenamiento', errorCategoryNetwork: 'Conexión', errorCategoryServer: 'Servidor', errorCategoryAuth: 'Autorización', errorCategoryFile: 'Archivo', errorCategoryOther: 'Otro', errorLogCleared: 'Registro de errores borrado ✓', errorReportCopied: 'Informe de errores copiado ✓', errorLocalStorage: 'El almacenamiento local es insuficiente o no está disponible.',
       resendLastBatch: '↺ Reenviar el último lote', lastBatchUnavailable: 'El último lote ya no está disponible localmente.', lastBatchRestored: '{n} archivo(s) del último lote restaurado(s) ✓',
       copySummary: '⧉ Copiar resumen', shareResult: '📤 Compartir resultado', summaryCopied: 'Resumen copiado ✓', noSummary: 'No hay resumen de transferencia disponible.',
@@ -575,7 +575,7 @@ Object.assign(STRINGS.es, {
   serverActivityActor:'Usuario', serverActivityIp:'IP', serverActivityDevice:'Dispositivo/origen', serverActivityResult:'Resultado', serverActivityPeriod:'Período', serverActivityDirection:'Dirección', serverActivityCorrelate:'Agrupar por recurso', serverActivity24h:'24 h', serverActivity7d:'7 días', serverActivity30d:'30 días',
   sharesTrashImpact:'Impacto: {count} elemento(s) · {bytes}', sharesTrashDependencies:'Dependencias: {value}', sharesTrashNoDependencies:'ninguna', sharesTrashSmartRestore:'Falta la ubicación original. ¿Usar «{path}»?', sharesTrashChooseRestore:'Otra ruta del host:'
 });
-// 1.63.4 — audited live server transfers inside the PWA Activity section.
+// 1.64.0 — audited live server transfers inside the PWA Activity section.
 Object.assign(STRINGS.fr, {
   liveTransfersTitle:'Transferts en cours', liveTransfersHint:'Suivi en direct des transferts actifs sur le serveur.', liveTransfersLoading:'Chargement des transferts en cours…', liveTransfersEmpty:'Aucun transfert en cours.', liveTransfersLoadFail:'Impossible de charger les transferts en cours.', liveTransfersUpdated:'Mis à jour à {time}', liveTransfersStalled:'Inactif', liveTransfersResumed:'Repris', liveTransfersStopping:'Arrêt…', liveTransfersOffline:'Flux en direct indisponible', liveTransfersStale:'Dernières données connues', liveTransfersRemaining:'restant', liveTransfersStop:'Arrêter le transfert', liveTransfersStopConfirm:'Arrêter ce transfert en cours ?', liveTransfersStopOk:'Transfert arrêté', liveTransfersStopFail:'Impossible d’arrêter le transfert'
 });
@@ -615,7 +615,7 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
       });
     });
     var manifest = document.getElementById('app-manifest');
-    if (manifest) manifest.href = (lang === 'fr' ? '/direct-xfer-pwa.webmanifest' : '/direct-xfer-pwa-' + lang + '.webmanifest') + '?v=269';
+    if (manifest) manifest.href = (lang === 'fr' ? '/direct-xfer-pwa.webmanifest' : '/direct-xfer-pwa-' + lang + '.webmanifest') + '?v=325';
     $('lang-select').value = lang;
     $('dest-save-btn').textContent = editingToken ? t('updateDestination') : t('saveDestination');
     renderDests(); renderQueue(); renderHistory(); renderDeviceStatus();
@@ -738,19 +738,34 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
     if (kind === 'ok') haptic('success'); else if (kind === 'warn' || kind === 'err') haptic('warning');
   }
   function sleep(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
-  // Smoothed transfer rate (bytes/s) via an exponential moving average. `state` is a
-  // plain object carrying the last sample; sampling at most ~3×/s keeps the reading
-  // steady across the many tiny 768 KiB blocks (an instantaneous per-block rate is
-  // far too jumpy on mobile, and often never shows at all when a block finishes in
-  // under 0.4 s). Reset by passing a fresh {}.
+  // Robust moving upload rate (bytes/s). Keep a time-bounded rolling window and
+  // ignore zero-byte samples caused by pauses/back-off. Instantaneous outliers are
+  // clamped around the recent median before a time-weighted average is calculated;
+  // this makes ETA stable across chunk boundaries, Android scheduling jitter and
+  // short proxy retries without making it sluggish after a real network change.
   function emaRate(state, bytes) {
-    var now = Date.now();
-    if (!state.t) { state.t = now; state.b = bytes; return state.ema || 0; }
-    var dt = (now - state.t) / 1000;
-    if (dt < 0.35) return state.ema || 0;
-    var inst = Math.max(0, bytes - state.b) / dt;
-    state.ema = state.ema ? state.ema * 0.65 + inst * 0.35 : inst;
+    // Upload-rate timing must be monotonic: wall-clock/NTP changes must not freeze
+    // ETA calculations or manufacture a giant rate sample.
+    var now = (window.performance && typeof performance.now === 'function') ? performance.now() : Date.now();
+    bytes = Math.max(0, Number(bytes) || 0);
+    if (!state.t) { state.t = now; state.b = bytes; state.samples = []; return Number(state.ema) || 0; }
+    var dt = (now - state.t) / 1000, delta = bytes - (Number(state.b) || 0);
+    if (dt < 0.30) return Number(state.ema) || 0;
     state.t = now; state.b = bytes;
+    if (!(delta > 0) || !(dt > 0)) return Number(state.ema) || 0;
+    var inst = delta / dt, samples = Array.isArray(state.samples) ? state.samples : (state.samples = []);
+    var recentRates = samples.slice(-9).map(function (x) { return x.rate; }).filter(function (x) { return x > 0 && isFinite(x); }).sort(function (a,b) { return a-b; });
+    if (recentRates.length >= 3) {
+      var median = recentRates[Math.floor(recentRates.length / 2)];
+      inst = Math.max(median * 0.25, Math.min(median * 4, inst));
+    }
+    samples.push({ at: now, rate: inst, dt: Math.min(3, dt) });
+    var cutoff = now - 15000;
+    while (samples.length > 28 || (samples[0] && samples[0].at < cutoff)) samples.shift();
+    var weighted = 0, weight = 0;
+    samples.forEach(function (x) { var w = Math.max(.15, Math.min(3, Number(x.dt) || .35)); weighted += x.rate * w; weight += w; });
+    var rolling = weight > 0 ? weighted / weight : inst;
+    state.ema = state.ema ? state.ema * 0.35 + rolling * 0.65 : rolling;
     return state.ema;
   }
   function fmtBytes(bytes) {
@@ -2037,6 +2052,9 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
   var recentErrors = [];
   try { recentErrors = JSON.parse(localStorage.getItem('dx-pwa-error-log') || '[]'); if (!Array.isArray(recentErrors)) recentErrors = []; } catch (_) { recentErrors = []; }
   recentErrors = recentErrors.slice(-30);
+  var networkErrorHistory = [];
+  try { networkErrorHistory = JSON.parse(localStorage.getItem('dx-pwa-network-errors-v1') || '[]'); if (!Array.isArray(networkErrorHistory)) networkErrorHistory = []; } catch (_) { networkErrorHistory = []; }
+  networkErrorHistory = networkErrorHistory.slice(-100);
   var lastNetworkTest = null;
   try { lastNetworkTest = JSON.parse(localStorage.getItem('dx-pwa-network-test') || 'null'); } catch (_) { lastNetworkTest = null; }
   var networkTestPromise = null;
@@ -2047,6 +2065,13 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
   var networkActiveTransfers = 0;
   var networkRateSamples = [];
   var networkLastSampleAt = 0;
+  var networkAdaptiveConcurrencyLimit = 0;
+  var networkAdaptiveState = 'auto';
+  var networkSlowSince = 0;
+  var networkGoodSince = 0;
+  var networkLastRetryAt = 0;
+  var transferNotificationLastAt = 0;
+  var transferNotificationLastPayload = null;
   // Full-size URLs of image links created this session, for "Copy all".
   var imageLinkUrls = [];
   var imageRowsByToken = new Map();
@@ -2141,6 +2166,9 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
       dlpLocal: it.dlpLocal || null,
       dlpApprovedFingerprint: it.dlpApprovedFingerprint || '',
       backgroundReady: !!it.backgroundReady,
+      // Persist the transport policy with the prepared payload. The service worker
+      // must not bypass a Wi-Fi-only rule after the page is closed.
+      wifiRequired: !!it.wifiRequired,
       backgroundFailedAt: Math.max(0, Number(it.backgroundFailedAt) || 0),
       backgroundCompletedAt: Math.max(0, Number(it.backgroundCompletedAt) || 0),
       backgroundResponse: it.backgroundResponse || null,
@@ -2279,6 +2307,7 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
       backgroundCompletedAt: Math.max(0, Number(record.backgroundCompletedAt) || 0),
       backgroundResponse: record.backgroundResponse || null,
       backgroundReady: !!record.backgroundReady,
+      wifiRequired: !!record.wifiRequired,
       lastCheckpointAt: Math.max(0, Number(record.lastCheckpointAt) || 0),
       lastServerOffset: Math.max(0, Number(record.lastServerOffset) || 0),
       recoveryAttempts: Math.max(0, Number(record.recoveryAttempts) || 0),
@@ -5297,6 +5326,32 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
   function persistErrorLog() {
     try { localStorage.setItem('dx-pwa-error-log', JSON.stringify(recentErrors.slice(-30))); } catch (_) {}
   }
+  function networkConnectionSnapshot() {
+    var c = connectionInfo();
+    return {
+      online: navigator.onLine !== false,
+      type: c && c.type ? String(c.type) : '',
+      effectiveType: c && c.effectiveType ? String(c.effectiveType) : '',
+      downlink: c && isFinite(Number(c.downlink)) ? Number(c.downlink) : null,
+      rtt: c && isFinite(Number(c.rtt)) ? Number(c.rtt) : null,
+      saveData: !!(c && c.saveData)
+    };
+  }
+  function persistNetworkErrorHistory() {
+    try { localStorage.setItem('dx-pwa-network-errors-v1', JSON.stringify(networkErrorHistory.slice(-100))); } catch (_) {}
+  }
+  function recordNetworkIncident(it, detail) {
+    detail = detail || {};
+    var rec = {
+      id: genId(12), itemId: it && it.id || '', name: it && it.name || '', at: Date.now(),
+      code: detail.code || 'network', badge: detail.badge || '', hint: detail.hint || '',
+      attempt: Math.max(1, Number(detail.attempt) || 1), offset: Math.max(0, Number(it && it.sentBytes) || 0),
+      total: Math.max(0, Number(it && (it.upSize || it.size)) || 0), connection: networkConnectionSnapshot()
+    };
+    networkErrorHistory.push(rec); networkErrorHistory = networkErrorHistory.slice(-100); persistNetworkErrorHistory();
+    try { window.dispatchEvent(new CustomEvent('dx-network-incident', { detail: rec })); } catch (_) {}
+    return rec;
+  }
   function errorCategory(code, badge, hint) {
     var text = [code, badge, hint].join(' ').toLowerCase();
     if (/413|proxy|gateway|502|503|504|post.*block|body.size|buffer/.test(text)) return 'proxy';
@@ -5357,7 +5412,10 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
     var records = currentErrorRecords();
     var lines = ['Direct-Xfer PWA · ' + APP_BUILD, 'online: ' + navigator.onLine, 'errors: ' + records.length];
     if (lastNetworkTest) lines.push('network: ' + Math.round(lastNetworkTest.latency || 0) + ' ms · up ' + fmtBytes(lastNetworkTest.uploadBps || 0) + '/s · down ' + fmtBytes(lastNetworkTest.downloadBps || 0) + '/s');
-    records.forEach(function (r) { lines.push('[' + errorCategoryLabel(r.category) + '] ' + fmtDate(r.at) + ' · ' + (r.name || '-') + ' · ' + [r.badge, r.code, r.hint].filter(Boolean).join(' — ')); });
+    records.forEach(function (r, index) {
+      var reportName = privacyNames && r.name ? t('privacyFile', { n: index + 1 }) : (r.name || '-');
+      lines.push('[' + errorCategoryLabel(r.category) + '] ' + fmtDate(r.at) + ' · ' + reportName + ' · ' + [r.badge, r.code, r.hint].filter(Boolean).join(' — '));
+    });
     return lines.join('\n');
   }
   function copyErrorReport() { copyText(errorReportText()).then(function () { toast(t('errorReportCopied'), 'ok'); }, function () { toast(t('copyFailed'), 'err'); }); }
@@ -5379,11 +5437,49 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
     else if (q === 'good') { networkRecommendedChunk = mobile ? MOBILE_CHUNK : 2 * 1024 * 1024; networkRecommendedConcurrency = mobile ? 1 : 2; }
     else { networkRecommendedChunk = mobile ? 1536 * 1024 : DESKTOP_CHUNK; networkRecommendedConcurrency = mobile ? 2 : 3; }
   }
+  function updateAdaptiveNetwork(rate) {
+    rate = Math.max(0, Number(rate) || 0);
+    var now = Date.now(), c = connectionInfo();
+    var apiSlow = !!(c && (/slow-2g|2g/.test(String(c.effectiveType || '')) || c.saveData));
+    var retrySlow = networkRetryCount >= 3 && now - networkLastRetryAt < 15000;
+    var rateSlow = rate > 0 && rate < 512 * 1024;
+    if (apiSlow || retrySlow || rateSlow) {
+      if (!networkSlowSince) networkSlowSince = now;
+      networkGoodSince = 0;
+      if (apiSlow || retrySlow || now - networkSlowSince >= 7000) {
+        networkAdaptiveState = 'slow';
+        networkAdaptiveConcurrencyLimit = 1;
+        networkRecommendedConcurrency = 1;
+        networkRecommendedChunk = Math.min(networkRecommendedChunk || MOBILE_CHUNK, MOBILE_CHUNK);
+        batch.forEach(function (it) {
+          if (!it) return;
+          if (!it.networkAdaptiveCeilBeforeSlow) it.networkAdaptiveCeilBeforeSlow = Math.max(MIN_CHUNK, it.chunkCeil || initialChunkSize());
+          it.chunkCeil = Math.min(Math.max(MIN_CHUNK, it.chunkCeil || MOBILE_CHUNK), MOBILE_CHUNK);
+        });
+      }
+    } else if (rate >= 1536 * 1024) {
+      networkSlowSince = 0;
+      if (!networkGoodSince) networkGoodSince = now;
+      if (networkAdaptiveState === 'slow' && now - networkGoodSince >= 12000 && now - networkLastRetryAt >= 12000) {
+        networkAdaptiveState = 'recovering';
+        var configured = Math.max(1, Math.min(3, parseInt($('concurrency-select') && $('concurrency-select').value, 10) || 1));
+        networkAdaptiveConcurrencyLimit = Math.max(1, Math.min(configured, isMobileLike() ? 2 : 3));
+        batch.forEach(function (it) {
+          var previous = it && Number(it.networkAdaptiveCeilBeforeSlow) || 0;
+          // If another failure reduced the ceiling below MOBILE_CHUNK, keep that safer
+          // proxy/network limit instead of restoring the old value.
+          if (it && previous > 0 && Number(it.chunkCeil || 0) >= MOBILE_CHUNK) it.chunkCeil = Math.max(it.chunkCeil || 0, previous);
+          if (it) it.networkAdaptiveCeilBeforeSlow = 0;
+        });
+        if (now - networkGoodSince >= 22000) networkAdaptiveState = 'auto';
+      } else if (networkAdaptiveState !== 'slow') networkAdaptiveState = 'auto';
+    }
+  }
   function recordNetworkRate(rate) {
     rate = Number(rate) || 0; if (rate <= 0) return;
     var now = Date.now(); if (now - networkLastSampleAt < 450) return; networkLastSampleAt = now;
     networkRateSamples.push({ at: now, rate: rate }); if (networkRateSamples.length > NETWORK_GRAPH_POINTS) networkRateSamples.shift();
-    renderNetworkDashboard();
+    updateAdaptiveNetwork(rate); renderNetworkDashboard();
   }
   function drawNetworkGraph() {
     var canvas = $('network-rate-chart'); if (!canvas || !canvas.getContext) return;
@@ -5405,6 +5501,7 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
     set('net-parallel', String(networkConfiguredConcurrency || networkRecommendedConcurrency || (parseInt($('concurrency-select') && $('concurrency-select').value, 10) || 1)));
     set('net-active', String(networkActiveTransfers));
     set('net-retries', String(networkRetryCount));
+    set('net-adaptive', t(networkAdaptiveState === 'slow' ? 'networkAdaptiveSlow' : networkAdaptiveState === 'recovering' ? 'networkAdaptiveRecovering' : 'networkAdaptiveAuto'));
     var q = networkQuality(test), quality = $('network-quality'); if (quality) { quality.textContent = networkQualityLabel(q); quality.dataset.quality = q; }
     if ($('network-last-test')) $('network-last-test').textContent = test && test.at ? t('networkLastTest', { when: fmtDate(test.at) }) : t('networkNotTested');
     if ($('network-connection-detail')) $('network-connection-detail').textContent = c ? [c.type || '', c.effectiveType || '', c.downlink ? c.downlink + ' Mb/s' : ''].filter(Boolean).join(' · ') : (navigator.onLine ? t('onlineStatus') : t('offlineStatus'));
@@ -5434,7 +5531,10 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
     return networkTestPromise;
   }
   async function maybeTestNetworkForLargeTransfer(candidates) {
-    var bytes = candidates.reduce(function (sum, it) { return sum + (it.upSize || it.size || 0); }, 0);
+    // Do not consume mobile data merely to benchmark files that are explicitly
+    // blocked until Wi-Fi. Only currently transport-eligible candidates count.
+    var eligible = (candidates || []).filter(function (it) { return !wifiPolicyRequired(it) || wifiOk(it); });
+    var bytes = eligible.reduce(function (sum, it) { return sum + (it.upSize || it.size || 0); }, 0);
     if (bytes < LARGE_TRANSFER_TEST_BYTES) return lastNetworkTest;
     if (lastNetworkTest && Date.now() - (lastNetworkTest.at || 0) < NETWORK_TEST_MAX_AGE_MS) { applyNetworkRecommendation(lastNetworkTest); return lastNetworkTest; }
     toast(t('networkTestAuto'));
@@ -5626,21 +5726,44 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
     if (navigator.onLine) return Promise.resolve();
     return new Promise(function (resolve) { onlineWaiters.push(resolve); });
   }
-  // True unless the "Wi-Fi only" preference is on AND the Network Information API
-  // reports a metered/cellular link. Unknown connection type is treated as allowed.
-  function wifiOk() {
-    if (!$('wifi-only') || !$('wifi-only').checked) return true;
-    var c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-    if (!c || !c.type) return true; // no info: don't block the user
-    return c.type === 'wifi' || c.type === 'ethernet' || c.type === 'wimax' || c.type === 'unknown';
+  function largeWifiThresholdBytes() {
+    var mb = Math.max(1, Number($('large-wifi-threshold') && $('large-wifi-threshold').value) || 100);
+    return mb * 1024 * 1024;
   }
-  function waitUntilWifi() {
-    if (wifiOk()) return Promise.resolve();
-    return new Promise(function (resolve) { wifiWaiters.push(resolve); });
+  function wifiPolicyRequired(it) {
+    if ($('wifi-only') && $('wifi-only').checked) return true;
+    if (!($('large-wifi-only') && $('large-wifi-only').checked)) return false;
+    return Math.max(0, Number(it && (it.upSize || it.size)) || 0) >= largeWifiThresholdBytes();
+  }
+  // A Wi-Fi-only policy must fail closed when the browser cannot prove the
+  // transport type. The user can explicitly disable the policy on browsers that do
+  // not expose NetworkInformation.type; silently allowing an unknown transport can
+  // otherwise consume cellular data while claiming Wi-Fi-only enforcement.
+  function wifiOk(it) {
+    if (!wifiPolicyRequired(it)) return true;
+    var c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    if (!c || !c.type) return false;
+    var type = String(c.type).toLowerCase();
+    return type === 'wifi' || type === 'ethernet' || type === 'wimax';
+  }
+  function waitUntilWifi(it) {
+    if (wifiOk(it)) return Promise.resolve();
+    return new Promise(function (resolve) { wifiWaiters.push({ resolve: resolve, item: it || null }); });
   }
   function releaseWifiWaiters() {
-    if (!wifiOk()) return;
-    var w = wifiWaiters.splice(0); w.forEach(function (resolve) { resolve(); });
+    var keep = [];
+    wifiWaiters.splice(0).forEach(function (entry) {
+      if (typeof entry === 'function') { if (wifiOk(null)) entry(); else keep.push({ resolve: entry, item: null }); return; }
+      if (entry && wifiOk(entry.item)) entry.resolve(); else if (entry) keep.push(entry);
+    });
+    Array.prototype.push.apply(wifiWaiters, keep);
+  }
+  function persistWifiPolicies() {
+    items.forEach(function (it) {
+      if (!it || it.state === 'done' || it.state === 'removed') return;
+      it.wifiRequired = wifiPolicyRequired(it);
+      if (!it.volatile) persistItem(it, false).catch(function () {});
+    });
   }
   function waitUntilResumed() {
     if (!paused) return Promise.resolve();
@@ -5718,6 +5841,23 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
     } catch (_) { return null; }
   }
 
+  async function acquireAdaptiveTransferSlot() {
+    // Reserve a slot atomically between chunks. Reducing concurrency therefore
+    // takes effect after the currently active chunks rather than waiting for an
+    // entire large file to finish.
+    while (true) {
+      await waitUntilResumed();
+      var limit = Math.max(1, Number(networkAdaptiveConcurrencyLimit || networkConfiguredConcurrency || 1));
+      if (networkActiveTransfers < limit) {
+        networkActiveTransfers++; renderNetworkDashboard(); return;
+      }
+      await sleep(120);
+    }
+  }
+  function releaseAdaptiveTransferSlot() {
+    networkActiveTransfers = Math.max(0, networkActiveTransfers - 1); renderNetworkDashboard();
+  }
+
   async function uploadOne(it) {
     if (it.state === 'removed' || it.state === 'done') return true;
     try { await prepareUpload(it); }
@@ -5753,14 +5893,14 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
       if (!navigator.onLine) {
         it.state = 'waiting-network'; updateItemUi(it, t('waitingNetwork')); schedulePersistItem(it); registerBackgroundSync(); await waitUntilOnline(); continue;
       }
-      if (!wifiOk()) {
-        it.state = 'waiting-network'; updateItemUi(it, t('waitingWifi')); schedulePersistItem(it); await waitUntilWifi(); continue;
+      if (!wifiOk(it)) {
+        it.state = 'waiting-network'; updateItemUi(it, t('waitingWifi')); schedulePersistItem(it); await waitUntilWifi(it); continue;
       }
       it.state = 'sending'; updateItemUi(it, offset ? Math.round((offset / Math.max(1, it.upSize)) * 100) + '%' : t('startingUpload'));
-      networkActiveTransfers++; renderNetworkDashboard();
+      await acquireAdaptiveTransferSlot();
       var result;
       try { result = await putChunk(it, offset); }
-      finally { networkActiveTransfers = Math.max(0, networkActiveTransfers - 1); renderNetworkDashboard(); }
+      finally { releaseAdaptiveTransferSlot(); }
       if (result.cancelled) return false;
       if (result.paused) { it.state = 'paused'; updateItemUi(it, t('paused')); await persistItem(it, false); continue; }
       if (result.done) { await finishItem(it, result.response); return true; }
@@ -5783,10 +5923,13 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
         it.state = 'waiting-network'; updateItemUi(it, t('rateLimited'));
         if (result.offset != null) { offset = Math.min(Math.max(0, result.offset), it.upSize); it.sentBytes = offset; }
         schedulePersistItem(it);
+        networkRetryCount++; networkLastRetryAt = Date.now();
+        recordNetworkIncident(it, { code:'rate-limited', badge:'HTTP 429', hint:t('rateLimited'), attempt:Math.max(1, failures + 1) });
+        updateAdaptiveNetwork(globalRate && globalRate.ema || 0); renderNetworkDashboard();
         await sleep(Math.min(60000, Math.max(2000, (result.retryAfter || 5) * 1000)));
         continue;
       }
-      failures++; networkRetryCount++; renderNetworkDashboard();
+      failures++; networkRetryCount++; networkLastRetryAt = Date.now(); renderNetworkDashboard();
       // Record why this block failed: a short badge for the live status line and a
       // precise sentence for the final give-up message. Both make a stalled upload
       // diagnosable on a phone without dev tools.
@@ -5803,6 +5946,8 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
         else if (reachable) { it.lastFail = t('diagBadgePostBlock'); it.lastHint = t('diagPostBlocked'); }
         else { it.lastHint = t('diagNoConnect'); }
       }
+      recordNetworkIncident(it, { code: result.timeout ? 'timeout' : result.netError ? 'network-error' : result.status ? 'http-' + result.status : 'retry', badge:it.lastFail || '', hint:it.lastHint || '', attempt:failures });
+      updateAdaptiveNetwork(globalRate && globalRate.ema || 0);
       var stall = function () {
         it.state = 'error'; it.resumeOnOpen = false; it.backgroundReady = false; it.errorCode = 'upload-stalled';
         var msg = it.lastHint ? t('uploadStalled') + ' — ' + it.lastHint : t('uploadStalled');
@@ -5853,13 +5998,13 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
   function pauseBatch() {
     if (!sending || paused) return;
     paused = true; $('pause-btn').classList.add('hidden'); $('resume-btn').classList.remove('hidden');
-    toast(t('pauseRequested'), 'warn'); activeXhrs.forEach(function (xhr) { try { xhr.abort(); } catch (_) {} });
+    postTransferNotification({ paused:true }, true); toast(t('pauseRequested'), 'warn'); activeXhrs.forEach(function (xhr) { try { xhr.abort(); } catch (_) {} });
     setTimeout(function () { items.filter(function (it) { return it.state === 'paused'; }).forEach(function (it) { it.resumeOnOpen = false; persistItem(it, false); }); }, 50);
   }
   function resumeBatch() {
     if (!paused) return;
     paused = false; $('resume-btn').classList.add('hidden'); $('pause-btn').classList.remove('hidden');
-    var waiters = resumeWaiters.splice(0); waiters.forEach(function (resolve) { resolve(); }); toast(t('resumed'), 'ok');
+    var waiters = resumeWaiters.splice(0); waiters.forEach(function (resolve) { resolve(); }); postTransferNotification({ paused:false }, true); toast(t('resumed'), 'ok');
   }
   function senderMap() {
     try { var map = JSON.parse(localStorage.getItem('dx-pwa-sender-by-destination') || '{}'); return map && typeof map === 'object' ? map : {}; }
@@ -5983,7 +6128,9 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
   }
   function confirmMobileDataIfNeeded(candidates) {
     if (!$('confirm-mobile-data') || !$('confirm-mobile-data').checked || !isCellularConnection()) return true;
-    var total = candidates.reduce(function (sum, it) { return sum + (it.upSize || it.size || 0); }, 0);
+    // Files covered by a Wi-Fi-only policy will wait rather than consume mobile data,
+    // so exclude them from the mobile-data confirmation volume.
+    var total = candidates.reduce(function (sum, it) { return sum + (wifiPolicyRequired(it) ? 0 : (it.upSize || it.size || 0)); }, 0);
     if (total < 10 * 1024 * 1024) return true;
     return confirm(t('mobileDataConfirm', { size: fmtBytes(total) }));
   }
@@ -6019,6 +6166,44 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
     batchClockTimer = null;
     batchStartedAt = 0;
   }
+  function activeTransferNotificationsEnabled() {
+    return !!($('persistent-transfer-notification') && $('persistent-transfer-notification').checked && 'Notification' in window && Notification.permission === 'granted' && navigator.serviceWorker);
+  }
+  function postTransferNotification(message, force) {
+    if (!activeTransferNotificationsEnabled()) return;
+    var now = Date.now(); if (!force && now - transferNotificationLastAt < 1400) return; transferNotificationLastAt = now;
+    transferNotificationLastPayload = Object.assign({}, transferNotificationLastPayload || {}, message || {});
+    message = Object.assign({ type:'TRANSFER_PROGRESS', build:APP_BUILD, lang:lang }, transferNotificationLastPayload);
+    try {
+      if (navigator.serviceWorker.controller) navigator.serviceWorker.controller.postMessage(message);
+      else navigator.serviceWorker.ready.then(function (reg) { if (reg && reg.active) reg.active.postMessage(message); }).catch(function () {});
+    } catch (_) {}
+  }
+  function clearTransferNotification() {
+    transferNotificationLastAt = 0; transferNotificationLastPayload = null;
+    try {
+      var msg = { type:'TRANSFER_PROGRESS_CLEAR' };
+      if (navigator.serviceWorker && navigator.serviceWorker.controller) navigator.serviceWorker.controller.postMessage(msg);
+      else if (navigator.serviceWorker) navigator.serviceWorker.ready.then(function (reg) { if (reg && reg.active) reg.active.postMessage(msg); }).catch(function () {});
+    } catch (_) {}
+  }
+  async function configureActiveTransferNotifications(enabled) {
+    try { localStorage.setItem('dx-pwa-transfer-notification', enabled ? '1' : '0'); } catch (_) {}
+    metaSet('transferNotificationEnabled', !!enabled).catch(function () {});
+    if (!enabled) { clearTransferNotification(); return true; }
+    if (!('Notification' in window)) return false;
+    if (Notification.permission === 'default') {
+      try { await Notification.requestPermission(); } catch (_) {}
+    }
+    if (Notification.permission !== 'granted') {
+      if ($('persistent-transfer-notification')) $('persistent-transfer-notification').checked = false;
+      try { localStorage.setItem('dx-pwa-transfer-notification', '0'); } catch (_) {}
+      metaSet('transferNotificationEnabled', false).catch(function () {});
+      toast(t('transferNotifPermissionDenied'), 'warn'); return false;
+    }
+    return true;
+  }
+
   async function showBatchCompletionNotification(ok, fail, summary) {
     if (!summary || !('Notification' in window) || Notification.permission !== 'granted' || !navigator.serviceWorker) return;
     try {
@@ -6081,6 +6266,7 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
       // to resume only the resulting durable payload and never receives a secret.
       try {
         await prepareUpload(item);
+        item.wifiRequired = wifiPolicyRequired(item);
         if (item.snapshot) { item.snapshot.key = ''; item.snapshot.passphrase = ''; }
         await persistItem(item, false); // metadata + final payload precede all upload traffic
         preparedCandidates.push(item);
@@ -6097,12 +6283,14 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
     if (candidates.some(function (it) { return it.backgroundReady; })) registerBackgroundSync();
     sending = true; paused = false; batch = candidates; batchTotal = candidates.reduce(function (sum, it) { return sum + (it.upSize || it.size || 0); }, 0);
     startBatchClock();
-    globalRate = {}; networkRetryCount = 0; networkRateSamples = []; networkLastSampleAt = 0;
+    globalRate = {}; networkRetryCount = 0; networkRateSamples = []; networkLastSampleAt = 0; networkAdaptiveState = 'auto'; networkSlowSince = 0; networkGoodSince = 0; networkLastRetryAt = 0;
     candidates.forEach(function (it) { it.rate = {}; if (networkRecommendedChunk > 0) it.chunkCeil = Math.max(MIN_CHUNK, networkRecommendedChunk); }); // fresh smoothed-rate baselines for this batch
     renderNetworkDashboard();
     batchSnapshot = candidates[0].snapshot; setDestinationLocked(true); $('send-btn').disabled = true; $('pause-btn').classList.remove('hidden'); $('resume-btn').classList.add('hidden');
     $('global-progress-wrap').classList.remove('hidden'); await acquireWake(); updateGlobalProgress();
-    var queue = candidates.slice(), ok = 0, fail = 0;
+    var queue = candidates.slice().sort(function (a, b) {
+      return (wifiOk(a) ? 0 : 1) - (wifiOk(b) ? 0 : 1);
+    }), ok = 0, fail = 0;
     var concurrency = Math.max(1, Math.min(3, parseInt($('concurrency-select').value, 10) || 2));
     if (networkRecommendedConcurrency > 0) concurrency = Math.min(concurrency, networkRecommendedConcurrency);
     // Without a fresh network recommendation, keep the conservative mobile rule.
@@ -6110,22 +6298,24 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
     // while any individual 128 MiB+ file remains single-stream for Android reliability.
     if ((!lastNetworkTest || Date.now() - (lastNetworkTest.at || 0) >= NETWORK_TEST_MAX_AGE_MS) && isMobileLike()) concurrency = 1;
     if (candidates.some(function (it) { return (it.size || 0) >= 128 * 1024 * 1024; })) concurrency = 1;
-    networkConfiguredConcurrency = concurrency; renderNetworkDashboard();
-    async function worker() {
+    networkConfiguredConcurrency = concurrency; networkAdaptiveConcurrencyLimit = concurrency; renderNetworkDashboard();
+    async function worker(workerIndex) {
       while (queue.length) {
-        var it = queue.shift();
+        if (workerIndex >= Math.max(1, networkAdaptiveConcurrencyLimit || concurrency)) { await sleep(500); continue; }
+        var it = queue.shift(); if (!it) continue;
         var good = await uploadOne(it); if (good) ok++; else if (it.state !== 'removed') fail++;
       }
     }
     var workers = [];
-    for (var w = 0; w < Math.min(concurrency, candidates.length); w++) workers.push(worker());
+    for (var w = 0; w < Math.min(concurrency, candidates.length); w++) workers.push(worker(w));
     await Promise.all(workers);
     // Learn the average rate for future pre-send estimates (estimated time).
     var learned = emaRate(globalRate, batchTotal);
     await rememberLastBatch(candidates, ok, fail);
     if (learned > 0) { avgRate = avgRate > 0 ? avgRate * 0.5 + learned * 0.5 : learned; try { localStorage.setItem('dx-pwa-avg-rate', String(Math.round(avgRate))); } catch (_) {} }
     stopBatchClock();
-    sending = false; paused = false; networkConfiguredConcurrency = 0; networkActiveTransfers = 0; batch = []; batchTotal = 0; batchSnapshot = null; setDestinationLocked(false);
+    sending = false; paused = false; networkConfiguredConcurrency = 0; networkAdaptiveConcurrencyLimit = 0; networkAdaptiveState = 'auto'; networkActiveTransfers = 0; batch = []; batchTotal = 0; batchSnapshot = null; setDestinationLocked(false);
+    clearTransferNotification();
     await showBatchCompletionNotification(ok, fail, lastBatchSummary);
     if (!($('keep-awake') && $('keep-awake').checked)) releaseWake();
     $('pause-btn').classList.add('hidden'); $('resume-btn').classList.add('hidden'); $('global-progress-wrap').classList.add('hidden');
@@ -6154,15 +6344,17 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
       line += ' · ' + t('batchElapsed', { time: fmtClock(elapsedSec) });
       if (done > 0) line += ' · ' + t('avgPerFile', { time: fmtClock(elapsedSec / done) });
     }
-    // Overall smoothed rate + ETA across the whole batch, shown while actively sending.
+    // Overall rolling rate + ETA across the whole batch, shown while actively sending.
+    var liveRate = 0, liveEtaSec = 0;
     if (sending && !paused) {
-      var rate = emaRate(globalRate, sent);
-      if (rate > 0) { recordNetworkRate(rate);
-        line += ' · ↑ ' + fmtBytes(rate) + '/s';
+      liveRate = emaRate(globalRate, sent);
+      if (liveRate > 0) { recordNetworkRate(liveRate);
+        line += ' · ↑ ' + fmtBytes(liveRate) + '/s';
         var remain = Math.max(0, total - sent);
-        if (remain > 0) line += ' · ⏳ ' + fmtEta(remain / rate);
+        if (remain > 0) { liveEtaSec = remain / liveRate; line += ' · ⏳ ' + fmtEta(liveEtaSec); }
       }
     }
+    if (sending) postTransferNotification({ sent:sent, total:total, percent:pct, done:done, count:source.length, rate:liveRate, etaSeconds:liveEtaSec, paused:!!paused }, false);
     $('gprog-text').textContent = line;
     // Live tab title while a batch is in flight. The app badge also represents
     // queued and failed files while idle, so it is updated centrally.
@@ -9238,7 +9430,7 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
   function registerServiceWorker() {
     if (!navigator.serviceWorker || typeof navigator.serviceWorker.register !== 'function') return;
     navigator.serviceWorker.addEventListener('controllerchange', refreshToNewVersion);
-    var registrationPromise = navigator.serviceWorker.register('/direct-xfer-pwa-sw.js?v=275', { scope: '/app/' }).then(function (reg) {
+    var registrationPromise = navigator.serviceWorker.register('/direct-xfer-pwa-sw.js?v=325', { scope: '/app/' }).then(function (reg) {
       swReg = reg;
       navigator.serviceWorker.ready.then(function () {
         swReadyForInstall = true;
@@ -10698,7 +10890,10 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
       }
       toast(t('pushLanguageSaved'), 'ok');
     });
-    if ($('wifi-only')) $('wifi-only').addEventListener('change', function () { try { localStorage.setItem('dx-pwa-wifionly', this.checked ? '1' : '0'); } catch (_) {} releaseWifiWaiters(); maybeAutoResume(); });
+    if ($('wifi-only')) $('wifi-only').addEventListener('change', function () { try { localStorage.setItem('dx-pwa-wifionly', this.checked ? '1' : '0'); } catch (_) {} persistWifiPolicies(); releaseWifiWaiters(); maybeAutoResume(); });
+    if ($('large-wifi-only')) $('large-wifi-only').addEventListener('change', function () { try { localStorage.setItem('dx-pwa-large-wifi-only', this.checked ? '1' : '0'); } catch (_) {} persistWifiPolicies(); releaseWifiWaiters(); maybeAutoResume(); });
+    if ($('large-wifi-threshold')) $('large-wifi-threshold').addEventListener('change', function () { try { localStorage.setItem('dx-pwa-large-wifi-threshold', this.value); } catch (_) {} persistWifiPolicies(); releaseWifiWaiters(); });
+    if ($('persistent-transfer-notification')) $('persistent-transfer-notification').addEventListener('change', function () { configureActiveTransferNotifications(this.checked); });
     if ($('confirm-mobile-data')) $('confirm-mobile-data').addEventListener('change', function () { try { localStorage.setItem('dx-pwa-confirm-mobile', this.checked ? '1' : '0'); } catch (_) {} });
     if ($('privacy-names')) $('privacy-names').addEventListener('change', function () {
       privacyNames = this.checked; document.body.classList.toggle('privacy-names', privacyNames);
@@ -10929,6 +11124,12 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
       if ($('storage-warning-threshold')) $('storage-warning-threshold').value = localStorage.getItem('dx-pwa-storage-warning-threshold') || '80';
       if ($('auto-lock-select')) $('auto-lock-select').value = localStorage.getItem('dx-pwa-auto-lock-minutes') || '15';
       if ($('wifi-only')) $('wifi-only').checked = localStorage.getItem('dx-pwa-wifionly') === '1';
+      if ($('large-wifi-only')) $('large-wifi-only').checked = localStorage.getItem('dx-pwa-large-wifi-only') === '1';
+      if ($('large-wifi-threshold')) $('large-wifi-threshold').value = localStorage.getItem('dx-pwa-large-wifi-threshold') || '100';
+      if ($('persistent-transfer-notification')) {
+        $('persistent-transfer-notification').checked = localStorage.getItem('dx-pwa-transfer-notification') !== '0';
+        metaSet('transferNotificationEnabled', $('persistent-transfer-notification').checked).catch(function () {});
+      }
       if ($('confirm-mobile-data')) $('confirm-mobile-data').checked = localStorage.getItem('dx-pwa-confirm-mobile') !== '0';
       privacyNames = localStorage.getItem('dx-pwa-privacy-names') === '1';
       if ($('privacy-names')) $('privacy-names').checked = privacyNames;

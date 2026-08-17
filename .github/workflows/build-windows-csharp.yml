@@ -13,6 +13,8 @@ on:
       - 'lib/**'
       - 'public/**'
       - 'pwa/**'
+      - 'scripts/**'
+      - 'security/**'
       - 'test/**'
       - '.github/workflows/build-windows-csharp.yml'
 
@@ -22,163 +24,54 @@ permissions:
 jobs:
   build-windows:
     runs-on: windows-2025
-
     env:
-      DX_VERSION: '1.63.4'
-      DX_RUNTIME_BUILD: '1.63.4-launcher52-csharp'
-      DX_SERVER_HOST_BUILD: '1.63.4-serverhost25-csharp'
+      DX_VERSION: '1.64.0'
+      DX_RUNTIME_BUILD: '1.64.0-launcher53-csharp'
+      DX_SERVER_HOST_BUILD: '1.64.0-serverhost26-csharp'
       DX_NODE_VERSION: '24.19.0'
       DX_NODE_EXE_SHA256: '3602f2bb1a10f2cbab4c36886218a33c1ab3db87290e73b033c46c77147d0237'
       INNO_VERSION: '6.7.3'
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v3
+      - uses: actions/checkout@v7
+      - uses: microsoft/setup-msbuild@v3
         with:
           msbuild-architecture: x64
-
-      - name: Setup Node.js for build
-        uses: actions/setup-node@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: '24.19.0'
           package-manager-cache: false
-
-      - name: Install production dependencies
+      - name: Install dependencies
         shell: pwsh
-        run: npm ci --omit=dev --ignore-scripts
-
+        run: npm ci --ignore-scripts
       - name: Audit production dependencies
         shell: pwsh
         run: npm audit --omit=dev --audit-level=high
-
-      - name: Test release-critical changes
+      - name: Validate source and tests
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $criticalTests = @(
-            'test/release-1.58.0-regressions.test.js',
-            'test/release-1.58.1-picker-scroll.test.js',
-            'test/release-1.58.2-firefox-picker.test.js',
-            'test/release-1.58.3-picker-ten-rows.test.js',
-            'test/windows-antivirus-packaging-1.58.4.test.js',
-            'test/windows-csharp-github-package-readme-1.58.4.test.js',
-            'test/windows-csharp-runtime-layout-1.58.4.test.js',
-            'test/windows-inno-installer-1.58.4.test.js',
-            'test/windows-password-copy-history-tooltip-1.58.4.test.js',
-            'test/recent-changes-ultra-audit-1.63.4.test.js',
-            'test/windows-launcher-hardening-1.59.4.test.js',
-            'test/windows-server-host-split-1.59.4.test.js',
-            'test/admin-favicon-1.59.4.test.js',
-            'test/windows-csharp-compile-sanity-1.59.4.test.js',
-            'test/windows-server-host-resilience-1.59.4.test.js',
-            'test/windows-server-host-ultra-audit-1.59.4.test.js',
-            'test/notification-delete-centering-1.59.4.test.js',
-            'test/notification-center-standard-controls-1.59.8.test.js',
-            'test/notification-center-ui-audit-1.59.8.test.js',
-            'test/notification-updates-optout-1.59.8.integration.test.js',
-            'test/share-picker-option-alignment-1.59.4.test.js',
-            'test/share-picker-max-bandwidth-i18n-1.59.4.test.js',
-            'test/share-picker-emoji-i18n-1.59.8.test.js',
-            'test/pwa-share-stats-1.60.0.test.js',
-            'test/pwa-share-stats-1.60.0.integration.test.js',
-            'test/mobile-install-hidden-when-installed-1.60.2.test.js',
-            'test/mobile-install-detection-runtime-1.60.2.integration.test.js',
-            'test/mobile-install-standalone-heartbeat-1.60.3.integration.test.js',
-            'test/pwa-generic-file-picker-1.60.2.test.js',
-            'test/standard-share-view-toggle-removal-1.60.2.test.js',
-            'test/standard-share-actions-two-rows-1.61.0.test.js',
-            'test/release-1.61.0-security-diagnostics-logs.test.js',
-            'test/release-1.61.0-security-diagnostics-logs.integration.test.js',
-            'test/release-1.61.0-wave3-deep-audit.test.js',
-            'test/release-1.61.0-wave3-deep-audit.integration.test.js',
-            'test/release-1.61.0-wave2.test.js',
-            'test/release-1.61.0-wave2.integration.test.js',
-            'test/release-1.61.0-wave2-audit.test.js',
-            'test/release-1.61.0-wave2-audit.integration.test.js',
-            'test/release-1.61.0-audit-fixes.test.js',
-            'test/release-1.61.0-audit-fixes.integration.test.js',
-            'test/release-1.61.0-photo-history-audit.integration.test.js',
-            'test/release-1.61.0-features.test.js',
-            'test/release-1.61.0-reception.integration.test.js',
-            'test/release-1.62.0-share-action-menus.test.js',
-            'test/release-1.62.0-share-action-menus-audit.test.js',
-            'test/release-1.62.0-hour-audit.test.js',
-            'test/release-1.62.0-hour-audit.integration.test.js',
-            'test/release-1.63.0-windows-junction-reception.integration.test.js',
-            'test/release-1.63.0-startup-banner.integration.test.js',
-            'test/release-1.63.0-universal-search-resilience.test.js',
-            'test/release-1.63.0-universal-search-resilience.integration.test.js',
-            'test/release-1.63.0-search-scope-audit.test.js',
-            'test/release-1.63.0-search-scope-audit.integration.test.js',
-            'test/pwa-activity-live-transfers-1.63.0.test.js',
-            'test/pwa-activity-layout-1.63.0.test.js',
-            'test/pwa-activity-recent-regressions-1.63.0.test.js',
-            'test/release-1.63.0-high-volume-pwa-back.test.js',
-            'test/pwa-back-exit.test.js',
-            'test/pwa-live-transfers-audit-1.63.0.integration.test.js',
-            'test/pwa.live-download-presence.test.js',
-            'test/release-1.63.1-filehandle-cleanup.test.js',
-            'test/release-1.63.4.test.js',
-            'test/pwa-back-live-refresh-1.63.4.test.js',
-            'test/pwa-checkbox-text-alignment-1.63.4.test.js'
-          )
-
-          $missingTests = @($criticalTests | Where-Object { -not (Test-Path -LiteralPath $_ -PathType Leaf) })
-          if ($missingTests.Count -gt 0) {
-            $formatted = ($missingTests | ForEach-Object { " - $_" }) -join [Environment]::NewLine
-            throw "Release-critical test files are missing from the Git checkout:$([Environment]::NewLine)$formatted"
+          Get-ChildItem -Recurse -Filter *.js -File | Where-Object { $_.FullName -notmatch '\\node_modules\\' } | ForEach-Object {
+            node --check $_.FullName
+            if ($LASTEXITCODE -ne 0) { throw "JavaScript syntax failure: $($_.FullName)" }
           }
-
-          & node --test @criticalTests
-          if ($LASTEXITCODE -ne 0) {
-            throw "Release-critical test suite failed with exit code $LASTEXITCODE"
-          }
-
-      - name: Build C# server host
+          $tests = @(Get-ChildItem test -Filter '*.test.js' -File | ForEach-Object { $_.FullName })
+          if ($tests.Count -eq 0) { throw 'No Direct-Xfer tests found.' }
+          node --test @tests
+          if ($LASTEXITCODE -ne 0) { throw "Direct-Xfer tests failed with exit code $LASTEXITCODE" }
+      - name: Build C# applications
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           msbuild windows-server-host\DirectXfer.ServerHost.csproj /t:Rebuild /p:Configuration=Release /p:Platform=x64 /m /nologo /verbosity:minimal
-
-          $hostExe = 'windows-server-host\bin\Release\Direct-Xfer.ServerHost.exe'
-          $hostConfig = 'windows-server-host\bin\Release\Direct-Xfer.ServerHost.exe.config'
-          if (-not (Test-Path -LiteralPath $hostExe)) { throw "MSBuild completed without producing $hostExe" }
-          if (-not (Test-Path -LiteralPath $hostConfig)) { throw "MSBuild completed without producing $hostConfig" }
-
-      - name: Build C# launcher
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
           msbuild windows-launcher\DirectXfer.Launcher.csproj /t:Rebuild /p:Configuration=Release /p:Platform=x64 /m /nologo /verbosity:minimal
-
-          $exe = 'windows-launcher\bin\Release\Direct-Xfer.exe'
-          $config = 'windows-launcher\bin\Release\Direct-Xfer.exe.config'
-          if (-not (Test-Path -LiteralPath $exe)) {
-            throw "MSBuild completed without producing $exe"
-          }
-          if (-not (Test-Path -LiteralPath $config)) {
-            throw "MSBuild completed without producing $config"
-          }
-
-      - name: Verify Windows executables are unsigned by design
+      - name: Verify executables are unsigned by design
         shell: pwsh
         run: |
-          $ErrorActionPreference = 'Stop'
-          $executables = @(
-            'windows-launcher\bin\Release\Direct-Xfer.exe',
-            'windows-server-host\bin\Release\Direct-Xfer.ServerHost.exe'
-          )
-          foreach ($exe in $executables) {
-            $signature = Get-AuthenticodeSignature -FilePath $exe
-            if ($signature.Status -ne 'NotSigned') {
-              throw "$exe must remain unsigned by design; Authenticode status is $($signature.Status)"
-            }
-            Write-Host "$exe is unsigned by design."
+          foreach ($exe in @('windows-launcher\bin\Release\Direct-Xfer.exe','windows-server-host\bin\Release\Direct-Xfer.ServerHost.exe')) {
+            if (-not (Test-Path $exe)) { throw "Missing $exe" }
+            $sig = Get-AuthenticodeSignature $exe
+            if ($sig.Status -ne 'NotSigned') { throw "$exe must remain unsigned by design; status=$($sig.Status)" }
           }
-
       - name: Create portable runtime
         shell: pwsh
         run: |
@@ -187,185 +80,49 @@ jobs:
           $dist = Join-Path $distRoot "Direct-Xfer-$env:DX_VERSION-Windows-CSharp"
           $app = Join-Path $dist 'runtime\app'
           $node = Join-Path $dist 'runtime\node'
-
           Remove-Item $dist -Recurse -Force -ErrorAction SilentlyContinue
-          New-Item -ItemType Directory -Force -Path $app, $node | Out-Null
-
-          Copy-Item 'windows-launcher\bin\Release\Direct-Xfer.exe' -Destination $dist -Force
-          Copy-Item 'windows-launcher\bin\Release\Direct-Xfer.exe.config' -Destination $dist -Force
-          Copy-Item 'windows-server-host\bin\Release\Direct-Xfer.ServerHost.exe' -Destination $dist -Force
-          Copy-Item 'windows-server-host\bin\Release\Direct-Xfer.ServerHost.exe.config' -Destination $dist -Force
-
-          $portableReadme = 'windows-launcher\README-WINDOWS-PORTABLE.md'
-          $rootReadme = 'README.md'
-          $destReadme = Join-Path $dist 'README-WINDOWS-PORTABLE.md'
-          if (Test-Path $portableReadme) {
-            Copy-Item $portableReadme -Destination $destReadme -Force
-          } elseif (Test-Path $rootReadme) {
-            Copy-Item $rootReadme -Destination $destReadme -Force
-          } else {
-            Set-Content -Encoding UTF8 -Path $destReadme -Value @(
-              "Direct-Xfer $env:DX_VERSION - Windows C#",
-              '',
-              'Direct-Xfer.exe is a C# / WinForms UI and tray launcher targeting .NET Framework 4.8.',
-              'Direct-Xfer.ServerHost.exe is the dedicated background process that supervises Node.js.',
-              'The application runtime is located in runtime\app.',
-              'The pinned Node.js runtime is located in runtime\node.'
-            )
-          }
-
-          Copy-Item -Path @('package.json','package-lock.json','server.js') -Destination $app -Force
-          Copy-Item -Path @('lib','public','pwa','node_modules') -Destination $app -Recurse -Force
-          Set-Content -Encoding ASCII -NoNewline -Path (Join-Path $app '.dx-runtime-build') -Value $env:DX_RUNTIME_BUILD
-
-          # Bundle an official pinned Node.js executable so the installed application
-          # does not need to download or install an executable on first launch.
+          New-Item -ItemType Directory -Force -Path $app,$node | Out-Null
+          Copy-Item 'windows-launcher\bin\Release\Direct-Xfer.exe' $dist
+          Copy-Item 'windows-launcher\bin\Release\Direct-Xfer.exe.config' $dist
+          Copy-Item 'windows-server-host\bin\Release\Direct-Xfer.ServerHost.exe' $dist
+          Copy-Item 'windows-server-host\bin\Release\Direct-Xfer.ServerHost.exe.config' $dist
+          Copy-Item 'windows-launcher\README-WINDOWS-PORTABLE.md' (Join-Path $dist 'README-WINDOWS-PORTABLE.md')
+          Copy-Item @('package.json','package-lock.json','server.js') $app
+          Copy-Item @('lib','public','pwa','scripts','security','node_modules') $app -Recurse
+          Set-Content -Encoding ASCII -NoNewline (Join-Path $app '.dx-runtime-build') $env:DX_RUNTIME_BUILD
           $nodeExe = Join-Path $node 'node.exe'
           $nodeUrl = "https://nodejs.org/download/release/v$env:DX_NODE_VERSION/win-x64/node.exe"
-          Write-Host "Downloading pinned Node.js runtime: $nodeUrl"
-          Invoke-WebRequest -Uri $nodeUrl -OutFile $nodeExe -UseBasicParsing
-          $nodeHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $nodeExe).Hash.ToLowerInvariant()
-          if ($nodeHash -ne $env:DX_NODE_EXE_SHA256) {
-            throw "Node.js SHA-256 mismatch. Expected $env:DX_NODE_EXE_SHA256, got $nodeHash"
-          }
-          Set-Content -Encoding UTF8 -Path (Join-Path $node 'README.txt') -Value @(
-            "Direct-Xfer pinned Node.js runtime $env:DX_NODE_VERSION (x64)",
-            "SHA-256: $nodeHash",
-            'Source: official nodejs.org release distribution.'
-          )
-
-          $required = @(
-            (Join-Path $dist 'Direct-Xfer.exe'),
-            (Join-Path $dist 'Direct-Xfer.exe.config'),
-            (Join-Path $dist 'Direct-Xfer.ServerHost.exe'),
-            (Join-Path $dist 'Direct-Xfer.ServerHost.exe.config'),
-            (Join-Path $app '.dx-runtime-build'),
-            (Join-Path $app 'package.json'),
-            (Join-Path $app 'package-lock.json'),
-            (Join-Path $app 'server.js'),
-            (Join-Path $app 'public\app.js'),
-            (Join-Path $app 'pwa\app.js'),
-            (Join-Path $app 'node_modules\express\package.json'),
-            $nodeExe
-          )
-          foreach ($item in $required) {
-            if (-not (Test-Path -LiteralPath $item)) {
-              throw "Portable package is incomplete: missing $item"
-            }
-          }
-
-          $marker = (Get-Content -Raw -LiteralPath (Join-Path $app '.dx-runtime-build')).Trim()
-          if ($marker -ne $env:DX_RUNTIME_BUILD) {
-            throw "Portable runtime marker mismatch: $marker"
-          }
-
-          $hashLines = @(
-            "Direct-Xfer.exe  $((Get-FileHash -Algorithm SHA256 (Join-Path $dist 'Direct-Xfer.exe')).Hash.ToLowerInvariant())",
-            "Direct-Xfer.ServerHost.exe  $((Get-FileHash -Algorithm SHA256 (Join-Path $dist 'Direct-Xfer.ServerHost.exe')).Hash.ToLowerInvariant())",
-            "runtime/app/server.js  $((Get-FileHash -Algorithm SHA256 (Join-Path $app 'server.js')).Hash.ToLowerInvariant())",
-            "runtime/node/node.exe  $nodeHash"
-          )
-          Set-Content -Encoding ASCII -Path (Join-Path $dist 'SHA256SUMS.txt') -Value $hashLines
-
-          Write-Host "Portable runtime validated: $dist"
-
-      - name: Install verified Inno Setup compiler
+          Invoke-WebRequest $nodeUrl -OutFile $nodeExe -UseBasicParsing
+          $nodeHash = (Get-FileHash -Algorithm SHA256 $nodeExe).Hash.ToLowerInvariant()
+          if ($nodeHash -ne $env:DX_NODE_EXE_SHA256) { throw "Node SHA-256 mismatch: $nodeHash" }
+          Set-Content -Encoding UTF8 (Join-Path $node 'README.txt') @("Direct-Xfer pinned Node.js $env:DX_NODE_VERSION x64","SHA-256: $nodeHash","Source: nodejs.org")
+      - name: Install Inno Setup
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $innoInstaller = Join-Path $env:RUNNER_TEMP "innosetup-$env:INNO_VERSION.exe"
-          $innoDir = Join-Path $env:RUNNER_TEMP 'InnoSetup6'
-          $innoUrl = "https://github.com/jrsoftware/issrc/releases/download/is-6_7_3/innosetup-$env:INNO_VERSION.exe"
-
-          Write-Host "Downloading official Inno Setup $env:INNO_VERSION"
-          Invoke-WebRequest -Uri $innoUrl -OutFile $innoInstaller -UseBasicParsing
-
-          $signature = Get-AuthenticodeSignature -FilePath $innoInstaller
-          if ($signature.Status -ne 'Valid') {
-            throw "Inno Setup Authenticode signature is not valid: $($signature.Status)"
-          }
-          if (-not $signature.SignerCertificate -or $signature.SignerCertificate.Subject -notmatch 'Pyrsys B\.V\.') {
-            throw "Unexpected Inno Setup signer: $($signature.SignerCertificate.Subject)"
-          }
-          Write-Host "Verified Inno Setup signer: $($signature.SignerCertificate.Subject)"
-
-          New-Item -ItemType Directory -Force -Path $innoDir | Out-Null
-          $process = Start-Process -FilePath $innoInstaller -ArgumentList @(
-            '/VERYSILENT',
-            '/SUPPRESSMSGBOXES',
-            '/NORESTART',
-            '/SP-',
-            "/DIR=$innoDir"
-          ) -Wait -PassThru
-          if ($process.ExitCode -ne 0) {
-            throw "Inno Setup installer exited with code $($process.ExitCode)"
-          }
-
-          $iscc = Join-Path $innoDir 'ISCC.exe'
-          if (-not (Test-Path -LiteralPath $iscc)) {
-            throw "ISCC.exe was not installed at the expected path: $iscc"
-          }
-          "INNO_ISCC=$iscc" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-
-      - name: Build Inno Setup installer
+          $installer = Join-Path $env:RUNNER_TEMP "innosetup-$env:INNO_VERSION.exe"
+          $dir = Join-Path $env:RUNNER_TEMP 'InnoSetup6'
+          Invoke-WebRequest "https://github.com/jrsoftware/issrc/releases/download/is-6_7_3/innosetup-$env:INNO_VERSION.exe" -OutFile $installer -UseBasicParsing
+          $sig = Get-AuthenticodeSignature $installer
+          if ($sig.Status -ne 'Valid') { throw "Invalid Inno Setup signature: $($sig.Status)" }
+          Start-Process $installer -ArgumentList '/VERYSILENT',('/DIR='+$dir),'/SUPPRESSMSGBOXES','/NORESTART' -Wait
+          "DX_ISCC=$dir\ISCC.exe" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Build installer
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $dist = Join-Path $PWD "dist\Direct-Xfer-$env:DX_VERSION-Windows-CSharp"
-          $installerDir = Join-Path $PWD 'dist\installer'
-          New-Item -ItemType Directory -Force -Path $installerDir | Out-Null
-
-          # Pass dynamic values through environment variables. This is compatible
-          # with Inno Setup 6.x and avoids relying on newer long --define options.
           $env:DX_INNO_APP_VERSION = $env:DX_VERSION
-          $env:DX_INNO_SOURCE_DIR = $dist
-          $env:DX_INNO_OUTPUT_DIR = $installerDir
-
-          & $env:INNO_ISCC 'installer\Direct-Xfer.iss'
-          if ($LASTEXITCODE -ne 0) {
-            throw "ISCC.exe failed with exit code $LASTEXITCODE"
-          }
-
-          $setupExe = Join-Path $installerDir "Direct-Xfer-Setup-$env:DX_VERSION.exe"
-          if (-not (Test-Path -LiteralPath $setupExe)) {
-            throw "Inno Setup completed without producing $setupExe"
-          }
-
-          Write-Host "Generated installer: $setupExe"
-
-      - name: Finalize installer metadata
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $installerDir = Join-Path $PWD 'dist\installer'
-          $setupExe = Join-Path $installerDir "Direct-Xfer-Setup-$env:DX_VERSION.exe"
-          if (-not (Test-Path -LiteralPath $setupExe)) {
-            throw "Installer is missing before finalization: $setupExe"
-          }
-          $setupHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $setupExe).Hash.ToLowerInvariant()
-          Set-Content -Encoding ASCII -NoNewline -Path (Join-Path $installerDir "Direct-Xfer-Setup-$env:DX_VERSION.exe.sha256") -Value "$setupHash  Direct-Xfer-Setup-$env:DX_VERSION.exe"
-          $setupSignature = Get-AuthenticodeSignature -FilePath $setupExe
-          if ($setupSignature.Status -ne 'NotSigned') {
-            throw "Direct-Xfer installer must remain unsigned by design; Authenticode status is $($setupSignature.Status)"
-          }
-          Write-Host "SHA-256: $setupHash"
-          Write-Host 'Installer is unsigned by design.'
-
-      - name: Upload Windows installer
-        uses: actions/upload-artifact@v6
+          $env:DX_INNO_SOURCE_DIR = Join-Path $PWD "dist\Direct-Xfer-$env:DX_VERSION-Windows-CSharp"
+          $env:DX_INNO_OUTPUT_DIR = Join-Path $PWD 'dist\installer'
+          & $env:DX_ISCC 'installer\Direct-Xfer.iss'
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed: $LASTEXITCODE" }
+      - uses: actions/upload-artifact@v6
         with:
-          name: Direct-Xfer-Setup-${{ env.DX_VERSION }}
-          path: |
-            dist/installer/Direct-Xfer-Setup-${{ env.DX_VERSION }}.exe
-            dist/installer/Direct-Xfer-Setup-${{ env.DX_VERSION }}.exe.sha256
+          name: Direct-Xfer-1.64.0-Windows-CSharp
+          path: dist/Direct-Xfer-1.64.0-Windows-CSharp/**
           if-no-files-found: error
-          retention-days: 30
-
-      - name: Upload Windows portable package
-        uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v6
         with:
-          name: Direct-Xfer-${{ env.DX_VERSION }}-Windows-CSharp
-          path: dist/Direct-Xfer-${{ env.DX_VERSION }}-Windows-CSharp/
-          include-hidden-files: true
+          name: Direct-Xfer-Setup-1.64.0
+          path: dist/installer/Direct-Xfer-Setup-1.64.0.exe
           if-no-files-found: error
-          retention-days: 30

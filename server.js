@@ -17,6 +17,7 @@ const zlib = require('zlib');
 const { execFile } = require('child_process');
 const {
   StorageConnectorService,
+  CONNECTOR_TYPES,
   normalizeConnector,
   cleanRelativePath: cleanConnectorPath,
 } = require('./lib/storage-connectors');
@@ -3145,6 +3146,46 @@ const SHARE_LOGICAL_BYTES_CACHE_MS = 30 * 1000;
 const shareLogicalBytesCache = new Map();
 const shareLogicalBytesRefreshes = new Map();
 const shareLogicalBytesGeneration = new Map();
+// Standard-admin source health (#39). The high-frequency /api/shares poll must
+// never block on filesystem I/O, so backing availability is refreshed in the
+// background and cached briefly. A generation guard prevents stale scans from
+// overwriting a newer result after a share is edited.
+const SHARE_BACKING_HEALTH_CACHE_MS = 30 * 1000;
+const shareBackingHealthCache = new Map();
+const shareBackingHealthRefreshes = new Map();
+const shareBackingHealthGeneration = new Map();
+function shareBackingHealthRelevant(s) {
+  return !!(s && ['file','folder','inbox','collab','photo','album'].includes(s.type));
+}
+function shareBackingHealthSnapshot(s) {
+  if (!shareBackingHealthRelevant(s)) return { status:'na', checkedAt:0 };
+  const cached = shareBackingHealthCache.get(s.id);
+  if (!cached) return { status:'checking', checkedAt:0 };
+  return { status:cached.available ? 'ok' : 'missing', checkedAt:cached.at || 0, reason:cached.reason || null };
+}
+async function refreshShareBackingHealth(s, force=false, expectedGeneration=null) {
+  if (!shareBackingHealthRelevant(s)) return { available:true, reason:null };
+  const now=Date.now(), cached=shareBackingHealthCache.get(s.id);
+  if (!force && cached && now-cached.at < SHARE_BACKING_HEALTH_CACHE_MS) return cached;
+  const availability = await shareReactivationAvailability(s).catch(() => ({ available:false, reason:'data-missing' }));
+  const row={ at:Date.now(), available:!!availability.available, reason:availability.reason || null };
+  if (expectedGeneration == null || (shareBackingHealthGeneration.get(s.id)||0) === expectedGeneration) shareBackingHealthCache.set(s.id,row);
+  return row;
+}
+function queueShareBackingHealthRefresh(s) {
+  if (!shareBackingHealthRelevant(s)) return null;
+  const cached=shareBackingHealthCache.get(s.id);
+  if (cached && Date.now()-cached.at < SHARE_BACKING_HEALTH_CACHE_MS) return null;
+  if (shareBackingHealthRefreshes.has(s.id)) return shareBackingHealthRefreshes.get(s.id);
+  const generation=shareBackingHealthGeneration.get(s.id)||0;
+  const job=refreshShareBackingHealth(s,false,generation).catch(()=>null).finally(()=>{ if(shareBackingHealthRefreshes.get(s.id)===job) shareBackingHealthRefreshes.delete(s.id); });
+  shareBackingHealthRefreshes.set(s.id,job); return job;
+}
+function invalidateShareBackingHealth(id) {
+  if (!id) return;
+  shareBackingHealthGeneration.set(id,(shareBackingHealthGeneration.get(id)||0)+1);
+  shareBackingHealthCache.delete(id); shareBackingHealthRefreshes.delete(id);
+}
 function shareLogicalBytes(s) {
   if (s && (s.type === 'inbox' || s.type === 'collab')) return Math.max(0, Number(s.bytesReceived) || 0);
   const cached = s && shareLogicalBytesCache.get(s.id);
@@ -3212,6 +3253,7 @@ function invalidateShareLogicalBytes(id) {
   // Do not let an old scan block a fresh one after the collection changed. Its
   // generation guard prevents it from overwriting the new cache if it finishes last.
   shareLogicalBytesRefreshes.delete(id);
+  invalidateShareBackingHealth(id);
 }
 function shareActivityAt(s) {
   if (!s) return 0;
@@ -13522,6 +13564,11 @@ adminRouter.use((req, res, next) => {
   return res.status(403).json({ error: 'forbidden' });
 });
 
+// PWA advanced-administration health + performance history. Attach directly to
+// the authenticated admin router so the endpoints inherit requireAuth, CSRF
+// policy for mutations, password-change enforcement and role authorization.
+require('./lib/pwa-admin-health-route').attachHealthRoute(adminRouter);
+
 function externalProto(req) {
   // req.protocol already honors X-Forwarded-Proto only when the peer is a
   // configured trusted proxy. Never accept that header independently.
@@ -13619,6 +13666,7 @@ function decorateShare(s, req) {
     archived: !!s.archived,
     logicalBytes: shareLogicalBytes(s),
     logicalBytesReady: !shareNeedsLogicalBytesScan(s) || !!shareLogicalBytesCache.get(s.id),
+    backing: shareBackingHealthSnapshot(s),
     itemCount: shareLogicalFileCount(s),
     lastActivityAt: shareActivityAt(s),
     lastUseAt: shareLastUseAt(s),
@@ -14223,6 +14271,43 @@ adminRouter.get('/audit/verify', requireAuditAccess, (req, res) => {
   const keys = ensureAuditProofKeys();
   res.json({ integrity: verifyAuditChain(), proof:{ algorithm:'Ed25519', publicKeyId:auditProofKeyId(keys.publicKey) } });
 });
+// Verify the current append-only journal and a freshly-generated Ed25519 proof
+// without sending the full proof bundle to the browser. This lets the PWA show a
+// signed verification result while keeping large audit exports an explicit action.
+adminRouter.get('/audit/signed-verify', requireAuditAccess, (req, res) => {
+  const integrity = verifyAuditChain();
+  if (!integrity.ok) {
+    return res.status(409).json({
+      ok:false, integrity,
+      signature:{ ok:false, algorithm:'Ed25519', reason:'audit-integrity-failed' },
+    });
+  }
+  let entries;
+  try { entries = parseAuditChainFile().entries; }
+  catch (error) {
+    return res.status(500).json({ ok:false, integrity, signature:{ ok:false, algorithm:'Ed25519', reason:'audit-read-failed' } });
+  }
+  try {
+    const proof = buildAuditProof(entries, integrity);
+    const checked = verifyAuditProofBundle(proof);
+    const expectedKeyId = auditProofKeyId(ensureAuditProofKeys().publicKey);
+    const trustedKey = !!(checked.ok && checked.keyId && timingSafeEqualStr(String(checked.keyId), String(expectedKeyId)));
+    return res.status(trustedKey ? 200 : 409).json({
+      ok:trustedKey, integrity,
+      signature:{
+        ok:trustedKey, algorithm:'Ed25519', publicKeyId:expectedKeyId,
+        reason:trustedKey ? null : (checked.reason || 'signature-invalid'),
+        entries:Math.max(0, Number(checked.entries) || 0),
+        head:proof.head, entriesSha256:proof.entriesSha256, exportedAt:proof.exportedAt,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      ok:false, integrity,
+      signature:{ ok:false, algorithm:'Ed25519', reason:String(error && error.code || 'audit-signature-failed') },
+    });
+  }
+});
 adminRouter.get('/audit/public-key', requireAuditAccess, (req, res) => {
   const keys = ensureAuditProofKeys();
   res.json({ algorithm:'Ed25519', publicKeyId:auditProofKeyId(keys.publicKey), publicKey:keys.publicKey.export({ type:'spki', format:'pem' }).toString() });
@@ -14241,7 +14326,8 @@ adminRouter.get('/audit/export', requireAuditAccess, (req, res) => {
   }
   // Record the export before taking the snapshot so the exported head is the
   // exact signed head at response time and includes its own export event.
-  auditReq(req, 'audit-exported', `full journal as ${fmt}`);
+  const exportAuditEntry = auditReq(req, 'audit-exported', `full journal as ${fmt}`);
+  if (!exportAuditEntry) return res.status(503).json({ error:'audit-write-failed' });
   // Export the append-only chain itself, not state.audit (which intentionally
   // keeps only AUDIT_MAX recent rows for the admin dashboard).
   let entries = [];
@@ -14380,11 +14466,15 @@ function queueStorageConnectorJob(req, connector, direction, input) {
     throw Object.assign(new Error('too-many-connector-jobs'), { code:'connector-capacity' });
   }
   const controller = new AbortController();
+  // Freeze the connector routing metadata at queue time. A later PATCH to the
+  // connector must affect only future jobs, never redirect a job that the admin
+  // already queued to another remote/root.
+  const jobConnector = Object.freeze({ ...connector });
   const requestIp = clientIp(req);
   const jobRequest = { socket:{ remoteAddress:requestIp } };
   const job = {
-    id:crypto.randomBytes(16).toString('hex'), connectorId:connector.id,
-    connectorName:connector.name, direction, status:'queued',
+    id:crypto.randomBytes(16).toString('hex'), connectorId:jobConnector.id,
+    connectorName:jobConnector.name, direction, status:'queued',
     sourceName:path.basename(String(input.source || input.remotePath || '')),
     targetName:path.basename(String(input.target || input.remotePath || '')),
     size:0, createdAt:Date.now(), startedAt:0, finishedAt:0, error:null,
@@ -14392,11 +14482,23 @@ function queueStorageConnectorJob(req, connector, direction, input) {
     ip:requestIp,
   };
   const jobs = connectorJobStore();
-  jobs.unshift(job); pruneConnectorJobs();
-  if (!persistNow()) { jobs.splice(jobs.indexOf(job), 1); throw Object.assign(new Error('write-error'), { code:'write-error' }); }
+  // Register the controller before pruning. Otherwise pruneConnectorJobs() sees
+  // this brand-new queued job as an orphan left by an earlier process and marks
+  // it failed with `server-restarted` before it has even started.
   activeConnectorJobs.set(job.id, controller);
+  jobs.unshift(job); pruneConnectorJobs();
+  if (!persistNow()) {
+    const index = jobs.indexOf(job); if (index >= 0) jobs.splice(index, 1);
+    activeConnectorJobs.delete(job.id);
+    throw Object.assign(new Error('write-error'), { code:'write-error' });
+  }
 
   setImmediate(async () => {
+    if (controller.signal.aborted) {
+      job.status = 'cancelled'; job.error = 'connector-cancelled'; job.finishedAt = Date.now();
+      activeConnectorJobs.delete(job.id); pruneConnectorJobs(); persistNow();
+      return;
+    }
     job.status = 'running'; job.startedAt = Date.now(); persist();
     try {
       if (!(await connectorStartupCleanup)) {
@@ -14408,12 +14510,12 @@ function queueStorageConnectorJob(req, connector, direction, input) {
         if (remotePath === null) throw Object.assign(new Error('invalid-remote-path'), { code:'invalid-source' });
         const target = cleanConnectorPath(input.target || path.posix.basename(remotePath), false);
         if (target === null) throw Object.assign(new Error('invalid-local-path'), { code:'invalid-source' });
-        result = await storageConnectorService.importFile(connector, remotePath, target, {
+        result = await storageConnectorService.importFile(jobConnector, remotePath, target, {
           signal:controller.signal,
           beforePublish:clamavEnabled() ? async (temporary) => {
             const scan = await scanFile(temporary);
             if (scan.infected) {
-              await quarantineFile(temporary, path.basename(target), { id:`connector:${connector.id}`, name:connector.name }, scan.virus, jobRequest);
+              await quarantineFile(temporary, path.basename(target), { id:`connector:${jobConnector.id}`, name:jobConnector.name }, scan.virus, jobRequest);
               throw Object.assign(new Error('infected'), { code:'infected' });
             }
             if (scan.error) console.warn('[connector] ClamAV scan error; import retained:', scan.error);
@@ -14424,14 +14526,14 @@ function queueStorageConnectorJob(req, connector, direction, input) {
         const local = await connectorExportSource(input.source);
         const remotePath = cleanConnectorPath(input.remotePath || path.basename(local), false);
         if (remotePath === null) throw Object.assign(new Error('invalid-remote-path'), { code:'invalid-source' });
-        result = await storageConnectorService.exportFile(connector, local, remotePath, { signal:controller.signal });
+        result = await storageConnectorService.exportFile(jobConnector, local, remotePath, { signal:controller.signal });
         job.sourceName = path.basename(local); job.targetName = path.posix.basename(remotePath);
       }
       job.size = Math.max(0, Number(result.size) || 0); job.status = 'completed';
       logAudit(`storage-connector-${direction}`, {
         username:job.actor || 'system', account:job.actorId ? getAccountById(job.actorId) : null,
         ip:job.ip,
-        detail:`${connector.name}: ${job.sourceName} -> ${job.targetName} (${job.size} bytes)`,
+        detail:`${jobConnector.name}: ${job.sourceName} -> ${job.targetName} (${job.size} bytes)`,
       });
       try { scheduleSearchReindex(); } catch (_) {}
     } catch (error) {
@@ -14440,7 +14542,7 @@ function queueStorageConnectorJob(req, connector, direction, input) {
       logAudit(`storage-connector-${job.status}`, {
         username:job.actor || 'system', account:job.actorId ? getAccountById(job.actorId) : null,
         ip:job.ip,
-        detail:`${connector.name}: ${direction}; ${job.error}`,
+        detail:`${jobConnector.name}: ${direction}; ${job.error}`, 
       });
     } finally {
       job.finishedAt = Date.now(); activeConnectorJobs.delete(job.id); pruneConnectorJobs(); persistNow();
@@ -14451,10 +14553,18 @@ function queueStorageConnectorJob(req, connector, direction, input) {
 
 adminRouter.get('/storage/connectors', requireFullAdmin, async (req, res) => {
   const { capabilities, remotes } = await connectorProbeSnapshot();
+  // Do not expose the absolute rclone config path to browser clients. The PWA
+  // only needs availability/version and configured remote names; credentials and
+  // their filesystem location stay server-side.
+  const publicCapabilities = {
+    available:!!(capabilities && capabilities.available),
+    version:capabilities && capabilities.version ? String(capabilities.version).slice(0, 160) : null,
+    error:capabilities && capabilities.error ? String(capabilities.error).slice(0, 120) : null,
+  };
   res.json({
     connectors:connectorStore().map(publicConnector),
-    jobs:pruneConnectorJobs().map(publicConnectorJob), capabilities, remotes,
-    importRoot:CONNECTOR_IMPORT_DIR,
+    jobs:pruneConnectorJobs().map(publicConnectorJob),
+    capabilities:publicCapabilities, remotes, types:Array.from(CONNECTOR_TYPES),
   });
 });
 adminRouter.post('/storage/connectors', requireFullAdmin, (req, res) => {
@@ -14500,7 +14610,7 @@ adminRouter.post('/storage/connectors/:id/test', requireFullAdmin, async (req, r
     res.json(result);
   } catch (error) {
     auditReq(req, 'storage-connector-tested', `${connector.name}: ${connectorErrorCode(error)}`);
-    res.status(502).json({ error:connectorErrorCode(error), detail:String(error.message || '').slice(0, 300) });
+    res.status(502).json({ error:connectorErrorCode(error) });
   }
 });
 adminRouter.get('/storage/connectors/:id/list', requireFullAdmin, async (req, res) => {
@@ -14509,7 +14619,7 @@ adminRouter.get('/storage/connectors/:id/list', requireFullAdmin, async (req, re
   const relative = cleanConnectorPath(req.query.path || '');
   if (relative === null) return res.status(400).json({ error:'invalid-remote-path' });
   try { res.json({ path:relative, entries:await storageConnectorService.list(connector, relative) }); }
-  catch (error) { res.status(502).json({ error:connectorErrorCode(error), detail:String(error.message || '').slice(0, 300) }); }
+  catch (error) { res.status(502).json({ error:connectorErrorCode(error) }); }
 });
 adminRouter.post('/storage/connectors/:id/import', requireFullAdmin, (req, res) => {
   const connector = getStorageConnector(req.params.id);
@@ -14541,6 +14651,8 @@ adminRouter.get('/shares', async (req, res) => {
   // cached value immediately and refresh stale folders in a bounded background job.
   const logicalSizeCandidates = all.filter(shareNeedsLogicalBytesScan);
   if (logicalSizeCandidates.length) void mapLimit(logicalSizeCandidates, 2, (s) => queueShareLogicalBytesRefresh(s)).catch(() => {});
+  const backingCandidates = all.filter(shareBackingHealthRelevant);
+  if (backingCandidates.length) void mapLimit(backingCandidates, 4, (s) => queueShareBackingHealthRefresh(s)).catch(() => {});
   const shares = all
     .sort((a, b) => b.createdAt - a.createdAt)
     .map((s) => decorateShare(s, req));
@@ -15157,7 +15269,7 @@ adminRouter.delete('/presets/:id', (req, res) => {
 
 adminRouter.get('/settings', (req, res) => {
   if (req.session.role === 'operator') return res.status(403).json({ error:'forbidden' });
-  res.json(settingsForClient(req));
+  res.json(settingsForClient(req, String(req.query && req.query.lite || '') === '1'));
 });
 
 // Validates a settings object (from the config form OR an imported file) and
@@ -15957,6 +16069,27 @@ async function detailedShareStatsPayload(s, req) {
     recent,image,
   };
 }
+
+// Simulate the public gate for a share without reusing the administrator's
+// cookies/session (#37). This is intentionally a logical visitor probe: it
+// evaluates lifecycle, backing data and access gates while revealing no password,
+// recipient token or filesystem detail.
+adminRouter.get('/shares/:id/visitor-test', async (req, res) => {
+  const sh=getById(req.params.id); if(!sh||!ownsShare(req,sh))return res.status(404).json({error:'not-found'});
+  const now=Date.now();
+  const backing=await refreshShareBackingHealth(sh,true).catch(()=>({available:false,reason:'data-missing',at:Date.now()}));
+  let verdict='ready', expectedStatus=200;
+  if (sh.revoked) { verdict='revoked'; expectedStatus=404; }
+  else if (sh.disabled) { verdict='paused'; expectedStatus=404; }
+  else if (isScheduled(sh,now)) { verdict='scheduled'; expectedStatus=404; }
+  else if (!isActive(sh,now)) { verdict='inactive'; expectedStatus=404; }
+  else if (!backing.available) { verdict='missing-source'; expectedStatus=404; }
+  else if (sh.pwHash) { verdict='password-required'; expectedStatus=401; }
+  else if (sh.requestAccess) { verdict='approval-required'; expectedStatus=401; }
+  const decorated=decorateShare(sh,req);
+  auditReq(req,'visitor-test',{code:'visitor-test',params:{shareId:sh.id,verdict},fallback:`${sh.name||sh.id}: ${verdict}`});
+  res.json({ok:true,shareId:sh.id,name:sh.name||'',verdict,expectedStatus,path:decorated.path,url:decorated.url||null,backing:{status:backing.available?'ok':'missing',checkedAt:backing.at||Date.now()},hasPassword:!!sh.pwHash,requestAccess:!!sh.requestAccess});
+});
 
 adminRouter.get('/shares/:id/stats-detail', async (req, res) => {
   const s = getById(req.params.id);
@@ -16806,7 +16939,9 @@ adminRouter.post('/shares/pause-all', requireFullAdmin, (req, res) => {
   const now = Date.now();
   const changed = [];
   for (const s of listShares()) {
-    if (!s || s.disabled || !isActive(s, now)) continue;
+    // Scheduled links are public links too: leaving them untouched would let one
+    // become live after the emergency pause had already been applied.
+    if (!s || s.disabled || (!isActive(s, now) && !isScheduled(s, now))) continue;
     changed.push({ s, disabled:!!s.disabled, panicPaused:!!s.panicPaused });
     s.disabled = true; s.panicPaused = true;
   }
@@ -18330,6 +18465,274 @@ adminRouter.get('/dashboard/live', (req, res) => {
   res.json({ transfers, stalledCount: transfers.filter((t) => t.stalled).length, stallThresholdMs: TRANSFER_STALL_MS, generatedAt: Date.now() });
 });
 
+
+// Comprehensive standard-view server health dashboard. The fast portion is
+// intentionally cheap enough for frequent polling; slower integrity/tool probes
+// are cached so the dashboard itself cannot become a source of load.
+const SERVER_HEALTH_DEEP_CACHE_MS = 30000;
+const SERVER_HEALTH_FS_TIMEOUT_MS = 2500;
+const SERVER_HEALTH_AUDIT_VERIFY_MS = 5 * 60 * 1000;
+let serverHealthDeepCache = { at:0, value:null, pending:null };
+let serverHealthAuditCache = { at:0, value:null };
+const serverHealthVolumeCache = new Map();
+const serverHealthVolumePending = new Map();
+const SERVER_HEALTH_BACKING_REFRESH_LIMIT = 16;
+function serverHealthWithTimeout(promise, ms=SERVER_HEALTH_FS_TIMEOUT_MS) {
+  let timer = null;
+  return Promise.race([
+    Promise.resolve(promise),
+    new Promise((_, reject) => { timer=setTimeout(() => reject(Object.assign(new Error('timeout'), { code:'ETIMEDOUT' })), ms); if (timer && typeof timer.unref === 'function') timer.unref(); }),
+  ]).finally(() => { if (timer) clearTimeout(timer); });
+}
+async function serverHealthExistingAncestor(target) {
+  let probe = target;
+  while (probe) {
+    try { await serverHealthWithTimeout(fs.promises.lstat(probe)); return probe; }
+    catch (e) { if (!e || e.code !== 'ENOENT') throw e; }
+    const parent = path.dirname(probe); if (parent === probe) return null; probe = parent;
+  }
+  return null;
+}
+async function serverHealthVolumeProbe(label, target, kind) {
+  if (!target) return { label, kind, configured:false, path:null, exists:false, readable:false, writable:false, symlink:false, directory:false, device:null, disk:null, error:'not-configured' };
+  const out = { label, kind, configured:true, path:String(target), exists:false, readable:false, writable:false, symlink:false, directory:false, device:null, disk:null, error:null };
+  try {
+    const st = await serverHealthWithTimeout(fs.promises.lstat(target));
+    out.exists = true; out.symlink = st.isSymbolicLink(); out.directory = st.isDirectory(); out.device = Number.isFinite(Number(st.dev)) ? Number(st.dev) : null;
+    if (out.symlink) {
+      try { const followed = await serverHealthWithTimeout(fs.promises.stat(target)); out.directory = followed.isDirectory(); out.device = Number.isFinite(Number(followed.dev)) ? Number(followed.dev) : out.device; }
+      catch (e) { out.error = e && e.code ? String(e.code) : 'symlink-target-unavailable'; }
+    }
+    const access = await Promise.allSettled([
+      serverHealthWithTimeout(fs.promises.access(target, fs.constants.R_OK)),
+      serverHealthWithTimeout(fs.promises.access(target, fs.constants.W_OK)),
+    ]);
+    out.readable = access[0].status === 'fulfilled'; out.writable = access[1].status === 'fulfilled';
+  } catch (e) { out.error = e && e.code ? String(e.code) : 'unavailable'; }
+  if (fs.promises && typeof fs.promises.statfs === 'function') {
+    try {
+      const probe = out.exists ? target : await serverHealthExistingAncestor(target);
+      if (probe) {
+        const st = await serverHealthWithTimeout(fs.promises.statfs(probe)); const b = Math.max(0, Number(st.bsize) || 0);
+        const total = Math.max(0, Number(st.blocks) || 0) * b;
+        const free = Math.max(0, Number(st.bavail) || 0) * b;
+        out.disk = { total, free, used:Math.max(0,total-free), percent:total ? Math.max(0,Math.min(100,((total-free)/total)*100)) : null };
+      }
+    } catch (e) { if (!out.error) out.error = e && e.code ? String(e.code) : 'disk-unavailable'; }
+  }
+  return out;
+}
+async function serverHealthVolume(label, target, kind) {
+  const key = String(kind || '') + '\0' + String(target || '');
+  const cached = serverHealthVolumeCache.get(key) || null;
+  if (serverHealthVolumePending.has(key)) {
+    return cached ? { ...cached, stale:true, probing:true } : { label, kind, configured:!!target, path:target?String(target):null, exists:false, readable:false, writable:false, symlink:false, directory:false, device:null, disk:null, error:'probe-pending', probing:true };
+  }
+  const probe = serverHealthVolumeProbe(label,target,kind)
+    .then((value) => { serverHealthVolumeCache.set(key,value); return value; })
+    .finally(() => { if (serverHealthVolumePending.get(key) === probe) serverHealthVolumePending.delete(key); });
+  serverHealthVolumePending.set(key, probe);
+  try { return await serverHealthWithTimeout(probe); }
+  catch (error) {
+    return cached ? { ...cached, stale:true, probing:true, error:cached.error || 'probe-timeout' } : { label, kind, configured:!!target, path:target?String(target):null, exists:false, readable:false, writable:false, symlink:false, directory:false, device:null, disk:null, error:error&&error.code==='ETIMEDOUT'?'probe-timeout':'unavailable', probing:true };
+  }
+}
+function serverHealthAuditSnapshot() {
+  const now = Date.now();
+  if (!serverHealthAuditCache.value || now - serverHealthAuditCache.at >= SERVER_HEALTH_AUDIT_VERIFY_MS) {
+    serverHealthAuditCache = { at:now, value:verifyAuditChain() };
+  }
+  const verified = serverHealthAuditCache.value || {};
+  const live = auditIntegrityStatus || {};
+  const liveFailure = live.checkedAt && live.ok === false;
+  return {
+    ok:liveFailure ? false : !!verified.ok,
+    reason:liveFailure ? (live.reason || 'integrity-failed') : (verified.reason || null),
+    entries:Math.max(0, Number(live.entries || verified.entries) || 0),
+    head:{ seq:Math.max(0, Number(live.headSeq || verified.headSeq) || 0), hash:String(live.headHash || verified.headHash || '') },
+    checkedAt:Number(verified.checkedAt) || serverHealthAuditCache.at,
+  };
+}
+function serverHealthShareSummary(now = Date.now()) {
+  const out = { total:0, active:0, paused:0, scheduled:0, expired:0, revoked:0, inactive:0, backingMissing:0, backingChecking:0, backingRefreshQueued:0 };
+  let refreshBudget = SERVER_HEALTH_BACKING_REFRESH_LIMIT;
+  for (const sh of listShares()) {
+    if (!sh) continue; out.total += 1;
+    if (sh.revoked) out.revoked += 1;
+    else if (sh.disabled) out.paused += 1;
+    else if (isScheduled(sh, now)) out.scheduled += 1;
+    else if (isActive(sh, now)) out.active += 1;
+    else {
+      const expiry = Number(shareEffectiveExpiry(sh)) || Number(sh.expiresAt) || 0;
+      if (expiry && now > expiry) out.expired += 1; else out.inactive += 1;
+    }
+    const backing = shareBackingHealthSnapshot(sh);
+    if (backing.status === 'missing') out.backingMissing += 1;
+    else if (backing.status === 'checking') { out.backingChecking += 1; if (refreshBudget > 0) { refreshBudget -= 1; out.backingRefreshQueued += 1; queueShareBackingHealthRefresh(sh); } }
+  }
+  return out;
+}
+function serverHealthJobSummary(now = Date.now()) {
+  const out = { total:0, queued:0, running:0, completed:0, failed:0, cancelled:0, failedRecent24h:0, cancelledRecent24h:0 };
+  const recentCutoff = now - 24 * 60 * 60 * 1000;
+  for (const job of pruneConnectorJobs()) {
+    if (!job) continue; out.total += 1;
+    const key = ['queued','running','completed','failed','cancelled'].includes(job.status) ? job.status : null;
+    if (key) out[key] += 1;
+    const endedAt = Number(job.finishedAt || job.createdAt) || 0;
+    if (endedAt >= recentCutoff && job.status === 'failed') out.failedRecent24h += 1;
+    if (endedAt >= recentCutoff && job.status === 'cancelled') out.cancelledRecent24h += 1;
+  }
+  return out;
+}
+async function serverHealthDeepSnapshot() {
+  const now = Date.now();
+  if (serverHealthDeepCache.value && now - serverHealthDeepCache.at < SERVER_HEALTH_DEEP_CACHE_MS) return serverHealthDeepCache.value;
+  if (serverHealthDeepCache.pending) return serverHealthDeepCache.pending;
+  serverHealthDeepCache.pending = (async () => {
+    const s = getSettings();
+    const connectorProbe = await connectorProbeSnapshot().catch((error) => ({ capabilities:{ available:false, error:String(error && error.message || error).slice(0,120) }, remotes:[] }));
+    const audit = serverHealthAuditSnapshot();
+    const tls = tlsCertificateDiagnostics();
+    const search = universalSearchStatus();
+    let ocr = null; try { ocr = await detectSearchOcrTools(); } catch (_) {}
+    const volumeSpecs = [
+      ['data', DATA_DIR, 'data'],
+      ['images', IMAGE_STORE_DIR, 'images'],
+      ['reception', INBOX_DIR, 'reception'],
+    ];
+    if (s.backupEnabled && s.backupDestType === 'local') volumeSpecs.push(['backup', s.backupLocalDir || '', 'backup']);
+    const volumes = await Promise.all(volumeSpecs.map(([label,target,kind]) => serverHealthVolume(label,target,kind)));
+    const value = {
+      generatedAt:Date.now(),
+      storage:{ volumes, setup:{ inboxUnconfigured:!!STORAGE_SETUP.inboxUnconfigured, imagesUnconfigured:!!STORAGE_SETUP.imagesUnconfigured }, thresholds:diskFreeThresholds() },
+      backup:{ enabled:!!s.backupEnabled, interval:s.backupInterval || null, hour:Number(s.backupHour)||0, weekday:Number(s.backupWeekday)||0, retention:Number(s.backupRetention)||0, destination:s.backupDestType || null, inFlight:!!backupInFlight, last:(state.meta && state.meta.lastBackup) || null },
+      security:{ audit:{ ok:!!(audit&&audit.ok), reason:audit&&audit.reason||null, entries:audit&&audit.entries||0, head:audit&&audit.head||null, checkedAt:audit&&audit.checkedAt||0 }, dataEncrypted:!!DATA_KEY, dlpEnabled:s.dlpEnabled !== false, ransomwareProtection:!!s.ransomwareProtection, clamav:{ configured:clamavEnabled(), host:clamavEnabled()?CLAMAV_HOST:null, port:clamavEnabled()?CLAMAV_PORT:null } },
+      tls:{ active:SERVER_SCHEME === 'https', mode:ACTIVE_TLS_MODE, diagnostics:tls },
+      search:{ ...search, ocrEnabled:!!SEARCH_OCR_ENABLED, ocrLanguages:SEARCH_OCR_LANGS, ocrTools:ocr ? { tesseract:!!ocr.tesseract, pdf:!!ocr.pdftoppm, missingLanguages:ocr.missingLanguages || [] } : null },
+      connectors:{ capabilities:{ available:!!(connectorProbe.capabilities&&connectorProbe.capabilities.available), version:connectorProbe.capabilities&&connectorProbe.capabilities.version||null, error:connectorProbe.capabilities&&connectorProbe.capabilities.error?'unavailable':null }, configured:connectorStore().length, remotes:Array.isArray(connectorProbe.remotes)?connectorProbe.remotes.length:0, jobs:serverHealthJobSummary(), maxActive:MAX_ACTIVE_CONNECTOR_JOBS },
+      notifications:{ webPushAvailable:!!webpush, subscriptions:pushSubs().length, emailConfigured:emailConfigured(), webhookConfigured:!!effectiveWebhook().url, lastEmail:lastEmail?{at:lastEmail.at||0,ok:!!lastEmail.ok,error:lastEmail.error?'failed':null}:null, lastWebhook:lastWebhook?{at:lastWebhook.at||0,ok:!!lastWebhook.ok,status:Number(lastWebhook.status)||0,event:lastWebhook.event||null,error:lastWebhook.error?'failed':null}:null },
+      config:{ publicUrl:PUBLIC_URL || s.linkBase || null, imageUrl:s.imageBase || null, trustProxy:!!TRUST_PROXY, port:PORT, scheme:SERVER_SCHEME, adminAllowlist:ADMIN_ALLOWED_IPS.length, localIps:getLocalIPv4s() },
+      runtime:{ node:process.version, platform:process.platform, arch:process.arch, hostname:os.hostname(), pid:process.pid },
+    };
+    serverHealthDeepCache = { at:Date.now(), value, pending:null }; return value;
+  })().catch((error) => { serverHealthDeepCache.pending = null; throw error; });
+  return serverHealthDeepCache.pending;
+}
+adminRouter.get('/server-health-dashboard', requireFullAdmin, async (req, res) => {
+  const now = Date.now();
+  const range = ['24h','7d','30d'].includes(String(req.query.range || '')) ? String(req.query.range) : '24h';
+  const healthModule = require('./lib/pwa-admin-health-route');
+  const health = healthModule.healthPayload();
+  healthModule.recordHealthHistory(false, health);
+  const history = healthModule.bucketHealthHistory(range, now);
+  const transfers = listTransfers(null);
+  const active = transfers.filter((t) => !t.completed && !t.finishedAt);
+  const stalled = active.filter((t) => t.stalled);
+  const speeds = active.map((t) => Math.max(0, Number(t.bps || t.speedBps || t.avgBps) || 0));
+  let deep = null; try { deep = await serverHealthDeepSnapshot(); } catch (error) { deep = { error:String(error && error.message || error).slice(0,160) }; }
+  const shares = serverHealthShareSummary(now);
+  const workload = {
+    shares,
+    transfers:{ active:active.length, stalled:stalled.length, aggregateBps:speeds.reduce((a,b)=>a+b,0), totalListed:transfers.length },
+    connectorJobs:serverHealthJobSummary(),
+  };
+  const alerts = [];
+  const addAlert = (severity, code, detail) => alerts.push({ severity, code, detail });
+  const pct = (v) => (v === null || v === undefined || v === '') ? null : (Number.isFinite(Number(v)) ? Number(v) : null);
+  const incomplete = [];
+  const cpuPct = pct(health.cpu && health.cpu.percent), ramPct = pct(health.memory && health.memory.percent);
+  const eventP95 = health.eventLoop && health.eventLoop.supported !== false ? pct(health.eventLoop.p95Ms) : null;
+  if (cpuPct === null) incomplete.push('cpu');
+  if (ramPct === null) incomplete.push('memory');
+  if (!health.disk || pct(health.disk.percent) === null) incomplete.push('disk');
+  if (health.eventLoop && health.eventLoop.supported !== false && eventP95 === null) incomplete.push('event-loop');
+  if (deep && deep.error) { incomplete.push('deep'); addAlert('warning','monitoring-incomplete','deep-probes'); }
+
+  if (cpuPct !== null && cpuPct >= 90) addAlert('critical','cpu-high',Math.round(cpuPct)); else if (cpuPct !== null && cpuPct >= 80) addAlert('warning','cpu-high',Math.round(cpuPct));
+  if (ramPct !== null && ramPct >= 95) addAlert('critical','ram-high',Math.round(ramPct)); else if (ramPct !== null && ramPct >= 85) addAlert('warning','ram-high',Math.round(ramPct));
+  if (eventP95 !== null && eventP95 >= 250) addAlert('critical','event-loop-lag',Math.round(eventP95)); else if (eventP95 !== null && eventP95 >= 100) addAlert('warning','event-loop-lag',Math.round(eventP95));
+  if (stalled.length) addAlert(stalled.length >= 3 ? 'critical':'warning','stalled-transfers',stalled.length);
+  if (shares.backingMissing) addAlert('warning','missing-sources',shares.backingMissing);
+  if (deep && deep.security && deep.security.audit && !deep.security.audit.ok) addAlert('critical','audit-integrity',deep.security.audit.reason || 'failed');
+  if (deep && deep.tls && deep.tls.diagnostics && ['bad','warn'].includes(deep.tls.diagnostics.status)) addAlert(deep.tls.diagnostics.status==='bad'?'critical':'warning','tls-health',deep.tls.diagnostics.reason || deep.tls.diagnostics.status);
+  if (deep && deep.backup && deep.backup.enabled && deep.backup.last && deep.backup.last.ok === false) addAlert('warning','backup-failed',deep.backup.last.error || 'failed');
+  if (deep && deep.backup && deep.backup.enabled && !deep.backup.last) addAlert('warning','backup-never','never');
+  if (deep && deep.backup && deep.backup.enabled && deep.backup.last && deep.backup.last.ok !== false) {
+    const maxAge = deep.backup.interval === 'weekly' ? 8 * 24 * 3600 * 1000 : 30 * 3600 * 1000;
+    if (Number(deep.backup.last.at) > 0 && now - Number(deep.backup.last.at) > maxAge) addAlert('warning','backup-stale',Math.round((now-Number(deep.backup.last.at))/3600000));
+  }
+  if (deep && deep.connectors && deep.connectors.jobs && deep.connectors.jobs.failedRecent24h) addAlert('warning','connector-failures',deep.connectors.jobs.failedRecent24h);
+  if (deep && deep.connectors && deep.connectors.configured > 0 && !(deep.connectors.capabilities && deep.connectors.capabilities.available)) addAlert('warning','connector-runtime','rclone-unavailable');
+  if (deep && deep.search && deep.search.error) addAlert('warning','search-health',deep.search.error);
+  if (deep && deep.storage && deep.storage.setup && (deep.storage.setup.inboxUnconfigured || deep.storage.setup.imagesUnconfigured)) addAlert('warning','storage-setup','mount-unconfigured');
+
+  // Volume availability is per path, but capacity is per filesystem. Several
+  // Direct-Xfer roots commonly share one physical disk; count that disk only once
+  // in the global score instead of turning a single 95%-full filesystem into three
+  // separate critical incidents.
+  let capacityEvaluated = false;
+  if (deep && deep.storage && Array.isArray(deep.storage.volumes)) {
+    const capacityGroups = new Map();
+    const limits = deep.storage.thresholds || diskFreeThresholds();
+    for (const volume of deep.storage.volumes) {
+      if (!volume) continue;
+      if (volume.probing && ['probe-timeout','probe-pending'].includes(String(volume.error || ''))) {
+        incomplete.push('storage:' + String(volume.label || 'volume'));
+        addAlert('warning','storage-probe-timeout',volume.label || 'volume');
+        if (!volume.stale) continue;
+      }
+      if (!volume.configured) {
+        if (volume.kind === 'backup' && deep.backup && deep.backup.enabled && deep.backup.destination === 'local') addAlert('critical','backup-volume','not-configured');
+        continue;
+      }
+      if (!volume.exists || volume.readable === false || volume.writable === false || !volume.directory) {
+        const reason = !volume.exists ? 'missing' : !volume.directory ? 'not-directory' : volume.readable === false ? 'unreadable' : 'read-only';
+        addAlert('critical','storage-volume',volume.label + ':' + reason);
+        continue;
+      }
+      if (volume.symlink) addAlert('warning','storage-symlink',volume.label);
+      if (!volume.disk || pct(volume.disk.percent) === null || !(Number(volume.disk.total) > 0)) continue;
+      capacityEvaluated = true;
+      const key = process.platform === 'win32' ? 'win:' + String(path.parse(path.resolve(volume.path || '.')).root || volume.path || volume.label).toLowerCase() : (volume.device !== null && volume.device !== undefined ? 'dev:' + String(volume.device) : 'path:' + String(volume.path || volume.label));
+      const row = capacityGroups.get(key) || { labels:[], freePct:100, usedPct:0 };
+      row.labels.push(volume.label); row.usedPct = Math.max(row.usedPct, pct(volume.disk.percent) || 0); row.freePct = Math.min(row.freePct, Math.max(0, 100 - (pct(volume.disk.percent) || 0)));
+      capacityGroups.set(key,row);
+    }
+    if (Number(limits.warn) > 0) for (const row of capacityGroups.values()) {
+      if (row.freePct <= Number(limits.critical)) addAlert('critical','storage-capacity',row.labels.join(',') + ':' + Math.round(row.freePct) + '% free');
+      else if (row.freePct <= Number(limits.warn)) addAlert('warning','storage-capacity',row.labels.join(',') + ':' + Math.round(row.freePct) + '% free');
+    }
+  }
+  // If the deeper filesystem probe is unavailable, retain a bounded fallback for
+  // the data directory using the same configured free-space thresholds.
+  if (!capacityEvaluated && health.disk && pct(health.disk.percent) !== null) {
+    const limits = diskFreeThresholds(), freePct = Math.max(0, 100 - pct(health.disk.percent));
+    if (Number(limits.warn) > 0 && freePct <= Number(limits.critical)) addAlert('critical','disk-high',Math.round(health.disk.percent));
+    else if (Number(limits.warn) > 0 && freePct <= Number(limits.warn)) addAlert('warning','disk-high',Math.round(health.disk.percent));
+  }
+
+  const forwardedHeadersPresent = !!(req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || req.headers['forwarded'] || req.headers['x-forwarded-proto'] || req.headers['x-forwarded-host']);
+  if (forwardedHeadersPresent && !TRUST_PROXY) addAlert('warning','proxy-untrusted','forwarded-headers-not-trusted');
+
+  const critical = alerts.filter((a)=>a.severity==='critical').length, warning = alerts.filter((a)=>a.severity==='warning').length;
+  let score = 100 - critical*25 - warning*8;
+  for (const metric of [cpuPct, ramPct, health.disk&&health.disk.percent]) { const n=pct(metric); if (n!==null && n>70) score -= Math.min(8, Math.round((n-70)/4)); }
+  if (incomplete.length) score = Math.min(score, 92);
+  score = Math.max(0, Math.min(100, score));
+  const status = critical ? 'critical' : warning ? 'warning' : (incomplete.length || score < 90) ? 'attention' : 'healthy';
+  const completeness = { complete:incomplete.length === 0, missing:[...new Set(incomplete)] };
+  const edge = {
+    protocol:req.protocol, secure:!!req.secure, host:req.get('host')||null,
+    forwardedHeadersPresent, proxyDetected:!!(TRUST_PROXY && forwardedHeadersPresent), forwardedTrusted:!!TRUST_PROXY,
+    forwardedProto:String(req.headers['x-forwarded-proto']||'').split(',')[0].trim()||null,
+    forwardedHost:String(req.headers['x-forwarded-host']||'').split(',')[0].trim()||null,
+    forwardedPort:String(req.headers['x-forwarded-port']||'').split(',')[0].trim()||null,
+  };
+  res.setHeader('Cache-Control','no-store');
+  res.json({ generatedAt:now, version:APP_VERSION, status, score, completeness, health, history, workload, deep, alerts, edge });
+});
+
 // Aggregated analytics for the dashboard. Reads the full transfer journal
 // (transfers.log) plus the per-link aggregates and produces ready-to-plot
 // series. On-demand only — never part of the periodic shares poll.
@@ -18371,6 +18774,7 @@ adminRouter.get('/dashboard', async (req, res) => {
   const previousCutoff = days > 0 ? cutoff - days * DAY_MS : 0;
   const userMap = new Map();
   const last24h = { transfers: 0, bytes: 0, completed: 0, interrupted: 0, up: 0, down: 0 };
+  const last24Ips = new Set();
   const last24Cutoff = now - DAY_MS;
   let last24Dur = 0, last24DurCount = 0, last24Bytes = 0;
   const recentErrors = [];
@@ -18401,6 +18805,7 @@ adminRouter.get('/dashboard', async (req, res) => {
       last24h.bytes += bytes;
       if (up) last24h.up += 1; else last24h.down += 1;
       if (r.completed) last24h.completed += 1; else last24h.interrupted += 1;
+      if (r.ip) last24Ips.add(pubIp(r.ip));
       if (r.completed && r.durationMs > 0) {
         last24Dur += r.durationMs;
         last24DurCount += 1;
@@ -18503,6 +18908,8 @@ adminRouter.get('/dashboard', async (req, res) => {
   last24h.avgDurationMs = last24DurCount ? Math.round(last24Dur / last24DurCount) : 0;
   last24h.avgBps = last24Dur > 0 ? Math.round(last24Bytes / (last24Dur / 1000)) : 0;
   last24h.successRate = last24h.transfers ? Math.round((last24h.completed / last24h.transfers) * 100) : 0;
+  last24h.uniqueVisitors = last24Ips.size;
+  last24h.sharesCreated = (visibleShares || listShares()).filter((s) => Number(s && s.createdAt || 0) >= last24Cutoff).length;
   recentErrors.sort((a, b) => b.at - a.at);
   if (recentErrors.length > 10) recentErrors.length = 10;
   totals.activeShares = visibleShares ? visibleShares.length : listShares().length;
@@ -19010,7 +19417,7 @@ adminRouter.post('/diagnostics/run', requireFullAdmin, async (req, res) => {
   add('email', 'notifications', emailConfigured() ? (lastEmail && lastEmail.ok === false ? 'warn' : 'ok') : 'info', { configured:emailConfigured(), last:lastEmail || null });
   add('web-push', 'notifications', webpush ? (pushSubs().length ? 'ok' : 'info') : 'warn', { module:!!webpush, subscriptions:pushSubs().length });
 
-  const pwaFiles = ['index.html','app.js','dlp-local.js','sw.js','manifest.webmanifest'];
+  const pwaFiles = ['index.html','app.js','mobile-intelligence.js','dlp-local.js','sw.js','manifest.webmanifest'];
   const missingPwa = pwaFiles.filter((name) => { try { return !fs.statSync(path.join(__dirname,'pwa',name)).isFile(); } catch (_) { return true; } });
   add('pwa-assets', 'pwa', missingPwa.length ? 'bad' : 'ok', { missing:missingPwa, pairedDevices:pwaDevices().length });
   add('pwa-install', 'pwa', STORAGE_SETUP.imagesUnconfigured || STORAGE_SETUP.inboxUnconfigured ? 'warn' : 'ok', { serviceWorker:'/direct-xfer-pwa-sw.js', manifest:'/direct-xfer-pwa.webmanifest' });
@@ -19906,6 +20313,9 @@ const PWA_PUBLIC_ASSET_PATHS = new Set([
   '/login.js',
   '/login-vault.js',
   '/theme-init.js',
+  '/admin-advanced.js',
+  '/admin-audit-connectors.js',
+  '/mobile-intelligence.js',
   '/sw.js',
   '/manifest.webmanifest',
   '/manifest-en.webmanifest',

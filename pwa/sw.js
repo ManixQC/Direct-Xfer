@@ -3,7 +3,7 @@
  * Shell versioning + network-aware updates. Upload/API requests are never cached.
  * Web Share Target batches are isolated so simultaneous shares cannot overwrite one another.
  */
-var VERSION = '2026.08.16-pwa317';
+var VERSION = '2026.08.16-pwa325';
 var SHELL_CACHE = 'dx-pwa-shell-' + VERSION;
 var RUNTIME_CACHE = 'dx-pwa-runtime-' + VERSION;
 var SHARE_CACHE = 'dx-share-v2';
@@ -13,12 +13,15 @@ var SHARE_CACHE = 'dx-share-v2';
 var SHELL = [
   '/app/launch',
   '/direct-xfer-pwa-shell.html',
-  '/app/app.css?v=280',
-  '/app/theme-init.js?v=269',
+  '/app/app.css?v=325',
+  '/app/theme-init.js?v=325',
+  '/app/admin-advanced.js?v=325',
+  '/app/admin-audit-connectors.js?v=325',
   '/app/login-vault.js?v=269',
   '/app/dlp-local.js?v=270',
   '/download-resume.js?v=269',
-  '/app/app.js?v=297',
+  '/app/app.js?v=325',
+  '/app/mobile-intelligence.js?v=325',
   '/direct-xfer-pwa.webmanifest',
   '/direct-xfer-pwa-en.webmanifest',
   '/direct-xfer-pwa-es.webmanifest',
@@ -86,7 +89,36 @@ self.addEventListener('message', function (event) {
       return cache.put('/app/__lang', new Response(String(event.data.lang).slice(0, 5)));
     }).catch(function () {}));
   }
+  if (event.data && event.data.type === 'TRANSFER_PROGRESS') event.waitUntil(showActiveTransferNotification(event.data));
+  if (event.data && event.data.type === 'TRANSFER_PROGRESS_CLEAR') event.waitUntil(clearActiveTransferNotification());
 });
+
+function swFmtBytes(bytes, language) {
+  var n=Math.max(0,Number(bytes)||0),units=String(language||'').slice(0,2)==='fr'?['o','Ko','Mo','Go','To']:['B','KB','MB','GB','TB'],i=0;
+  while(n>=1024&&i<units.length-1){n/=1024;i++;}
+  return (i?n.toFixed(n>=10?1:2):Math.round(n))+' '+units[i];
+}
+function swFmtEta(seconds) {
+  seconds=Math.max(0,Math.ceil(Number(seconds)||0));var h=Math.floor(seconds/3600),m=Math.floor((seconds%3600)/60),sec=seconds%60;
+  return (h?h+'h ':'')+(m?m+'m ':'')+sec+'s';
+}
+async function clearActiveTransferNotification() {
+  if (!self.registration.getNotifications) return;
+  try { var rows=await self.registration.getNotifications({tag:'dx-transfer-active'}); (rows||[]).forEach(function(n){try{n.close();}catch(_){}}); } catch (_) {}
+}
+async function showActiveTransferNotification(data) {
+  data=data||{};var chosen=String(data.lang||'').slice(0,2);if(!RESUME_PROMPT[chosen])chosen=await swLang();var dict=RESUME_PROMPT[chosen]||RESUME_PROMPT.fr;
+  var total=Math.max(0,Number(data.total)||0),sent=Math.max(0,Math.min(total||Number.MAX_SAFE_INTEGER,Number(data.sent)||0));
+  var pct=total>0?Math.max(0,Math.min(100,Math.round((sent/total)*100))):Math.max(0,Math.min(100,Number(data.percent)||0));
+  var body=(data.paused?'⏸ ':'')+pct+'% · '+swFmtBytes(sent,chosen)+(total?' / '+swFmtBytes(total,chosen):'');
+  if(Number(data.rate)>0&&!data.paused)body+=' · ↑ '+swFmtBytes(data.rate,chosen)+'/s';
+  if(Number(data.etaSeconds)>0&&!data.paused)body+=' · ETA '+swFmtEta(data.etaSeconds);
+  if(Number(data.done)>=0&&Number(data.count)>0)body+=' · '+Number(data.done)+'/'+Number(data.count);
+  return self.registration.showNotification(dict.transferTitle || 'Direct-Xfer', {
+    body:body, icon:'/app/icon-192.png', badge:'/app/icon-192.png', tag:'dx-transfer-active', renotify:false, silent:true, requireInteraction:true,
+    data:{kind:'upload-progress',url:'/app/?action=send'}
+  });
+}
 
 // Background/Periodic Sync. The page performs every security-sensitive
 // step first (DLP decision, image transformation and optional encryption), persists
@@ -96,13 +128,14 @@ self.addEventListener('message', function (event) {
 var BG_DB_NAME = 'direct-xfer-pwa';
 var BG_DB_VERSION = 7;
 var BG_QUEUE_STORE = 'queue';
+var BG_META_STORE = 'meta';
 var BG_OPFS_DIR = 'durable-transfers-v1';
 var BG_CHUNK = 768 * 1024;
 var BG_TIMEOUT_MS = 4 * 60 * 1000;
 var RESUME_PROMPT = {
-  fr: { body: 'Des transferts sont en attente.', complete: '{n} transfert(s) terminé(s) en arrière-plan.', failed: '{n} transfert(s) nécessite(nt) votre attention.' },
-  en: { body: 'Transfers are waiting.', complete: '{n} transfer(s) completed in the background.', failed: '{n} transfer(s) need your attention.' },
-  es: { body: 'Hay transferencias en espera.', complete: '{n} transferencia(s) completada(s) en segundo plano.', failed: '{n} transferencia(s) requiere(n) atención.' }
+  fr: { body: 'Des transferts sont en attente.', complete: '{n} transfert(s) terminé(s) en arrière-plan.', failed: '{n} transfert(s) nécessite(nt) votre attention.', transferTitle: 'Direct-Xfer · Transfert' },
+  en: { body: 'Transfers are waiting.', complete: '{n} transfer(s) completed in the background.', failed: '{n} transfer(s) need your attention.', transferTitle: 'Direct-Xfer · Transfer' },
+  es: { body: 'Hay transferencias en espera.', complete: '{n} transferencia(s) completada(s) en segundo plano.', failed: '{n} transferencia(s) requiere(n) atención.', transferTitle: 'Direct-Xfer · Transferencia' }
 };
 function swLang() {
   return caches.open(RUNTIME_CACHE)
@@ -121,15 +154,17 @@ function bgOpenDb() {
     request.onupgradeneeded = function () {
       var db = request.result;
       if (!db.objectStoreNames.contains(BG_QUEUE_STORE)) db.createObjectStore(BG_QUEUE_STORE, { keyPath: 'id' });
+      if (!db.objectStoreNames.contains(BG_META_STORE)) db.createObjectStore(BG_META_STORE, { keyPath: 'key' });
     };
     request.onsuccess = function () { if (!settled) { settled = true; clearTimeout(timer); resolve(request.result); } };
     request.onerror = function () { if (!settled) { settled = true; clearTimeout(timer); reject(request.error || new Error('idb-error')); } };
     request.onblocked = function () { if (!settled) { settled = true; clearTimeout(timer); reject(new Error('idb-blocked')); } };
   });
 }
-function bgDbAction(db, mode, fn) {
+function bgDbAction(db, mode, fn, storeName) {
   return new Promise(function (resolve, reject) {
-    var tx = db.transaction(BG_QUEUE_STORE, mode), store = tx.objectStore(BG_QUEUE_STORE), value;
+    storeName = storeName || BG_QUEUE_STORE;
+    var tx = db.transaction(storeName, mode), store = tx.objectStore(storeName), value;
     try { value = fn(store); } catch (e) { return reject(e); }
     tx.oncomplete = function () { resolve(value); };
     tx.onerror = function () { reject(tx.error || new Error('idb-error')); };
@@ -144,6 +179,24 @@ function bgQueueAll(db) {
   });
 }
 function bgQueuePut(db, record) { return bgDbAction(db, 'readwrite', function (store) { store.put(record); }); }
+function bgMetaGet(db, key, fallback) {
+  return new Promise(function (resolve) {
+    if (!db.objectStoreNames.contains(BG_META_STORE)) return resolve(fallback);
+    var tx, request;
+    try { tx=db.transaction(BG_META_STORE,'readonly'); request=tx.objectStore(BG_META_STORE).get(key); }
+    catch (_) { return resolve(fallback); }
+    request.onsuccess=function(){var row=request.result;resolve(row&&row.value!==undefined?row.value:fallback);};
+    request.onerror=function(){resolve(fallback);};
+    tx.onabort=function(){resolve(fallback);};
+  });
+}
+function bgWifiAllowed(record) {
+  if (!record || !record.wifiRequired) return true;
+  var c=self.navigator&&(self.navigator.connection||self.navigator.mozConnection||self.navigator.webkitConnection);
+  if (!c || !c.type) return false; // fail closed in background; the foreground can explain/override unknown APIs
+  var type=String(c.type).toLowerCase();
+  return type==='wifi'||type==='ethernet'||type==='wimax';
+}
 async function bgReadOpfs(path, type) {
   if (!path || !self.navigator || !self.navigator.storage || typeof self.navigator.storage.getDirectory !== 'function') return null;
   var root = await self.navigator.storage.getDirectory();
@@ -200,8 +253,14 @@ async function bgMarkComplete(db, record, response) {
   await Promise.all([bgDeleteOpfs(sourcePath), preparedPath && preparedPath !== sourcePath ? bgDeleteOpfs(preparedPath) : Promise.resolve()]);
   return { completed: true };
 }
-async function bgUploadOne(db, record) {
+async function bgUploadOne(db, record, notifyProgress, notifyLang, aggregate) {
   var snap = record && record.snapshot || {};
+  async function notifyOffset(offset) {
+    if (!notifyProgress) return;
+    var base=aggregate?Math.max(0,Number(aggregate.base)||0):0,total=aggregate?Math.max(0,Number(aggregate.total)||0):uploadSize;
+    var sent=base+Math.max(0,Number(offset)||0),count=aggregate?Math.max(1,Number(aggregate.count)||1):1,done=aggregate?Math.max(0,Number(aggregate.done)||0):0;
+    try { await showActiveTransferNotification({sent:sent,total:total,percent:total?Math.round(sent/total*100):0,done:done,count:count,lang:notifyLang}); } catch (_) {}
+  }
   var uploadSize = Number(record && record.upSize);
   if (!record || record.backgroundReady !== true || !record.resumeOnOpen || !snap.token || !record.uploadId || !record.upName || !Number.isFinite(uploadSize) || uploadSize < 0) return { skipped: true };
   var blob;
@@ -222,8 +281,13 @@ async function bgUploadOne(db, record) {
   // retry must acknowledge it instead of starting the same file again at offset 0.
   if (statusBody.complete === true) return bgMarkComplete(db, record, statusBody.response || { ok: true, complete: true });
   var offset = Math.min(uploadSize, Math.max(0, Number(statusBody.offset) || 0));
+  await notifyOffset(offset);
   var failures = 0;
   while (offset < uploadSize) {
+    // Re-evaluate the transport before every block. If Android roams from Wi-Fi
+    // to cellular while the PWA is closed, stop after the current completed block
+    // instead of finishing the rest of a large Wi-Fi-only file on mobile data.
+    if (!bgWifiAllowed(record)) throw new Error('background-wifi-required');
     var end = Math.min(uploadSize, offset + BG_CHUNK), response;
     try {
       response = await bgFetch(bgUploadUrl(record, offset), {
@@ -240,7 +304,7 @@ async function bgUploadOne(db, record) {
     if (response.ok) return bgMarkComplete(db, record, body);
     if (response.status === 409 && Number(body.offset) >= 0) {
       var next = Math.min(uploadSize, Math.max(0, Number(body.offset)));
-      if (next > offset) { offset = next; failures = 0; record.sentBytes = offset; record.lastServerOffset=offset; record.lastCheckpointAt=Date.now(); await bgQueuePut(db, record); continue; }
+      if (next > offset) { offset = next; failures = 0; record.sentBytes = offset; record.lastServerOffset=offset; record.lastCheckpointAt=Date.now(); await bgQueuePut(db, record); await notifyOffset(offset); continue; }
       failures++;
       if (failures >= 3) throw new Error('background-busy');
       continue;
@@ -270,15 +334,28 @@ async function runBackgroundUploads() {
   try { records = await bgQueueAll(db); }
   catch (e) { try { db.close(); } catch (_) {} throw e; }
   var eligible = records.filter(function (r) { return r && r.backgroundReady === true && r.resumeOnOpen && ['waiting', 'waiting-network', 'sending'].indexOf(r.state) !== -1; });
-  var completed = 0, failed = 0, retry = false;
-  for (var i = 0; i < eligible.length; i++) {
+  var transportable = eligible.filter(bgWifiAllowed);
+  var completed = 0, failed = 0, retry = transportable.length !== eligible.length, completedBytes = 0;
+  var notifyProgress = (await bgMetaGet(db, 'transferNotificationEnabled', true)) !== false;
+  var notifyLang = await swLang();
+  // A Wi-Fi-blocked record is pending but is not part of the currently moving
+  // progress denominator; otherwise a small allowed file could appear permanently
+  // stuck at 1% because a 100 GiB Wi-Fi-only file is waiting beside it.
+  var aggregateTotal=transportable.reduce(function(sum,r){return sum+Math.max(0,Number(r&&r.upSize)||0);},0);
+  var aggregate={base:0,total:aggregateTotal,count:transportable.length,done:0};
+  for (var i = 0; i < transportable.length; i++) {
+    aggregate.base=completedBytes;aggregate.done=completed;
     try {
-      var result = await bgUploadOne(db, eligible[i]);
-      if (result.completed) completed++;
+      var result = await bgUploadOne(db, transportable[i], notifyProgress, notifyLang, aggregate);
+      if (result.completed) {
+        completed++; completedBytes += Math.max(0,Number(transportable[i].upSize)||0); aggregate.base=completedBytes; aggregate.done=completed;
+        if(notifyProgress) try { await showActiveTransferNotification({sent:completedBytes,total:aggregateTotal,done:completed,count:transportable.length,lang:notifyLang}); } catch (_) {}
+      }
       else if (result.failed) failed++;
     } catch (_) { retry = true; }
   }
   try { db.close(); } catch (_) {}
+  await clearActiveTransferNotification();
   return { completed: completed, failed: failed, retry: retry, pending: eligible.length };
 }
 function notifyBackgroundResult(result) {

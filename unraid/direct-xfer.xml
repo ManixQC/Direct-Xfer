@@ -1,34 +1,21 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0"?>
 <Container version="2">
   <Name>Direct-Xfer</Name>
   <Repository>manixqc/direct-xfer:latest</Repository>
   <Registry>https://hub.docker.com/r/manixqc/direct-xfer</Registry>
   <Network>bridge</Network>
-  <MyIP/>
-  <Shell>bash</Shell>
-  <Privileged>false</Privileged>
-  <Support>https://github.com/ManixQC/Direct-Xfer/issues</Support>
-  <Project>https://github.com/ManixQC/Direct-Xfer</Project>
-  <Overview>Direct file sharing and receiving over HTTP or HTTPS, with an administrator interface, reception links, collaboration links, direct images, and a companion PWA.</Overview>
-  <Category>Productivity: Tools:</Category>
+  <Shell>sh</Shell>
   <WebUI>http://[IP]:[PORT:55750]/</WebUI>
-  <TemplateURL>https://raw.githubusercontent.com/ManixQC/Direct-Xfer/refs/heads/main/unraid/direct-xfer.xml</TemplateURL>
-  <Icon>https://raw.githubusercontent.com/ManixQC/Direct-Xfer/refs/heads/main/unraid/direct-xfer.png</Icon>
-  <ExtraParams>--restart=on-failure</ExtraParams>
-  <PostArgs/>
-  <CPUset/>
-  <DateInstalled/>
-  <DonateText/>
-  <DonateLink/>
-  <Requires/>
-  <Config Name="WebUI Port" Target="55750" Default="55750" Mode="tcp" Description="Direct-Xfer web interface port." Type="Port" Display="always" Required="true" Mask="false">55750</Config>
-  <Config Name="Host files (read-only)" Target="/host" Default="/" Mode="ro" Description="Host filesystem exposed read-only; ordinary shares reference it directly while image links make managed copies." Type="Path" Display="always" Required="true" Mask="false">/</Config>
-  <Config Name="Application data" Target="/data" Default="/mnt/user/appdata/direct-xfer" Mode="rw" Description="Persistent settings, generated password, links, audit log, and metadata." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/direct-xfer</Config>
-  <Config Name="Images" Target="/Images" Default="/mnt/user/Direct-Xfer/Images" Mode="rw" Description="Managed Full, Mini and Micro image copies plus revoked-image history previews." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/Direct-Xfer/Images</Config>
-  <Config Name="Received files" Target="/Direct-Xfer" Default="/mnt/user/Direct-Xfer" Mode="rw" Description="Writable destination for files received through upload and collaboration links." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/Direct-Xfer</Config>
-  <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="Unraid user ID (normally nobody = 99)." Type="Variable" Display="advanced" Required="true" Mask="false">99</Config>
-  <Config Name="PGID" Target="PGID" Default="100" Mode="" Description="Unraid group ID (normally users = 100)." Type="Variable" Display="advanced" Required="true" Mask="false">100</Config>
-  <Config Name="PORT" Target="PORT" Default="55750" Mode="" Description="Internal application port; keep equal to the WebUI container port." Type="Variable" Display="advanced" Required="true" Mask="false">55750</Config>
-  <Config Name="LOCAL_IP" Target="LOCAL_IP" Default="" Mode="" Description="Optional LAN address shown by Direct-Xfer when Docker bridge auto-detection is insufficient." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
-  <Config Name="TRUST_PROXY" Target="TRUST_PROXY" Default="" Mode="" Description="Set to 1 when Direct-Xfer is behind a trusted reverse proxy." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Icon>https://raw.githubusercontent.com/ManixQC/Direct-Xfer/main/unraid/direct-xfer.png</Icon>
+  <Support>https://github.com/ManixQC/Direct-Xfer</Support>
+  <Project>https://github.com/ManixQC/Direct-Xfer</Project>
+  <Overview>Direct-Xfer — direct file sharing, reception, collaboration, image hosting and installable PWA.</Overview>
+  <Category>Network:Other Productivity: Tools:</Category>
+  <Config Name="Web UI" Target="55750" Default="55750" Mode="tcp" Description="Direct-Xfer HTTP/HTTPS port" Type="Port" Display="always" Required="true" Mask="false">55750</Config>
+  <Config Name="Data" Target="/data" Default="/mnt/user/appdata/direct-xfer" Mode="rw" Description="Persistent settings and metadata" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/direct-xfer</Config>
+  <Config Name="Images" Target="/Images" Default="" Mode="rw" Description="Image hosting storage" Type="Path" Display="always" Required="false" Mask="false"></Config>
+  <Config Name="Received files" Target="/Direct-Xfer" Default="" Mode="rw" Description="Reception/import destination" Type="Path" Display="always" Required="false" Mask="false"></Config>
+  <Config Name="Host root" Target="/host" Default="/" Mode="ro" Description="Host files exposed read-only to the picker" Type="Path" Display="advanced" Required="true" Mask="false">/</Config>
+  <Config Name="PUID" Target="PUID" Default="99" Description="Runtime user id" Type="Variable" Display="advanced" Required="false" Mask="false">99</Config>
+  <Config Name="PGID" Target="PGID" Default="100" Description="Runtime group id" Type="Variable" Display="advanced" Required="false" Mask="false">100</Config>
 </Container>

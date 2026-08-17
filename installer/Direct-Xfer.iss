@@ -2,23 +2,20 @@
 #if EnvAppVersion != ""
   #define AppVersion EnvAppVersion
 #else
-  #define AppVersion "1.63.4"
+  #define AppVersion "1.64.0"
 #endif
-
 #define EnvSourceDir GetEnv("DX_INNO_SOURCE_DIR")
 #if EnvSourceDir != ""
   #define SourceDir EnvSourceDir
 #else
-  #define SourceDir "..\dist\Direct-Xfer-1.63.4-Windows-CSharp"
+  #define SourceDir "..\dist\Direct-Xfer-1.64.0-Windows-CSharp"
 #endif
-
 #define EnvOutputDir GetEnv("DX_INNO_OUTPUT_DIR")
 #if EnvOutputDir != ""
   #define OutputDir EnvOutputDir
 #else
   #define OutputDir "..\dist\installer"
 #endif
-
 #define AppName "Direct-Xfer"
 #define AppPublisher "Direct-Xfer"
 #define AppExeName "Direct-Xfer.exe"
@@ -62,8 +59,6 @@ CreateUninstallRegKey=yes
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional shortcuts:"; Flags: unchecked
 
 [InstallDelete]
-; Runtime trees are immutable build artifacts. Purge them before an upgrade so
-; removed dependencies/assets from an older release cannot survive beside 1.63.4.
 Type: filesandordirs; Name: "{app}\runtime\app"
 Type: filesandordirs; Name: "{app}\runtime\node"
 
@@ -82,82 +77,43 @@ Filename: "{app}\{#AppExeName}"; Description: "Launch Direct-Xfer"; WorkingDir: 
 [Code]
 const
   Net48Release = 528040;
-
-function HasNetFramework48OrLater: Boolean;
-var
-  ReleaseValue: Cardinal;
-begin
-  Result := RegQueryDWordValue(
-    HKLM64,
-    'SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full',
-    'Release',
-    ReleaseValue
-  ) and (ReleaseValue >= Net48Release);
-end;
-
-const
   EventModifyState = $0002;
-
+function HasNetFramework48OrLater: Boolean;
+var ReleaseValue: Cardinal;
+begin
+  Result := RegQueryDWordValue(HKLM64, 'SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full', 'Release', ReleaseValue) and (ReleaseValue >= Net48Release);
+end;
 function OpenEvent(dwDesiredAccess: LongWord; bInheritHandle: Boolean; lpName: string): THandle;
   external 'OpenEventW@kernel32.dll stdcall';
 function SetEvent(hEvent: THandle): Boolean;
   external 'SetEvent@kernel32.dll stdcall';
 function CloseHandle(hObject: THandle): Boolean;
   external 'CloseHandle@kernel32.dll stdcall';
-
 procedure SignalServerHostStop;
-var
-  StopEvent: THandle;
+var StopEvent: THandle;
 begin
   StopEvent := OpenEvent(EventModifyState, False, 'Local\DirectXferServerHostStop');
-  if StopEvent <> 0 then
-  begin
-    SetEvent(StopEvent);
-    CloseHandle(StopEvent);
-  end;
+  if StopEvent <> 0 then begin SetEvent(StopEvent); CloseHandle(StopEvent); end;
 end;
-
 function StopServerHostAndWait: Boolean;
-var
-  I: Integer;
+var I: Integer;
 begin
   SignalServerHostStop;
-  for I := 0 to 100 do
-  begin
-    if not CheckForMutexes('Local\DirectXferServerHostInstance') then
-    begin
-      Result := True;
-      exit;
-    end;
+  for I := 0 to 100 do begin
+    if not CheckForMutexes('Local\DirectXferServerHostInstance') then begin Result := True; exit; end;
     if (I mod 10) = 0 then SignalServerHostStop;
     Sleep(100);
   end;
   Result := not CheckForMutexes('Local\DirectXferServerHostInstance');
 end;
-
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
-  if StopServerHostAndWait then
-    Result := ''
-  else
-    Result := 'Direct-Xfer Server Host did not stop in time. Close the current Windows session or restart Windows, then run the installer again.';
+  if StopServerHostAndWait then Result := '' else Result := 'Direct-Xfer Server Host did not stop in time. Close the current Windows session or restart Windows, then run the installer again.';
 end;
-
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
-begin
-  if CurUninstallStep = usUninstall then StopServerHostAndWait;
-end;
-
+begin if CurUninstallStep = usUninstall then StopServerHostAndWait; end;
 function InitializeSetup: Boolean;
 begin
   Result := HasNetFramework48OrLater;
-  if not Result then
-  begin
-    MsgBox(
-      'Direct-Xfer requires Microsoft .NET Framework 4.8 or later. ' +
-      'Install the approved Microsoft .NET Framework package, then run this installer again.',
-      mbError,
-      MB_OK
-    );
-  end;
+  if not Result then MsgBox('Direct-Xfer requires Microsoft .NET Framework 4.8 or later. Install the approved Microsoft .NET Framework package, then run this installer again.', mbError, MB_OK);
 end;

@@ -3896,3 +3896,88 @@ body[data-role="auditor"] .album-url .clone-btn {
 
 /* 1.61.0 wave 3 — security sessions, explainable DLP and diagnostic actions. */
 .modal-wide{width:min(980px,calc(100vw - 28px));max-width:980px}.security-summary{display:flex;gap:10px;align-items:center;margin:4px 0 12px;font-weight:700}.security-session-list{display:grid;gap:8px;max-height:310px;overflow:auto}.security-session-row{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:10px 12px;border:1px solid var(--border-soft);border-radius:12px;background:var(--panel-2)}.security-session-row.current{outline:1px solid color-mix(in srgb,var(--accent) 55%,transparent)}.security-session-main{display:grid;gap:3px;min-width:0}.security-session-title{display:flex;gap:7px;align-items:center;flex-wrap:wrap}.security-history-list{max-height:360px;overflow:auto}.dlp-badge:is(button){border:0;cursor:pointer;font:inherit}.dlp-details-list{display:grid;gap:10px;max-height:58vh;overflow:auto}.dlp-detail-row{border:1px solid var(--border-soft);background:var(--panel-2);border-radius:12px;padding:11px;display:grid;gap:8px}.dlp-detail-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.dlp-detail-cell{min-width:0;display:grid;gap:3px}.dlp-detail-cell>span:last-child{overflow-wrap:anywhere}.diag-row-actions{display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap}.diag-extra{margin-top:6px}.diag-extra>summary{cursor:pointer;color:var(--muted);font-size:.75rem}.diag-extra>div{display:grid;grid-template-columns:minmax(110px,.7fr) minmax(0,1.6fr);gap:8px;margin-top:5px;font-size:.72rem}.diag-extra code{white-space:normal;overflow-wrap:anywhere}.diag-fix-btn{white-space:nowrap}@media(max-width:700px){.security-session-row{align-items:flex-start;flex-direction:column}.security-session-row>.btn{align-self:flex-end}.dlp-detail-grid{grid-template-columns:1fr}.diag-row{grid-template-columns:auto minmax(0,1fr)}.diag-row-actions{grid-column:2;justify-content:flex-start}}
+
+
+/* ========================================================================
+   1.64.0 — Standard share productivity: 3-level density, detail drawer,
+   colored/filterable labels and configurable quick-action icons.
+   ======================================================================== */
+.share-clickable { cursor: default; }
+.share-clickable:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.share-headline { min-width: 0; }
+.share-quick-actions { display:inline-flex; align-items:center; gap:4px; margin-left:auto; flex:0 0 auto; }
+.share-quick-action { width:30px; height:30px; display:inline-grid; place-items:center; border:1px solid var(--border-soft); border-radius:8px; background:transparent; color:var(--text); cursor:pointer; padding:0; font-size:.88rem; }
+.share-quick-action:hover,.share-quick-action:focus-visible { border-color:var(--accent); background:var(--accent-soft); outline:none; }
+.share-quick-config { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px 14px; margin-top:7px; }
+.share-quick-config .opt-check { margin:0; }
+
+/* Deterministic label colors: the same label keeps the same hue everywhere in
+   the current interface, including the side drawer. */
+.tag-chip { --tag-hue:215; background:hsl(var(--tag-hue) 55% 42% / .16); border-color:hsl(var(--tag-hue) 62% 55% / .42); color:hsl(var(--tag-hue) 75% 82%); padding-left:5px; }
+.tag-label { border:0; background:none; color:inherit; padding:0 4px; cursor:pointer; font:inherit; }
+.tag-label:hover,.tag-label:focus-visible { text-decoration:underline; outline:none; }
+:root[data-theme="light"] .tag-chip { color:hsl(var(--tag-hue) 55% 30%); background:hsl(var(--tag-hue) 70% 52% / .13); }
+body[data-role="auditor"] .tags-row { display:flex !important; }
+body[data-role="auditor"] .tag-x, body[data-role="auditor"] .tag-add { display:none !important; }
+
+/* Third density level. Long/secondary card surfaces move to the drawer while
+   core status, counters and quick icons stay visible. */
+.shares-list.density-ultra { gap:4px; }
+.shares-list.density-ultra .share { padding:6px 9px; border-radius:8px; }
+.shares-list.density-ultra .share-top { margin-bottom:2px; }
+.shares-list.density-ultra .share-meta { margin:2px 0 0; row-gap:1px; column-gap:8px; font-size:.72rem; }
+.shares-list.density-ultra .share-badges { gap:3px; }
+.shares-list.density-ultra .badge { padding:1px 5px; font-size:.68rem; }
+.shares-list.density-ultra .share-actions,
+.shares-list.density-ultra .share-path,
+.shares-list.density-ultra .link-row,
+.shares-list.density-ultra .share-adminnote,
+.shares-list.density-ultra .share-description-preview,
+.shares-list.density-ultra .share-last-comment,
+.shares-list.density-ultra .item-list,
+.shares-list.density-ultra .share-msgs,
+.shares-list.density-ultra .share-sub,
+.shares-list.density-ultra .tags-row { display:none; }
+.shares-list.density-ultra .share-quick-action { width:26px; height:26px; border-radius:7px; font-size:.78rem; }
+
+/* Side details drawer — intentionally independent from the modal stack so the
+   share list remains visible and the periodic poll can refresh the open record. */
+body.share-details-open { overflow:hidden; }
+.share-details-backdrop { position:fixed; inset:0; z-index:74; background:rgba(3,7,18,.32); backdrop-filter:blur(1px); }
+.share-details-drawer { position:fixed; z-index:75; top:0; right:0; width:min(460px,92vw); height:100dvh; background:var(--card); border-left:1px solid var(--border); box-shadow:-16px 0 38px rgba(0,0,0,.28); display:flex; flex-direction:column; }
+.share-details-drawer.hidden,.share-details-backdrop.hidden { display:none !important; }
+.share-details-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:18px; border-bottom:1px solid var(--border); }
+.share-details-head h2 { margin:2px 0 0; font-size:1.2rem; overflow-wrap:anywhere; }
+.share-details-body { overflow:auto; padding:16px 18px 28px; display:flex; flex-direction:column; gap:14px; }
+.share-details-badges { display:flex; gap:6px; flex-wrap:wrap; }
+.share-details-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+.share-details-metric { border:1px solid var(--border-soft); border-radius:10px; padding:9px 10px; min-width:0; }
+.share-details-metric span { display:block; color:var(--muted); font-size:.72rem; margin-bottom:3px; }
+.share-details-metric strong { display:block; font-size:.86rem; overflow-wrap:anywhere; }
+.share-details-section { border-top:1px solid var(--border-soft); padding-top:11px; }
+.share-details-section h3 { margin:0 0 6px; font-size:.82rem; }
+.share-details-section p { margin:0; color:var(--muted); white-space:pre-wrap; overflow-wrap:anywhere; }
+.share-details-section code { display:block; white-space:pre-wrap; overflow-wrap:anywhere; color:var(--muted); }
+.share-details-actions { display:flex; flex-wrap:wrap; gap:7px; padding-top:4px; }
+.share-details-drawer .tags-row { margin-top:0; }
+@media (max-width:620px) {
+  .share-quick-config { grid-template-columns:1fr; }
+  .share-details-drawer { width:100vw; }
+  .share-details-grid { grid-template-columns:1fr; }
+  .share-quick-actions { gap:2px; }
+}
+
+/* 1.64.0 — standard-view productivity: context menu, needs-attention center,
+   visitor test, undo history, source health, customizable dashboard and guided diagnostics. */
+.share-context-menu{position:fixed;z-index:3200;min-width:220px;max-width:min(320px,calc(100vw - 16px));padding:6px;background:var(--panel);border:1px solid var(--border);border-radius:12px;box-shadow:0 16px 44px #0007;display:grid;gap:2px}
+.share-context-item{appearance:none;border:0;background:transparent;color:var(--text);padding:9px 10px;border-radius:8px;text-align:left;font:inherit;cursor:pointer}
+.share-context-item:hover,.share-context-item:focus-visible{background:var(--surface-2,var(--border-soft));outline:none}.share-context-item.danger{color:var(--danger)}
+.share-source-health{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:3px 7px;font-size:.72rem;font-weight:800;background:color-mix(in srgb,var(--warn) 14%,transparent);color:var(--warn)}
+.share-source-health.missing{background:color-mix(in srgb,var(--danger) 14%,transparent);color:var(--danger)}.share-source-missing{border-color:color-mix(in srgb,var(--danger) 42%,var(--border))}
+.std-enh-modal{width:min(780px,calc(100vw - 24px));max-height:min(82vh,760px)}.std-enh-body{display:grid;gap:10px;overflow:auto;min-height:80px}
+.std-enh-row,.guided-row{display:flex;align-items:center;justify-content:space-between;gap:14px;border:1px solid var(--border-soft);border-radius:12px;padding:11px 12px}.std-enh-row>div,.guided-row>div{display:grid;gap:3px;min-width:0}.std-enh-row span,.guided-row span{color:var(--muted);font-size:.78rem;overflow-wrap:anywhere}.std-enh-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.todo-row{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:center;width:100%;border:1px solid var(--border-soft);background:var(--panel);color:var(--text);border-radius:12px;padding:11px;text-align:left;cursor:pointer}.todo-row:not(:disabled):hover{border-color:var(--accent)}.todo-row:disabled{cursor:default}.todo-icon{font-size:1.25rem}.todo-copy{display:grid;gap:3px}.todo-copy small{color:var(--muted)}.todo-bad{border-color:color-mix(in srgb,var(--danger) 45%,var(--border))}.todo-warn{border-color:color-mix(in srgb,var(--warn) 45%,var(--border))}
+.visitor-test-result{display:grid;gap:6px;border:1px solid var(--border-soft);border-radius:14px;padding:16px}.visitor-test-result strong{font-size:1rem}.visitor-test-result span{color:var(--muted);font-size:.82rem}.visitor-test-result.verdict-ready{border-color:color-mix(in srgb,var(--ok) 48%,var(--border))}.visitor-test-result.verdict-missing-source,.visitor-test-result.verdict-revoked{border-color:color-mix(in srgb,var(--danger) 48%,var(--border))}
+.dash-daily-summary{order:-10}.dash-widget-tools{display:none;position:absolute;right:8px;top:8px;z-index:4;gap:4px;padding:4px;border:1px solid var(--border);border-radius:9px;background:color-mix(in srgb,var(--panel) 92%,transparent);box-shadow:0 5px 20px #0004}.dashboard-customizing .chart-panel{position:relative;outline:1px dashed color-mix(in srgb,var(--accent) 45%,transparent);min-height:90px}.dashboard-customizing .dash-widget-tools{display:flex}.dash-widget-tool{border:0;background:transparent;color:var(--text);border-radius:6px;padding:4px 6px;cursor:pointer}.dash-widget-tool:hover{background:var(--border-soft)}.dashboard-customizing .chart-panel.dragging{opacity:.55}.dash-widget-hidden-preview{opacity:.38;filter:saturate(.45)}
+.guided-summary{border:1px solid var(--border-soft);border-radius:12px;padding:12px;font-weight:800}.guided-bad{border-color:color-mix(in srgb,var(--danger) 48%,var(--border))}.guided-warn{border-color:color-mix(in srgb,var(--warn) 48%,var(--border))}
+@media(max-width:640px){.std-enh-row,.guided-row{align-items:stretch;flex-direction:column}.share-context-menu{min-width:min(260px,calc(100vw - 16px))}}

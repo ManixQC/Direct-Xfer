@@ -20,17 +20,17 @@ using System.Web.Script.Serialization;
 [assembly: AssemblyCompany("Direct-Xfer")]
 [assembly: AssemblyProduct("Direct-Xfer Server Host")]
 [assembly: AssemblyCopyright("Copyright © Direct-Xfer 2026")]
-[assembly: AssemblyVersion("1.63.4.0")]
-[assembly: AssemblyFileVersion("1.63.4.0")]
-[assembly: AssemblyInformationalVersion("1.63.4-serverhost25-csharp")]
+[assembly: AssemblyVersion("1.64.0.0")]
+[assembly: AssemblyFileVersion("1.64.0.0")]
+[assembly: AssemblyInformationalVersion("1.64.0-serverhost26-csharp")]
 
 namespace DirectXfer.WindowsServerHost
 {
     internal static class Program
     {
-        internal const string AppVersion = "1.63.4";
-        internal const string RuntimeAppBuild = "1.63.4-launcher52-csharp";
-        internal const string HostVersion = "1.63.4-serverhost25-csharp";
+        internal const string AppVersion = "1.64.0";
+        internal const string RuntimeAppBuild = "1.64.0-launcher53-csharp";
+        internal const string HostVersion = "1.64.0-serverhost26-csharp";
         internal const int DefaultPort = 55750;
         internal const int MaxFallbackPort = 55769;
         internal const int StartupReadyTimeoutMs = 30000;
@@ -97,11 +97,11 @@ namespace DirectXfer.WindowsServerHost
         private static readonly IDictionary<string, string> CriticalRuntimeSha256 =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                { "package.json", "c585a3cfc3a59bb1547eed6eacf762797f80fb019052c3a18473e5d66e6d9b9f" },
-                { "package-lock.json", "d5adc187356616948710efedb595b07b3b8e45769e0a2ba75dedf38d7b8c040b" },
-                { "server.js", "01ca929036509b9cff7bb2caf2588c73dd55cc15085432bd2c4c83b9e111d1ce" },
-                { "public/app.js", "c18bc3b820ce6dd178777815722e0ee71dd3f36de3724b29429002de4662494e" },
-                { "pwa/app.js", "d0c2163a06435361fcbfb46cf11968eb725d9ee510e9bf672c04b3c5aacff11a" },
+                { "package.json", "07a1fc985b5898ed745a3c500af69956394eb97219d0857f70c0d181db041bce" },
+                { "package-lock.json", "512d40d49ff4afaccf423bcbb5f37728984f7d3467dbad71380611e9444ed34a" },
+                { "server.js", "4426b8c8aaf71f3fdb048dfa8f9771a0a94377642647329f5b2f020f5f33442b" },
+                { "public/app.js", "35b26f358f22c94edb36d0bd2d335b4c4e69eb0e274736f9145559ddc8418b8a" },
+                { "pwa/app.js", "2ca52b949ddb1a7d61b94acfd1c902499cc1613858607657a6787dd211fc7817" },
                 { "lib/dlp-utils.js", "dd4d15a3ebb1cc2e7183e9b68434cf69d50532f54fcbb9e90b5ffeb0cfdad086" },
                 { "lib/fd-utils.js", "322abf15ce7a15310d6d27ac1b0ca40892658d5f21198510f7e84b78b0070b13" },
                 { "pwa/dlp-local.js", "246267542621fc92f759438b2295b87f777ba6d6aa88b3c4d23dea25aebe7390" },
@@ -205,8 +205,6 @@ namespace DirectXfer.WindowsServerHost
                     continue;
                 }
 
-                // A backend that remained healthy for at least a minute has recovered.
-                // Do not carry a stale crash-loop penalty into a much later unrelated failure.
                 if (_lastReadyUptimeMs >= 60000) consecutiveFailures = 0;
                 consecutiveFailures = Math.Min(consecutiveFailures + 1, 6);
                 var delayMs = Math.Min(30000, 1000 * (1 << (consecutiveFailures - 1)));

@@ -65,6 +65,19 @@ test('connector capability response hides rclone config path and exposes support
   assert.doesNotMatch(block, /configPath/);
 });
 
+test('connector runner executes a JavaScript rclone wrapper portably without a shell', async () => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'dx-rclone-js-wrapper-'));
+  const wrapper = path.join(temp, 'fake-rclone.js');
+  fs.writeFileSync(wrapper, "'use strict';\nif(process.argv[2]==='version'){console.log('rclone vJS-WRAPPER');process.exit(0);}process.exit(2);\n");
+  const service = new StorageConnectorService({ bin:wrapper, configPath:path.join(temp, 'rclone.conf'), importRoot:path.join(temp, 'imports') });
+  try {
+    const result = await service.capabilities();
+    assert.equal(result.available, true, JSON.stringify(result));
+    assert.equal(result.version, 'rclone vJS-WRAPPER');
+    assert.match(storageSource, /avoiding shell:true/);
+  } finally { fs.rmSync(temp, { recursive:true, force:true }); }
+});
+
 test('remote browser returns connector-root-relative paths inside nested folders', async () => {
   const service = new StorageConnectorService({ bin:'unused', configPath:path.join(os.tmpdir(), 'unused-rclone.conf'), importRoot:path.join(os.tmpdir(), 'unused-import') });
   service.run = async (args) => {
@@ -156,10 +169,10 @@ test('real server verifies signed audit and imports a nested remote file server-
   const dataDir = path.join(temp, 'data');
   const images = path.join(temp, 'images');
   const inbox = path.join(temp, 'inbox');
-  const fakeRclone = path.join(temp, 'fake-rclone');
+  const fakeRclone = path.join(temp, 'fake-rclone.js');
   fs.mkdirSync(hostDir, { recursive:true });
   fs.writeFileSync(fakeRclone, `#!/usr/bin/env node\n'use strict';\nconst fs=require('fs'),path=require('path');\nconst a=process.argv.slice(2),cmd=a[0];\nif(cmd==='version'){console.log('rclone vFAKE-1.0');process.exit(0);}\nif(cmd==='listremotes'){console.log('fake:');process.exit(0);}\nif(cmd==='lsjson'){const spec=String(a[1]||'');if(a.includes('--stat')){console.log(JSON.stringify({Name:'',Path:'',IsDir:true}));process.exit(0);}const rel=(spec.split(':').slice(1).join(':')||'').replace(/^\\/+|\\/+$/g,'');if(rel==='docs')console.log(JSON.stringify([{Name:'nested.txt',Path:'nested.txt',IsDir:false,Size:19}]));else console.log(JSON.stringify([{Name:'docs',Path:'docs',IsDir:true,Size:0},{Name:'root.txt',Path:'root.txt',IsDir:false,Size:9}]));process.exit(0);}\nif(cmd==='copyto'){const src=String(a[1]||''),dst=String(a[2]||'');fs.mkdirSync(path.dirname(dst),{recursive:true});fs.writeFileSync(dst,'REMOTE:'+src);process.exit(0);}\nconsole.error('unsupported '+cmd);process.exit(2);\n`);
-  fs.chmodSync(fakeRclone, 0o755);
+  if (process.platform !== 'win32') fs.chmodSync(fakeRclone, 0o755);
   const port = await freePort();
   const base = `http://127.0.0.1:${port}`;
   const logs = [];

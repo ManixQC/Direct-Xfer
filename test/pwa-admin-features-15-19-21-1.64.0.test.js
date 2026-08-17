@@ -9,7 +9,7 @@ const net = require('net');
 const { spawn } = require('child_process');
 
 const root = path.resolve(__dirname, '..');
-const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
+const read = (file) => fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n?/g, '\n');
 const server = read('server.js');
 const storageSource = read('lib/storage-connectors.js');
 const pwa = read('pwa/admin-audit-connectors.js');

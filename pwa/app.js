@@ -9,8 +9,8 @@
 (function () {
   // Build tag, shown in the footer so a user can confirm at a glance which version
   // is actually running after an update. Keep it in lock-step with sw.js VERSION.
-  var APP_VERSION = '1.64.8';
-  var APP_BUILD = '2026.08.17-pwa337';
+  var APP_VERSION = '1.64.10';
+  var APP_BUILD = '2026.08.17-pwa339';
   // Upload blocks are deliberately small on mobile. A number of reverse proxies
   // still default to a 1 MiB request-body limit; an 8 MiB first block can therefore
   // be rejected before the browser emits any useful progress event, which looks like
@@ -615,7 +615,7 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
       });
     });
     var manifest = document.getElementById('app-manifest');
-    if (manifest) manifest.href = (lang === 'fr' ? '/direct-xfer-pwa.webmanifest' : '/direct-xfer-pwa-' + lang + '.webmanifest') + '?v=337';
+    if (manifest) manifest.href = (lang === 'fr' ? '/direct-xfer-pwa.webmanifest' : '/direct-xfer-pwa-' + lang + '.webmanifest') + '?v=339';
     $('lang-select').value = lang;
     $('dest-save-btn').textContent = editingToken ? t('updateDestination') : t('saveDestination');
     renderDests(); renderQueue(); renderHistory(); renderDeviceStatus();
@@ -633,6 +633,9 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
   var systemHealthAccessEnabled = false;
   var systemHealthAccessResolved = false;
   var pendingSystemHealthPanel = false;
+  var systemHealthAccessRequestSeq = 0;
+  var systemHealthAccessRetryTimer = 0;
+  var systemHealthAccessPollTimer = 0;
   var serverActivityEvents = [];
   var serverActivityRetained = 0;
   var serverActivityLoading = false;
@@ -670,6 +673,7 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
 
   function activatePwaPanel(panel, options) {
     options = options || {};
+    var previousPanel = activePwaPanel;
     if (!PWA_PANEL_KEYS[panel]) panel = 'send';
     if (panel === 'system-health' && !systemHealthAccessEnabled) {
       pendingSystemHealthPanel = !systemHealthAccessResolved;
@@ -695,7 +699,13 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
     if ($('pwa-panel-kicker')) $('pwa-panel-kicker').textContent = t(meta.label);
     if ($('pwa-panel-summary')) $('pwa-panel-summary').textContent = t(meta.hint);
     if (panel === 'activity') { loadPwaServerActivity(false).catch(function () {}); loadPwaLiveTransfers(false).catch(function () {}); startPwaActivityRefresh(); } else stopPwaActivityRefresh();
-    if (panel === 'system-health') { var healthCard = $('dx-admin-advanced-card'); if (healthCard) healthCard.open = true; }
+    if (panel === 'system-health') {
+      var healthCard = $('dx-admin-advanced-card');
+      if (healthCard) healthCard.open = true;
+      if (window.DirectXferServerHealth && typeof window.DirectXferServerHealth.start === 'function') window.DirectXferServerHealth.start();
+    } else if (previousPanel === 'system-health' && window.DirectXferServerHealth && typeof window.DirectXferServerHealth.stop === 'function') {
+      window.DirectXferServerHealth.stop();
+    }
     if (panel === 'settings' && $('settings-card')) { $('settings-card').open = true; if (!notificationPrefsLoaded) loadPwaNotificationPrefs(); else renderPwaNotificationPrefs(); if(!notificationRulesLoaded)loadPwaNotificationRules(); else renderPwaNotificationRules(); }
     if (panel === 'images') {
       refreshImageStats(false).catch(function () {});
@@ -737,6 +747,46 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
     }
   }
 
+  function scheduleSystemHealthAccessRetry(delay) {
+    clearTimeout(systemHealthAccessRetryTimer);
+    systemHealthAccessRetryTimer = setTimeout(function () { refreshSystemHealthNavAccess(true).catch(function () {}); }, Math.max(500, Number(delay) || 2000));
+  }
+
+  async function refreshSystemHealthNavAccess(force) {
+    var seq = ++systemHealthAccessRequestSeq;
+    var ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+    var timeout = ctrl ? setTimeout(function () { ctrl.abort(); }, 6000) : 0;
+    try {
+      var response = await fetch('/api/session', { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' }, signal: ctrl ? ctrl.signal : undefined });
+      if (timeout) clearTimeout(timeout);
+      if (seq !== systemHealthAccessRequestSeq) return;
+      if (response.status === 401 || response.status === 403) {
+        syncSystemHealthNavAccess(false);
+        return;
+      }
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      var session = await response.json().catch(function () { return {}; });
+      if (seq !== systemHealthAccessRequestSeq) return;
+      var enabled = !!(session && session.authenticated && (session.role === 'owner' || session.role === 'admin'));
+      syncSystemHealthNavAccess(enabled);
+      clearTimeout(systemHealthAccessRetryTimer);
+    } catch (_) {
+      if (timeout) clearTimeout(timeout);
+      if (seq !== systemHealthAccessRequestSeq) return;
+      // A transient network/bootstrap failure must not revoke a previously confirmed
+      // admin UI. On first resolution, retry quickly until the real session is known.
+      if (!systemHealthAccessResolved || force) scheduleSystemHealthAccessRetry(systemHealthAccessResolved ? 5000 : 1500);
+    }
+  }
+
+  function startSystemHealthAccessWatch() {
+    clearInterval(systemHealthAccessPollTimer);
+    refreshSystemHealthNavAccess(true).catch(function () {});
+    systemHealthAccessPollTimer = setInterval(function () {
+      if (!document.hidden) refreshSystemHealthNavAccess(false).catch(function () {});
+    }, 30000);
+  }
+
   function initPwaNavigation() {
     document.querySelectorAll('[data-pwa-nav]').forEach(function (button) {
       button.addEventListener('click', function () { activatePwaPanel(button.getAttribute('data-pwa-nav'), { userInitiated: true }); });
@@ -756,6 +806,13 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
     if (announcedAdminAccess === '1' || announcedAdminAccess === '0') {
       syncSystemHealthNavAccess(announcedAdminAccess === '1');
     }
+    // Do not depend on the asynchronously loaded health module for navigation access.
+    // Resolve the authenticated role directly and keep it fresh across PWA lifecycle events.
+    startSystemHealthAccessWatch();
+    window.addEventListener('pageshow', function () { refreshSystemHealthNavAccess(true).catch(function () {}); });
+    window.addEventListener('online', function () { refreshSystemHealthNavAccess(true).catch(function () {}); });
+    window.addEventListener('focus', function () { refreshSystemHealthNavAccess(false).catch(function () {}); });
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) refreshSystemHealthNavAccess(true).catch(function () {}); });
     // Restore the tab that was open before a refresh; default to Send on a fresh session.
     var savedPanel = '';
     try { savedPanel = sessionStorage.getItem('dx-pwa-active-panel') || ''; } catch (_) {}
@@ -9477,7 +9534,7 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
   function registerServiceWorker() {
     if (!navigator.serviceWorker || typeof navigator.serviceWorker.register !== 'function') return;
     navigator.serviceWorker.addEventListener('controllerchange', refreshToNewVersion);
-    var registrationPromise = navigator.serviceWorker.register('/direct-xfer-pwa-sw.js?v=337', { scope: '/app/' }).then(function (reg) {
+    var registrationPromise = navigator.serviceWorker.register('/direct-xfer-pwa-sw.js?v=339', { scope: '/app/' }).then(function (reg) {
       swReg = reg;
       navigator.serviceWorker.ready.then(function () {
         swReadyForInstall = true;

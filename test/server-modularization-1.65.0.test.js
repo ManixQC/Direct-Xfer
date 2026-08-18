@@ -56,12 +56,12 @@ test('network module keeps exported update state live across checks', async () =
       ok: true,
       text: async () => JSON.stringify({ results: [
         { name:'latest', digest:'sha256:new' },
-        { name:'1.66.2', digest:'sha256:new' },
+        { name:'1.66.3', digest:'sha256:new' },
         { name:'1.65.0', digest:'sha256:old' },
       ] }),
     });
     const svc = createNetworkServices({
-      net: require('node:net'), os: require('node:os'), LOCAL_IP:'', APP_VERSION:'1.66.1', UPDATE_REPO:'owner/repo', UPDATE_TAG:'latest',
+      net: require('node:net'), os: require('node:os'), LOCAL_IP:'', APP_VERSION:'1.66.2', UPDATE_REPO:'owner/repo', UPDATE_TAG:'latest',
       compareSemver:(a,b)=>a.localeCompare(b, undefined, { numeric:true }), updateCheckEnabled:()=>true,
       addAdminCenterNotification:()=>{}, getState:()=>({meta:{}}), persist:()=>{}, maskToPrefix:()=>24,
       ipToInt:()=>null, intToIp:()=>'', isPrivateIp:()=>false, getSettings:()=>({geoLookup:false}),
@@ -70,7 +70,7 @@ test('network module keeps exported update state live across checks', async () =
     const live = svc.updateState;
     await svc.checkForUpdate();
     assert.strictEqual(svc.updateState, live);
-    assert.equal(live.latest, '1.66.2');
+    assert.equal(live.latest, '1.66.3');
     assert.equal(live.available, true);
   } finally { global.fetch = oldFetch; }
 });
@@ -129,7 +129,7 @@ test('backup service serializes the current restored state instead of the empty 
     const svc = createBackupService({
       fs, path, crypto, forge:null, DATA_KEY:null, SECRETS_DIR:tmp,
       LOG_FILE:path.join(tmp,'transfers.log'), AUDIT_CHAIN_FILE:path.join(tmp,'audit-chain.log'), AUDIT_HEAD_FILE:path.join(tmp,'audit-head.json'),
-      APP_NAME:'Direct-Xfer', APP_VERSION:'1.66.1', getState:()=>current,
+      APP_NAME:'Direct-Xfer', APP_VERSION:'1.66.2', getState:()=>current,
       localCaPaths:()=>({}), readLocalCaCertificateOnly:()=>null, localCaFeatureRelevant:()=>false, readManagedTlsFile:()=>'',
       validateLocalCaCertificate:()=>{}, validateLeafCertificate:()=>{}, auditKeyId:()=> 'test-key', ensureAuditChainKey:()=>Buffer.alloc(32),
       encryptStore:x=>x, decryptStore:x=>x, getSettings:()=>({}), scheduleFlush:()=>{}, dispatch:()=>{}, formatBytes:n=>String(n), logAudit:()=>{}, DAY_MS:86400000,

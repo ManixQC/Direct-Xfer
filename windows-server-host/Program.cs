@@ -19,9 +19,9 @@ namespace DirectXfer.WindowsServerHost
 {
     internal static class Program
     {
-        internal const string AppVersion = "1.66.1";
-        internal const string RuntimeAppBuild = "1.66.1-launcher74-csharp";
-        internal const string HostVersion = "1.66.1-serverhost48-csharp";
+        internal const string AppVersion = "1.66.2";
+        internal const string RuntimeAppBuild = "1.66.2-launcher75-csharp";
+        internal const string HostVersion = "1.66.2-serverhost49-csharp";
         internal const int DefaultPort = 55750;
         internal const int MaxFallbackPort = 55769;
         internal const int StartupReadyTimeoutMs = 60000;
@@ -58,8 +58,8 @@ namespace DirectXfer.WindowsServerHost
         [STAThread]
         private static int Main(string[] args)
         {
-            // CI/runtime probe: reaching managed code with DOTNET_ROOT redirected to an
-            // empty directory proves the published ServerHost carries its own .NET runtime.
+            // CI/runtime probe: reaching managed code while global DOTNET_ROOT paths are
+            // disabled proves ServerHost resolved the packaged app-relative shared runtime.
             if (args.Length == 1 && string.Equals(args[0], "--dx-runtime-probe", StringComparison.Ordinal)) return 0;
 
             using var mutex = new Mutex(true, MutexName, out var createdNew);
@@ -110,8 +110,8 @@ namespace DirectXfer.WindowsServerHost
         private static readonly IDictionary<string, string> CriticalRuntimeSha256 =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                { "package.json", "c82f31518fa2ffa47b58400528142a3ea8bee68a68bdeb2ed3c7b7eb847a76a7" },
-                { "package-lock.json", "305355bbfe142a99dd4f6f6ac63b58f0fa67593d29698ba94f31d8ff4fc273fd" },
+                { "package.json", "9ae60e3b047d0b1aed3948bfe2549bcc1516d7f93507522992f1447fa121a9c7" },
+                { "package-lock.json", "b022777ca6f1cf0c7b30ec7e9d049f6aa100048f8dfd40c62bc7ca601ecbb65a" },
                 { "server.js", "355346095ee8975d19edaca57d88647e71ed9e57580ad069d025bcb4871b9e32" },
                 { "lib/server/public-pages.js", "96954ccf1705f068c5579806c69f4f1d56916c2a803d1fc160be874c908f0615" },
                 { "lib/server/tls-manager.js", "b82a1b195b6cb36d47d8d431b890e0479aaf9ca8d47f98e8ef9e046390610f7f" },
@@ -119,7 +119,7 @@ namespace DirectXfer.WindowsServerHost
                 { "lib/server/backup-service.js", "65cb07c147b326475a833be6cbc668db733fc8183ec0b4eec919a876b3f04bc2" },
                 { "lib/server/notification-service.js", "a55beb8d5fdb09754eeb7f7d01974896efaad20dde3b9cf00e83bf4f7a7b9baa" },
                 { "public/app.js", "d50010dbae1548634d8bf1f711d301cd1d20d6ca2e2b5b2f76dee5ae632e6350" },
-                { "pwa/app.js", "e6b95b1ff623be2074305297f8d77856c23c563f9dd609ba8bb8365b4bd62c53" },
+                { "pwa/app.js", "405a8e8bacf0123fdcf5e5d8a5d4894481c552fea5bcbe5ac54388cd14062d7d" },
                 { "lib/dlp-utils.js", "dd4d15a3ebb1cc2e7183e9b68434cf69d50532f54fcbb9e90b5ffeb0cfdad086" },
                 { "lib/fd-utils.js", "322abf15ce7a15310d6d27ac1b0ca40892658d5f21198510f7e84b78b0070b13" },
                 { "pwa/dlp-local.js", "246267542621fc92f759438b2295b87f777ba6d6aa88b3c4d23dea25aebe7390" },

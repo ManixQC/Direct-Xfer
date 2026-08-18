@@ -1,5 +1,5 @@
 name: Build Direct-Xfer Windows C# + Installer
-run-name: v1.66.1
+run-name: v1.66.2
 
 on:
   workflow_dispatch:
@@ -26,9 +26,11 @@ jobs:
   build-windows:
     runs-on: windows-2025
     env:
-      DX_VERSION: '1.66.1'
-      DX_RUNTIME_BUILD: '1.66.1-launcher74-csharp'
-      DX_SERVER_HOST_BUILD: '1.66.1-serverhost48-csharp'
+      DX_VERSION: '1.66.2'
+      DX_RUNTIME_BUILD: '1.66.2-launcher75-csharp'
+      DX_SERVER_HOST_BUILD: '1.66.2-serverhost49-csharp'
+      DX_DOTNET_DESKTOP_RUNTIME_VERSION: '10.0.11'
+      DX_DOTNET_DESKTOP_RUNTIME_ZIP_SHA512: '1d32a9bf6c93f50dee5734048f825998b98266d0e28846dbee0310e2aad7e28fc2251e38ffad6a474a1e57381895130f2b3e1e1a4f875ac7f79271d91c6eb433'
       DX_NODE_VERSION: '24.19.0'
       DX_NODE_EXE_SHA256: '3602f2bb1a10f2cbab4c36886218a33c1ab3db87290e73b033c46c77147d0237'
       DX_RCLONE_VERSION: '1.74.4'
@@ -79,12 +81,12 @@ jobs:
           $launcherOut = Join-Path $buildRoot 'launcher'
           Remove-Item $buildRoot -Recurse -Force -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Force -Path $hostOut,$launcherOut | Out-Null
-          dotnet publish windows-server-host\DirectXfer.ServerHost.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugSymbols=false -p:DebugType=None -o $hostOut
+          dotnet publish windows-server-host\DirectXfer.ServerHost.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:AppHostDotNetSearch=AppRelative -p:AppHostRelativeDotNet=runtime\dotnet -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugSymbols=false -p:DebugType=None -o $hostOut
           if ($LASTEXITCODE -ne 0) { throw "ServerHost .NET 10 publish failed: $LASTEXITCODE" }
-          dotnet publish windows-launcher\DirectXfer.Launcher.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugSymbols=false -p:DebugType=None -o $launcherOut
+          dotnet publish windows-launcher\DirectXfer.Launcher.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:AppHostDotNetSearch=AppRelative -p:AppHostRelativeDotNet=runtime\dotnet -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugSymbols=false -p:DebugType=None -o $launcherOut
           if ($LASTEXITCODE -ne 0) { throw "Launcher .NET 10 publish failed: $LASTEXITCODE" }
 
-          # A self-contained single-file publish must not leave framework/runtime sidecars.
+          # Framework-dependent single-file apphosts keep app dependencies bundled while using one private shared runtime.
           foreach ($entry in @(
             @{ Name = 'ServerHost'; Dir = $hostOut; Exe = 'Direct-Xfer.ServerHost.exe' },
             @{ Name = 'Launcher'; Dir = $launcherOut; Exe = 'Direct-Xfer.exe' }
@@ -93,38 +95,6 @@ jobs:
             if ($files.Count -ne 1 -or $files[0].Name -ne $entry.Exe) {
               throw "$($entry.Name) publish is not single-file: $($files.Name -join ', ')"
             }
-          }
-      - name: Verify self-contained .NET runtime independence
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $emptyDotnetRoot = Join-Path $env:RUNNER_TEMP 'dx-empty-dotnet-root'
-          Remove-Item $emptyDotnetRoot -Recurse -Force -ErrorAction SilentlyContinue
-          New-Item -ItemType Directory -Force -Path $emptyDotnetRoot | Out-Null
-          $previousDotnetRoot = $env:DOTNET_ROOT
-          $previousDotnetRootX64 = $env:DOTNET_ROOT_X64
-          $previousMultilevel = $env:DOTNET_MULTILEVEL_LOOKUP
-          try {
-            # A framework-dependent apphost obeys DOTNET_ROOT_X64 and fails here.
-            # The self-contained apphost must reach managed code without consulting it.
-            $env:DOTNET_ROOT = $emptyDotnetRoot
-            $env:DOTNET_ROOT_X64 = $emptyDotnetRoot
-            $env:DOTNET_MULTILEVEL_LOOKUP = '0'
-            foreach ($exe in @(
-              'build\windows-dotnet10\launcher\Direct-Xfer.exe',
-              'build\windows-dotnet10\server-host\Direct-Xfer.ServerHost.exe'
-            )) {
-              $process = Start-Process -FilePath (Join-Path $PWD $exe) -ArgumentList '--dx-runtime-probe' -PassThru
-              if (-not $process.WaitForExit(15000)) {
-                try { Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue } catch {}
-                throw "$exe timed out during the self-contained runtime probe."
-              }
-              if ($process.ExitCode -ne 0) { throw "$exe failed the self-contained runtime probe: $($process.ExitCode)" }
-            }
-          } finally {
-            $env:DOTNET_ROOT = $previousDotnetRoot
-            $env:DOTNET_ROOT_X64 = $previousDotnetRootX64
-            $env:DOTNET_MULTILEVEL_LOOKUP = $previousMultilevel
           }
       - name: Verify executables are unsigned by design
         shell: pwsh
@@ -157,10 +127,11 @@ jobs:
           $dist = Join-Path $distRoot "Direct-Xfer-$env:DX_VERSION-Windows-CSharp"
           $app = Join-Path $dist 'runtime\app'
           $node = Join-Path $dist 'runtime\node'
+          $dotnetRuntime = Join-Path $dist 'runtime\dotnet'
           $rclone = Join-Path $dist 'runtime\rclone'
           $tesseract = Join-Path $dist 'runtime\tesseract'
           Remove-Item $dist -Recurse -Force -ErrorAction SilentlyContinue
-          New-Item -ItemType Directory -Force -Path $app,$node,$rclone,$tesseract | Out-Null
+          New-Item -ItemType Directory -Force -Path $app,$node,$dotnetRuntime,$rclone,$tesseract | Out-Null
           Copy-Item 'build\windows-dotnet10\launcher\Direct-Xfer.exe' $dist
           Copy-Item 'build\windows-dotnet10\server-host\Direct-Xfer.ServerHost.exe' $dist
           Copy-Item 'windows-launcher\README-WINDOWS-PORTABLE.md' (Join-Path $dist 'README-WINDOWS-PORTABLE.md')
@@ -180,6 +151,37 @@ jobs:
           $nodeHash = (Get-FileHash -Algorithm SHA256 $nodeExe).Hash.ToLowerInvariant()
           if ($nodeHash -ne $env:DX_NODE_EXE_SHA256) { throw "Node SHA-256 mismatch: $nodeHash" }
           Set-Content -Encoding UTF8 (Join-Path $node 'README.txt') @("Direct-Xfer pinned Node.js $env:DX_NODE_VERSION x64","SHA-256: $nodeHash","Source: nodejs.org")
+
+
+          # Bundle one private .NET 10 Desktop Runtime shared by both framework-dependent
+          # single-file apphosts. The Desktop Runtime includes Microsoft.NETCore.App as
+          # well as Microsoft.WindowsDesktop.App, so Launcher and ServerHost use the same
+          # runtime tree without requiring a machine-wide .NET installation.
+          $dotnetRuntimeZip = Join-Path $env:RUNNER_TEMP "windowsdesktop-runtime-$env:DX_DOTNET_DESKTOP_RUNTIME_VERSION-win-x64.zip"
+          $dotnetRuntimeUrl = "https://builds.dotnet.microsoft.com/dotnet/WindowsDesktop/$env:DX_DOTNET_DESKTOP_RUNTIME_VERSION/windowsdesktop-runtime-$env:DX_DOTNET_DESKTOP_RUNTIME_VERSION-win-x64.zip"
+          Invoke-DxDownload $dotnetRuntimeUrl $dotnetRuntimeZip
+          $dotnetRuntimeHash = (Get-FileHash -Algorithm SHA512 $dotnetRuntimeZip).Hash.ToLowerInvariant()
+          if ($dotnetRuntimeHash -ne $env:DX_DOTNET_DESKTOP_RUNTIME_ZIP_SHA512) { throw "Private .NET Desktop Runtime SHA-512 mismatch: $dotnetRuntimeHash" }
+          Expand-Archive -LiteralPath $dotnetRuntimeZip -DestinationPath $dotnetRuntime -Force
+          $privateDotnetExe = Join-Path $dotnetRuntime 'dotnet.exe'
+          $privateCore = Join-Path $dotnetRuntime "shared\Microsoft.NETCore.App\$env:DX_DOTNET_DESKTOP_RUNTIME_VERSION"
+          $privateDesktop = Join-Path $dotnetRuntime "shared\Microsoft.WindowsDesktop.App\$env:DX_DOTNET_DESKTOP_RUNTIME_VERSION"
+          $privateHostFxr = Join-Path $dotnetRuntime "host\fxr\$env:DX_DOTNET_DESKTOP_RUNTIME_VERSION\hostfxr.dll"
+          foreach ($required in @($privateDotnetExe,$privateCore,$privateDesktop,$privateHostFxr)) {
+            if (-not (Test-Path -LiteralPath $required)) { throw "Incomplete private .NET runtime: missing $required" }
+          }
+          $privateRuntimeOutput = @(& $privateDotnetExe --list-runtimes 2>&1)
+          if ($LASTEXITCODE -ne 0) { throw "Private dotnet runtime probe failed: $LASTEXITCODE" }
+          $privateRuntimeLines = @($privateRuntimeOutput | ForEach-Object { ([string]$_).Trim() } | Where-Object { $_ })
+          $escapedDotnetVersion = [regex]::Escape($env:DX_DOTNET_DESKTOP_RUNTIME_VERSION)
+          if (-not ($privateRuntimeLines | Where-Object { $_ -match "^Microsoft\.NETCore\.App\s+$escapedDotnetVersion\s+\[" })) { throw "Private runtime is missing Microsoft.NETCore.App $env:DX_DOTNET_DESKTOP_RUNTIME_VERSION" }
+          if (-not ($privateRuntimeLines | Where-Object { $_ -match "^Microsoft\.WindowsDesktop\.App\s+$escapedDotnetVersion\s+\[" })) { throw "Private runtime is missing Microsoft.WindowsDesktop.App $env:DX_DOTNET_DESKTOP_RUNTIME_VERSION" }
+          [System.IO.File]::WriteAllLines((Join-Path $dotnetRuntime 'DIRECT-XFER-README.txt'), @(
+            "Direct-Xfer private shared .NET Desktop Runtime $env:DX_DOTNET_DESKTOP_RUNTIME_VERSION x64",
+            "Archive SHA-512: $dotnetRuntimeHash",
+            "Source: $dotnetRuntimeUrl",
+            "Used by both Direct-Xfer.exe and Direct-Xfer.ServerHost.exe via AppHostDotNetSearch=AppRelative"
+          ), [System.Text.Encoding]::UTF8)
 
           # Bundle the official pinned rclone Windows AMD64 executable. The archive checksum
           # is taken from rclone's signed SHA256SUMS release file so CI never trusts an
@@ -268,6 +270,67 @@ jobs:
           # validation cannot observe a partially prepared runtime tree.
           [System.IO.File]::WriteAllText($marker, [string]$env:DX_RUNTIME_BUILD, [System.Text.Encoding]::ASCII)
           if (-not (Test-Path -LiteralPath $marker -PathType Leaf)) { throw "Runtime marker disappeared during package assembly: $marker" }
+      - name: Verify shared private .NET 10 runtime
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $dist = Join-Path $PWD "dist\Direct-Xfer-$env:DX_VERSION-Windows-CSharp"
+          $privateDotnetRoot = Join-Path $dist 'runtime\dotnet'
+          $privateDotnetExe = Join-Path $privateDotnetRoot 'dotnet.exe'
+          if (-not (Test-Path -LiteralPath $privateDotnetExe -PathType Leaf)) { throw "Missing private .NET host: $privateDotnetExe" }
+          $emptyDotnetRoot = Join-Path $env:RUNNER_TEMP 'dx-empty-global-dotnet-root'
+          Remove-Item $emptyDotnetRoot -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force -Path $emptyDotnetRoot | Out-Null
+          $previousDotnetRoot = $env:DOTNET_ROOT
+          $previousDotnetRootX64 = $env:DOTNET_ROOT_X64
+          $previousMultilevel = $env:DOTNET_MULTILEVEL_LOOKUP
+          $previousHostTrace = $env:DOTNET_HOST_TRACE
+          $previousHostTraceFile = $env:DOTNET_HOST_TRACEFILE
+          $previousHostTraceVerbosity = $env:DOTNET_HOST_TRACE_VERBOSITY
+          try {
+            # AppHostDotNetSearch=AppRelative is intended to bind both EXEs to the private
+            # runtime beside them. Do not rely only on a successful managed-code probe:
+            # actions/setup-dotnet also places a machine/user runtime on the runner. .NET 10
+            # host tracing lets CI prove that hostfxr was actually loaded from runtime\dotnet.
+            $env:DOTNET_ROOT = $emptyDotnetRoot
+            $env:DOTNET_ROOT_X64 = $emptyDotnetRoot
+            $env:DOTNET_MULTILEVEL_LOOKUP = '0'
+            $env:DOTNET_HOST_TRACE = '1'
+            $env:DOTNET_HOST_TRACE_VERBOSITY = '4'
+            $privateRootNormalized = ([System.IO.Path]::GetFullPath($privateDotnetRoot)).Replace('/', '\').TrimEnd('\').ToLowerInvariant()
+            $expectedHostFxr = Join-Path $privateDotnetRoot "host\fxr\$env:DX_DOTNET_DESKTOP_RUNTIME_VERSION\hostfxr.dll"
+            $expectedHostFxrNormalized = ([System.IO.Path]::GetFullPath($expectedHostFxr)).Replace('/', '\').ToLowerInvariant()
+            foreach ($exeName in @('Direct-Xfer.exe','Direct-Xfer.ServerHost.exe')) {
+              $exe = Join-Path $dist $exeName
+              $safeName = [System.IO.Path]::GetFileNameWithoutExtension($exeName).Replace('.', '-')
+              $traceFile = Join-Path $env:RUNNER_TEMP ("dx-dotnet-host-$safeName.log")
+              Remove-Item -LiteralPath $traceFile -Force -ErrorAction SilentlyContinue
+              $env:DOTNET_HOST_TRACEFILE = $traceFile
+              $process = Start-Process -FilePath $exe -ArgumentList '--dx-runtime-probe' -WorkingDirectory $dist -PassThru
+              if (-not $process.WaitForExit(15000)) {
+                try { Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue } catch {}
+                throw "$exeName timed out during the shared private .NET runtime probe."
+              }
+              if ($process.ExitCode -ne 0) { throw "$exeName failed the shared private .NET runtime probe: $($process.ExitCode)" }
+              if (-not (Test-Path -LiteralPath $traceFile -PathType Leaf)) { throw "$exeName did not produce a .NET host trace." }
+              $traceNormalized = (Get-Content -LiteralPath $traceFile -Raw).Replace('/', '\').ToLowerInvariant()
+              if (-not $traceNormalized.Contains($privateRootNormalized)) {
+                throw "$exeName reached managed code but its .NET host trace did not reference the packaged runtime root."
+              }
+              $resolvedHostFxrMarker = "resolved fxr [$expectedHostFxrNormalized]"
+              $loadedHostFxrMarker = "loaded library from $expectedHostFxrNormalized"
+              if (-not ($traceNormalized.Contains($resolvedHostFxrMarker) -or $traceNormalized.Contains($loadedHostFxrMarker))) {
+                throw "$exeName did not resolve/load hostfxr from the pinned private .NET $env:DX_DOTNET_DESKTOP_RUNTIME_VERSION runtime."
+              }
+            }
+          } finally {
+            $env:DOTNET_ROOT = $previousDotnetRoot
+            $env:DOTNET_ROOT_X64 = $previousDotnetRootX64
+            $env:DOTNET_MULTILEVEL_LOOKUP = $previousMultilevel
+            $env:DOTNET_HOST_TRACE = $previousHostTrace
+            $env:DOTNET_HOST_TRACEFILE = $previousHostTraceFile
+            $env:DOTNET_HOST_TRACE_VERBOSITY = $previousHostTraceVerbosity
+          }
       - name: Verify portable runtime layout
         shell: pwsh
         run: |
@@ -283,6 +346,19 @@ jobs:
             if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { throw "Missing runtime file: $file" }
             if ((Get-Item -LiteralPath $file).Length -le 0) { throw "Empty runtime file: $file" }
           }
+          $privateDotnetRoot = Join-Path $dist 'runtime\dotnet'
+          $privateDotnetExe = Join-Path $privateDotnetRoot 'dotnet.exe'
+          $privateCore = Join-Path $privateDotnetRoot "shared\Microsoft.NETCore.App\$env:DX_DOTNET_DESKTOP_RUNTIME_VERSION"
+          $privateDesktop = Join-Path $privateDotnetRoot "shared\Microsoft.WindowsDesktop.App\$env:DX_DOTNET_DESKTOP_RUNTIME_VERSION"
+          foreach ($required in @($privateDotnetExe,$privateCore,$privateDesktop)) {
+            if (-not (Test-Path -LiteralPath $required)) { throw "Missing private shared .NET runtime component: $required" }
+          }
+          $privateRuntimeOutput = @(& $privateDotnetExe --list-runtimes 2>&1)
+          if ($LASTEXITCODE -ne 0) { throw "Private .NET runtime layout probe failed: $LASTEXITCODE" }
+          $privateRuntimeText = (($privateRuntimeOutput | ForEach-Object { [string]$_ }) -join "`n")
+          $escapedDotnetVersion = [regex]::Escape($env:DX_DOTNET_DESKTOP_RUNTIME_VERSION)
+          if ($privateRuntimeText -notmatch "(?m)^Microsoft\.NETCore\.App\s+$escapedDotnetVersion\s+\[") { throw 'Private runtime does not expose the pinned Microsoft.NETCore.App.' }
+          if ($privateRuntimeText -notmatch "(?m)^Microsoft\.WindowsDesktop\.App\s+$escapedDotnetVersion\s+\[") { throw 'Private runtime does not expose the pinned Microsoft.WindowsDesktop.App.' }
           $rcloneExe = Join-Path $dist 'runtime\rclone\rclone.exe'
           if (-not (Test-Path -LiteralPath $rcloneExe -PathType Leaf)) { throw "Missing bundled rclone: $rcloneExe" }
           if ((Get-Item -LiteralPath $rcloneExe).Length -le 0) { throw "Empty bundled rclone: $rcloneExe" }
@@ -349,17 +425,18 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $env:DX_INNO_APP_VERSION = $env:DX_VERSION
+          $env:DX_INNO_DOTNET_RUNTIME_VERSION = $env:DX_DOTNET_DESKTOP_RUNTIME_VERSION
           $env:DX_INNO_SOURCE_DIR = Join-Path $PWD "dist\Direct-Xfer-$env:DX_VERSION-Windows-CSharp"
           $env:DX_INNO_OUTPUT_DIR = Join-Path $PWD 'dist\installer'
           & $env:DX_ISCC 'installer\Direct-Xfer.iss'
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed: $LASTEXITCODE" }
       - uses: actions/upload-artifact@v6
         with:
-          name: Direct-Xfer-1.66.1-Windows-CSharp
-          path: dist/Direct-Xfer-1.66.1-Windows-CSharp/**
+          name: Direct-Xfer-1.66.2-Windows-CSharp
+          path: dist/Direct-Xfer-1.66.2-Windows-CSharp/**
           if-no-files-found: error
       - uses: actions/upload-artifact@v6
         with:
-          name: Direct-Xfer-Setup-1.66.1
-          path: dist/installer/Direct-Xfer-Setup-1.66.1.exe
+          name: Direct-Xfer-Setup-1.66.2
+          path: dist/installer/Direct-Xfer-Setup-1.66.2.exe
           if-no-files-found: error

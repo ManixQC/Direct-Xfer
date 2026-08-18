@@ -31,7 +31,7 @@ test('historical test restorer verifies Git blob integrity before writing', () =
   assert.match(restorer, /atomicWrite/);
 });
 
-test('default test command remains scoped to current 1.66.1 tests', () => {
+test('default test command remains scoped to current 1.66.2 tests', () => {
   assert.equal(packageJson.scripts.test, 'node --test test/*.test.js');
   assert.equal(packageJson.scripts['test:historical:restore'], 'node scripts/restore-historical-tests.js');
   assert.equal(packageJson.scripts['test:historical'], 'node --test test-historical/*.test.js');

@@ -50,9 +50,11 @@ test('Windows workflow uses pinned .NET 10 SDK and dotnet publish instead of leg
   assert.match(workflow, /dotnet-version: '10\.0\.400'/);
   assert.match(workflow, /dotnet publish windows-server-host\\DirectXfer\.ServerHost\.csproj/);
   assert.match(workflow, /dotnet publish windows-launcher\\DirectXfer\.Launcher\.csproj/);
-  assert.match(workflow, /--self-contained true/);
+  assert.match(workflow, /--self-contained false/);
+  assert.match(workflow, /AppHostDotNetSearch=AppRelative/);
+  assert.match(workflow, /AppHostRelativeDotNet=runtime\\dotnet/);
   assert.match(workflow, /IncludeNativeLibrariesForSelfExtract=true/);
-  assert.doesNotMatch(workflow, /--self-contained false/);
+  assert.doesNotMatch(workflow, /--self-contained true/);
   assert.match(workflow, /PublishSingleFile=true/);
   assert.doesNotMatch(workflow, /setup-msbuild|\bmsbuild windows-|\.exe\.config/);
 });
@@ -66,7 +68,8 @@ test('modern .NET SDK is pinned and projects do not depend on obsolete Framework
     assert.doesNotMatch(project, /App\.config|<None[^>]+App\.config|<Content[^>]+App\.config|TargetFrameworkVersion|\.NETFramework/);
   }
   const portableReadme = read('windows-launcher/README-WINDOWS-PORTABLE.md');
-  assert.match(portableReadme, /self-contained and single-file for win-x64/i);
+  assert.match(portableReadme, /framework-dependent single-file for win-x64/i);
+  assert.match(portableReadme, /one private \.NET 10 Desktop Runtime x64/i);
   assert.match(portableReadme, /No separate Microsoft \.NET Runtime or Desktop Runtime installation is required/i);
   assert.doesNotMatch(portableReadme, /winget install Microsoft\.DotNet\.DesktopRuntime|dotnet\.microsoft\.com\/en-us\/download\/dotnet/);
   const installer = read('installer/Direct-Xfer.iss');
@@ -116,22 +119,27 @@ test('ServerHost explicitly references SystemEvents on modern .NET', () => {
 });
 
 
-test('modern Windows projects declare the same single-file win-x64 deployment used by CI', () => {
+test('modern Windows projects declare framework-dependent single-file apphosts bound to one private runtime', () => {
   for (const rel of ['windows-launcher/DirectXfer.Launcher.csproj','windows-server-host/DirectXfer.ServerHost.csproj']) {
     const project = read(rel);
     assert.match(project, /<RuntimeIdentifier>win-x64<\/RuntimeIdentifier>/);
-    assert.match(project, /<SelfContained>true<\/SelfContained>/);
-    assert.match(project, /<IncludeNativeLibrariesForSelfExtract>true<\/IncludeNativeLibrariesForSelfExtract>/);
+    assert.match(project, /<SelfContained>false<\/SelfContained>/);
     assert.match(project, /<PublishSingleFile>true<\/PublishSingleFile>/);
+    assert.match(project, /<AppHostDotNetSearch>AppRelative<\/AppHostDotNetSearch>/);
+    assert.match(project, /<AppHostRelativeDotNet>runtime\\dotnet<\/AppHostRelativeDotNet>/);
+    assert.match(project, /<IncludeNativeLibrariesForSelfExtract>true<\/IncludeNativeLibrariesForSelfExtract>/);
   }
 });
 
-test('Windows CI probes both self-contained EXEs with global dotnet roots disabled', () => {
+test('Windows CI probes both apphosts against the one private shared .NET runtime', () => {
   const workflow = read('.github/workflows/build-windows-csharp.yml');
   const launcher = read('windows-launcher/Program.cs');
   const host = read('windows-server-host/Program.cs');
-  assert.match(workflow, /Verify self-contained \.NET runtime independence/);
+  assert.match(workflow, /Verify shared private \.NET 10 runtime/);
   assert.match(workflow, /DOTNET_ROOT_X64 = \$emptyDotnetRoot/);
+  assert.match(workflow, /runtime\\dotnet/);
+  assert.match(workflow, /DX_DOTNET_DESKTOP_RUNTIME_VERSION: '10\.0\.11'/);
+  assert.match(workflow, /Microsoft\.WindowsDesktop\.App/);
   assert.match(workflow, /DOTNET_MULTILEVEL_LOOKUP = '0'/);
   assert.match(workflow, /--dx-runtime-probe/);
   assert.match(workflow, /publish is not single-file/);
@@ -139,12 +147,14 @@ test('Windows CI probes both self-contained EXEs with global dotnet roots disabl
   assert.match(host, /--dx-runtime-probe/);
 });
 
-test('self-contained Windows installer has no external .NET runtime prerequisite gate', () => {
+test('Windows installer ships a private shared .NET runtime and has no external prerequisite gate', () => {
   const installer = read('installer/Direct-Xfer.iss');
   const installerReadme = read('installer/README-INNO-SETUP.md');
-  assert.doesNotMatch(installer, /HasNet10DesktopRuntime|Microsoft\.WindowsDesktop\.App|DOTNET_ROOT|OfferNet10DesktopRuntimeDownload|InitializeSetup/);
-  assert.match(installerReadme, /self-contained single-file/i);
-  assert.match(installerReadme, /do \*\*not\*\* need to install the Microsoft \.NET 10 Desktop Runtime separately/i);
+  assert.doesNotMatch(installer, /HasNet10DesktopRuntime|OfferNet10DesktopRuntimeDownload|InitializeSetup/);
+  assert.match(installer, /runtime\\dotnet/);
+  assert.match(installerReadme, /framework-dependent single-file/i);
+  assert.match(installerReadme, /one private shared \.NET 10 Desktop Runtime/i);
+  assert.match(installerReadme, /do \*\*not\*\* need to install Microsoft \.NET separately/i);
 });
 
 
@@ -189,9 +199,9 @@ test('SDK-generated assembly metadata replaces manual assembly attributes', () =
   const hostSource = read('windows-server-host/Program.cs');
   for (const project of [launcherProject, hostProject]) {
     assert.doesNotMatch(project, /<GenerateAssemblyInfo>\s*false\s*<\/GenerateAssemblyInfo>/);
-    assert.match(project, /<AssemblyVersion>1\.66\.1\.0<\/AssemblyVersion>/);
-    assert.match(project, /<FileVersion>1\.66\.1\.0<\/FileVersion>/);
-    assert.match(project, /<InformationalVersion>1\.66\.1-(?:launcher74|serverhost48)-csharp<\/InformationalVersion>/);
+    assert.match(project, /<AssemblyVersion>1\.66\.2\.0<\/AssemblyVersion>/);
+    assert.match(project, /<FileVersion>1\.66\.2\.0<\/FileVersion>/);
+    assert.match(project, /<InformationalVersion>1\.66\.2-(?:launcher75|serverhost49)-csharp<\/InformationalVersion>/);
   }
   assert.doesNotMatch(launcherSource, /\[assembly:\s*Assembly(?:Title|Description|Company|Product|Copyright|Version|FileVersion|InformationalVersion)/);
   assert.doesNotMatch(hostSource, /\[assembly:\s*Assembly(?:Title|Description|Company|Product|Copyright|Version|FileVersion|InformationalVersion)/);

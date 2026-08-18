@@ -47,7 +47,7 @@ test('ServerHost validates bundled helper executables before selecting them', ()
 
 test('Windows CI has bounded probes, bounded Tesseract setup and retried downloads', () => {
   assert.match(workflow, /WaitForExit\(15000\)/);
-  assert.match(workflow, /timed out during the self-contained runtime probe/);
+  assert.match(workflow, /timed out during the shared private \.NET runtime probe/);
   assert.match(workflow, /Get-ChildItem -LiteralPath \$entry\.Dir -Recurse -File/);
   assert.match(workflow, /WaitForExit\(120000\)/);
   assert.match(workflow, /Tesseract silent extraction\/install timed out after 120 seconds/);

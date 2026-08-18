@@ -175,3 +175,20 @@ test('SDK-generated assembly metadata replaces manual assembly attributes', () =
   assert.doesNotMatch(launcherSource, /\[assembly:\s*Assembly(?:Title|Description|Company|Product|Copyright|Version|FileVersion|InformationalVersion)/);
   assert.doesNotMatch(hostSource, /\[assembly:\s*Assembly(?:Title|Description|Company|Product|Copyright|Version|FileVersion|InformationalVersion)/);
 });
+
+
+test('modern Windows C# nullability contracts match runtime-optional values', () => {
+  const host = read('windows-server-host/Program.cs');
+  const launcher = read('windows-launcher/Program.cs');
+  assert.match(host, /Json\.Deserialize<LauncherConfig>\([\s\S]*?\?\? throw new InvalidDataException/);
+  assert.match(host, /private static long GetProcessStartUtcTicks\(Process\? process\)/);
+  assert.match(host, /private void AppendLog\(string\? line\)/);
+  assert.match(host, /var config = _config \?\? throw new InvalidOperationException/);
+  assert.match(host, /var token = _token \?\? throw new InvalidOperationException/);
+  assert.doesNotMatch(host, /TryReady\(_port, _token,/);
+  assert.match(host, /Json\.Deserialize<Dictionary<string, object\?>>/);
+  assert.match(launcher, /private static bool GetBool\(IDictionary<string, object\?>\? payload/);
+  assert.match(launcher, /private static string\? GetString\(IDictionary<string, object\?>\? payload/);
+  assert.match(launcher, /var token = _token;[\s\S]*?string\.IsNullOrEmpty\(token\)/);
+  assert.doesNotMatch(launcher, /LauncherRequestAnyScheme\([^;]*_token,/s);
+});

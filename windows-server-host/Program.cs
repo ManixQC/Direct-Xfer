@@ -337,8 +337,10 @@ namespace DirectXfer.WindowsServerHost
 
                 if (readyWatch.ElapsedMilliseconds >= nextHealthProbeMs)
                 {
+                    var server = _server;
+                    var token = _token;
                     string usedScheme;
-                    if (TryReady(_port, _token, _scheme, _server.Id, out usedScheme))
+                    if (server != null && !string.IsNullOrEmpty(token) && TryReady(_port, token, _scheme, server.Id, out usedScheme))
                     {
                         _scheme = usedScheme;
                         consecutiveHealthFailures = 0;
@@ -362,7 +364,8 @@ namespace DirectXfer.WindowsServerHost
 
         private void OpenRuntimeLog()
         {
-            var nextPath = Path.Combine(_config.logsDir, "Direct-Xfer-Windows.log");
+            var config = _config ?? throw new InvalidOperationException("Launcher configuration is not loaded.");
+            var nextPath = Path.Combine(config.logsDir, "Direct-Xfer-Windows.log");
             lock (_logSync)
             {
                 try { if (_logWriter != null) _logWriter.Dispose(); } catch { }
@@ -399,7 +402,8 @@ namespace DirectXfer.WindowsServerHost
                     var info = new FileInfo(candidate);
                     if (info.Length <= 0 || info.Length > 1024 * 1024) throw new InvalidDataException("Launcher configuration size is invalid.");
                     if ((File.GetAttributes(candidate) & FileAttributes.ReparsePoint) != 0) throw new InvalidDataException("Launcher configuration cannot be a reparse point.");
-                    var cfg = Json.Deserialize<LauncherConfig>(File.ReadAllText(candidate, Encoding.UTF8));
+                    var cfg = Json.Deserialize<LauncherConfig>(File.ReadAllText(candidate, Encoding.UTF8))
+                        ?? throw new InvalidDataException("Launcher configuration JSON is empty or invalid.");
                     NormalizeAndValidateConfig(cfg);
                     EnsureConfigDirectories(cfg);
                     if (!string.Equals(candidate, ConfigPath, StringComparison.OrdinalIgnoreCase)) RestorePrimaryConfigAtomic(cfg);
@@ -414,7 +418,7 @@ namespace DirectXfer.WindowsServerHost
             throw new InvalidDataException("Direct-Xfer launcher configuration is missing or invalid.", last);
         }
 
-        private static void NormalizeAndValidateConfig(LauncherConfig cfg)
+        private static void NormalizeAndValidateConfig(LauncherConfig? cfg)
         {
             if (cfg == null) throw new InvalidDataException("Missing launcher configuration.");
             cfg.dataDir = RequireAbsolutePath(cfg.dataDir, "dataDir");
@@ -517,9 +521,11 @@ namespace DirectXfer.WindowsServerHost
                     var file = Path.Combine(root, required);
                     if (!File.Exists(file) || new FileInfo(file).Length == 0) { reason = "missing or empty " + required; return false; }
                 }
-                var package = Json.Deserialize<Dictionary<string, object>>(File.ReadAllText(Path.Combine(root, "package.json"), Encoding.UTF8));
-                object value;
-                var version = package != null && package.TryGetValue("version", out value) ? Convert.ToString(value, CultureInfo.InvariantCulture) : string.Empty;
+                var package = Json.Deserialize<Dictionary<string, object?>>(File.ReadAllText(Path.Combine(root, "package.json"), Encoding.UTF8));
+                object? value;
+                var version = package != null && package.TryGetValue("version", out value)
+                    ? Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty
+                    : string.Empty;
                 if (!string.Equals(version, Program.AppVersion, StringComparison.Ordinal)) { reason = "package version mismatch"; return false; }
 
                 foreach (var pair in CriticalRuntimeSha256)
@@ -620,8 +626,7 @@ namespace DirectXfer.WindowsServerHost
                     if (!stdout.Wait(500)) return false;
                     try { stderr.Wait(100); } catch { }
                     var output = (stdout.Result ?? string.Empty).Trim().TrimStart('v');
-                    Version parsed;
-                    if (process.ExitCode != 0 || !Version.TryParse(output, out parsed)) return false;
+                    if (process.ExitCode != 0 || !Version.TryParse(output, out var parsed) || parsed == null) return false;
                     if (!(parsed.Major == 20 || parsed.Major >= 22)) return false;
                     return !bundled || string.Equals(parsed.ToString(), Program.NodeVersion, StringComparison.Ordinal);
                 }
@@ -674,6 +679,9 @@ namespace DirectXfer.WindowsServerHost
 
         private void StartNode(string appDir, string node)
         {
+            var config = _config ?? throw new InvalidOperationException("Launcher configuration is not loaded.");
+            var token = _token ?? throw new InvalidOperationException("Launcher token is not initialized.");
+            var shutdownMarkerPath = _shutdownMarkerPath ?? throw new InvalidOperationException("Shutdown marker path is not initialized.");
             var start = new ProcessStartInfo
             {
                 FileName = node, Arguments = "server.js", WorkingDirectory = appDir, UseShellExecute = false,
@@ -683,13 +691,13 @@ namespace DirectXfer.WindowsServerHost
             SanitizeNodeEnvironment(start);
             start.EnvironmentVariables["PORT"] = _port.ToString(CultureInfo.InvariantCulture);
             start.EnvironmentVariables["BIND"] = "0.0.0.0";
-            start.EnvironmentVariables["DATA_DIR"] = _config.dataDir;
-            start.EnvironmentVariables["INBOX_DIR"] = _config.inboxDir;
-            start.EnvironmentVariables["HOST_ROOT"] = _config.hostRoot;
-            start.EnvironmentVariables["IMAGES_DIR"] = _config.imagesDir;
+            start.EnvironmentVariables["DATA_DIR"] = config.dataDir;
+            start.EnvironmentVariables["INBOX_DIR"] = config.inboxDir;
+            start.EnvironmentVariables["HOST_ROOT"] = config.hostRoot;
+            start.EnvironmentVariables["IMAGES_DIR"] = config.imagesDir;
             start.EnvironmentVariables["NO_COLOR"] = "1";
-            start.EnvironmentVariables["DX_WINDOWS_LAUNCHER_TOKEN"] = _token;
-            start.EnvironmentVariables["DX_WINDOWS_SHUTDOWN_MARKER"] = _shutdownMarkerPath;
+            start.EnvironmentVariables["DX_WINDOWS_LAUNCHER_TOKEN"] = token;
+            start.EnvironmentVariables["DX_WINDOWS_SHUTDOWN_MARKER"] = shutdownMarkerPath;
 
             _server = new Process { StartInfo = start, EnableRaisingEvents = true };
             _server.OutputDataReceived += (s, e) => AppendLog(e.Data);
@@ -702,18 +710,20 @@ namespace DirectXfer.WindowsServerHost
 
         private void WriteSession(string nodePath)
         {
-            var host = Process.GetCurrentProcess();
+            var server = _server ?? throw new InvalidOperationException("Node.js process is not initialized.");
+            var token = _token ?? throw new InvalidOperationException("Launcher token is not initialized.");
+            using var host = Process.GetCurrentProcess();
             WriteSessionAtomic(new HostSession
             {
                 hostPid = host.Id,
                 hostStartedUtcTicks = GetProcessStartUtcTicks(host),
                 hostPath = Program.ExecutablePath,
-                serverPid = _server != null ? _server.Id : 0,
-                serverStartedUtcTicks = GetProcessStartUtcTicks(_server),
+                serverPid = server.Id,
+                serverStartedUtcTicks = GetProcessStartUtcTicks(server),
                 nodePath = nodePath,
                 port = _port,
                 scheme = _scheme,
-                token = _token,
+                token = token,
                 runtimeBuild = Program.RuntimeAppBuild,
                 hostBuild = Program.HostVersion
             });
@@ -724,12 +734,20 @@ namespace DirectXfer.WindowsServerHost
             var watch = Stopwatch.StartNew();
             while (watch.ElapsedMilliseconds < Program.StartupReadyTimeoutMs)
             {
-                try { if (_server == null || _server.HasExited) return false; } catch { return false; }
+                Process server;
+                string token;
+                try
+                {
+                    server = _server ?? throw new InvalidOperationException("Node.js process is not initialized.");
+                    if (server.HasExited) return false;
+                    token = _token ?? throw new InvalidOperationException("Launcher token is not initialized.");
+                }
+                catch { return false; }
                 string used;
-                if (TryReady(_port, _token, _scheme, _server.Id, out used))
+                if (TryReady(_port, token, _scheme, server.Id, out used))
                 {
                     _scheme = used;
-                    WriteSession(_server.StartInfo.FileName);
+                    WriteSession(server.StartInfo.FileName);
                     return true;
                 }
                 var signal = WaitHandle.WaitAny(new WaitHandle[] { _stopEvent, _reloadEvent }, 100);
@@ -747,8 +765,8 @@ namespace DirectXfer.WindowsServerHost
                 try
                 {
                     var response = LauncherRequest("GET", port, "/__dx_launcher/ready", token, scheme, 900, LocalCaCertificatePath);
-                    var payload = Json.Deserialize<Dictionary<string, object>>(response.Body);
-                    object okValue, appValue, pidValue;
+                    var payload = Json.Deserialize<Dictionary<string, object?>>(response.Body);
+                    object? okValue, appValue, pidValue;
                     var ok = payload != null && payload.TryGetValue("ok", out okValue) && Convert.ToBoolean(okValue, CultureInfo.InvariantCulture);
                     var app = payload != null && payload.TryGetValue("app", out appValue) ? Convert.ToString(appValue, CultureInfo.InvariantCulture) : string.Empty;
                     var pid = payload != null && payload.TryGetValue("pid", out pidValue) ? Convert.ToInt32(pidValue, CultureInfo.InvariantCulture) : 0;
@@ -927,7 +945,7 @@ namespace DirectXfer.WindowsServerHost
             catch { }
         }
 
-        private static long GetProcessStartUtcTicks(Process process)
+        private static long GetProcessStartUtcTicks(Process? process)
         {
             try { return process != null ? process.StartTime.ToUniversalTime().Ticks : 0L; }
             catch { return 0L; }
@@ -950,7 +968,7 @@ namespace DirectXfer.WindowsServerHost
             catch { return false; }
         }
 
-        private void AppendLog(string line)
+        private void AppendLog(string? line)
         {
             if (line == null) return;
             lock (_logSync) { try { if (_logWriter != null) _logWriter.WriteLine(line); } catch { } }

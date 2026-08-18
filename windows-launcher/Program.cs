@@ -572,16 +572,17 @@ namespace DirectXfer.WindowsLauncher
 
         private void ShowInitialAdminPassword()
         {
-            if (_exiting || string.IsNullOrEmpty(_token)) return;
+            var token = _token;
+            if (_exiting || string.IsNullOrEmpty(token)) return;
             try
             {
                 string scheme;
                 var response = LauncherRequestAnyScheme("POST", _runtimePort,
-                    "/__dx_launcher/initial-admin-password", _token, _runtimeScheme, 1500, out scheme);
+                    "/__dx_launcher/initial-admin-password", token, _runtimeScheme, 1500, out scheme);
                 _runtimeScheme = scheme;
                 if (response.StatusCode == HttpStatusCode.NoContent) return;
                 if (response.StatusCode != HttpStatusCode.OK) throw new InvalidDataException();
-                var payload = Json.Deserialize<Dictionary<string, object>>(response.Body);
+                var payload = Json.Deserialize<Dictionary<string, object?>>(response.Body);
                 if (!GetBool(payload, "ok") || !GetBool(payload, "fresh")) return;
                 var username = GetString(payload, "username");
                 var password = GetString(payload, "password");
@@ -596,12 +597,13 @@ namespace DirectXfer.WindowsLauncher
 
         private void OpenPasswordReset()
         {
-            if (_exiting || string.IsNullOrEmpty(_token)) return;
+            var token = _token;
+            if (_exiting || string.IsNullOrEmpty(token)) return;
             try
             {
                 string scheme;
                 var response = LauncherRequestAnyScheme("POST", _runtimePort,
-                    "/__dx_launcher/reset-admin-password-ticket", _token, _runtimeScheme, 1500, out scheme);
+                    "/__dx_launcher/reset-admin-password-ticket", token, _runtimeScheme, 1500, out scheme);
                 if (response.StatusCode == HttpStatusCode.Conflict)
                 {
                     MessageBox.Show(Tr.ResetPasswordEnvManaged, Tr.AppTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -609,7 +611,7 @@ namespace DirectXfer.WindowsLauncher
                 }
                 if (response.StatusCode != HttpStatusCode.OK) throw new HttpRequestException();
                 _runtimeScheme = scheme;
-                var payload = Json.Deserialize<Dictionary<string, object>>(response.Body);
+                var payload = Json.Deserialize<Dictionary<string, object?>>(response.Body);
                 var ticket = GetString(payload, "ticket");
                 if (!GetBool(payload, "ok") || string.IsNullOrEmpty(ticket)) throw new InvalidDataException();
                 var url = scheme + "://127.0.0.1:" + _runtimePort.ToString(CultureInfo.InvariantCulture) +
@@ -620,18 +622,18 @@ namespace DirectXfer.WindowsLauncher
             catch { MessageBox.Show(Tr.ResetPasswordError, Tr.AppTitle, MessageBoxButtons.OK, MessageBoxIcon.Error); }
         }
 
-        private static bool GetBool(IDictionary<string, object> payload, string key)
+        private static bool GetBool(IDictionary<string, object?>? payload, string key)
         {
-            object value;
+            object? value;
             if (payload == null || !payload.TryGetValue(key, out value) || value == null) return false;
             if (value is bool) return (bool)value;
             bool parsed;
             return bool.TryParse(Convert.ToString(value, CultureInfo.InvariantCulture), out parsed) && parsed;
         }
 
-        private static string? GetString(IDictionary<string, object> payload, string key)
+        private static string? GetString(IDictionary<string, object?>? payload, string key)
         {
-            object value;
+            object? value;
             return payload != null && payload.TryGetValue(key, out value) && value != null
                 ? Convert.ToString(value, CultureInfo.InvariantCulture) : null;
         }

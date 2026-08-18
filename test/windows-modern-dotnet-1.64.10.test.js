@@ -172,9 +172,9 @@ test('SDK-generated assembly metadata replaces manual assembly attributes', () =
   const hostSource = read('windows-server-host/Program.cs');
   for (const project of [launcherProject, hostProject]) {
     assert.doesNotMatch(project, /<GenerateAssemblyInfo>\s*false\s*<\/GenerateAssemblyInfo>/);
-    assert.match(project, /<AssemblyVersion>1\.65\.3\.0<\/AssemblyVersion>/);
-    assert.match(project, /<FileVersion>1\.65\.3\.0<\/FileVersion>/);
-    assert.match(project, /<InformationalVersion>1\.65\.3-(?:launcher64|serverhost37)-csharp<\/InformationalVersion>/);
+    assert.match(project, /<AssemblyVersion>1\.65\.4\.0<\/AssemblyVersion>/);
+    assert.match(project, /<FileVersion>1\.65\.4\.0<\/FileVersion>/);
+    assert.match(project, /<InformationalVersion>1\.65\.4-(?:launcher65|serverhost38)-csharp<\/InformationalVersion>/);
   }
   assert.doesNotMatch(launcherSource, /\[assembly:\s*Assembly(?:Title|Description|Company|Product|Copyright|Version|FileVersion|InformationalVersion)/);
   assert.doesNotMatch(hostSource, /\[assembly:\s*Assembly(?:Title|Description|Company|Product|Copyright|Version|FileVersion|InformationalVersion)/);
@@ -232,4 +232,18 @@ test('ServerHost startup readiness gets a .NET 10 cold-start window and stable L
   assert.match(host, /\/__dx_launcher\/ready", token, scheme, 2000/);
   assert.match(tls, /net\.isIP\(String\(item\.address \|\| ''\)\) === 4/);
   assert.match(tls, /temporary\/privacy IPv6 addresses/);
+});
+
+
+test('Windows Local CA probes use .NET modern CustomRootTrust and keep readiness diagnostics', () => {
+  const launcher = read('windows-launcher/Program.cs');
+  const host = read('windows-server-host/Program.cs');
+  for (const source of [launcher, host]) {
+    assert.match(source, /X509ChainTrustMode\.CustomRootTrust/);
+    assert.match(source, /CustomTrustStore\.Add\(localCa\)/);
+    assert.match(source, /DisableCertificateDownloads = true/);
+    assert.doesNotMatch(source, /VerificationFlags = X509VerificationFlags\.AllowUnknownCertificateAuthority/);
+  }
+  assert.match(host, /readiness timeout detail:/);
+  assert.match(host, /probe failed:/);
 });

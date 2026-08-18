@@ -19,9 +19,9 @@ namespace DirectXfer.WindowsServerHost
 {
     internal static class Program
     {
-        internal const string AppVersion = "1.65.3";
-        internal const string RuntimeAppBuild = "1.65.3-launcher64-csharp";
-        internal const string HostVersion = "1.65.3-serverhost37-csharp";
+        internal const string AppVersion = "1.65.4";
+        internal const string RuntimeAppBuild = "1.65.4-launcher65-csharp";
+        internal const string HostVersion = "1.65.4-serverhost38-csharp";
         internal const int DefaultPort = 55750;
         internal const int MaxFallbackPort = 55769;
         internal const int StartupReadyTimeoutMs = 60000;
@@ -104,8 +104,8 @@ namespace DirectXfer.WindowsServerHost
         private static readonly IDictionary<string, string> CriticalRuntimeSha256 =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                { "package.json", "be25c2dbd3195c6a011064044e6349055a1fc4dc3a4e0a23464eaf80111b1ab6" },
-                { "package-lock.json", "226a826888df624e9d0ef80c2698bfae022d28751efb3e8c507c72a363818b28" },
+                { "package.json", "ebb4b2b1ffa2e770e9c0cd026d1632d6d738934c0a0424d5c7cb96cbaa5958f5" },
+                { "package-lock.json", "33664492746c9e839469e70fd373d15ebb833835628a696fc863813a15441e88" },
                 { "server.js", "7b429f14563a3f6c5a0edc17c9155521c07c2b16e08189a728c53988c7c4f2c8" },
                 { "lib/server/public-pages.js", "96954ccf1705f068c5579806c69f4f1d56916c2a803d1fc160be874c908f0615" },
                 { "lib/server/tls-manager.js", "b82a1b195b6cb36d47d8d431b890e0479aaf9ca8d47f98e8ef9e046390610f7f" },
@@ -113,7 +113,7 @@ namespace DirectXfer.WindowsServerHost
                 { "lib/server/backup-service.js", "65cb07c147b326475a833be6cbc668db733fc8183ec0b4eec919a876b3f04bc2" },
                 { "lib/server/notification-service.js", "a55beb8d5fdb09754eeb7f7d01974896efaad20dde3b9cf00e83bf4f7a7b9baa" },
                 { "public/app.js", "d50010dbae1548634d8bf1f711d301cd1d20d6ca2e2b5b2f76dee5ae632e6350" },
-                { "pwa/app.js", "a76e7e662e4a4c99374f45e1f1fc699259a185a78b9bd5d20ed5678aedea735d" },
+                { "pwa/app.js", "b9ba54853c34a652272307ea9a25640cf7143dfe8ffcaf4f4ce0dbc9c213d9f0" },
                 { "lib/dlp-utils.js", "dd4d15a3ebb1cc2e7183e9b68434cf69d50532f54fcbb9e90b5ffeb0cfdad086" },
                 { "lib/fd-utils.js", "322abf15ce7a15310d6d27ac1b0ca40892658d5f21198510f7e84b78b0070b13" },
                 { "pwa/dlp-local.js", "246267542621fc92f759438b2295b87f777ba6d6aa88b3c4d23dea25aebe7390" },
@@ -136,6 +136,7 @@ namespace DirectXfer.WindowsServerHost
         private bool _systemEventsSubscribed;
         private bool _disposed;
         private long _lastReadyUptimeMs;
+        private string _lastReadyFailure = string.Empty;
 
         internal ServerHost()
         {
@@ -730,6 +731,7 @@ namespace DirectXfer.WindowsServerHost
 
         private bool WaitUntilReady()
         {
+            _lastReadyFailure = string.Empty;
             var watch = Stopwatch.StartNew();
             while (watch.ElapsedMilliseconds < Program.StartupReadyTimeoutMs)
             {
@@ -753,12 +755,15 @@ namespace DirectXfer.WindowsServerHost
                 if (signal == 0) { _expectedStop = true; StopNode(); return false; }
                 if (signal == 1) { _reloadRequested = true; StopNode(); return false; }
             }
+            if (!string.IsNullOrWhiteSpace(_lastReadyFailure))
+                AppendLog("[server-host] readiness timeout detail: " + _lastReadyFailure);
             return false;
         }
 
         private bool TryReady(int port, string token, string preferredScheme, int expectedPid, out string usedScheme)
         {
             usedScheme = preferredScheme;
+            var lastFailure = string.Empty;
             foreach (var scheme in SchemeCandidates(preferredScheme))
             {
                 try
@@ -770,10 +775,17 @@ namespace DirectXfer.WindowsServerHost
                     var app = payload != null && payload.TryGetValue("app", out appValue) ? Convert.ToString(appValue, CultureInfo.InvariantCulture) : string.Empty;
                     var pid = payload != null && payload.TryGetValue("pid", out pidValue) ? Convert.ToInt32(pidValue, CultureInfo.InvariantCulture) : 0;
                     if (response.StatusCode == HttpStatusCode.OK && ok && string.Equals(app, "Direct-Xfer", StringComparison.Ordinal) && pid == expectedPid)
-                    { usedScheme = scheme; return true; }
+                    { _lastReadyFailure = string.Empty; usedScheme = scheme; return true; }
+                    lastFailure = scheme + " returned HTTP " + ((int)response.StatusCode).ToString(CultureInfo.InvariantCulture) +
+                        " (ok=" + ok.ToString(CultureInfo.InvariantCulture) + ", app=" + (app ?? string.Empty) +
+                        ", pid=" + pid.ToString(CultureInfo.InvariantCulture) + ", expectedPid=" + expectedPid.ToString(CultureInfo.InvariantCulture) + ")";
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    lastFailure = scheme + " probe failed: " + ex.GetType().Name + ": " + ex.Message;
+                }
             }
+            if (!string.IsNullOrWhiteSpace(lastFailure)) _lastReadyFailure = lastFailure;
             return false;
         }
 
@@ -825,8 +837,10 @@ namespace DirectXfer.WindowsServerHost
                 localCa = LoadPemCertificate(localCaCertificatePath); if (localCa == null) return false;
                 leaf = X509CertificateLoader.LoadCertificate(certificate.GetRawCertData()); localChain = new X509Chain();
                 localChain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
-                localChain.ChainPolicy.VerificationFlags = X509VerificationFlags.AllowUnknownCertificateAuthority;
-                localChain.ChainPolicy.ExtraStore.Add(localCa);
+                localChain.ChainPolicy.DisableCertificateDownloads = true;
+                localChain.ChainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
+                localChain.ChainPolicy.CustomTrustStore.Add(localCa);
+                localChain.ChainPolicy.VerificationFlags = X509VerificationFlags.NoFlag;
                 if (!localChain.Build(leaf) || localChain.ChainElements.Count == 0) return false;
                 var root = localChain.ChainElements[localChain.ChainElements.Count - 1].Certificate;
                 return string.Equals(root.Thumbprint, localCa.Thumbprint, StringComparison.OrdinalIgnoreCase);

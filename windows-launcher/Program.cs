@@ -19,15 +19,15 @@ namespace DirectXfer.WindowsLauncher
 {
     internal static class Program
     {
-        internal const string AppVersion = "1.65.3";
-        internal const string RuntimeAppBuild = "1.65.3-launcher64-csharp";
+        internal const string AppVersion = "1.65.4";
+        internal const string RuntimeAppBuild = "1.65.4-launcher65-csharp";
         internal const string ServerHostFileName = "Direct-Xfer.ServerHost.exe";
-        internal const string ServerHostVersion = "1.65.3.0";
+        internal const string ServerHostVersion = "1.65.4.0";
         internal const int DefaultPort = 55750;
         internal const int StartupReadyTimeoutMs = 60000;
         internal const string MutexName = @"Local\DirectXferLauncherInstance";
         internal const string OpenEventName = @"Local\DirectXferLauncherOpen";
-        internal const string ServerHostBuild = "1.65.3-serverhost37-csharp";
+        internal const string ServerHostBuild = "1.65.4-serverhost38-csharp";
         internal const string ServerHostReloadEventName = @"Local\DirectXferServerHostReload";
 
         internal static string ExecutablePath
@@ -520,8 +520,10 @@ namespace DirectXfer.WindowsLauncher
                 leaf = X509CertificateLoader.LoadCertificate(certificate.GetRawCertData());
                 localChain = new X509Chain();
                 localChain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
-                localChain.ChainPolicy.VerificationFlags = X509VerificationFlags.AllowUnknownCertificateAuthority;
-                localChain.ChainPolicy.ExtraStore.Add(localCa);
+                localChain.ChainPolicy.DisableCertificateDownloads = true;
+                localChain.ChainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
+                localChain.ChainPolicy.CustomTrustStore.Add(localCa);
+                localChain.ChainPolicy.VerificationFlags = X509VerificationFlags.NoFlag;
                 if (!localChain.Build(leaf) || localChain.ChainElements.Count == 0) return false;
                 var root = localChain.ChainElements[localChain.ChainElements.Count - 1].Certificate;
                 return string.Equals(root.Thumbprint, localCa.Thumbprint, StringComparison.OrdinalIgnoreCase);

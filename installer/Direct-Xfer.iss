@@ -77,6 +77,7 @@ Filename: "{app}\{#AppExeName}"; Description: "Launch Direct-Xfer"; WorkingDir: 
 [Code]
 const
   EventModifyState = $0002;
+  DotNet10DesktopRuntimeUrl = 'https://dotnet.microsoft.com/en-us/download/dotnet/10.0';
 function HasNet10DesktopRuntimeAt(const DotnetRoot: String): Boolean;
 var
   FindRec: TFindRec;
@@ -139,8 +140,25 @@ begin
 end;
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin if CurUninstallStep = usUninstall then StopServerHostAndWait; end;
+procedure OfferNet10DesktopRuntimeDownload;
+var
+  ErrorCode: Integer;
+begin
+  if MsgBox(
+    'Direct-Xfer requires Microsoft .NET 10 Desktop Runtime x64, but it is not installed.' + #13#10 + #13#10 +
+    'Would you like to open the official Microsoft .NET 10 download page now?' + #13#10 +
+    'Choose the .NET Desktop Runtime installer for Windows x64.',
+    mbConfirmation, MB_YESNO) = IDYES then
+  begin
+    if not ShellExec('', DotNet10DesktopRuntimeUrl, '', '', SW_SHOWNORMAL, ewNoWait, ErrorCode) then
+      MsgBox('Unable to open the Microsoft download page automatically.' + #13#10 + #13#10 +
+        'Open this address in your browser:' + #13#10 + DotNet10DesktopRuntimeUrl,
+        mbError, MB_OK);
+  end;
+end;
+
 function InitializeSetup: Boolean;
 begin
   Result := HasNet10DesktopRuntime;
-  if not Result then MsgBox('Direct-Xfer requires Microsoft .NET 10 Desktop Runtime x64. Install the current supported .NET 10 Desktop Runtime from Microsoft, then run this installer again.', mbError, MB_OK);
+  if not Result then OfferNet10DesktopRuntimeDownload;
 end;

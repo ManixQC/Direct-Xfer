@@ -8,3 +8,10 @@ Environment variables used by CI:
 - `DX_INNO_OUTPUT_DIR`
 
 The installer targets x64 Windows and requires the Microsoft .NET 10 Desktop Runtime x64. Direct-Xfer executables remain unsigned by design.
+
+
+If the runtime is missing, the installer now offers to open the official Microsoft .NET 10 download page:
+`https://dotnet.microsoft.com/en-us/download/dotnet/10.0`
+
+Alternative with WinGet:
+`winget install Microsoft.DotNet.DesktopRuntime.10`

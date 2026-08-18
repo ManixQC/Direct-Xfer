@@ -67,6 +67,10 @@ test('modern .NET SDK is pinned and projects do not depend on obsolete Framework
   const installer = read('installer/Direct-Xfer.iss');
   assert.match(installer, /HasNet10DesktopRuntime/);
   assert.match(installer, /Microsoft \.NET 10 Desktop Runtime x64/);
+  assert.match(installer, /DotNet10DesktopRuntimeUrl = 'https:\/\/dotnet\.microsoft\.com\/en-us\/download\/dotnet\/10\.0'/);
+  assert.match(installer, /OfferNet10DesktopRuntimeDownload/);
+  assert.match(installer, /ShellExec\('', DotNet10DesktopRuntimeUrl/);
+  assert.match(installer, /MB_YESNO/);
   assert.doesNotMatch(installer, /HasNetFramework48OrLater|Net48Release|requires Microsoft \.NET Framework 4\.8/);
 });
 

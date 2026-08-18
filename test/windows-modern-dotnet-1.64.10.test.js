@@ -172,9 +172,9 @@ test('SDK-generated assembly metadata replaces manual assembly attributes', () =
   const hostSource = read('windows-server-host/Program.cs');
   for (const project of [launcherProject, hostProject]) {
     assert.doesNotMatch(project, /<GenerateAssemblyInfo>\s*false\s*<\/GenerateAssemblyInfo>/);
-    assert.match(project, /<AssemblyVersion>1\.65\.4\.0<\/AssemblyVersion>/);
-    assert.match(project, /<FileVersion>1\.65\.4\.0<\/FileVersion>/);
-    assert.match(project, /<InformationalVersion>1\.65\.4-(?:launcher65|serverhost38)-csharp<\/InformationalVersion>/);
+    assert.match(project, /<AssemblyVersion>1\.65\.5\.0<\/AssemblyVersion>/);
+    assert.match(project, /<FileVersion>1\.65\.5\.0<\/FileVersion>/);
+    assert.match(project, /<InformationalVersion>1\.65\.5-(?:launcher66|serverhost39)-csharp<\/InformationalVersion>/);
   }
   assert.doesNotMatch(launcherSource, /\[assembly:\s*Assembly(?:Title|Description|Company|Product|Copyright|Version|FileVersion|InformationalVersion)/);
   assert.doesNotMatch(hostSource, /\[assembly:\s*Assembly(?:Title|Description|Company|Product|Copyright|Version|FileVersion|InformationalVersion)/);
@@ -246,4 +246,23 @@ test('Windows Local CA probes use .NET modern CustomRootTrust and keep readiness
   }
   assert.match(host, /readiness timeout detail:/);
   assert.match(host, /probe failed:/);
+});
+
+
+test('Launcher self-starts ServerHost and does not require Startup-folder IPC for authenticated readiness', () => {
+  const launcher = read('windows-launcher/Program.cs');
+  assert.match(launcher, /AttachToServerHost\(\)[\s\S]*?StartExpectedServerHost\(\);[\s\S]*?WaitForServerHostReady/);
+  assert.match(launcher, /private void StartExpectedServerHost\(\)[\s\S]*?FileName = expected[\s\S]*?WorkingDirectory = PortableRoot[\s\S]*?UseShellExecute = false/);
+  assert.match(launcher, /named single-instance mutex makes the duplicate process exit immediately/);
+  assert.doesNotMatch(launcher, /TryAttachReadySession[\s\S]{0,900}IsServerHostIpcAlive\(\)/);
+  assert.doesNotMatch(launcher, /private static bool IsServerHostIpcAlive\(/);
+});
+
+test('Launcher readiness timeout exposes the actual attach and ServerHost startup diagnostics', () => {
+  const launcher = read('windows-launcher/Program.cs');
+  assert.match(launcher, /private string _lastAttachFailure = string\.Empty/);
+  assert.match(launcher, /Diagnostic: " \+ _lastAttachFailure/);
+  assert.match(launcher, /Direct-Xfer-ServerHost-error\.log/);
+  assert.match(launcher, /ServerHost error log:/);
+  assert.match(launcher, /readiness failed: " \+ ex\.GetType\(\)\.Name/);
 });

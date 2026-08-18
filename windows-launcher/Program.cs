@@ -19,15 +19,15 @@ namespace DirectXfer.WindowsLauncher
 {
     internal static class Program
     {
-        internal const string AppVersion = "1.65.4";
-        internal const string RuntimeAppBuild = "1.65.4-launcher65-csharp";
+        internal const string AppVersion = "1.65.5";
+        internal const string RuntimeAppBuild = "1.65.5-launcher66-csharp";
         internal const string ServerHostFileName = "Direct-Xfer.ServerHost.exe";
-        internal const string ServerHostVersion = "1.65.4.0";
+        internal const string ServerHostVersion = "1.65.5.0";
         internal const int DefaultPort = 55750;
         internal const int StartupReadyTimeoutMs = 60000;
         internal const string MutexName = @"Local\DirectXferLauncherInstance";
         internal const string OpenEventName = @"Local\DirectXferLauncherOpen";
-        internal const string ServerHostBuild = "1.65.4-serverhost38-csharp";
+        internal const string ServerHostBuild = "1.65.5-serverhost39-csharp";
         internal const string ServerHostReloadEventName = @"Local\DirectXferServerHostReload";
 
         internal static string ExecutablePath
@@ -127,6 +127,7 @@ namespace DirectXfer.WindowsLauncher
         private int _runtimePort;
         private bool _exiting;
         private bool _disposed;
+        private string _lastAttachFailure = string.Empty;
 
         internal LauncherContext(string[] args)
         {
@@ -387,18 +388,68 @@ namespace DirectXfer.WindowsLauncher
                 return;
             }
 
+            // Do not depend solely on the Startup-folder shortcut or the installer post-run.
+            // Starting the expected ServerHost is safe even when one is already running: its
+            // named single-instance mutex makes the duplicate process exit immediately. This
+            // makes Direct-Xfer self-healing when Windows Startup was disabled, delayed or lost.
+            StartExpectedServerHost();
             Task.Run(() => WaitForServerHostReady(_lifetime.Token));
+        }
+
+        private void StartExpectedServerHost()
+        {
+            try
+            {
+                var expected = Path.GetFullPath(ExpectedServerHostPath);
+                if (!File.Exists(expected))
+                {
+                    _lastAttachFailure = "ServerHost executable not found: " + expected;
+                    return;
+                }
+                if ((File.GetAttributes(expected) & FileAttributes.ReparsePoint) != 0 || !IsAmd64Pe(expected))
+                {
+                    _lastAttachFailure = "ServerHost executable failed local validation: " + expected;
+                    return;
+                }
+                using var process = Process.Start(new ProcessStartInfo
+                {
+                    FileName = expected,
+                    WorkingDirectory = PortableRoot,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    WindowStyle = ProcessWindowStyle.Hidden
+                });
+                if (process == null) _lastAttachFailure = "Windows did not start Direct-Xfer.ServerHost.exe.";
+            }
+            catch (Exception ex)
+            {
+                _lastAttachFailure = "ServerHost start failed: " + ex.GetType().Name + ": " + ex.Message;
+            }
         }
 
         private bool TryAttachReadySession(LauncherSession? session)
         {
-            if (session == null || !string.Equals(session.runtimeBuild, Program.RuntimeAppBuild, StringComparison.Ordinal)) return false;
-            if (!ServerHostFileMatchesSession(session) || !IsServerHostIpcAlive()) return false;
+            if (session == null)
+            {
+                _lastAttachFailure = "No usable launcher-session.json has been published by ServerHost yet.";
+                return false;
+            }
+            if (!string.Equals(session.runtimeBuild, Program.RuntimeAppBuild, StringComparison.Ordinal))
+            {
+                _lastAttachFailure = "Runtime build mismatch: session=" + session.runtimeBuild + ", expected=" + Program.RuntimeAppBuild + ".";
+                return false;
+            }
+            if (!ServerHostFileMatchesSession(session))
+            {
+                _lastAttachFailure = "ServerHost path/build validation failed for the published session.";
+                return false;
+            }
             string usedScheme;
             if (!TryReady(session.port, session.token, session.scheme, session.serverPid, out usedScheme)) return false;
             _runtimePort = session.port;
             _runtimeScheme = usedScheme;
             _token = session.token;
+            _lastAttachFailure = string.Empty;
             return true;
         }
 
@@ -417,8 +468,12 @@ namespace DirectXfer.WindowsLauncher
             }
             if (token.IsCancellationRequested || _exiting) return;
             var details = TailFile(_runtimeLogPath, 4096);
+            var hostErrorPath = Path.Combine(BaseDirectory, "Direct-Xfer-ServerHost-error.log");
+            var hostError = TailFile(hostErrorPath, 4096);
             var body = Tr.ServerHostUnavailable + "\r\n" + Tr.LogLabel + ": " + _runtimeLogPath;
-            if (!string.IsNullOrWhiteSpace(details)) body += "\r\n\r\n" + details;
+            if (!string.IsNullOrWhiteSpace(_lastAttachFailure)) body += "\r\n\r\nDiagnostic: " + _lastAttachFailure;
+            if (!string.IsNullOrWhiteSpace(hostError)) body += "\r\n\r\nServerHost error log:\r\n" + hostError;
+            if (!string.IsNullOrWhiteSpace(details)) body += "\r\n\r\nRuntime log:\r\n" + details;
             Ui(() =>
             {
                 if (_exiting) return;
@@ -437,20 +492,15 @@ namespace DirectXfer.WindowsLauncher
             if (_config.openBrowser && !_exiting) OpenBrowser();
         }
 
-        private static bool IsServerHostIpcAlive()
-        {
-            try
-            {
-                using (var evt = EventWaitHandle.OpenExisting(Program.ServerHostReloadEventName)) return true;
-            }
-            catch (WaitHandleCannotBeOpenedException) { return false; }
-            catch (UnauthorizedAccessException) { return false; }
-        }
-
         private bool TryReady(int port, string token, string preferredScheme, int expectedPid, out string usedScheme)
         {
             usedScheme = preferredScheme;
-            if (port <= 0 || expectedPid <= 0 || string.IsNullOrEmpty(token)) return false;
+            if (port <= 0 || expectedPid <= 0 || string.IsNullOrEmpty(token))
+            {
+                _lastAttachFailure = "Published ServerHost session is incomplete (port/PID/token).";
+                return false;
+            }
+            var lastFailure = string.Empty;
             foreach (var scheme in SchemeCandidates(preferredScheme))
             {
                 try
@@ -460,11 +510,18 @@ namespace DirectXfer.WindowsLauncher
                         response.Body.Contains("\"pid\":" + expectedPid.ToString(CultureInfo.InvariantCulture)))
                     {
                         usedScheme = scheme;
+                        _lastAttachFailure = string.Empty;
                         return true;
                     }
+                    lastFailure = scheme + " readiness returned HTTP " + ((int)response.StatusCode).ToString(CultureInfo.InvariantCulture) +
+                        " for PID " + expectedPid.ToString(CultureInfo.InvariantCulture) + ".";
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    lastFailure = scheme + " readiness failed: " + ex.GetType().Name + ": " + ex.Message;
+                }
             }
+            if (!string.IsNullOrWhiteSpace(lastFailure)) _lastAttachFailure = lastFailure;
             return false;
         }
 

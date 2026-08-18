@@ -24,14 +24,20 @@ test('both Windows apphosts are framework-dependent single-file and resolve only
   }
 });
 
-test('Windows CI publishes framework-dependent EXEs and packages one pinned private Desktop Runtime', () => {
+test('Windows CI publishes framework-dependent EXEs and assembles one pinned private runtime tree from base + WindowsDesktop archives', () => {
   assert.match(workflow, /--self-contained false/);
   assert.doesNotMatch(workflow, /--self-contained true/);
   assert.match(workflow, /DX_DOTNET_DESKTOP_RUNTIME_VERSION: '10\.0\.11'/);
+  assert.match(workflow, /DX_DOTNET_RUNTIME_ZIP_SHA512: 'd9ab9c0d9916b8fa3585b5f403057f594ffffb8364dac09e0007dd8ac671c86754935b980d8fb5da83cb1b82ac3cd57cc407c969e6d837aaa2fae21047cb7448'/);
   assert.match(workflow, /DX_DOTNET_DESKTOP_RUNTIME_ZIP_SHA512: '1d32a9bf6c93f50dee5734048f825998b98266d0e28846dbee0310e2aad7e28fc2251e38ffad6a474a1e57381895130f2b3e1e1a4f875ac7f79271d91c6eb433'/);
+  assert.match(workflow, /builds\.dotnet\.microsoft\.com\/dotnet\/Runtime\/\$env:DX_DOTNET_DESKTOP_RUNTIME_VERSION\/dotnet-runtime-\$env:DX_DOTNET_DESKTOP_RUNTIME_VERSION-win-x64\.zip/);
   assert.match(workflow, /builds\.dotnet\.microsoft\.com\/dotnet\/WindowsDesktop\/\$env:DX_DOTNET_DESKTOP_RUNTIME_VERSION\/windowsdesktop-runtime-\$env:DX_DOTNET_DESKTOP_RUNTIME_VERSION-win-x64\.zip/);
-  assert.match(workflow, /Get-FileHash -Algorithm SHA512 \$dotnetRuntimeZip/);
-  assert.match(workflow, /Expand-Archive -LiteralPath \$dotnetRuntimeZip -DestinationPath \$dotnetRuntime -Force/);
+  assert.match(workflow, /Get-FileHash -Algorithm SHA512 \$dotnetBaseRuntimeZip/);
+  assert.match(workflow, /Get-FileHash -Algorithm SHA512 \$dotnetDesktopRuntimeZip/);
+  assert.match(workflow, /Expand-Archive -LiteralPath \$dotnetBaseRuntimeZip -DestinationPath \$dotnetRuntime -Force/);
+  assert.match(workflow, /Expand-Archive -LiteralPath \$dotnetDesktopRuntimeZip -DestinationPath \$dotnetRuntime -Force/);
+  assert.match(workflow, /WindowsDesktop ZIP is an additive framework/);
+  assert.match(workflow, /does not provide dotnet\.exe\/hostfxr\/Microsoft\.NETCore\.App by itself/);
   assert.match(workflow, /\$dotnetRuntime = Join-Path \$dist 'runtime\\dotnet'/);
   assert.equal((workflow.match(/\$dotnetRuntime = Join-Path \$dist 'runtime\\dotnet'/g) || []).length, 1);
   assert.match(workflow, /Microsoft\.NETCore\.App/);
@@ -65,8 +71,8 @@ test('installer updates and ships the single private runtime without pre-deletin
   assert.match(installer, /CleanupOldPrivateDotNetVersions/);
   assert.match(installer, /Source: "\{#SourceDir\}\\\*"; DestDir: "\{app\}"/);
   assert.doesNotMatch(installer, /HasNet10DesktopRuntime|OfferNet10DesktopRuntimeDownload|DotNet10DesktopRuntimeUrl/);
-  assert.match(portable, /one private shared \.NET 10 Desktop Runtime x64 used by both Windows EXEs/i);
+  assert.match(portable, /one private shared \.NET 10 runtime tree used by both Windows EXEs/i);
   assert.match(portable, /AppHostDotNetSearch=AppRelative/);
-  assert.match(installerReadme, /one private shared \.NET 10 Desktop Runtime/i);
+  assert.match(installerReadme, /one private shared \.NET 10 runtime tree/i);
   assert.match(installerReadme, /runtime\\dotnet/);
 });

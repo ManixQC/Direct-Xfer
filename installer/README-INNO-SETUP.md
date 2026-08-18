@@ -8,7 +8,7 @@ Environment variables used by CI:
 - `DX_INNO_OUTPUT_DIR`
 - `DX_INNO_DOTNET_RUNTIME_VERSION`
 
-The installer targets x64 Windows. `Direct-Xfer.exe` and `Direct-Xfer.ServerHost.exe` are .NET 10 **framework-dependent single-file** apphosts configured for `AppHostDotNetSearch=AppRelative`. The installer carries one private shared .NET 10 Desktop Runtime under `runtime\dotnet`, so users do **not** need to install Microsoft .NET separately and the runtime is not duplicated between the two EXEs.
+The installer targets x64 Windows. `Direct-Xfer.exe` and `Direct-Xfer.ServerHost.exe` are .NET 10 **framework-dependent single-file** apphosts configured for `AppHostDotNetSearch=AppRelative`. The installer carries one private shared .NET 10 runtime tree under `runtime\dotnet`, assembled by CI from the matching Microsoft `dotnet-runtime` and `windowsdesktop-runtime` ZIPs. Users do **not** need to install Microsoft .NET separately and the runtime is not duplicated between the two EXEs.
 
 Direct-Xfer executables remain unsigned by design. The installer also packages the pinned Node.js runtime, rclone and Tesseract runtime assembled by GitHub Actions.
 

@@ -1,5 +1,5 @@
 name: Build Direct-Xfer Windows C# + Installer
-run-name: v1.66.2
+run-name: v1.66.3
 
 on:
   workflow_dispatch:
@@ -26,10 +26,11 @@ jobs:
   build-windows:
     runs-on: windows-2025
     env:
-      DX_VERSION: '1.66.2'
-      DX_RUNTIME_BUILD: '1.66.2-launcher75-csharp'
-      DX_SERVER_HOST_BUILD: '1.66.2-serverhost49-csharp'
+      DX_VERSION: '1.66.3'
+      DX_RUNTIME_BUILD: '1.66.3-launcher76-csharp'
+      DX_SERVER_HOST_BUILD: '1.66.3-serverhost50-csharp'
       DX_DOTNET_DESKTOP_RUNTIME_VERSION: '10.0.11'
+      DX_DOTNET_RUNTIME_ZIP_SHA512: 'd9ab9c0d9916b8fa3585b5f403057f594ffffb8364dac09e0007dd8ac671c86754935b980d8fb5da83cb1b82ac3cd57cc407c969e6d837aaa2fae21047cb7448'
       DX_DOTNET_DESKTOP_RUNTIME_ZIP_SHA512: '1d32a9bf6c93f50dee5734048f825998b98266d0e28846dbee0310e2aad7e28fc2251e38ffad6a474a1e57381895130f2b3e1e1a4f875ac7f79271d91c6eb433'
       DX_NODE_VERSION: '24.19.0'
       DX_NODE_EXE_SHA256: '3602f2bb1a10f2cbab4c36886218a33c1ab3db87290e73b033c46c77147d0237'
@@ -153,16 +154,26 @@ jobs:
           Set-Content -Encoding UTF8 (Join-Path $node 'README.txt') @("Direct-Xfer pinned Node.js $env:DX_NODE_VERSION x64","SHA-256: $nodeHash","Source: nodejs.org")
 
 
-          # Bundle one private .NET 10 Desktop Runtime shared by both framework-dependent
-          # single-file apphosts. The Desktop Runtime includes Microsoft.NETCore.App as
-          # well as Microsoft.WindowsDesktop.App, so Launcher and ServerHost use the same
-          # runtime tree without requiring a machine-wide .NET installation.
-          $dotnetRuntimeZip = Join-Path $env:RUNNER_TEMP "windowsdesktop-runtime-$env:DX_DOTNET_DESKTOP_RUNTIME_VERSION-win-x64.zip"
-          $dotnetRuntimeUrl = "https://builds.dotnet.microsoft.com/dotnet/WindowsDesktop/$env:DX_DOTNET_DESKTOP_RUNTIME_VERSION/windowsdesktop-runtime-$env:DX_DOTNET_DESKTOP_RUNTIME_VERSION-win-x64.zip"
-          Invoke-DxDownload $dotnetRuntimeUrl $dotnetRuntimeZip
-          $dotnetRuntimeHash = (Get-FileHash -Algorithm SHA512 $dotnetRuntimeZip).Hash.ToLowerInvariant()
-          if ($dotnetRuntimeHash -ne $env:DX_DOTNET_DESKTOP_RUNTIME_ZIP_SHA512) { throw "Private .NET Desktop Runtime SHA-512 mismatch: $dotnetRuntimeHash" }
-          Expand-Archive -LiteralPath $dotnetRuntimeZip -DestinationPath $dotnetRuntime -Force
+          # Build one private .NET 10 runtime tree shared by both framework-dependent
+          # single-file apphosts. Microsoft's WindowsDesktop ZIP is an additive framework
+          # archive: it does not provide dotnet.exe/hostfxr/Microsoft.NETCore.App by itself.
+          # Merge the pinned base .NET Runtime ZIP first, then the matching WindowsDesktop
+          # Runtime ZIP into the same runtime\dotnet directory. This keeps one shared tree
+          # without duplicating the runtime inside both Direct-Xfer executables.
+          $dotnetBaseRuntimeZip = Join-Path $env:RUNNER_TEMP "dotnet-runtime-$env:DX_DOTNET_DESKTOP_RUNTIME_VERSION-win-x64.zip"
+          $dotnetBaseRuntimeUrl = "https://builds.dotnet.microsoft.com/dotnet/Runtime/$env:DX_DOTNET_DESKTOP_RUNTIME_VERSION/dotnet-runtime-$env:DX_DOTNET_DESKTOP_RUNTIME_VERSION-win-x64.zip"
+          Invoke-DxDownload $dotnetBaseRuntimeUrl $dotnetBaseRuntimeZip
+          $dotnetBaseRuntimeHash = (Get-FileHash -Algorithm SHA512 $dotnetBaseRuntimeZip).Hash.ToLowerInvariant()
+          if ($dotnetBaseRuntimeHash -ne $env:DX_DOTNET_RUNTIME_ZIP_SHA512) { throw "Private .NET Runtime SHA-512 mismatch: $dotnetBaseRuntimeHash" }
+          Expand-Archive -LiteralPath $dotnetBaseRuntimeZip -DestinationPath $dotnetRuntime -Force
+
+          $dotnetDesktopRuntimeZip = Join-Path $env:RUNNER_TEMP "windowsdesktop-runtime-$env:DX_DOTNET_DESKTOP_RUNTIME_VERSION-win-x64.zip"
+          $dotnetDesktopRuntimeUrl = "https://builds.dotnet.microsoft.com/dotnet/WindowsDesktop/$env:DX_DOTNET_DESKTOP_RUNTIME_VERSION/windowsdesktop-runtime-$env:DX_DOTNET_DESKTOP_RUNTIME_VERSION-win-x64.zip"
+          Invoke-DxDownload $dotnetDesktopRuntimeUrl $dotnetDesktopRuntimeZip
+          $dotnetDesktopRuntimeHash = (Get-FileHash -Algorithm SHA512 $dotnetDesktopRuntimeZip).Hash.ToLowerInvariant()
+          if ($dotnetDesktopRuntimeHash -ne $env:DX_DOTNET_DESKTOP_RUNTIME_ZIP_SHA512) { throw "Private .NET WindowsDesktop Runtime SHA-512 mismatch: $dotnetDesktopRuntimeHash" }
+          Expand-Archive -LiteralPath $dotnetDesktopRuntimeZip -DestinationPath $dotnetRuntime -Force
+
           $privateDotnetExe = Join-Path $dotnetRuntime 'dotnet.exe'
           $privateCore = Join-Path $dotnetRuntime "shared\Microsoft.NETCore.App\$env:DX_DOTNET_DESKTOP_RUNTIME_VERSION"
           $privateDesktop = Join-Path $dotnetRuntime "shared\Microsoft.WindowsDesktop.App\$env:DX_DOTNET_DESKTOP_RUNTIME_VERSION"
@@ -177,9 +188,12 @@ jobs:
           if (-not ($privateRuntimeLines | Where-Object { $_ -match "^Microsoft\.NETCore\.App\s+$escapedDotnetVersion\s+\[" })) { throw "Private runtime is missing Microsoft.NETCore.App $env:DX_DOTNET_DESKTOP_RUNTIME_VERSION" }
           if (-not ($privateRuntimeLines | Where-Object { $_ -match "^Microsoft\.WindowsDesktop\.App\s+$escapedDotnetVersion\s+\[" })) { throw "Private runtime is missing Microsoft.WindowsDesktop.App $env:DX_DOTNET_DESKTOP_RUNTIME_VERSION" }
           [System.IO.File]::WriteAllLines((Join-Path $dotnetRuntime 'DIRECT-XFER-README.txt'), @(
-            "Direct-Xfer private shared .NET Desktop Runtime $env:DX_DOTNET_DESKTOP_RUNTIME_VERSION x64",
-            "Archive SHA-512: $dotnetRuntimeHash",
-            "Source: $dotnetRuntimeUrl",
+            "Direct-Xfer private shared .NET 10 runtime tree $env:DX_DOTNET_DESKTOP_RUNTIME_VERSION x64",
+            "Base Runtime SHA-512: $dotnetBaseRuntimeHash",
+            "Base Runtime source: $dotnetBaseRuntimeUrl",
+            "WindowsDesktop Runtime SHA-512: $dotnetDesktopRuntimeHash",
+            "WindowsDesktop Runtime source: $dotnetDesktopRuntimeUrl",
+            "The two official Microsoft archives are merged into this single runtime tree.",
             "Used by both Direct-Xfer.exe and Direct-Xfer.ServerHost.exe via AppHostDotNetSearch=AppRelative"
           ), [System.Text.Encoding]::UTF8)
 
@@ -432,11 +446,11 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed: $LASTEXITCODE" }
       - uses: actions/upload-artifact@v6
         with:
-          name: Direct-Xfer-1.66.2-Windows-CSharp
-          path: dist/Direct-Xfer-1.66.2-Windows-CSharp/**
+          name: Direct-Xfer-1.66.3-Windows-CSharp
+          path: dist/Direct-Xfer-1.66.3-Windows-CSharp/**
           if-no-files-found: error
       - uses: actions/upload-artifact@v6
         with:
-          name: Direct-Xfer-Setup-1.66.2
-          path: dist/installer/Direct-Xfer-Setup-1.66.2.exe
+          name: Direct-Xfer-Setup-1.66.3
+          path: dist/installer/Direct-Xfer-Setup-1.66.3.exe
           if-no-files-found: error

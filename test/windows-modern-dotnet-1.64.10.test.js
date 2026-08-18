@@ -69,7 +69,7 @@ test('modern .NET SDK is pinned and projects do not depend on obsolete Framework
   }
   const portableReadme = read('windows-launcher/README-WINDOWS-PORTABLE.md');
   assert.match(portableReadme, /framework-dependent single-file for win-x64/i);
-  assert.match(portableReadme, /one private \.NET 10 Desktop Runtime x64/i);
+  assert.match(portableReadme, /one private \.NET 10 runtime tree x64/i);
   assert.match(portableReadme, /No separate Microsoft \.NET Runtime or Desktop Runtime installation is required/i);
   assert.doesNotMatch(portableReadme, /winget install Microsoft\.DotNet\.DesktopRuntime|dotnet\.microsoft\.com\/en-us\/download\/dotnet/);
   const installer = read('installer/Direct-Xfer.iss');
@@ -153,7 +153,7 @@ test('Windows installer ships a private shared .NET runtime and has no external 
   assert.doesNotMatch(installer, /HasNet10DesktopRuntime|OfferNet10DesktopRuntimeDownload|InitializeSetup/);
   assert.match(installer, /runtime\\dotnet/);
   assert.match(installerReadme, /framework-dependent single-file/i);
-  assert.match(installerReadme, /one private shared \.NET 10 Desktop Runtime/i);
+  assert.match(installerReadme, /one private shared \.NET 10 runtime tree/i);
   assert.match(installerReadme, /do \*\*not\*\* need to install Microsoft \.NET separately/i);
 });
 
@@ -199,9 +199,9 @@ test('SDK-generated assembly metadata replaces manual assembly attributes', () =
   const hostSource = read('windows-server-host/Program.cs');
   for (const project of [launcherProject, hostProject]) {
     assert.doesNotMatch(project, /<GenerateAssemblyInfo>\s*false\s*<\/GenerateAssemblyInfo>/);
-    assert.match(project, /<AssemblyVersion>1\.66\.2\.0<\/AssemblyVersion>/);
-    assert.match(project, /<FileVersion>1\.66\.2\.0<\/FileVersion>/);
-    assert.match(project, /<InformationalVersion>1\.66\.2-(?:launcher75|serverhost49)-csharp<\/InformationalVersion>/);
+    assert.match(project, /<AssemblyVersion>1\.66\.3\.0<\/AssemblyVersion>/);
+    assert.match(project, /<FileVersion>1\.66\.3\.0<\/FileVersion>/);
+    assert.match(project, /<InformationalVersion>1\.66\.3-(?:launcher76|serverhost50)-csharp<\/InformationalVersion>/);
   }
   assert.doesNotMatch(launcherSource, /\[assembly:\s*Assembly(?:Title|Description|Company|Product|Copyright|Version|FileVersion|InformationalVersion)/);
   assert.doesNotMatch(hostSource, /\[assembly:\s*Assembly(?:Title|Description|Company|Product|Copyright|Version|FileVersion|InformationalVersion)/);

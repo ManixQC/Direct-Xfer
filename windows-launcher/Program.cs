@@ -19,15 +19,15 @@ namespace DirectXfer.WindowsLauncher
 {
     internal static class Program
     {
-        internal const string AppVersion = "1.66.2";
-        internal const string RuntimeAppBuild = "1.66.2-launcher75-csharp";
+        internal const string AppVersion = "1.66.3";
+        internal const string RuntimeAppBuild = "1.66.3-launcher76-csharp";
         internal const string ServerHostFileName = "Direct-Xfer.ServerHost.exe";
-        internal const string ServerHostVersion = "1.66.2.0";
+        internal const string ServerHostVersion = "1.66.3.0";
         internal const int DefaultPort = 55750;
         internal const int StartupReadyTimeoutMs = 60000;
         internal const string MutexName = @"Local\DirectXferLauncherInstance";
         internal const string OpenEventName = @"Local\DirectXferLauncherOpen";
-        internal const string ServerHostBuild = "1.66.2-serverhost49-csharp";
+        internal const string ServerHostBuild = "1.66.3-serverhost50-csharp";
         internal const string ServerHostReloadEventName = @"Local\DirectXferServerHostReload";
 
         internal static string ExecutablePath

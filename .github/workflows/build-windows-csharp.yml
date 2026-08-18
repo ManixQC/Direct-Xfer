@@ -1,5 +1,5 @@
 name: Build Direct-Xfer Windows C# + Installer
-run-name: v1.66.3
+run-name: v1.66.4
 
 on:
   workflow_dispatch:
@@ -18,6 +18,7 @@ on:
       - 'security/**'
       - 'test/**'
       - '.github/workflows/build-windows-csharp.yml'
+      - '.github/scripts/**'
 
 permissions:
   contents: read
@@ -26,9 +27,9 @@ jobs:
   build-windows:
     runs-on: windows-2025
     env:
-      DX_VERSION: '1.66.3'
-      DX_RUNTIME_BUILD: '1.66.3-launcher76-csharp'
-      DX_SERVER_HOST_BUILD: '1.66.3-serverhost50-csharp'
+      DX_VERSION: '1.66.4'
+      DX_RUNTIME_BUILD: '1.66.4-launcher77-csharp'
+      DX_SERVER_HOST_BUILD: '1.66.4-serverhost51-csharp'
       DX_DOTNET_DESKTOP_RUNTIME_VERSION: '10.0.11'
       DX_DOTNET_RUNTIME_ZIP_SHA512: 'd9ab9c0d9916b8fa3585b5f403057f594ffffb8364dac09e0007dd8ac671c86754935b980d8fb5da83cb1b82ac3cd57cc407c969e6d837aaa2fae21047cb7448'
       DX_DOTNET_DESKTOP_RUNTIME_ZIP_SHA512: '1d32a9bf6c93f50dee5734048f825998b98266d0e28846dbee0310e2aad7e28fc2251e38ffad6a474a1e57381895130f2b3e1e1a4f875ac7f79271d91c6eb433'
@@ -40,6 +41,8 @@ jobs:
       DX_TESSERACT_PACKAGE_VERSION: '5.5.3.20260724'
       DX_TESSERACT_SETUP_SHA256: 'bee9e3434bd94fd65387d9be28cd467a41f61b1275383b55b0f59a1331270ae4'
       DX_TESSDATA_FAST_COMMIT: '87416418657359cb625c412a48b6e1d6d41c29bd'
+      DX_NODE_MODULES_BUDGET_MB: '35'
+      DX_TESSERACT_RUNTIME_BUDGET_MB: '100'
       INNO_VERSION: '6.7.3'
     steps:
       - uses: actions/checkout@v7
@@ -137,7 +140,46 @@ jobs:
           Copy-Item 'build\windows-dotnet10\server-host\Direct-Xfer.ServerHost.exe' $dist
           Copy-Item 'windows-launcher\README-WINDOWS-PORTABLE.md' (Join-Path $dist 'README-WINDOWS-PORTABLE.md')
           Copy-Item @('package.json','package-lock.json','server.js') $app
-          Copy-Item @('lib','public','pwa','scripts','security','node_modules') $app -Recurse
+          Copy-Item @('lib','public','pwa','scripts','security') $app -Recurse
+
+          # Build a dedicated production dependency tree. Never copy the workspace's
+          # test/development node_modules into the Windows runtime: future devDependencies
+          # must not silently inflate the installer. npm ci keeps this tree locked to
+          # package-lock.json; the conservative metadata prune keeps runtime code/licenses.
+          $repoRoot = $PWD.Path
+          Push-Location $app
+          try {
+            npm ci --omit=dev --ignore-scripts --no-audit --no-fund
+            if ($LASTEXITCODE -ne 0) { throw "Production node_modules install failed: $LASTEXITCODE" }
+          } finally {
+            Pop-Location
+          }
+          $runtimeNodeModules = Join-Path $app 'node_modules'
+          & (Join-Path $repoRoot '.github\scripts\prune-windows-node-modules.ps1') -NodeModulesPath $runtimeNodeModules
+
+          # Import every direct production dependency from the pruned tree. This catches an
+          # over-aggressive prune before the package reaches Inno Setup. Dynamic import works
+          # for both CommonJS dependencies and Archiver 8's ESM entrypoint.
+          $moduleProbe = @(
+            "(async () => {",
+            "  const dependencies = Object.keys(require('./package.json').dependencies || {});",
+            "  for (const name of dependencies) await import(name);",
+            "  console.log('Direct-Xfer runtime module probe OK: ' + dependencies.join(', '));",
+            "})().catch((error) => { console.error(error); process.exit(1); });"
+          ) -join "`n"
+          Push-Location $app
+          try {
+            node -e $moduleProbe
+            if ($LASTEXITCODE -ne 0) { throw "Pruned node_modules runtime probe failed: $LASTEXITCODE" }
+          } finally {
+            Pop-Location
+          }
+          $runtimeNodeModulesBytes = (Get-ChildItem -LiteralPath $runtimeNodeModules -Recurse -File -Force | Measure-Object Length -Sum).Sum
+          $runtimeNodeModulesBudget = [int64]$env:DX_NODE_MODULES_BUDGET_MB * 1MB
+          if ([int64]$runtimeNodeModulesBytes -gt $runtimeNodeModulesBudget) {
+            throw ("node_modules runtime exceeds the Direct-Xfer size budget: {0:N1} MiB > {1} MiB" -f ($runtimeNodeModulesBytes / 1MB), $env:DX_NODE_MODULES_BUDGET_MB)
+          }
+
           $marker = Join-Path $app 'runtime-build.txt'
           # Use File.WriteAllText instead of positional Set-Content binding. This is deterministic
           # on Windows PowerShell/PowerShell 7 and guarantees that the marker is materialized
@@ -245,8 +287,30 @@ jobs:
           if ($tessInstall.ExitCode -ne 0) { throw "Tesseract silent extraction/install failed: $($tessInstall.ExitCode)" }
           $tesseractStageExe = Join-Path $tesseractStage 'tesseract.exe'
           if (-not (Test-Path -LiteralPath $tesseractStageExe -PathType Leaf)) { throw "Tesseract installer did not create tesseract.exe in $tesseractStage" }
-          Copy-Item -Path (Join-Path $tesseractStage '*') -Destination $tesseract -Recurse -Force
+
+          # Keep a lean portable OCR runtime instead of copying the complete installer tree.
+          # Tesseract and its MinGW dependencies live as PE files/DLLs; language data is
+          # downloaded separately below. Preserve license/notice material but discard the
+          # installer, bundled docs, examples and unrelated tessdata.
           $tesseractExe = Join-Path $tesseract 'tesseract.exe'
+          Copy-Item -LiteralPath $tesseractStageExe -Destination $tesseractExe -Force
+          $tesseractDlls = @(Get-ChildItem -LiteralPath $tesseractStage -Recurse -Filter '*.dll' -File)
+          if ($tesseractDlls.Count -eq 0) { throw 'Tesseract portable extraction contains no runtime DLLs.' }
+          foreach ($dll in $tesseractDlls) {
+            $relativeDll = [System.IO.Path]::GetRelativePath($tesseractStage, $dll.FullName)
+            $destinationDll = Join-Path $tesseract $relativeDll
+            New-Item -ItemType Directory -Force -Path (Split-Path -Parent $destinationDll) | Out-Null
+            Copy-Item -LiteralPath $dll.FullName -Destination $destinationDll -Force
+          }
+          $noticeFiles = @(Get-ChildItem -LiteralPath $tesseractStage -Recurse -File | Where-Object {
+            $_.Name -match '(?i)^(license|licence|copying|notice|copyright)([._ -].*)?$'
+          })
+          foreach ($notice in $noticeFiles) {
+            $relativeNotice = [System.IO.Path]::GetRelativePath($tesseractStage, $notice.FullName)
+            $destinationNotice = Join-Path (Join-Path $tesseract 'licenses') $relativeNotice
+            New-Item -ItemType Directory -Force -Path (Split-Path -Parent $destinationNotice) | Out-Null
+            Copy-Item -LiteralPath $notice.FullName -Destination $destinationNotice -Force
+          }
           $tessdataDir = Join-Path $tesseract 'tessdata'
           New-Item -ItemType Directory -Force -Path $tessdataDir | Out-Null
           foreach ($lang in @('eng','fra','spa')) {
@@ -277,8 +341,22 @@ jobs:
             "Setup SHA-256: $tesseractSetupHash",
             "Source: $tesseractUrl",
             "tessdata_fast commit: $env:DX_TESSDATA_FAST_COMMIT",
-            "Bundled OCR languages: eng, fra, spa"
+            "Bundled OCR languages: eng, fra, spa",
+            "Packaging: minimal portable runtime (tesseract.exe + runtime DLLs + licenses + selected tessdata)"
           ), [System.Text.Encoding]::UTF8)
+          $tesseractRuntimeBytes = (Get-ChildItem -LiteralPath $tesseract -Recurse -File -Force | Measure-Object Length -Sum).Sum
+          $tesseractRuntimeBudget = [int64]$env:DX_TESSERACT_RUNTIME_BUDGET_MB * 1MB
+          if ([int64]$tesseractRuntimeBytes -gt $tesseractRuntimeBudget) {
+            throw ("Tesseract runtime exceeds the Direct-Xfer size budget: {0:N1} MiB > {1} MiB" -f ($tesseractRuntimeBytes / 1MB), $env:DX_TESSERACT_RUNTIME_BUDGET_MB)
+          }
+          Write-Host ("Direct-Xfer optimized Windows payload: node_modules={0:N1} MiB; Tesseract={1:N1} MiB" -f ($runtimeNodeModulesBytes / 1MB), ($tesseractRuntimeBytes / 1MB))
+          if ($env:GITHUB_STEP_SUMMARY) {
+            Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Value @(
+              '### Direct-Xfer Windows runtime footprint',
+              "- production node_modules: $([math]::Round($runtimeNodeModulesBytes / 1MB, 1)) MiB (budget $env:DX_NODE_MODULES_BUDGET_MB MiB)",
+              "- minimal Tesseract runtime: $([math]::Round($tesseractRuntimeBytes / 1MB, 1)) MiB (budget $env:DX_TESSERACT_RUNTIME_BUDGET_MB MiB)"
+            )
+          }
 
           # Re-materialize the marker as the final operation of package assembly so later
           # validation cannot observe a partially prepared runtime tree.
@@ -446,11 +524,11 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed: $LASTEXITCODE" }
       - uses: actions/upload-artifact@v6
         with:
-          name: Direct-Xfer-1.66.3-Windows-CSharp
-          path: dist/Direct-Xfer-1.66.3-Windows-CSharp/**
+          name: Direct-Xfer-1.66.4-Windows-CSharp
+          path: dist/Direct-Xfer-1.66.4-Windows-CSharp/**
           if-no-files-found: error
       - uses: actions/upload-artifact@v6
         with:
-          name: Direct-Xfer-Setup-1.66.3
-          path: dist/installer/Direct-Xfer-Setup-1.66.3.exe
+          name: Direct-Xfer-Setup-1.66.4
+          path: dist/installer/Direct-Xfer-Setup-1.66.4.exe
           if-no-files-found: error

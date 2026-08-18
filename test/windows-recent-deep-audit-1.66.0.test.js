@@ -38,11 +38,11 @@ test('ServerHost validates bundled helper executables before selecting them', ()
   assert.match(host, /PortableHelperUsable\(string path, string arguments, params string\[\] expectedPrefixes\)/);
   assert.match(host, /FileAttributes\.ReparsePoint[\s\S]*?!IsAmd64Pe\(full\)/);
   assert.match(host, /BundledRcloneUsable\(\)[\s\S]*?"rclone v" \+ Program\.RcloneVersion/);
-  assert.match(host, /BundledTesseractUsable\(\)[\s\S]*?"tesseract " \+ Program\.TesseractVersion[\s\S]*?"tesseract v" \+ Program\.TesseractVersion/);
+  assert.match(host, /BundledTesseractUsable\(IEnumerable<string> requiredLanguages\)[\s\S]*?"tesseract " \+ Program\.TesseractVersion[\s\S]*?"tesseract v" \+ Program\.TesseractVersion/);
   assert.match(host, /foreach \(var language in new\[\] \{ "eng", "fra", "spa" \}\)/);
   assert.match(host, /language \+ "\.traineddata"[\s\S]*?Length < 100 \* 1024/);
   assert.match(host, /bundled rclone failed validation; falling back to PATH/);
-  assert.match(host, /bundled Tesseract failed validation; falling back to PATH/);
+  assert.match(host, /bundled Tesseract cannot satisfy the requested OCR languages[\s\S]*?falling back to PATH/);
 });
 
 test('Windows CI has bounded probes, bounded Tesseract setup and retried downloads', () => {

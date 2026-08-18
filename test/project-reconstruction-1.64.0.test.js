@@ -24,14 +24,15 @@ test('source tree does not keep a redundant prebuilt Windows runtime', () => {
   assert.match(workflow, /runtime\\app/);
   assert.match(workflow, /runtime\\node/);
   assert.ok(workflow.includes("Copy-Item @('package.json','package-lock.json','server.js') $app"));
-  assert.ok(workflow.includes("Copy-Item @('lib','public','pwa','scripts','security','node_modules') $app -Recurse"));
+  assert.ok(workflow.includes("Copy-Item @('lib','public','pwa','scripts','security') $app -Recurse"));
+  assert.match(workflow, /npm ci --omit=dev --ignore-scripts --no-audit --no-fund/);
 });
-test('Windows metadata targets 1.66.3 and current runtime hashes', () => {
+test('Windows metadata targets 1.66.4 and current runtime hashes', () => {
   const launcher = read('windows-launcher/Program.cs');
   const host = read('windows-server-host/Program.cs');
-  assert.match(launcher, /AppVersion = "1\.66\.3"/);
-  assert.match(launcher, /RuntimeAppBuild = "1\.66\.3-launcher76-csharp"/);
-  assert.match(host, /HostVersion = "1\.66\.3-serverhost50-csharp"/);
+  assert.match(launcher, /AppVersion = "1\.66\.4"/);
+  assert.match(launcher, /RuntimeAppBuild = "1\.66\.4-launcher77-csharp"/);
+  assert.match(host, /HostVersion = "1\.66\.4-serverhost51-csharp"/);
   for (const rel of ['package.json','package-lock.json','server.js','lib/server/public-pages.js','lib/server/tls-manager.js','lib/server/network-services.js','lib/server/notification-service.js','lib/server/backup-service.js','public/app.js','pwa/app.js']) {
     assert.ok(host.includes(normalizedSha(rel)), rel + ' hash');
   }
@@ -50,7 +51,7 @@ test('forbidden generated project files are absent', () => {
   assert.deepEqual(forbidden, []);
 });
 
-test('Windows GitHub Actions run name follows Direct-Xfer 1.66.3', () => {
+test('Windows GitHub Actions run name follows Direct-Xfer 1.66.4', () => {
   const workflow = read('.github/workflows/build-windows-csharp.yml');
-  assert.match(workflow, /^run-name: v1\.66\.3$/m);
+  assert.match(workflow, /^run-name: v1\.66\.4$/m);
 });

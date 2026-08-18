@@ -19,15 +19,15 @@ namespace DirectXfer.WindowsLauncher
 {
     internal static class Program
     {
-        internal const string AppVersion = "1.66.3";
-        internal const string RuntimeAppBuild = "1.66.3-launcher76-csharp";
+        internal const string AppVersion = "1.66.4";
+        internal const string RuntimeAppBuild = "1.66.4-launcher77-csharp";
         internal const string ServerHostFileName = "Direct-Xfer.ServerHost.exe";
-        internal const string ServerHostVersion = "1.66.3.0";
+        internal const string ServerHostVersion = "1.66.4.0";
         internal const int DefaultPort = 55750;
         internal const int StartupReadyTimeoutMs = 60000;
         internal const string MutexName = @"Local\DirectXferLauncherInstance";
         internal const string OpenEventName = @"Local\DirectXferLauncherOpen";
-        internal const string ServerHostBuild = "1.66.3-serverhost50-csharp";
+        internal const string ServerHostBuild = "1.66.4-serverhost51-csharp";
         internal const string ServerHostReloadEventName = @"Local\DirectXferServerHostReload";
 
         internal static string ExecutablePath
@@ -326,7 +326,11 @@ namespace DirectXfer.WindowsLauncher
             get
             {
                 var overridden = Environment.GetEnvironmentVariable("DX_WINDOWS_PORTABLE_ROOT");
-                if (!string.IsNullOrWhiteSpace(overridden)) return Path.GetFullPath(overridden.Trim());
+                if (!string.IsNullOrWhiteSpace(overridden))
+                {
+                    try { return Path.GetFullPath(overridden.Trim()); }
+                    catch { /* Invalid optional override: fall back to the packaged executable directory. */ }
+                }
                 return Program.ExecutableDirectory;
             }
         }
@@ -510,8 +514,11 @@ namespace DirectXfer.WindowsLauncher
                 try
                 {
                     var response = LauncherRequest("GET", port, "/__dx_launcher/ready", token, scheme, 2000, LocalCaCertificatePath);
-                    if (response.StatusCode == HttpStatusCode.OK && response.Body.Contains("\"ok\":true") &&
-                        response.Body.Contains("\"pid\":" + expectedPid.ToString(CultureInfo.InvariantCulture)))
+                    var payload = Json.Deserialize<Dictionary<string, object?>>(response.Body);
+                    var ready = response.StatusCode == HttpStatusCode.OK && GetBool(payload, "ok") &&
+                        string.Equals(GetString(payload, "app"), "Direct-Xfer", StringComparison.Ordinal) &&
+                        GetInt32(payload, "pid") == expectedPid;
+                    if (ready)
                     {
                         usedScheme = scheme;
                         _lastAttachFailure = string.Empty;
@@ -703,6 +710,14 @@ namespace DirectXfer.WindowsLauncher
             object? value;
             return payload != null && payload.TryGetValue(key, out value) && value != null
                 ? Convert.ToString(value, CultureInfo.InvariantCulture) : null;
+        }
+
+        private static int GetInt32(IDictionary<string, object?>? payload, string key)
+        {
+            object? value;
+            if (payload == null || !payload.TryGetValue(key, out value) || value == null) return 0;
+            try { return Convert.ToInt32(value, CultureInfo.InvariantCulture); }
+            catch { return 0; }
         }
 
         private void OpenBrowser()

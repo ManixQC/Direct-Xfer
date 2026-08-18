@@ -19,9 +19,9 @@ namespace DirectXfer.WindowsServerHost
 {
     internal static class Program
     {
-        internal const string AppVersion = "1.66.3";
-        internal const string RuntimeAppBuild = "1.66.3-launcher76-csharp";
-        internal const string HostVersion = "1.66.3-serverhost50-csharp";
+        internal const string AppVersion = "1.66.4";
+        internal const string RuntimeAppBuild = "1.66.4-launcher77-csharp";
+        internal const string HostVersion = "1.66.4-serverhost51-csharp";
         internal const int DefaultPort = 55750;
         internal const int MaxFallbackPort = 55769;
         internal const int StartupReadyTimeoutMs = 60000;
@@ -110,8 +110,8 @@ namespace DirectXfer.WindowsServerHost
         private static readonly IDictionary<string, string> CriticalRuntimeSha256 =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                { "package.json", "5241651f8f78cd80f4d20efb9414ef0f1ae270a847a5a92ccd970066daba571d" },
-                { "package-lock.json", "f638739793a7fd03b64d56a3be6686afad1395c3118e921141b1b9f364ebc0a2" },
+                { "package.json", "bd320382063f5dd038fa281acb9f111844186dbece574ca884a05fd049757d2d" },
+                { "package-lock.json", "667064b9c0691a60299e55395031563f375a8f90d010a620e9bd10273c5e9c50" },
                 { "server.js", "355346095ee8975d19edaca57d88647e71ed9e57580ad069d025bcb4871b9e32" },
                 { "lib/server/public-pages.js", "96954ccf1705f068c5579806c69f4f1d56916c2a803d1fc160be874c908f0615" },
                 { "lib/server/tls-manager.js", "b82a1b195b6cb36d47d8d431b890e0479aaf9ca8d47f98e8ef9e046390610f7f" },
@@ -119,7 +119,7 @@ namespace DirectXfer.WindowsServerHost
                 { "lib/server/backup-service.js", "65cb07c147b326475a833be6cbc668db733fc8183ec0b4eec919a876b3f04bc2" },
                 { "lib/server/notification-service.js", "a55beb8d5fdb09754eeb7f7d01974896efaad20dde3b9cf00e83bf4f7a7b9baa" },
                 { "public/app.js", "d50010dbae1548634d8bf1f711d301cd1d20d6ca2e2b5b2f76dee5ae632e6350" },
-                { "pwa/app.js", "5ceeed84653b05ec8c4ea0abcf87a27b03743273794e08f4a39a239ddd7c650a" },
+                { "pwa/app.js", "f4ecb9099da68845377d108f5d62df65ba7c2a9274b70301b2844c8c5719abdf" },
                 { "lib/dlp-utils.js", "dd4d15a3ebb1cc2e7183e9b68434cf69d50532f54fcbb9e90b5ffeb0cfdad086" },
                 { "lib/fd-utils.js", "322abf15ce7a15310d6d27ac1b0ca40892658d5f21198510f7e84b78b0070b13" },
                 { "pwa/dlp-local.js", "246267542621fc92f759438b2295b87f777ba6d6aa88b3c4d23dea25aebe7390" },
@@ -179,7 +179,11 @@ namespace DirectXfer.WindowsServerHost
             get
             {
                 var overridden = Environment.GetEnvironmentVariable("DX_WINDOWS_PORTABLE_ROOT");
-                if (!string.IsNullOrWhiteSpace(overridden)) return Path.GetFullPath(overridden.Trim());
+                if (!string.IsNullOrWhiteSpace(overridden))
+                {
+                    try { return Path.GetFullPath(overridden.Trim()); }
+                    catch { /* Invalid optional override: fall back to the packaged executable directory. */ }
+                }
                 return Program.ExecutableDirectory;
             }
         }
@@ -498,7 +502,9 @@ namespace DirectXfer.WindowsServerHost
             foreach (var value in new[] { env, Path.Combine(RuntimeRoot, "app") })
             {
                 if (string.IsNullOrWhiteSpace(value)) continue;
-                var full = Path.GetFullPath(value.Trim());
+                string full;
+                try { full = Path.GetFullPath(value.Trim()); }
+                catch { continue; }
                 if (seen.Add(full)) yield return full;
             }
         }
@@ -614,6 +620,23 @@ namespace DirectXfer.WindowsServerHost
             catch { return false; }
         }
 
+        private static string[] RequestedOcrLanguages(ProcessStartInfo start)
+        {
+            string raw = string.Empty;
+            try
+            {
+                if (start.EnvironmentVariables.ContainsKey("SEARCH_OCR_LANGS"))
+                    raw = (start.EnvironmentVariables["SEARCH_OCR_LANGS"] ?? string.Empty).Trim().ToLowerInvariant();
+            }
+            catch { raw = string.Empty; }
+
+            var parts = raw.Split(new[] { '+' }, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length < 1 || parts.Length > 6 || parts.Any(part =>
+                part.Length != 3 || part.Any(ch => ch < 'a' || ch > 'z')))
+                return new[] { "fra", "eng" };
+            return parts.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        }
+
         private static bool PortableHelperUsable(string path, string arguments, params string[] expectedPrefixes)
         {
             try
@@ -661,7 +684,7 @@ namespace DirectXfer.WindowsServerHost
             return PortableHelperUsable(PortableRclonePath, "version", "rclone v" + Program.RcloneVersion);
         }
 
-        private static bool BundledTesseractUsable()
+        private static bool BundledTesseractUsable(IEnumerable<string> requiredLanguages)
         {
             if (!PortableHelperUsable(PortableTesseractPath, "--version",
                 "tesseract " + Program.TesseractVersion,
@@ -669,6 +692,16 @@ namespace DirectXfer.WindowsServerHost
             try
             {
                 foreach (var language in new[] { "eng", "fra", "spa" })
+                {
+                    var model = Path.Combine(PortableTessdataPath, language + ".traineddata");
+                    if (!File.Exists(model) || new FileInfo(model).Length < 100 * 1024) return false;
+                }
+                var requested = (requiredLanguages ?? Array.Empty<string>())
+                    .Where(language => !string.IsNullOrWhiteSpace(language))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
+                if (requested.Length == 0) requested = new[] { "fra", "eng" };
+                foreach (var language in requested)
                 {
                     var model = Path.Combine(PortableTessdataPath, language + ".traineddata");
                     if (!File.Exists(model) || new FileInfo(model).Length < 100 * 1024) return false;
@@ -702,7 +735,7 @@ namespace DirectXfer.WindowsServerHost
                     .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
                     .Select(line => line.Trim())
                     .ToHashSet(StringComparer.OrdinalIgnoreCase);
-                return new[] { "eng", "fra", "spa" }.All(languages.Contains);
+                return new[] { "eng", "fra", "spa" }.All(languages.Contains) && requested.All(languages.Contains);
             }
             catch { return false; }
         }
@@ -832,9 +865,10 @@ namespace DirectXfer.WindowsServerHost
                 start.EnvironmentVariables["RCLONE_CONFIG"] = Path.Combine(config.dataDir, "rclone", "rclone.conf");
 
             var usingBundledTesseract = false;
+            var requestedOcrLanguages = RequestedOcrLanguages(start);
             if (!HasNonEmptyEnvironmentVariable(start, "SEARCH_OCR_TESSERACT_BIN") && File.Exists(PortableTesseractPath))
             {
-                if (BundledTesseractUsable())
+                if (BundledTesseractUsable(requestedOcrLanguages))
                 {
                     start.EnvironmentVariables["SEARCH_OCR_TESSERACT_BIN"] = PortableTesseractPath;
                     usingBundledTesseract = true;
@@ -842,7 +876,8 @@ namespace DirectXfer.WindowsServerHost
                 else
                 {
                     start.EnvironmentVariables["SEARCH_OCR_TESSERACT_BIN"] = "tesseract";
-                    AppendLog("[server-host] bundled Tesseract failed validation; falling back to PATH.");
+                    AppendLog("[server-host] bundled Tesseract cannot satisfy the requested OCR languages (" +
+                        string.Join("+", requestedOcrLanguages) + "); falling back to PATH.");
                 }
             }
             if (usingBundledTesseract && !HasNonEmptyEnvironmentVariable(start, "TESSDATA_PREFIX"))

@@ -192,3 +192,21 @@ test('modern Windows C# nullability contracts match runtime-optional values', ()
   assert.match(launcher, /var token = _token;[\s\S]*?string\.IsNullOrEmpty\(token\)/);
   assert.doesNotMatch(launcher, /LauncherRequestAnyScheme\([^;]*_token,/s);
 });
+
+test('Windows C# source eliminates the remaining nullable and unused-field warnings seen in CI', () => {
+  const launcher = read('windows-launcher/Program.cs');
+  const host = read('windows-server-host/Program.cs');
+
+  // Text resources are created through object initializers, but every field still has a safe
+  // default so nullable analysis never treats a partially initialized Texts instance as invalid.
+  assert.match(launcher, /internal string AppTitle = string\.Empty,[\s\S]*?Stop = string\.Empty;/);
+  assert.match(launcher, /internal string FirstRunTitle = string\.Empty,[\s\S]*?PickImages = string\.Empty;/);
+  assert.match(launcher, /internal string InitialPasswordLabel = string\.Empty,[\s\S]*?InitialPasswordOK = string\.Empty;/);
+
+  // ServerHost does not consume this launcher-only preference, so it must not keep a dead field.
+  assert.doesNotMatch(host, /public bool openBrowser\s*;/);
+
+  // Shutdown is best-effort: only call the authenticated endpoint when a token is actually present.
+  assert.match(host, /var token = _token;[\s\S]*?if \(!string\.IsNullOrWhiteSpace\(token\)\)[\s\S]*?LauncherRequest\("POST", _port, "\/__dx_launcher\/shutdown", token,/);
+  assert.doesNotMatch(host, /LauncherRequest\("POST", _port, "\/__dx_launcher\/shutdown", _token,/);
+});

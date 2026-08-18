@@ -855,12 +855,12 @@ namespace DirectXfer.WindowsLauncher
 
     internal sealed class Texts
     {
-        internal string AppTitle, Open, Logs, Configure, ResetAdminPassword, Language, Stop;
-        internal string FirstRunTitle, FirstRunBody, PickHost, PickInbox, PickImages;
-        internal string ConfigSaved, ConfigSavedRestart, StartError, ServerStopped, ServerHostUnavailable, LogLabel, PortFallback, NoFreePort;
-        internal string ResetPasswordError, ResetPasswordEnvManaged;
-        internal string InitialPasswordTitle, InitialPasswordError, InitialPasswordIntro, InitialPasswordAccount;
-        internal string InitialPasswordLabel, InitialPasswordSave, InitialPasswordCopy, InitialPasswordOK;
+        internal string AppTitle = string.Empty, Open = string.Empty, Logs = string.Empty, Configure = string.Empty, ResetAdminPassword = string.Empty, Language = string.Empty, Stop = string.Empty;
+        internal string FirstRunTitle = string.Empty, FirstRunBody = string.Empty, PickHost = string.Empty, PickInbox = string.Empty, PickImages = string.Empty;
+        internal string ConfigSaved = string.Empty, ConfigSavedRestart = string.Empty, StartError = string.Empty, ServerStopped = string.Empty, ServerHostUnavailable = string.Empty, LogLabel = string.Empty, PortFallback = string.Empty, NoFreePort = string.Empty;
+        internal string ResetPasswordError = string.Empty, ResetPasswordEnvManaged = string.Empty;
+        internal string InitialPasswordTitle = string.Empty, InitialPasswordError = string.Empty, InitialPasswordIntro = string.Empty, InitialPasswordAccount = string.Empty;
+        internal string InitialPasswordLabel = string.Empty, InitialPasswordSave = string.Empty, InitialPasswordCopy = string.Empty, InitialPasswordOK = string.Empty;
 
         internal static Texts For(string language)
         {

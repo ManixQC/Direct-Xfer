@@ -80,7 +80,6 @@ namespace DirectXfer.WindowsServerHost
         public string inboxDir = string.Empty;
         public string hostRoot = string.Empty;
         public string imagesDir = string.Empty;
-        public bool openBrowser;
         public string language = string.Empty;
     }
 
@@ -857,14 +856,18 @@ namespace DirectXfer.WindowsServerHost
             try { if (server.HasExited) return; } catch { return; }
             try
             {
-                foreach (var scheme in SchemeCandidates(_scheme))
+                var token = _token;
+                if (!string.IsNullOrWhiteSpace(token))
                 {
-                    try
+                    foreach (var scheme in SchemeCandidates(_scheme))
                     {
-                        var response = LauncherRequest("POST", _port, "/__dx_launcher/shutdown", _token, scheme, 900, LocalCaCertificatePath);
-                        if (response.IsSuccessStatusCode) break;
+                        try
+                        {
+                            var response = LauncherRequest("POST", _port, "/__dx_launcher/shutdown", token, scheme, 900, LocalCaCertificatePath);
+                            if (response.IsSuccessStatusCode) break;
+                        }
+                        catch { }
                     }
-                    catch { }
                 }
             }
             catch { }

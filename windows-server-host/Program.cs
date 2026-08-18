@@ -19,12 +19,12 @@ namespace DirectXfer.WindowsServerHost
 {
     internal static class Program
     {
-        internal const string AppVersion = "1.65.2";
-        internal const string RuntimeAppBuild = "1.65.2-launcher63-csharp";
-        internal const string HostVersion = "1.65.2-serverhost36-csharp";
+        internal const string AppVersion = "1.65.3";
+        internal const string RuntimeAppBuild = "1.65.3-launcher64-csharp";
+        internal const string HostVersion = "1.65.3-serverhost37-csharp";
         internal const int DefaultPort = 55750;
         internal const int MaxFallbackPort = 55769;
-        internal const int StartupReadyTimeoutMs = 30000;
+        internal const int StartupReadyTimeoutMs = 60000;
         internal const int HealthProbeIntervalMs = 5000;
         internal const int HealthProbeFailureThreshold = 3;
         internal const long EmergencyLogMaxBytes = 2L * 1024 * 1024;
@@ -104,16 +104,16 @@ namespace DirectXfer.WindowsServerHost
         private static readonly IDictionary<string, string> CriticalRuntimeSha256 =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                { "package.json", "3ec2545e9c90611428e043fbe6b5a15bf31dcf7a067d7f389f825a1fddd3f173" },
-                { "package-lock.json", "b7a6de2ac1e529aad29ad858985cbba7775dffed3ed1fe938eb1b4e9d716f703" },
+                { "package.json", "be25c2dbd3195c6a011064044e6349055a1fc4dc3a4e0a23464eaf80111b1ab6" },
+                { "package-lock.json", "226a826888df624e9d0ef80c2698bfae022d28751efb3e8c507c72a363818b28" },
                 { "server.js", "7b429f14563a3f6c5a0edc17c9155521c07c2b16e08189a728c53988c7c4f2c8" },
                 { "lib/server/public-pages.js", "96954ccf1705f068c5579806c69f4f1d56916c2a803d1fc160be874c908f0615" },
-                { "lib/server/tls-manager.js", "f71b5a70188948204ba6baef2e0e3d59c4433b15c86bfeb744451a53d4817881" },
+                { "lib/server/tls-manager.js", "b82a1b195b6cb36d47d8d431b890e0479aaf9ca8d47f98e8ef9e046390610f7f" },
                 { "lib/server/network-services.js", "fd4a119ca1a75127b82c758c3d3555c12384c01b487bee3b3150a398217e4bdf" },
                 { "lib/server/backup-service.js", "65cb07c147b326475a833be6cbc668db733fc8183ec0b4eec919a876b3f04bc2" },
                 { "lib/server/notification-service.js", "a55beb8d5fdb09754eeb7f7d01974896efaad20dde3b9cf00e83bf4f7a7b9baa" },
                 { "public/app.js", "d50010dbae1548634d8bf1f711d301cd1d20d6ca2e2b5b2f76dee5ae632e6350" },
-                { "pwa/app.js", "d206a817289f79171a8a4a033ea6721fae1791c5d910719e762ffead6c2b5e21" },
+                { "pwa/app.js", "a76e7e662e4a4c99374f45e1f1fc699259a185a78b9bd5d20ed5678aedea735d" },
                 { "lib/dlp-utils.js", "dd4d15a3ebb1cc2e7183e9b68434cf69d50532f54fcbb9e90b5ffeb0cfdad086" },
                 { "lib/fd-utils.js", "322abf15ce7a15310d6d27ac1b0ca40892658d5f21198510f7e84b78b0070b13" },
                 { "pwa/dlp-local.js", "246267542621fc92f759438b2295b87f777ba6d6aa88b3c4d23dea25aebe7390" },
@@ -763,7 +763,7 @@ namespace DirectXfer.WindowsServerHost
             {
                 try
                 {
-                    var response = LauncherRequest("GET", port, "/__dx_launcher/ready", token, scheme, 900, LocalCaCertificatePath);
+                    var response = LauncherRequest("GET", port, "/__dx_launcher/ready", token, scheme, 2000, LocalCaCertificatePath);
                     var payload = Json.Deserialize<Dictionary<string, object?>>(response.Body);
                     object? okValue, appValue, pidValue;
                     var ok = payload != null && payload.TryGetValue("ok", out okValue) && Convert.ToBoolean(okValue, CultureInfo.InvariantCulture);

@@ -172,9 +172,9 @@ test('SDK-generated assembly metadata replaces manual assembly attributes', () =
   const hostSource = read('windows-server-host/Program.cs');
   for (const project of [launcherProject, hostProject]) {
     assert.doesNotMatch(project, /<GenerateAssemblyInfo>\s*false\s*<\/GenerateAssemblyInfo>/);
-    assert.match(project, /<AssemblyVersion>1\.65\.2\.0<\/AssemblyVersion>/);
-    assert.match(project, /<FileVersion>1\.65\.2\.0<\/FileVersion>/);
-    assert.match(project, /<InformationalVersion>1\.65\.2-(?:launcher63|serverhost36)-csharp<\/InformationalVersion>/);
+    assert.match(project, /<AssemblyVersion>1\.65\.3\.0<\/AssemblyVersion>/);
+    assert.match(project, /<FileVersion>1\.65\.3\.0<\/FileVersion>/);
+    assert.match(project, /<InformationalVersion>1\.65\.3-(?:launcher64|serverhost37)-csharp<\/InformationalVersion>/);
   }
   assert.doesNotMatch(launcherSource, /\[assembly:\s*Assembly(?:Title|Description|Company|Product|Copyright|Version|FileVersion|InformationalVersion)/);
   assert.doesNotMatch(hostSource, /\[assembly:\s*Assembly(?:Title|Description|Company|Product|Copyright|Version|FileVersion|InformationalVersion)/);
@@ -213,4 +213,23 @@ test('Windows C# source eliminates the remaining nullable and unused-field warni
   // Shutdown is best-effort: only call the authenticated endpoint when a token is actually present.
   assert.match(host, /var token = _token;[\s\S]*?if \(!string\.IsNullOrWhiteSpace\(token\)\)[\s\S]*?LauncherRequest\("POST", _port, "\/__dx_launcher\/shutdown", token,/);
   assert.doesNotMatch(host, /LauncherRequest\("POST", _port, "\/__dx_launcher\/shutdown", _token,/);
+});
+
+
+test('single-file ServerHost attachment trusts authenticated runtime identity instead of brittle Win32 metadata', () => {
+  const launcher = read('windows-launcher/Program.cs');
+  assert.match(launcher, /StartupReadyTimeoutMs = 60000/);
+  assert.match(launcher, /ServerHostFileMatchesSession[\s\S]*?string\.Equals\(session\.hostBuild, Program\.ServerHostBuild/);
+  assert.match(launcher, /ServerHostFileMatchesSession[\s\S]*?IsAmd64Pe\(expected\)[\s\S]*?return true;/);
+  assert.doesNotMatch(launcher, /FileVersionInfo\.GetVersionInfo\(expected\)/);
+  assert.match(launcher, /\/__dx_launcher\/ready", token, scheme, 2000/);
+});
+
+test('ServerHost startup readiness gets a .NET 10 cold-start window and stable Local-CA SAN discovery', () => {
+  const host = read('windows-server-host/Program.cs');
+  const tls = read('lib/server/tls-manager.js');
+  assert.match(host, /StartupReadyTimeoutMs = 60000/);
+  assert.match(host, /\/__dx_launcher\/ready", token, scheme, 2000/);
+  assert.match(tls, /net\.isIP\(String\(item\.address \|\| ''\)\) === 4/);
+  assert.match(tls, /temporary\/privacy IPv6 addresses/);
 });

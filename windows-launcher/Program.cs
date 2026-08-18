@@ -19,15 +19,15 @@ namespace DirectXfer.WindowsLauncher
 {
     internal static class Program
     {
-        internal const string AppVersion = "1.65.2";
-        internal const string RuntimeAppBuild = "1.65.2-launcher63-csharp";
+        internal const string AppVersion = "1.65.3";
+        internal const string RuntimeAppBuild = "1.65.3-launcher64-csharp";
         internal const string ServerHostFileName = "Direct-Xfer.ServerHost.exe";
-        internal const string ServerHostVersion = "1.65.2.0";
+        internal const string ServerHostVersion = "1.65.3.0";
         internal const int DefaultPort = 55750;
-        internal const int StartupReadyTimeoutMs = 30000;
+        internal const int StartupReadyTimeoutMs = 60000;
         internal const string MutexName = @"Local\DirectXferLauncherInstance";
         internal const string OpenEventName = @"Local\DirectXferLauncherOpen";
-        internal const string ServerHostBuild = "1.65.2-serverhost36-csharp";
+        internal const string ServerHostBuild = "1.65.3-serverhost37-csharp";
         internal const string ServerHostReloadEventName = @"Local\DirectXferServerHostReload";
 
         internal static string ExecutablePath
@@ -346,9 +346,13 @@ namespace DirectXfer.WindowsLauncher
                 var reported = Path.GetFullPath(session.hostPath);
                 if (!string.Equals(expected, reported, StringComparison.OrdinalIgnoreCase) || !File.Exists(expected)) return false;
                 if ((File.GetAttributes(expected) & FileAttributes.ReparsePoint) != 0 || !IsAmd64Pe(expected)) return false;
-                var info = FileVersionInfo.GetVersionInfo(expected);
-                return string.Equals(info.FileVersion, Program.ServerHostVersion, StringComparison.Ordinal) &&
-                    string.Equals(info.ProductName, "Direct-Xfer Server Host", StringComparison.Ordinal);
+                // The SDK-generated Win32 version resource of a framework-dependent
+                // single-file apphost is not a stable runtime identity boundary across
+                // .NET SDK servicing releases. The session is already authenticated by
+                // the exact expected path/build plus the per-process token and PID in
+                // /__dx_launcher/ready, so do not reject a healthy ServerHost only because
+                // FileVersionInfo metadata is missing or formatted differently.
+                return true;
             }
             catch { return false; }
         }
@@ -451,7 +455,7 @@ namespace DirectXfer.WindowsLauncher
             {
                 try
                 {
-                    var response = LauncherRequest("GET", port, "/__dx_launcher/ready", token, scheme, 900, LocalCaCertificatePath);
+                    var response = LauncherRequest("GET", port, "/__dx_launcher/ready", token, scheme, 2000, LocalCaCertificatePath);
                     if (response.StatusCode == HttpStatusCode.OK && response.Body.Contains("\"ok\":true") &&
                         response.Body.Contains("\"pid\":" + expectedPid.ToString(CultureInfo.InvariantCulture)))
                     {

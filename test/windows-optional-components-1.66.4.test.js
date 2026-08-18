@@ -20,7 +20,7 @@ test('default Windows build cannot accidentally package optional helpers', () =>
 test('optional component activation is explicit and per-user', () => {
   assert.match(launcher, /OptionalToolsRoot.*Path\.Combine\(BaseDirectory, "tools"\)/);
   assert.match(launcher, /OptionalInstallConfirm/);
-  assert.match(launcher, /MessageBoxButtons\.YesNo/);
+  assert.match(launcher, /NativeUi\.Confirm\(_tray\.WindowHandle/);
   assert.match(launcher, /InstallOptionalToolAsync\("rclone"\)/);
   assert.match(launcher, /InstallOptionalToolAsync\("tesseract"\)/);
   assert.match(launcher, /SignalServerHostReload\(\)/);

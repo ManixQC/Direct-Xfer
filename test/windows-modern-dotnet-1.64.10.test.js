@@ -15,11 +15,11 @@ test('Windows ServerHost targets modern .NET 10 with SDK-style project', () => {
   assert.doesNotMatch(project, /TargetFrameworkVersion|\.NETFramework|System\.Web\.Extensions|LangVersion>5<\/LangVersion>/);
 });
 
-test('Windows Launcher targets modern .NET 10 and keeps WinForms', () => {
+test('Windows Launcher targets modern .NET 10 without WindowsDesktop/WinForms', () => {
   const project = read('windows-launcher/DirectXfer.Launcher.csproj');
   assert.match(project, /<Project Sdk="Microsoft\.NET\.Sdk">/);
   assert.match(project, /<TargetFramework>net10\.0-windows<\/TargetFramework>/);
-  assert.match(project, /<UseWindowsForms>true<\/UseWindowsForms>/);
+  assert.doesNotMatch(project, /UseWindowsForms|UseWPF|Microsoft\.WindowsDesktop\.App/);
   assert.match(project, /<PlatformTarget>x64<\/PlatformTarget>/);
   assert.match(project, /<LangVersion>14\.0<\/LangVersion>/);
   assert.match(project, /<Nullable>enable<\/Nullable>/);
@@ -107,7 +107,8 @@ test('single-file Windows publish never relies on Assembly.Location for executab
     assert.match(source, /Environment\.ProcessPath/);
     assert.match(source, /AppContext\.BaseDirectory/);
   }
-  assert.match(launcher, /Icon\.ExtractAssociatedIcon\(Program\.ExecutablePath\)/);
+  const nativeUi = read('windows-launcher/NativeUi.cs');
+  assert.match(nativeUi, /ExtractIconExW\(Program\.ExecutablePath/);
   assert.match(host, /hostPath = Program\.ExecutablePath/);
 });
 
@@ -138,8 +139,8 @@ test('Windows CI probes both apphosts against the one private shared .NET runtim
   assert.match(workflow, /Verify shared private \.NET 10 runtime/);
   assert.match(workflow, /DOTNET_ROOT_X64 = \$emptyDotnetRoot/);
   assert.match(workflow, /runtime\\dotnet/);
-  assert.match(workflow, /DX_DOTNET_DESKTOP_RUNTIME_VERSION: '10\.0\.11'/);
-  assert.match(workflow, /Microsoft\.WindowsDesktop\.App/);
+  assert.match(workflow, /DX_DOTNET_RUNTIME_VERSION: '10\.0\.11'/);
+  assert.match(workflow, /Microsoft\.WindowsDesktop\.App must not be present/);
   assert.match(workflow, /DOTNET_MULTILEVEL_LOOKUP = '0'/);
   assert.match(workflow, /--dx-runtime-probe/);
   assert.match(workflow, /publish is not single-file/);
@@ -199,9 +200,9 @@ test('SDK-generated assembly metadata replaces manual assembly attributes', () =
   const hostSource = read('windows-server-host/Program.cs');
   for (const project of [launcherProject, hostProject]) {
     assert.doesNotMatch(project, /<GenerateAssemblyInfo>\s*false\s*<\/GenerateAssemblyInfo>/);
-    assert.match(project, /<AssemblyVersion>1\.66\.5\.0<\/AssemblyVersion>/);
-    assert.match(project, /<FileVersion>1\.66\.5\.0<\/FileVersion>/);
-    assert.match(project, /<InformationalVersion>1\.66\.5-(?:launcher79|serverhost53)-csharp<\/InformationalVersion>/);
+    assert.match(project, /<AssemblyVersion>1\.66\.6\.0<\/AssemblyVersion>/);
+    assert.match(project, /<FileVersion>1\.66\.6\.0<\/FileVersion>/);
+    assert.match(project, /<InformationalVersion>1\.66\.6-(?:launcher82|serverhost55)-csharp<\/InformationalVersion>/);
   }
   assert.doesNotMatch(launcherSource, /\[assembly:\s*Assembly(?:Title|Description|Company|Product|Copyright|Version|FileVersion|InformationalVersion)/);
   assert.doesNotMatch(hostSource, /\[assembly:\s*Assembly(?:Title|Description|Company|Product|Copyright|Version|FileVersion|InformationalVersion)/);

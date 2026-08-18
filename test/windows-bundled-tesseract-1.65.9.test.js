@@ -15,7 +15,7 @@ const portable = read('windows-launcher/README-WINDOWS-PORTABLE.md');
 test('Windows default payload deliberately excludes Tesseract', () => {
   assert.doesNotMatch(workflow, /DX_TESSERACT_VERSION|DX_TESSERACT_SETUP_SHA256|DX_TESSERACT_RUNTIME_BUDGET_MB/);
   assert.match(workflow, /optional rclone\/Tesseract excluded/);
-  assert.match(workflow, /foreach \(\$optionalRel in @\('runtime\\rclone','runtime\\tesseract'\)\)/);
+  assert.match(workflow, /foreach \(\$optionalRel in @\('runtime\\node','runtime\\rclone','runtime\\tesseract'\)\)/);
   assert.match(workflow, /Optional Windows component leaked into the default payload/);
 });
 

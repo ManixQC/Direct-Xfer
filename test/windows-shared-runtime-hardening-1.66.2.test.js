@@ -32,13 +32,14 @@ test('installer preserves the current private .NET tree until replacement succee
   assert.doesNotMatch(installer, /Type:\s*filesandordirs;\s*Name:\s*"\{app\}\\runtime\\dotnet"/i);
   assert.match(installer, /#define EnvDotNetRuntimeVersion GetEnv\("DX_INNO_DOTNET_RUNTIME_VERSION"\)/);
   assert.match(installer, /#define DotNetRuntimeVersion "10\.0\.11"/);
-  assert.match(workflow, /DX_INNO_DOTNET_RUNTIME_VERSION\s*=\s*\$env:DX_DOTNET_DESKTOP_RUNTIME_VERSION/);
+  assert.match(workflow, /DX_INNO_DOTNET_RUNTIME_VERSION\s*=\s*\$env:DX_DOTNET_RUNTIME_VERSION/);
   assert.match(installer, /function PrivateDotNetVersionIsComplete: Boolean;/);
   assert.match(installer, /Root \+ '\\dotnet\.exe'/);
   assert.match(installer, /host\\fxr\\' \+ Version \+ '\\hostfxr\.dll'/);
   assert.match(installer, /Microsoft\.NETCore\.App\\' \+ Version \+ '\\coreclr\.dll'/);
   assert.match(installer, /Microsoft\.NETCore\.App\\' \+ Version \+ '\\hostpolicy\.dll'/);
-  assert.match(installer, /Microsoft\.WindowsDesktop\.App\\' \+ Version \+ '\\System\.Windows\.Forms\.dll'/);
+  assert.doesNotMatch(installer, /System\.Windows\.Forms\.dll/);
+  assert.match(installer, /Removed retired Microsoft\.WindowsDesktop\.App runtime tree/);
   assert.match(installer, /AfterInstall: ValidateInstalledPrivateDotNet/);
   assert.match(installer, /procedure ValidateInstalledPrivateDotNet;/);
   assert.match(installer, /if not PrivateDotNetVersionIsComplete then/);

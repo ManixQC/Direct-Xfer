@@ -24,24 +24,22 @@ test('both Windows apphosts are framework-dependent single-file and resolve only
   }
 });
 
-test('Windows CI publishes framework-dependent EXEs and assembles one pinned private runtime tree from base + WindowsDesktop archives', () => {
+test('Windows CI publishes framework-dependent EXEs and assembles one pinned base runtime without WindowsDesktop', () => {
   assert.match(workflow, /--self-contained false/);
   assert.doesNotMatch(workflow, /--self-contained true/);
-  assert.match(workflow, /DX_DOTNET_DESKTOP_RUNTIME_VERSION: '10\.0\.11'/);
+  assert.match(workflow, /DX_DOTNET_RUNTIME_VERSION: '10\.0\.11'/);
   assert.match(workflow, /DX_DOTNET_RUNTIME_ZIP_SHA512: 'd9ab9c0d9916b8fa3585b5f403057f594ffffb8364dac09e0007dd8ac671c86754935b980d8fb5da83cb1b82ac3cd57cc407c969e6d837aaa2fae21047cb7448'/);
-  assert.match(workflow, /DX_DOTNET_DESKTOP_RUNTIME_ZIP_SHA512: '1d32a9bf6c93f50dee5734048f825998b98266d0e28846dbee0310e2aad7e28fc2251e38ffad6a474a1e57381895130f2b3e1e1a4f875ac7f79271d91c6eb433'/);
-  assert.match(workflow, /builds\.dotnet\.microsoft\.com\/dotnet\/Runtime\/\$env:DX_DOTNET_DESKTOP_RUNTIME_VERSION\/dotnet-runtime-\$env:DX_DOTNET_DESKTOP_RUNTIME_VERSION-win-x64\.zip/);
-  assert.match(workflow, /builds\.dotnet\.microsoft\.com\/dotnet\/WindowsDesktop\/\$env:DX_DOTNET_DESKTOP_RUNTIME_VERSION\/windowsdesktop-runtime-\$env:DX_DOTNET_DESKTOP_RUNTIME_VERSION-win-x64\.zip/);
+  assert.doesNotMatch(workflow, /DX_DOTNET_DESKTOP_RUNTIME_ZIP_SHA512/);
+  assert.match(workflow, /builds\.dotnet\.microsoft\.com\/dotnet\/Runtime\/\$env:DX_DOTNET_RUNTIME_VERSION\/dotnet-runtime-\$env:DX_DOTNET_RUNTIME_VERSION-win-x64\.zip/);
+  assert.doesNotMatch(workflow, /builds\.dotnet\.microsoft\.com\/dotnet\/WindowsDesktop\//);
+  assert.doesNotMatch(workflow, /windowsdesktop-runtime-/);
   assert.match(workflow, /Get-FileHash -Algorithm SHA512 \$dotnetBaseRuntimeZip/);
-  assert.match(workflow, /Get-FileHash -Algorithm SHA512 \$dotnetDesktopRuntimeZip/);
   assert.match(workflow, /Expand-Archive -LiteralPath \$dotnetBaseRuntimeZip -DestinationPath \$dotnetRuntime -Force/);
-  assert.match(workflow, /Expand-Archive -LiteralPath \$dotnetDesktopRuntimeZip -DestinationPath \$dotnetRuntime -Force/);
-  assert.match(workflow, /WindowsDesktop ZIP is an additive framework/);
-  assert.match(workflow, /does not provide dotnet\.exe\/hostfxr\/Microsoft\.NETCore\.App by itself/);
+  assert.match(workflow, /launcher uses native Win32 UI APIs/);
   assert.match(workflow, /\$dotnetRuntime = Join-Path \$dist 'runtime\\dotnet'/);
   assert.equal((workflow.match(/\$dotnetRuntime = Join-Path \$dist 'runtime\\dotnet'/g) || []).length, 1);
   assert.match(workflow, /Microsoft\.NETCore\.App/);
-  assert.match(workflow, /Microsoft\.WindowsDesktop\.App/);
+  assert.match(workflow, /Microsoft\.WindowsDesktop\.App must not be present/);
 });
 
 test('CI proves both EXEs load hostfxr from the packaged private runtime', () => {

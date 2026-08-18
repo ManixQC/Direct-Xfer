@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
@@ -14,23 +13,22 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Forms;
 
 
 namespace DirectXfer.WindowsLauncher
 {
     internal static class Program
     {
-        internal const string AppVersion = "1.66.5";
-        internal const string RuntimeAppBuild = "1.66.5-launcher79-csharp";
+        internal const string AppVersion = "1.66.6";
+        internal const string RuntimeAppBuild = "1.66.6-launcher82-csharp";
         internal const string ServerHostFileName = "Direct-Xfer.ServerHost.exe";
-        internal const string ServerHostVersion = "1.66.5.0";
+        internal const string ServerHostVersion = "1.66.6.0";
         internal const int DefaultPort = 55750;
         internal const int MaxFallbackPort = 55769;
         internal const int StartupReadyTimeoutMs = 60000;
         internal const string MutexName = @"Local\DirectXferLauncherInstance";
         internal const string OpenEventName = @"Local\DirectXferLauncherOpen";
-        internal const string ServerHostBuild = "1.66.5-serverhost53-csharp";
+        internal const string ServerHostBuild = "1.66.6-serverhost55-csharp";
         internal const string ServerHostReloadEventName = @"Local\DirectXferServerHostReload";
         internal const string RcloneVersion = "1.74.4";
         internal const string RcloneZipSha256 = "ef097ef9de37a57feb7d9f9c7afb34148ad3c65be8025f1d8f7f521554a701ea";
@@ -76,16 +74,14 @@ namespace DirectXfer.WindowsLauncher
                 return;
             }
 
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
             try
             {
                 using var context = new LauncherContext(args ?? Array.Empty<string>());
-                Application.Run(context);
+                context.Run();
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Direct-Xfer", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                NativeUi.Error(IntPtr.Zero, "Direct-Xfer", ex.Message);
             }
             finally
             {
@@ -131,11 +127,10 @@ namespace DirectXfer.WindowsLauncher
         public string hostBuild { get; set; } = string.Empty;
     }
 
-    internal sealed class LauncherContext : ApplicationContext, IDisposable
+    internal sealed class LauncherContext : IDisposable
     {
         private static readonly JsonCompat Json = new();
-        private readonly Control _dispatcher;
-        private readonly NotifyIcon _tray;
+        private readonly NativeTrayIcon _tray;
         private readonly EventWaitHandle _openEvent;
         private readonly CancellationTokenSource _lifetime = new();
         private readonly object _exitSync = new();
@@ -151,9 +146,7 @@ namespace DirectXfer.WindowsLauncher
 
         internal LauncherContext(string[] args)
         {
-            _dispatcher = new();
-            _dispatcher.CreateControl();
-
+            _tray = new NativeTrayIcon($"Direct-Xfer {Program.AppVersion}");
             bool exists;
             _config = LoadConfig(out exists);
             if (!exists) ConfigureFolders(true);
@@ -162,14 +155,9 @@ namespace DirectXfer.WindowsLauncher
             if (args.Any(a => string.Equals(a, "--configure", StringComparison.OrdinalIgnoreCase)))
                 ConfigureFolders(false);
 
-            _tray = new NotifyIcon
-            {
-                Icon = LoadApplicationIcon(),
-                Text = $"Direct-Xfer {Program.AppVersion}",
-                Visible = true
-            };
-            _tray.MouseClick += (s, e) => { if (e.Button == MouseButtons.Left) OpenBrowser(); };
-            _tray.MouseDoubleClick += (s, e) => { if (e.Button == MouseButtons.Left) OpenBrowser(); };
+            _tray.LeftClick = OpenBrowser;
+            _tray.MenuFactory = BuildTrayMenu;
+            _tray.CommandInvoked = HandleTrayCommand;
             CleanupStaleOptionalWorkDirectories();
             if (MigrateLegacyOptionalActivationState()) SignalServerHostReload();
             RebuildTrayMenu();
@@ -180,10 +168,9 @@ namespace DirectXfer.WindowsLauncher
             try { AttachToServerHost(); }
             catch (Exception ex)
             {
-                _tray.Visible = false;
-                MessageBox.Show(Tr.StartError + ":\r\n" + ex.Message, Tr.AppTitle,
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-                _dispatcher.BeginInvoke(new Action(ExitThread));
+                _tray.Hide();
+                NativeUi.Error(_tray.WindowHandle, Tr.AppTitle, Tr.StartError + ":\r\n" + ex.Message);
+                _tray.Exit();
             }
         }
 
@@ -209,6 +196,7 @@ namespace DirectXfer.WindowsLauncher
         private static string OptionalTesseractPath { get { return Path.Combine(OptionalTesseractRoot, "tesseract.exe"); } }
         private static string OptionalTessdataPath { get { return Path.Combine(OptionalTesseractRoot, "tessdata"); } }
         private static string OptionalTesseractActivationMarker { get { return Path.Combine(OptionalTesseractRoot, Program.OptionalActivationMarkerFileName); } }
+        private static string OptionalOperationLockPath { get { return Path.Combine(OptionalToolsRoot, ".operation.lock"); } }
 
         private static LauncherConfig DefaultConfig()
         {
@@ -302,7 +290,7 @@ namespace DirectXfer.WindowsLauncher
         private void ConfigureFolders(bool firstRun)
         {
             var tr = Tr;
-            if (firstRun) MessageBox.Show(tr.FirstRunBody, tr.FirstRunTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            if (firstRun) NativeUi.Info(_tray.WindowHandle, tr.FirstRunTitle, tr.FirstRunBody);
             var next = CloneConfig(_config);
             next.hostRoot = PickFolder(tr.PickHost, next.hostRoot);
             next.inboxDir = PickFolder(tr.PickInbox, next.inboxDir);
@@ -317,11 +305,10 @@ namespace DirectXfer.WindowsLauncher
                 {
                     var running = IsServerHostRunning();
                     if (running) SignalServerHostReload();
-                    MessageBox.Show(running ? tr.ConfigSavedRestart : tr.ConfigSaved,
-                        tr.AppTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    NativeUi.Info(_tray.WindowHandle, tr.AppTitle, running ? tr.ConfigSavedRestart : tr.ConfigSaved);
                 }
             }
-            catch (Exception ex) { MessageBox.Show(ex.Message, tr.AppTitle, MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            catch (Exception ex) { NativeUi.Error(_tray.WindowHandle, tr.AppTitle, ex.Message); }
         }
 
         private static LauncherConfig CloneConfig(LauncherConfig c)
@@ -333,18 +320,9 @@ namespace DirectXfer.WindowsLauncher
             };
         }
 
-        private static string PickFolder(string title, string initial)
+        private string PickFolder(string title, string initial)
         {
-            using (var dlg = new FolderBrowserDialog
-            {
-                Description = title,
-                SelectedPath = Directory.Exists(initial) ? initial : string.Empty,
-                ShowNewFolderButton = true
-            })
-            {
-                return dlg.ShowDialog() == DialogResult.OK && !string.IsNullOrWhiteSpace(dlg.SelectedPath)
-                    ? dlg.SelectedPath : initial;
-            }
+            return NativeUi.PickFolder(_tray.WindowHandle, title, Directory.Exists(initial) ? initial : string.Empty);
         }
 
         private static string PortableRoot
@@ -511,7 +489,7 @@ namespace DirectXfer.WindowsLauncher
             Ui(() =>
             {
                 if (_exiting) return;
-                MessageBox.Show(body, Tr.AppTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                NativeUi.Error(_tray.WindowHandle, Tr.AppTitle, body);
                 RequestExit();
             });
         }
@@ -520,8 +498,7 @@ namespace DirectXfer.WindowsLauncher
         {
             if (_exiting) return;
             if (_runtimePort != Program.DefaultPort)
-                MessageBox.Show(string.Format(Tr.PortFallback, Program.DefaultPort, _runtimePort), Tr.AppTitle,
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                NativeUi.Info(_tray.WindowHandle, Tr.AppTitle, string.Format(Tr.PortFallback, Program.DefaultPort, _runtimePort));
             ShowInitialAdminPassword();
             if (_config.openBrowser && !_exiting) OpenBrowser();
         }
@@ -687,11 +664,14 @@ namespace DirectXfer.WindowsLauncher
                 var username = GetString(payload, "username");
                 var password = GetString(payload, "password");
                 if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password)) throw new InvalidDataException();
-                using (var dialog = new InitialPasswordForm(Tr, username, password)) dialog.ShowDialog();
+                var tr = Tr;
+                NativeUi.ShowPasswordDialog(_tray.WindowHandle, _tray.IconHandle, tr.InitialPasswordTitle,
+                    tr.InitialPasswordIntro, string.Format(tr.InitialPasswordAccount, username), tr.InitialPasswordLabel,
+                    password, tr.InitialPasswordSave, tr.InitialPasswordCopy, tr.InitialPasswordOK);
             }
             catch
             {
-                MessageBox.Show(Tr.InitialPasswordError, Tr.InitialPasswordTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                NativeUi.Warning(_tray.WindowHandle, Tr.InitialPasswordTitle, Tr.InitialPasswordError);
             }
         }
 
@@ -706,7 +686,7 @@ namespace DirectXfer.WindowsLauncher
                     "/__dx_launcher/reset-admin-password-ticket", token, _runtimeScheme, 1500, out scheme);
                 if (response.StatusCode == HttpStatusCode.Conflict)
                 {
-                    MessageBox.Show(Tr.ResetPasswordEnvManaged, Tr.AppTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    NativeUi.Warning(_tray.WindowHandle, Tr.AppTitle, Tr.ResetPasswordEnvManaged);
                     return;
                 }
                 if (response.StatusCode != HttpStatusCode.OK) throw new HttpRequestException();
@@ -719,7 +699,7 @@ namespace DirectXfer.WindowsLauncher
                     "&lang=" + Uri.EscapeDataString(_config.language);
                 OpenUrl(url);
             }
-            catch { MessageBox.Show(Tr.ResetPasswordError, Tr.AppTitle, MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            catch { NativeUi.Error(_tray.WindowHandle, Tr.AppTitle, Tr.ResetPasswordError); }
         }
 
         private static bool GetBool(IDictionary<string, object?>? payload, string key)
@@ -751,7 +731,7 @@ namespace DirectXfer.WindowsLauncher
             var session = ReadSession();
             if (!TryAttachReadySession(session))
             {
-                MessageBox.Show(Tr.ServerHostUnavailable, Tr.AppTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                NativeUi.Warning(_tray.WindowHandle, Tr.AppTitle, Tr.ServerHostUnavailable);
                 return;
             }
             OpenUrl(_runtimeScheme + "://127.0.0.1:" + _runtimePort.ToString(CultureInfo.InvariantCulture) + "/");
@@ -776,8 +756,8 @@ namespace DirectXfer.WindowsLauncher
         {
             try
             {
-                return File.Exists(OptionalRcloneActivationMarker) && File.Exists(OptionalRclonePath) &&
-                    new FileInfo(OptionalRclonePath).Length > 1024 * 1024;
+                return File.Exists(OptionalRcloneActivationMarker) &&
+                    RcloneBinaryMatchesPinnedVersion(OptionalRclonePath);
             }
             catch { return false; }
         }
@@ -786,13 +766,37 @@ namespace DirectXfer.WindowsLauncher
         {
             try
             {
-                if (!File.Exists(OptionalTesseractActivationMarker) || !File.Exists(OptionalTesseractPath) ||
-                    !Directory.Exists(OptionalTessdataPath) || new FileInfo(OptionalTesseractPath).Length <= 1024 * 1024) return false;
-                return new[] { "eng", "fra", "spa" }.All(language =>
-                {
-                    var model = Path.Combine(OptionalTessdataPath, language + ".traineddata");
-                    return File.Exists(model) && new FileInfo(model).Length >= 100 * 1024;
-                });
+                return File.Exists(OptionalTesseractActivationMarker) &&
+                    TesseractBinaryMatchesPinnedVersion(OptionalTesseractPath) &&
+                    Directory.Exists(OptionalTessdataPath) && LegacyTessdataMatchesPinnedBlobs();
+            }
+            catch { return false; }
+        }
+
+        private static bool RcloneBinaryMatchesPinnedVersion(string path)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(path) || !File.Exists(path) ||
+                    new FileInfo(path).Length <= 1024 * 1024 || !IsAmd64Pe(path)) return false;
+                var output = RunToolCapture(path, new[] { "version" }, 2500);
+                return output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Any(line => string.Equals(line.Trim(), "rclone v" + Program.RcloneVersion, StringComparison.OrdinalIgnoreCase));
+            }
+            catch { return false; }
+        }
+
+        private static bool TesseractBinaryMatchesPinnedVersion(string path)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(path) || !File.Exists(path) ||
+                    new FileInfo(path).Length <= 1024 * 1024 || !IsAmd64Pe(path)) return false;
+                var output = RunToolCapture(path, new[] { "--version" }, 2500);
+                var first = output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty;
+                first = first.TrimStart();
+                return first.StartsWith("tesseract v" + Program.TesseractVersion, StringComparison.OrdinalIgnoreCase) ||
+                    first.StartsWith("tesseract " + Program.TesseractVersion, StringComparison.OrdinalIgnoreCase);
             }
             catch { return false; }
         }
@@ -802,21 +806,29 @@ namespace DirectXfer.WindowsLauncher
             // 1.66.4 was the first on-demand build and had no explicit activation marker.
             // Preserve a component only when its Direct-Xfer receipt proves it came from that
             // explicit activation flow. Manually dropped executables are never auto-activated.
-            var migrated = false;
-            migrated |= TryMigrateLegacyActivationReceipt(
-                OptionalRcloneRoot,
-                OptionalRcloneActivationMarker,
-                "Direct-Xfer optional rclone v" + Program.RcloneVersion,
-                "Archive SHA-256: " + Program.RcloneZipSha256,
-                () => File.Exists(OptionalRclonePath) && new FileInfo(OptionalRclonePath).Length > 1024 * 1024 && IsAmd64Pe(OptionalRclonePath));
-            migrated |= TryMigrateLegacyActivationReceipt(
-                OptionalTesseractRoot,
-                OptionalTesseractActivationMarker,
-                "Direct-Xfer optional Tesseract OCR " + Program.TesseractVersion,
-                "Setup SHA-256: " + Program.TesseractSetupSha256,
-                () => File.Exists(OptionalTesseractPath) && IsAmd64Pe(OptionalTesseractPath) && Directory.Exists(OptionalTessdataPath) &&
-                    LegacyTessdataMatchesPinnedBlobs());
-            return migrated;
+            // Serialize migration too: another RDP/session may currently be installing or
+            // repairing the same per-user component tree.
+            var operationLock = TryAcquireOptionalOperationLock();
+            if (operationLock == null) return false;
+            try
+            {
+                var migrated = false;
+                migrated |= TryMigrateLegacyActivationReceipt(
+                    OptionalRcloneRoot,
+                    OptionalRcloneActivationMarker,
+                    "Direct-Xfer optional rclone v" + Program.RcloneVersion,
+                    "Archive SHA-256: " + Program.RcloneZipSha256,
+                    () => RcloneBinaryMatchesPinnedVersion(OptionalRclonePath));
+                migrated |= TryMigrateLegacyActivationReceipt(
+                    OptionalTesseractRoot,
+                    OptionalTesseractActivationMarker,
+                    "Direct-Xfer optional Tesseract OCR " + Program.TesseractVersion,
+                    "Setup SHA-256: " + Program.TesseractSetupSha256,
+                    () => TesseractBinaryMatchesPinnedVersion(OptionalTesseractPath) && Directory.Exists(OptionalTessdataPath) &&
+                        LegacyTessdataMatchesPinnedBlobs());
+                return migrated;
+            }
+            finally { ReleaseOptionalOperationLock(operationLock); }
         }
 
         private static bool LegacyTessdataMatchesPinnedBlobs()
@@ -881,6 +893,24 @@ namespace DirectXfer.WindowsLauncher
             return true;
         }
 
+        private static FileStream? TryAcquireOptionalOperationLock()
+        {
+            try
+            {
+                Directory.CreateDirectory(OptionalToolsRoot);
+                return new FileStream(OptionalOperationLockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None, 1, FileOptions.None);
+            }
+            catch (IOException) { return null; }
+            catch (UnauthorizedAccessException) { return null; }
+        }
+
+        private static void ReleaseOptionalOperationLock(FileStream? operationLock)
+        {
+            if (operationLock == null) return;
+            try { operationLock.Dispose(); } catch { }
+            try { if (File.Exists(OptionalOperationLockPath)) File.Delete(OptionalOperationLockPath); } catch { }
+        }
+
         private async Task InstallOptionalToolAsync(string tool)
         {
             if (_optionalToolBusy) return;
@@ -888,15 +918,21 @@ namespace DirectXfer.WindowsLauncher
             var displayName = string.Equals(tool, "rclone", StringComparison.OrdinalIgnoreCase)
                 ? "rclone " + Program.RcloneVersion
                 : "Tesseract OCR " + Program.TesseractVersion;
-            if (MessageBox.Show(string.Format(CultureInfo.CurrentCulture, tr.OptionalInstallConfirm, displayName),
-                tr.AppTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+            if (!NativeUi.Confirm(_tray.WindowHandle, tr.AppTitle,
+                string.Format(CultureInfo.CurrentCulture, tr.OptionalInstallConfirm, displayName), false)) return;
 
+            var operationLock = TryAcquireOptionalOperationLock();
+            if (operationLock == null)
+            {
+                NativeUi.Warning(_tray.WindowHandle, tr.AppTitle, tr.OptionalBusyOtherSession);
+                return;
+            }
             _optionalToolBusy = true;
             RebuildTrayMenu();
             try
             {
-                _tray.ShowBalloonTip(2500, tr.OptionalComponents,
-                    string.Format(CultureInfo.CurrentCulture, tr.OptionalInstalling, displayName), ToolTipIcon.Info);
+                _tray.ShowBalloon(tr.OptionalComponents,
+                    string.Format(CultureInfo.CurrentCulture, tr.OptionalInstalling, displayName), NativeBalloonIcon.Info);
 
                 // Repair/re-activation can be requested when an existing optional component is
                 // incomplete or damaged. Deactivate it and stop the backend before replacing
@@ -925,17 +961,16 @@ namespace DirectXfer.WindowsLauncher
                     else InstallTesseractCore();
                 });
                 SignalServerHostReload();
-                MessageBox.Show(string.Format(CultureInfo.CurrentCulture, tr.OptionalInstalled, displayName),
-                    tr.AppTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                NativeUi.Info(_tray.WindowHandle, tr.AppTitle, string.Format(CultureInfo.CurrentCulture, tr.OptionalInstalled, displayName));
             }
             catch (Exception ex)
             {
-                MessageBox.Show(string.Format(CultureInfo.CurrentCulture, tr.OptionalFailed, displayName, ex.Message),
-                    tr.AppTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                NativeUi.Error(_tray.WindowHandle, tr.AppTitle, string.Format(CultureInfo.CurrentCulture, tr.OptionalFailed, displayName, ex.Message));
             }
             finally
             {
                 _optionalToolBusy = false;
+                ReleaseOptionalOperationLock(operationLock);
                 RebuildTrayMenu();
             }
         }
@@ -947,9 +982,15 @@ namespace DirectXfer.WindowsLauncher
             var displayName = string.Equals(tool, "rclone", StringComparison.OrdinalIgnoreCase)
                 ? "rclone " + Program.RcloneVersion
                 : "Tesseract OCR " + Program.TesseractVersion;
-            if (MessageBox.Show(string.Format(CultureInfo.CurrentCulture, tr.OptionalRemoveConfirm, displayName),
-                tr.AppTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
+            if (!NativeUi.Confirm(_tray.WindowHandle, tr.AppTitle,
+                string.Format(CultureInfo.CurrentCulture, tr.OptionalRemoveConfirm, displayName), true)) return;
 
+            var operationLock = TryAcquireOptionalOperationLock();
+            if (operationLock == null)
+            {
+                NativeUi.Warning(_tray.WindowHandle, tr.AppTitle, tr.OptionalBusyOtherSession);
+                return;
+            }
             _optionalToolBusy = true;
             var deactivated = false;
             RebuildTrayMenu();
@@ -966,39 +1007,46 @@ namespace DirectXfer.WindowsLauncher
                     if (string.Equals(tool, "rclone", StringComparison.OrdinalIgnoreCase)) RemoveRcloneCore();
                     else RemoveTesseractCore();
                 });
-                MessageBox.Show(string.Format(CultureInfo.CurrentCulture, tr.OptionalRemoved, displayName),
-                    tr.AppTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                NativeUi.Info(_tray.WindowHandle, tr.AppTitle, string.Format(CultureInfo.CurrentCulture, tr.OptionalRemoved, displayName));
             }
             catch (Exception ex)
             {
                 var message = deactivated
                     ? string.Format(CultureInfo.CurrentCulture, tr.OptionalCleanupFailed, displayName, ex.Message)
                     : string.Format(CultureInfo.CurrentCulture, tr.OptionalFailed, displayName, ex.Message);
-                MessageBox.Show(message, tr.AppTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                NativeUi.Error(_tray.WindowHandle, tr.AppTitle, message);
             }
             finally
             {
                 _optionalToolBusy = false;
+                ReleaseOptionalOperationLock(operationLock);
                 RebuildTrayMenu();
             }
         }
 
         private static void CleanupStaleOptionalWorkDirectories()
         {
+            FileStream? operationLock = null;
             try
             {
                 if (!Directory.Exists(OptionalToolsRoot)) return;
+                operationLock = TryAcquireOptionalOperationLock();
+                if (operationLock == null) return; // Another Windows session is actively modifying optional tools.
+                var cutoff = DateTime.UtcNow - TimeSpan.FromHours(12);
                 foreach (var directory in Directory.EnumerateDirectories(OptionalToolsRoot, ".work-*", SearchOption.TopDirectoryOnly))
                 {
                     try
                     {
                         if ((File.GetAttributes(directory) & FileAttributes.ReparsePoint) != 0) continue;
+                        var info = new DirectoryInfo(directory);
+                        if (info.LastWriteTimeUtc > cutoff) continue;
                         Directory.Delete(directory, true);
                     }
                     catch { }
                 }
             }
             catch { }
+            finally { ReleaseOptionalOperationLock(operationLock); }
         }
 
         private static string CreateToolWorkDirectory(string name)
@@ -1145,9 +1193,7 @@ namespace DirectXfer.WindowsLauncher
                 if (candidates.Length != 1) throw new InvalidDataException("The verified rclone archive did not contain exactly one rclone.exe.");
                 var source = Path.GetFullPath(candidates[0]);
                 if (!IsAmd64Pe(source)) throw new InvalidDataException("The downloaded rclone executable is not Windows x64.");
-                var versionOutput = RunToolCapture(source, new[] { "version" }, 10000);
-                if (!versionOutput.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
-                    .Any(line => string.Equals(line.Trim(), "rclone v" + Program.RcloneVersion, StringComparison.OrdinalIgnoreCase)))
+                if (!RcloneBinaryMatchesPinnedVersion(source))
                     throw new InvalidDataException("The downloaded rclone version does not match Direct-Xfer's pinned version.");
 
                 var stage = Path.Combine(work, "stage");
@@ -1216,10 +1262,7 @@ namespace DirectXfer.WindowsLauncher
                     VerifyGitBlobSha1(modelPath, model.GitBlobSha1);
                 }
 
-                var versionOutput = RunToolCapture(OptionalTesseractPath, new[] { "--version" }, 10000);
-                var first = versionOutput.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty;
-                if (!first.TrimStart().StartsWith("tesseract v" + Program.TesseractVersion, StringComparison.OrdinalIgnoreCase) &&
-                    !first.TrimStart().StartsWith("tesseract " + Program.TesseractVersion, StringComparison.OrdinalIgnoreCase))
+                if (!TesseractBinaryMatchesPinnedVersion(OptionalTesseractPath))
                     throw new InvalidDataException("The downloaded Tesseract version does not match Direct-Xfer's pinned version.");
                 var langsOutput = RunToolCapture(OptionalTesseractPath,
                     new[] { "--list-langs", "--tessdata-dir", OptionalTessdataPath }, 10000);
@@ -1351,40 +1394,77 @@ namespace DirectXfer.WindowsLauncher
             catch { }
         }
 
-        private void RebuildTrayMenu()
+        private const int TrayOpen = 1001;
+        private const int TrayLogs = 1002;
+        private const int TrayConfigure = 1003;
+        private const int TrayResetPassword = 1004;
+        private const int TrayRcloneStatus = 1101;
+        private const int TrayRcloneRemove = 1102;
+        private const int TrayRcloneInstall = 1103;
+        private const int TrayTesseractStatus = 1201;
+        private const int TrayTesseractRemove = 1202;
+        private const int TrayTesseractInstall = 1203;
+        private const int TrayLanguageFr = 1301;
+        private const int TrayLanguageEn = 1302;
+        private const int TrayLanguageEs = 1303;
+        private const int TrayStop = 1401;
+
+        private NativeMenuBuilder BuildTrayMenu()
         {
             var tr = Tr;
-            var menu = new ContextMenuStrip();
-            menu.Items.Add(tr.Open, null, (s, e) => OpenBrowser());
-            menu.Items.Add(tr.Logs, null, (s, e) => OpenLogs());
-            menu.Items.Add(tr.Configure, null, (s, e) => ConfigureFolders(false));
-            menu.Items.Add(tr.ResetAdminPassword, null, (s, e) => OpenPasswordReset());
-            var optional = new ToolStripMenuItem(tr.OptionalComponents) { Enabled = !_optionalToolBusy };
+            var menu = new NativeMenuBuilder();
+            menu.AddItem(TrayOpen, tr.Open);
+            menu.AddItem(TrayLogs, tr.Logs);
+            menu.AddItem(TrayConfigure, tr.Configure);
+            menu.AddItem(TrayResetPassword, tr.ResetAdminPassword);
+
+            var optional = menu.AddSubMenu(tr.OptionalComponents, !_optionalToolBusy);
             if (OptionalRcloneInstalled())
             {
-                optional.DropDownItems.Add(tr.RcloneActive).Enabled = false;
-                optional.DropDownItems.Add(tr.RemoveRclone, null, async (s, e) => await RemoveOptionalToolAsync("rclone"));
+                optional.AddItem(TrayRcloneStatus, tr.RcloneActive, false);
+                optional.AddItem(TrayRcloneRemove, tr.RemoveRclone);
             }
-            else optional.DropDownItems.Add(tr.ActivateRclone, null, async (s, e) => await InstallOptionalToolAsync("rclone"));
-            optional.DropDownItems.Add(new ToolStripSeparator());
+            else optional.AddItem(TrayRcloneInstall, tr.ActivateRclone);
+            optional.AddSeparator();
             if (OptionalTesseractInstalled())
             {
-                optional.DropDownItems.Add(tr.TesseractActive).Enabled = false;
-                optional.DropDownItems.Add(tr.RemoveTesseract, null, async (s, e) => await RemoveOptionalToolAsync("tesseract"));
+                optional.AddItem(TrayTesseractStatus, tr.TesseractActive, false);
+                optional.AddItem(TrayTesseractRemove, tr.RemoveTesseract);
             }
-            else optional.DropDownItems.Add(tr.ActivateTesseract, null, async (s, e) => await InstallOptionalToolAsync("tesseract"));
-            menu.Items.Add(optional);
-            menu.Items.Add(new ToolStripSeparator());
-            var languages = new ToolStripMenuItem(tr.Language);
-            languages.DropDownItems.Add("Français", null, (s, e) => SetLanguage("fr"));
-            languages.DropDownItems.Add("English", null, (s, e) => SetLanguage("en"));
-            languages.DropDownItems.Add("Español", null, (s, e) => SetLanguage("es"));
-            menu.Items.Add(languages);
-            menu.Items.Add(new ToolStripSeparator());
-            var stopItem = menu.Items.Add(tr.Stop, null, (s, e) => RequestExit());
-            stopItem.Enabled = !_optionalToolBusy;
-            if (_tray.ContextMenuStrip != null) _tray.ContextMenuStrip.Dispose();
-            _tray.ContextMenuStrip = menu;
+            else optional.AddItem(TrayTesseractInstall, tr.ActivateTesseract);
+
+            menu.AddSeparator();
+            var languages = menu.AddSubMenu(tr.Language);
+            languages.AddItem(TrayLanguageFr, "Français");
+            languages.AddItem(TrayLanguageEn, "English");
+            languages.AddItem(TrayLanguageEs, "Español");
+            menu.AddSeparator();
+            menu.AddItem(TrayStop, tr.Stop, !_optionalToolBusy);
+            return menu;
+        }
+
+        private void HandleTrayCommand(int command)
+        {
+            switch (command)
+            {
+                case TrayOpen: OpenBrowser(); break;
+                case TrayLogs: OpenLogs(); break;
+                case TrayConfigure: ConfigureFolders(false); break;
+                case TrayResetPassword: OpenPasswordReset(); break;
+                case TrayRcloneRemove: _ = RemoveOptionalToolAsync("rclone"); break;
+                case TrayRcloneInstall: _ = InstallOptionalToolAsync("rclone"); break;
+                case TrayTesseractRemove: _ = RemoveOptionalToolAsync("tesseract"); break;
+                case TrayTesseractInstall: _ = InstallOptionalToolAsync("tesseract"); break;
+                case TrayLanguageFr: SetLanguage("fr"); break;
+                case TrayLanguageEn: SetLanguage("en"); break;
+                case TrayLanguageEs: SetLanguage("es"); break;
+                case TrayStop: if (!_optionalToolBusy) RequestExit(); break;
+            }
+        }
+
+        private void RebuildTrayMenu()
+        {
+            _tray.UpdateTooltip($"Direct-Xfer {Program.AppVersion}");
         }
 
         private void SetLanguage(string language)
@@ -1396,19 +1476,8 @@ namespace DirectXfer.WindowsLauncher
             catch (Exception ex)
             {
                 _config.language = previous;
-                MessageBox.Show(ex.Message, Tr.AppTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                NativeUi.Error(_tray.WindowHandle, Tr.AppTitle, ex.Message);
             }
-        }
-
-        private static Icon LoadApplicationIcon()
-        {
-            try
-            {
-                var icon = Icon.ExtractAssociatedIcon(Program.ExecutablePath);
-                if (icon != null) return icon;
-            }
-            catch { }
-            return SystemIcons.Application;
         }
 
         private void ExistingInstanceSignalLoop(CancellationToken token)
@@ -1422,13 +1491,8 @@ namespace DirectXfer.WindowsLauncher
 
         private void Ui(Action action)
         {
-            if (_disposed || _dispatcher.IsDisposed) return;
-            try
-            {
-                if (_dispatcher.InvokeRequired) _dispatcher.BeginInvoke(action); else action();
-            }
-            catch (ObjectDisposedException) { }
-            catch (InvalidOperationException) { }
+            if (_disposed) return;
+            _tray.Post(action);
         }
 
         private void RequestExit()
@@ -1437,9 +1501,9 @@ namespace DirectXfer.WindowsLauncher
             {
                 if (_exiting) return;
                 _exiting = true;
-                _tray.Visible = false;
+                _tray.Hide();
             }
-            Ui(ExitThread);
+            _tray.Exit();
         }
 
         private static void SignalServerHostReload()
@@ -1495,76 +1559,19 @@ namespace DirectXfer.WindowsLauncher
             catch { return string.Empty; }
         }
 
-        protected override void ExitThreadCore()
+        internal int Run()
         {
-            try { _tray.Visible = false; } catch { }
-            base.ExitThreadCore();
+            return _tray.RunMessageLoop();
         }
 
-        public new void Dispose()
+        public void Dispose()
         {
             if (_disposed) return;
             _disposed = true;
             _lifetime.Cancel();
             try { _openEvent.Dispose(); } catch { }
-            try { _tray.Visible = false; _tray.Dispose(); } catch { }
-            try { _dispatcher.Dispose(); } catch { }
+            try { _tray.Dispose(); } catch { }
             _lifetime.Dispose();
-            try { base.Dispose(); } catch { }
-        }
-    }
-
-    internal sealed class InitialPasswordForm : Form
-    {
-        internal InitialPasswordForm(Texts tr, string username, string password)
-        {
-            Text = tr.InitialPasswordTitle;
-            StartPosition = FormStartPosition.CenterScreen;
-            FormBorderStyle = FormBorderStyle.FixedDialog;
-            MaximizeBox = false;
-            MinimizeBox = false;
-            ShowInTaskbar = true;
-            ClientSize = new Size(660, 255);
-            Font = SystemFonts.MessageBoxFont;
-            Icon = TryApplicationIcon();
-
-            var intro = new Label { Left = 20, Top = 18, Width = 620, Height = 34, Text = tr.InitialPasswordIntro };
-            var account = new Label { Left = 20, Top = 56, Width = 620, Height = 24, Text = string.Format(tr.InitialPasswordAccount, username) };
-            var label = new Label { Left = 20, Top = 86, Width = 620, Height = 22, Text = tr.InitialPasswordLabel };
-            var passwordBox = new TextBox
-            {
-                Left = 20,
-                Top = 108,
-                Width = 620,
-                Height = 26,
-                ReadOnly = true,
-                Text = password,
-                TabIndex = 0
-            };
-            var save = new Label { Left = 20, Top = 145, Width = 620, Height = 42, Text = tr.InitialPasswordSave };
-            var copy = new Button { Left = 20, Top = 204, Width = 210, Height = 32, Text = tr.InitialPasswordCopy, TabIndex = 1 };
-            var ok = new Button { Left = 540, Top = 204, Width = 100, Height = 32, Text = tr.InitialPasswordOK, DialogResult = DialogResult.OK, TabIndex = 2 };
-
-            copy.Click += (s, e) =>
-            {
-                passwordBox.Focus();
-                passwordBox.SelectAll();
-                try { Clipboard.SetText(password); } catch { }
-            };
-            Shown += (s, e) =>
-            {
-                passwordBox.Focus();
-                passwordBox.SelectAll();
-            };
-
-            AcceptButton = ok;
-            Controls.AddRange(new Control[] { intro, account, label, passwordBox, save, copy, ok });
-        }
-
-        private static Icon? TryApplicationIcon()
-        {
-            try { return Icon.ExtractAssociatedIcon(Program.ExecutablePath); }
-            catch { return null; }
         }
     }
 
@@ -1572,7 +1579,7 @@ namespace DirectXfer.WindowsLauncher
     {
         internal string AppTitle = string.Empty, Open = string.Empty, Logs = string.Empty, Configure = string.Empty, ResetAdminPassword = string.Empty, Language = string.Empty, Stop = string.Empty;
         internal string OptionalComponents = string.Empty, ActivateRclone = string.Empty, RemoveRclone = string.Empty, RcloneActive = string.Empty, ActivateTesseract = string.Empty, RemoveTesseract = string.Empty, TesseractActive = string.Empty;
-        internal string OptionalInstallConfirm = string.Empty, OptionalRemoveConfirm = string.Empty, OptionalInstalling = string.Empty, OptionalInstalled = string.Empty, OptionalRemoved = string.Empty, OptionalFailed = string.Empty, OptionalCleanupFailed = string.Empty;
+        internal string OptionalInstallConfirm = string.Empty, OptionalRemoveConfirm = string.Empty, OptionalInstalling = string.Empty, OptionalInstalled = string.Empty, OptionalRemoved = string.Empty, OptionalFailed = string.Empty, OptionalCleanupFailed = string.Empty, OptionalBusyOtherSession = string.Empty;
         internal string FirstRunTitle = string.Empty, FirstRunBody = string.Empty, PickHost = string.Empty, PickInbox = string.Empty, PickImages = string.Empty;
         internal string ConfigSaved = string.Empty, ConfigSavedRestart = string.Empty, StartError = string.Empty, ServerStopped = string.Empty, ServerHostUnavailable = string.Empty, LogLabel = string.Empty, PortFallback = string.Empty, NoFreePort = string.Empty;
         internal string ResetPasswordError = string.Empty, ResetPasswordEnvManaged = string.Empty;
@@ -1593,7 +1600,7 @@ namespace DirectXfer.WindowsLauncher
                         ActivateTesseract = "Activer Tesseract OCR (télécharger)…", RemoveTesseract = "Désactiver et supprimer Tesseract OCR", TesseractActive = "✓ Tesseract OCR 5.5.3 activé",
                         OptionalInstallConfirm = "{0} est optionnel et n’est pas inclus dans l’installateur Direct-Xfer. Le télécharger et l’activer maintenant ?",
                         OptionalRemoveConfirm = "Désactiver et supprimer {0} de cet utilisateur ?", OptionalInstalling = "Téléchargement et installation de {0}…",
-                        OptionalInstalled = "{0} est installé et activé. Direct-Xfer recharge le serveur.", OptionalRemoved = "{0} a été désactivé et supprimé.", OptionalFailed = "Impossible de modifier {0}.\r\n\r\n{1}", OptionalCleanupFailed = "{0} a bien été désactivé, mais certains fichiers n’ont pas pu être supprimés.\r\n\r\n{1}",
+                        OptionalInstalled = "{0} est installé et activé. Direct-Xfer recharge le serveur.", OptionalRemoved = "{0} a été désactivé et supprimé.", OptionalFailed = "Impossible de modifier {0}.\r\n\r\n{1}", OptionalCleanupFailed = "{0} a bien été désactivé, mais certains fichiers n’ont pas pu être supprimés.\r\n\r\n{1}", OptionalBusyOtherSession = "Une autre session Direct-Xfer modifie déjà les composants optionnels. Réessayez dans quelques instants.",
                         FirstRunTitle = "Direct-Xfer - Configuration du premier démarrage",
                         FirstRunBody = "Choisissez les dossiers utilisés par Direct-Xfer. Vous pourrez les modifier plus tard depuis l’icône près de l’heure.",
                         PickHost = "Choisir le dossier à partager / parcourir", PickInbox = "Choisir le dossier des fichiers reçus",
@@ -1622,7 +1629,7 @@ namespace DirectXfer.WindowsLauncher
                         ActivateTesseract = "Activar Tesseract OCR (descargar)…", RemoveTesseract = "Desactivar y eliminar Tesseract OCR", TesseractActive = "✓ Tesseract OCR 5.5.3 activado",
                         OptionalInstallConfirm = "{0} es opcional y no está incluido en el instalador de Direct-Xfer. ¿Descargarlo y activarlo ahora?",
                         OptionalRemoveConfirm = "¿Desactivar y eliminar {0} para este usuario?", OptionalInstalling = "Descargando e instalando {0}…",
-                        OptionalInstalled = "{0} está instalado y activado. Direct-Xfer está recargando el servidor.", OptionalRemoved = "{0} se desactivó y eliminó.", OptionalFailed = "No se pudo modificar {0}.\r\n\r\n{1}", OptionalCleanupFailed = "{0} se desactivó correctamente, pero algunos archivos no pudieron eliminarse.\r\n\r\n{1}",
+                        OptionalInstalled = "{0} está instalado y activado. Direct-Xfer está recargando el servidor.", OptionalRemoved = "{0} se desactivó y eliminó.", OptionalFailed = "No se pudo modificar {0}.\r\n\r\n{1}", OptionalCleanupFailed = "{0} se desactivó correctamente, pero algunos archivos no pudieron eliminarse.\r\n\r\n{1}", OptionalBusyOtherSession = "Otra sesión de Direct-Xfer ya está modificando los componentes opcionales. Inténtalo de nuevo en unos instantes.",
                         FirstRunTitle = "Direct-Xfer - Configuración del primer inicio",
                         FirstRunBody = "Elige las carpetas que usará Direct-Xfer. Podrás cambiarlas más tarde desde el icono de la bandeja del sistema.",
                         PickHost = "Elegir la carpeta para compartir / explorar", PickInbox = "Elegir la carpeta de archivos recibidos",
@@ -1651,7 +1658,7 @@ namespace DirectXfer.WindowsLauncher
                         ActivateTesseract = "Activate Tesseract OCR (download)…", RemoveTesseract = "Deactivate and remove Tesseract OCR", TesseractActive = "✓ Tesseract OCR 5.5.3 active",
                         OptionalInstallConfirm = "{0} is optional and is not included in the Direct-Xfer installer. Download and activate it now?",
                         OptionalRemoveConfirm = "Deactivate and remove {0} for this user?", OptionalInstalling = "Downloading and installing {0}…",
-                        OptionalInstalled = "{0} is installed and active. Direct-Xfer is reloading the server.", OptionalRemoved = "{0} was deactivated and removed.", OptionalFailed = "Could not change {0}.\r\n\r\n{1}", OptionalCleanupFailed = "{0} was deactivated successfully, but some files could not be removed.\r\n\r\n{1}",
+                        OptionalInstalled = "{0} is installed and active. Direct-Xfer is reloading the server.", OptionalRemoved = "{0} was deactivated and removed.", OptionalFailed = "Could not change {0}.\r\n\r\n{1}", OptionalCleanupFailed = "{0} was deactivated successfully, but some files could not be removed.\r\n\r\n{1}", OptionalBusyOtherSession = "Another Direct-Xfer session is already modifying optional components. Try again in a moment.",
                         FirstRunTitle = "Direct-Xfer - First-run setup",
                         FirstRunBody = "Choose the folders used by Direct-Xfer. You can change them later from the system tray icon.",
                         PickHost = "Choose the folder to share / browse", PickInbox = "Choose the received-files folder",

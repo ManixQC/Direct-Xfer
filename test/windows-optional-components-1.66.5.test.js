@@ -10,10 +10,10 @@ const launcher = read('windows-launcher/Program.cs');
 const host = read('windows-server-host/Program.cs');
 const workflow = read('.github/workflows/build-windows-csharp.yml');
 
-test('1.66.5 keeps optional helpers opt-in with explicit activation markers', () => {
+test('1.66.6 keeps optional helpers opt-in with explicit activation markers', () => {
   assert.match(launcher, /OptionalActivationMarkerFileName = "\.direct-xfer-enabled"/);
-  assert.match(launcher, /File\.Exists\(OptionalRcloneActivationMarker\) && File\.Exists\(OptionalRclonePath\)/);
-  assert.match(launcher, /File\.Exists\(OptionalTesseractActivationMarker\).*File\.Exists\(OptionalTesseractPath\)/s);
+  assert.match(launcher, /File\.Exists\(OptionalRcloneActivationMarker\).*RcloneBinaryMatchesPinnedVersion\(OptionalRclonePath\)/s);
+  assert.match(launcher, /File\.Exists\(OptionalTesseractActivationMarker\).*TesseractBinaryMatchesPinnedVersion\(OptionalTesseractPath\)/s);
   assert.match(host, /File\.Exists\(OptionalRcloneActivationMarker\) && File\.Exists\(OptionalRclonePath\)/);
   assert.match(host, /File\.Exists\(OptionalTesseractActivationMarker\) && File\.Exists\(OptionalTesseractPath\)/);
 });
@@ -24,8 +24,8 @@ test('legacy 1.66.4 activation migration is explicit, integrity-aware and reload
   assert.match(launcher, /migrated-from-1\.66\.4/);
   assert.match(launcher, /LegacyTessdataMatchesPinnedBlobs\(\)/);
   assert.match(launcher, /FileGitBlobSha1\(path\).*model\.GitBlobSha1/s);
-  assert.match(launcher, /IsAmd64Pe\(OptionalRclonePath\)/);
-  assert.match(launcher, /IsAmd64Pe\(OptionalTesseractPath\)/);
+  assert.match(launcher, /RcloneBinaryMatchesPinnedVersion\(OptionalRclonePath\)/);
+  assert.match(launcher, /TesseractBinaryMatchesPinnedVersion\(OptionalTesseractPath\)/);
 });
 
 test('optional downloads retry transient failures and reject non-HTTPS redirects', () => {
@@ -107,11 +107,11 @@ test('launcher session parsing is bounded and stale optional download work is cl
   assert.match(launcher, /session\.token\.Length != 48/);
   assert.match(launcher, /CleanupStaleOptionalWorkDirectories\(\);/);
   assert.match(launcher, /Directory\.EnumerateDirectories\(OptionalToolsRoot, "\.work-\*", SearchOption\.TopDirectoryOnly\)/);
-  assert.match(launcher, /stopItem\.Enabled = !_optionalToolBusy/);
+  assert.match(launcher, /menu\.AddItem\(TrayStop, tr\.Stop, !_optionalToolBusy\)/);
 });
 
-test('default Windows payload still excludes rclone and Tesseract in 1.66.5', () => {
-  assert.match(workflow, /DX_VERSION: '1\.66\.5'/);
+test('default Windows payload still excludes rclone and Tesseract in 1.66.6', () => {
+  assert.match(workflow, /DX_VERSION: '1\.66\.6'/);
   assert.doesNotMatch(workflow, /downloads\.rclone\.org|tesseract-ocr-w64-setup/);
   assert.match(workflow, /Optional Windows component leaked into the default payload/);
 });

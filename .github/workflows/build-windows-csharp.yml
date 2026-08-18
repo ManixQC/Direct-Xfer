@@ -1,5 +1,5 @@
 name: Build Direct-Xfer Windows C# + Installer
-run-name: v1.66.5
+run-name: v1.66.6
 
 on:
   workflow_dispatch:
@@ -27,12 +27,11 @@ jobs:
   build-windows:
     runs-on: windows-2025
     env:
-      DX_VERSION: '1.66.5'
-      DX_RUNTIME_BUILD: '1.66.5-launcher79-csharp'
-      DX_SERVER_HOST_BUILD: '1.66.5-serverhost53-csharp'
-      DX_DOTNET_DESKTOP_RUNTIME_VERSION: '10.0.11'
+      DX_VERSION: '1.66.6'
+      DX_RUNTIME_BUILD: '1.66.6-launcher82-csharp'
+      DX_SERVER_HOST_BUILD: '1.66.6-serverhost55-csharp'
+      DX_DOTNET_RUNTIME_VERSION: '10.0.11'
       DX_DOTNET_RUNTIME_ZIP_SHA512: 'd9ab9c0d9916b8fa3585b5f403057f594ffffb8364dac09e0007dd8ac671c86754935b980d8fb5da83cb1b82ac3cd57cc407c969e6d837aaa2fae21047cb7448'
-      DX_DOTNET_DESKTOP_RUNTIME_ZIP_SHA512: '1d32a9bf6c93f50dee5734048f825998b98266d0e28846dbee0310e2aad7e28fc2251e38ffad6a474a1e57381895130f2b3e1e1a4f875ac7f79271d91c6eb433'
       DX_NODE_VERSION: '24.19.0'
       DX_NODE_EXE_SHA256: '3602f2bb1a10f2cbab4c36886218a33c1ab3db87290e73b033c46c77147d0237'
       DX_NODE_MODULES_BUDGET_MB: '15'
@@ -123,10 +122,9 @@ jobs:
           $distRoot = Join-Path $PWD 'dist'
           $dist = Join-Path $distRoot "Direct-Xfer-$env:DX_VERSION-Windows-CSharp"
           $app = Join-Path $dist 'runtime\app'
-          $node = Join-Path $dist 'runtime\node'
           $dotnetRuntime = Join-Path $dist 'runtime\dotnet'
           Remove-Item $dist -Recurse -Force -ErrorAction SilentlyContinue
-          New-Item -ItemType Directory -Force -Path $app,$node,$dotnetRuntime | Out-Null
+          New-Item -ItemType Directory -Force -Path $app,$dotnetRuntime | Out-Null
           Copy-Item 'build\windows-dotnet10\launcher\Direct-Xfer.exe' $dist
           Copy-Item 'build\windows-dotnet10\server-host\Direct-Xfer.ServerHost.exe' $dist
           Copy-Item 'windows-launcher\README-WINDOWS-PORTABLE.md' (Join-Path $dist 'README-WINDOWS-PORTABLE.md')
@@ -179,65 +177,48 @@ jobs:
           if (-not (Test-Path -LiteralPath $marker -PathType Leaf)) { throw "Failed to create runtime marker: $marker" }
           $markerNow = (Get-Content -LiteralPath $marker -Raw).Trim()
           if ($markerNow -ne $env:DX_RUNTIME_BUILD) { throw "Runtime marker write mismatch: '$markerNow' != '$env:DX_RUNTIME_BUILD'" }
-          $nodeExe = Join-Path $node 'node.exe'
-          $nodeUrl = "https://nodejs.org/download/release/v$env:DX_NODE_VERSION/win-x64/node.exe"
-          Invoke-DxDownload $nodeUrl $nodeExe
-          $nodeHash = (Get-FileHash -Algorithm SHA256 $nodeExe).Hash.ToLowerInvariant()
-          if ($nodeHash -ne $env:DX_NODE_EXE_SHA256) { throw "Node SHA-256 mismatch: $nodeHash" }
-          Set-Content -Encoding UTF8 (Join-Path $node 'README.txt') @("Direct-Xfer pinned Node.js $env:DX_NODE_VERSION x64","SHA-256: $nodeHash","Source: nodejs.org")
-
-
           # Build one private .NET 10 runtime tree shared by both framework-dependent
-          # single-file apphosts. Microsoft's WindowsDesktop ZIP is an additive framework
-          # archive: it does not provide dotnet.exe/hostfxr/Microsoft.NETCore.App by itself.
-          # Merge the pinned base .NET Runtime ZIP first, then the matching WindowsDesktop
-          # Runtime ZIP into the same runtime\dotnet directory. This keeps one shared tree
-          # without duplicating the runtime inside both Direct-Xfer executables.
-          $dotnetBaseRuntimeZip = Join-Path $env:RUNNER_TEMP "dotnet-runtime-$env:DX_DOTNET_DESKTOP_RUNTIME_VERSION-win-x64.zip"
-          $dotnetBaseRuntimeUrl = "https://builds.dotnet.microsoft.com/dotnet/Runtime/$env:DX_DOTNET_DESKTOP_RUNTIME_VERSION/dotnet-runtime-$env:DX_DOTNET_DESKTOP_RUNTIME_VERSION-win-x64.zip"
+          # single-file apphosts. The launcher uses native Win32 UI APIs, so Direct-Xfer no
+          # longer needs Microsoft.WindowsDesktop.App or the WindowsDesktop runtime archive.
+          $dotnetBaseRuntimeZip = Join-Path $env:RUNNER_TEMP "dotnet-runtime-$env:DX_DOTNET_RUNTIME_VERSION-win-x64.zip"
+          $dotnetBaseRuntimeUrl = "https://builds.dotnet.microsoft.com/dotnet/Runtime/$env:DX_DOTNET_RUNTIME_VERSION/dotnet-runtime-$env:DX_DOTNET_RUNTIME_VERSION-win-x64.zip"
           Invoke-DxDownload $dotnetBaseRuntimeUrl $dotnetBaseRuntimeZip
           $dotnetBaseRuntimeHash = (Get-FileHash -Algorithm SHA512 $dotnetBaseRuntimeZip).Hash.ToLowerInvariant()
           if ($dotnetBaseRuntimeHash -ne $env:DX_DOTNET_RUNTIME_ZIP_SHA512) { throw "Private .NET Runtime SHA-512 mismatch: $dotnetBaseRuntimeHash" }
           Expand-Archive -LiteralPath $dotnetBaseRuntimeZip -DestinationPath $dotnetRuntime -Force
 
-          $dotnetDesktopRuntimeZip = Join-Path $env:RUNNER_TEMP "windowsdesktop-runtime-$env:DX_DOTNET_DESKTOP_RUNTIME_VERSION-win-x64.zip"
-          $dotnetDesktopRuntimeUrl = "https://builds.dotnet.microsoft.com/dotnet/WindowsDesktop/$env:DX_DOTNET_DESKTOP_RUNTIME_VERSION/windowsdesktop-runtime-$env:DX_DOTNET_DESKTOP_RUNTIME_VERSION-win-x64.zip"
-          Invoke-DxDownload $dotnetDesktopRuntimeUrl $dotnetDesktopRuntimeZip
-          $dotnetDesktopRuntimeHash = (Get-FileHash -Algorithm SHA512 $dotnetDesktopRuntimeZip).Hash.ToLowerInvariant()
-          if ($dotnetDesktopRuntimeHash -ne $env:DX_DOTNET_DESKTOP_RUNTIME_ZIP_SHA512) { throw "Private .NET WindowsDesktop Runtime SHA-512 mismatch: $dotnetDesktopRuntimeHash" }
-          Expand-Archive -LiteralPath $dotnetDesktopRuntimeZip -DestinationPath $dotnetRuntime -Force
-
           $privateDotnetExe = Join-Path $dotnetRuntime 'dotnet.exe'
-          $privateCore = Join-Path $dotnetRuntime "shared\Microsoft.NETCore.App\$env:DX_DOTNET_DESKTOP_RUNTIME_VERSION"
-          $privateDesktop = Join-Path $dotnetRuntime "shared\Microsoft.WindowsDesktop.App\$env:DX_DOTNET_DESKTOP_RUNTIME_VERSION"
-          $privateHostFxr = Join-Path $dotnetRuntime "host\fxr\$env:DX_DOTNET_DESKTOP_RUNTIME_VERSION\hostfxr.dll"
-          foreach ($required in @($privateDotnetExe,$privateCore,$privateDesktop,$privateHostFxr)) {
+          $privateCore = Join-Path $dotnetRuntime "shared\Microsoft.NETCore.App\$env:DX_DOTNET_RUNTIME_VERSION"
+          $privateHostFxr = Join-Path $dotnetRuntime "host\fxr\$env:DX_DOTNET_RUNTIME_VERSION\hostfxr.dll"
+          foreach ($required in @($privateDotnetExe,$privateCore,$privateHostFxr)) {
             if (-not (Test-Path -LiteralPath $required)) { throw "Incomplete private .NET runtime: missing $required" }
           }
+          $retiredDesktop = Join-Path $dotnetRuntime 'shared\Microsoft.WindowsDesktop.App'
+          if (Test-Path -LiteralPath $retiredDesktop) { throw "Microsoft.WindowsDesktop.App leaked into the base Direct-Xfer runtime: $retiredDesktop" }
           $privateRuntimeOutput = @(& $privateDotnetExe --list-runtimes 2>&1)
           if ($LASTEXITCODE -ne 0) { throw "Private dotnet runtime probe failed: $LASTEXITCODE" }
           $privateRuntimeLines = @($privateRuntimeOutput | ForEach-Object { ([string]$_).Trim() } | Where-Object { $_ })
-          $escapedDotnetVersion = [regex]::Escape($env:DX_DOTNET_DESKTOP_RUNTIME_VERSION)
-          if (-not ($privateRuntimeLines | Where-Object { $_ -match "^Microsoft\.NETCore\.App\s+$escapedDotnetVersion\s+\[" })) { throw "Private runtime is missing Microsoft.NETCore.App $env:DX_DOTNET_DESKTOP_RUNTIME_VERSION" }
-          if (-not ($privateRuntimeLines | Where-Object { $_ -match "^Microsoft\.WindowsDesktop\.App\s+$escapedDotnetVersion\s+\[" })) { throw "Private runtime is missing Microsoft.WindowsDesktop.App $env:DX_DOTNET_DESKTOP_RUNTIME_VERSION" }
+          $escapedDotnetVersion = [regex]::Escape($env:DX_DOTNET_RUNTIME_VERSION)
+          if (-not ($privateRuntimeLines | Where-Object { $_ -match "^Microsoft\.NETCore\.App\s+$escapedDotnetVersion\s+\[" })) { throw "Private runtime is missing Microsoft.NETCore.App $env:DX_DOTNET_RUNTIME_VERSION" }
+          if ($privateRuntimeLines | Where-Object { $_ -match '^Microsoft\.WindowsDesktop\.App\s+' }) { throw 'Private runtime unexpectedly exposes Microsoft.WindowsDesktop.App.' }
           [System.IO.File]::WriteAllLines((Join-Path $dotnetRuntime 'DIRECT-XFER-README.txt'), @(
-            "Direct-Xfer private shared .NET 10 runtime tree $env:DX_DOTNET_DESKTOP_RUNTIME_VERSION x64",
+            "Direct-Xfer private shared .NET 10 runtime tree $env:DX_DOTNET_RUNTIME_VERSION x64",
             "Base Runtime SHA-512: $dotnetBaseRuntimeHash",
             "Base Runtime source: $dotnetBaseRuntimeUrl",
-            "WindowsDesktop Runtime SHA-512: $dotnetDesktopRuntimeHash",
-            "WindowsDesktop Runtime source: $dotnetDesktopRuntimeUrl",
-            "The two official Microsoft archives are merged into this single runtime tree.",
+            "Microsoft.WindowsDesktop.App: not bundled (launcher uses native Win32 UI)",
             "Used by both Direct-Xfer.exe and Direct-Xfer.ServerHost.exe via AppHostDotNetSearch=AppRelative"
           ), [System.Text.Encoding]::UTF8)
 
-          # rclone and Tesseract are intentionally excluded from the default Windows payload.
-          # The launcher downloads their pinned, verified packages only when the user activates
-          # the corresponding optional component from the Direct-Xfer system-tray menu.
-          Write-Host ("Direct-Xfer optimized Windows payload: node_modules={0:N1} MiB; optional rclone/Tesseract excluded" -f ($runtimeNodeModulesBytes / 1MB))
+          # Node.js, rclone and Tesseract are intentionally excluded from the default Windows payload.
+          # Inno Setup reuses an existing compatible x64 Node.js installation when available and
+          # downloads Direct-Xfer's pinned node.exe only during installation when Node is missing.
+          # rclone/Tesseract remain opt-in system-tray components.
+          Write-Host ("Direct-Xfer optimized Windows payload: node_modules={0:N1} MiB; Node excluded; optional rclone/Tesseract excluded" -f ($runtimeNodeModulesBytes / 1MB))
           if ($env:GITHUB_STEP_SUMMARY) {
             Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Value @(
               '### Direct-Xfer Windows runtime footprint',
               "- production node_modules: $([math]::Round($runtimeNodeModulesBytes / 1MB, 1)) MiB (hard budget $env:DX_NODE_MODULES_BUDGET_MB MiB)",
+              "- Node.js $env:DX_NODE_VERSION: not bundled; installer downloads pinned node.exe only when no compatible x64 Node is available",
               '- rclone: optional, downloaded after activation (not bundled)',
               '- Tesseract OCR: optional, downloaded after activation (not bundled)'
             )
@@ -275,7 +256,7 @@ jobs:
             $env:DOTNET_HOST_TRACE = '1'
             $env:DOTNET_HOST_TRACE_VERBOSITY = '4'
             $privateRootNormalized = ([System.IO.Path]::GetFullPath($privateDotnetRoot)).Replace('/', '\').TrimEnd('\').ToLowerInvariant()
-            $expectedHostFxr = Join-Path $privateDotnetRoot "host\fxr\$env:DX_DOTNET_DESKTOP_RUNTIME_VERSION\hostfxr.dll"
+            $expectedHostFxr = Join-Path $privateDotnetRoot "host\fxr\$env:DX_DOTNET_RUNTIME_VERSION\hostfxr.dll"
             $expectedHostFxrNormalized = ([System.IO.Path]::GetFullPath($expectedHostFxr)).Replace('/', '\').ToLowerInvariant()
             foreach ($exeName in @('Direct-Xfer.exe','Direct-Xfer.ServerHost.exe')) {
               $exe = Join-Path $dist $exeName
@@ -297,7 +278,7 @@ jobs:
               $resolvedHostFxrMarker = "resolved fxr [$expectedHostFxrNormalized]"
               $loadedHostFxrMarker = "loaded library from $expectedHostFxrNormalized"
               if (-not ($traceNormalized.Contains($resolvedHostFxrMarker) -or $traceNormalized.Contains($loadedHostFxrMarker))) {
-                throw "$exeName did not resolve/load hostfxr from the pinned private .NET $env:DX_DOTNET_DESKTOP_RUNTIME_VERSION runtime."
+                throw "$exeName did not resolve/load hostfxr from the pinned private .NET $env:DX_DOTNET_RUNTIME_VERSION runtime."
               }
             }
           } finally {
@@ -325,18 +306,19 @@ jobs:
           }
           $privateDotnetRoot = Join-Path $dist 'runtime\dotnet'
           $privateDotnetExe = Join-Path $privateDotnetRoot 'dotnet.exe'
-          $privateCore = Join-Path $privateDotnetRoot "shared\Microsoft.NETCore.App\$env:DX_DOTNET_DESKTOP_RUNTIME_VERSION"
-          $privateDesktop = Join-Path $privateDotnetRoot "shared\Microsoft.WindowsDesktop.App\$env:DX_DOTNET_DESKTOP_RUNTIME_VERSION"
-          foreach ($required in @($privateDotnetExe,$privateCore,$privateDesktop)) {
+          $privateCore = Join-Path $privateDotnetRoot "shared\Microsoft.NETCore.App\$env:DX_DOTNET_RUNTIME_VERSION"
+          foreach ($required in @($privateDotnetExe,$privateCore)) {
             if (-not (Test-Path -LiteralPath $required)) { throw "Missing private shared .NET runtime component: $required" }
           }
+          $retiredDesktop = Join-Path $privateDotnetRoot 'shared\Microsoft.WindowsDesktop.App'
+          if (Test-Path -LiteralPath $retiredDesktop) { throw "Microsoft.WindowsDesktop.App must not be present in the portable runtime: $retiredDesktop" }
           $privateRuntimeOutput = @(& $privateDotnetExe --list-runtimes 2>&1)
           if ($LASTEXITCODE -ne 0) { throw "Private .NET runtime layout probe failed: $LASTEXITCODE" }
           $privateRuntimeText = (($privateRuntimeOutput | ForEach-Object { [string]$_ }) -join "`n")
-          $escapedDotnetVersion = [regex]::Escape($env:DX_DOTNET_DESKTOP_RUNTIME_VERSION)
+          $escapedDotnetVersion = [regex]::Escape($env:DX_DOTNET_RUNTIME_VERSION)
           if ($privateRuntimeText -notmatch "(?m)^Microsoft\.NETCore\.App\s+$escapedDotnetVersion\s+\[") { throw 'Private runtime does not expose the pinned Microsoft.NETCore.App.' }
-          if ($privateRuntimeText -notmatch "(?m)^Microsoft\.WindowsDesktop\.App\s+$escapedDotnetVersion\s+\[") { throw 'Private runtime does not expose the pinned Microsoft.WindowsDesktop.App.' }
-          foreach ($optionalRel in @('runtime\rclone','runtime\tesseract')) {
+          if ($privateRuntimeText -match "(?m)^Microsoft\.WindowsDesktop\.App\s+") { throw 'Private runtime unexpectedly exposes Microsoft.WindowsDesktop.App.' }
+          foreach ($optionalRel in @('runtime\node','runtime\rclone','runtime\tesseract')) {
             $optionalPath = Join-Path $dist $optionalRel
             if (Test-Path -LiteralPath $optionalPath) {
               throw "Optional Windows component leaked into the default payload: $optionalPath"
@@ -377,18 +359,20 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $env:DX_INNO_APP_VERSION = $env:DX_VERSION
-          $env:DX_INNO_DOTNET_RUNTIME_VERSION = $env:DX_DOTNET_DESKTOP_RUNTIME_VERSION
+          $env:DX_INNO_DOTNET_RUNTIME_VERSION = $env:DX_DOTNET_RUNTIME_VERSION
+          $env:DX_INNO_NODE_VERSION = $env:DX_NODE_VERSION
+          $env:DX_INNO_NODE_EXE_SHA256 = $env:DX_NODE_EXE_SHA256
           $env:DX_INNO_SOURCE_DIR = Join-Path $PWD "dist\Direct-Xfer-$env:DX_VERSION-Windows-CSharp"
           $env:DX_INNO_OUTPUT_DIR = Join-Path $PWD 'dist\installer'
           & $env:DX_ISCC 'installer\Direct-Xfer.iss'
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed: $LASTEXITCODE" }
       - uses: actions/upload-artifact@v6
         with:
-          name: Direct-Xfer-1.66.5-Windows-CSharp
-          path: dist/Direct-Xfer-1.66.5-Windows-CSharp/**
+          name: Direct-Xfer-1.66.6-Windows-CSharp
+          path: dist/Direct-Xfer-1.66.6-Windows-CSharp/**
           if-no-files-found: error
       - uses: actions/upload-artifact@v6
         with:
-          name: Direct-Xfer-Setup-1.66.5
-          path: dist/installer/Direct-Xfer-Setup-1.66.5.exe
+          name: Direct-Xfer-Setup-1.66.6
+          path: dist/installer/Direct-Xfer-Setup-1.66.6.exe
           if-no-files-found: error

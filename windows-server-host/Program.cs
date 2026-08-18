@@ -10,6 +10,7 @@ using System.Net.Http;
 using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using Microsoft.Win32;
@@ -19,9 +20,9 @@ namespace DirectXfer.WindowsServerHost
 {
     internal static class Program
     {
-        internal const string AppVersion = "1.66.5";
-        internal const string RuntimeAppBuild = "1.66.5-launcher79-csharp";
-        internal const string HostVersion = "1.66.5-serverhost53-csharp";
+        internal const string AppVersion = "1.66.6";
+        internal const string RuntimeAppBuild = "1.66.6-launcher82-csharp";
+        internal const string HostVersion = "1.66.6-serverhost55-csharp";
         internal const int DefaultPort = 55750;
         internal const int MaxFallbackPort = 55769;
         internal const int StartupReadyTimeoutMs = 60000;
@@ -111,8 +112,8 @@ namespace DirectXfer.WindowsServerHost
         private static readonly IDictionary<string, string> CriticalRuntimeSha256 =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                { "package.json", "3ddbdcd09b48d47bf5668b6b0d2f0f8dc211e64bfab526647ffa179a2c114d6f" },
-                { "package-lock.json", "334e91cc5fa09929b50800ba480f638df7b51080a2656bddf2079e4e604b1145" },
+                { "package.json", "6a07fb99643002fe898a682ee73555249cf78a853e2120398b4ac50d8ced741d" },
+                { "package-lock.json", "130479dd2110d569980e7b9f3d1c3c3469a9d1d3b639e40102248c97bb86a535" },
                 { "server.js", "a91794477ab1431bd9509924f53f939e23d0ef34e074f6d613a31cd3d8117dae" },
                 { "lib/server/public-pages.js", "96954ccf1705f068c5579806c69f4f1d56916c2a803d1fc160be874c908f0615" },
                 { "lib/server/tls-manager.js", "b82a1b195b6cb36d47d8d431b890e0479aaf9ca8d47f98e8ef9e046390610f7f" },
@@ -120,7 +121,7 @@ namespace DirectXfer.WindowsServerHost
                 { "lib/server/backup-service.js", "65cb07c147b326475a833be6cbc668db733fc8183ec0b4eec919a876b3f04bc2" },
                 { "lib/server/notification-service.js", "a55beb8d5fdb09754eeb7f7d01974896efaad20dde3b9cf00e83bf4f7a7b9baa" },
                 { "public/app.js", "d50010dbae1548634d8bf1f711d301cd1d20d6ca2e2b5b2f76dee5ae632e6350" },
-                { "pwa/app.js", "32d32f364ca52e76a3a7760f72d44bbad81463a93dde8253ea2c93cf4409fec0" },
+                { "pwa/app.js", "b2a4a62f2eea3150ee63bceb60d44d72cfbca000996313604fce34efcec8c9d6" },
                 { "lib/dlp-utils.js", "dd4d15a3ebb1cc2e7183e9b68434cf69d50532f54fcbb9e90b5ffeb0cfdad086" },
                 { "lib/fd-utils.js", "322abf15ce7a15310d6d27ac1b0ca40892658d5f21198510f7e84b78b0070b13" },
                 { "pwa/dlp-local.js", "246267542621fc92f759438b2295b87f777ba6d6aa88b3c4d23dea25aebe7390" },
@@ -190,6 +191,7 @@ namespace DirectXfer.WindowsServerHost
         }
         private static string RuntimeRoot { get { return Path.Combine(PortableRoot, "runtime"); } }
         private static string PortableNodePath { get { return Path.Combine(RuntimeRoot, "node", "node.exe"); } }
+        private static string ExternalNodeReceiptPath { get { return Path.Combine(RuntimeRoot, "node", "external-node.ini"); } }
         // rclone and Tesseract are intentionally not part of the default Windows payload.
         // The launcher downloads them only after explicit user activation and stores them
         // under the current user's Direct-Xfer data root. Legacy portable locations remain
@@ -597,21 +599,94 @@ namespace DirectXfer.WindowsServerHost
 
         private static IEnumerable<string> NodeCandidates()
         {
-            yield return PortableNodePath;
-            var external = Environment.GetEnvironmentVariable("DX_WINDOWS_NODE");
-            if (!string.IsNullOrWhiteSpace(external))
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var raw in new[]
             {
-                string? full = null;
-                try { full = Path.GetFullPath(external.Trim()); } catch { }
-                if (!string.IsNullOrWhiteSpace(full) && !string.Equals(full, Path.GetFullPath(PortableNodePath), StringComparison.OrdinalIgnoreCase))
-                    yield return full;
+                PortableNodePath,
+                ReadExternalNodeReceiptPath(),
+                Environment.GetEnvironmentVariable("DX_WINDOWS_NODE")
+            })
+            {
+                if (string.IsNullOrWhiteSpace(raw)) continue;
+                string full;
+                try { full = Path.GetFullPath(raw.Trim()); }
+                catch { continue; }
+                if (seen.Add(full)) yield return full;
+            }
+        }
+
+        private static string? ReadExternalNodeReceiptPath()
+        {
+            string path, sha256, version;
+            return TryReadExternalNodeReceipt(out path, out sha256, out version) ? path : null;
+        }
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern uint GetPrivateProfileString(
+            string lpAppName,
+            string lpKeyName,
+            string lpDefault,
+            StringBuilder lpReturnedString,
+            uint nSize,
+            string lpFileName);
+
+        private static bool TryReadNodeReceiptValue(string key, out string value)
+        {
+            value = string.Empty;
+            // Inno Setup writes the receipt through Windows INI APIs. Reading it through
+            // GetPrivateProfileStringW keeps Unicode paths safe regardless of the on-disk
+            // INI encoding chosen by Windows/Setup. The receipt is capped at 16 KiB below,
+            // so this buffer cannot truncate a legitimate value.
+            var buffer = new StringBuilder(32 * 1024);
+            var count = GetPrivateProfileString("node", key, string.Empty, buffer, (uint)buffer.Capacity, ExternalNodeReceiptPath);
+            if (count == 0 || count >= buffer.Capacity - 1) return false;
+            value = buffer.ToString().Trim();
+            return value.Length > 0;
+        }
+
+        private static bool IsSupportedNodeVersion(Version version)
+        {
+            if (version == null) return false;
+            return (version.Major == 22 && version >= new Version(22, 23, 2)) ||
+                (version.Major == 24 && version >= new Version(24, 19, 0)) ||
+                (version.Major == 26 && version >= new Version(26, 7, 0));
+        }
+
+        private static bool TryReadExternalNodeReceipt(out string path, out string sha256, out string version)
+        {
+            path = string.Empty;
+            sha256 = string.Empty;
+            version = string.Empty;
+            try
+            {
+                if (!File.Exists(ExternalNodeReceiptPath)) return false;
+                var info = new FileInfo(ExternalNodeReceiptPath);
+                if (info.Length <= 0 || info.Length > 16 * 1024 ||
+                    (info.Attributes & FileAttributes.ReparsePoint) != 0) return false;
+
+                if (!TryReadNodeReceiptValue("path", out path) || string.IsNullOrWhiteSpace(path) ||
+                    !TryReadNodeReceiptValue("sha256", out sha256) || sha256.Length != 64 || !sha256.All(IsHexDigit) ||
+                    !TryReadNodeReceiptValue("version", out version) || !Version.TryParse(version, out var parsed) || parsed == null ||
+                    !IsSupportedNodeVersion(parsed)) return false;
+
+                path = Path.GetFullPath(path);
+                sha256 = sha256.ToLowerInvariant();
+                version = parsed.ToString();
+                return !string.Equals(path, Path.GetFullPath(PortableNodePath), StringComparison.OrdinalIgnoreCase);
+            }
+            catch
+            {
+                path = string.Empty;
+                sha256 = string.Empty;
+                version = string.Empty;
+                return false;
             }
         }
 
         private static string EnsureNode()
         {
             foreach (var candidate in NodeCandidates()) if (NodeUsable(candidate)) return candidate;
-            throw new FileNotFoundException("Valid pinned x64 Node.js runtime not found.");
+            throw new FileNotFoundException("Valid x64 Node.js runtime not found. Re-run the Direct-Xfer installer so it can download Node.js when needed.");
         }
 
         private static void SanitizeNodeEnvironment(ProcessStartInfo start)
@@ -764,16 +839,42 @@ namespace DirectXfer.WindowsServerHost
                 if ((File.GetAttributes(full) & FileAttributes.ReparsePoint) != 0) return false;
                 var length = new FileInfo(full).Length;
                 if (length < 1024 * 1024 || length > 200L * 1024 * 1024 || !IsAmd64Pe(full)) return false;
+
                 var bundled = string.Equals(full, Path.GetFullPath(PortableNodePath), StringComparison.OrdinalIgnoreCase);
+                string expectedHash;
+                string? expectedVersion = null;
                 if (bundled)
                 {
-                    if (!string.Equals(FileSha256(full), Program.NodeExeSha256, StringComparison.OrdinalIgnoreCase)) return false;
+                    expectedHash = Program.NodeExeSha256;
+                    expectedVersion = Program.NodeVersion;
                 }
                 else
                 {
-                    var expected = (Environment.GetEnvironmentVariable("DX_WINDOWS_NODE_SHA256") ?? string.Empty).Trim();
-                    if (expected.Length != 64 || !expected.All(IsHexDigit) || !string.Equals(FileSha256(full), expected, StringComparison.OrdinalIgnoreCase)) return false;
+                    string receiptPath, receiptHash, receiptVersion;
+                    if (TryReadExternalNodeReceipt(out receiptPath, out receiptHash, out receiptVersion) &&
+                        string.Equals(full, receiptPath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        expectedHash = receiptHash;
+                        expectedVersion = receiptVersion;
+                    }
+                    else
+                    {
+                        var external = Environment.GetEnvironmentVariable("DX_WINDOWS_NODE");
+                        string? externalFull = null;
+                        try
+                        {
+                            if (!string.IsNullOrWhiteSpace(external)) externalFull = Path.GetFullPath(external.Trim());
+                        }
+                        catch { }
+                        if (string.IsNullOrWhiteSpace(externalFull) ||
+                            !string.Equals(full, externalFull, StringComparison.OrdinalIgnoreCase)) return false;
+                        expectedHash = (Environment.GetEnvironmentVariable("DX_WINDOWS_NODE_SHA256") ?? string.Empty).Trim();
+                        if (expectedHash.Length != 64 || !expectedHash.All(IsHexDigit)) return false;
+                    }
                 }
+
+                if (!string.Equals(FileSha256(full), expectedHash, StringComparison.OrdinalIgnoreCase)) return false;
+
                 using (var process = new Process())
                 {
                     process.StartInfo = new ProcessStartInfo
@@ -795,8 +896,9 @@ namespace DirectXfer.WindowsServerHost
                     try { stderr.Wait(100); } catch { }
                     var output = (stdout.Result ?? string.Empty).Trim().TrimStart('v');
                     if (process.ExitCode != 0 || !Version.TryParse(output, out var parsed) || parsed == null) return false;
-                    if (!(parsed.Major == 20 || parsed.Major >= 22)) return false;
-                    return !bundled || string.Equals(parsed.ToString(), Program.NodeVersion, StringComparison.Ordinal);
+                    if (!IsSupportedNodeVersion(parsed)) return false;
+                    return string.IsNullOrWhiteSpace(expectedVersion) ||
+                        string.Equals(parsed.ToString(), expectedVersion, StringComparison.Ordinal);
                 }
             }
             catch { return false; }

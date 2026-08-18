@@ -19,9 +19,9 @@ namespace DirectXfer.WindowsServerHost
 {
     internal static class Program
     {
-        internal const string AppVersion = "1.65.7";
-        internal const string RuntimeAppBuild = "1.65.7-launcher68-csharp";
-        internal const string HostVersion = "1.65.7-serverhost41-csharp";
+        internal const string AppVersion = "1.65.8";
+        internal const string RuntimeAppBuild = "1.65.8-launcher69-csharp";
+        internal const string HostVersion = "1.65.8-serverhost42-csharp";
         internal const int DefaultPort = 55750;
         internal const int MaxFallbackPort = 55769;
         internal const int StartupReadyTimeoutMs = 60000;
@@ -104,8 +104,8 @@ namespace DirectXfer.WindowsServerHost
         private static readonly IDictionary<string, string> CriticalRuntimeSha256 =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                { "package.json", "c50c5f6dc44d8bbdf30a9a6acc048175b1ec89979a0c5185df96d737285a084a" },
-                { "package-lock.json", "a65362a9ba910a9c7aec0f49464314d2d4125ae8e5e09da9c0cede966eea0c1f" },
+                { "package.json", "3122bcde3e98d72d69f6067fa41f31da06ca89984632f27c954ec8e964ecf5cf" },
+                { "package-lock.json", "082ad2325578960fc077acec426c0345167d9e4870e232e67127bb974cb2cfd2" },
                 { "server.js", "7b429f14563a3f6c5a0edc17c9155521c07c2b16e08189a728c53988c7c4f2c8" },
                 { "lib/server/public-pages.js", "96954ccf1705f068c5579806c69f4f1d56916c2a803d1fc160be874c908f0615" },
                 { "lib/server/tls-manager.js", "b82a1b195b6cb36d47d8d431b890e0479aaf9ca8d47f98e8ef9e046390610f7f" },
@@ -113,7 +113,7 @@ namespace DirectXfer.WindowsServerHost
                 { "lib/server/backup-service.js", "65cb07c147b326475a833be6cbc668db733fc8183ec0b4eec919a876b3f04bc2" },
                 { "lib/server/notification-service.js", "a55beb8d5fdb09754eeb7f7d01974896efaad20dde3b9cf00e83bf4f7a7b9baa" },
                 { "public/app.js", "d50010dbae1548634d8bf1f711d301cd1d20d6ca2e2b5b2f76dee5ae632e6350" },
-                { "pwa/app.js", "4e4d2b20385535a97918578f0af301a117655891317ab567e9f9045a569c5f43" },
+                { "pwa/app.js", "9431e012c099e91e1443822bf9534d71c8f731abf6411b959a34637e46db807f" },
                 { "lib/dlp-utils.js", "dd4d15a3ebb1cc2e7183e9b68434cf69d50532f54fcbb9e90b5ffeb0cfdad086" },
                 { "lib/fd-utils.js", "322abf15ce7a15310d6d27ac1b0ca40892658d5f21198510f7e84b78b0070b13" },
                 { "pwa/dlp-local.js", "246267542621fc92f759438b2295b87f777ba6d6aa88b3c4d23dea25aebe7390" },

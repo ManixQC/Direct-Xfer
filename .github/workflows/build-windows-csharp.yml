@@ -1,5 +1,5 @@
 name: Build Direct-Xfer Windows C# + Installer
-run-name: v1.65.7
+run-name: v1.65.8
 
 on:
   workflow_dispatch:
@@ -26,9 +26,9 @@ jobs:
   build-windows:
     runs-on: windows-2025
     env:
-      DX_VERSION: '1.65.7'
-      DX_RUNTIME_BUILD: '1.65.7-launcher68-csharp'
-      DX_SERVER_HOST_BUILD: '1.65.7-serverhost41-csharp'
+      DX_VERSION: '1.65.8'
+      DX_RUNTIME_BUILD: '1.65.8-launcher69-csharp'
+      DX_SERVER_HOST_BUILD: '1.65.8-serverhost42-csharp'
       DX_NODE_VERSION: '24.19.0'
       DX_NODE_EXE_SHA256: '3602f2bb1a10f2cbab4c36886218a33c1ab3db87290e73b033c46c77147d0237'
       INNO_VERSION: '6.7.3'
@@ -100,13 +100,24 @@ jobs:
           Copy-Item 'windows-launcher\README-WINDOWS-PORTABLE.md' (Join-Path $dist 'README-WINDOWS-PORTABLE.md')
           Copy-Item @('package.json','package-lock.json','server.js') $app
           Copy-Item @('lib','public','pwa','scripts','security','node_modules') $app -Recurse
-          Set-Content -Encoding ASCII -NoNewline (Join-Path $app 'runtime-build.txt') $env:DX_RUNTIME_BUILD
+          $marker = Join-Path $app 'runtime-build.txt'
+          # Use File.WriteAllText instead of positional Set-Content binding. This is deterministic
+          # on Windows PowerShell/PowerShell 7 and guarantees that the marker is materialized
+          # before the portable package is validated or passed to Inno Setup.
+          [System.IO.File]::WriteAllText($marker, [string]$env:DX_RUNTIME_BUILD, [System.Text.Encoding]::ASCII)
+          if (-not (Test-Path -LiteralPath $marker -PathType Leaf)) { throw "Failed to create runtime marker: $marker" }
+          $markerNow = (Get-Content -LiteralPath $marker -Raw).Trim()
+          if ($markerNow -ne $env:DX_RUNTIME_BUILD) { throw "Runtime marker write mismatch: '$markerNow' != '$env:DX_RUNTIME_BUILD'" }
           $nodeExe = Join-Path $node 'node.exe'
           $nodeUrl = "https://nodejs.org/download/release/v$env:DX_NODE_VERSION/win-x64/node.exe"
           Invoke-WebRequest $nodeUrl -OutFile $nodeExe -UseBasicParsing
           $nodeHash = (Get-FileHash -Algorithm SHA256 $nodeExe).Hash.ToLowerInvariant()
           if ($nodeHash -ne $env:DX_NODE_EXE_SHA256) { throw "Node SHA-256 mismatch: $nodeHash" }
           Set-Content -Encoding UTF8 (Join-Path $node 'README.txt') @("Direct-Xfer pinned Node.js $env:DX_NODE_VERSION x64","SHA-256: $nodeHash","Source: nodejs.org")
+          # Re-materialize the marker as the final operation of package assembly so later
+          # validation cannot observe a partially prepared runtime tree.
+          [System.IO.File]::WriteAllText($marker, [string]$env:DX_RUNTIME_BUILD, [System.Text.Encoding]::ASCII)
+          if (-not (Test-Path -LiteralPath $marker -PathType Leaf)) { throw "Runtime marker disappeared during package assembly: $marker" }
       - name: Verify portable runtime layout
         shell: pwsh
         run: |
@@ -144,11 +155,11 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed: $LASTEXITCODE" }
       - uses: actions/upload-artifact@v6
         with:
-          name: Direct-Xfer-1.65.7-Windows-CSharp
-          path: dist/Direct-Xfer-1.65.7-Windows-CSharp/**
+          name: Direct-Xfer-1.65.8-Windows-CSharp
+          path: dist/Direct-Xfer-1.65.8-Windows-CSharp/**
           if-no-files-found: error
       - uses: actions/upload-artifact@v6
         with:
-          name: Direct-Xfer-Setup-1.65.7
-          path: dist/installer/Direct-Xfer-Setup-1.65.7.exe
+          name: Direct-Xfer-Setup-1.65.8
+          path: dist/installer/Direct-Xfer-Setup-1.65.8.exe
           if-no-files-found: error

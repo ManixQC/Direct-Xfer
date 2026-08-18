@@ -10,10 +10,10 @@
     <Company>Direct-Xfer</Company>
     <Product>Direct-Xfer</Product>
     <Copyright>Copyright © Direct-Xfer 2026</Copyright>
-    <Version>1.65.7</Version>
-    <AssemblyVersion>1.65.7.0</AssemblyVersion>
-    <FileVersion>1.65.7.0</FileVersion>
-    <InformationalVersion>1.65.7-launcher68-csharp</InformationalVersion>
+    <Version>1.65.8</Version>
+    <AssemblyVersion>1.65.8.0</AssemblyVersion>
+    <FileVersion>1.65.8.0</FileVersion>
+    <InformationalVersion>1.65.8-launcher69-csharp</InformationalVersion>
     <PlatformTarget>x64</PlatformTarget>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>false</SelfContained>

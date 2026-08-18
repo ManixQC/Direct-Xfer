@@ -4,10 +4,12 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Security;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
@@ -19,16 +21,27 @@ namespace DirectXfer.WindowsLauncher
 {
     internal static class Program
     {
-        internal const string AppVersion = "1.66.4";
-        internal const string RuntimeAppBuild = "1.66.4-launcher77-csharp";
+        internal const string AppVersion = "1.66.5";
+        internal const string RuntimeAppBuild = "1.66.5-launcher79-csharp";
         internal const string ServerHostFileName = "Direct-Xfer.ServerHost.exe";
-        internal const string ServerHostVersion = "1.66.4.0";
+        internal const string ServerHostVersion = "1.66.5.0";
         internal const int DefaultPort = 55750;
+        internal const int MaxFallbackPort = 55769;
         internal const int StartupReadyTimeoutMs = 60000;
         internal const string MutexName = @"Local\DirectXferLauncherInstance";
         internal const string OpenEventName = @"Local\DirectXferLauncherOpen";
-        internal const string ServerHostBuild = "1.66.4-serverhost51-csharp";
+        internal const string ServerHostBuild = "1.66.5-serverhost53-csharp";
         internal const string ServerHostReloadEventName = @"Local\DirectXferServerHostReload";
+        internal const string RcloneVersion = "1.74.4";
+        internal const string RcloneZipSha256 = "ef097ef9de37a57feb7d9f9c7afb34148ad3c65be8025f1d8f7f521554a701ea";
+        internal const string TesseractVersion = "5.5.3";
+        internal const string TesseractPackageVersion = "5.5.3.20260724";
+        internal const string TesseractSetupSha256 = "bee9e3434bd94fd65387d9be28cd467a41f61b1275383b55b0f59a1331270ae4";
+        internal const string TessdataFastCommit = "87416418657359cb625c412a48b6e1d6d41c29bd";
+        internal const string TessdataEngGitBlobSha1 = "bbef4675053b5b468cdb477053e28b1c698ba08e";
+        internal const string TessdataFraGitBlobSha1 = "d9e2b2160be0d1ca3b8f1bf2730fae476ef3b4a6";
+        internal const string TessdataSpaGitBlobSha1 = "72e901f13ca52cfe34cf239a368b9ed3c0ddaf26";
+        internal const string OptionalActivationMarkerFileName = ".direct-xfer-enabled";
 
         internal static string ExecutablePath
         {
@@ -109,6 +122,8 @@ namespace DirectXfer.WindowsLauncher
         public long hostStartedUtcTicks { get; set; }
         public string hostPath { get; set; } = string.Empty;
         public int serverPid { get; set; }
+        public long serverStartedUtcTicks { get; set; }
+        public string nodePath { get; set; } = string.Empty;
         public int port { get; set; }
         public string scheme { get; set; } = string.Empty;
         public string token { get; set; } = string.Empty;
@@ -131,6 +146,7 @@ namespace DirectXfer.WindowsLauncher
         private int _runtimePort;
         private bool _exiting;
         private bool _disposed;
+        private bool _optionalToolBusy;
         private string _lastAttachFailure = string.Empty;
 
         internal LauncherContext(string[] args)
@@ -154,6 +170,8 @@ namespace DirectXfer.WindowsLauncher
             };
             _tray.MouseClick += (s, e) => { if (e.Button == MouseButtons.Left) OpenBrowser(); };
             _tray.MouseDoubleClick += (s, e) => { if (e.Button == MouseButtons.Left) OpenBrowser(); };
+            CleanupStaleOptionalWorkDirectories();
+            if (MigrateLegacyOptionalActivationState()) SignalServerHostReload();
             RebuildTrayMenu();
 
             bool eventCreated;
@@ -183,6 +201,14 @@ namespace DirectXfer.WindowsLauncher
         }
         private static string ConfigPath { get { return Path.Combine(BaseDirectory, "launcher-config.json"); } }
         private static string SessionPath { get { return Path.Combine(BaseDirectory, "launcher-session.json"); } }
+        private static string OptionalToolsRoot { get { return Path.Combine(BaseDirectory, "tools"); } }
+        private static string OptionalRcloneRoot { get { return Path.Combine(OptionalToolsRoot, "rclone", Program.RcloneVersion); } }
+        private static string OptionalRclonePath { get { return Path.Combine(OptionalRcloneRoot, "rclone.exe"); } }
+        private static string OptionalRcloneActivationMarker { get { return Path.Combine(OptionalRcloneRoot, Program.OptionalActivationMarkerFileName); } }
+        private static string OptionalTesseractRoot { get { return Path.Combine(OptionalToolsRoot, "tesseract", Program.TesseractVersion); } }
+        private static string OptionalTesseractPath { get { return Path.Combine(OptionalTesseractRoot, "tesseract.exe"); } }
+        private static string OptionalTessdataPath { get { return Path.Combine(OptionalTesseractRoot, "tessdata"); } }
+        private static string OptionalTesseractActivationMarker { get { return Path.Combine(OptionalTesseractRoot, Program.OptionalActivationMarkerFileName); } }
 
         private static LauncherConfig DefaultConfig()
         {
@@ -746,6 +772,585 @@ namespace DirectXfer.WindowsLauncher
             catch { }
         }
 
+        private static bool OptionalRcloneInstalled()
+        {
+            try
+            {
+                return File.Exists(OptionalRcloneActivationMarker) && File.Exists(OptionalRclonePath) &&
+                    new FileInfo(OptionalRclonePath).Length > 1024 * 1024;
+            }
+            catch { return false; }
+        }
+
+        private static bool OptionalTesseractInstalled()
+        {
+            try
+            {
+                if (!File.Exists(OptionalTesseractActivationMarker) || !File.Exists(OptionalTesseractPath) ||
+                    !Directory.Exists(OptionalTessdataPath) || new FileInfo(OptionalTesseractPath).Length <= 1024 * 1024) return false;
+                return new[] { "eng", "fra", "spa" }.All(language =>
+                {
+                    var model = Path.Combine(OptionalTessdataPath, language + ".traineddata");
+                    return File.Exists(model) && new FileInfo(model).Length >= 100 * 1024;
+                });
+            }
+            catch { return false; }
+        }
+
+        private static bool MigrateLegacyOptionalActivationState()
+        {
+            // 1.66.4 was the first on-demand build and had no explicit activation marker.
+            // Preserve a component only when its Direct-Xfer receipt proves it came from that
+            // explicit activation flow. Manually dropped executables are never auto-activated.
+            var migrated = false;
+            migrated |= TryMigrateLegacyActivationReceipt(
+                OptionalRcloneRoot,
+                OptionalRcloneActivationMarker,
+                "Direct-Xfer optional rclone v" + Program.RcloneVersion,
+                "Archive SHA-256: " + Program.RcloneZipSha256,
+                () => File.Exists(OptionalRclonePath) && new FileInfo(OptionalRclonePath).Length > 1024 * 1024 && IsAmd64Pe(OptionalRclonePath));
+            migrated |= TryMigrateLegacyActivationReceipt(
+                OptionalTesseractRoot,
+                OptionalTesseractActivationMarker,
+                "Direct-Xfer optional Tesseract OCR " + Program.TesseractVersion,
+                "Setup SHA-256: " + Program.TesseractSetupSha256,
+                () => File.Exists(OptionalTesseractPath) && IsAmd64Pe(OptionalTesseractPath) && Directory.Exists(OptionalTessdataPath) &&
+                    LegacyTessdataMatchesPinnedBlobs());
+            return migrated;
+        }
+
+        private static bool LegacyTessdataMatchesPinnedBlobs()
+        {
+            foreach (var model in new[]
+            {
+                (Language: "eng", GitBlobSha1: Program.TessdataEngGitBlobSha1),
+                (Language: "fra", GitBlobSha1: Program.TessdataFraGitBlobSha1),
+                (Language: "spa", GitBlobSha1: Program.TessdataSpaGitBlobSha1)
+            })
+            {
+                var path = Path.Combine(OptionalTessdataPath, model.Language + ".traineddata");
+                if (!File.Exists(path) || new FileInfo(path).Length < 100 * 1024 ||
+                    !string.Equals(FileGitBlobSha1(path), model.GitBlobSha1, StringComparison.OrdinalIgnoreCase)) return false;
+            }
+            return true;
+        }
+
+        private static bool TryMigrateLegacyActivationReceipt(string root, string marker, string receiptPrefix, string receiptHash, Func<bool> filesLookComplete)
+        {
+            try
+            {
+                if (File.Exists(marker) || !Directory.Exists(root) || !filesLookComplete()) return false;
+                var receipt = Path.Combine(root, "DIRECT-XFER-README.txt");
+                if (!File.Exists(receipt)) return false;
+                var info = new FileInfo(receipt);
+                if (info.Length <= 0 || info.Length > 64 * 1024) return false;
+                var content = File.ReadAllText(receipt, Encoding.UTF8);
+                if (!content.Contains(receiptPrefix, StringComparison.Ordinal) ||
+                    !content.Contains(receiptHash, StringComparison.OrdinalIgnoreCase) ||
+                    !content.Contains("Downloaded only after user activation.", StringComparison.Ordinal)) return false;
+                WriteActivationMarker(marker, "migrated-from-1.66.4");
+                return true;
+            }
+            catch { return false; }
+        }
+
+        private static void WriteActivationMarker(string marker, string source)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(marker) ?? throw new InvalidOperationException("Invalid activation marker path."));
+            var temp = marker + ".tmp-" + Guid.NewGuid().ToString("N");
+            try
+            {
+                File.WriteAllText(temp,
+                    "Direct-Xfer optional component activation" + Environment.NewLine +
+                    "app=" + Program.AppVersion + Environment.NewLine +
+                    "source=" + source + Environment.NewLine,
+                    new UTF8Encoding(false));
+                File.Move(temp, marker, true);
+            }
+            finally { try { if (File.Exists(temp)) File.Delete(temp); } catch { } }
+        }
+
+        private static bool DeactivateOptionalTool(string tool)
+        {
+            var marker = string.Equals(tool, "rclone", StringComparison.OrdinalIgnoreCase)
+                ? OptionalRcloneActivationMarker
+                : OptionalTesseractActivationMarker;
+            if (!File.Exists(marker)) return false;
+            File.Delete(marker);
+            if (File.Exists(marker)) throw new IOException("Direct-Xfer could not deactivate the optional component before replacement or removal.");
+            return true;
+        }
+
+        private async Task InstallOptionalToolAsync(string tool)
+        {
+            if (_optionalToolBusy) return;
+            var tr = Tr;
+            var displayName = string.Equals(tool, "rclone", StringComparison.OrdinalIgnoreCase)
+                ? "rclone " + Program.RcloneVersion
+                : "Tesseract OCR " + Program.TesseractVersion;
+            if (MessageBox.Show(string.Format(CultureInfo.CurrentCulture, tr.OptionalInstallConfirm, displayName),
+                tr.AppTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+
+            _optionalToolBusy = true;
+            RebuildTrayMenu();
+            try
+            {
+                _tray.ShowBalloonTip(2500, tr.OptionalComponents,
+                    string.Format(CultureInfo.CurrentCulture, tr.OptionalInstalling, displayName), ToolTipIcon.Info);
+
+                // Repair/re-activation can be requested when an existing optional component is
+                // incomplete or damaged. Deactivate it and stop the backend before replacing
+                // files so Windows cannot keep rclone.exe/tesseract.exe locked or keep spawning
+                // jobs with a path that is being replaced.
+                var existingRoot = string.Equals(tool, "rclone", StringComparison.OrdinalIgnoreCase)
+                    ? OptionalRcloneRoot
+                    : OptionalTesseractRoot;
+                var previousSession = ReadSession();
+                var replacingExistingFiles = Directory.Exists(existingRoot);
+                var wasActive = DeactivateOptionalTool(tool);
+                if (wasActive || replacingExistingFiles)
+                {
+                    SignalServerHostReload();
+                    await Task.Run(() =>
+                    {
+                        if (previousSession != null && previousSession.serverPid > 0)
+                            StopPreviousBackend(previousSession, 9000);
+                        StopOptionalToolProcesses(tool);
+                    });
+                }
+
+                await Task.Run(() =>
+                {
+                    if (string.Equals(tool, "rclone", StringComparison.OrdinalIgnoreCase)) InstallRcloneCore();
+                    else InstallTesseractCore();
+                });
+                SignalServerHostReload();
+                MessageBox.Show(string.Format(CultureInfo.CurrentCulture, tr.OptionalInstalled, displayName),
+                    tr.AppTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(string.Format(CultureInfo.CurrentCulture, tr.OptionalFailed, displayName, ex.Message),
+                    tr.AppTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                _optionalToolBusy = false;
+                RebuildTrayMenu();
+            }
+        }
+
+        private async Task RemoveOptionalToolAsync(string tool)
+        {
+            if (_optionalToolBusy) return;
+            var tr = Tr;
+            var displayName = string.Equals(tool, "rclone", StringComparison.OrdinalIgnoreCase)
+                ? "rclone " + Program.RcloneVersion
+                : "Tesseract OCR " + Program.TesseractVersion;
+            if (MessageBox.Show(string.Format(CultureInfo.CurrentCulture, tr.OptionalRemoveConfirm, displayName),
+                tr.AppTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
+
+            _optionalToolBusy = true;
+            var deactivated = false;
+            RebuildTrayMenu();
+            try
+            {
+                var previousSession = ReadSession();
+                deactivated = DeactivateOptionalTool(tool);
+                SignalServerHostReload();
+                await Task.Run(() =>
+                {
+                    if (previousSession != null && previousSession.serverPid > 0)
+                        StopPreviousBackend(previousSession, 9000);
+                    StopOptionalToolProcesses(tool);
+                    if (string.Equals(tool, "rclone", StringComparison.OrdinalIgnoreCase)) RemoveRcloneCore();
+                    else RemoveTesseractCore();
+                });
+                MessageBox.Show(string.Format(CultureInfo.CurrentCulture, tr.OptionalRemoved, displayName),
+                    tr.AppTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                var message = deactivated
+                    ? string.Format(CultureInfo.CurrentCulture, tr.OptionalCleanupFailed, displayName, ex.Message)
+                    : string.Format(CultureInfo.CurrentCulture, tr.OptionalFailed, displayName, ex.Message);
+                MessageBox.Show(message, tr.AppTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                _optionalToolBusy = false;
+                RebuildTrayMenu();
+            }
+        }
+
+        private static void CleanupStaleOptionalWorkDirectories()
+        {
+            try
+            {
+                if (!Directory.Exists(OptionalToolsRoot)) return;
+                foreach (var directory in Directory.EnumerateDirectories(OptionalToolsRoot, ".work-*", SearchOption.TopDirectoryOnly))
+                {
+                    try
+                    {
+                        if ((File.GetAttributes(directory) & FileAttributes.ReparsePoint) != 0) continue;
+                        Directory.Delete(directory, true);
+                    }
+                    catch { }
+                }
+            }
+            catch { }
+        }
+
+        private static string CreateToolWorkDirectory(string name)
+        {
+            Directory.CreateDirectory(OptionalToolsRoot);
+            var root = Path.Combine(OptionalToolsRoot, ".work-" + name + "-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(root);
+            return root;
+        }
+
+        private static void DownloadOptionalFile(string url, string destination, string? expectedSha256, long minimumBytes, long maximumBytes)
+        {
+            Exception? last = null;
+            for (var attempt = 1; attempt <= 3; attempt++)
+            {
+                try
+                {
+                    DownloadOptionalFileOnce(url, destination, expectedSha256, minimumBytes, maximumBytes);
+                    return;
+                }
+                catch (Exception ex) when (ex is HttpRequestException || ex is TaskCanceledException ||
+                    (ex is IOException && ex is not InvalidDataException))
+                {
+                    last = ex;
+                    try { if (File.Exists(destination)) File.Delete(destination); } catch { }
+                    if (attempt >= 3) break;
+                    Thread.Sleep(750 * attempt);
+                }
+            }
+            throw new InvalidOperationException("Optional component download failed after 3 attempts.", last);
+        }
+
+        private static void DownloadOptionalFileOnce(string url, string destination, string? expectedSha256, long minimumBytes, long maximumBytes)
+        {
+            var uri = new Uri(url, UriKind.Absolute);
+            if (!string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Optional component downloads require HTTPS.");
+            Directory.CreateDirectory(Path.GetDirectoryName(destination) ?? throw new InvalidOperationException("Invalid download path."));
+
+            using var handler = new HttpClientHandler { AllowAutoRedirect = true, MaxAutomaticRedirections = 8 };
+            using var client = new HttpClient(handler) { Timeout = TimeSpan.FromMinutes(5) };
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("Direct-Xfer/" + Program.AppVersion);
+            using var response = client.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead).GetAwaiter().GetResult();
+            response.EnsureSuccessStatusCode();
+            var finalUri = response.RequestMessage?.RequestUri;
+            if (finalUri == null || !string.Equals(finalUri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Optional component download was redirected outside HTTPS.");
+            var declared = response.Content.Headers.ContentLength;
+            if (declared.HasValue && declared.Value > maximumBytes)
+                throw new InvalidDataException("Optional component download is larger than the allowed limit.");
+
+            using (var input = response.Content.ReadAsStream())
+            using (var output = new FileStream(destination, FileMode.Create, FileAccess.Write, FileShare.None))
+            {
+                var buffer = new byte[1024 * 128];
+                long total = 0;
+                while (true)
+                {
+                    var read = input.Read(buffer, 0, buffer.Length);
+                    if (read <= 0) break;
+                    total += read;
+                    if (total > maximumBytes) throw new InvalidDataException("Optional component download exceeded the allowed limit.");
+                    output.Write(buffer, 0, read);
+                }
+            }
+
+            var length = new FileInfo(destination).Length;
+            if (length < minimumBytes || length > maximumBytes)
+                throw new InvalidDataException("Optional component download has an invalid size.");
+            if (!string.IsNullOrWhiteSpace(expectedSha256))
+            {
+                var actual = FileSha256(destination);
+                if (!string.Equals(actual, expectedSha256.Trim(), StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidDataException("Optional component SHA-256 verification failed.");
+            }
+        }
+
+        private static string FileSha256(string path)
+        {
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            using var sha = SHA256.Create();
+            return BitConverter.ToString(sha.ComputeHash(stream)).Replace("-", string.Empty).ToLowerInvariant();
+        }
+
+        private static string FileGitBlobSha1(string path)
+        {
+            var info = new FileInfo(path);
+            using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA1);
+            hash.AppendData(Encoding.ASCII.GetBytes("blob " + info.Length.ToString(CultureInfo.InvariantCulture) + "\0"));
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            var buffer = new byte[1024 * 128];
+            int read;
+            while ((read = stream.Read(buffer, 0, buffer.Length)) > 0) hash.AppendData(buffer, 0, read);
+            return Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant();
+        }
+
+        private static void VerifyGitBlobSha1(string path, string expected)
+        {
+            var actual = FileGitBlobSha1(path);
+            if (!string.Equals(actual, expected, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("Optional OCR language data failed pinned Git blob verification.");
+        }
+
+        private static string RunToolCapture(string fileName, IEnumerable<string> arguments, int timeoutMs)
+        {
+            using var process = new Process();
+            var start = new ProcessStartInfo
+            {
+                FileName = fileName,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                WindowStyle = ProcessWindowStyle.Hidden
+            };
+            foreach (var argument in arguments) start.ArgumentList.Add(argument);
+            process.StartInfo = start;
+            if (!process.Start()) throw new InvalidOperationException("Windows could not start the optional component.");
+            var stdout = process.StandardOutput.ReadToEndAsync();
+            var stderr = process.StandardError.ReadToEndAsync();
+            if (!process.WaitForExit(timeoutMs))
+            {
+                try { process.Kill(true); } catch { }
+                throw new TimeoutException("Optional component validation timed out.");
+            }
+            Task.WaitAll(new Task[] { stdout, stderr }, 2000);
+            var output = (stdout.IsCompleted ? stdout.Result : string.Empty) + "\n" + (stderr.IsCompleted ? stderr.Result : string.Empty);
+            if (process.ExitCode != 0) throw new InvalidOperationException("Optional component validation failed with exit code " + process.ExitCode.ToString(CultureInfo.InvariantCulture) + ".");
+            return output.Trim();
+        }
+
+        private static void InstallRcloneCore()
+        {
+            var work = CreateToolWorkDirectory("rclone");
+            try
+            {
+                var zip = Path.Combine(work, "rclone.zip");
+                var extract = Path.Combine(work, "extract");
+                var url = "https://downloads.rclone.org/v" + Program.RcloneVersion + "/rclone-v" + Program.RcloneVersion + "-windows-amd64.zip";
+                DownloadOptionalFile(url, zip, Program.RcloneZipSha256, 1024 * 1024, 100L * 1024 * 1024);
+                Directory.CreateDirectory(extract);
+                ZipFile.ExtractToDirectory(zip, extract, true);
+                var candidates = Directory.GetFiles(extract, "rclone.exe", SearchOption.AllDirectories);
+                if (candidates.Length != 1) throw new InvalidDataException("The verified rclone archive did not contain exactly one rclone.exe.");
+                var source = Path.GetFullPath(candidates[0]);
+                if (!IsAmd64Pe(source)) throw new InvalidDataException("The downloaded rclone executable is not Windows x64.");
+                var versionOutput = RunToolCapture(source, new[] { "version" }, 10000);
+                if (!versionOutput.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Any(line => string.Equals(line.Trim(), "rclone v" + Program.RcloneVersion, StringComparison.OrdinalIgnoreCase)))
+                    throw new InvalidDataException("The downloaded rclone version does not match Direct-Xfer's pinned version.");
+
+                var stage = Path.Combine(work, "stage");
+                Directory.CreateDirectory(stage);
+                File.Copy(source, Path.Combine(stage, "rclone.exe"), true);
+                File.WriteAllText(Path.Combine(stage, "DIRECT-XFER-README.txt"),
+                    "Direct-Xfer optional rclone v" + Program.RcloneVersion + Environment.NewLine +
+                    "Downloaded only after user activation." + Environment.NewLine +
+                    "Archive SHA-256: " + Program.RcloneZipSha256 + Environment.NewLine,
+                    new UTF8Encoding(false));
+                WriteActivationMarker(Path.Combine(stage, Program.OptionalActivationMarkerFileName), "rclone-verified-download");
+                Directory.CreateDirectory(Path.GetDirectoryName(OptionalRcloneRoot) ?? OptionalToolsRoot);
+                if (Directory.Exists(OptionalRcloneRoot)) Directory.Delete(OptionalRcloneRoot, true);
+                Directory.Move(stage, OptionalRcloneRoot);
+            }
+            finally
+            {
+                try { if (Directory.Exists(work)) Directory.Delete(work, true); } catch { }
+            }
+        }
+
+        private static void InstallTesseractCore()
+        {
+            var work = CreateToolWorkDirectory("tesseract");
+            try
+            {
+                var setup = Path.Combine(work, "tesseract-setup.exe");
+                var url = "https://github.com/tesseract-ocr/tesseract/releases/download/" + Program.TesseractVersion +
+                    "/tesseract-ocr-w64-setup-" + Program.TesseractPackageVersion + ".exe";
+                DownloadOptionalFile(url, setup, Program.TesseractSetupSha256, 20L * 1024 * 1024, 250L * 1024 * 1024);
+
+                Directory.CreateDirectory(Path.GetDirectoryName(OptionalTesseractRoot) ?? OptionalToolsRoot);
+                if (Directory.Exists(OptionalTesseractRoot)) Directory.Delete(OptionalTesseractRoot, true);
+                using (var install = new Process())
+                {
+                    install.StartInfo = new ProcessStartInfo
+                    {
+                        FileName = setup,
+                        Arguments = "/CurrentUser /S /D=" + OptionalTesseractRoot,
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                        WindowStyle = ProcessWindowStyle.Hidden
+                    };
+                    if (!install.Start()) throw new InvalidOperationException("Windows could not start the Tesseract installer.");
+                    if (!install.WaitForExit(240000))
+                    {
+                        try { install.Kill(true); } catch { }
+                        throw new TimeoutException("Tesseract installation timed out.");
+                    }
+                    if (install.ExitCode != 0) throw new InvalidOperationException("Tesseract installation failed with exit code " + install.ExitCode.ToString(CultureInfo.InvariantCulture) + ".");
+                }
+
+                if (!File.Exists(OptionalTesseractPath) || !IsAmd64Pe(OptionalTesseractPath))
+                    throw new InvalidDataException("Tesseract did not install a valid Windows x64 executable.");
+                Directory.CreateDirectory(OptionalTessdataPath);
+                foreach (var model in new[]
+                {
+                    (Language: "eng", GitBlobSha1: Program.TessdataEngGitBlobSha1),
+                    (Language: "fra", GitBlobSha1: Program.TessdataFraGitBlobSha1),
+                    (Language: "spa", GitBlobSha1: Program.TessdataSpaGitBlobSha1)
+                })
+                {
+                    var modelPath = Path.Combine(OptionalTessdataPath, model.Language + ".traineddata");
+                    var modelUrl = "https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/" + Program.TessdataFastCommit + "/" + model.Language + ".traineddata";
+                    DownloadOptionalFile(modelUrl, modelPath, null, 100 * 1024, 50L * 1024 * 1024);
+                    VerifyGitBlobSha1(modelPath, model.GitBlobSha1);
+                }
+
+                var versionOutput = RunToolCapture(OptionalTesseractPath, new[] { "--version" }, 10000);
+                var first = versionOutput.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty;
+                if (!first.TrimStart().StartsWith("tesseract v" + Program.TesseractVersion, StringComparison.OrdinalIgnoreCase) &&
+                    !first.TrimStart().StartsWith("tesseract " + Program.TesseractVersion, StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidDataException("The downloaded Tesseract version does not match Direct-Xfer's pinned version.");
+                var langsOutput = RunToolCapture(OptionalTesseractPath,
+                    new[] { "--list-langs", "--tessdata-dir", OptionalTessdataPath }, 10000);
+                var languages = langsOutput.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(line => line.Trim()).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                if (!new[] { "eng", "fra", "spa" }.All(languages.Contains))
+                    throw new InvalidDataException("Tesseract did not expose all Direct-Xfer OCR languages after installation.");
+                File.WriteAllText(Path.Combine(OptionalTesseractRoot, "DIRECT-XFER-README.txt"),
+                    "Direct-Xfer optional Tesseract OCR " + Program.TesseractVersion + Environment.NewLine +
+                    "Downloaded only after user activation." + Environment.NewLine +
+                    "Setup SHA-256: " + Program.TesseractSetupSha256 + Environment.NewLine +
+                    "tessdata_fast commit: " + Program.TessdataFastCommit + Environment.NewLine +
+                    "OCR languages: eng, fra, spa" + Environment.NewLine,
+                    new UTF8Encoding(false));
+                WriteActivationMarker(OptionalTesseractActivationMarker, "tesseract-verified-download");
+            }
+            catch
+            {
+                // If the upstream installer created registry/uninstall metadata before a
+                // later model/probe failure, use its own uninstaller when available before
+                // deleting any remaining partial files.
+                try { RemoveTesseractCore(); } catch { }
+                throw;
+            }
+            finally
+            {
+                try { if (Directory.Exists(work)) Directory.Delete(work, true); } catch { }
+            }
+        }
+
+        private static void StopPreviousBackend(LauncherSession? session, int timeoutMs)
+        {
+            if (session == null || session.serverPid <= 0 || session.serverStartedUtcTicks <= 0 ||
+                string.IsNullOrWhiteSpace(session.nodePath) || !Path.IsPathRooted(session.nodePath)) return;
+            try
+            {
+                using var process = Process.GetProcessById(session.serverPid);
+                // launcher-session.json survives crashes. PID reuse must never let an old session
+                // terminate an unrelated process, so validate both process creation time and the
+                // exact Node executable path published by ServerHost before waiting or killing.
+                var started = GetProcessStartUtcTicks(process);
+                if (started <= 0 || started != session.serverStartedUtcTicks) return;
+                var actualPath = process.MainModule?.FileName;
+                if (string.IsNullOrWhiteSpace(actualPath) ||
+                    !string.Equals(Path.GetFullPath(actualPath), Path.GetFullPath(session.nodePath), StringComparison.OrdinalIgnoreCase)) return;
+                if (process.WaitForExit(timeoutMs)) return;
+                try { process.Kill(true); }
+                catch (Exception ex) { throw new InvalidOperationException("Direct-Xfer could not stop the previous backend before optional component replacement or removal.", ex); }
+                if (!process.WaitForExit(5000))
+                    throw new TimeoutException("Direct-Xfer backend did not stop before optional component replacement or removal.");
+            }
+            catch (ArgumentException) { }
+        }
+
+        private static long GetProcessStartUtcTicks(Process? process)
+        {
+            try { return process != null ? process.StartTime.ToUniversalTime().Ticks : 0L; }
+            catch { return 0L; }
+        }
+
+        private static void StopOptionalToolProcesses(string tool)
+        {
+            var expectedPath = string.Equals(tool, "rclone", StringComparison.OrdinalIgnoreCase)
+                ? OptionalRclonePath
+                : OptionalTesseractPath;
+            var processName = string.Equals(tool, "rclone", StringComparison.OrdinalIgnoreCase) ? "rclone" : "tesseract";
+            string expectedFull;
+            try { expectedFull = Path.GetFullPath(expectedPath); }
+            catch { return; }
+            foreach (var process in Process.GetProcessesByName(processName))
+            {
+                using (process)
+                {
+                    try
+                    {
+                        var actual = process.MainModule?.FileName;
+                        if (string.IsNullOrWhiteSpace(actual) ||
+                            !string.Equals(Path.GetFullPath(actual), expectedFull, StringComparison.OrdinalIgnoreCase)) continue;
+                        process.Kill(true);
+                        process.WaitForExit(5000);
+                    }
+                    catch { }
+                }
+            }
+        }
+
+        private static void RemoveRcloneCore()
+        {
+            if (Directory.Exists(OptionalRcloneRoot)) Directory.Delete(OptionalRcloneRoot, true);
+            DeleteParentIfEmpty(Path.GetDirectoryName(OptionalRcloneRoot));
+        }
+
+        private static void RemoveTesseractCore()
+        {
+            var uninstaller = Path.Combine(OptionalTesseractRoot, "tesseract-uninstall.exe");
+            if (File.Exists(uninstaller))
+            {
+                using var process = Process.Start(new ProcessStartInfo
+                {
+                    FileName = uninstaller,
+                    // NSIS normally spawns a temporary copy of an uninstaller and lets the
+                    // original process exit early. _?= keeps this process as the real uninstaller,
+                    // making WaitForExit/ExitCode authoritative and preventing a delete race.
+                    Arguments = "/CurrentUser /S _?=" + OptionalTesseractRoot,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    WindowStyle = ProcessWindowStyle.Hidden
+                });
+                if (process == null) throw new InvalidOperationException("Windows could not start the Tesseract uninstaller.");
+                if (!process.WaitForExit(120000))
+                {
+                    try { process.Kill(true); } catch { }
+                    throw new TimeoutException("Tesseract removal timed out.");
+                }
+                if (process.ExitCode != 0)
+                    throw new InvalidOperationException("Tesseract removal failed with exit code " + process.ExitCode.ToString(CultureInfo.InvariantCulture) + ".");
+            }
+            if (Directory.Exists(OptionalTesseractRoot)) Directory.Delete(OptionalTesseractRoot, true);
+            DeleteParentIfEmpty(Path.GetDirectoryName(OptionalTesseractRoot));
+        }
+
+        private static void DeleteParentIfEmpty(string? directory)
+        {
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(directory) && Directory.Exists(directory) && !Directory.EnumerateFileSystemEntries(directory).Any())
+                    Directory.Delete(directory, false);
+            }
+            catch { }
+        }
+
         private void RebuildTrayMenu()
         {
             var tr = Tr;
@@ -754,6 +1359,21 @@ namespace DirectXfer.WindowsLauncher
             menu.Items.Add(tr.Logs, null, (s, e) => OpenLogs());
             menu.Items.Add(tr.Configure, null, (s, e) => ConfigureFolders(false));
             menu.Items.Add(tr.ResetAdminPassword, null, (s, e) => OpenPasswordReset());
+            var optional = new ToolStripMenuItem(tr.OptionalComponents) { Enabled = !_optionalToolBusy };
+            if (OptionalRcloneInstalled())
+            {
+                optional.DropDownItems.Add(tr.RcloneActive).Enabled = false;
+                optional.DropDownItems.Add(tr.RemoveRclone, null, async (s, e) => await RemoveOptionalToolAsync("rclone"));
+            }
+            else optional.DropDownItems.Add(tr.ActivateRclone, null, async (s, e) => await InstallOptionalToolAsync("rclone"));
+            optional.DropDownItems.Add(new ToolStripSeparator());
+            if (OptionalTesseractInstalled())
+            {
+                optional.DropDownItems.Add(tr.TesseractActive).Enabled = false;
+                optional.DropDownItems.Add(tr.RemoveTesseract, null, async (s, e) => await RemoveOptionalToolAsync("tesseract"));
+            }
+            else optional.DropDownItems.Add(tr.ActivateTesseract, null, async (s, e) => await InstallOptionalToolAsync("tesseract"));
+            menu.Items.Add(optional);
             menu.Items.Add(new ToolStripSeparator());
             var languages = new ToolStripMenuItem(tr.Language);
             languages.DropDownItems.Add("Français", null, (s, e) => SetLanguage("fr"));
@@ -761,7 +1381,8 @@ namespace DirectXfer.WindowsLauncher
             languages.DropDownItems.Add("Español", null, (s, e) => SetLanguage("es"));
             menu.Items.Add(languages);
             menu.Items.Add(new ToolStripSeparator());
-            menu.Items.Add(tr.Stop, null, (s, e) => RequestExit());
+            var stopItem = menu.Items.Add(tr.Stop, null, (s, e) => RequestExit());
+            stopItem.Enabled = !_optionalToolBusy;
             if (_tray.ContextMenuStrip != null) _tray.ContextMenuStrip.Dispose();
             _tray.ContextMenuStrip = menu;
         }
@@ -837,12 +1458,24 @@ namespace DirectXfer.WindowsLauncher
             try
             {
                 if (!File.Exists(SessionPath)) return null;
+                var info = new FileInfo(SessionPath);
+                if (info.Length <= 0 || info.Length > 64 * 1024) return null;
+                if ((File.GetAttributes(SessionPath) & FileAttributes.ReparsePoint) != 0) return null;
                 var session = Json.Deserialize<LauncherSession>(File.ReadAllText(SessionPath, Encoding.UTF8));
-                return session != null && session.hostPid > 0 && session.serverPid > 0 && session.port > 0 &&
-                    !string.IsNullOrEmpty(session.token) && !string.IsNullOrEmpty(session.hostBuild)
-                    ? session : null;
+                if (session == null || session.hostPid <= 0 || session.serverPid <= 0 ||
+                    session.serverStartedUtcTicks <= 0 || session.port < Program.DefaultPort || session.port > Program.MaxFallbackPort) return null;
+                if (string.IsNullOrWhiteSpace(session.token) || session.token.Length != 48 ||
+                    !session.token.All(IsHexDigit) || string.IsNullOrWhiteSpace(session.hostBuild)) return null;
+                if (string.IsNullOrWhiteSpace(session.hostPath) || !Path.IsPathRooted(session.hostPath) ||
+                    string.IsNullOrWhiteSpace(session.nodePath) || !Path.IsPathRooted(session.nodePath)) return null;
+                return session;
             }
             catch { return null; }
+        }
+
+        private static bool IsHexDigit(char value)
+        {
+            return (value >= '0' && value <= '9') || (value >= 'a' && value <= 'f') || (value >= 'A' && value <= 'F');
         }
 
         private static string TailFile(string path, int maxBytes)
@@ -938,6 +1571,8 @@ namespace DirectXfer.WindowsLauncher
     internal sealed class Texts
     {
         internal string AppTitle = string.Empty, Open = string.Empty, Logs = string.Empty, Configure = string.Empty, ResetAdminPassword = string.Empty, Language = string.Empty, Stop = string.Empty;
+        internal string OptionalComponents = string.Empty, ActivateRclone = string.Empty, RemoveRclone = string.Empty, RcloneActive = string.Empty, ActivateTesseract = string.Empty, RemoveTesseract = string.Empty, TesseractActive = string.Empty;
+        internal string OptionalInstallConfirm = string.Empty, OptionalRemoveConfirm = string.Empty, OptionalInstalling = string.Empty, OptionalInstalled = string.Empty, OptionalRemoved = string.Empty, OptionalFailed = string.Empty, OptionalCleanupFailed = string.Empty;
         internal string FirstRunTitle = string.Empty, FirstRunBody = string.Empty, PickHost = string.Empty, PickInbox = string.Empty, PickImages = string.Empty;
         internal string ConfigSaved = string.Empty, ConfigSavedRestart = string.Empty, StartError = string.Empty, ServerStopped = string.Empty, ServerHostUnavailable = string.Empty, LogLabel = string.Empty, PortFallback = string.Empty, NoFreePort = string.Empty;
         internal string ResetPasswordError = string.Empty, ResetPasswordEnvManaged = string.Empty;
@@ -954,6 +1589,11 @@ namespace DirectXfer.WindowsLauncher
                         AppTitle = "Direct-Xfer " + Program.AppVersion, Open = "Ouvrir Direct-Xfer", Logs = "Ouvrir les journaux",
                         Configure = "Configurer les dossiers…", ResetAdminPassword = "Réinitialiser le mot de passe admin…",
                         Language = "Langue", Stop = "Quitter la systray",
+                        OptionalComponents = "Composants optionnels", ActivateRclone = "Activer rclone (télécharger)…", RemoveRclone = "Désactiver et supprimer rclone", RcloneActive = "✓ rclone 1.74.4 activé",
+                        ActivateTesseract = "Activer Tesseract OCR (télécharger)…", RemoveTesseract = "Désactiver et supprimer Tesseract OCR", TesseractActive = "✓ Tesseract OCR 5.5.3 activé",
+                        OptionalInstallConfirm = "{0} est optionnel et n’est pas inclus dans l’installateur Direct-Xfer. Le télécharger et l’activer maintenant ?",
+                        OptionalRemoveConfirm = "Désactiver et supprimer {0} de cet utilisateur ?", OptionalInstalling = "Téléchargement et installation de {0}…",
+                        OptionalInstalled = "{0} est installé et activé. Direct-Xfer recharge le serveur.", OptionalRemoved = "{0} a été désactivé et supprimé.", OptionalFailed = "Impossible de modifier {0}.\r\n\r\n{1}", OptionalCleanupFailed = "{0} a bien été désactivé, mais certains fichiers n’ont pas pu être supprimés.\r\n\r\n{1}",
                         FirstRunTitle = "Direct-Xfer - Configuration du premier démarrage",
                         FirstRunBody = "Choisissez les dossiers utilisés par Direct-Xfer. Vous pourrez les modifier plus tard depuis l’icône près de l’heure.",
                         PickHost = "Choisir le dossier à partager / parcourir", PickInbox = "Choisir le dossier des fichiers reçus",
@@ -978,6 +1618,11 @@ namespace DirectXfer.WindowsLauncher
                         AppTitle = "Direct-Xfer " + Program.AppVersion, Open = "Abrir Direct-Xfer", Logs = "Abrir registros",
                         Configure = "Configurar carpetas…", ResetAdminPassword = "Restablecer la contraseña de administrador…",
                         Language = "Idioma", Stop = "Salir de la bandeja",
+                        OptionalComponents = "Componentes opcionales", ActivateRclone = "Activar rclone (descargar)…", RemoveRclone = "Desactivar y eliminar rclone", RcloneActive = "✓ rclone 1.74.4 activado",
+                        ActivateTesseract = "Activar Tesseract OCR (descargar)…", RemoveTesseract = "Desactivar y eliminar Tesseract OCR", TesseractActive = "✓ Tesseract OCR 5.5.3 activado",
+                        OptionalInstallConfirm = "{0} es opcional y no está incluido en el instalador de Direct-Xfer. ¿Descargarlo y activarlo ahora?",
+                        OptionalRemoveConfirm = "¿Desactivar y eliminar {0} para este usuario?", OptionalInstalling = "Descargando e instalando {0}…",
+                        OptionalInstalled = "{0} está instalado y activado. Direct-Xfer está recargando el servidor.", OptionalRemoved = "{0} se desactivó y eliminó.", OptionalFailed = "No se pudo modificar {0}.\r\n\r\n{1}", OptionalCleanupFailed = "{0} se desactivó correctamente, pero algunos archivos no pudieron eliminarse.\r\n\r\n{1}",
                         FirstRunTitle = "Direct-Xfer - Configuración del primer inicio",
                         FirstRunBody = "Elige las carpetas que usará Direct-Xfer. Podrás cambiarlas más tarde desde el icono de la bandeja del sistema.",
                         PickHost = "Elegir la carpeta para compartir / explorar", PickInbox = "Elegir la carpeta de archivos recibidos",
@@ -1002,6 +1647,11 @@ namespace DirectXfer.WindowsLauncher
                         AppTitle = "Direct-Xfer " + Program.AppVersion, Open = "Open Direct-Xfer", Logs = "Open logs",
                         Configure = "Configure folders…", ResetAdminPassword = "Reset admin password…",
                         Language = "Language", Stop = "Exit tray",
+                        OptionalComponents = "Optional components", ActivateRclone = "Activate rclone (download)…", RemoveRclone = "Deactivate and remove rclone", RcloneActive = "✓ rclone 1.74.4 active",
+                        ActivateTesseract = "Activate Tesseract OCR (download)…", RemoveTesseract = "Deactivate and remove Tesseract OCR", TesseractActive = "✓ Tesseract OCR 5.5.3 active",
+                        OptionalInstallConfirm = "{0} is optional and is not included in the Direct-Xfer installer. Download and activate it now?",
+                        OptionalRemoveConfirm = "Deactivate and remove {0} for this user?", OptionalInstalling = "Downloading and installing {0}…",
+                        OptionalInstalled = "{0} is installed and active. Direct-Xfer is reloading the server.", OptionalRemoved = "{0} was deactivated and removed.", OptionalFailed = "Could not change {0}.\r\n\r\n{1}", OptionalCleanupFailed = "{0} was deactivated successfully, but some files could not be removed.\r\n\r\n{1}",
                         FirstRunTitle = "Direct-Xfer - First-run setup",
                         FirstRunBody = "Choose the folders used by Direct-Xfer. You can change them later from the system tray icon.",
                         PickHost = "Choose the folder to share / browse", PickInbox = "Choose the received-files folder",

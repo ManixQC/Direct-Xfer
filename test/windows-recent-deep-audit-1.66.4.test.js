@@ -21,28 +21,23 @@ test('launcher readiness validates structured authenticated JSON instead of subs
   assert.match(launcher, /GetBool\(payload, "ok"\)/);
   assert.match(launcher, /string\.Equals\(GetString\(payload, "app"\), "Direct-Xfer", StringComparison\.Ordinal\)/);
   assert.match(launcher, /GetInt32\(payload, "pid"\) == expectedPid/);
-  assert.match(launcher, /private static int GetInt32\(IDictionary<string, object\?>\? payload, string key\)/);
   assert.doesNotMatch(launcher, /response\.Body\.Contains\("\\\"ok\\\":true"\)/);
-  assert.doesNotMatch(launcher, /response\.Body\.Contains\("\\\"pid\\\":"/);
 });
 
-
-test('bundled Windows Tesseract is selected only when it can satisfy SEARCH_OCR_LANGS', () => {
+test('optional Windows Tesseract is selected only when it can satisfy SEARCH_OCR_LANGS', () => {
   assert.match(host, /private static string\[\] RequestedOcrLanguages\(ProcessStartInfo start\)/);
-  assert.match(host, /SEARCH_OCR_LANGS/);
   assert.match(host, /return new\[\] \{ "fra", "eng" \};/);
-  assert.match(host, /BundledTesseractUsable\(IEnumerable<string> requiredLanguages\)/);
-  assert.match(host, /var requestedOcrLanguages = RequestedOcrLanguages\(start\);/);
-  assert.match(host, /BundledTesseractUsable\(requestedOcrLanguages\)/);
+  assert.match(host, /TesseractUsable\(string executablePath, string tessdataPath, IEnumerable<string> requiredLanguages\)/);
+  assert.match(host, /TesseractUsable\(OptionalTesseractPath, OptionalTessdataPath, requestedOcrLanguages\)/);
   assert.match(host, /requested\.All\(languages\.Contains\)/);
-  assert.match(host, /bundled Tesseract cannot satisfy the requested OCR languages/);
+  assert.match(host, /optional Tesseract cannot satisfy the requested OCR languages/);
 });
 
-test('1.66.4 bump advances the PWA cache generation so changed release metadata is not served from pwa353', () => {
-  assert.match(read('package.json'), /"version"\s*:\s*"1\.66\.4"/);
+test('1.66.5 bump advances the PWA cache generation so changed release metadata is not served from pwa353', () => {
+  assert.match(read('package.json'), /"version"\s*:\s*"1\.66\.5"/);
   for (const rel of ['pwa/app.js', 'pwa/index.html', 'pwa/sw.js', 'pwa/theme-init.js', 'pwa/admin-advanced.js', 'pwa/mobile-intelligence.js']) {
     const source = read(rel);
-    assert.match(source, /1\.66\.4|pwa354|v=354/);
+    assert.match(source, /1\.66\.5|pwa355|v=355/);
     assert.doesNotMatch(source, /pwa353|v=353/);
   }
 });

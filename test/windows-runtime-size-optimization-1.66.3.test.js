@@ -14,7 +14,6 @@ test('Windows runtime installs production-only Node dependencies instead of copy
   assert.match(workflow, /Copy-Item\s+@\('lib','public','pwa','scripts','security'\)\s+\$app\s+-Recurse/);
   assert.match(workflow, /npm ci --omit=dev --ignore-scripts --no-audit --no-fund/);
   assert.match(workflow, /prune-windows-node-modules\.ps1/);
-  assert.match(workflow, /Object\.keys\(require\('\.\/package\.json'\)\.dependencies \|\| \{\}\)/);
   assert.match(workflow, /await import\(name\)/);
 });
 
@@ -28,21 +27,16 @@ test('Node pruning preserves licenses and only targets development metadata', ()
   assert.doesNotMatch(pruneScript, /Remove-Item[^\n]+package\.json/i);
 });
 
-test('Windows Tesseract bundle keeps executable, DLL closure and selected OCR models instead of the full install tree', () => {
-  assert.doesNotMatch(workflow, /Copy-Item -Path \(Join-Path \$tesseractStage '\*'\) -Destination \$tesseract -Recurse -Force/);
-  assert.match(workflow, /Copy-Item -LiteralPath \$tesseractStageExe -Destination \$tesseractExe -Force/);
-  assert.match(workflow, /Get-ChildItem -LiteralPath \$tesseractStage -Recurse -Filter '\*\.dll' -File/);
-  assert.match(workflow, /foreach \(\$lang in @\('eng','fra','spa'\)\)/);
-  assert.match(workflow, /Bundled OCR languages: eng, fra, spa/);
-  assert.match(workflow, /DX_TESSERACT_RUNTIME_BUDGET_MB/);
+test('Windows base payload excludes heavyweight optional rclone and Tesseract trees', () => {
+  assert.match(workflow, /rclone and Tesseract are intentionally excluded from the default Windows payload/);
+  assert.match(workflow, /optional rclone\/Tesseract excluded/);
+  assert.match(workflow, /foreach \(\$optionalRel in @\('runtime\\rclone','runtime\\tesseract'\)\)/);
+  assert.match(workflow, /Optional Windows component leaked into the default payload/);
+  assert.doesNotMatch(workflow, /DX_TESSERACT_RUNTIME_BUDGET_MB|DX_TESSERACT_RUNTIME_TARGET_MB|DX_RCLONE_VERSION/);
 });
 
-test('Windows CI enforces size budgets after functional runtime probes', () => {
+test('Windows CI keeps a tight production node_modules hard budget', () => {
   assert.match(workflow, /DX_NODE_MODULES_BUDGET_MB:\s*'15'/);
-  assert.match(workflow, /DX_TESSERACT_RUNTIME_TARGET_MB:\s*'101'/);
-  assert.match(workflow, /DX_TESSERACT_RUNTIME_BUDGET_MB:\s*'105'/);
   assert.match(workflow, /node_modules runtime exceeds the Direct-Xfer size budget/);
-  assert.match(workflow, /Tesseract runtime is above the optimization target/);
-  assert.match(workflow, /Tesseract runtime exceeds the Direct-Xfer hard size budget/);
-  assert.match(workflow, /Largest Tesseract runtime files/);
+  assert.doesNotMatch(workflow, /DX_NODE_MODULES_BUDGET_MB:\s*'35'/);
 });

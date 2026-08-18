@@ -450,10 +450,10 @@ window. (Shared reference — variable names are identical in every language.)
 | `CONNECTOR_IMPORT_DIR` | `/Direct-Xfer/Imports` | Confined writable destination for connector imports. Imports never overwrite an existing file. |
 | `MAX_ACTIVE_CONNECTOR_JOBS` | `4` | Maximum simultaneous connector import/export processes. |
 | `SEARCH_INDEX_MAX_DOCS` | `250000` | Maximum number of files kept in the persistent universal-search index. Raise carefully because postings and metadata are also held in memory. |
-| `SEARCH_OCR_ENABLED` | `true` | Enable server-side OCR in the full Direct-Xfer universal index for supported images and scanned PDFs. Docker includes Tesseract + Poppler. The Windows package now bundles Tesseract x64 with `fra`, `eng` and `spa`; scanned-PDF OCR still requires Poppler (`pdftoppm`) to be available. |
-| `SEARCH_OCR_LANGS` | `fra+eng` | Tesseract language set used by the server OCR (`fra`, `eng`, `spa` are bundled in Docker and in the Windows package). On Windows, requesting another language makes ServerHost fall back to a Tesseract on `PATH` unless `SEARCH_OCR_TESSERACT_BIN` explicitly selects a binary. |
-| `SEARCH_OCR_TESSERACT_BIN` | `tesseract` *(auto-bundled on Windows)* | Optional Tesseract executable override. The Windows package automatically uses its validated bundled x64 binary unless this variable is explicitly set. |
-| `TESSDATA_PREFIX` | *(auto)* | Optional Tesseract data-root override. The Windows package points this to its bundled `runtime\tesseract\tessdata` directory when the bundled engine is selected; Direct-Xfer also passes `--tessdata-dir` explicitly for deterministic Windows OCR discovery. |
+| `SEARCH_OCR_ENABLED` | `true` *(Docker)* / `false` until activation *(Windows host)* | Enable server-side OCR in the full Direct-Xfer universal index for supported images and scanned PDFs. Docker includes Tesseract + Poppler. The Windows installer keeps Tesseract optional and enables its private OCR engine only after the user activates the component; scanned-PDF OCR still requires Poppler (`pdftoppm`) to be available. |
+| `SEARCH_OCR_LANGS` | `fra+eng` | Tesseract language set used by server OCR. Docker includes `fra`, `eng` and `spa`; the optional Windows Tesseract activation downloads those three models. A private Windows component that cannot satisfy the requested language set is not selected. |
+| `SEARCH_OCR_TESSERACT_BIN` | `tesseract` | Optional Tesseract executable override. On Windows, an explicitly supplied value wins over the on-demand Direct-Xfer component. |
+| `TESSDATA_PREFIX` | *(auto)* | Optional Tesseract data-root override. When the on-demand Windows component is active and this variable is not overridden, Direct-Xfer uses its per-user `tools\tesseract\5.5.3\tessdata` directory and passes `--tessdata-dir` explicitly. |
 | `SEARCH_OCR_PDFTOTEXT_BIN` / `SEARCH_OCR_PDFTOPPM_BIN` | `pdftotext` / `pdftoppm` | Optional Poppler executable overrides for PDF text extraction and rasterization. Poppler is still external on Windows. |
 | `SEARCH_OCR_BATCH` | `100` | Maximum number of previously uncached OCR files processed in one index rebuild. Cached files do not count; deferred files are picked up by later rebuilds. |
 | `SEARCH_OCR_PDF_MAX_PAGES` | `12` | Maximum PDF pages rasterized for OCR when no usable text layer exists. |
@@ -805,12 +805,14 @@ Connecteurs de stockage. Docker continue d’utiliser le rclone de l’image :
 docker exec -it direct-xfer rclone config
 ```
 
-La distribution Windows inclut maintenant rclone directement sous
-`runtime\rclone\rclone.exe`. Aucune installation rclone séparée ni modification du
-`PATH` n’est nécessaire. Pour créer les remotes Windows manuellement :
+Sur Windows, rclone est désormais **optionnel** afin d’alléger l’installateur. Il n’est
+plus inclus sous `runtime\rclone`. Activez-le seulement si nécessaire depuis
+**l’icône Direct-Xfer près de l’heure → Composants optionnels → Activer rclone**.
+Direct-Xfer télécharge alors la version épinglée dans le profil de l’utilisateur. Pour
+créer les remotes manuellement après activation :
 
 ```powershell
-& "$env:ProgramFiles\Direct-Xfer\runtime\rclone\rclone.exe" config --config "$env:LOCALAPPDATA\Direct-Xfer\data\rclone\rclone.conf"
+& "$env:LOCALAPPDATA\Direct-Xfer\tools\rclone\1.74.4\rclone.exe" config --config "$env:LOCALAPPDATA\Direct-Xfer\data\rclone\rclone.conf"
 ```
 
 Vérifiez une preuve téléchargée avec l’empreinte affichée par Direct-Xfer (ou avec une

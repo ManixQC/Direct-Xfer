@@ -19,9 +19,9 @@ namespace DirectXfer.WindowsServerHost
 {
     internal static class Program
     {
-        internal const string AppVersion = "1.66.4";
-        internal const string RuntimeAppBuild = "1.66.4-launcher77-csharp";
-        internal const string HostVersion = "1.66.4-serverhost51-csharp";
+        internal const string AppVersion = "1.66.5";
+        internal const string RuntimeAppBuild = "1.66.5-launcher79-csharp";
+        internal const string HostVersion = "1.66.5-serverhost53-csharp";
         internal const int DefaultPort = 55750;
         internal const int MaxFallbackPort = 55769;
         internal const int StartupReadyTimeoutMs = 60000;
@@ -31,6 +31,7 @@ namespace DirectXfer.WindowsServerHost
         internal const string NodeVersion = "24.19.0";
         internal const string RcloneVersion = "1.74.4";
         internal const string TesseractVersion = "5.5.3";
+        internal const string OptionalActivationMarkerFileName = ".direct-xfer-enabled";
         internal const string NodeExeSha256 = "3602f2bb1a10f2cbab4c36886218a33c1ab3db87290e73b033c46c77147d0237";
         internal const string MutexName = @"Local\DirectXferServerHostInstance";
         internal const string StopEventName = @"Local\DirectXferServerHostStop";
@@ -110,16 +111,16 @@ namespace DirectXfer.WindowsServerHost
         private static readonly IDictionary<string, string> CriticalRuntimeSha256 =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                { "package.json", "bd320382063f5dd038fa281acb9f111844186dbece574ca884a05fd049757d2d" },
-                { "package-lock.json", "667064b9c0691a60299e55395031563f375a8f90d010a620e9bd10273c5e9c50" },
-                { "server.js", "355346095ee8975d19edaca57d88647e71ed9e57580ad069d025bcb4871b9e32" },
+                { "package.json", "3ddbdcd09b48d47bf5668b6b0d2f0f8dc211e64bfab526647ffa179a2c114d6f" },
+                { "package-lock.json", "334e91cc5fa09929b50800ba480f638df7b51080a2656bddf2079e4e604b1145" },
+                { "server.js", "a91794477ab1431bd9509924f53f939e23d0ef34e074f6d613a31cd3d8117dae" },
                 { "lib/server/public-pages.js", "96954ccf1705f068c5579806c69f4f1d56916c2a803d1fc160be874c908f0615" },
                 { "lib/server/tls-manager.js", "b82a1b195b6cb36d47d8d431b890e0479aaf9ca8d47f98e8ef9e046390610f7f" },
                 { "lib/server/network-services.js", "fd4a119ca1a75127b82c758c3d3555c12384c01b487bee3b3150a398217e4bdf" },
                 { "lib/server/backup-service.js", "65cb07c147b326475a833be6cbc668db733fc8183ec0b4eec919a876b3f04bc2" },
                 { "lib/server/notification-service.js", "a55beb8d5fdb09754eeb7f7d01974896efaad20dde3b9cf00e83bf4f7a7b9baa" },
                 { "public/app.js", "d50010dbae1548634d8bf1f711d301cd1d20d6ca2e2b5b2f76dee5ae632e6350" },
-                { "pwa/app.js", "f4ecb9099da68845377d108f5d62df65ba7c2a9274b70301b2844c8c5719abdf" },
+                { "pwa/app.js", "32d32f364ca52e76a3a7760f72d44bbad81463a93dde8253ea2c93cf4409fec0" },
                 { "lib/dlp-utils.js", "dd4d15a3ebb1cc2e7183e9b68434cf69d50532f54fcbb9e90b5ffeb0cfdad086" },
                 { "lib/fd-utils.js", "322abf15ce7a15310d6d27ac1b0ca40892658d5f21198510f7e84b78b0070b13" },
                 { "pwa/dlp-local.js", "246267542621fc92f759438b2295b87f777ba6d6aa88b3c4d23dea25aebe7390" },
@@ -189,6 +190,18 @@ namespace DirectXfer.WindowsServerHost
         }
         private static string RuntimeRoot { get { return Path.Combine(PortableRoot, "runtime"); } }
         private static string PortableNodePath { get { return Path.Combine(RuntimeRoot, "node", "node.exe"); } }
+        // rclone and Tesseract are intentionally not part of the default Windows payload.
+        // The launcher downloads them only after explicit user activation and stores them
+        // under the current user's Direct-Xfer data root. Legacy portable locations remain
+        // supported so upgrades from older packages do not break custom/manual layouts.
+        private static string OptionalToolsRoot { get { return Path.Combine(BaseDirectory, "tools"); } }
+        private static string OptionalRcloneRoot { get { return Path.Combine(OptionalToolsRoot, "rclone", Program.RcloneVersion); } }
+        private static string OptionalRclonePath { get { return Path.Combine(OptionalRcloneRoot, "rclone.exe"); } }
+        private static string OptionalRcloneActivationMarker { get { return Path.Combine(OptionalRcloneRoot, Program.OptionalActivationMarkerFileName); } }
+        private static string OptionalTesseractRoot { get { return Path.Combine(OptionalToolsRoot, "tesseract", Program.TesseractVersion); } }
+        private static string OptionalTesseractPath { get { return Path.Combine(OptionalTesseractRoot, "tesseract.exe"); } }
+        private static string OptionalTessdataPath { get { return Path.Combine(OptionalTesseractRoot, "tessdata"); } }
+        private static string OptionalTesseractActivationMarker { get { return Path.Combine(OptionalTesseractRoot, Program.OptionalActivationMarkerFileName); } }
         private static string PortableRclonePath { get { return Path.Combine(RuntimeRoot, "rclone", "rclone.exe"); } }
         private static string PortableTesseractRoot { get { return Path.Combine(RuntimeRoot, "tesseract"); } }
         private static string PortableTesseractPath { get { return Path.Combine(PortableTesseractRoot, "tesseract.exe"); } }
@@ -656,7 +669,7 @@ namespace DirectXfer.WindowsServerHost
                     var stderr = process.StandardError.ReadToEndAsync();
                     if (!process.WaitForExit(5000))
                     {
-                        try { process.Kill(); } catch { }
+                        try { process.Kill(true); } catch { }
                         try { process.WaitForExit(1000); } catch { }
                         return false;
                     }
@@ -679,21 +692,23 @@ namespace DirectXfer.WindowsServerHost
             catch { return false; }
         }
 
-        private static bool BundledRcloneUsable()
+        private static bool RcloneUsable(string path)
         {
-            return PortableHelperUsable(PortableRclonePath, "version", "rclone v" + Program.RcloneVersion);
+            return PortableHelperUsable(path, "version", "rclone v" + Program.RcloneVersion);
         }
 
-        private static bool BundledTesseractUsable(IEnumerable<string> requiredLanguages)
+        private static bool TesseractUsable(string executablePath, string tessdataPath, IEnumerable<string> requiredLanguages)
         {
-            if (!PortableHelperUsable(PortableTesseractPath, "--version",
+            if (!PortableHelperUsable(executablePath, "--version",
                 "tesseract " + Program.TesseractVersion,
                 "tesseract v" + Program.TesseractVersion)) return false;
             try
             {
+                if (string.IsNullOrWhiteSpace(tessdataPath) || !Path.IsPathRooted(tessdataPath) || !Directory.Exists(tessdataPath)) return false;
+                var tessdataFull = Path.GetFullPath(tessdataPath);
                 foreach (var language in new[] { "eng", "fra", "spa" })
                 {
-                    var model = Path.Combine(PortableTessdataPath, language + ".traineddata");
+                    var model = Path.Combine(tessdataFull, language + ".traineddata");
                     if (!File.Exists(model) || new FileInfo(model).Length < 100 * 1024) return false;
                 }
                 var requested = (requiredLanguages ?? Array.Empty<string>())
@@ -703,19 +718,19 @@ namespace DirectXfer.WindowsServerHost
                 if (requested.Length == 0) requested = new[] { "fra", "eng" };
                 foreach (var language in requested)
                 {
-                    var model = Path.Combine(PortableTessdataPath, language + ".traineddata");
+                    var model = Path.Combine(tessdataFull, language + ".traineddata");
                     if (!File.Exists(model) || new FileInfo(model).Length < 100 * 1024) return false;
                 }
 
                 using var process = new Process();
                 var start = new ProcessStartInfo
                 {
-                    FileName = Path.GetFullPath(PortableTesseractPath), UseShellExecute = false, CreateNoWindow = true,
+                    FileName = Path.GetFullPath(executablePath), UseShellExecute = false, CreateNoWindow = true,
                     RedirectStandardOutput = true, RedirectStandardError = true, WindowStyle = ProcessWindowStyle.Hidden
                 };
                 start.ArgumentList.Add("--list-langs");
                 start.ArgumentList.Add("--tessdata-dir");
-                start.ArgumentList.Add(Path.GetFullPath(PortableTessdataPath));
+                start.ArgumentList.Add(tessdataFull);
                 try { if (start.EnvironmentVariables.ContainsKey("TESSDATA_PREFIX")) start.EnvironmentVariables.Remove("TESSDATA_PREFIX"); } catch { }
                 process.StartInfo = start;
                 if (!process.Start()) return false;
@@ -772,7 +787,7 @@ namespace DirectXfer.WindowsServerHost
                     var stderr = process.StandardError.ReadToEndAsync();
                     if (!process.WaitForExit(3000))
                     {
-                        try { process.Kill(); } catch { }
+                        try { process.Kill(true); } catch { }
                         try { process.WaitForExit(1000); } catch { }
                         return false;
                     }
@@ -848,45 +863,79 @@ namespace DirectXfer.WindowsServerHost
             start.EnvironmentVariables["INBOX_DIR"] = config.inboxDir;
             start.EnvironmentVariables["HOST_ROOT"] = config.hostRoot;
             start.EnvironmentVariables["IMAGES_DIR"] = config.imagesDir;
-            // Explicit administrator overrides win over bundled helper tools. The Windows
-            // package supplies safe defaults, but must not silently replace RCLONE_BIN,
-            // RCLONE_CONFIG, SEARCH_OCR_TESSERACT_BIN or TESSDATA_PREFIX inherited by
-            // ServerHost. This keeps the documented environment-based customization usable.
-            if (!HasNonEmptyEnvironmentVariable(start, "RCLONE_BIN") && File.Exists(PortableRclonePath))
+            // Explicit administrator overrides always win. rclone and Tesseract are optional
+            // Windows components installed per-user by the launcher only after activation.
+            // Legacy runtime\rclone and runtime\tesseract paths remain accepted for upgrades
+            // and manually assembled portable deployments.
+            if (!HasNonEmptyEnvironmentVariable(start, "RCLONE_BIN"))
             {
-                if (BundledRcloneUsable()) start.EnvironmentVariables["RCLONE_BIN"] = PortableRclonePath;
-                else
+                if (File.Exists(OptionalRcloneActivationMarker) && File.Exists(OptionalRclonePath))
                 {
-                    start.EnvironmentVariables["RCLONE_BIN"] = "rclone";
-                    AppendLog("[server-host] bundled rclone failed validation; falling back to PATH.");
+                    if (RcloneUsable(OptionalRclonePath))
+                        start.EnvironmentVariables["RCLONE_BIN"] = OptionalRclonePath;
+                    else
+                        AppendLog("[server-host] optional rclone failed validation and will not be used.");
+                }
+                if (!HasNonEmptyEnvironmentVariable(start, "RCLONE_BIN") && File.Exists(PortableRclonePath))
+                {
+                    if (RcloneUsable(PortableRclonePath))
+                        start.EnvironmentVariables["RCLONE_BIN"] = PortableRclonePath;
+                    else
+                        AppendLog("[server-host] legacy portable rclone failed validation and will not be used.");
                 }
             }
             if (!HasNonEmptyEnvironmentVariable(start, "RCLONE_CONFIG"))
                 start.EnvironmentVariables["RCLONE_CONFIG"] = Path.Combine(config.dataDir, "rclone", "rclone.conf");
 
-            var usingBundledTesseract = false;
             var requestedOcrLanguages = RequestedOcrLanguages(start);
-            if (!HasNonEmptyEnvironmentVariable(start, "SEARCH_OCR_TESSERACT_BIN") && File.Exists(PortableTesseractPath))
+            string selectedTesseract = string.Empty;
+            string selectedTessdata = string.Empty;
+            if (!HasNonEmptyEnvironmentVariable(start, "SEARCH_OCR_TESSERACT_BIN"))
             {
-                if (BundledTesseractUsable(requestedOcrLanguages))
+                if (File.Exists(OptionalTesseractActivationMarker) && File.Exists(OptionalTesseractPath))
                 {
-                    start.EnvironmentVariables["SEARCH_OCR_TESSERACT_BIN"] = PortableTesseractPath;
-                    usingBundledTesseract = true;
+                    if (TesseractUsable(OptionalTesseractPath, OptionalTessdataPath, requestedOcrLanguages))
+                    {
+                        selectedTesseract = OptionalTesseractPath;
+                        selectedTessdata = OptionalTessdataPath;
+                    }
+                    else
+                    {
+                        AppendLog("[server-host] optional Tesseract cannot satisfy the requested OCR languages (" +
+                            string.Join("+", requestedOcrLanguages) + ") and will not be used.");
+                    }
                 }
-                else
+                if (string.IsNullOrWhiteSpace(selectedTesseract) && File.Exists(PortableTesseractPath))
                 {
-                    start.EnvironmentVariables["SEARCH_OCR_TESSERACT_BIN"] = "tesseract";
-                    AppendLog("[server-host] bundled Tesseract cannot satisfy the requested OCR languages (" +
-                        string.Join("+", requestedOcrLanguages) + "); falling back to PATH.");
+                    if (TesseractUsable(PortableTesseractPath, PortableTessdataPath, requestedOcrLanguages))
+                    {
+                        selectedTesseract = PortableTesseractPath;
+                        selectedTessdata = PortableTessdataPath;
+                    }
+                    else
+                    {
+                        AppendLog("[server-host] legacy portable Tesseract cannot satisfy the requested OCR languages (" +
+                            string.Join("+", requestedOcrLanguages) + ") and will not be used.");
+                    }
                 }
-            }
-            if (usingBundledTesseract && !HasNonEmptyEnvironmentVariable(start, "TESSDATA_PREFIX"))
-            {
-                // Modern Tesseract accepts the directory containing the traineddata
-                // files directly. Pass it both as the compatibility environment value
-                // and as an internal hint so server.js can add --tessdata-dir explicitly.
-                start.EnvironmentVariables["TESSDATA_PREFIX"] = PortableTessdataPath;
-                start.EnvironmentVariables["DX_WINDOWS_BUNDLED_TESSDATA_DIR"] = PortableTessdataPath;
+
+                if (!string.IsNullOrWhiteSpace(selectedTesseract))
+                {
+                    start.EnvironmentVariables["SEARCH_OCR_TESSERACT_BIN"] = selectedTesseract;
+                    if (!HasNonEmptyEnvironmentVariable(start, "TESSDATA_PREFIX"))
+                    {
+                        start.EnvironmentVariables["TESSDATA_PREFIX"] = selectedTessdata;
+                        start.EnvironmentVariables["DX_WINDOWS_TESSDATA_DIR"] = selectedTessdata;
+                    }
+                }
+                else if (!HasNonEmptyEnvironmentVariable(start, "SEARCH_OCR_ENABLED"))
+                {
+                    // Keep the default installer light and quiet: Windows OCR stays off until
+                    // Tesseract is explicitly activated. Administrators can still opt in to a
+                    // PATH/custom Tesseract by setting SEARCH_OCR_ENABLED or *_BIN themselves.
+                    start.EnvironmentVariables["SEARCH_OCR_ENABLED"] = "false";
+                    AppendLog("[server-host] OCR is disabled until the optional Tesseract component is activated.");
+                }
             }
             start.EnvironmentVariables["NO_COLOR"] = "1";
             start.EnvironmentVariables["DX_WINDOWS_LAUNCHER_TOKEN"] = token;
@@ -1079,7 +1128,7 @@ namespace DirectXfer.WindowsServerHost
             }
             catch { }
             try { if (server.WaitForExit(6500)) return; } catch { return; }
-            try { server.Kill(); } catch { }
+            try { server.Kill(true); } catch { try { server.Kill(); } catch { } }
             try { server.WaitForExit(1200); } catch { }
         }
 

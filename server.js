@@ -4979,7 +4979,7 @@ const SEARCH_OCR_IMAGE_MAX_BYTES = Math.max(1024 * 1024, int(process.env.SEARCH_
 const SEARCH_OCR_PDF_MAX_BYTES = Math.max(1024 * 1024, int(process.env.SEARCH_OCR_PDF_MAX_MB, 100) * 1024 * 1024);
 const SEARCH_OCR_PDF_MAX_PAGES = Math.max(1, Math.min(100, int(process.env.SEARCH_OCR_PDF_MAX_PAGES, 12)));
 const SEARCH_OCR_PDF_DPI = Math.max(96, Math.min(300, int(process.env.SEARCH_OCR_PDF_DPI, 160)));
-let searchOcrBundledTessdataDir = String(process.env.DX_WINDOWS_BUNDLED_TESSDATA_DIR || '').trim();
+let searchOcrBundledTessdataDir = String(process.env.DX_WINDOWS_TESSDATA_DIR || process.env.DX_WINDOWS_BUNDLED_TESSDATA_DIR || '').trim();
 function resolveSearchOcrTesseractBinary() {
   const configured = String(process.env.SEARCH_OCR_TESSERACT_BIN || '').trim();
   if (configured) return configured;

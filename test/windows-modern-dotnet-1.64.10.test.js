@@ -199,9 +199,9 @@ test('SDK-generated assembly metadata replaces manual assembly attributes', () =
   const hostSource = read('windows-server-host/Program.cs');
   for (const project of [launcherProject, hostProject]) {
     assert.doesNotMatch(project, /<GenerateAssemblyInfo>\s*false\s*<\/GenerateAssemblyInfo>/);
-    assert.match(project, /<AssemblyVersion>1\.66\.4\.0<\/AssemblyVersion>/);
-    assert.match(project, /<FileVersion>1\.66\.4\.0<\/FileVersion>/);
-    assert.match(project, /<InformationalVersion>1\.66\.4-(?:launcher77|serverhost51)-csharp<\/InformationalVersion>/);
+    assert.match(project, /<AssemblyVersion>1\.66\.5\.0<\/AssemblyVersion>/);
+    assert.match(project, /<FileVersion>1\.66\.5\.0<\/FileVersion>/);
+    assert.match(project, /<InformationalVersion>1\.66\.5-(?:launcher79|serverhost53)-csharp<\/InformationalVersion>/);
   }
   assert.doesNotMatch(launcherSource, /\[assembly:\s*Assembly(?:Title|Description|Company|Product|Copyright|Version|FileVersion|InformationalVersion)/);
   assert.doesNotMatch(hostSource, /\[assembly:\s*Assembly(?:Title|Description|Company|Product|Copyright|Version|FileVersion|InformationalVersion)/);
@@ -313,30 +313,31 @@ test('Windows runtime marker uses a conventional file and is explicitly packaged
 });
 
 
-test('Windows package bundles pinned verified rclone and ServerHost exposes it to Direct-Xfer', () => {
+test('Windows rclone is an on-demand per-user component instead of installer payload', () => {
   const workflow = read('.github/workflows/build-windows-csharp.yml');
+  const launcher = read('windows-launcher/Program.cs');
   const host = read('windows-server-host/Program.cs');
   const server = read('server.js');
   const installer = read('installer/Direct-Xfer.iss');
   const portable = read('windows-launcher/README-WINDOWS-PORTABLE.md');
 
-  assert.match(workflow, /DX_RCLONE_VERSION: '1\.74\.4'/);
-  assert.match(workflow, /DX_RCLONE_ZIP_SHA256: 'ef097ef9de37a57feb7d9f9c7afb34148ad3c65be8025f1d8f7f521554a701ea'/);
-  assert.match(workflow, /https:\/\/downloads\.rclone\.org\/v\$env:DX_RCLONE_VERSION\/rclone-v\$env:DX_RCLONE_VERSION-windows-amd64\.zip/);
-  assert.match(workflow, /Get-FileHash -Algorithm SHA256 \$rcloneZip/);
-  assert.match(workflow, /rclone ZIP SHA-256 mismatch/);
-  assert.match(workflow, /runtime\\rclone\\rclone\.exe/);
-  assert.match(workflow, /Bundled rclone runtime version mismatch/);
+  assert.doesNotMatch(workflow, /DX_RCLONE_VERSION|DX_RCLONE_ZIP_SHA256/);
+  assert.match(workflow, /optional rclone\/Tesseract excluded/);
+  assert.match(workflow, /runtime\\rclone','runtime\\tesseract/);
 
-  assert.match(host, /RcloneVersion = "1\.74\.4"/);
-  assert.match(host, /PortableRclonePath.*Path\.Combine\(RuntimeRoot, "rclone", "rclone\.exe"\)/s);
-  assert.match(host, /!HasNonEmptyEnvironmentVariable\(start, "RCLONE_BIN"\)[\s\S]*?EnvironmentVariables\["RCLONE_BIN"\] = PortableRclonePath/);
-  assert.match(host, /!HasNonEmptyEnvironmentVariable\(start, "RCLONE_CONFIG"\)[\s\S]*?EnvironmentVariables\["RCLONE_CONFIG"\] = Path\.Combine\(config\.dataDir, "rclone", "rclone\.conf"\)/);
+  assert.match(launcher, /RcloneVersion = "1\.74\.4"/);
+  assert.match(launcher, /RcloneZipSha256 = "ef097ef9de37a57feb7d9f9c7afb34148ad3c65be8025f1d8f7f521554a701ea"/i);
+  assert.match(launcher, /downloads\.rclone\.org\/v" \+ Program\.RcloneVersion/);
+  assert.match(launcher, /DownloadOptionalFile\(url, zip, Program\.RcloneZipSha256/);
+  assert.match(launcher, /OptionalRclonePath/);
+
+  assert.match(host, /OptionalRclonePath/);
+  assert.match(host, /RcloneUsable\(OptionalRclonePath\)/);
+  assert.match(host, /EnvironmentVariables\["RCLONE_BIN"\] = OptionalRclonePath/);
+  assert.match(host, /!HasNonEmptyEnvironmentVariable\(start, "RCLONE_CONFIG"\)[\s\S]*?Path\.Combine\(config\.dataDir, "rclone", "rclone\.conf"\)/);
 
   assert.match(server, /function resolveRcloneBinary\(\)/);
-  assert.match(server, /path\.resolve\(__dirname, '\.\.', 'rclone', 'rclone\.exe'\)/);
-  assert.match(server, /bin:resolveRcloneBinary\(\)/);
-  assert.match(installer, /\{app\}\\runtime\\rclone/);
-  assert.match(portable, /runtime\/rclone\/rclone\.exe/);
-  assert.match(portable, /no separate rclone installation or PATH configuration is required/);
+  assert.match(installer, /\{app\}\\runtime\\rclone/); // upgrade cleanup only
+  assert.match(portable, /rclone is optional on Windows/i);
+  assert.match(portable, /%LOCALAPPDATA%\\Direct-Xfer\\tools\\rclone\\1\.74\.4/);
 });

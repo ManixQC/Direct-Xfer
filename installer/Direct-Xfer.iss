@@ -2,13 +2,13 @@
 #if EnvAppVersion != ""
   #define AppVersion EnvAppVersion
 #else
-  #define AppVersion "1.66.4"
+  #define AppVersion "1.66.5"
 #endif
 #define EnvSourceDir GetEnv("DX_INNO_SOURCE_DIR")
 #if EnvSourceDir != ""
   #define SourceDir EnvSourceDir
 #else
-  #define SourceDir "..\dist\Direct-Xfer-1.66.4-Windows-CSharp"
+  #define SourceDir "..\dist\Direct-Xfer-1.66.5-Windows-CSharp"
 #endif
 #define EnvOutputDir GetEnv("DX_INNO_OUTPUT_DIR")
 #if EnvOutputDir != ""
@@ -65,6 +65,8 @@ CreateUninstallRegKey=yes
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional shortcuts:"; Flags: unchecked
 
 [InstallDelete]
+; Remove old heavyweight helpers left by <=1.66.4 bundled-component builds. New optional
+; rclone/Tesseract installs live per-user under %LOCALAPPDATA%\Direct-Xfer\tools.
 Type: filesandordirs; Name: "{app}\runtime\app"
 Type: filesandordirs; Name: "{app}\runtime\node"
 Type: filesandordirs; Name: "{app}\runtime\rclone"

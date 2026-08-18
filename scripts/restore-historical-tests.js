@@ -16,7 +16,7 @@ function gitBlobSha(buf) {
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 function get(url, redirects = 4) {
   return new Promise((resolve, reject) => {
-    const req = https.get(url, { headers: { 'User-Agent': 'Direct-Xfer-test-restorer/1.66.4', Accept: 'application/octet-stream' }, timeout: 20000 }, res => {
+    const req = https.get(url, { headers: { 'User-Agent': 'Direct-Xfer-test-restorer/1.66.5', Accept: 'application/octet-stream' }, timeout: 20000 }, res => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location && redirects > 0) {
         res.resume(); resolve(get(new URL(res.headers.location, url), redirects - 1)); return;
       }

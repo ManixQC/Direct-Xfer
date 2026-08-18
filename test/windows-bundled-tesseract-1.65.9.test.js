@@ -17,6 +17,9 @@ test('Windows CI bundles pinned Tesseract x64 and validates its release checksum
   assert.match(workflow, /DX_TESSERACT_SETUP_SHA256:\s*'bee9e3434bd94fd65387d9be28cd467a41f61b1275383b55b0f59a1331270ae4'/i);
   assert.match(workflow, /releases\/download\/\$env:DX_TESSERACT_VERSION\/tesseract-ocr-w64-setup-/);
   assert.match(workflow, /Tesseract setup SHA-256 mismatch/);
+  assert.match(workflow, /\[regex\]::Match\(\$tesseractVersionText, '\(\?im\)\^\\s\*tesseract\\s\+v\?\(\?<base>\\d\+\\\.\\d\+\\\.\\d\+\)\(\?:\\\.\\d\+\)\?\(\?:\\s\|\$\)'\)/);
+  assert.match(workflow, /\$tesseractVersionMatch\.Groups\['base'\]\.Value -ne \$env:DX_TESSERACT_VERSION/);
+  assert.doesNotMatch(workflow, /\$tesseractVersionOutput\[0\]\s+-match/);
   assert.match(workflow, /runtime\\tesseract/);
   assert.match(workflow, /tesseract\.exe/);
 });
@@ -32,8 +35,8 @@ test('Windows Tesseract includes pinned fast English, French and Spanish models'
 test('ServerHost wires bundled Tesseract into server OCR automatically', () => {
   assert.match(host, /PortableTesseractRoot/);
   assert.match(host, /PortableTesseractPath/);
-  assert.match(host, /EnvironmentVariables\["SEARCH_OCR_TESSERACT_BIN"\]\s*=\s*PortableTesseractPath/);
-  assert.match(host, /EnvironmentVariables\["TESSDATA_PREFIX"\]\s*=\s*PortableTesseractRoot/);
+  assert.match(host, /!HasNonEmptyEnvironmentVariable\(start, "SEARCH_OCR_TESSERACT_BIN"\)[\s\S]*?EnvironmentVariables\["SEARCH_OCR_TESSERACT_BIN"\]\s*=\s*PortableTesseractPath/);
+  assert.match(host, /usingBundledTesseract[\s\S]*?!HasNonEmptyEnvironmentVariable\(start, "TESSDATA_PREFIX"\)[\s\S]*?EnvironmentVariables\["TESSDATA_PREFIX"\]\s*=\s*PortableTesseractRoot/);
 });
 
 test('Installer upgrade cleanup and documentation include bundled Tesseract', () => {

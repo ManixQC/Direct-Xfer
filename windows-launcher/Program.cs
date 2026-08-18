@@ -19,15 +19,15 @@ namespace DirectXfer.WindowsLauncher
 {
     internal static class Program
     {
-        internal const string AppVersion = "1.66.0";
-        internal const string RuntimeAppBuild = "1.66.0-launcher71-csharp";
+        internal const string AppVersion = "1.66.1";
+        internal const string RuntimeAppBuild = "1.66.1-launcher74-csharp";
         internal const string ServerHostFileName = "Direct-Xfer.ServerHost.exe";
-        internal const string ServerHostVersion = "1.66.0.0";
+        internal const string ServerHostVersion = "1.66.1.0";
         internal const int DefaultPort = 55750;
         internal const int StartupReadyTimeoutMs = 60000;
         internal const string MutexName = @"Local\DirectXferLauncherInstance";
         internal const string OpenEventName = @"Local\DirectXferLauncherOpen";
-        internal const string ServerHostBuild = "1.66.0-serverhost44-csharp";
+        internal const string ServerHostBuild = "1.66.1-serverhost47-csharp";
         internal const string ServerHostReloadEventName = @"Local\DirectXferServerHostReload";
 
         internal static string ExecutablePath
@@ -52,6 +52,10 @@ namespace DirectXfer.WindowsLauncher
         [STAThread]
         private static void Main(string[] args)
         {
+            // CI/runtime probe: reaching managed code with DOTNET_ROOT redirected to an
+            // empty directory proves the published launcher carries its own .NET runtime.
+            if (args.Length == 1 && string.Equals(args[0], "--dx-runtime-probe", StringComparison.Ordinal)) return;
+
             using var mutex = new Mutex(true, MutexName, out var createdNew);
             if (!createdNew)
             {
@@ -347,7 +351,7 @@ namespace DirectXfer.WindowsLauncher
                 var reported = Path.GetFullPath(session.hostPath);
                 if (!string.Equals(expected, reported, StringComparison.OrdinalIgnoreCase) || !File.Exists(expected)) return false;
                 if ((File.GetAttributes(expected) & FileAttributes.ReparsePoint) != 0 || !IsAmd64Pe(expected)) return false;
-                // The SDK-generated Win32 version resource of a framework-dependent
+                // The SDK-generated Win32 version resource of a self-contained
                 // single-file apphost is not a stable runtime identity boundary across
                 // .NET SDK servicing releases. The session is already authenticated by
                 // the exact expected path/build plus the per-process token and PID in

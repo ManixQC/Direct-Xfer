@@ -50,7 +50,9 @@ test('Windows workflow uses pinned .NET 10 SDK and dotnet publish instead of leg
   assert.match(workflow, /dotnet-version: '10\.0\.400'/);
   assert.match(workflow, /dotnet publish windows-server-host\\DirectXfer\.ServerHost\.csproj/);
   assert.match(workflow, /dotnet publish windows-launcher\\DirectXfer\.Launcher\.csproj/);
-  assert.match(workflow, /--self-contained false/);
+  assert.match(workflow, /--self-contained true/);
+  assert.match(workflow, /IncludeNativeLibrariesForSelfExtract=true/);
+  assert.doesNotMatch(workflow, /--self-contained false/);
   assert.match(workflow, /PublishSingleFile=true/);
   assert.doesNotMatch(workflow, /setup-msbuild|\bmsbuild windows-|\.exe\.config/);
 });
@@ -63,14 +65,12 @@ test('modern .NET SDK is pinned and projects do not depend on obsolete Framework
     const project = read(rel);
     assert.doesNotMatch(project, /App\.config|<None[^>]+App\.config|<Content[^>]+App\.config|TargetFrameworkVersion|\.NETFramework/);
   }
-  assert.match(read('windows-launcher/README-WINDOWS-PORTABLE.md'), /\.NET 10 Desktop Runtime x64/);
+  const portableReadme = read('windows-launcher/README-WINDOWS-PORTABLE.md');
+  assert.match(portableReadme, /self-contained and single-file for win-x64/i);
+  assert.match(portableReadme, /No separate Microsoft \.NET Runtime or Desktop Runtime installation is required/i);
+  assert.doesNotMatch(portableReadme, /winget install Microsoft\.DotNet\.DesktopRuntime|dotnet\.microsoft\.com\/en-us\/download\/dotnet/);
   const installer = read('installer/Direct-Xfer.iss');
-  assert.match(installer, /HasNet10DesktopRuntime/);
-  assert.match(installer, /Microsoft \.NET 10 Desktop Runtime x64/);
-  assert.match(installer, /DotNet10DesktopRuntimeUrl = 'https:\/\/dotnet\.microsoft\.com\/en-us\/download\/dotnet\/10\.0'/);
-  assert.match(installer, /OfferNet10DesktopRuntimeDownload/);
-  assert.match(installer, /ShellExec\('', DotNet10DesktopRuntimeUrl/);
-  assert.match(installer, /MB_YESNO/);
+  assert.doesNotMatch(installer, /HasNet10DesktopRuntime|DotNet10DesktopRuntimeUrl|OfferNet10DesktopRuntimeDownload|Microsoft \.NET 10 Desktop Runtime|InitializeSetup/);
   assert.doesNotMatch(installer, /HasNetFramework48OrLater|Net48Release|requires Microsoft \.NET Framework 4\.8/);
 });
 
@@ -120,14 +120,31 @@ test('modern Windows projects declare the same single-file win-x64 deployment us
   for (const rel of ['windows-launcher/DirectXfer.Launcher.csproj','windows-server-host/DirectXfer.ServerHost.csproj']) {
     const project = read(rel);
     assert.match(project, /<RuntimeIdentifier>win-x64<\/RuntimeIdentifier>/);
-    assert.match(project, /<SelfContained>false<\/SelfContained>/);
+    assert.match(project, /<SelfContained>true<\/SelfContained>/);
+    assert.match(project, /<IncludeNativeLibrariesForSelfExtract>true<\/IncludeNativeLibrariesForSelfExtract>/);
     assert.match(project, /<PublishSingleFile>true<\/PublishSingleFile>/);
   }
 });
 
-test('installer rejects prerelease .NET 10 Desktop Runtime folders as a stable runtime prerequisite', () => {
+test('Windows CI probes both self-contained EXEs with global dotnet roots disabled', () => {
+  const workflow = read('.github/workflows/build-windows-csharp.yml');
+  const launcher = read('windows-launcher/Program.cs');
+  const host = read('windows-server-host/Program.cs');
+  assert.match(workflow, /Verify self-contained \.NET runtime independence/);
+  assert.match(workflow, /DOTNET_ROOT_X64 = \$emptyDotnetRoot/);
+  assert.match(workflow, /DOTNET_MULTILEVEL_LOOKUP = '0'/);
+  assert.match(workflow, /--dx-runtime-probe/);
+  assert.match(workflow, /publish is not single-file/);
+  assert.match(launcher, /--dx-runtime-probe/);
+  assert.match(host, /--dx-runtime-probe/);
+});
+
+test('self-contained Windows installer has no external .NET runtime prerequisite gate', () => {
   const installer = read('installer/Direct-Xfer.iss');
-  assert.match(installer, /\(Pos\('-', FindRec\.Name\) = 0\)/);
+  const installerReadme = read('installer/README-INNO-SETUP.md');
+  assert.doesNotMatch(installer, /HasNet10DesktopRuntime|Microsoft\.WindowsDesktop\.App|DOTNET_ROOT|OfferNet10DesktopRuntimeDownload|InitializeSetup/);
+  assert.match(installerReadme, /self-contained single-file/i);
+  assert.match(installerReadme, /do \*\*not\*\* need to install the Microsoft \.NET 10 Desktop Runtime separately/i);
 });
 
 
@@ -172,9 +189,9 @@ test('SDK-generated assembly metadata replaces manual assembly attributes', () =
   const hostSource = read('windows-server-host/Program.cs');
   for (const project of [launcherProject, hostProject]) {
     assert.doesNotMatch(project, /<GenerateAssemblyInfo>\s*false\s*<\/GenerateAssemblyInfo>/);
-    assert.match(project, /<AssemblyVersion>1\.66\.0\.0<\/AssemblyVersion>/);
-    assert.match(project, /<FileVersion>1\.66\.0\.0<\/FileVersion>/);
-    assert.match(project, /<InformationalVersion>1\.66\.0-(?:launcher71|serverhost44)-csharp<\/InformationalVersion>/);
+    assert.match(project, /<AssemblyVersion>1\.66\.1\.0<\/AssemblyVersion>/);
+    assert.match(project, /<FileVersion>1\.66\.1\.0<\/FileVersion>/);
+    assert.match(project, /<InformationalVersion>1\.66\.1-(?:launcher74|serverhost47)-csharp<\/InformationalVersion>/);
   }
   assert.doesNotMatch(launcherSource, /\[assembly:\s*Assembly(?:Title|Description|Company|Product|Copyright|Version|FileVersion|InformationalVersion)/);
   assert.doesNotMatch(hostSource, /\[assembly:\s*Assembly(?:Title|Description|Company|Product|Copyright|Version|FileVersion|InformationalVersion)/);
@@ -303,8 +320,8 @@ test('Windows package bundles pinned verified rclone and ServerHost exposes it t
 
   assert.match(host, /RcloneVersion = "1\.74\.4"/);
   assert.match(host, /PortableRclonePath.*Path\.Combine\(RuntimeRoot, "rclone", "rclone\.exe"\)/s);
-  assert.match(host, /start\.EnvironmentVariables\["RCLONE_BIN"\] = PortableRclonePath/);
-  assert.match(host, /start\.EnvironmentVariables\["RCLONE_CONFIG"\] = Path\.Combine\(config\.dataDir, "rclone", "rclone\.conf"\)/);
+  assert.match(host, /!HasNonEmptyEnvironmentVariable\(start, "RCLONE_BIN"\)[\s\S]*?EnvironmentVariables\["RCLONE_BIN"\] = PortableRclonePath/);
+  assert.match(host, /!HasNonEmptyEnvironmentVariable\(start, "RCLONE_CONFIG"\)[\s\S]*?EnvironmentVariables\["RCLONE_CONFIG"\] = Path\.Combine\(config\.dataDir, "rclone", "rclone\.conf"\)/);
 
   assert.match(server, /function resolveRcloneBinary\(\)/);
   assert.match(server, /path\.resolve\(__dirname, '\.\.', 'rclone', 'rclone\.exe'\)/);

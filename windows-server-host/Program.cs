@@ -19,9 +19,9 @@ namespace DirectXfer.WindowsServerHost
 {
     internal static class Program
     {
-        internal const string AppVersion = "1.66.0";
-        internal const string RuntimeAppBuild = "1.66.0-launcher71-csharp";
-        internal const string HostVersion = "1.66.0-serverhost44-csharp";
+        internal const string AppVersion = "1.66.1";
+        internal const string RuntimeAppBuild = "1.66.1-launcher74-csharp";
+        internal const string HostVersion = "1.66.1-serverhost47-csharp";
         internal const int DefaultPort = 55750;
         internal const int MaxFallbackPort = 55769;
         internal const int StartupReadyTimeoutMs = 60000;
@@ -30,6 +30,7 @@ namespace DirectXfer.WindowsServerHost
         internal const long EmergencyLogMaxBytes = 2L * 1024 * 1024;
         internal const string NodeVersion = "24.19.0";
         internal const string RcloneVersion = "1.74.4";
+        internal const string TesseractVersion = "5.5.3";
         internal const string NodeExeSha256 = "3602f2bb1a10f2cbab4c36886218a33c1ab3db87290e73b033c46c77147d0237";
         internal const string MutexName = @"Local\DirectXferServerHostInstance";
         internal const string StopEventName = @"Local\DirectXferServerHostStop";
@@ -57,6 +58,10 @@ namespace DirectXfer.WindowsServerHost
         [STAThread]
         private static int Main(string[] args)
         {
+            // CI/runtime probe: reaching managed code with DOTNET_ROOT redirected to an
+            // empty directory proves the published ServerHost carries its own .NET runtime.
+            if (args.Length == 1 && string.Equals(args[0], "--dx-runtime-probe", StringComparison.Ordinal)) return 0;
+
             using var mutex = new Mutex(true, MutexName, out var createdNew);
             if (!createdNew) return 0;
             try
@@ -105,16 +110,16 @@ namespace DirectXfer.WindowsServerHost
         private static readonly IDictionary<string, string> CriticalRuntimeSha256 =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                { "package.json", "7a25d69b5c84d5ed15ce0d72ef8c6b104a97a75964a7664c3d76757e7f14eee0" },
-                { "package-lock.json", "7751557376772a631963cec6029e8c5fe5bf81581b5f1e50af173b24c29b7415" },
-                { "server.js", "40d8b63adb5eabde5c5cee8ecd3d69ce33a5da6279c7c574712f7e9db29f35a7" },
+                { "package.json", "c82f31518fa2ffa47b58400528142a3ea8bee68a68bdeb2ed3c7b7eb847a76a7" },
+                { "package-lock.json", "305355bbfe142a99dd4f6f6ac63b58f0fa67593d29698ba94f31d8ff4fc273fd" },
+                { "server.js", "64d9dee9cd0b0e0132f910083338884d940aef6519868bcf832275853351c09b" },
                 { "lib/server/public-pages.js", "96954ccf1705f068c5579806c69f4f1d56916c2a803d1fc160be874c908f0615" },
                 { "lib/server/tls-manager.js", "b82a1b195b6cb36d47d8d431b890e0479aaf9ca8d47f98e8ef9e046390610f7f" },
                 { "lib/server/network-services.js", "fd4a119ca1a75127b82c758c3d3555c12384c01b487bee3b3150a398217e4bdf" },
                 { "lib/server/backup-service.js", "65cb07c147b326475a833be6cbc668db733fc8183ec0b4eec919a876b3f04bc2" },
                 { "lib/server/notification-service.js", "a55beb8d5fdb09754eeb7f7d01974896efaad20dde3b9cf00e83bf4f7a7b9baa" },
                 { "public/app.js", "d50010dbae1548634d8bf1f711d301cd1d20d6ca2e2b5b2f76dee5ae632e6350" },
-                { "pwa/app.js", "d451f18e35ac06e882824e4c08dcea2c39aaf14de556b49bf59669e1af7c8019" },
+                { "pwa/app.js", "e6b95b1ff623be2074305297f8d77856c23c563f9dd609ba8bb8365b4bd62c53" },
                 { "lib/dlp-utils.js", "dd4d15a3ebb1cc2e7183e9b68434cf69d50532f54fcbb9e90b5ffeb0cfdad086" },
                 { "lib/fd-utils.js", "322abf15ce7a15310d6d27ac1b0ca40892658d5f21198510f7e84b78b0070b13" },
                 { "pwa/dlp-local.js", "246267542621fc92f759438b2295b87f777ba6d6aa88b3c4d23dea25aebe7390" },
@@ -598,6 +603,81 @@ namespace DirectXfer.WindowsServerHost
             }
         }
 
+        private static bool HasNonEmptyEnvironmentVariable(ProcessStartInfo start, string name)
+        {
+            try
+            {
+                return start.EnvironmentVariables.ContainsKey(name) &&
+                    !string.IsNullOrWhiteSpace(start.EnvironmentVariables[name]);
+            }
+            catch { return false; }
+        }
+
+        private static bool PortableHelperUsable(string path, string arguments, params string[] expectedPrefixes)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(path) || !Path.IsPathRooted(path) || !File.Exists(path)) return false;
+                var full = Path.GetFullPath(path);
+                if ((File.GetAttributes(full) & FileAttributes.ReparsePoint) != 0 || !IsAmd64Pe(full)) return false;
+                using (var process = new Process())
+                {
+                    process.StartInfo = new ProcessStartInfo
+                    {
+                        FileName = full, Arguments = arguments, UseShellExecute = false, CreateNoWindow = true,
+                        RedirectStandardOutput = true, RedirectStandardError = true, WindowStyle = ProcessWindowStyle.Hidden
+                    };
+                    if (!process.Start()) return false;
+                    var stdout = process.StandardOutput.ReadToEndAsync();
+                    var stderr = process.StandardError.ReadToEndAsync();
+                    if (!process.WaitForExit(5000))
+                    {
+                        try { process.Kill(); } catch { }
+                        try { process.WaitForExit(1000); } catch { }
+                        return false;
+                    }
+                    if (!stdout.Wait(500)) return false;
+                    try { stderr.Wait(500); } catch { }
+                    if (process.ExitCode != 0) return false;
+                    var stderrText = stderr.IsCompleted ? (stderr.Result ?? string.Empty) : string.Empty;
+                    var output = ((stdout.Result ?? string.Empty) + "\n" + stderrText).Trim();
+                    return expectedPrefixes != null && expectedPrefixes.Length > 0 &&
+                        output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                            .Any(line => expectedPrefixes.Any(prefix =>
+                            {
+                                if (string.IsNullOrWhiteSpace(prefix)) return false;
+                                var value = line.Trim();
+                                if (!value.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) return false;
+                                return value.Length == prefix.Length || value[prefix.Length] == '.' || char.IsWhiteSpace(value[prefix.Length]);
+                            }));
+                }
+            }
+            catch { return false; }
+        }
+
+        private static bool BundledRcloneUsable()
+        {
+            return PortableHelperUsable(PortableRclonePath, "version", "rclone v" + Program.RcloneVersion);
+        }
+
+        private static bool BundledTesseractUsable()
+        {
+            if (!PortableHelperUsable(PortableTesseractPath, "--version",
+                "tesseract " + Program.TesseractVersion,
+                "tesseract v" + Program.TesseractVersion)) return false;
+            try
+            {
+                var tessdata = Path.Combine(PortableTesseractRoot, "tessdata");
+                foreach (var language in new[] { "eng", "fra", "spa" })
+                {
+                    var model = Path.Combine(tessdata, language + ".traineddata");
+                    if (!File.Exists(model) || new FileInfo(model).Length < 100 * 1024) return false;
+                }
+                return true;
+            }
+            catch { return false; }
+        }
+
         private static bool NodeUsable(string path)
         {
             try
@@ -706,16 +786,38 @@ namespace DirectXfer.WindowsServerHost
             start.EnvironmentVariables["INBOX_DIR"] = config.inboxDir;
             start.EnvironmentVariables["HOST_ROOT"] = config.hostRoot;
             start.EnvironmentVariables["IMAGES_DIR"] = config.imagesDir;
-            if (File.Exists(PortableRclonePath))
+            // Explicit administrator overrides win over bundled helper tools. The Windows
+            // package supplies safe defaults, but must not silently replace RCLONE_BIN,
+            // RCLONE_CONFIG, SEARCH_OCR_TESSERACT_BIN or TESSDATA_PREFIX inherited by
+            // ServerHost. This keeps the documented environment-based customization usable.
+            if (!HasNonEmptyEnvironmentVariable(start, "RCLONE_BIN") && File.Exists(PortableRclonePath))
             {
-                start.EnvironmentVariables["RCLONE_BIN"] = PortableRclonePath;
+                if (BundledRcloneUsable()) start.EnvironmentVariables["RCLONE_BIN"] = PortableRclonePath;
+                else
+                {
+                    start.EnvironmentVariables["RCLONE_BIN"] = "rclone";
+                    AppendLog("[server-host] bundled rclone failed validation; falling back to PATH.");
+                }
+            }
+            if (!HasNonEmptyEnvironmentVariable(start, "RCLONE_CONFIG"))
                 start.EnvironmentVariables["RCLONE_CONFIG"] = Path.Combine(config.dataDir, "rclone", "rclone.conf");
-            }
-            if (File.Exists(PortableTesseractPath))
+
+            var usingBundledTesseract = false;
+            if (!HasNonEmptyEnvironmentVariable(start, "SEARCH_OCR_TESSERACT_BIN") && File.Exists(PortableTesseractPath))
             {
-                start.EnvironmentVariables["SEARCH_OCR_TESSERACT_BIN"] = PortableTesseractPath;
-                start.EnvironmentVariables["TESSDATA_PREFIX"] = PortableTesseractRoot;
+                if (BundledTesseractUsable())
+                {
+                    start.EnvironmentVariables["SEARCH_OCR_TESSERACT_BIN"] = PortableTesseractPath;
+                    usingBundledTesseract = true;
+                }
+                else
+                {
+                    start.EnvironmentVariables["SEARCH_OCR_TESSERACT_BIN"] = "tesseract";
+                    AppendLog("[server-host] bundled Tesseract failed validation; falling back to PATH.");
+                }
             }
+            if (usingBundledTesseract && !HasNonEmptyEnvironmentVariable(start, "TESSDATA_PREFIX"))
+                start.EnvironmentVariables["TESSDATA_PREFIX"] = PortableTesseractRoot;
             start.EnvironmentVariables["NO_COLOR"] = "1";
             start.EnvironmentVariables["DX_WINDOWS_LAUNCHER_TOKEN"] = token;
             start.EnvironmentVariables["DX_WINDOWS_SHUTDOWN_MARKER"] = shutdownMarkerPath;

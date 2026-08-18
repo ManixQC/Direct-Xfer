@@ -1,5 +1,5 @@
 name: Build Direct-Xfer Windows C# + Installer
-run-name: v1.66.0
+run-name: v1.66.1
 
 on:
   workflow_dispatch:
@@ -26,9 +26,9 @@ jobs:
   build-windows:
     runs-on: windows-2025
     env:
-      DX_VERSION: '1.66.0'
-      DX_RUNTIME_BUILD: '1.66.0-launcher71-csharp'
-      DX_SERVER_HOST_BUILD: '1.66.0-serverhost44-csharp'
+      DX_VERSION: '1.66.1'
+      DX_RUNTIME_BUILD: '1.66.1-launcher74-csharp'
+      DX_SERVER_HOST_BUILD: '1.66.1-serverhost47-csharp'
       DX_NODE_VERSION: '24.19.0'
       DX_NODE_EXE_SHA256: '3602f2bb1a10f2cbab4c36886218a33c1ab3db87290e73b033c46c77147d0237'
       DX_RCLONE_VERSION: '1.74.4'
@@ -79,10 +79,53 @@ jobs:
           $launcherOut = Join-Path $buildRoot 'launcher'
           Remove-Item $buildRoot -Recurse -Force -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Force -Path $hostOut,$launcherOut | Out-Null
-          dotnet publish windows-server-host\DirectXfer.ServerHost.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:DebugSymbols=false -p:DebugType=None -o $hostOut
+          dotnet publish windows-server-host\DirectXfer.ServerHost.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugSymbols=false -p:DebugType=None -o $hostOut
           if ($LASTEXITCODE -ne 0) { throw "ServerHost .NET 10 publish failed: $LASTEXITCODE" }
-          dotnet publish windows-launcher\DirectXfer.Launcher.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:DebugSymbols=false -p:DebugType=None -o $launcherOut
+          dotnet publish windows-launcher\DirectXfer.Launcher.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugSymbols=false -p:DebugType=None -o $launcherOut
           if ($LASTEXITCODE -ne 0) { throw "Launcher .NET 10 publish failed: $LASTEXITCODE" }
+
+          # A self-contained single-file publish must not leave framework/runtime sidecars.
+          foreach ($entry in @(
+            @{ Name = 'ServerHost'; Dir = $hostOut; Exe = 'Direct-Xfer.ServerHost.exe' },
+            @{ Name = 'Launcher'; Dir = $launcherOut; Exe = 'Direct-Xfer.exe' }
+          )) {
+            $files = @(Get-ChildItem -LiteralPath $entry.Dir -Recurse -File)
+            if ($files.Count -ne 1 -or $files[0].Name -ne $entry.Exe) {
+              throw "$($entry.Name) publish is not single-file: $($files.Name -join ', ')"
+            }
+          }
+      - name: Verify self-contained .NET runtime independence
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $emptyDotnetRoot = Join-Path $env:RUNNER_TEMP 'dx-empty-dotnet-root'
+          Remove-Item $emptyDotnetRoot -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force -Path $emptyDotnetRoot | Out-Null
+          $previousDotnetRoot = $env:DOTNET_ROOT
+          $previousDotnetRootX64 = $env:DOTNET_ROOT_X64
+          $previousMultilevel = $env:DOTNET_MULTILEVEL_LOOKUP
+          try {
+            # A framework-dependent apphost obeys DOTNET_ROOT_X64 and fails here.
+            # The self-contained apphost must reach managed code without consulting it.
+            $env:DOTNET_ROOT = $emptyDotnetRoot
+            $env:DOTNET_ROOT_X64 = $emptyDotnetRoot
+            $env:DOTNET_MULTILEVEL_LOOKUP = '0'
+            foreach ($exe in @(
+              'build\windows-dotnet10\launcher\Direct-Xfer.exe',
+              'build\windows-dotnet10\server-host\Direct-Xfer.ServerHost.exe'
+            )) {
+              $process = Start-Process -FilePath (Join-Path $PWD $exe) -ArgumentList '--dx-runtime-probe' -PassThru
+              if (-not $process.WaitForExit(15000)) {
+                try { Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue } catch {}
+                throw "$exe timed out during the self-contained runtime probe."
+              }
+              if ($process.ExitCode -ne 0) { throw "$exe failed the self-contained runtime probe: $($process.ExitCode)" }
+            }
+          } finally {
+            $env:DOTNET_ROOT = $previousDotnetRoot
+            $env:DOTNET_ROOT_X64 = $previousDotnetRootX64
+            $env:DOTNET_MULTILEVEL_LOOKUP = $previousMultilevel
+          }
       - name: Verify executables are unsigned by design
         shell: pwsh
         run: |
@@ -95,6 +138,21 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
+          function Invoke-DxDownload([string]$Uri, [string]$OutFile) {
+            for ($attempt = 1; $attempt -le 3; $attempt++) {
+              try {
+                Remove-Item -LiteralPath $OutFile -Force -ErrorAction SilentlyContinue
+                Invoke-WebRequest -Uri $Uri -OutFile $OutFile -UseBasicParsing -TimeoutSec 180
+                if (-not (Test-Path -LiteralPath $OutFile -PathType Leaf) -or (Get-Item -LiteralPath $OutFile).Length -le 0) {
+                  throw "Downloaded file is missing or empty: $OutFile"
+                }
+                return
+              } catch {
+                if ($attempt -ge 3) { throw }
+                Start-Sleep -Seconds (2 * $attempt)
+              }
+            }
+          }
           $distRoot = Join-Path $PWD 'dist'
           $dist = Join-Path $distRoot "Direct-Xfer-$env:DX_VERSION-Windows-CSharp"
           $app = Join-Path $dist 'runtime\app'
@@ -118,7 +176,7 @@ jobs:
           if ($markerNow -ne $env:DX_RUNTIME_BUILD) { throw "Runtime marker write mismatch: '$markerNow' != '$env:DX_RUNTIME_BUILD'" }
           $nodeExe = Join-Path $node 'node.exe'
           $nodeUrl = "https://nodejs.org/download/release/v$env:DX_NODE_VERSION/win-x64/node.exe"
-          Invoke-WebRequest $nodeUrl -OutFile $nodeExe -UseBasicParsing
+          Invoke-DxDownload $nodeUrl $nodeExe
           $nodeHash = (Get-FileHash -Algorithm SHA256 $nodeExe).Hash.ToLowerInvariant()
           if ($nodeHash -ne $env:DX_NODE_EXE_SHA256) { throw "Node SHA-256 mismatch: $nodeHash" }
           Set-Content -Encoding UTF8 (Join-Path $node 'README.txt') @("Direct-Xfer pinned Node.js $env:DX_NODE_VERSION x64","SHA-256: $nodeHash","Source: nodejs.org")
@@ -131,7 +189,7 @@ jobs:
           Remove-Item $rcloneZip -Force -ErrorAction SilentlyContinue
           Remove-Item $rcloneExtract -Recurse -Force -ErrorAction SilentlyContinue
           $rcloneUrl = "https://downloads.rclone.org/v$env:DX_RCLONE_VERSION/rclone-v$env:DX_RCLONE_VERSION-windows-amd64.zip"
-          Invoke-WebRequest $rcloneUrl -OutFile $rcloneZip -UseBasicParsing
+          Invoke-DxDownload $rcloneUrl $rcloneZip
           $rcloneZipHash = (Get-FileHash -Algorithm SHA256 $rcloneZip).Hash.ToLowerInvariant()
           if ($rcloneZipHash -ne $env:DX_RCLONE_ZIP_SHA256) { throw "rclone ZIP SHA-256 mismatch: $rcloneZipHash" }
           Expand-Archive -LiteralPath $rcloneZip -DestinationPath $rcloneExtract -Force
@@ -141,7 +199,9 @@ jobs:
           Copy-Item -LiteralPath $rcloneSource[0].FullName -Destination $rcloneExe -Force
           $rcloneVersionOutput = @(& $rcloneExe version 2>&1)
           if ($LASTEXITCODE -ne 0) { throw "Bundled rclone failed its version probe: $LASTEXITCODE" }
-          if (-not ($rcloneVersionOutput -match "^rclone v$([regex]::Escape($env:DX_RCLONE_VERSION))$")) { throw "Unexpected bundled rclone version: $($rcloneVersionOutput -join ' | ')" }
+          $rcloneVersionText = (($rcloneVersionOutput | ForEach-Object { [string]$_ }) -join "`n")
+          $rcloneVersionMatch = [regex]::Match($rcloneVersionText, '(?im)^\s*rclone\s+v(?<base>\d+\.\d+\.\d+)\s*$')
+          if (-not $rcloneVersionMatch.Success -or $rcloneVersionMatch.Groups['base'].Value -ne $env:DX_RCLONE_VERSION) { throw "Unexpected bundled rclone version: $($rcloneVersionOutput -join ' | ')" }
           [System.IO.File]::WriteAllLines((Join-Path $rclone 'README.txt'), @(
             "Direct-Xfer bundled rclone v$env:DX_RCLONE_VERSION Windows AMD64",
             "Archive SHA-256: $rcloneZipHash",
@@ -158,10 +218,14 @@ jobs:
           Remove-Item $tesseractStage -Recurse -Force -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Force -Path $tesseractStage | Out-Null
           $tesseractUrl = "https://github.com/tesseract-ocr/tesseract/releases/download/$env:DX_TESSERACT_VERSION/tesseract-ocr-w64-setup-$env:DX_TESSERACT_PACKAGE_VERSION.exe"
-          Invoke-WebRequest $tesseractUrl -OutFile $tesseractSetup -UseBasicParsing
+          Invoke-DxDownload $tesseractUrl $tesseractSetup
           $tesseractSetupHash = (Get-FileHash -Algorithm SHA256 $tesseractSetup).Hash.ToLowerInvariant()
           if ($tesseractSetupHash -ne $env:DX_TESSERACT_SETUP_SHA256) { throw "Tesseract setup SHA-256 mismatch: $tesseractSetupHash" }
-          $tessInstall = Start-Process -FilePath $tesseractSetup -ArgumentList @('/S', "/D=$tesseractStage") -Wait -PassThru
+          $tessInstall = Start-Process -FilePath $tesseractSetup -ArgumentList @('/S', "/D=$tesseractStage") -PassThru
+          if (-not $tessInstall.WaitForExit(120000)) {
+            try { Stop-Process -Id $tessInstall.Id -Force -ErrorAction SilentlyContinue } catch {}
+            throw 'Tesseract silent extraction/install timed out after 120 seconds.'
+          }
           if ($tessInstall.ExitCode -ne 0) { throw "Tesseract silent extraction/install failed: $($tessInstall.ExitCode)" }
           $tesseractStageExe = Join-Path $tesseractStage 'tesseract.exe'
           if (-not (Test-Path -LiteralPath $tesseractStageExe -PathType Leaf)) { throw "Tesseract installer did not create tesseract.exe in $tesseractStage" }
@@ -172,7 +236,7 @@ jobs:
           foreach ($lang in @('eng','fra','spa')) {
             $langUrl = "https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/$env:DX_TESSDATA_FAST_COMMIT/$lang.traineddata"
             $langPath = Join-Path $tessdataDir "$lang.traineddata"
-            Invoke-WebRequest $langUrl -OutFile $langPath -UseBasicParsing
+            Invoke-DxDownload $langUrl $langPath
             if (-not (Test-Path -LiteralPath $langPath -PathType Leaf) -or (Get-Item -LiteralPath $langPath).Length -lt 100000) { throw "Invalid Tesseract language model: $langPath" }
           }
           $previousTessdataPrefix = $env:TESSDATA_PREFIX
@@ -180,10 +244,13 @@ jobs:
             $env:TESSDATA_PREFIX = $tesseract
             $tesseractVersionOutput = @(& $tesseractExe --version 2>&1)
             if ($LASTEXITCODE -ne 0) { throw "Bundled Tesseract failed its version probe: $LASTEXITCODE" }
-            if (-not ($tesseractVersionOutput[0] -match "^tesseract $([regex]::Escape($env:DX_TESSERACT_VERSION))(?:\s|$)")) { throw "Unexpected bundled Tesseract version: $($tesseractVersionOutput -join ' | ')" }
+            $tesseractVersionText = (($tesseractVersionOutput | ForEach-Object { [string]$_ }) -join "`n")
+            $tesseractVersionMatch = [regex]::Match($tesseractVersionText, '(?im)^\s*tesseract\s+v?(?<base>\d+\.\d+\.\d+)(?:\.\d+)?(?:\s|$)')
+            if (-not $tesseractVersionMatch.Success -or $tesseractVersionMatch.Groups['base'].Value -ne $env:DX_TESSERACT_VERSION) { throw "Unexpected bundled Tesseract version: $($tesseractVersionOutput -join ' | ')" }
             $tesseractLangOutput = @(& $tesseractExe --list-langs 2>&1)
             if ($LASTEXITCODE -ne 0) { throw "Bundled Tesseract language probe failed: $LASTEXITCODE" }
-            foreach ($lang in @('eng','fra','spa')) { if ($tesseractLangOutput -notcontains $lang) { throw "Bundled Tesseract is missing language '$lang'" } }
+            $tesseractLangLines = @($tesseractLangOutput | ForEach-Object { ([string]$_).Trim() } | Where-Object { $_ })
+            foreach ($lang in @('eng','fra','spa')) { if ($tesseractLangLines -notcontains $lang) { throw "Bundled Tesseract is missing language '$lang'" } }
           } finally {
             $env:TESSDATA_PREFIX = $previousTessdataPrefix
           }
@@ -221,7 +288,9 @@ jobs:
           if ((Get-Item -LiteralPath $rcloneExe).Length -le 0) { throw "Empty bundled rclone: $rcloneExe" }
           $rcloneVersionOutput = @(& $rcloneExe version 2>&1)
           if ($LASTEXITCODE -ne 0) { throw "Bundled rclone runtime validation failed: $LASTEXITCODE" }
-          if (-not ($rcloneVersionOutput -match "^rclone v$([regex]::Escape($env:DX_RCLONE_VERSION))$")) { throw "Bundled rclone runtime version mismatch: $($rcloneVersionOutput -join ' | ')" }
+          $rcloneVersionText = (($rcloneVersionOutput | ForEach-Object { [string]$_ }) -join "`n")
+          $rcloneVersionMatch = [regex]::Match($rcloneVersionText, '(?im)^\s*rclone\s+v(?<base>\d+\.\d+\.\d+)\s*$')
+          if (-not $rcloneVersionMatch.Success -or $rcloneVersionMatch.Groups['base'].Value -ne $env:DX_RCLONE_VERSION) { throw "Bundled rclone runtime version mismatch: $($rcloneVersionOutput -join ' | ')" }
           $tesseractRoot = Join-Path $dist 'runtime\tesseract'
           $tesseractExe = Join-Path $tesseractRoot 'tesseract.exe'
           $tessdataDir = Join-Path $tesseractRoot 'tessdata'
@@ -230,13 +299,17 @@ jobs:
           try {
             $env:TESSDATA_PREFIX = $tesseractRoot
             $tesseractVersionOutput = @(& $tesseractExe --version 2>&1)
-            if ($LASTEXITCODE -ne 0 -or -not ($tesseractVersionOutput[0] -match "^tesseract $([regex]::Escape($env:DX_TESSERACT_VERSION))(?:\s|$)")) { throw "Bundled Tesseract runtime version mismatch: $($tesseractVersionOutput -join ' | ')" }
+            if ($LASTEXITCODE -ne 0) { throw "Bundled Tesseract runtime version probe failed: $LASTEXITCODE" }
+            $tesseractVersionText = (($tesseractVersionOutput | ForEach-Object { [string]$_ }) -join "`n")
+            $tesseractVersionMatch = [regex]::Match($tesseractVersionText, '(?im)^\s*tesseract\s+v?(?<base>\d+\.\d+\.\d+)(?:\.\d+)?(?:\s|$)')
+            if (-not $tesseractVersionMatch.Success -or $tesseractVersionMatch.Groups['base'].Value -ne $env:DX_TESSERACT_VERSION) { throw "Bundled Tesseract runtime version mismatch: $($tesseractVersionOutput -join ' | ')" }
             $langs = @(& $tesseractExe --list-langs 2>&1)
             if ($LASTEXITCODE -ne 0) { throw "Bundled Tesseract runtime language probe failed: $LASTEXITCODE" }
+            $langLines = @($langs | ForEach-Object { ([string]$_).Trim() } | Where-Object { $_ })
             foreach ($lang in @('eng','fra','spa')) {
               $model = Join-Path $tessdataDir "$lang.traineddata"
               if (-not (Test-Path -LiteralPath $model -PathType Leaf)) { throw "Missing bundled Tesseract model: $model" }
-              if ($langs -notcontains $lang) { throw "Bundled Tesseract runtime does not expose '$lang'" }
+              if ($langLines -notcontains $lang) { throw "Bundled Tesseract runtime does not expose '$lang'" }
             }
           } finally {
             $env:TESSDATA_PREFIX = $previousTessdataPrefix
@@ -247,11 +320,30 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $installer = Join-Path $env:RUNNER_TEMP "innosetup-$env:INNO_VERSION.exe"
           $dir = Join-Path $env:RUNNER_TEMP 'InnoSetup6'
-          Invoke-WebRequest "https://github.com/jrsoftware/issrc/releases/download/is-6_7_3/innosetup-$env:INNO_VERSION.exe" -OutFile $installer -UseBasicParsing
+          $uri = "https://github.com/jrsoftware/issrc/releases/download/is-6_7_3/innosetup-$env:INNO_VERSION.exe"
+          for ($attempt = 1; $attempt -le 3; $attempt++) {
+            try {
+              Remove-Item -LiteralPath $installer -Force -ErrorAction SilentlyContinue
+              Invoke-WebRequest -Uri $uri -OutFile $installer -UseBasicParsing -TimeoutSec 180
+              if (-not (Test-Path -LiteralPath $installer -PathType Leaf) -or (Get-Item -LiteralPath $installer).Length -le 0) { throw 'Inno Setup download is missing or empty.' }
+              break
+            } catch {
+              if ($attempt -ge 3) { throw }
+              Start-Sleep -Seconds (2 * $attempt)
+            }
+          }
           $sig = Get-AuthenticodeSignature $installer
           if ($sig.Status -ne 'Valid') { throw "Invalid Inno Setup signature: $($sig.Status)" }
-          Start-Process $installer -ArgumentList '/VERYSILENT',('/DIR='+$dir),'/SUPPRESSMSGBOXES','/NORESTART' -Wait
-          "DX_ISCC=$dir\ISCC.exe" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Remove-Item $dir -Recurse -Force -ErrorAction SilentlyContinue
+          $innoInstall = Start-Process $installer -ArgumentList '/VERYSILENT',('/DIR='+$dir),'/SUPPRESSMSGBOXES','/NORESTART' -PassThru
+          if (-not $innoInstall.WaitForExit(120000)) {
+            try { Stop-Process -Id $innoInstall.Id -Force -ErrorAction SilentlyContinue } catch {}
+            throw 'Inno Setup installation timed out after 120 seconds.'
+          }
+          if ($innoInstall.ExitCode -ne 0) { throw "Inno Setup installation failed: $($innoInstall.ExitCode)" }
+          $iscc = Join-Path $dir 'ISCC.exe'
+          if (-not (Test-Path -LiteralPath $iscc -PathType Leaf)) { throw "Inno Setup compiler is missing after installation: $iscc" }
+          "DX_ISCC=$iscc" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       - name: Build installer
         shell: pwsh
         run: |
@@ -263,11 +355,11 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed: $LASTEXITCODE" }
       - uses: actions/upload-artifact@v6
         with:
-          name: Direct-Xfer-1.66.0-Windows-CSharp
-          path: dist/Direct-Xfer-1.66.0-Windows-CSharp/**
+          name: Direct-Xfer-1.66.1-Windows-CSharp
+          path: dist/Direct-Xfer-1.66.1-Windows-CSharp/**
           if-no-files-found: error
       - uses: actions/upload-artifact@v6
         with:
-          name: Direct-Xfer-Setup-1.66.0
-          path: dist/installer/Direct-Xfer-Setup-1.66.0.exe
+          name: Direct-Xfer-Setup-1.66.1
+          path: dist/installer/Direct-Xfer-Setup-1.66.1.exe
           if-no-files-found: error

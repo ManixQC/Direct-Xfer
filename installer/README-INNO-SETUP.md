@@ -7,11 +7,6 @@ Environment variables used by CI:
 - `DX_INNO_SOURCE_DIR`
 - `DX_INNO_OUTPUT_DIR`
 
-The installer targets x64 Windows and requires the Microsoft .NET 10 Desktop Runtime x64. Direct-Xfer executables remain unsigned by design.
+The installer targets x64 Windows. `Direct-Xfer.exe` and `Direct-Xfer.ServerHost.exe` are .NET 10 **self-contained single-file** applications, so users do **not** need to install the Microsoft .NET 10 Desktop Runtime separately.
 
-
-If the runtime is missing, the installer now offers to open the official Microsoft .NET 10 download page:
-`https://dotnet.microsoft.com/en-us/download/dotnet/10.0`
-
-Alternative with WinGet:
-`winget install Microsoft.DotNet.DesktopRuntime.10`
+Direct-Xfer executables remain unsigned by design. The installer also packages the pinned Node.js runtime, rclone and Tesseract runtime assembled by GitHub Actions.

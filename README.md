@@ -451,7 +451,10 @@ window. (Shared reference — variable names are identical in every language.)
 | `MAX_ACTIVE_CONNECTOR_JOBS` | `4` | Maximum simultaneous connector import/export processes. |
 | `SEARCH_INDEX_MAX_DOCS` | `250000` | Maximum number of files kept in the persistent universal-search index. Raise carefully because postings and metadata are also held in memory. |
 | `SEARCH_OCR_ENABLED` | `true` | Enable server-side OCR in the full Direct-Xfer universal index for supported images and scanned PDFs. Docker includes Tesseract + Poppler. The Windows package now bundles Tesseract x64 with `fra`, `eng` and `spa`; scanned-PDF OCR still requires Poppler (`pdftoppm`) to be available. |
-| `SEARCH_OCR_LANGS` | `fra+eng` | Tesseract language set used by the server OCR (`fra`, `eng`, `spa` are bundled in the Docker image). |
+| `SEARCH_OCR_LANGS` | `fra+eng` | Tesseract language set used by the server OCR (`fra`, `eng`, `spa` are bundled in Docker and in the Windows package). |
+| `SEARCH_OCR_TESSERACT_BIN` | `tesseract` *(auto-bundled on Windows)* | Optional Tesseract executable override. The Windows package automatically uses its validated bundled x64 binary unless this variable is explicitly set. |
+| `TESSDATA_PREFIX` | *(auto)* | Optional Tesseract data-root override. The Windows package points this to its bundled `tessdata` parent when the bundled engine is selected. |
+| `SEARCH_OCR_PDFTOTEXT_BIN` / `SEARCH_OCR_PDFTOPPM_BIN` | `pdftotext` / `pdftoppm` | Optional Poppler executable overrides for PDF text extraction and rasterization. Poppler is still external on Windows. |
 | `SEARCH_OCR_BATCH` | `100` | Maximum number of previously uncached OCR files processed in one index rebuild. Cached files do not count; deferred files are picked up by later rebuilds. |
 | `SEARCH_OCR_PDF_MAX_PAGES` | `12` | Maximum PDF pages rasterized for OCR when no usable text layer exists. |
 | `SEARCH_OCR_IMAGE_MAX_MB` / `SEARCH_OCR_PDF_MAX_MB` | `50` / `100` | Safety caps for files sent to the server OCR pipeline. |

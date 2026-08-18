@@ -28,7 +28,7 @@ const net = require('net');
 const https = require('https');
 const tls = require('tls');
 const zlib = require('zlib');
-const { execFile } = require('child_process');
+const { execFile, spawnSync } = require('child_process');
 const {
   StorageConnectorService,
   CONNECTOR_TYPES,
@@ -4979,7 +4979,36 @@ const SEARCH_OCR_IMAGE_MAX_BYTES = Math.max(1024 * 1024, int(process.env.SEARCH_
 const SEARCH_OCR_PDF_MAX_BYTES = Math.max(1024 * 1024, int(process.env.SEARCH_OCR_PDF_MAX_MB, 100) * 1024 * 1024);
 const SEARCH_OCR_PDF_MAX_PAGES = Math.max(1, Math.min(100, int(process.env.SEARCH_OCR_PDF_MAX_PAGES, 12)));
 const SEARCH_OCR_PDF_DPI = Math.max(96, Math.min(300, int(process.env.SEARCH_OCR_PDF_DPI, 160)));
-const SEARCH_OCR_TESSERACT_BIN = String(process.env.SEARCH_OCR_TESSERACT_BIN || 'tesseract').trim() || 'tesseract';
+function resolveSearchOcrTesseractBinary() {
+  const configured = String(process.env.SEARCH_OCR_TESSERACT_BIN || '').trim();
+  if (configured) return configured;
+  if (process.platform === 'win32') {
+    const bundledRoot = path.resolve(__dirname, '..', 'tesseract');
+    const bundled = path.join(bundledRoot, 'tesseract.exe');
+    try {
+      if (fs.existsSync(bundled)) {
+        // A direct portable Node launch does not pass through ServerHost validation.
+        // Probe the bundled engine + requested models here so a partial/quarantined
+        // Tesseract installation can still fall back to a system PATH installation.
+        const probeEnv = { ...process.env, TESSDATA_PREFIX: bundledRoot };
+        const probe = spawnSync(bundled, ['--list-langs'], {
+          encoding: 'utf8', windowsHide: true, timeout: 5000, env: probeEnv,
+        });
+        const probeText = String((probe && probe.stdout) || '') + '\n' + String((probe && probe.stderr) || '');
+        const languages = probeText.split(/\r?\n/).map((x) => x.trim().toLowerCase()).filter((x) => /^[a-z]{3}$/.test(x));
+        const requested = SEARCH_OCR_LANGS.split('+').filter(Boolean);
+        if (!probe.error && probe.status === 0 && requested.every((lang) => languages.includes(lang))) {
+          // TESSDATA_PREFIX points at the parent of the bundled tessdata directory.
+          // Preserve an explicit administrator override when one is already present.
+          if (!String(process.env.TESSDATA_PREFIX || '').trim()) process.env.TESSDATA_PREFIX = bundledRoot;
+          return bundled;
+        }
+      }
+    } catch (_) {}
+  }
+  return 'tesseract';
+}
+const SEARCH_OCR_TESSERACT_BIN = resolveSearchOcrTesseractBinary();
 const SEARCH_OCR_PDFTOTEXT_BIN = String(process.env.SEARCH_OCR_PDFTOTEXT_BIN || 'pdftotext').trim() || 'pdftotext';
 const SEARCH_OCR_PDFTOPPM_BIN = String(process.env.SEARCH_OCR_PDFTOPPM_BIN || 'pdftoppm').trim() || 'pdftoppm';
 const SEARCH_OCR_CACHE_FILE = path.join(DATA_DIR, 'search-ocr-cache.json');

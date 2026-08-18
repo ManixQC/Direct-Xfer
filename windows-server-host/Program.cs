@@ -21,7 +21,7 @@ namespace DirectXfer.WindowsServerHost
     {
         internal const string AppVersion = "1.66.1";
         internal const string RuntimeAppBuild = "1.66.1-launcher74-csharp";
-        internal const string HostVersion = "1.66.1-serverhost47-csharp";
+        internal const string HostVersion = "1.66.1-serverhost48-csharp";
         internal const int DefaultPort = 55750;
         internal const int MaxFallbackPort = 55769;
         internal const int StartupReadyTimeoutMs = 60000;
@@ -112,7 +112,7 @@ namespace DirectXfer.WindowsServerHost
             {
                 { "package.json", "c82f31518fa2ffa47b58400528142a3ea8bee68a68bdeb2ed3c7b7eb847a76a7" },
                 { "package-lock.json", "305355bbfe142a99dd4f6f6ac63b58f0fa67593d29698ba94f31d8ff4fc273fd" },
-                { "server.js", "64d9dee9cd0b0e0132f910083338884d940aef6519868bcf832275853351c09b" },
+                { "server.js", "355346095ee8975d19edaca57d88647e71ed9e57580ad069d025bcb4871b9e32" },
                 { "lib/server/public-pages.js", "96954ccf1705f068c5579806c69f4f1d56916c2a803d1fc160be874c908f0615" },
                 { "lib/server/tls-manager.js", "b82a1b195b6cb36d47d8d431b890e0479aaf9ca8d47f98e8ef9e046390610f7f" },
                 { "lib/server/network-services.js", "fd4a119ca1a75127b82c758c3d3555c12384c01b487bee3b3150a398217e4bdf" },
@@ -188,6 +188,7 @@ namespace DirectXfer.WindowsServerHost
         private static string PortableRclonePath { get { return Path.Combine(RuntimeRoot, "rclone", "rclone.exe"); } }
         private static string PortableTesseractRoot { get { return Path.Combine(RuntimeRoot, "tesseract"); } }
         private static string PortableTesseractPath { get { return Path.Combine(PortableTesseractRoot, "tesseract.exe"); } }
+        private static string PortableTessdataPath { get { return Path.Combine(PortableTesseractRoot, "tessdata"); } }
         private string? LocalCaCertificatePath
         {
             get { return _config == null || string.IsNullOrWhiteSpace(_config.dataDir) ? null : Path.Combine(_config.dataDir, "tls", "local-ca-cert.pem"); }
@@ -667,13 +668,41 @@ namespace DirectXfer.WindowsServerHost
                 "tesseract v" + Program.TesseractVersion)) return false;
             try
             {
-                var tessdata = Path.Combine(PortableTesseractRoot, "tessdata");
                 foreach (var language in new[] { "eng", "fra", "spa" })
                 {
-                    var model = Path.Combine(tessdata, language + ".traineddata");
+                    var model = Path.Combine(PortableTessdataPath, language + ".traineddata");
                     if (!File.Exists(model) || new FileInfo(model).Length < 100 * 1024) return false;
                 }
-                return true;
+
+                using var process = new Process();
+                var start = new ProcessStartInfo
+                {
+                    FileName = Path.GetFullPath(PortableTesseractPath), UseShellExecute = false, CreateNoWindow = true,
+                    RedirectStandardOutput = true, RedirectStandardError = true, WindowStyle = ProcessWindowStyle.Hidden
+                };
+                start.ArgumentList.Add("--list-langs");
+                start.ArgumentList.Add("--tessdata-dir");
+                start.ArgumentList.Add(Path.GetFullPath(PortableTessdataPath));
+                try { if (start.EnvironmentVariables.ContainsKey("TESSDATA_PREFIX")) start.EnvironmentVariables.Remove("TESSDATA_PREFIX"); } catch { }
+                process.StartInfo = start;
+                if (!process.Start()) return false;
+                var stdout = process.StandardOutput.ReadToEndAsync();
+                var stderr = process.StandardError.ReadToEndAsync();
+                if (!process.WaitForExit(5000))
+                {
+                    try { process.Kill(); } catch { }
+                    try { process.WaitForExit(1000); } catch { }
+                    return false;
+                }
+                if (!stdout.Wait(500)) return false;
+                try { stderr.Wait(500); } catch { }
+                if (process.ExitCode != 0) return false;
+                var stderrText = stderr.IsCompleted ? (stderr.Result ?? string.Empty) : string.Empty;
+                var languages = ((stdout.Result ?? string.Empty) + "\n" + stderrText)
+                    .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(line => line.Trim())
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                return new[] { "eng", "fra", "spa" }.All(languages.Contains);
             }
             catch { return false; }
         }
@@ -817,7 +846,13 @@ namespace DirectXfer.WindowsServerHost
                 }
             }
             if (usingBundledTesseract && !HasNonEmptyEnvironmentVariable(start, "TESSDATA_PREFIX"))
-                start.EnvironmentVariables["TESSDATA_PREFIX"] = PortableTesseractRoot;
+            {
+                // Modern Tesseract accepts the directory containing the traineddata
+                // files directly. Pass it both as the compatibility environment value
+                // and as an internal hint so server.js can add --tessdata-dir explicitly.
+                start.EnvironmentVariables["TESSDATA_PREFIX"] = PortableTessdataPath;
+                start.EnvironmentVariables["DX_WINDOWS_BUNDLED_TESSDATA_DIR"] = PortableTessdataPath;
+            }
             start.EnvironmentVariables["NO_COLOR"] = "1";
             start.EnvironmentVariables["DX_WINDOWS_LAUNCHER_TOKEN"] = token;
             start.EnvironmentVariables["DX_WINDOWS_SHUTDOWN_MARKER"] = shutdownMarkerPath;

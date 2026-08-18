@@ -28,7 +28,7 @@ jobs:
     env:
       DX_VERSION: '1.66.1'
       DX_RUNTIME_BUILD: '1.66.1-launcher74-csharp'
-      DX_SERVER_HOST_BUILD: '1.66.1-serverhost47-csharp'
+      DX_SERVER_HOST_BUILD: '1.66.1-serverhost48-csharp'
       DX_NODE_VERSION: '24.19.0'
       DX_NODE_EXE_SHA256: '3602f2bb1a10f2cbab4c36886218a33c1ab3db87290e73b033c46c77147d0237'
       DX_RCLONE_VERSION: '1.74.4'
@@ -241,13 +241,13 @@ jobs:
           }
           $previousTessdataPrefix = $env:TESSDATA_PREFIX
           try {
-            $env:TESSDATA_PREFIX = $tesseract
+            $env:TESSDATA_PREFIX = $tessdataDir
             $tesseractVersionOutput = @(& $tesseractExe --version 2>&1)
             if ($LASTEXITCODE -ne 0) { throw "Bundled Tesseract failed its version probe: $LASTEXITCODE" }
             $tesseractVersionText = (($tesseractVersionOutput | ForEach-Object { [string]$_ }) -join "`n")
             $tesseractVersionMatch = [regex]::Match($tesseractVersionText, '(?im)^\s*tesseract\s+v?(?<base>\d+\.\d+\.\d+)(?:\.\d+)?(?:\s|$)')
             if (-not $tesseractVersionMatch.Success -or $tesseractVersionMatch.Groups['base'].Value -ne $env:DX_TESSERACT_VERSION) { throw "Unexpected bundled Tesseract version: $($tesseractVersionOutput -join ' | ')" }
-            $tesseractLangOutput = @(& $tesseractExe --list-langs 2>&1)
+            $tesseractLangOutput = @(& $tesseractExe --list-langs --tessdata-dir $tessdataDir 2>&1)
             if ($LASTEXITCODE -ne 0) { throw "Bundled Tesseract language probe failed: $LASTEXITCODE" }
             $tesseractLangLines = @($tesseractLangOutput | ForEach-Object { ([string]$_).Trim() } | Where-Object { $_ })
             foreach ($lang in @('eng','fra','spa')) { if ($tesseractLangLines -notcontains $lang) { throw "Bundled Tesseract is missing language '$lang'" } }
@@ -297,13 +297,13 @@ jobs:
           if (-not (Test-Path -LiteralPath $tesseractExe -PathType Leaf)) { throw "Missing bundled Tesseract: $tesseractExe" }
           $previousTessdataPrefix = $env:TESSDATA_PREFIX
           try {
-            $env:TESSDATA_PREFIX = $tesseractRoot
+            $env:TESSDATA_PREFIX = $tessdataDir
             $tesseractVersionOutput = @(& $tesseractExe --version 2>&1)
             if ($LASTEXITCODE -ne 0) { throw "Bundled Tesseract runtime version probe failed: $LASTEXITCODE" }
             $tesseractVersionText = (($tesseractVersionOutput | ForEach-Object { [string]$_ }) -join "`n")
             $tesseractVersionMatch = [regex]::Match($tesseractVersionText, '(?im)^\s*tesseract\s+v?(?<base>\d+\.\d+\.\d+)(?:\.\d+)?(?:\s|$)')
             if (-not $tesseractVersionMatch.Success -or $tesseractVersionMatch.Groups['base'].Value -ne $env:DX_TESSERACT_VERSION) { throw "Bundled Tesseract runtime version mismatch: $($tesseractVersionOutput -join ' | ')" }
-            $langs = @(& $tesseractExe --list-langs 2>&1)
+            $langs = @(& $tesseractExe --list-langs --tessdata-dir $tessdataDir 2>&1)
             if ($LASTEXITCODE -ne 0) { throw "Bundled Tesseract runtime language probe failed: $LASTEXITCODE" }
             $langLines = @($langs | ForEach-Object { ([string]$_).Trim() } | Where-Object { $_ })
             foreach ($lang in @('eng','fra','spa')) {

@@ -25,10 +25,10 @@ test('direct Windows Node runtime can discover bundled Tesseract without ServerH
   assert.match(server, /function resolveSearchOcrTesseractBinary\(\)/);
   assert.match(server, /path\.resolve\(__dirname, '\.\.', 'tesseract'\)/);
   assert.match(server, /path\.join\(bundledRoot, 'tesseract\.exe'\)/);
-  assert.match(server, /spawnSync\(bundled, \['--list-langs'\]/);
+  assert.match(server, /spawnSync\(bundled, \['--list-langs', '--tessdata-dir', bundledTessdataDir\]/);
   assert.match(server, /timeout: 5000/);
   assert.match(server, /requested\.every\(\(lang\) => languages\.includes\(lang\)\)/);
-  assert.match(server, /process\.env\.TESSDATA_PREFIX = bundledRoot/);
+  assert.match(server, /process\.env\.TESSDATA_PREFIX = bundledTessdataDir/);
   assert.match(server, /const SEARCH_OCR_TESSERACT_BIN = resolveSearchOcrTesseractBinary\(\)/);
 });
 

@@ -27,6 +27,6 @@ To create or edit cloud remotes manually, run from PowerShell:
 
 ## OCR / Tesseract
 
-The Windows package bundles Tesseract OCR 5.5.3 under `runtime\tesseract`. Direct-Xfer uses it automatically through ServerHost, including the `eng`, `fra` and `spa` language models. No separate Tesseract installation or PATH change is required for image OCR. Explicit `SEARCH_OCR_TESSERACT_BIN` and `TESSDATA_PREFIX` environment overrides are preserved.
+The Windows package bundles Tesseract OCR 5.5.3 under `runtime\tesseract`. Direct-Xfer uses it automatically through ServerHost, including the `eng`, `fra` and `spa` language models. No separate Tesseract installation or PATH change is required for image OCR. Explicit `SEARCH_OCR_TESSERACT_BIN` and `TESSDATA_PREFIX` environment overrides are preserved. For the bundled engine, Direct-Xfer points Tesseract at `runtime\tesseract\tessdata` explicitly so language discovery does not depend on Windows environment-variable interpretation.
 
 Scanned-PDF OCR additionally requires Poppler (`pdftoppm`); searchable PDFs can still use their embedded text layer without Poppler.

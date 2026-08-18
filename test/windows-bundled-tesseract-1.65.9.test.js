@@ -28,7 +28,7 @@ test('Windows Tesseract includes pinned fast English, French and Spanish models'
   assert.match(workflow, /DX_TESSDATA_FAST_COMMIT:\s*'87416418657359cb625c412a48b6e1d6d41c29bd'/);
   assert.match(workflow, /raw\.githubusercontent\.com\/tesseract-ocr\/tessdata_fast\/\$env:DX_TESSDATA_FAST_COMMIT/);
   assert.match(workflow, /@\('eng','fra','spa'\)/);
-  assert.match(workflow, /--list-langs/);
+  assert.match(workflow, /--list-langs --tessdata-dir \$tessdataDir/);
   assert.match(workflow, /Bundled Tesseract is missing language/);
 });
 
@@ -36,7 +36,7 @@ test('ServerHost wires bundled Tesseract into server OCR automatically', () => {
   assert.match(host, /PortableTesseractRoot/);
   assert.match(host, /PortableTesseractPath/);
   assert.match(host, /!HasNonEmptyEnvironmentVariable\(start, "SEARCH_OCR_TESSERACT_BIN"\)[\s\S]*?EnvironmentVariables\["SEARCH_OCR_TESSERACT_BIN"\]\s*=\s*PortableTesseractPath/);
-  assert.match(host, /usingBundledTesseract[\s\S]*?!HasNonEmptyEnvironmentVariable\(start, "TESSDATA_PREFIX"\)[\s\S]*?EnvironmentVariables\["TESSDATA_PREFIX"\]\s*=\s*PortableTesseractRoot/);
+  assert.match(host, /usingBundledTesseract[\s\S]*?!HasNonEmptyEnvironmentVariable\(start, "TESSDATA_PREFIX"\)[\s\S]*?EnvironmentVariables\["TESSDATA_PREFIX"\]\s*=\s*PortableTessdataPath/);
 });
 
 test('Installer upgrade cleanup and documentation include bundled Tesseract', () => {

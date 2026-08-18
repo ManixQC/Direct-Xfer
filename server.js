@@ -4979,28 +4979,36 @@ const SEARCH_OCR_IMAGE_MAX_BYTES = Math.max(1024 * 1024, int(process.env.SEARCH_
 const SEARCH_OCR_PDF_MAX_BYTES = Math.max(1024 * 1024, int(process.env.SEARCH_OCR_PDF_MAX_MB, 100) * 1024 * 1024);
 const SEARCH_OCR_PDF_MAX_PAGES = Math.max(1, Math.min(100, int(process.env.SEARCH_OCR_PDF_MAX_PAGES, 12)));
 const SEARCH_OCR_PDF_DPI = Math.max(96, Math.min(300, int(process.env.SEARCH_OCR_PDF_DPI, 160)));
+let searchOcrBundledTessdataDir = String(process.env.DX_WINDOWS_BUNDLED_TESSDATA_DIR || '').trim();
 function resolveSearchOcrTesseractBinary() {
   const configured = String(process.env.SEARCH_OCR_TESSERACT_BIN || '').trim();
   if (configured) return configured;
   if (process.platform === 'win32') {
     const bundledRoot = path.resolve(__dirname, '..', 'tesseract');
+    const bundledTessdataDir = path.join(bundledRoot, 'tessdata');
     const bundled = path.join(bundledRoot, 'tesseract.exe');
     try {
-      if (fs.existsSync(bundled)) {
+      if (fs.existsSync(bundled) && fs.existsSync(bundledTessdataDir)) {
         // A direct portable Node launch does not pass through ServerHost validation.
         // Probe the bundled engine + requested models here so a partial/quarantined
         // Tesseract installation can still fall back to a system PATH installation.
-        const probeEnv = { ...process.env, TESSDATA_PREFIX: bundledRoot };
-        const probe = spawnSync(bundled, ['--list-langs'], {
-          encoding: 'utf8', windowsHide: true, timeout: 5000, env: probeEnv,
+        // Use --tessdata-dir explicitly: it avoids Windows-build differences in
+        // TESSDATA_PREFIX interpretation and points at the directory containing the
+        // packaged *.traineddata files.
+        const probe = spawnSync(bundled, ['--list-langs', '--tessdata-dir', bundledTessdataDir], {
+          encoding: 'utf8', windowsHide: true, timeout: 5000, env: process.env,
         });
         const probeText = String((probe && probe.stdout) || '') + '\n' + String((probe && probe.stderr) || '');
         const languages = probeText.split(/\r?\n/).map((x) => x.trim().toLowerCase()).filter((x) => /^[a-z]{3}$/.test(x));
         const requested = SEARCH_OCR_LANGS.split('+').filter(Boolean);
         if (!probe.error && probe.status === 0 && requested.every((lang) => languages.includes(lang))) {
-          // TESSDATA_PREFIX points at the parent of the bundled tessdata directory.
-          // Preserve an explicit administrator override when one is already present.
-          if (!String(process.env.TESSDATA_PREFIX || '').trim()) process.env.TESSDATA_PREFIX = bundledRoot;
+          // Preserve an explicit administrator TESSDATA_PREFIX override. When no
+          // override exists, remember the exact bundled tessdata directory so all
+          // subsequent OCR calls can pass --tessdata-dir deterministically.
+          if (!String(process.env.TESSDATA_PREFIX || '').trim()) {
+            searchOcrBundledTessdataDir = bundledTessdataDir;
+            process.env.TESSDATA_PREFIX = bundledTessdataDir;
+          }
           return bundled;
         }
       }
@@ -5009,6 +5017,10 @@ function resolveSearchOcrTesseractBinary() {
   return 'tesseract';
 }
 const SEARCH_OCR_TESSERACT_BIN = resolveSearchOcrTesseractBinary();
+function searchOcrTesseractArgs(args) {
+  const dataDir = String(searchOcrBundledTessdataDir || '').trim();
+  return dataDir ? args.concat(['--tessdata-dir', dataDir]) : args;
+}
 const SEARCH_OCR_PDFTOTEXT_BIN = String(process.env.SEARCH_OCR_PDFTOTEXT_BIN || 'pdftotext').trim() || 'pdftotext';
 const SEARCH_OCR_PDFTOPPM_BIN = String(process.env.SEARCH_OCR_PDFTOPPM_BIN || 'pdftoppm').trim() || 'pdftoppm';
 const SEARCH_OCR_CACHE_FILE = path.join(DATA_DIR, 'search-ocr-cache.json');
@@ -5234,7 +5246,7 @@ async function detectSearchOcrTools() {
   let languages = [];
   if (tesseractBinary) {
     try {
-      const r = await runSearchOcrCommand(SEARCH_OCR_TESSERACT_BIN, ['--list-langs'], { timeout:5000, maxBuffer:1024*1024 });
+      const r = await runSearchOcrCommand(SEARCH_OCR_TESSERACT_BIN, searchOcrTesseractArgs(['--list-langs']), { timeout:5000, maxBuffer:1024*1024 });
       languages = String((r.stdout || '') + '\n' + (r.stderr || '')).split(/\r?\n/).map((x) => x.trim().toLowerCase()).filter((x) => /^[a-z]{3}$/.test(x));
     } catch (_) {}
   }
@@ -5277,7 +5289,7 @@ function meaningfulExtractedText(text) {
 }
 async function tesseractFileText(abs) {
   const r = await runSearchOcrCommand(SEARCH_OCR_TESSERACT_BIN,
-    [abs, 'stdout', '-l', SEARCH_OCR_LANGS, '--psm', '3'],
+    searchOcrTesseractArgs([abs, 'stdout', '-l', SEARCH_OCR_LANGS, '--psm', '3']),
     { timeout:SEARCH_OCR_TIMEOUT_MS, maxBuffer:SEARCH_INDEX_CONTENT_CAP * 2 });
   return String(r.stdout || '').replace(/\u0000/g, ' ').replace(/\s+/g, ' ').trim().slice(0, SEARCH_INDEX_CONTENT_CAP);
 }

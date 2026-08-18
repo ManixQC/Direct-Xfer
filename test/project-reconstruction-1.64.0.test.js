@@ -31,7 +31,7 @@ test('Windows metadata targets 1.66.1 and current runtime hashes', () => {
   const host = read('windows-server-host/Program.cs');
   assert.match(launcher, /AppVersion = "1\.66\.1"/);
   assert.match(launcher, /RuntimeAppBuild = "1\.66\.1-launcher74-csharp"/);
-  assert.match(host, /HostVersion = "1\.66\.1-serverhost47-csharp"/);
+  assert.match(host, /HostVersion = "1\.66\.1-serverhost48-csharp"/);
   for (const rel of ['package.json','package-lock.json','server.js','lib/server/public-pages.js','lib/server/tls-manager.js','lib/server/network-services.js','lib/server/notification-service.js','lib/server/backup-service.js','public/app.js','pwa/app.js']) {
     assert.ok(host.includes(normalizedSha(rel)), rel + ' hash');
   }

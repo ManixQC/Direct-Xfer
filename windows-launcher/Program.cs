@@ -27,7 +27,7 @@ namespace DirectXfer.WindowsLauncher
         internal const int StartupReadyTimeoutMs = 60000;
         internal const string MutexName = @"Local\DirectXferLauncherInstance";
         internal const string OpenEventName = @"Local\DirectXferLauncherOpen";
-        internal const string ServerHostBuild = "1.66.1-serverhost47-csharp";
+        internal const string ServerHostBuild = "1.66.1-serverhost48-csharp";
         internal const string ServerHostReloadEventName = @"Local\DirectXferServerHostReload";
 
         internal static string ExecutablePath

@@ -160,3 +160,18 @@ test('HttpClient migration preserves launcher endpoint status semantics', () => 
   assert.match(host, /if \(response\.IsSuccessStatusCode\) break;/);
   assert.match(host, /response\.StatusCode == HttpStatusCode\.OK/);
 });
+
+test('SDK-generated assembly metadata replaces manual assembly attributes', () => {
+  const launcherProject = read('windows-launcher/DirectXfer.Launcher.csproj');
+  const hostProject = read('windows-server-host/DirectXfer.ServerHost.csproj');
+  const launcherSource = read('windows-launcher/Program.cs');
+  const hostSource = read('windows-server-host/Program.cs');
+  for (const project of [launcherProject, hostProject]) {
+    assert.doesNotMatch(project, /<GenerateAssemblyInfo>\s*false\s*<\/GenerateAssemblyInfo>/);
+    assert.match(project, /<AssemblyVersion>1\.65\.0\.0<\/AssemblyVersion>/);
+    assert.match(project, /<FileVersion>1\.65\.0\.0<\/FileVersion>/);
+    assert.match(project, /<InformationalVersion>1\.65\.0-(?:launcher61|serverhost34)-csharp<\/InformationalVersion>/);
+  }
+  assert.doesNotMatch(launcherSource, /\[assembly:\s*Assembly(?:Title|Description|Company|Product|Copyright|Version|FileVersion|InformationalVersion)/);
+  assert.doesNotMatch(hostSource, /\[assembly:\s*Assembly(?:Title|Description|Company|Product|Copyright|Version|FileVersion|InformationalVersion)/);
+});

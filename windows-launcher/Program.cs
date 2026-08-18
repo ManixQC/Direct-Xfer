@@ -14,14 +14,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-[assembly: AssemblyTitle("Direct-Xfer")]
-[assembly: AssemblyDescription("Direct-Xfer Windows launcher")]
-[assembly: AssemblyCompany("Direct-Xfer")]
-[assembly: AssemblyProduct("Direct-Xfer")]
-[assembly: AssemblyCopyright("Copyright © Direct-Xfer 2026")]
-[assembly: AssemblyVersion("1.65.0.0")]
-[assembly: AssemblyFileVersion("1.65.0.0")]
-[assembly: AssemblyInformationalVersion("1.65.0-launcher61-csharp")]
 
 namespace DirectXfer.WindowsLauncher
 {

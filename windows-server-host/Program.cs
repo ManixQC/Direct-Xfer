@@ -14,14 +14,6 @@ using System.Text;
 using System.Threading;
 using Microsoft.Win32;
 
-[assembly: AssemblyTitle("Direct-Xfer Server Host")]
-[assembly: AssemblyDescription("Direct-Xfer background server host")]
-[assembly: AssemblyCompany("Direct-Xfer")]
-[assembly: AssemblyProduct("Direct-Xfer Server Host")]
-[assembly: AssemblyCopyright("Copyright © Direct-Xfer 2026")]
-[assembly: AssemblyVersion("1.65.0.0")]
-[assembly: AssemblyFileVersion("1.65.0.0")]
-[assembly: AssemblyInformationalVersion("1.65.0-serverhost34-csharp")]
 
 namespace DirectXfer.WindowsServerHost
 {

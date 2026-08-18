@@ -38,8 +38,11 @@ test('Windows Tesseract bundle keeps executable, DLL closure and selected OCR mo
 });
 
 test('Windows CI enforces size budgets after functional runtime probes', () => {
-  assert.match(workflow, /DX_NODE_MODULES_BUDGET_MB:\s*'35'/);
-  assert.match(workflow, /DX_TESSERACT_RUNTIME_BUDGET_MB:\s*'100'/);
+  assert.match(workflow, /DX_NODE_MODULES_BUDGET_MB:\s*'15'/);
+  assert.match(workflow, /DX_TESSERACT_RUNTIME_TARGET_MB:\s*'101'/);
+  assert.match(workflow, /DX_TESSERACT_RUNTIME_BUDGET_MB:\s*'105'/);
   assert.match(workflow, /node_modules runtime exceeds the Direct-Xfer size budget/);
-  assert.match(workflow, /Tesseract runtime exceeds the Direct-Xfer size budget/);
+  assert.match(workflow, /Tesseract runtime is above the optimization target/);
+  assert.match(workflow, /Tesseract runtime exceeds the Direct-Xfer hard size budget/);
+  assert.match(workflow, /Largest Tesseract runtime files/);
 });

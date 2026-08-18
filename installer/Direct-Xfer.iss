@@ -2,13 +2,13 @@
 #if EnvAppVersion != ""
   #define AppVersion EnvAppVersion
 #else
-  #define AppVersion "1.65.6"
+  #define AppVersion "1.65.7"
 #endif
 #define EnvSourceDir GetEnv("DX_INNO_SOURCE_DIR")
 #if EnvSourceDir != ""
   #define SourceDir EnvSourceDir
 #else
-  #define SourceDir "..\dist\Direct-Xfer-1.65.6-Windows-CSharp"
+  #define SourceDir "..\dist\Direct-Xfer-1.65.7-Windows-CSharp"
 #endif
 #define EnvOutputDir GetEnv("DX_INNO_OUTPUT_DIR")
 #if EnvOutputDir != ""
@@ -63,7 +63,9 @@ Type: filesandordirs; Name: "{app}\runtime\app"
 Type: filesandordirs; Name: "{app}\runtime\node"
 
 [Files]
-Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#SourceDir}\*"; DestDir: "{app}"; Excludes: "runtime\app\runtime-build.txt"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Runtime marker is copied explicitly because dot/marker-style files are too important to rely on wildcard packaging semantics.
+Source: "{#SourceDir}\runtime\app\runtime-build.txt"; DestDir: "{app}\runtime\app"; DestName: "runtime-build.txt"; Flags: ignoreversion
 
 [Icons]
 Name: "{autoprograms}\Direct-Xfer"; Filename: "{app}\{#AppExeName}"; WorkingDir: "{app}"

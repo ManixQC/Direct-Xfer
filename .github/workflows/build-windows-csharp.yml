@@ -1,5 +1,5 @@
 name: Build Direct-Xfer Windows C# + Installer
-run-name: v1.65.6
+run-name: v1.65.7
 
 on:
   workflow_dispatch:
@@ -26,9 +26,9 @@ jobs:
   build-windows:
     runs-on: windows-2025
     env:
-      DX_VERSION: '1.65.6'
-      DX_RUNTIME_BUILD: '1.65.6-launcher67-csharp'
-      DX_SERVER_HOST_BUILD: '1.65.6-serverhost40-csharp'
+      DX_VERSION: '1.65.7'
+      DX_RUNTIME_BUILD: '1.65.7-launcher68-csharp'
+      DX_SERVER_HOST_BUILD: '1.65.7-serverhost41-csharp'
       DX_NODE_VERSION: '24.19.0'
       DX_NODE_EXE_SHA256: '3602f2bb1a10f2cbab4c36886218a33c1ab3db87290e73b033c46c77147d0237'
       INNO_VERSION: '6.7.3'
@@ -100,13 +100,28 @@ jobs:
           Copy-Item 'windows-launcher\README-WINDOWS-PORTABLE.md' (Join-Path $dist 'README-WINDOWS-PORTABLE.md')
           Copy-Item @('package.json','package-lock.json','server.js') $app
           Copy-Item @('lib','public','pwa','scripts','security','node_modules') $app -Recurse
-          Set-Content -Encoding ASCII -NoNewline (Join-Path $app '.dx-runtime-build') $env:DX_RUNTIME_BUILD
+          Set-Content -Encoding ASCII -NoNewline (Join-Path $app 'runtime-build.txt') $env:DX_RUNTIME_BUILD
           $nodeExe = Join-Path $node 'node.exe'
           $nodeUrl = "https://nodejs.org/download/release/v$env:DX_NODE_VERSION/win-x64/node.exe"
           Invoke-WebRequest $nodeUrl -OutFile $nodeExe -UseBasicParsing
           $nodeHash = (Get-FileHash -Algorithm SHA256 $nodeExe).Hash.ToLowerInvariant()
           if ($nodeHash -ne $env:DX_NODE_EXE_SHA256) { throw "Node SHA-256 mismatch: $nodeHash" }
           Set-Content -Encoding UTF8 (Join-Path $node 'README.txt') @("Direct-Xfer pinned Node.js $env:DX_NODE_VERSION x64","SHA-256: $nodeHash","Source: nodejs.org")
+      - name: Verify portable runtime layout
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $dist = Join-Path $PWD "dist\Direct-Xfer-$env:DX_VERSION-Windows-CSharp"
+          $app = Join-Path $dist 'runtime\app'
+          $marker = Join-Path $app 'runtime-build.txt'
+          if (-not (Test-Path -LiteralPath $marker -PathType Leaf)) { throw "Missing runtime marker: $marker" }
+          $markerValue = (Get-Content -LiteralPath $marker -Raw).Trim()
+          if ($markerValue -ne $env:DX_RUNTIME_BUILD) { throw "Runtime marker mismatch: '$markerValue' != '$env:DX_RUNTIME_BUILD'" }
+          foreach ($rel in @('package.json','server.js','public\app.js','node_modules\express\package.json')) {
+            $file = Join-Path $app $rel
+            if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { throw "Missing runtime file: $file" }
+            if ((Get-Item -LiteralPath $file).Length -le 0) { throw "Empty runtime file: $file" }
+          }
       - name: Install Inno Setup
         shell: pwsh
         run: |
@@ -129,11 +144,11 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed: $LASTEXITCODE" }
       - uses: actions/upload-artifact@v6
         with:
-          name: Direct-Xfer-1.65.6-Windows-CSharp
-          path: dist/Direct-Xfer-1.65.6-Windows-CSharp/**
+          name: Direct-Xfer-1.65.7-Windows-CSharp
+          path: dist/Direct-Xfer-1.65.7-Windows-CSharp/**
           if-no-files-found: error
       - uses: actions/upload-artifact@v6
         with:
-          name: Direct-Xfer-Setup-1.65.6
-          path: dist/installer/Direct-Xfer-Setup-1.65.6.exe
+          name: Direct-Xfer-Setup-1.65.7
+          path: dist/installer/Direct-Xfer-Setup-1.65.7.exe
           if-no-files-found: error

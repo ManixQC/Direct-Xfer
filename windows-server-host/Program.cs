@@ -19,9 +19,9 @@ namespace DirectXfer.WindowsServerHost
 {
     internal static class Program
     {
-        internal const string AppVersion = "1.65.6";
-        internal const string RuntimeAppBuild = "1.65.6-launcher67-csharp";
-        internal const string HostVersion = "1.65.6-serverhost40-csharp";
+        internal const string AppVersion = "1.65.7";
+        internal const string RuntimeAppBuild = "1.65.7-launcher68-csharp";
+        internal const string HostVersion = "1.65.7-serverhost41-csharp";
         internal const int DefaultPort = 55750;
         internal const int MaxFallbackPort = 55769;
         internal const int StartupReadyTimeoutMs = 60000;
@@ -104,8 +104,8 @@ namespace DirectXfer.WindowsServerHost
         private static readonly IDictionary<string, string> CriticalRuntimeSha256 =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                { "package.json", "4eeec08269b3fd0ad7c7543b78b18c1a13d9527d5501735a645da5236448c285" },
-                { "package-lock.json", "b4689dd0185af48e0ea7e1f74e54d9b78978d06a73976528db650f76072e7189" },
+                { "package.json", "c50c5f6dc44d8bbdf30a9a6acc048175b1ec89979a0c5185df96d737285a084a" },
+                { "package-lock.json", "a65362a9ba910a9c7aec0f49464314d2d4125ae8e5e09da9c0cede966eea0c1f" },
                 { "server.js", "7b429f14563a3f6c5a0edc17c9155521c07c2b16e08189a728c53988c7c4f2c8" },
                 { "lib/server/public-pages.js", "96954ccf1705f068c5579806c69f4f1d56916c2a803d1fc160be874c908f0615" },
                 { "lib/server/tls-manager.js", "b82a1b195b6cb36d47d8d431b890e0479aaf9ca8d47f98e8ef9e046390610f7f" },
@@ -113,7 +113,7 @@ namespace DirectXfer.WindowsServerHost
                 { "lib/server/backup-service.js", "65cb07c147b326475a833be6cbc668db733fc8183ec0b4eec919a876b3f04bc2" },
                 { "lib/server/notification-service.js", "a55beb8d5fdb09754eeb7f7d01974896efaad20dde3b9cf00e83bf4f7a7b9baa" },
                 { "public/app.js", "d50010dbae1548634d8bf1f711d301cd1d20d6ca2e2b5b2f76dee5ae632e6350" },
-                { "pwa/app.js", "18126b72c945e7db68659a2d0c933dc78a2b9f7a203e8732c906bcc4680f622c" },
+                { "pwa/app.js", "4e4d2b20385535a97918578f0af301a117655891317ab567e9f9045a569c5f43" },
                 { "lib/dlp-utils.js", "dd4d15a3ebb1cc2e7183e9b68434cf69d50532f54fcbb9e90b5ffeb0cfdad086" },
                 { "lib/fd-utils.js", "322abf15ce7a15310d6d27ac1b0ca40892658d5f21198510f7e84b78b0070b13" },
                 { "pwa/dlp-local.js", "246267542621fc92f759438b2295b87f777ba6d6aa88b3c4d23dea25aebe7390" },
@@ -510,11 +510,18 @@ namespace DirectXfer.WindowsServerHost
             try
             {
                 if (!Directory.Exists(root)) { reason = "folder not found"; return false; }
-                var marker = Path.Combine(root, ".dx-runtime-build");
-                if (!File.Exists(marker)) { reason = "missing runtime marker"; return false; }
+                var marker = Path.Combine(root, "runtime-build.txt");
+                if (!File.Exists(marker))
+                {
+                    // Compatibility with portable/runtime bundles generated before runtime marker hardening.
+                    var legacyMarker = Path.Combine(root, ".dx-runtime-build");
+                    if (File.Exists(legacyMarker)) marker = legacyMarker;
+                    else { reason = "missing runtime marker (runtime-build.txt)"; return false; }
+                }
                 var markerValue = File.ReadAllText(marker, Encoding.ASCII).Trim();
                 if (!string.Equals(markerValue, Program.RuntimeAppBuild, StringComparison.Ordinal))
                 { reason = "runtime build mismatch"; return false; }
+
 
                 foreach (var required in new[] { "package.json", "server.js", Path.Combine("public", "app.js"), Path.Combine("node_modules", "express", "package.json") })
                 {

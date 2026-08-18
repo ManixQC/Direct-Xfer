@@ -172,9 +172,9 @@ test('SDK-generated assembly metadata replaces manual assembly attributes', () =
   const hostSource = read('windows-server-host/Program.cs');
   for (const project of [launcherProject, hostProject]) {
     assert.doesNotMatch(project, /<GenerateAssemblyInfo>\s*false\s*<\/GenerateAssemblyInfo>/);
-    assert.match(project, /<AssemblyVersion>1\.65\.6\.0<\/AssemblyVersion>/);
-    assert.match(project, /<FileVersion>1\.65\.6\.0<\/FileVersion>/);
-    assert.match(project, /<InformationalVersion>1\.65\.6-(?:launcher67|serverhost40)-csharp<\/InformationalVersion>/);
+    assert.match(project, /<AssemblyVersion>1\.65\.7\.0<\/AssemblyVersion>/);
+    assert.match(project, /<FileVersion>1\.65\.7\.0<\/FileVersion>/);
+    assert.match(project, /<InformationalVersion>1\.65\.7-(?:launcher68|serverhost41)-csharp<\/InformationalVersion>/);
   }
   assert.doesNotMatch(launcherSource, /\[assembly:\s*Assembly(?:Title|Description|Company|Product|Copyright|Version|FileVersion|InformationalVersion)/);
   assert.doesNotMatch(hostSource, /\[assembly:\s*Assembly(?:Title|Description|Company|Product|Copyright|Version|FileVersion|InformationalVersion)/);
@@ -265,4 +265,18 @@ test('Launcher readiness timeout exposes the actual attach and ServerHost startu
   assert.match(launcher, /Direct-Xfer-ServerHost-error\.log/);
   assert.match(launcher, /ServerHost error log:/);
   assert.match(launcher, /readiness failed: " \+ ex\.GetType\(\)\.Name/);
+});
+
+
+test('Windows runtime marker uses a conventional file and is explicitly packaged', () => {
+  const host = read('windows-server-host/Program.cs');
+  const workflow = read('.github/workflows/build-windows-csharp.yml');
+  const installer = read('installer/Direct-Xfer.iss');
+  assert.match(host, /Path\.Combine\(root, "runtime-build\.txt"\)/);
+  assert.match(host, /Path\.Combine\(root, "\.dx-runtime-build"\)/);
+  assert.match(workflow, /Join-Path \$app 'runtime-build\.txt'/);
+  assert.match(workflow, /name: Verify portable runtime layout/);
+  assert.match(workflow, /Runtime marker mismatch/);
+  assert.match(installer, /Source: "\{#SourceDir\}\\runtime\\app\\runtime-build\.txt"/);
+  assert.match(installer, /DestName: "runtime-build\.txt"/);
 });

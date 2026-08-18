@@ -103,8 +103,8 @@ test('share source warming is bounded per health poll',()=>{
 
 test('automatic health export does not carry raw connector or notification transport errors',()=>{
   assert.match(server,/error:connectorProbe\.capabilities&&connectorProbe\.capabilities\.error\?'unavailable':null/);
-  assert.match(server,/lastEmail\.error\?'failed':null/);
-  assert.match(server,/lastWebhook\.error\?'failed':null/);
+  assert.match(server,/getLastEmail\(\)\.error\?'failed':null/);
+  assert.match(server,/getLastWebhook\(\)\.error\?'failed':null/);
 });
 test('server health chrome is localized in all three languages and assets are cache-busted',()=>{
   assert.match(html,/server-health-dashboard\.js\?v=4/);

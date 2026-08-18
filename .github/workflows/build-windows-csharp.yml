@@ -25,17 +25,18 @@ jobs:
   build-windows:
     runs-on: windows-2025
     env:
-      DX_VERSION: '1.64.10'
-      DX_RUNTIME_BUILD: '1.64.10-launcher60-csharp'
-      DX_SERVER_HOST_BUILD: '1.64.10-serverhost33-csharp'
+      DX_VERSION: '1.65.0'
+      DX_RUNTIME_BUILD: '1.65.0-launcher61-csharp'
+      DX_SERVER_HOST_BUILD: '1.65.0-serverhost34-csharp'
       DX_NODE_VERSION: '24.19.0'
       DX_NODE_EXE_SHA256: '3602f2bb1a10f2cbab4c36886218a33c1ab3db87290e73b033c46c77147d0237'
       INNO_VERSION: '6.7.3'
     steps:
       - uses: actions/checkout@v7
-      - uses: microsoft/setup-msbuild@v3
+      - uses: actions/setup-dotnet@v5
         with:
-          msbuild-architecture: x64
+          dotnet-version: '10.0.400'
+          architecture: x64
       - uses: actions/setup-node@v7
         with:
           node-version: '24.19.0'
@@ -58,16 +59,23 @@ jobs:
           if ($tests.Count -eq 0) { throw 'No Direct-Xfer tests found.' }
           node --test @tests
           if ($LASTEXITCODE -ne 0) { throw "Direct-Xfer tests failed with exit code $LASTEXITCODE" }
-      - name: Build C# applications
+      - name: Publish C# applications on .NET 10
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          msbuild windows-server-host\DirectXfer.ServerHost.csproj /t:Rebuild /p:Configuration=Release /p:Platform=x64 /m /nologo /verbosity:minimal
-          msbuild windows-launcher\DirectXfer.Launcher.csproj /t:Rebuild /p:Configuration=Release /p:Platform=x64 /m /nologo /verbosity:minimal
+          $buildRoot = Join-Path $PWD 'build\windows-dotnet10'
+          $hostOut = Join-Path $buildRoot 'server-host'
+          $launcherOut = Join-Path $buildRoot 'launcher'
+          Remove-Item $buildRoot -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force -Path $hostOut,$launcherOut | Out-Null
+          dotnet publish windows-server-host\DirectXfer.ServerHost.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:DebugSymbols=false -p:DebugType=None -o $hostOut
+          if ($LASTEXITCODE -ne 0) { throw "ServerHost .NET 10 publish failed: $LASTEXITCODE" }
+          dotnet publish windows-launcher\DirectXfer.Launcher.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:DebugSymbols=false -p:DebugType=None -o $launcherOut
+          if ($LASTEXITCODE -ne 0) { throw "Launcher .NET 10 publish failed: $LASTEXITCODE" }
       - name: Verify executables are unsigned by design
         shell: pwsh
         run: |
-          foreach ($exe in @('windows-launcher\bin\Release\Direct-Xfer.exe','windows-server-host\bin\Release\Direct-Xfer.ServerHost.exe')) {
+          foreach ($exe in @('build\windows-dotnet10\launcher\Direct-Xfer.exe','build\windows-dotnet10\server-host\Direct-Xfer.ServerHost.exe')) {
             if (-not (Test-Path $exe)) { throw "Missing $exe" }
             $sig = Get-AuthenticodeSignature $exe
             if ($sig.Status -ne 'NotSigned') { throw "$exe must remain unsigned by design; status=$($sig.Status)" }
@@ -82,10 +90,8 @@ jobs:
           $node = Join-Path $dist 'runtime\node'
           Remove-Item $dist -Recurse -Force -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Force -Path $app,$node | Out-Null
-          Copy-Item 'windows-launcher\bin\Release\Direct-Xfer.exe' $dist
-          Copy-Item 'windows-launcher\bin\Release\Direct-Xfer.exe.config' $dist
-          Copy-Item 'windows-server-host\bin\Release\Direct-Xfer.ServerHost.exe' $dist
-          Copy-Item 'windows-server-host\bin\Release\Direct-Xfer.ServerHost.exe.config' $dist
+          Copy-Item 'build\windows-dotnet10\launcher\Direct-Xfer.exe' $dist
+          Copy-Item 'build\windows-dotnet10\server-host\Direct-Xfer.ServerHost.exe' $dist
           Copy-Item 'windows-launcher\README-WINDOWS-PORTABLE.md' (Join-Path $dist 'README-WINDOWS-PORTABLE.md')
           Copy-Item @('package.json','package-lock.json','server.js') $app
           Copy-Item @('lib','public','pwa','scripts','security','node_modules') $app -Recurse
@@ -118,11 +124,11 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed: $LASTEXITCODE" }
       - uses: actions/upload-artifact@v6
         with:
-          name: Direct-Xfer-1.64.10-Windows-CSharp
-          path: dist/Direct-Xfer-1.64.10-Windows-CSharp/**
+          name: Direct-Xfer-1.65.0-Windows-CSharp
+          path: dist/Direct-Xfer-1.65.0-Windows-CSharp/**
           if-no-files-found: error
       - uses: actions/upload-artifact@v6
         with:
-          name: Direct-Xfer-Setup-1.64.10
-          path: dist/installer/Direct-Xfer-Setup-1.64.10.exe
+          name: Direct-Xfer-Setup-1.65.0
+          path: dist/installer/Direct-Xfer-Setup-1.65.0.exe
           if-no-files-found: error

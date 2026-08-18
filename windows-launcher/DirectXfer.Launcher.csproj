@@ -1,17 +1,25 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Release</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">x64</Platform>
-    <ProjectGuid>{A44C7114-3EDB-4584-AE09-6587E8D6C484}</ProjectGuid>
-    <OutputType>WinExe</OutputType><RootNamespace>DirectXfer.WindowsLauncher</RootNamespace><AssemblyName>Direct-Xfer</AssemblyName>
-    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion><FileAlignment>512</FileAlignment><AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
-    <ApplicationIcon>direct-xfer.ico</ApplicationIcon><ApplicationManifest>app.manifest</ApplicationManifest><Deterministic>true</Deterministic>
-    <DebugSymbols>false</DebugSymbols><DebugType>none</DebugType><Optimize>true</Optimize><Prefer32Bit>false</Prefer32Bit><PlatformTarget>x64</PlatformTarget><LangVersion>5</LangVersion>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <RootNamespace>DirectXfer.WindowsLauncher</RootNamespace>
+    <AssemblyName>Direct-Xfer</AssemblyName>
+    <PlatformTarget>x64</PlatformTarget>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <Prefer32Bit>false</Prefer32Bit>
+    <ApplicationIcon>direct-xfer.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <LangVersion>14.0</LangVersion>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Deterministic>true</Deterministic>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <DebugType Condition="'$(Configuration)' == 'Release'">none</DebugType>
+    <DebugSymbols Condition="'$(Configuration)' == 'Release'">false</DebugSymbols>
+    <Optimize Condition="'$(Configuration)' == 'Release'">true</Optimize>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x64' "><OutputPath>bin\Debug\</OutputPath><DebugSymbols>true</DebugSymbols><DebugType>full</DebugType><Optimize>false</Optimize><DefineConstants>DEBUG;TRACE</DefineConstants><PlatformTarget>x64</PlatformTarget></PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x64' "><OutputPath>bin\Release\</OutputPath><DebugSymbols>false</DebugSymbols><DebugType>none</DebugType><Optimize>true</Optimize><DefineConstants>TRACE</DefineConstants><PlatformTarget>x64</PlatformTarget></PropertyGroup>
-  <ItemGroup><Reference Include="System" /><Reference Include="System.Core" /><Reference Include="System.Drawing" /><Reference Include="System.Windows.Forms" /><Reference Include="System.Web.Extensions" /></ItemGroup>
-  <ItemGroup><Compile Include="Program.cs" /><None Include="App.config" /><None Include="app.manifest" /><None Include="README-WINDOWS-PORTABLE.md" /></ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

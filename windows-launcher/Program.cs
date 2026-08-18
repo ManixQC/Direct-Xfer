@@ -7,12 +7,11 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Security;
-using System.Reflection;
+using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Web.Script.Serialization;
 using System.Windows.Forms;
 
 [assembly: AssemblyTitle("Direct-Xfer")]
@@ -20,52 +19,68 @@ using System.Windows.Forms;
 [assembly: AssemblyCompany("Direct-Xfer")]
 [assembly: AssemblyProduct("Direct-Xfer")]
 [assembly: AssemblyCopyright("Copyright © Direct-Xfer 2026")]
-[assembly: AssemblyVersion("1.64.10.0")]
-[assembly: AssemblyFileVersion("1.64.10.0")]
-[assembly: AssemblyInformationalVersion("1.64.10-launcher60-csharp")]
+[assembly: AssemblyVersion("1.65.0.0")]
+[assembly: AssemblyFileVersion("1.65.0.0")]
+[assembly: AssemblyInformationalVersion("1.65.0-launcher61-csharp")]
 
 namespace DirectXfer.WindowsLauncher
 {
     internal static class Program
     {
-        internal const string AppVersion = "1.64.10";
-        internal const string RuntimeAppBuild = "1.64.10-launcher60-csharp";
+        internal const string AppVersion = "1.65.0";
+        internal const string RuntimeAppBuild = "1.65.0-launcher61-csharp";
         internal const string ServerHostFileName = "Direct-Xfer.ServerHost.exe";
-        internal const string ServerHostVersion = "1.64.10.0";
+        internal const string ServerHostVersion = "1.65.0.0";
         internal const int DefaultPort = 55750;
         internal const int StartupReadyTimeoutMs = 30000;
         internal const string MutexName = @"Local\DirectXferLauncherInstance";
         internal const string OpenEventName = @"Local\DirectXferLauncherOpen";
-        internal const string ServerHostBuild = "1.64.10-serverhost33-csharp";
+        internal const string ServerHostBuild = "1.65.0-serverhost34-csharp";
         internal const string ServerHostReloadEventName = @"Local\DirectXferServerHostReload";
+
+        internal static string ExecutablePath
+        {
+            get
+            {
+                var processPath = Environment.ProcessPath;
+                if (!string.IsNullOrWhiteSpace(processPath)) return Path.GetFullPath(processPath);
+                return Path.Combine(AppContext.BaseDirectory, "Direct-Xfer.exe");
+            }
+        }
+
+        internal static string ExecutableDirectory
+        {
+            get
+            {
+                var directory = Path.GetDirectoryName(ExecutablePath);
+                return !string.IsNullOrWhiteSpace(directory) ? directory : AppContext.BaseDirectory;
+            }
+        }
 
         [STAThread]
         private static void Main(string[] args)
         {
-            bool createdNew;
-            using (var mutex = new Mutex(true, MutexName, out createdNew))
+            using var mutex = new Mutex(true, MutexName, out var createdNew);
+            if (!createdNew)
             {
-                if (!createdNew)
-                {
-                    SignalExistingInstance();
-                    return;
-                }
+                SignalExistingInstance();
+                return;
+            }
 
-                Application.EnableVisualStyles();
-                Application.SetCompatibleTextRenderingDefault(false);
-                try
-                {
-                    using (var context = new LauncherContext(args ?? new string[0]))
-                        Application.Run(context);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(ex.Message, "Direct-Xfer", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-                finally
-                {
-                    try { mutex.ReleaseMutex(); } catch { }
-                }
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+            try
+            {
+                using var context = new LauncherContext(args ?? Array.Empty<string>());
+                Application.Run(context);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Direct-Xfer", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                try { mutex.ReleaseMutex(); } catch { }
             }
         }
 
@@ -73,7 +88,8 @@ namespace DirectXfer.WindowsLauncher
         {
             try
             {
-                using (var evt = EventWaitHandle.OpenExisting(OpenEventName)) evt.Set();
+                using var evt = EventWaitHandle.OpenExisting(OpenEventName);
+                evt.Set();
             }
             catch { }
         }
@@ -81,40 +97,40 @@ namespace DirectXfer.WindowsLauncher
 
     internal sealed class LauncherConfig
     {
-        public string version;
-        public string dataDir;
-        public string logsDir;
-        public string inboxDir;
-        public string hostRoot;
-        public string imagesDir;
+        public string version = string.Empty;
+        public string dataDir = string.Empty;
+        public string logsDir = string.Empty;
+        public string inboxDir = string.Empty;
+        public string hostRoot = string.Empty;
+        public string imagesDir = string.Empty;
         public bool openBrowser;
-        public string language;
+        public string language = string.Empty;
     }
 
     internal sealed class LauncherSession
     {
         public int hostPid { get; set; }
         public long hostStartedUtcTicks { get; set; }
-        public string hostPath { get; set; }
+        public string hostPath { get; set; } = string.Empty;
         public int serverPid { get; set; }
         public int port { get; set; }
-        public string scheme { get; set; }
-        public string token { get; set; }
-        public string runtimeBuild { get; set; }
-        public string hostBuild { get; set; }
+        public string scheme { get; set; } = string.Empty;
+        public string token { get; set; } = string.Empty;
+        public string runtimeBuild { get; set; } = string.Empty;
+        public string hostBuild { get; set; } = string.Empty;
     }
 
     internal sealed class LauncherContext : ApplicationContext, IDisposable
     {
-        private static readonly JavaScriptSerializer Json = new JavaScriptSerializer { MaxJsonLength = 1024 * 1024 };
+        private static readonly JsonCompat Json = new();
         private readonly Control _dispatcher;
         private readonly NotifyIcon _tray;
         private readonly EventWaitHandle _openEvent;
-        private readonly CancellationTokenSource _lifetime = new CancellationTokenSource();
-        private readonly object _exitSync = new object();
+        private readonly CancellationTokenSource _lifetime = new();
+        private readonly object _exitSync = new();
         private LauncherConfig _config;
-        private string _runtimeLogPath;
-        private string _token;
+        private string _runtimeLogPath = string.Empty;
+        private string _token = string.Empty;
         private string _runtimeScheme = "http";
         private int _runtimePort;
         private bool _exiting;
@@ -122,7 +138,7 @@ namespace DirectXfer.WindowsLauncher
 
         internal LauncherContext(string[] args)
         {
-            _dispatcher = new Control();
+            _dispatcher = new();
             _dispatcher.CreateControl();
 
             bool exists;
@@ -136,7 +152,7 @@ namespace DirectXfer.WindowsLauncher
             _tray = new NotifyIcon
             {
                 Icon = LoadApplicationIcon(),
-                Text = "Direct-Xfer " + Program.AppVersion,
+                Text = $"Direct-Xfer {Program.AppVersion}",
                 Visible = true
             };
             _tray.MouseClick += (s, e) => { if (e.Button == MouseButtons.Left) OpenBrowser(); };
@@ -314,13 +330,11 @@ namespace DirectXfer.WindowsLauncher
             {
                 var overridden = Environment.GetEnvironmentVariable("DX_WINDOWS_PORTABLE_ROOT");
                 if (!string.IsNullOrWhiteSpace(overridden)) return Path.GetFullPath(overridden.Trim());
-                var exe = Assembly.GetExecutingAssembly().Location;
-                if (!string.IsNullOrWhiteSpace(exe)) return Path.GetDirectoryName(exe);
-                return Environment.CurrentDirectory;
+                return Program.ExecutableDirectory;
             }
         }
 
-        private string LocalCaCertificatePath
+        private string? LocalCaCertificatePath
         {
             get { return string.IsNullOrWhiteSpace(_config.dataDir) ? null : Path.Combine(_config.dataDir, "tls", "local-ca-cert.pem"); }
         }
@@ -330,7 +344,7 @@ namespace DirectXfer.WindowsLauncher
             get { return Path.Combine(PortableRoot, Program.ServerHostFileName); }
         }
 
-        private static bool ServerHostFileMatchesSession(LauncherSession session)
+        private static bool ServerHostFileMatchesSession(LauncherSession? session)
         {
             if (session == null || string.IsNullOrWhiteSpace(session.hostPath) ||
                 !string.Equals(session.hostBuild, Program.ServerHostBuild, StringComparison.Ordinal)) return false;
@@ -380,7 +394,7 @@ namespace DirectXfer.WindowsLauncher
             Task.Run(() => WaitForServerHostReady(_lifetime.Token));
         }
 
-        private bool TryAttachReadySession(LauncherSession session)
+        private bool TryAttachReadySession(LauncherSession? session)
         {
             if (session == null || !string.Equals(session.runtimeBuild, Program.RuntimeAppBuild, StringComparison.Ordinal)) return false;
             if (!ServerHostFileMatchesSession(session) || !IsServerHostIpcAlive()) return false;
@@ -445,16 +459,12 @@ namespace DirectXfer.WindowsLauncher
             {
                 try
                 {
-                    using (var response = LauncherRequest("GET", port, "/__dx_launcher/ready", token, scheme, 900, LocalCaCertificatePath))
-                    using (var reader = new StreamReader(response.GetResponseStream() ?? Stream.Null))
+                    var response = LauncherRequest("GET", port, "/__dx_launcher/ready", token, scheme, 900, LocalCaCertificatePath);
+                    if (response.StatusCode == HttpStatusCode.OK && response.Body.Contains("\"ok\":true") &&
+                        response.Body.Contains("\"pid\":" + expectedPid.ToString(CultureInfo.InvariantCulture)))
                     {
-                        var body = reader.ReadToEnd();
-                        if ((int)response.StatusCode == 200 && body.Contains("\"ok\":true") &&
-                            body.Contains("\"pid\":" + expectedPid.ToString(CultureInfo.InvariantCulture)))
-                        {
-                            usedScheme = scheme;
-                            return true;
-                        }
+                        usedScheme = scheme;
+                        return true;
                     }
                 }
                 catch { }
@@ -468,38 +478,50 @@ namespace DirectXfer.WindowsLauncher
             else { yield return "http"; yield return "https"; }
         }
 
-        private static HttpWebResponse LauncherRequest(string method, int port, string route, string token,
-            string scheme, int timeoutMs, string localCaCertificatePath)
+        private sealed record LauncherHttpResponse(HttpStatusCode StatusCode, string Body)
         {
-            var url = scheme + "://127.0.0.1:" + port.ToString(CultureInfo.InvariantCulture) + route;
-            var request = (HttpWebRequest)WebRequest.Create(url);
-            request.Method = method;
-            request.Timeout = timeoutMs;
-            request.ReadWriteTimeout = timeoutMs;
-            request.AllowAutoRedirect = false;
-            request.Proxy = null;
-            request.KeepAlive = false;
-            if (!string.IsNullOrEmpty(token)) request.Headers["X-Direct-Xfer-Launcher-Token"] = token;
-            if (string.Equals(scheme, "https", StringComparison.OrdinalIgnoreCase))
-                request.ServerCertificateValidationCallback = (sender, certificate, chain, errors) =>
-                    ValidateLauncherServerCertificate(certificate, errors, localCaCertificatePath);
-            return (HttpWebResponse)request.GetResponse();
+            internal bool IsSuccessStatusCode => (int)StatusCode is >= 200 and <= 299;
         }
 
-        private static bool ValidateLauncherServerCertificate(X509Certificate certificate, SslPolicyErrors errors,
-            string localCaCertificatePath)
+        private static LauncherHttpResponse LauncherRequest(string method, int port, string route, string token,
+            string scheme, int timeoutMs, string? localCaCertificatePath)
+        {
+            var url = scheme + "://127.0.0.1:" + port.ToString(CultureInfo.InvariantCulture) + route;
+            using var handler = new HttpClientHandler
+            {
+                AllowAutoRedirect = false,
+                UseProxy = false,
+                UseCookies = false
+            };
+            if (string.Equals(scheme, "https", StringComparison.OrdinalIgnoreCase))
+                handler.ServerCertificateCustomValidationCallback = (_, certificate, _, errors) =>
+                    ValidateLauncherServerCertificate(certificate, errors, localCaCertificatePath);
+            using var client = new HttpClient(handler)
+            {
+                Timeout = TimeSpan.FromMilliseconds(Math.Max(100, timeoutMs))
+            };
+            using var request = new HttpRequestMessage(new HttpMethod(method), url);
+            request.Headers.ConnectionClose = true;
+            if (!string.IsNullOrEmpty(token)) request.Headers.TryAddWithoutValidation("X-Direct-Xfer-Launcher-Token", token);
+            using var response = client.SendAsync(request, HttpCompletionOption.ResponseContentRead).GetAwaiter().GetResult();
+            var body = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+            return new LauncherHttpResponse(response.StatusCode, body);
+        }
+
+        private static bool ValidateLauncherServerCertificate(X509Certificate? certificate, SslPolicyErrors errors,
+            string? localCaCertificatePath)
         {
             if (certificate == null) return false;
             if (errors == SslPolicyErrors.None) return true;
             if ((errors & (SslPolicyErrors.RemoteCertificateNameMismatch | SslPolicyErrors.RemoteCertificateNotAvailable)) != 0) return false;
             if ((errors & ~SslPolicyErrors.RemoteCertificateChainErrors) != 0) return false;
-            X509Certificate2 localCa = null, leaf = null;
-            X509Chain localChain = null;
+            X509Certificate2? localCa = null, leaf = null;
+            X509Chain? localChain = null;
             try
             {
                 localCa = LoadPemCertificate(localCaCertificatePath);
                 if (localCa == null) return false;
-                leaf = new X509Certificate2(certificate);
+                leaf = X509CertificateLoader.LoadCertificate(certificate.GetRawCertData());
                 localChain = new X509Chain();
                 localChain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
                 localChain.ChainPolicy.VerificationFlags = X509VerificationFlags.AllowUnknownCertificateAuthority;
@@ -517,7 +539,7 @@ namespace DirectXfer.WindowsLauncher
             }
         }
 
-        private static X509Certificate2 LoadPemCertificate(string path)
+        private static X509Certificate2? LoadPemCertificate(string? path)
         {
             if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return null;
             if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0) return null;
@@ -529,25 +551,31 @@ namespace DirectXfer.WindowsLauncher
             var last = pem.IndexOf(end, first >= 0 ? first + begin.Length : 0, StringComparison.Ordinal);
             if (first < 0 || last <= first) return null;
             var compact = new string(pem.Substring(first + begin.Length, last - first - begin.Length).Where(c => !char.IsWhiteSpace(c)).ToArray());
-            return new X509Certificate2(Convert.FromBase64String(compact));
+            return X509CertificateLoader.LoadCertificate(Convert.FromBase64String(compact));
         }
 
-        private HttpWebResponse LauncherRequestAnyScheme(string method, int port, string route, string token,
+        private LauncherHttpResponse LauncherRequestAnyScheme(string method, int port, string route, string token,
             string preferred, int timeoutMs, out string usedScheme)
         {
-            Exception last = null;
+            Exception? last = null;
             foreach (var scheme in SchemeCandidates(preferred))
             {
                 try
                 {
                     var response = LauncherRequest(method, port, route, token, scheme, timeoutMs, LocalCaCertificatePath);
+                    if (!response.IsSuccessStatusCode && response.StatusCode != HttpStatusCode.Conflict)
+                    {
+                        last = new HttpRequestException("Direct-Xfer launcher endpoint returned HTTP " +
+                            ((int)response.StatusCode).ToString(CultureInfo.InvariantCulture) + ".");
+                        continue;
+                    }
                     usedScheme = scheme;
                     return response;
                 }
                 catch (Exception ex) { last = ex; }
             }
             usedScheme = preferred;
-            throw last ?? new WebException("Direct-Xfer launcher endpoint unavailable.");
+            throw last ?? new HttpRequestException("Direct-Xfer launcher endpoint unavailable.");
         }
 
         private void ShowInitialAdminPassword()
@@ -556,22 +584,17 @@ namespace DirectXfer.WindowsLauncher
             try
             {
                 string scheme;
-                using (var response = LauncherRequestAnyScheme("POST", _runtimePort,
-                    "/__dx_launcher/initial-admin-password", _token, _runtimeScheme, 1500, out scheme))
-                {
-                    _runtimeScheme = scheme;
-                    if (response.StatusCode == HttpStatusCode.NoContent) return;
-                    if (response.StatusCode != HttpStatusCode.OK) throw new InvalidDataException();
-                    using (var reader = new StreamReader(response.GetResponseStream() ?? Stream.Null))
-                    {
-                        var payload = Json.Deserialize<Dictionary<string, object>>(reader.ReadToEnd());
-                        if (!GetBool(payload, "ok") || !GetBool(payload, "fresh")) return;
-                        var username = GetString(payload, "username");
-                        var password = GetString(payload, "password");
-                        if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password)) throw new InvalidDataException();
-                        using (var dialog = new InitialPasswordForm(Tr, username, password)) dialog.ShowDialog();
-                    }
-                }
+                var response = LauncherRequestAnyScheme("POST", _runtimePort,
+                    "/__dx_launcher/initial-admin-password", _token, _runtimeScheme, 1500, out scheme);
+                _runtimeScheme = scheme;
+                if (response.StatusCode == HttpStatusCode.NoContent) return;
+                if (response.StatusCode != HttpStatusCode.OK) throw new InvalidDataException();
+                var payload = Json.Deserialize<Dictionary<string, object>>(response.Body);
+                if (!GetBool(payload, "ok") || !GetBool(payload, "fresh")) return;
+                var username = GetString(payload, "username");
+                var password = GetString(payload, "password");
+                if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password)) throw new InvalidDataException();
+                using (var dialog = new InitialPasswordForm(Tr, username, password)) dialog.ShowDialog();
             }
             catch
             {
@@ -585,39 +608,22 @@ namespace DirectXfer.WindowsLauncher
             try
             {
                 string scheme;
-                HttpWebResponse response = null;
-                try
+                var response = LauncherRequestAnyScheme("POST", _runtimePort,
+                    "/__dx_launcher/reset-admin-password-ticket", _token, _runtimeScheme, 1500, out scheme);
+                if (response.StatusCode == HttpStatusCode.Conflict)
                 {
-                    response = LauncherRequestAnyScheme("POST", _runtimePort,
-                        "/__dx_launcher/reset-admin-password-ticket", _token, _runtimeScheme, 1500, out scheme);
+                    MessageBox.Show(Tr.ResetPasswordEnvManaged, Tr.AppTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
                 }
-                catch (WebException ex)
-                {
-                    response = ex.Response as HttpWebResponse;
-                    if (response == null) throw;
-                    scheme = _runtimeScheme;
-                }
-                using (response)
-                {
-                    if (response == null) throw new WebException();
-                    if (response.StatusCode == HttpStatusCode.Conflict)
-                    {
-                        MessageBox.Show(Tr.ResetPasswordEnvManaged, Tr.AppTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        return;
-                    }
-                    if (response.StatusCode != HttpStatusCode.OK) throw new WebException();
-                    _runtimeScheme = scheme;
-                    using (var reader = new StreamReader(response.GetResponseStream() ?? Stream.Null))
-                    {
-                        var payload = Json.Deserialize<Dictionary<string, object>>(reader.ReadToEnd());
-                        var ticket = GetString(payload, "ticket");
-                        if (!GetBool(payload, "ok") || string.IsNullOrEmpty(ticket)) throw new InvalidDataException();
-                        var url = scheme + "://127.0.0.1:" + _runtimePort.ToString(CultureInfo.InvariantCulture) +
-                            "/__dx_launcher/reset-admin-password?ticket=" + Uri.EscapeDataString(ticket) +
-                            "&lang=" + Uri.EscapeDataString(_config.language);
-                        OpenUrl(url);
-                    }
-                }
+                if (response.StatusCode != HttpStatusCode.OK) throw new HttpRequestException();
+                _runtimeScheme = scheme;
+                var payload = Json.Deserialize<Dictionary<string, object>>(response.Body);
+                var ticket = GetString(payload, "ticket");
+                if (!GetBool(payload, "ok") || string.IsNullOrEmpty(ticket)) throw new InvalidDataException();
+                var url = scheme + "://127.0.0.1:" + _runtimePort.ToString(CultureInfo.InvariantCulture) +
+                    "/__dx_launcher/reset-admin-password?ticket=" + Uri.EscapeDataString(ticket) +
+                    "&lang=" + Uri.EscapeDataString(_config.language);
+                OpenUrl(url);
             }
             catch { MessageBox.Show(Tr.ResetPasswordError, Tr.AppTitle, MessageBoxButtons.OK, MessageBoxIcon.Error); }
         }
@@ -631,7 +637,7 @@ namespace DirectXfer.WindowsLauncher
             return bool.TryParse(Convert.ToString(value, CultureInfo.InvariantCulture), out parsed) && parsed;
         }
 
-        private static string GetString(IDictionary<string, object> payload, string key)
+        private static string? GetString(IDictionary<string, object> payload, string key)
         {
             object value;
             return payload != null && payload.TryGetValue(key, out value) && value != null
@@ -657,7 +663,11 @@ namespace DirectXfer.WindowsLauncher
 
         private static void OpenUrl(string value)
         {
-            try { Process.Start(value); } catch { }
+            try
+            {
+                Process.Start(new ProcessStartInfo { FileName = value, UseShellExecute = true });
+            }
+            catch { }
         }
 
         private void RebuildTrayMenu()
@@ -697,7 +707,7 @@ namespace DirectXfer.WindowsLauncher
         {
             try
             {
-                var icon = Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().Location);
+                var icon = Icon.ExtractAssociatedIcon(Program.ExecutablePath);
                 if (icon != null) return icon;
             }
             catch { }
@@ -746,7 +756,7 @@ namespace DirectXfer.WindowsLauncher
             return TryAttachReadySession(ReadSession());
         }
 
-        private static LauncherSession ReadSession()
+        private static LauncherSession? ReadSession()
         {
             try
             {
@@ -842,9 +852,9 @@ namespace DirectXfer.WindowsLauncher
             Controls.AddRange(new Control[] { intro, account, label, passwordBox, save, copy, ok });
         }
 
-        private static Icon TryApplicationIcon()
+        private static Icon? TryApplicationIcon()
         {
-            try { return Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().Location); }
+            try { return Icon.ExtractAssociatedIcon(Program.ExecutablePath); }
             catch { return null; }
         }
     }

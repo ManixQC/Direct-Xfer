@@ -6,31 +6,30 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Security;
+using System.Net.Http;
 using System.Net.Sockets;
-using System.Reflection;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using Microsoft.Win32;
-using System.Web.Script.Serialization;
 
 [assembly: AssemblyTitle("Direct-Xfer Server Host")]
 [assembly: AssemblyDescription("Direct-Xfer background server host")]
 [assembly: AssemblyCompany("Direct-Xfer")]
 [assembly: AssemblyProduct("Direct-Xfer Server Host")]
 [assembly: AssemblyCopyright("Copyright © Direct-Xfer 2026")]
-[assembly: AssemblyVersion("1.64.10.0")]
-[assembly: AssemblyFileVersion("1.64.10.0")]
-[assembly: AssemblyInformationalVersion("1.64.10-serverhost33-csharp")]
+[assembly: AssemblyVersion("1.65.0.0")]
+[assembly: AssemblyFileVersion("1.65.0.0")]
+[assembly: AssemblyInformationalVersion("1.65.0-serverhost34-csharp")]
 
 namespace DirectXfer.WindowsServerHost
 {
     internal static class Program
     {
-        internal const string AppVersion = "1.64.10";
-        internal const string RuntimeAppBuild = "1.64.10-launcher60-csharp";
-        internal const string HostVersion = "1.64.10-serverhost33-csharp";
+        internal const string AppVersion = "1.65.0";
+        internal const string RuntimeAppBuild = "1.65.0-launcher61-csharp";
+        internal const string HostVersion = "1.65.0-serverhost34-csharp";
         internal const int DefaultPort = 55750;
         internal const int MaxFallbackPort = 55769;
         internal const int StartupReadyTimeoutMs = 30000;
@@ -43,65 +42,87 @@ namespace DirectXfer.WindowsServerHost
         internal const string StopEventName = @"Local\DirectXferServerHostStop";
         internal const string ReloadEventName = @"Local\DirectXferServerHostReload";
 
+        internal static string ExecutablePath
+        {
+            get
+            {
+                var processPath = Environment.ProcessPath;
+                if (!string.IsNullOrWhiteSpace(processPath)) return Path.GetFullPath(processPath);
+                return Path.Combine(AppContext.BaseDirectory, "Direct-Xfer.ServerHost.exe");
+            }
+        }
+
+        internal static string ExecutableDirectory
+        {
+            get
+            {
+                var directory = Path.GetDirectoryName(ExecutablePath);
+                return !string.IsNullOrWhiteSpace(directory) ? directory : AppContext.BaseDirectory;
+            }
+        }
+
         [STAThread]
         private static int Main(string[] args)
         {
-            bool createdNew;
-            using (var mutex = new Mutex(true, MutexName, out createdNew))
+            using var mutex = new Mutex(true, MutexName, out var createdNew);
+            if (!createdNew) return 0;
+            try
             {
-                if (!createdNew) return 0;
-                try
-                {
-                    using (var host = new ServerHost()) return host.Run();
-                }
-                catch (Exception ex)
-                {
-                    ServerHost.WriteEmergencyLog(ex);
-                    return 1;
-                }
-                finally { try { mutex.ReleaseMutex(); } catch { } }
+                using var host = new ServerHost();
+                return host.Run();
             }
+            catch (Exception ex)
+            {
+                ServerHost.WriteEmergencyLog(ex);
+                return 1;
+            }
+            finally { try { mutex.ReleaseMutex(); } catch { } }
         }
     }
 
     internal sealed class LauncherConfig
     {
-        public string version;
-        public string dataDir;
-        public string logsDir;
-        public string inboxDir;
-        public string hostRoot;
-        public string imagesDir;
+        public string version = string.Empty;
+        public string dataDir = string.Empty;
+        public string logsDir = string.Empty;
+        public string inboxDir = string.Empty;
+        public string hostRoot = string.Empty;
+        public string imagesDir = string.Empty;
         public bool openBrowser;
-        public string language;
+        public string language = string.Empty;
     }
 
     internal sealed class HostSession
     {
         public int hostPid;
         public long hostStartedUtcTicks;
-        public string hostPath;
+        public string hostPath = string.Empty;
         public int serverPid;
         public long serverStartedUtcTicks;
-        public string nodePath;
+        public string nodePath = string.Empty;
         public int port;
-        public string scheme;
-        public string token;
-        public string runtimeBuild;
-        public string hostBuild;
+        public string scheme = string.Empty;
+        public string token = string.Empty;
+        public string runtimeBuild = string.Empty;
+        public string hostBuild = string.Empty;
     }
 
     internal sealed class ServerHost : IDisposable
     {
-        private static readonly JavaScriptSerializer Json = new JavaScriptSerializer { MaxJsonLength = 1024 * 1024 };
+        private static readonly JsonCompat Json = new();
         private static readonly IDictionary<string, string> CriticalRuntimeSha256 =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                { "package.json", "e0e57defd4f5fd6340b635515091b644ab734970a134cf20c32adea763b777d2" },
-                { "package-lock.json", "9738d4468f85c5016b5b802e01bca382281496d6ed1c55814f1381a3c6cf86d2" },
-                { "server.js", "640bca6404a203213f5110cc21ade240f5a5fedc8ccd2e8c7b5b81875499ceb3" },
+                { "package.json", "60f9094b764669bd356a1daa06d694d01e5eeaaf142bd714ce7e1d11a236f7e2" },
+                { "package-lock.json", "19b879b6f0d11e82eb79ea0082eccd8589c78f5ff6eb597c478a42a3fb4df088" },
+                { "server.js", "7b429f14563a3f6c5a0edc17c9155521c07c2b16e08189a728c53988c7c4f2c8" },
+                { "lib/server/public-pages.js", "96954ccf1705f068c5579806c69f4f1d56916c2a803d1fc160be874c908f0615" },
+                { "lib/server/tls-manager.js", "f71b5a70188948204ba6baef2e0e3d59c4433b15c86bfeb744451a53d4817881" },
+                { "lib/server/network-services.js", "fd4a119ca1a75127b82c758c3d3555c12384c01b487bee3b3150a398217e4bdf" },
+                { "lib/server/backup-service.js", "65cb07c147b326475a833be6cbc668db733fc8183ec0b4eec919a876b3f04bc2" },
+                { "lib/server/notification-service.js", "a55beb8d5fdb09754eeb7f7d01974896efaad20dde3b9cf00e83bf4f7a7b9baa" },
                 { "public/app.js", "d50010dbae1548634d8bf1f711d301cd1d20d6ca2e2b5b2f76dee5ae632e6350" },
-                { "pwa/app.js", "a10ba98e984d01e056a0fda3e515912f7ece53f21d9dfb4e8579ae241ab249d8" },
+                { "pwa/app.js", "ae54c8f0637b31890fb8e7a7e9fc1a3e5997cce29ecb33f1bd3dc0865638cc86" },
                 { "lib/dlp-utils.js", "dd4d15a3ebb1cc2e7183e9b68434cf69d50532f54fcbb9e90b5ffeb0cfdad086" },
                 { "lib/fd-utils.js", "322abf15ce7a15310d6d27ac1b0ca40892658d5f21198510f7e84b78b0070b13" },
                 { "pwa/dlp-local.js", "246267542621fc92f759438b2295b87f777ba6d6aa88b3c4d23dea25aebe7390" },
@@ -110,13 +131,13 @@ namespace DirectXfer.WindowsServerHost
 
         private readonly EventWaitHandle _stopEvent;
         private readonly EventWaitHandle _reloadEvent;
-        private readonly object _logSync = new object();
-        private StreamWriter _logWriter;
-        private Process _server;
-        private LauncherConfig _config;
-        private string _runtimeLogPath;
-        private string _shutdownMarkerPath;
-        private string _token;
+        private readonly object _logSync = new();
+        private StreamWriter? _logWriter;
+        private Process? _server;
+        private LauncherConfig? _config;
+        private string _runtimeLogPath = string.Empty;
+        private string? _shutdownMarkerPath;
+        private string? _token;
         private string _scheme = "http";
         private int _port;
         private bool _expectedStop;
@@ -127,9 +148,8 @@ namespace DirectXfer.WindowsServerHost
 
         internal ServerHost()
         {
-            bool created;
-            _stopEvent = new EventWaitHandle(false, EventResetMode.AutoReset, Program.StopEventName, out created);
-            _reloadEvent = new EventWaitHandle(false, EventResetMode.AutoReset, Program.ReloadEventName, out created);
+            _stopEvent = new EventWaitHandle(false, EventResetMode.AutoReset, Program.StopEventName, out _);
+            _reloadEvent = new EventWaitHandle(false, EventResetMode.AutoReset, Program.ReloadEventName, out _);
             try
             {
                 SystemEvents.SessionEnding += OnSessionEnding;
@@ -162,14 +182,12 @@ namespace DirectXfer.WindowsServerHost
             {
                 var overridden = Environment.GetEnvironmentVariable("DX_WINDOWS_PORTABLE_ROOT");
                 if (!string.IsNullOrWhiteSpace(overridden)) return Path.GetFullPath(overridden.Trim());
-                var exe = Assembly.GetExecutingAssembly().Location;
-                if (!string.IsNullOrWhiteSpace(exe)) return Path.GetDirectoryName(exe);
-                return Environment.CurrentDirectory;
+                return Program.ExecutableDirectory;
             }
         }
         private static string RuntimeRoot { get { return Path.Combine(PortableRoot, "runtime"); } }
         private static string PortableNodePath { get { return Path.Combine(RuntimeRoot, "node", "node.exe"); } }
-        private string LocalCaCertificatePath
+        private string? LocalCaCertificatePath
         {
             get { return _config == null || string.IsNullOrWhiteSpace(_config.dataDir) ? null : Path.Combine(_config.dataDir, "tls", "local-ca-cert.pem"); }
         }
@@ -380,7 +398,7 @@ namespace DirectXfer.WindowsServerHost
 
         private static LauncherConfig LoadConfig()
         {
-            Exception last = null;
+            Exception? last = null;
             foreach (var candidate in new[] { ConfigPath, ConfigPath + ".bak" })
             {
                 try
@@ -549,7 +567,7 @@ namespace DirectXfer.WindowsServerHost
             var external = Environment.GetEnvironmentVariable("DX_WINDOWS_NODE");
             if (!string.IsNullOrWhiteSpace(external))
             {
-                string full = null;
+                string? full = null;
                 try { full = Path.GetFullPath(external.Trim()); } catch { }
                 if (!string.IsNullOrWhiteSpace(full) && !string.Equals(full, Path.GetFullPath(PortableNodePath), StringComparison.OrdinalIgnoreCase))
                     yield return full;
@@ -647,7 +665,7 @@ namespace DirectXfer.WindowsServerHost
         {
             for (var port = Program.DefaultPort; port <= Program.MaxFallbackPort; port++)
             {
-                TcpListener listener = null;
+                TcpListener? listener = null;
                 try { listener = new TcpListener(IPAddress.Any, port); listener.Start(); return port; }
                 catch (SocketException) { }
                 finally { try { if (listener != null) listener.Stop(); } catch { } }
@@ -697,7 +715,7 @@ namespace DirectXfer.WindowsServerHost
             {
                 hostPid = host.Id,
                 hostStartedUtcTicks = GetProcessStartUtcTicks(host),
-                hostPath = Assembly.GetExecutingAssembly().Location,
+                hostPath = Program.ExecutablePath,
                 serverPid = _server != null ? _server.Id : 0,
                 serverStartedUtcTicks = GetProcessStartUtcTicks(_server),
                 nodePath = nodePath,
@@ -736,18 +754,14 @@ namespace DirectXfer.WindowsServerHost
             {
                 try
                 {
-                    using (var response = LauncherRequest("GET", port, "/__dx_launcher/ready", token, scheme, 900, LocalCaCertificatePath))
-                    using (var reader = new StreamReader(response.GetResponseStream() ?? Stream.Null))
-                    {
-                        var body = reader.ReadToEnd();
-                        var payload = Json.Deserialize<Dictionary<string, object>>(body);
-                        object okValue, appValue, pidValue;
-                        var ok = payload != null && payload.TryGetValue("ok", out okValue) && Convert.ToBoolean(okValue, CultureInfo.InvariantCulture);
-                        var app = payload != null && payload.TryGetValue("app", out appValue) ? Convert.ToString(appValue, CultureInfo.InvariantCulture) : string.Empty;
-                        var pid = payload != null && payload.TryGetValue("pid", out pidValue) ? Convert.ToInt32(pidValue, CultureInfo.InvariantCulture) : 0;
-                        if ((int)response.StatusCode == 200 && ok && string.Equals(app, "Direct-Xfer", StringComparison.Ordinal) && pid == expectedPid)
-                        { usedScheme = scheme; return true; }
-                    }
+                    var response = LauncherRequest("GET", port, "/__dx_launcher/ready", token, scheme, 900, LocalCaCertificatePath);
+                    var payload = Json.Deserialize<Dictionary<string, object>>(response.Body);
+                    object okValue, appValue, pidValue;
+                    var ok = payload != null && payload.TryGetValue("ok", out okValue) && Convert.ToBoolean(okValue, CultureInfo.InvariantCulture);
+                    var app = payload != null && payload.TryGetValue("app", out appValue) ? Convert.ToString(appValue, CultureInfo.InvariantCulture) : string.Empty;
+                    var pid = payload != null && payload.TryGetValue("pid", out pidValue) ? Convert.ToInt32(pidValue, CultureInfo.InvariantCulture) : 0;
+                    if (response.StatusCode == HttpStatusCode.OK && ok && string.Equals(app, "Direct-Xfer", StringComparison.Ordinal) && pid == expectedPid)
+                    { usedScheme = scheme; return true; }
                 }
                 catch { }
             }
@@ -760,29 +774,47 @@ namespace DirectXfer.WindowsServerHost
             else { yield return "http"; yield return "https"; }
         }
 
-        private static HttpWebResponse LauncherRequest(string method, int port, string route, string token,
-            string scheme, int timeoutMs, string localCaCertificatePath)
+        private sealed record LauncherHttpResponse(HttpStatusCode StatusCode, string Body)
         {
-            var request = (HttpWebRequest)WebRequest.Create(scheme + "://127.0.0.1:" + port.ToString(CultureInfo.InvariantCulture) + route);
-            request.Method = method; request.Timeout = timeoutMs; request.ReadWriteTimeout = timeoutMs;
-            request.AllowAutoRedirect = false; request.Proxy = null; request.KeepAlive = false;
-            if (!string.IsNullOrEmpty(token)) request.Headers["X-Direct-Xfer-Launcher-Token"] = token;
-            if (string.Equals(scheme, "https", StringComparison.OrdinalIgnoreCase))
-                request.ServerCertificateValidationCallback = (sender, certificate, chain, errors) => ValidateServerCertificate(certificate, errors, localCaCertificatePath);
-            return (HttpWebResponse)request.GetResponse();
+            internal bool IsSuccessStatusCode => (int)StatusCode is >= 200 and <= 299;
         }
 
-        private static bool ValidateServerCertificate(X509Certificate certificate, SslPolicyErrors errors, string localCaCertificatePath)
+        private static LauncherHttpResponse LauncherRequest(string method, int port, string route, string token,
+            string scheme, int timeoutMs, string? localCaCertificatePath)
+        {
+            var url = scheme + "://127.0.0.1:" + port.ToString(CultureInfo.InvariantCulture) + route;
+            using var handler = new HttpClientHandler
+            {
+                AllowAutoRedirect = false,
+                UseProxy = false,
+                UseCookies = false
+            };
+            if (string.Equals(scheme, "https", StringComparison.OrdinalIgnoreCase))
+                handler.ServerCertificateCustomValidationCallback = (_, certificate, _, errors) =>
+                    ValidateServerCertificate(certificate, errors, localCaCertificatePath);
+            using var client = new HttpClient(handler)
+            {
+                Timeout = TimeSpan.FromMilliseconds(Math.Max(100, timeoutMs))
+            };
+            using var request = new HttpRequestMessage(new HttpMethod(method), url);
+            request.Headers.ConnectionClose = true;
+            if (!string.IsNullOrEmpty(token)) request.Headers.TryAddWithoutValidation("X-Direct-Xfer-Launcher-Token", token);
+            using var response = client.SendAsync(request, HttpCompletionOption.ResponseContentRead).GetAwaiter().GetResult();
+            var body = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+            return new LauncherHttpResponse(response.StatusCode, body);
+        }
+
+        private static bool ValidateServerCertificate(X509Certificate? certificate, SslPolicyErrors errors, string? localCaCertificatePath)
         {
             if (certificate == null) return false;
             if (errors == SslPolicyErrors.None) return true;
             if ((errors & (SslPolicyErrors.RemoteCertificateNameMismatch | SslPolicyErrors.RemoteCertificateNotAvailable)) != 0) return false;
             if ((errors & ~SslPolicyErrors.RemoteCertificateChainErrors) != 0) return false;
-            X509Certificate2 localCa = null, leaf = null; X509Chain localChain = null;
+            X509Certificate2? localCa = null, leaf = null; X509Chain? localChain = null;
             try
             {
                 localCa = LoadPemCertificate(localCaCertificatePath); if (localCa == null) return false;
-                leaf = new X509Certificate2(certificate); localChain = new X509Chain();
+                leaf = X509CertificateLoader.LoadCertificate(certificate.GetRawCertData()); localChain = new X509Chain();
                 localChain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
                 localChain.ChainPolicy.VerificationFlags = X509VerificationFlags.AllowUnknownCertificateAuthority;
                 localChain.ChainPolicy.ExtraStore.Add(localCa);
@@ -794,7 +826,7 @@ namespace DirectXfer.WindowsServerHost
             finally { if (localChain != null) localChain.Dispose(); if (leaf != null) leaf.Dispose(); if (localCa != null) localCa.Dispose(); }
         }
 
-        private static X509Certificate2 LoadPemCertificate(string path)
+        private static X509Certificate2? LoadPemCertificate(string? path)
         {
             if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return null;
             if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0) return null;
@@ -805,7 +837,7 @@ namespace DirectXfer.WindowsServerHost
             var last = pem.IndexOf(end, first >= 0 ? first + begin.Length : 0, StringComparison.Ordinal);
             if (first < 0 || last <= first) return null;
             var compact = new string(pem.Substring(first + begin.Length, last - first - begin.Length).Where(c => !char.IsWhiteSpace(c)).ToArray());
-            return new X509Certificate2(Convert.FromBase64String(compact));
+            return X509CertificateLoader.LoadCertificate(Convert.FromBase64String(compact));
         }
 
         private void StopNode()
@@ -817,7 +849,11 @@ namespace DirectXfer.WindowsServerHost
             {
                 foreach (var scheme in SchemeCandidates(_scheme))
                 {
-                    try { using (LauncherRequest("POST", _port, "/__dx_launcher/shutdown", _token, scheme, 900, LocalCaCertificatePath)) { } break; }
+                    try
+                    {
+                        var response = LauncherRequest("POST", _port, "/__dx_launcher/shutdown", _token, scheme, 900, LocalCaCertificatePath);
+                        if (response.IsSuccessStatusCode) break;
+                    }
                     catch { }
                 }
             }
@@ -834,7 +870,7 @@ namespace DirectXfer.WindowsServerHost
             string used;
             if (TryReady(session.port, session.token, session.scheme, session.serverPid, out used))
             {
-                try { using (LauncherRequest("POST", session.port, "/__dx_launcher/shutdown", session.token, used, 800, LocalCaCertificatePath)) { } } catch { }
+                try { LauncherRequest("POST", session.port, "/__dx_launcher/shutdown", session.token, used, 800, LocalCaCertificatePath); } catch { }
                 if (WaitForProcessExit(session.serverPid, 3000)) { ClearSession(session.hostPid, session.serverPid); return; }
             }
             try
@@ -852,7 +888,7 @@ namespace DirectXfer.WindowsServerHost
             ClearSession(session.hostPid, session.serverPid);
         }
 
-        private static HostSession ReadSession()
+        private static HostSession? ReadSession()
         {
             try
             {

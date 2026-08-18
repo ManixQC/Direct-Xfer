@@ -2,13 +2,13 @@
 #if EnvAppVersion != ""
   #define AppVersion EnvAppVersion
 #else
-  #define AppVersion "1.64.10"
+  #define AppVersion "1.65.0"
 #endif
 #define EnvSourceDir GetEnv("DX_INNO_SOURCE_DIR")
 #if EnvSourceDir != ""
   #define SourceDir EnvSourceDir
 #else
-  #define SourceDir "..\dist\Direct-Xfer-1.64.10-Windows-CSharp"
+  #define SourceDir "..\dist\Direct-Xfer-1.65.0-Windows-CSharp"
 #endif
 #define EnvOutputDir GetEnv("DX_INNO_OUTPUT_DIR")
 #if EnvOutputDir != ""
@@ -76,12 +76,39 @@ Filename: "{app}\{#AppExeName}"; Description: "Launch Direct-Xfer"; WorkingDir: 
 
 [Code]
 const
-  Net48Release = 528040;
   EventModifyState = $0002;
-function HasNetFramework48OrLater: Boolean;
-var ReleaseValue: Cardinal;
+function HasNet10DesktopRuntimeAt(const DotnetRoot: String): Boolean;
+var
+  FindRec: TFindRec;
+  RuntimeRoot: String;
 begin
-  Result := RegQueryDWordValue(HKLM64, 'SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full', 'Release', ReleaseValue) and (ReleaseValue >= Net48Release);
+  Result := False;
+  if DotnetRoot = '' then exit;
+  RuntimeRoot := AddBackslash(DotnetRoot) + 'shared\Microsoft.WindowsDesktop.App\10.*';
+  if FindFirst(RuntimeRoot, FindRec) then begin
+    try
+      repeat
+        if ((FindRec.Attributes and FILE_ATTRIBUTE_DIRECTORY) <> 0) and (Pos('10.', FindRec.Name) = 1) and (Pos('-', FindRec.Name) = 0) then begin
+          Result := True;
+          exit;
+        end;
+      until not FindNext(FindRec);
+    finally
+      FindClose(FindRec);
+    end;
+  end;
+end;
+function HasNet10DesktopRuntime: Boolean;
+var
+  DotnetRoot: String;
+begin
+  Result := False;
+  DotnetRoot := GetEnv('DOTNET_ROOT_X64');
+  if HasNet10DesktopRuntimeAt(DotnetRoot) then begin Result := True; exit; end;
+  DotnetRoot := GetEnv('DOTNET_ROOT');
+  if HasNet10DesktopRuntimeAt(DotnetRoot) then begin Result := True; exit; end;
+  if RegQueryStringValue(HKLM64, 'SOFTWARE\dotnet\Setup\InstalledVersions\x64', 'InstallLocation', DotnetRoot) and HasNet10DesktopRuntimeAt(DotnetRoot) then begin Result := True; exit; end;
+  Result := HasNet10DesktopRuntimeAt(ExpandConstant('{pf64}\dotnet'));
 end;
 function OpenEvent(dwDesiredAccess: LongWord; bInheritHandle: Boolean; lpName: string): THandle;
   external 'OpenEventW@kernel32.dll stdcall';
@@ -114,6 +141,6 @@ procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin if CurUninstallStep = usUninstall then StopServerHostAndWait; end;
 function InitializeSetup: Boolean;
 begin
-  Result := HasNetFramework48OrLater;
-  if not Result then MsgBox('Direct-Xfer requires Microsoft .NET Framework 4.8 or later. Install the approved Microsoft .NET Framework package, then run this installer again.', mbError, MB_OK);
+  Result := HasNet10DesktopRuntime;
+  if not Result then MsgBox('Direct-Xfer requires Microsoft .NET 10 Desktop Runtime x64. Install the current supported .NET 10 Desktop Runtime from Microsoft, then run this installer again.', mbError, MB_OK);
 end;

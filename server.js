@@ -228,8 +228,17 @@ const DATA_KEY = (process.env.DATA_KEY || '').trim();
 const INBOX_DIR = path.resolve(process.env.INBOX_DIR || '/Direct-Xfer');
 const CONNECTOR_IMPORT_DIR = path.resolve(process.env.CONNECTOR_IMPORT_DIR || path.join(INBOX_DIR, 'Imports'));
 const RCLONE_CONFIG = path.resolve(process.env.RCLONE_CONFIG || path.join(DATA_DIR, 'rclone', 'rclone.conf'));
+function resolveRcloneBinary() {
+  const configured = String(process.env.RCLONE_BIN || '').trim();
+  if (configured) return configured;
+  if (process.platform === 'win32') {
+    const bundled = path.resolve(__dirname, '..', 'rclone', 'rclone.exe');
+    try { if (fs.existsSync(bundled)) return bundled; } catch (_) {}
+  }
+  return 'rclone';
+}
 const storageConnectorService = new StorageConnectorService({
-  bin:process.env.RCLONE_BIN || 'rclone',
+  bin:resolveRcloneBinary(),
   configPath:RCLONE_CONFIG,
   importRoot:CONNECTOR_IMPORT_DIR,
 });

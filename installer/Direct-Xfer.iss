@@ -2,13 +2,13 @@
 #if EnvAppVersion != ""
   #define AppVersion EnvAppVersion
 #else
-  #define AppVersion "1.65.8"
+  #define AppVersion "1.66.0"
 #endif
 #define EnvSourceDir GetEnv("DX_INNO_SOURCE_DIR")
 #if EnvSourceDir != ""
   #define SourceDir EnvSourceDir
 #else
-  #define SourceDir "..\dist\Direct-Xfer-1.65.8-Windows-CSharp"
+  #define SourceDir "..\dist\Direct-Xfer-1.66.0-Windows-CSharp"
 #endif
 #define EnvOutputDir GetEnv("DX_INNO_OUTPUT_DIR")
 #if EnvOutputDir != ""
@@ -61,6 +61,8 @@ Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription:
 [InstallDelete]
 Type: filesandordirs; Name: "{app}\runtime\app"
 Type: filesandordirs; Name: "{app}\runtime\node"
+Type: filesandordirs; Name: "{app}\runtime\rclone"
+Type: filesandordirs; Name: "{app}\runtime\tesseract"
 
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Excludes: "runtime\app\runtime-build.txt"; Flags: ignoreversion recursesubdirs createallsubdirs

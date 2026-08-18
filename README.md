@@ -450,7 +450,7 @@ window. (Shared reference — variable names are identical in every language.)
 | `CONNECTOR_IMPORT_DIR` | `/Direct-Xfer/Imports` | Confined writable destination for connector imports. Imports never overwrite an existing file. |
 | `MAX_ACTIVE_CONNECTOR_JOBS` | `4` | Maximum simultaneous connector import/export processes. |
 | `SEARCH_INDEX_MAX_DOCS` | `250000` | Maximum number of files kept in the persistent universal-search index. Raise carefully because postings and metadata are also held in memory. |
-| `SEARCH_OCR_ENABLED` | `true` | Enable server-side OCR in the full Direct-Xfer universal index for supported images and scanned PDFs. Docker includes Tesseract + Poppler; native installs need those binaries available in `PATH`. |
+| `SEARCH_OCR_ENABLED` | `true` | Enable server-side OCR in the full Direct-Xfer universal index for supported images and scanned PDFs. Docker includes Tesseract + Poppler. The Windows package now bundles Tesseract x64 with `fra`, `eng` and `spa`; scanned-PDF OCR still requires Poppler (`pdftoppm`) to be available. |
 | `SEARCH_OCR_LANGS` | `fra+eng` | Tesseract language set used by the server OCR (`fra`, `eng`, `spa` are bundled in the Docker image). |
 | `SEARCH_OCR_BATCH` | `100` | Maximum number of previously uncached OCR files processed in one index rebuild. Cached files do not count; deferred files are picked up by later rebuilds. |
 | `SEARCH_OCR_PDF_MAX_PAGES` | `12` | Maximum PDF pages rasterized for OCR when no usable text layer exists. |
@@ -796,10 +796,18 @@ re-add the container from its saved template. Application data remains in the ma
 - La version applicative reste **1.49.0**; cache PWA **pwa242**, ressources **v230**.
 
 Configurez d’abord les destinations, puis utilisez leurs noms dans Configuration →
-Connecteurs de stockage :
+Connecteurs de stockage. Docker continue d’utiliser le rclone de l’image :
 
 ```bash
 docker exec -it direct-xfer rclone config
+```
+
+La distribution Windows inclut maintenant rclone directement sous
+`runtime\rclone\rclone.exe`. Aucune installation rclone séparée ni modification du
+`PATH` n’est nécessaire. Pour créer les remotes Windows manuellement :
+
+```powershell
+& "$env:ProgramFiles\Direct-Xfer\runtime\rclone\rclone.exe" config --config "$env:LOCALAPPDATA\Direct-Xfer\data\rclone\rclone.conf"
 ```
 
 Vérifiez une preuve téléchargée avec l’empreinte affichée par Direct-Xfer (ou avec une

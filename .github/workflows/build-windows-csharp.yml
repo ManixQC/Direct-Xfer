@@ -1,5 +1,5 @@
 name: Build Direct-Xfer Windows C# + Installer
-run-name: v1.65.8
+run-name: v1.66.0
 
 on:
   workflow_dispatch:
@@ -26,11 +26,17 @@ jobs:
   build-windows:
     runs-on: windows-2025
     env:
-      DX_VERSION: '1.65.8'
-      DX_RUNTIME_BUILD: '1.65.8-launcher69-csharp'
-      DX_SERVER_HOST_BUILD: '1.65.8-serverhost42-csharp'
+      DX_VERSION: '1.66.0'
+      DX_RUNTIME_BUILD: '1.66.0-launcher71-csharp'
+      DX_SERVER_HOST_BUILD: '1.66.0-serverhost44-csharp'
       DX_NODE_VERSION: '24.19.0'
       DX_NODE_EXE_SHA256: '3602f2bb1a10f2cbab4c36886218a33c1ab3db87290e73b033c46c77147d0237'
+      DX_RCLONE_VERSION: '1.74.4'
+      DX_RCLONE_ZIP_SHA256: 'ef097ef9de37a57feb7d9f9c7afb34148ad3c65be8025f1d8f7f521554a701ea'
+      DX_TESSERACT_VERSION: '5.5.3'
+      DX_TESSERACT_PACKAGE_VERSION: '5.5.3.20260724'
+      DX_TESSERACT_SETUP_SHA256: 'bee9e3434bd94fd65387d9be28cd467a41f61b1275383b55b0f59a1331270ae4'
+      DX_TESSDATA_FAST_COMMIT: '87416418657359cb625c412a48b6e1d6d41c29bd'
       INNO_VERSION: '6.7.3'
     steps:
       - uses: actions/checkout@v7
@@ -93,8 +99,10 @@ jobs:
           $dist = Join-Path $distRoot "Direct-Xfer-$env:DX_VERSION-Windows-CSharp"
           $app = Join-Path $dist 'runtime\app'
           $node = Join-Path $dist 'runtime\node'
+          $rclone = Join-Path $dist 'runtime\rclone'
+          $tesseract = Join-Path $dist 'runtime\tesseract'
           Remove-Item $dist -Recurse -Force -ErrorAction SilentlyContinue
-          New-Item -ItemType Directory -Force -Path $app,$node | Out-Null
+          New-Item -ItemType Directory -Force -Path $app,$node,$rclone,$tesseract | Out-Null
           Copy-Item 'build\windows-dotnet10\launcher\Direct-Xfer.exe' $dist
           Copy-Item 'build\windows-dotnet10\server-host\Direct-Xfer.ServerHost.exe' $dist
           Copy-Item 'windows-launcher\README-WINDOWS-PORTABLE.md' (Join-Path $dist 'README-WINDOWS-PORTABLE.md')
@@ -114,6 +122,81 @@ jobs:
           $nodeHash = (Get-FileHash -Algorithm SHA256 $nodeExe).Hash.ToLowerInvariant()
           if ($nodeHash -ne $env:DX_NODE_EXE_SHA256) { throw "Node SHA-256 mismatch: $nodeHash" }
           Set-Content -Encoding UTF8 (Join-Path $node 'README.txt') @("Direct-Xfer pinned Node.js $env:DX_NODE_VERSION x64","SHA-256: $nodeHash","Source: nodejs.org")
+
+          # Bundle the official pinned rclone Windows AMD64 executable. The archive checksum
+          # is taken from rclone's signed SHA256SUMS release file so CI never trusts an
+          # unverified moving/latest download.
+          $rcloneZip = Join-Path $env:RUNNER_TEMP "rclone-v$env:DX_RCLONE_VERSION-windows-amd64.zip"
+          $rcloneExtract = Join-Path $env:RUNNER_TEMP "rclone-v$env:DX_RCLONE_VERSION-windows-amd64"
+          Remove-Item $rcloneZip -Force -ErrorAction SilentlyContinue
+          Remove-Item $rcloneExtract -Recurse -Force -ErrorAction SilentlyContinue
+          $rcloneUrl = "https://downloads.rclone.org/v$env:DX_RCLONE_VERSION/rclone-v$env:DX_RCLONE_VERSION-windows-amd64.zip"
+          Invoke-WebRequest $rcloneUrl -OutFile $rcloneZip -UseBasicParsing
+          $rcloneZipHash = (Get-FileHash -Algorithm SHA256 $rcloneZip).Hash.ToLowerInvariant()
+          if ($rcloneZipHash -ne $env:DX_RCLONE_ZIP_SHA256) { throw "rclone ZIP SHA-256 mismatch: $rcloneZipHash" }
+          Expand-Archive -LiteralPath $rcloneZip -DestinationPath $rcloneExtract -Force
+          $rcloneSource = @(Get-ChildItem -LiteralPath $rcloneExtract -Recurse -Filter 'rclone.exe' -File)
+          if ($rcloneSource.Count -ne 1) { throw "Expected exactly one rclone.exe in the official archive; found $($rcloneSource.Count)" }
+          $rcloneExe = Join-Path $rclone 'rclone.exe'
+          Copy-Item -LiteralPath $rcloneSource[0].FullName -Destination $rcloneExe -Force
+          $rcloneVersionOutput = @(& $rcloneExe version 2>&1)
+          if ($LASTEXITCODE -ne 0) { throw "Bundled rclone failed its version probe: $LASTEXITCODE" }
+          if (-not ($rcloneVersionOutput -match "^rclone v$([regex]::Escape($env:DX_RCLONE_VERSION))$")) { throw "Unexpected bundled rclone version: $($rcloneVersionOutput -join ' | ')" }
+          [System.IO.File]::WriteAllLines((Join-Path $rclone 'README.txt'), @(
+            "Direct-Xfer bundled rclone v$env:DX_RCLONE_VERSION Windows AMD64",
+            "Archive SHA-256: $rcloneZipHash",
+            "Source: $rcloneUrl",
+            "Configuration: %LOCALAPPDATA%\Direct-Xfer\data\rclone\rclone.conf"
+          ), [System.Text.Encoding]::UTF8)
+
+          # Bundle Tesseract OCR for the Windows runtime. Tesseract 5.5.3 is pinned
+          # by release asset + SHA-256. Language models are pinned to an immutable
+          # tessdata_fast commit so OCR remains reproducible across future builds.
+          $tesseractSetup = Join-Path $env:RUNNER_TEMP "tesseract-ocr-w64-setup-$env:DX_TESSERACT_PACKAGE_VERSION.exe"
+          $tesseractStage = Join-Path $env:RUNNER_TEMP 'direct-xfer-tesseract-portable'
+          Remove-Item $tesseractSetup -Force -ErrorAction SilentlyContinue
+          Remove-Item $tesseractStage -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force -Path $tesseractStage | Out-Null
+          $tesseractUrl = "https://github.com/tesseract-ocr/tesseract/releases/download/$env:DX_TESSERACT_VERSION/tesseract-ocr-w64-setup-$env:DX_TESSERACT_PACKAGE_VERSION.exe"
+          Invoke-WebRequest $tesseractUrl -OutFile $tesseractSetup -UseBasicParsing
+          $tesseractSetupHash = (Get-FileHash -Algorithm SHA256 $tesseractSetup).Hash.ToLowerInvariant()
+          if ($tesseractSetupHash -ne $env:DX_TESSERACT_SETUP_SHA256) { throw "Tesseract setup SHA-256 mismatch: $tesseractSetupHash" }
+          $tessInstall = Start-Process -FilePath $tesseractSetup -ArgumentList @('/S', "/D=$tesseractStage") -Wait -PassThru
+          if ($tessInstall.ExitCode -ne 0) { throw "Tesseract silent extraction/install failed: $($tessInstall.ExitCode)" }
+          $tesseractStageExe = Join-Path $tesseractStage 'tesseract.exe'
+          if (-not (Test-Path -LiteralPath $tesseractStageExe -PathType Leaf)) { throw "Tesseract installer did not create tesseract.exe in $tesseractStage" }
+          Copy-Item -Path (Join-Path $tesseractStage '*') -Destination $tesseract -Recurse -Force
+          $tesseractExe = Join-Path $tesseract 'tesseract.exe'
+          $tessdataDir = Join-Path $tesseract 'tessdata'
+          New-Item -ItemType Directory -Force -Path $tessdataDir | Out-Null
+          foreach ($lang in @('eng','fra','spa')) {
+            $langUrl = "https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/$env:DX_TESSDATA_FAST_COMMIT/$lang.traineddata"
+            $langPath = Join-Path $tessdataDir "$lang.traineddata"
+            Invoke-WebRequest $langUrl -OutFile $langPath -UseBasicParsing
+            if (-not (Test-Path -LiteralPath $langPath -PathType Leaf) -or (Get-Item -LiteralPath $langPath).Length -lt 100000) { throw "Invalid Tesseract language model: $langPath" }
+          }
+          $previousTessdataPrefix = $env:TESSDATA_PREFIX
+          try {
+            $env:TESSDATA_PREFIX = $tesseract
+            $tesseractVersionOutput = @(& $tesseractExe --version 2>&1)
+            if ($LASTEXITCODE -ne 0) { throw "Bundled Tesseract failed its version probe: $LASTEXITCODE" }
+            if (-not ($tesseractVersionOutput[0] -match "^tesseract $([regex]::Escape($env:DX_TESSERACT_VERSION))(?:\s|$)")) { throw "Unexpected bundled Tesseract version: $($tesseractVersionOutput -join ' | ')" }
+            $tesseractLangOutput = @(& $tesseractExe --list-langs 2>&1)
+            if ($LASTEXITCODE -ne 0) { throw "Bundled Tesseract language probe failed: $LASTEXITCODE" }
+            foreach ($lang in @('eng','fra','spa')) { if ($tesseractLangOutput -notcontains $lang) { throw "Bundled Tesseract is missing language '$lang'" } }
+          } finally {
+            $env:TESSDATA_PREFIX = $previousTessdataPrefix
+          }
+          Remove-Item (Join-Path $tesseract 'uninstall.exe') -Force -ErrorAction SilentlyContinue
+          [System.IO.File]::WriteAllLines((Join-Path $tesseract 'DIRECT-XFER-README.txt'), @(
+            "Direct-Xfer bundled Tesseract $env:DX_TESSERACT_VERSION Windows x64",
+            "Setup package: $env:DX_TESSERACT_PACKAGE_VERSION",
+            "Setup SHA-256: $tesseractSetupHash",
+            "Source: $tesseractUrl",
+            "tessdata_fast commit: $env:DX_TESSDATA_FAST_COMMIT",
+            "Bundled OCR languages: eng, fra, spa"
+          ), [System.Text.Encoding]::UTF8)
+
           # Re-materialize the marker as the final operation of package assembly so later
           # validation cannot observe a partially prepared runtime tree.
           [System.IO.File]::WriteAllText($marker, [string]$env:DX_RUNTIME_BUILD, [System.Text.Encoding]::ASCII)
@@ -132,6 +215,31 @@ jobs:
             $file = Join-Path $app $rel
             if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { throw "Missing runtime file: $file" }
             if ((Get-Item -LiteralPath $file).Length -le 0) { throw "Empty runtime file: $file" }
+          }
+          $rcloneExe = Join-Path $dist 'runtime\rclone\rclone.exe'
+          if (-not (Test-Path -LiteralPath $rcloneExe -PathType Leaf)) { throw "Missing bundled rclone: $rcloneExe" }
+          if ((Get-Item -LiteralPath $rcloneExe).Length -le 0) { throw "Empty bundled rclone: $rcloneExe" }
+          $rcloneVersionOutput = @(& $rcloneExe version 2>&1)
+          if ($LASTEXITCODE -ne 0) { throw "Bundled rclone runtime validation failed: $LASTEXITCODE" }
+          if (-not ($rcloneVersionOutput -match "^rclone v$([regex]::Escape($env:DX_RCLONE_VERSION))$")) { throw "Bundled rclone runtime version mismatch: $($rcloneVersionOutput -join ' | ')" }
+          $tesseractRoot = Join-Path $dist 'runtime\tesseract'
+          $tesseractExe = Join-Path $tesseractRoot 'tesseract.exe'
+          $tessdataDir = Join-Path $tesseractRoot 'tessdata'
+          if (-not (Test-Path -LiteralPath $tesseractExe -PathType Leaf)) { throw "Missing bundled Tesseract: $tesseractExe" }
+          $previousTessdataPrefix = $env:TESSDATA_PREFIX
+          try {
+            $env:TESSDATA_PREFIX = $tesseractRoot
+            $tesseractVersionOutput = @(& $tesseractExe --version 2>&1)
+            if ($LASTEXITCODE -ne 0 -or -not ($tesseractVersionOutput[0] -match "^tesseract $([regex]::Escape($env:DX_TESSERACT_VERSION))(?:\s|$)")) { throw "Bundled Tesseract runtime version mismatch: $($tesseractVersionOutput -join ' | ')" }
+            $langs = @(& $tesseractExe --list-langs 2>&1)
+            if ($LASTEXITCODE -ne 0) { throw "Bundled Tesseract runtime language probe failed: $LASTEXITCODE" }
+            foreach ($lang in @('eng','fra','spa')) {
+              $model = Join-Path $tessdataDir "$lang.traineddata"
+              if (-not (Test-Path -LiteralPath $model -PathType Leaf)) { throw "Missing bundled Tesseract model: $model" }
+              if ($langs -notcontains $lang) { throw "Bundled Tesseract runtime does not expose '$lang'" }
+            }
+          } finally {
+            $env:TESSDATA_PREFIX = $previousTessdataPrefix
           }
       - name: Install Inno Setup
         shell: pwsh
@@ -155,11 +263,11 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed: $LASTEXITCODE" }
       - uses: actions/upload-artifact@v6
         with:
-          name: Direct-Xfer-1.65.8-Windows-CSharp
-          path: dist/Direct-Xfer-1.65.8-Windows-CSharp/**
+          name: Direct-Xfer-1.66.0-Windows-CSharp
+          path: dist/Direct-Xfer-1.66.0-Windows-CSharp/**
           if-no-files-found: error
       - uses: actions/upload-artifact@v6
         with:
-          name: Direct-Xfer-Setup-1.65.8
-          path: dist/installer/Direct-Xfer-Setup-1.65.8.exe
+          name: Direct-Xfer-Setup-1.66.0
+          path: dist/installer/Direct-Xfer-Setup-1.66.0.exe
           if-no-files-found: error

@@ -19,9 +19,9 @@ namespace DirectXfer.WindowsServerHost
 {
     internal static class Program
     {
-        internal const string AppVersion = "1.65.8";
-        internal const string RuntimeAppBuild = "1.65.8-launcher69-csharp";
-        internal const string HostVersion = "1.65.8-serverhost42-csharp";
+        internal const string AppVersion = "1.66.0";
+        internal const string RuntimeAppBuild = "1.66.0-launcher71-csharp";
+        internal const string HostVersion = "1.66.0-serverhost44-csharp";
         internal const int DefaultPort = 55750;
         internal const int MaxFallbackPort = 55769;
         internal const int StartupReadyTimeoutMs = 60000;
@@ -29,6 +29,7 @@ namespace DirectXfer.WindowsServerHost
         internal const int HealthProbeFailureThreshold = 3;
         internal const long EmergencyLogMaxBytes = 2L * 1024 * 1024;
         internal const string NodeVersion = "24.19.0";
+        internal const string RcloneVersion = "1.74.4";
         internal const string NodeExeSha256 = "3602f2bb1a10f2cbab4c36886218a33c1ab3db87290e73b033c46c77147d0237";
         internal const string MutexName = @"Local\DirectXferServerHostInstance";
         internal const string StopEventName = @"Local\DirectXferServerHostStop";
@@ -104,16 +105,16 @@ namespace DirectXfer.WindowsServerHost
         private static readonly IDictionary<string, string> CriticalRuntimeSha256 =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                { "package.json", "3122bcde3e98d72d69f6067fa41f31da06ca89984632f27c954ec8e964ecf5cf" },
-                { "package-lock.json", "082ad2325578960fc077acec426c0345167d9e4870e232e67127bb974cb2cfd2" },
-                { "server.js", "7b429f14563a3f6c5a0edc17c9155521c07c2b16e08189a728c53988c7c4f2c8" },
+                { "package.json", "7a25d69b5c84d5ed15ce0d72ef8c6b104a97a75964a7664c3d76757e7f14eee0" },
+                { "package-lock.json", "7751557376772a631963cec6029e8c5fe5bf81581b5f1e50af173b24c29b7415" },
+                { "server.js", "40d8b63adb5eabde5c5cee8ecd3d69ce33a5da6279c7c574712f7e9db29f35a7" },
                 { "lib/server/public-pages.js", "96954ccf1705f068c5579806c69f4f1d56916c2a803d1fc160be874c908f0615" },
                 { "lib/server/tls-manager.js", "b82a1b195b6cb36d47d8d431b890e0479aaf9ca8d47f98e8ef9e046390610f7f" },
                 { "lib/server/network-services.js", "fd4a119ca1a75127b82c758c3d3555c12384c01b487bee3b3150a398217e4bdf" },
                 { "lib/server/backup-service.js", "65cb07c147b326475a833be6cbc668db733fc8183ec0b4eec919a876b3f04bc2" },
                 { "lib/server/notification-service.js", "a55beb8d5fdb09754eeb7f7d01974896efaad20dde3b9cf00e83bf4f7a7b9baa" },
                 { "public/app.js", "d50010dbae1548634d8bf1f711d301cd1d20d6ca2e2b5b2f76dee5ae632e6350" },
-                { "pwa/app.js", "9431e012c099e91e1443822bf9534d71c8f731abf6411b959a34637e46db807f" },
+                { "pwa/app.js", "d451f18e35ac06e882824e4c08dcea2c39aaf14de556b49bf59669e1af7c8019" },
                 { "lib/dlp-utils.js", "dd4d15a3ebb1cc2e7183e9b68434cf69d50532f54fcbb9e90b5ffeb0cfdad086" },
                 { "lib/fd-utils.js", "322abf15ce7a15310d6d27ac1b0ca40892658d5f21198510f7e84b78b0070b13" },
                 { "pwa/dlp-local.js", "246267542621fc92f759438b2295b87f777ba6d6aa88b3c4d23dea25aebe7390" },
@@ -179,6 +180,9 @@ namespace DirectXfer.WindowsServerHost
         }
         private static string RuntimeRoot { get { return Path.Combine(PortableRoot, "runtime"); } }
         private static string PortableNodePath { get { return Path.Combine(RuntimeRoot, "node", "node.exe"); } }
+        private static string PortableRclonePath { get { return Path.Combine(RuntimeRoot, "rclone", "rclone.exe"); } }
+        private static string PortableTesseractRoot { get { return Path.Combine(RuntimeRoot, "tesseract"); } }
+        private static string PortableTesseractPath { get { return Path.Combine(PortableTesseractRoot, "tesseract.exe"); } }
         private string? LocalCaCertificatePath
         {
             get { return _config == null || string.IsNullOrWhiteSpace(_config.dataDir) ? null : Path.Combine(_config.dataDir, "tls", "local-ca-cert.pem"); }
@@ -702,6 +706,16 @@ namespace DirectXfer.WindowsServerHost
             start.EnvironmentVariables["INBOX_DIR"] = config.inboxDir;
             start.EnvironmentVariables["HOST_ROOT"] = config.hostRoot;
             start.EnvironmentVariables["IMAGES_DIR"] = config.imagesDir;
+            if (File.Exists(PortableRclonePath))
+            {
+                start.EnvironmentVariables["RCLONE_BIN"] = PortableRclonePath;
+                start.EnvironmentVariables["RCLONE_CONFIG"] = Path.Combine(config.dataDir, "rclone", "rclone.conf");
+            }
+            if (File.Exists(PortableTesseractPath))
+            {
+                start.EnvironmentVariables["SEARCH_OCR_TESSERACT_BIN"] = PortableTesseractPath;
+                start.EnvironmentVariables["TESSDATA_PREFIX"] = PortableTesseractRoot;
+            }
             start.EnvironmentVariables["NO_COLOR"] = "1";
             start.EnvironmentVariables["DX_WINDOWS_LAUNCHER_TOKEN"] = token;
             start.EnvironmentVariables["DX_WINDOWS_SHUTDOWN_MARKER"] = shutdownMarkerPath;

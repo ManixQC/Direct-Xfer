@@ -1809,7 +1809,7 @@ Une PWA ne peut pas garantir que le réseau continue à travailler après sa fer
 
 ## 1.59.1 — Durcissement du launcher Windows
 
-- Le launcher C#/.NET Framework est compilé explicitement en **x64**, aligné avec le runtime Node.js x64 fourni.
+- Le launcher C#/.NET 10 est compilé explicitement en **x64**, aligné avec le runtime Node.js x64 fourni.
 - Le manifeste Windows utilise l’identité **DirectXfer.WindowsLauncher 1.59.1.0**, `asInvoker`, DPI-aware et long-path-aware au lieu de l’identité générique `MyApplication.app`.
 - Les requêtes HTTPS privées du launcher vers `127.0.0.1` n’acceptent plus tous les certificats : la validation Windows reste prioritaire et le mode Local CA n’autorise une chaîne non approuvée que si elle remonte exactement vers la racine Direct-Xfer locale et sans erreur de nom.
 - Le fallback automatique vers un `node.exe` trouvé dans `PATH` ou `Program Files` est retiré. Un Node externe doit être explicitement configuré avec `DX_WINDOWS_NODE` **et** épinglé avec `DX_WINDOWS_NODE_SHA256`, être un PE AMD64 normal et utiliser une version supportée.
@@ -1819,7 +1819,7 @@ Une PWA ne peut pas garantir que le réseau continue à travailler après sa fer
 
 ## 1.59.0 — Audit approfondi du launcher C# et de l’installateur Windows
 
-- Le launcher Windows reste entièrement **C# / WinForms / .NET Framework 4.8** ; aucun launcher Go, packer ou archive applicative auto-extraite n’est réintroduit.
+- Le launcher Windows reste entièrement **C# / WinForms / .NET 10** ; aucun launcher Go, packer ou archive applicative auto-extraite n’est réintroduit.
 - Les écritures de configuration utilisent un fichier temporaire unique et un remplacement atomique ; un backup valide laissé par une interruption Windows est maintenant récupéré automatiquement avant de considérer le démarrage comme une nouvelle installation.
 - La reprise d’une ancienne session Windows vérifie le **PID, le chemin exact de `node.exe` et l’heure de démarrage du processus** avant tout arrêt forcé, ce qui empêche de viser un processus Node sans rapport après réutilisation d’un PID.
 - La détection de Node préfère le runtime officiel embarqué et haché ; la sonde `node --version` est bornée dans le temps et les fallbacks système sont alignés sur le contrat courant **Node 20 ou Node 22+**.

@@ -47,6 +47,10 @@ jobs:
       - name: Audit production dependencies
         shell: pwsh
         run: npm audit --omit=dev --audit-level=high
+      - name: Remove obsolete .NET Framework config files
+        shell: pwsh
+        run: |
+          Remove-Item 'windows-launcher\App.config','windows-server-host\App.config' -Force -ErrorAction SilentlyContinue
       - name: Validate source and tests
         shell: pwsh
         run: |

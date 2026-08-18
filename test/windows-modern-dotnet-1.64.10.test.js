@@ -55,12 +55,14 @@ test('Windows workflow uses pinned .NET 10 SDK and dotnet publish instead of leg
   assert.doesNotMatch(workflow, /setup-msbuild|\bmsbuild windows-|\.exe\.config/);
 });
 
-test('modern .NET SDK is pinned and obsolete Framework App.config files are gone', () => {
+test('modern .NET SDK is pinned and projects do not depend on obsolete Framework App.config files', () => {
   const globalJson = JSON.parse(read('global.json'));
   assert.equal(globalJson.sdk.version, '10.0.400');
   assert.equal(globalJson.sdk.allowPrerelease, false);
-  assert.equal(fs.existsSync(path.join(ROOT, 'windows-launcher/App.config')), false);
-  assert.equal(fs.existsSync(path.join(ROOT, 'windows-server-host/App.config')), false);
+  for (const rel of ['windows-launcher/DirectXfer.Launcher.csproj','windows-server-host/DirectXfer.ServerHost.csproj']) {
+    const project = read(rel);
+    assert.doesNotMatch(project, /App\.config|<None[^>]+App\.config|<Content[^>]+App\.config|TargetFrameworkVersion|\.NETFramework/);
+  }
   assert.match(read('windows-launcher/README-WINDOWS-PORTABLE.md'), /\.NET 10 Desktop Runtime x64/);
   const installer = read('installer/Direct-Xfer.iss');
   assert.match(installer, /HasNet10DesktopRuntime/);

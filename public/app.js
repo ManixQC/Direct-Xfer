@@ -5687,13 +5687,15 @@ async function api(method, url, body, timeoutMs) {
 // ------------------------------------------------------------------
 // UI helpers
 // ------------------------------------------------------------------
-function toast(msg, kind) {
+function toast(msg, kind, durationMs) {
   const el2 = $('toast');
   el2.textContent = msg;
   el2.className = 'toast ' + (kind || '');
   el2.classList.remove('hidden');
   clearTimeout(toast._t);
-  toast._t = setTimeout(() => el2.classList.add('hidden'), 2600);
+  const requested = Number(durationMs);
+  const duration = Number.isFinite(requested) && requested > 0 ? Math.min(requested, 60000) : 2600;
+  toast._t = setTimeout(() => el2.classList.add('hidden'), duration);
 }
 
 function formatBytes(bytes) {
@@ -9304,6 +9306,10 @@ function webStorageSetSelection(path, isDir, name) {
 function webStorageParentPath(value) {
   const parts=String(value||'').split('/').filter(Boolean); parts.pop(); return parts.join('/');
 }
+const WEB_STORAGE_NOTICE_MS = 10000;
+function webStorageToast(message, kind='err') {
+  if (message) toast(message, kind, WEB_STORAGE_NOTICE_MS);
+}
 function webStorageBrowseErrorMessage(error, context='browse') {
   const code=String(error && error.data && error.data.error || error && error.message || '').trim();
   if(code==='rclone-unavailable') return t('webStorage.rcloneMissing');
@@ -9386,13 +9392,13 @@ async function openWebStorageModal(mode='share') {
     try { summary=await api('GET','/api/storage/connectors/summary',null,10000); }
     catch (error) {
       const message=webStorageBrowseErrorMessage(error,'connector-summary');
-      if(message) toast(message,'err');
+      if(message) webStorageToast(message,'err');
       return;
     }
     const configured=Math.max(0, Number(summary && summary.configured) || 0);
     const writableConfigured=Math.max(0, Number(summary && summary.writable) || 0);
-    if(!configured) { toast(t('webStorage.none'),'warn'); return; }
-    if(writable && !writableConfigured) { toast(t('webStorage.noneWritable'),'warn'); return; }
+    if(!configured) { webStorageToast(t('webStorage.none'),'warn'); return; }
+    if(writable && !writableConfigured) { webStorageToast(t('webStorage.noneWritable'),'warn'); return; }
 
     const data=await api('GET','/api/storage/connectors',null,30000);
     const available=!!(data && data.capabilities && data.capabilities.available);
@@ -9401,8 +9407,8 @@ async function openWebStorageModal(mode='share') {
     // Missing connector configuration is the first actionable condition. This is
     // more precise than reporting the optional rclone runtime when nothing has
     // been configured yet.
-    if(!connectors.length) { toast(t(writable?'webStorage.noneWritable':'webStorage.none'),'warn'); return; }
-    if(!available) { toast(t('webStorage.rcloneMissing'),'err'); return; }
+    if(!connectors.length) { webStorageToast(t(writable?'webStorage.noneWritable':'webStorage.none'),'warn'); return; }
+    if(!available) { webStorageToast(t('webStorage.rcloneMissing'),'err'); return; }
     const select=$('web-storage-connector'); select.textContent='';
     connectors.forEach((connector)=>select.appendChild(el('option',{attrs:{value:connector.id},text:connector.name})));
     const settings=state.settings||{};
@@ -9418,7 +9424,7 @@ async function openWebStorageModal(mode='share') {
     await loadWebStoragePath('');
   } catch (error) {
     const message=webStorageBrowseErrorMessage(error,'connectors');
-    if(message) toast(message,'err');
+    if(message) webStorageToast(message,'err');
   }
 }
 if($('new-web-storage-btn')) $('new-web-storage-btn').addEventListener('click',()=>openWebStorageModal('share'));

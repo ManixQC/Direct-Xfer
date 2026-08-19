@@ -4019,9 +4019,9 @@ body.share-details-open { overflow:hidden; }
 
 /* 1.64.0 — standard-view productivity: context menu, needs-attention center,
    visitor test, undo history, source health, customizable dashboard and guided diagnostics. */
-.share-context-menu{position:fixed;z-index:3200;min-width:220px;max-width:min(320px,calc(100vw - 16px));padding:6px;background:var(--panel);border:1px solid var(--border);border-radius:12px;box-shadow:0 16px 44px #0007;display:grid;gap:2px}
+.share-context-menu{position:fixed;z-index:3200;min-width:220px;max-width:min(320px,calc(100vw - 16px));padding:6px;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:12px;box-shadow:0 16px 44px #0007;display:grid;gap:2px;opacity:1;overflow:hidden;backdrop-filter:none;-webkit-backdrop-filter:none}
 .share-context-item{appearance:none;border:0;background:transparent;color:var(--text);padding:9px 10px;border-radius:8px;text-align:left;font:inherit;cursor:pointer}
-.share-context-item:hover,.share-context-item:focus-visible{background:var(--surface-2,var(--border-soft));outline:none}.share-context-item.danger{color:var(--danger)}
+.share-context-item:hover,.share-context-item:focus-visible{background:var(--card-2);outline:none}.share-context-item.danger{color:var(--danger)}
 .share-source-health{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:3px 7px;font-size:.72rem;font-weight:800;background:color-mix(in srgb,var(--warn) 14%,transparent);color:var(--warn)}
 .share-source-health.missing{background:color-mix(in srgb,var(--danger) 14%,transparent);color:var(--danger)}.share-source-missing{border-color:color-mix(in srgb,var(--danger) 42%,var(--border))}
 .std-enh-modal{width:min(780px,calc(100vw - 24px));max-height:min(82vh,760px)}.std-enh-body{display:grid;gap:10px;overflow:auto;min-height:80px}
@@ -4032,7 +4032,7 @@ body.share-details-open { overflow:hidden; }
 .guided-summary{border:1px solid var(--border-soft);border-radius:12px;padding:12px;font-weight:800}.guided-bad{border-color:color-mix(in srgb,var(--danger) 48%,var(--border))}.guided-warn{border-color:color-mix(in srgb,var(--warn) 48%,var(--border))}
 @media(max-width:640px){.std-enh-row,.guided-row{align-items:stretch;flex-direction:column}.share-context-menu{min-width:min(260px,calc(100vw - 16px))}}
 
-/* -------------------- Configuration full page (1.67.6) -------------------- */
+/* -------------------- Configuration full page (1.67.7) -------------------- */
 #config-page .brand {
   font-size: 2.4rem;
 }

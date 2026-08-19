@@ -12,7 +12,7 @@ const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8').replace(/\r\n?/g
 const app = read('public/app.js');
 const server = read('server.js');
 
-test('1.67.6 reports no configured cloud connector before optional-rclone state', () => {
+test('1.67.7 reports no configured cloud connector before optional-rclone state', () => {
   const start = app.indexOf("async function openWebStorageModal(mode='share')");
   const end = app.indexOf("if($('new-web-storage-btn'))", start);
   assert.ok(start >= 0 && end > start);
@@ -23,7 +23,7 @@ test('1.67.6 reports no configured cloud connector before optional-rclone state'
   assert.match(block, /webStorage\.noneWritable.*webStorage\.none/);
 });
 
-test('1.67.6 maps connector/browser failures to actionable messages instead of one generic browse error', () => {
+test('1.67.7 maps connector/browser failures to actionable messages instead of one generic browse error', () => {
   assert.match(app, /function webStorageBrowseErrorMessage\(error, context='browse'\)/);
   for (const [code, key] of [
     ['rclone-unavailable', 'webStorage.rcloneMissing'],
@@ -58,7 +58,7 @@ async function failureCode(stderr) {
   }
 }
 
-test('1.67.6 classifies common rclone authentication/config/network errors safely', async () => {
+test('1.67.7 classifies common rclone authentication/config/network errors safely', async () => {
   assert.equal(await failureCode('Failed to authenticate: invalid_grant'), 'connector-auth-failed');
   assert.equal(await failureCode(`didn't find section in config file ("cloud")`), 'remote-not-found');
   assert.equal(await failureCode('403 Forbidden: access denied'), 'connector-forbidden');
@@ -66,7 +66,7 @@ test('1.67.6 classifies common rclone authentication/config/network errors safel
   assert.equal(await failureCode('dial tcp: connection refused'), 'connector-unreachable');
 });
 
-test('1.67.6 connector list API preserves diagnostic codes and meaningful HTTP status classes', () => {
+test('1.67.7 connector list API preserves diagnostic codes and meaningful HTTP status classes', () => {
   for (const code of ['connector-auth-failed','connector-forbidden','connector-unreachable','connector-rate-limited','connector-response']) {
     assert.match(server, new RegExp(code));
   }

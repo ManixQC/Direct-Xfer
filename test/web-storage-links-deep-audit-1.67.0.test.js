@@ -249,7 +249,7 @@ test('PWA host-share library renders web-storage links as cloud shares with norm
   assert.match(pwaApp, /s\.type === 'file' \|\| s\.type === 'folder' \|\| s\.type === 'web-storage'/);
   assert.match(pwaApp, /'web-storage':'shareStatsWebStorage'/);
   assert.match(pwaApp, /shareStatsWebStorage:'Stockage web'/);
-  assert.match(pwaApp, /2026\.08\.18-pwa365/);
+  assert.match(pwaApp, /2026\.08\.18-pwa366/);
 });
 
 test('share config import accepts web-storage only when the frozen route still matches a configured connector', () => {

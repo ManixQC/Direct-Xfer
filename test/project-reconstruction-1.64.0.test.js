@@ -27,13 +27,13 @@ test('source tree does not keep a redundant prebuilt Windows runtime', () => {
   assert.ok(workflow.includes("Copy-Item @('lib','public','pwa','scripts','security') $app -Recurse"));
   assert.match(workflow, /npm ci --omit=dev --ignore-scripts --no-audit --no-fund/);
 });
-test('Windows metadata targets 1.67.2 and current runtime hashes', () => {
+test('Windows metadata targets 1.67.3 and current runtime hashes', () => {
   const launcher = read('windows-launcher/Program.cs');
   const host = read('windows-server-host/Program.cs');
-  assert.match(launcher, /AppVersion = "1\.67\.2"/);
-  assert.match(launcher, /RuntimeAppBuild = "1\.67\.2-launcher89-csharp"/);
-  assert.match(host, /RuntimeAppBuild = "1\.67\.2-launcher89-csharp"/);
-  assert.match(host, /HostVersion = "1\.67\.2-serverhost62-csharp"/);
+  assert.match(launcher, /AppVersion = "1\.67\.3"/);
+  assert.match(launcher, /RuntimeAppBuild = "1\.67\.3-launcher90-csharp"/);
+  assert.match(host, /RuntimeAppBuild = "1\.67\.3-launcher90-csharp"/);
+  assert.match(host, /HostVersion = "1\.67\.3-serverhost63-csharp"/);
   for (const rel of ['package.json','package-lock.json','server.js','lib/server/public-pages.js','lib/server/tls-manager.js','lib/server/network-services.js','lib/server/notification-service.js','lib/server/backup-service.js','public/app.js','pwa/app.js']) {
     assert.ok(host.includes(normalizedSha(rel)), rel + ' hash');
   }
@@ -52,7 +52,7 @@ test('forbidden generated project files are absent', () => {
   assert.deepEqual(forbidden, []);
 });
 
-test('Windows GitHub Actions run name follows Direct-Xfer 1.67.2', () => {
+test('Windows GitHub Actions run name follows Direct-Xfer 1.67.3', () => {
   const workflow = read('.github/workflows/build-windows-csharp.yml');
-  assert.match(workflow, /^run-name: v1\.67\.2$/m);
+  assert.match(workflow, /^run-name: v1\.67\.3$/m);
 });

@@ -43,6 +43,12 @@ function makeTools(serviceOverrides={}) {
 test('admin exposes dedicated web reception and web collaboration creation actions', () => {
   assert.match(html, /id="new-web-inbox-btn"/);
   assert.match(html, /id="new-web-collab-btn"/);
+  const menu = html.slice(html.indexOf('id="share-create-menu-panel"'), html.indexOf('</div>', html.indexOf('id="share-create-menu-panel"')));
+  const webStoragePos = menu.indexOf('id="new-web-storage-btn"');
+  const webInboxPos = menu.indexOf('id="new-web-inbox-btn"');
+  const webCollabPos = menu.indexOf('id="new-web-collab-btn"');
+  assert.ok(webStoragePos > menu.indexOf('id="new-enc-btn"'), 'web link actions must be after all local link actions');
+  assert.ok(webStoragePos < webInboxPos && webInboxPos < webCollabPos, 'the three web link actions must occupy the bottom of the + menu');
   assert.match(app, /openWebStorageModal\('inbox'\)/);
   assert.match(app, /openWebStorageModal\('collab'\)/);
   assert.match(app, /\/api\/inbox\/web-storage/);

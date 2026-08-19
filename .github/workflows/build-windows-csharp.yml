@@ -1,5 +1,5 @@
 name: Build Direct-Xfer Windows C# + Installer
-run-name: v1.67.1
+run-name: v1.67.2
 
 on:
   workflow_dispatch:
@@ -27,9 +27,9 @@ jobs:
   build-windows:
     runs-on: windows-2025
     env:
-      DX_VERSION: '1.67.1'
-      DX_RUNTIME_BUILD: '1.67.1-launcher87-csharp'
-      DX_SERVER_HOST_BUILD: '1.67.1-serverhost60-csharp'
+      DX_VERSION: '1.67.2'
+      DX_RUNTIME_BUILD: '1.67.2-launcher89-csharp'
+      DX_SERVER_HOST_BUILD: '1.67.2-serverhost62-csharp'
       DX_DOTNET_RUNTIME_VERSION: '10.0.11'
       DX_DOTNET_RUNTIME_ZIP_SHA512: 'd9ab9c0d9916b8fa3585b5f403057f594ffffb8364dac09e0007dd8ac671c86754935b980d8fb5da83cb1b82ac3cd57cc407c969e6d837aaa2fae21047cb7448'
       DX_NODE_VERSION: '24.19.0'
@@ -123,8 +123,9 @@ jobs:
           $dist = Join-Path $distRoot "Direct-Xfer-$env:DX_VERSION-Windows-CSharp"
           $app = Join-Path $dist 'runtime\app'
           $dotnetRuntime = Join-Path $dist 'runtime\dotnet'
+          $nodeRuntime = Join-Path $dist 'runtime\node'
           Remove-Item $dist -Recurse -Force -ErrorAction SilentlyContinue
-          New-Item -ItemType Directory -Force -Path $app,$dotnetRuntime | Out-Null
+          New-Item -ItemType Directory -Force -Path $app,$dotnetRuntime,$nodeRuntime | Out-Null
           Copy-Item 'build\windows-dotnet10\launcher\Direct-Xfer.exe' $dist
           Copy-Item 'build\windows-dotnet10\server-host\Direct-Xfer.ServerHost.exe' $dist
           Copy-Item 'windows-launcher\README-WINDOWS-PORTABLE.md' (Join-Path $dist 'README-WINDOWS-PORTABLE.md')
@@ -209,16 +210,25 @@ jobs:
             "Used by both Direct-Xfer.exe and Direct-Xfer.ServerHost.exe via AppHostDotNetSearch=AppRelative"
           ), [System.Text.Encoding]::UTF8)
 
-          # Node.js, rclone and Tesseract are intentionally excluded from the default Windows payload.
-          # Inno Setup reuses an existing compatible x64 Node.js installation when available and
-          # downloads Direct-Xfer's pinned node.exe only during installation when Node is missing.
-          # rclone/Tesseract remain opt-in system-tray components.
-          Write-Host ("Direct-Xfer optimized Windows payload: node_modules={0:N1} MiB; Node excluded; optional rclone/Tesseract excluded" -f ($runtimeNodeModulesBytes / 1MB))
+          # Bundle one pinned x64 Node.js executable directly in the Windows payload.
+          # The installer itself performs no Node.js network access; this restores the passive
+          # installer model while keeping rclone/Tesseract as opt-in post-install components.
+          $nodeExe = Join-Path $nodeRuntime 'node.exe'
+          $nodeUrl = "https://nodejs.org/download/release/v$env:DX_NODE_VERSION/win-x64/node.exe"
+          Invoke-DxDownload $nodeUrl $nodeExe
+          $nodeHash = (Get-FileHash -Algorithm SHA256 $nodeExe).Hash.ToLowerInvariant()
+          if ($nodeHash -ne $env:DX_NODE_EXE_SHA256) { throw "Bundled Node.js SHA-256 mismatch: $nodeHash" }
+          $nodeVersionOutput = ((& $nodeExe --version 2>&1 | Select-Object -First 1) -as [string]).Trim().TrimStart('v')
+          if ($LASTEXITCODE -ne 0 -or $nodeVersionOutput -ne $env:DX_NODE_VERSION) {
+            throw "Bundled Node.js version probe mismatch: '$nodeVersionOutput' != '$env:DX_NODE_VERSION'"
+          }
+
+          Write-Host ("Direct-Xfer optimized Windows payload: node_modules={0:N1} MiB; Node {1} bundled; optional rclone/Tesseract excluded" -f ($runtimeNodeModulesBytes / 1MB), $env:DX_NODE_VERSION)
           if ($env:GITHUB_STEP_SUMMARY) {
             Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Value @(
               '### Direct-Xfer Windows runtime footprint',
               "- production node_modules: $([math]::Round($runtimeNodeModulesBytes / 1MB, 1)) MiB (hard budget $env:DX_NODE_MODULES_BUDGET_MB MiB)",
-              "- Node.js $env:DX_NODE_VERSION: not bundled; installer downloads pinned node.exe only when no compatible x64 Node is available",
+              "- Node.js $env:DX_NODE_VERSION: bundled in runtime/node/node.exe (SHA-256 $nodeHash)",
               '- rclone: optional, downloaded after activation (not bundled)',
               '- Tesseract OCR: optional, downloaded after activation (not bundled)'
             )
@@ -318,7 +328,14 @@ jobs:
           $escapedDotnetVersion = [regex]::Escape($env:DX_DOTNET_RUNTIME_VERSION)
           if ($privateRuntimeText -notmatch "(?m)^Microsoft\.NETCore\.App\s+$escapedDotnetVersion\s+\[") { throw 'Private runtime does not expose the pinned Microsoft.NETCore.App.' }
           if ($privateRuntimeText -match "(?m)^Microsoft\.WindowsDesktop\.App\s+") { throw 'Private runtime unexpectedly exposes Microsoft.WindowsDesktop.App.' }
-          foreach ($optionalRel in @('runtime\node','runtime\rclone','runtime\tesseract')) {
+          $nodeExe = Join-Path $dist 'runtime\node\node.exe'
+          if (-not (Test-Path -LiteralPath $nodeExe -PathType Leaf)) { throw "Missing bundled Node.js runtime: $nodeExe" }
+          $nodeHash = (Get-FileHash -Algorithm SHA256 $nodeExe).Hash.ToLowerInvariant()
+          if ($nodeHash -ne $env:DX_NODE_EXE_SHA256) { throw "Bundled Node.js payload SHA-256 mismatch: $nodeHash" }
+          $nodeVersionOutput = ((& $nodeExe --version 2>&1 | Select-Object -First 1) -as [string]).Trim().TrimStart('v')
+          if ($LASTEXITCODE -ne 0 -or $nodeVersionOutput -ne $env:DX_NODE_VERSION) { throw "Bundled Node.js payload version mismatch: $nodeVersionOutput" }
+          if (Test-Path -LiteralPath (Join-Path $dist 'runtime\node\external-node.ini')) { throw 'Obsolete external Node.js receipt leaked into the portable payload.' }
+          foreach ($optionalRel in @('runtime\rclone','runtime\tesseract')) {
             $optionalPath = Join-Path $dist $optionalRel
             if (Test-Path -LiteralPath $optionalPath) {
               throw "Optional Windows component leaked into the default payload: $optionalPath"
@@ -368,11 +385,11 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed: $LASTEXITCODE" }
       - uses: actions/upload-artifact@v6
         with:
-          name: Direct-Xfer-1.67.1-Windows-CSharp
-          path: dist/Direct-Xfer-1.67.1-Windows-CSharp/**
+          name: Direct-Xfer-1.67.2-Windows-CSharp
+          path: dist/Direct-Xfer-1.67.2-Windows-CSharp/**
           if-no-files-found: error
       - uses: actions/upload-artifact@v6
         with:
-          name: Direct-Xfer-Setup-1.67.1
-          path: dist/installer/Direct-Xfer-Setup-1.67.1.exe
+          name: Direct-Xfer-Setup-1.67.2
+          path: dist/installer/Direct-Xfer-Setup-1.67.2.exe
           if-no-files-found: error

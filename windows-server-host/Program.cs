@@ -21,9 +21,9 @@ namespace DirectXfer.WindowsServerHost
 {
     internal static class Program
     {
-        internal const string AppVersion = "1.67.1";
-        internal const string RuntimeAppBuild = "1.67.1-launcher87-csharp";
-        internal const string HostVersion = "1.67.1-serverhost60-csharp";
+        internal const string AppVersion = "1.67.2";
+        internal const string RuntimeAppBuild = "1.67.2-launcher89-csharp";
+        internal const string HostVersion = "1.67.2-serverhost62-csharp";
         internal const int DefaultPort = 55750;
         internal const int MaxFallbackPort = 55769;
         internal const int StartupReadyTimeoutMs = 60000;
@@ -113,8 +113,8 @@ namespace DirectXfer.WindowsServerHost
         private static readonly IDictionary<string, string> CriticalRuntimeSha256 =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                { "package.json", "cd497fef46924eb963a76631de1e29ebd21698eb896a63a9bbf0acf56f42d757" },
-                { "package-lock.json", "135670b17465d9ed7b45335cfec43d14f5df126ce073e11acf37c165a3b465de" },
+                { "package.json", "95a3ec54ec4b63fead7d03e98cd272f93f4839d305a61911b084d0724bdcad85" },
+                { "package-lock.json", "afc59cf2ce437274be4e3bde0bdcd6b3a449f3a8e77e349dec50614af4323e7a" },
                 { "server.js", "f643b567005939004c16d5710f5d1f6b4040e0127a6685d35ad9dca6448662f0" },
                 { "lib/server/public-pages.js", "de434eac7cef447abbda40604621a354ff6c23320a42823cdcb8969dcc16c533" },
                 { "lib/server/tls-manager.js", "b82a1b195b6cb36d47d8d431b890e0479aaf9ca8d47f98e8ef9e046390610f7f" },
@@ -122,15 +122,15 @@ namespace DirectXfer.WindowsServerHost
                 { "lib/server/backup-service.js", "65cb07c147b326475a833be6cbc668db733fc8183ec0b4eec919a876b3f04bc2" },
                 { "lib/server/notification-service.js", "a55beb8d5fdb09754eeb7f7d01974896efaad20dde3b9cf00e83bf4f7a7b9baa" },
                 { "public/app.js", "b4b27ccfd2973b5d9ee5c3d694da2995e434c8b6b0d7d10b63e96a094afd204d" },
-                { "pwa/app.js", "670f55d2456cc3439fb1eef891c0bee26246ebc59ea44d5af62bdd4b1d499ed6" },
-                { "lib/dlp-utils.js", "3ec0c2a1fb447aecbe82c7a6518621eb12de6eb5e9ac7de66f8a9fa3ee1d84a3" },
-                { "lib/fd-utils.js", "3ee5dafdb49f688b8cfab7446132adf9175f75ee45f00c25987ae88430d0ac14" },
+                { "pwa/app.js", "eb1c6c37cc77a6c1146372a083913eecfd2aae51bc8cc04bee67170b173df2a7" },
+                { "lib/dlp-utils.js", "dd4d15a3ebb1cc2e7183e9b68434cf69d50532f54fcbb9e90b5ffeb0cfdad086" },
+                { "lib/fd-utils.js", "322abf15ce7a15310d6d27ac1b0ca40892658d5f21198510f7e84b78b0070b13" },
                 { "pwa/dlp-local.js", "246267542621fc92f759438b2295b87f777ba6d6aa88b3c4d23dea25aebe7390" },
                 { "lib/storage-connectors.js", "a7b3ca52fbf7e94bfc821bfda2974ab1bb10518080608c48c9e4d90e4b8a7b74" },
                 { "lib/web-storage-share.js", "7a575bd6ed1e98eedd748bc96510e8e85a08eeb3c7dff64608a3fc97b3c8bbdf" },
                 { "lib/web-storage-writable.js", "afebff2f33a373d48a98e920bb55b2f0f5783c3cdfe6e640004532474becc102" },
                 { "public/index.html", "5f439207afd575d53acef27e5fe16cd61153192da6c8f7ec5744592ae66904bc" },
-                { "public/style.css", "3776d0f8de279b6612571025eb148ee469a327fde6f95e24c5eeb6c8f3d8e432" },
+                { "public/style.css", "dd188aab8a7532f263f5e5ef71a21e04a30742f07a56a6f27f40759ef3336bb2" },
                 { "node_modules/express/package.json", "c7db3b72582355c80cdcef1ad7b2c9a8f53557550724c6bef8502e9818c2ebe7" }
             };
 
@@ -707,7 +707,7 @@ namespace DirectXfer.WindowsServerHost
         private static string EnsureNode()
         {
             foreach (var candidate in NodeCandidates()) if (NodeUsable(candidate)) return candidate;
-            throw new FileNotFoundException("Valid x64 Node.js runtime not found. Re-run the Direct-Xfer installer so it can download Node.js when needed.");
+            throw new FileNotFoundException("Valid x64 Node.js runtime not found. Re-run the Direct-Xfer installer to restore the bundled Node.js runtime.");
         }
 
         private static void SanitizeNodeEnvironment(ProcessStartInfo start)

@@ -28,9 +28,9 @@ test('Node pruning preserves licenses and only targets development metadata', ()
 });
 
 test('Windows base payload excludes heavyweight optional rclone and Tesseract trees', () => {
-  assert.match(workflow, /rclone and Tesseract are intentionally excluded from the default Windows payload/);
+  assert.match(workflow, /rclone\/Tesseract as opt-in post-install components/);
   assert.match(workflow, /optional rclone\/Tesseract excluded/);
-  assert.match(workflow, /foreach \(\$optionalRel in @\('runtime\\node','runtime\\rclone','runtime\\tesseract'\)\)/);
+  assert.match(workflow, /foreach \(\$optionalRel in @\('runtime\\rclone','runtime\\tesseract'\)\)/);
   assert.match(workflow, /Optional Windows component leaked into the default payload/);
   assert.doesNotMatch(workflow, /DX_TESSERACT_RUNTIME_BUDGET_MB|DX_TESSERACT_RUNTIME_TARGET_MB|DX_RCLONE_VERSION/);
 });

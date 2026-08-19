@@ -22,34 +22,31 @@ function sliceBetween(source, startMarker, endMarker) {
   return source.slice(start, end);
 }
 
-test('1.67.1 version, Windows builds and PWA generation are synchronized', () => {
-  assert.equal(pkg.version, '1.67.1');
-  assert.equal(lock.version, '1.67.1');
-  assert.equal(lock.packages[''].version, '1.67.1');
-  assert.match(workflow, /^run-name: v1\.67\.1$/m);
-  assert.match(workflow, /DX_RUNTIME_BUILD: '1\.67\.1-launcher87-csharp'/);
-  assert.match(workflow, /DX_SERVER_HOST_BUILD: '1\.67\.1-serverhost60-csharp'/);
-  assert.match(launcher, /AppVersion = "1\.67\.1"/);
-  assert.match(host, /AppVersion = "1\.67\.1"/);
+test('1.67.2 version, Windows builds and PWA generation are synchronized', () => {
+  assert.equal(pkg.version, '1.67.2');
+  assert.equal(lock.version, '1.67.2');
+  assert.equal(lock.packages[''].version, '1.67.2');
+  assert.match(workflow, /^run-name: v1\.67\.2$/m);
+  assert.match(workflow, /DX_RUNTIME_BUILD: '1\.67\.2-launcher89-csharp'/);
+  assert.match(workflow, /DX_SERVER_HOST_BUILD: '1\.67\.2-serverhost62-csharp'/);
+  assert.match(launcher, /AppVersion = "1\.67\.2"/);
+  assert.match(host, /AppVersion = "1\.67\.2"/);
   for (const rel of ['pwa/theme-init.js','pwa/mobile-intelligence.js','pwa/index.html','pwa/admin-advanced.js','pwa/app.js','pwa/sw.js']) {
-    assert.match(read(rel), /1\.67\.1|pwa360/);
+    assert.match(read(rel), /1\.67\.2|pwa361/);
   }
   for (const rel of ['pwa/login.html','pwa/theme-init.js','pwa/index.html','pwa/login.js','pwa/admin-advanced.js','pwa/app.js','pwa/sw.js']) {
     assert.doesNotMatch(read(rel), /v=356/);
   }
 });
 
-test('Windows Node reuse rejects EOL and stale release lines before deciding not to download', () => {
+test('Windows bundles pinned Node while ServerHost keeps strict fallback validation', () => {
   assert.equal(pkg.engines.node, '20 || >=22');
   assert.equal(lock.packages[''].engines.node, pkg.engines.node);
-  assert.match(installer, /function IsSupportedNodeVersion\(Major, Minor, Revision: Word\): Boolean/);
-  assert.match(installer, /Major = 22.*Minor = 23.*Revision >= 2/s);
-  assert.match(installer, /Major = 24.*Minor = 19/s);
-  assert.match(installer, /Major = 26.*Minor = 7/s);
-  assert.doesNotMatch(installer, /Major = 20/);
-  assert.match(installer, /function NodeRunsAsOriginalUser\(const FileName: String\): Boolean/);
-  assert.match(installer, /ExecAsOriginalUser\(FileName, '--version'/);
-  assert.match(installer, /if not NodeRunsAsOriginalUser\(FileName\) then/);
+  assert.match(workflow, /\$nodeRuntime = Join-Path \$dist 'runtime\\node'/);
+  assert.match(workflow, /Bundled Node\.js SHA-256 mismatch/);
+  assert.match(installer, /function IsPinnedPrivateNode: Boolean/);
+  assert.doesNotMatch(installer, /NodeDownloadPage/);
+  assert.doesNotMatch(installer, /FindCompatibleSystemNode/);
   assert.match(host, /version\.Major == 22 && version >= new Version\(22, 23, 2\)/);
   assert.match(host, /version\.Major == 24 && version >= new Version\(24, 19, 0\)/);
   assert.match(host, /version\.Major == 26 && version >= new Version\(26, 7, 0\)/);

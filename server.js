@@ -11807,6 +11807,8 @@ function queueStorageConnectorJob(req, connector, direction, input) {
   return job;
 }
 
+adminRouter.get('/storage/connectors/summary', requireFullAdmin, (req, res) => { const connectors = connectorStore().map(publicConnector).filter(Boolean); res.json({ configured:connectors.length, writable:connectors.filter((connector) => !connector.readOnly).length }); });
+
 adminRouter.get('/storage/connectors', requireFullAdmin, async (req, res) => {
   let probe;
   try { probe = await connectorProbeSnapshot(); }

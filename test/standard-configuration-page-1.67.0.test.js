@@ -11,7 +11,7 @@ const app = read('public/app.js');
 const css = read('public/style.css');
 const server = read('server.js');
 
-test('1.67.5 Configuration is a dedicated full page instead of an overlay modal', () => {
+test('1.67.6 Configuration is a dedicated full page instead of an overlay modal', () => {
   assert.match(html, /<main id="config-page" class="app-view hidden">/);
   assert.match(html, /<form id="config-form" autocomplete="off">/);
   assert.doesNotMatch(html, /id="config-overlay"/);
@@ -19,7 +19,7 @@ test('1.67.5 Configuration is a dedicated full page instead of an overlay modal'
   assert.match(css, /#config-page #config-form\s*\{[\s\S]*?overflow:\s*visible/);
 });
 
-test('1.67.5 Configuration has a real URL and participates in SPA history navigation', () => {
+test('1.67.6 Configuration has a real URL and participates in SPA history navigation', () => {
   assert.match(app, /const CONFIG_PATH = '\/configuration';/);
   assert.match(app, /function configPageOpen\(\)/);
   assert.match(app, /function showConfigView\(\)/);
@@ -28,14 +28,14 @@ test('1.67.5 Configuration has a real URL and participates in SPA history naviga
   assert.match(server, /app\.get\('\/configuration', adminGuard,[\s\S]*?public', 'index\.html'/);
 });
 
-test('1.67.5 Configuration page is owner/admin only and moves shared account controls into its top bar', () => {
+test('1.67.6 Configuration page is owner/admin only and moves shared account controls into its top bar', () => {
   assert.match(app, /if \(!\['owner','admin',''\]\.includes\(state\.role \|\| ''\)\) return false;/);
   assert.match(app, /config: '#config-page \.topbar-menus'/);
   assert.match(app, /placeUserMenu\('config'\)/);
   assert.match(app, /'config-page'\]\.some/);
 });
 
-test('1.67.5 optional rclone absence cannot turn connector listing into an HTTP 500', () => {
+test('1.67.6 optional rclone absence cannot turn connector listing into an HTTP 500', () => {
   assert.match(server, /Optional rclone is allowed to be absent/);
   assert.match(server, /capabilities = \{ available:false, error:/);
   assert.match(server, /adminRouter\.get\('\/storage\/connectors',[\s\S]*?probe = \{ capabilities:\{ available:false/);
@@ -44,12 +44,12 @@ test('1.67.5 optional rclone absence cannot turn connector listing into an HTTP 
   assert.match(app, /rclone n’est pas installé ou est indisponible/);
 });
 
-test('1.67.5 connector job polling follows Configuration page visibility, not the removed modal', () => {
+test('1.67.6 connector job polling follows Configuration page visibility, not the removed modal', () => {
   assert.match(app, /\['queued','running'\]\.includes\(job\.status\)\) && configPageOpen\(\)/);
   assert.doesNotMatch(app, /config-overlay/);
 });
 
-test('1.67.5 logout clears sensitive Configuration-page fields and account-specific connector output', () => {
+test('1.67.6 logout clears sensitive Configuration-page fields and account-specific connector output', () => {
   assert.match(app, /#config-page input\[type=\"password\"\]/);
   assert.match(app, /#config-page input\[type=\"file\"\]/);
   assert.match(app, /#config-page textarea/);

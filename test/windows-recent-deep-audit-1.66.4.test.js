@@ -33,11 +33,11 @@ test('optional Windows Tesseract is selected only when it can satisfy SEARCH_OCR
   assert.match(host, /optional Tesseract cannot satisfy the requested OCR languages/);
 });
 
-test('1.67.5 bump advances the PWA cache generation so changed release metadata is not served from pwa353', () => {
-  assert.match(read('package.json'), /"version"\s*:\s*"1\.67\.5"/);
+test('1.67.6 bump advances the PWA cache generation so changed release metadata is not served from pwa353', () => {
+  assert.match(read('package.json'), /"version"\s*:\s*"1\.67\.6"/);
   for (const rel of ['pwa/app.js', 'pwa/index.html', 'pwa/sw.js', 'pwa/theme-init.js', 'pwa/admin-advanced.js', 'pwa/mobile-intelligence.js']) {
     const source = read(rel);
-    assert.match(source, /1\.67\.5|pwa364|v=364/);
+    assert.match(source, /1\.67\.6|pwa365|v=365/);
     assert.doesNotMatch(source, /pwa353|v=353/);
   }
 });

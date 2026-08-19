@@ -1113,6 +1113,7 @@ const I18N = {
     'webStorage.rcloneMissing': 'rclone est indisponible. Activez le composant optionnel rclone puis réessayez.',
     'webStorage.loadFail': 'Impossible de parcourir ce stockage cloud.',
     'webStorage.connectorListFail': 'Impossible de charger la liste des connecteurs de stockage.',
+    'webStorage.connectorCheckFail': 'Impossible de vérifier la configuration des connecteurs. Ouvrez Configuration → Connecteurs de stockage et vérifiez que cette section se charge correctement.',
     'webStorage.connectorApiMissing': 'Le service des connecteurs de stockage n’est pas disponible dans cette version du serveur. Rechargez la page après la mise à jour de Direct-Xfer.',
     'webStorage.connectorForbidden': 'Votre compte n’a pas accès aux connecteurs de stockage.',
     'webStorage.connectorMissing': 'Ce connecteur n’existe plus. Vérifiez Configuration → Connecteurs de stockage.',
@@ -2736,6 +2737,7 @@ const I18N = {
     'webStorage.rcloneMissing': 'rclone is unavailable. Enable the optional rclone component and try again.',
     'webStorage.loadFail': 'Could not browse this cloud storage.',
     'webStorage.connectorListFail': 'Could not load the storage connector list.',
+    'webStorage.connectorCheckFail': 'Could not verify the connector configuration. Open Configuration → Storage connectors and check that this section loads correctly.',
     'webStorage.connectorApiMissing': 'The storage connector service is not available in this server version. Reload the page after updating Direct-Xfer.',
     'webStorage.connectorForbidden': 'Your account does not have access to storage connectors.',
     'webStorage.connectorMissing': 'This connector no longer exists. Check Configuration → Storage connectors.',
@@ -4359,6 +4361,7 @@ const I18N = {
     'webStorage.rcloneMissing': 'rclone no está disponible. Activa el componente opcional rclone y vuelve a intentarlo.',
     'webStorage.loadFail': 'No se pudo explorar este almacenamiento en la nube.',
     'webStorage.connectorListFail': 'No se pudo cargar la lista de conectores de almacenamiento.',
+    'webStorage.connectorCheckFail': 'No se pudo verificar la configuración de los conectores. Abre Configuración → Conectores de almacenamiento y comprueba que esta sección se cargue correctamente.',
     'webStorage.connectorApiMissing': 'El servicio de conectores de almacenamiento no está disponible en esta versión del servidor. Recarga la página después de actualizar Direct-Xfer.',
     'webStorage.connectorForbidden': 'Tu cuenta no tiene acceso a los conectores de almacenamiento.',
     'webStorage.connectorMissing': 'Este conector ya no existe. Revisa Configuración → Conectores de almacenamiento.',
@@ -9315,10 +9318,10 @@ function webStorageBrowseErrorMessage(error, context='browse') {
   if(code==='connector-cancelled'||code==='connector-terminated') return t('webStorage.browseInterrupted');
   if(code==='fetch-timeout') return t('webStorage.requestTimeout');
   if(code==='not-authenticated'||code==='stale-auth') return '';
-  if(context==='connectors') {
+  if(context==='connectors'||context==='connector-summary') {
     if(error && error.status===403) return t('webStorage.connectorForbidden');
     if(error && error.status===404) return t('webStorage.connectorApiMissing');
-    return t('webStorage.connectorListFail');
+    return t(context==='connector-summary'?'webStorage.connectorCheckFail':'webStorage.connectorListFail');
   }
   if(code==='connector-failed') return t('webStorage.connectorGeneric');
   return t('webStorage.loadFail');
@@ -9376,6 +9379,21 @@ async function openWebStorageModal(mode='share') {
   if($('web-storage-inbox-sender-limits')) $('web-storage-inbox-sender-limits').classList.toggle('hidden',webStorageMode!=='inbox');
   if($('web-storage-inbox-require-row')) $('web-storage-inbox-require-row').classList.toggle('hidden',webStorageMode!=='inbox');
   try {
+    // Check connector metadata first without probing rclone. This makes the
+    // common first-use case deterministic: no configured storage is reported as
+    // such, rather than being masked by an optional-runtime/probe failure.
+    let summary;
+    try { summary=await api('GET','/api/storage/connectors/summary',null,10000); }
+    catch (error) {
+      const message=webStorageBrowseErrorMessage(error,'connector-summary');
+      if(message) toast(message,'err');
+      return;
+    }
+    const configured=Math.max(0, Number(summary && summary.configured) || 0);
+    const writableConfigured=Math.max(0, Number(summary && summary.writable) || 0);
+    if(!configured) { toast(t('webStorage.none'),'warn'); return; }
+    if(writable && !writableConfigured) { toast(t('webStorage.noneWritable'),'warn'); return; }
+
     const data=await api('GET','/api/storage/connectors',null,30000);
     const available=!!(data && data.capabilities && data.capabilities.available);
     let connectors=Array.isArray(data && data.connectors)?data.connectors:[];

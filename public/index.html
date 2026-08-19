@@ -16,7 +16,7 @@
       })();
     </script>
     <link rel="manifest" href="/admin-pwa-detect.webmanifest" />
-    <link rel="stylesheet" href="/style.css?v=291" />
+    <link rel="stylesheet" href="/style.css?v=292" />
     <link rel="stylesheet" href="/server-health-dashboard.css?v=3" />
   </head>
   <body>
@@ -130,7 +130,7 @@
             </button>
           </div>
           <div class="config-menu">
-            <button id="config-btn" class="icon-btn user-btn" aria-label="Configuration" data-i18n-title="menu.config" title="Configuration" aria-haspopup="true">
+            <button id="config-btn" class="icon-btn user-btn" aria-label="Configuration" data-i18n-title="menu.config" title="Configuration" aria-controls="config-page">
               <svg viewBox="0 0 24 24" width="21" height="21" fill="currentColor" aria-hidden="true">
                 <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm7.43-2.53c.04-.32.07-.65.07-.97s-.03-.65-.07-.97l2.11-1.65a.5.5 0 0 0 .12-.64l-2-3.46a.5.5 0 0 0-.61-.22l-2.49 1a7.3 7.3 0 0 0-1.69-.98l-.38-2.65a.5.5 0 0 0-.49-.42h-4a.5.5 0 0 0-.49.42l-.38 2.65c-.61.25-1.17.58-1.69.98l-2.49-1a.5.5 0 0 0-.61.22l-2 3.46a.5.5 0 0 0 .12.64l2.11 1.65c-.04.32-.07.65-.07.97s.03.65.07.97l-2.11 1.65a.5.5 0 0 0-.12.64l2 3.46c.14.24.42.32.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.04.24.25.42.49.42h4c.24 0 .45-.18.49-.42l.38-2.65c.61-.25 1.17-.58 1.69-.98l2.49 1c.19.1.47.02.61-.22l2-3.46a.5.5 0 0 0-.12-.64l-2.11-1.65Z" />
               </svg>
@@ -283,6 +283,9 @@
               <button id="share-create-menu-btn" class="btn ghost sm share-action-menu-trigger share-action-menu-plus" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="share-create-menu-panel" data-i18n-aria="sh.moreCreateAria">+</button>
               <div id="share-create-menu-panel" class="share-action-menu-panel hidden" role="menu" aria-labelledby="share-create-menu-btn">
                 <button id="new-collab-btn" class="btn ghost sm" type="button" role="menuitem" data-i18n="sh.newCollab">🔁 Collaboration link</button>
+                <button id="new-web-storage-btn" class="btn ghost sm" type="button" role="menuitem" data-i18n="webStorage.new">☁ Web storage link</button>
+                <button id="new-web-inbox-btn" class="btn ghost sm" type="button" role="menuitem" data-i18n="webStorage.newInbox">☁＋ Web reception link</button>
+                <button id="new-web-collab-btn" class="btn ghost sm" type="button" role="menuitem" data-i18n="webStorage.newCollab">☁🔁 Web collaboration link</button>
                 <button id="new-inbox-btn" class="btn ghost sm" type="button" role="menuitem" data-i18n="sh.newInbox">＋ Reception link</button>
                 <button id="new-secret-btn" class="btn ghost sm" type="button" role="menuitem" data-i18n="secret.new">🔑 Secret note</button>
                 <button id="new-enc-btn" class="btn ghost sm" type="button" role="menuitem" data-i18n="enc.newShare">🔒 Encrypted share</button>
@@ -1286,6 +1289,143 @@
       </div>
     </div>
 
+    <!-- ===================== Web storage link (modal) ===================== -->
+    <div id="web-storage-overlay" class="overlay hidden">
+      <div class="modal picker-modal web-storage-modal" role="dialog" aria-modal="true" aria-labelledby="web-storage-title">
+        <div class="modal-head">
+          <h3 id="web-storage-title" data-i18n="webStorage.title">Cloud web storage link</h3>
+          <button id="web-storage-close" class="icon-btn" type="button" aria-label="Close">✕</button>
+        </div>
+        <div class="picker-body">
+          <div class="share-options web-storage-top-fields">
+            <label>
+              <span data-i18n="webStorage.connector">Storage connector</span>
+              <select id="web-storage-connector"></select>
+            </label>
+            <label>
+              <span data-i18n="webStorage.name">Public link name (optional)</span>
+              <input id="web-storage-name" type="text" maxlength="240" autocomplete="off" />
+            </label>
+          </div>
+          <div class="web-storage-browser-head">
+            <div><span class="muted sm" data-i18n="webStorage.location">Cloud location:</span> <code id="web-storage-path">/</code></div>
+            <div class="web-storage-browser-actions">
+              <button id="web-storage-up" class="btn ghost xs" type="button" data-i18n="webStorage.up">↑ Parent</button>
+              <button id="web-storage-select-folder" class="btn ghost xs" type="button" data-i18n="webStorage.selectFolder">Select this folder</button>
+              <button id="web-storage-refresh" class="btn ghost xs" type="button" data-i18n="webStorage.refresh">↻ Refresh</button>
+            </div>
+          </div>
+          <div id="web-storage-list" class="browser-list web-storage-list" aria-live="polite"></div>
+          <p class="muted sm"><span data-i18n="webStorage.selection">Selection:</span> <strong id="web-storage-selection">—</strong></p>
+          <p id="web-storage-error" class="error hidden" role="alert"></p>
+          <div class="share-options">
+            <label>
+              <span data-i18n="pk.expiration">Expiration</span>
+              <select id="web-storage-expiry">
+                <option value="0" data-i18n="pk.never">Never</option>
+                <option value="3600" data-i18n="pk.h1">1 hour</option>
+                <option value="86400" data-i18n="pk.d1">1 day</option>
+                <option value="604800" data-i18n="pk.d7">7 days</option>
+                <option value="2592000" data-i18n="pk.d30">30 days</option>
+              </select>
+            </label>
+            <label class="web-storage-download-only">
+              <span data-i18n="pk.maxDl">Max downloads</span>
+              <input id="web-storage-maxdl" type="number" min="0" data-i18n-ph="pk.unlimited" placeholder="unlimited" />
+            </label>
+            <label>
+              <span data-i18n="pk.password">Password (optional)</span>
+              <input id="web-storage-password" type="text" autocomplete="off" spellcheck="false" data-i18n-ph="pk.passwordPh" placeholder="none" />
+            </label>
+            <label class="web-storage-download-only">
+              <span data-i18n="pk.rate">Max speed (KB/s)</span>
+              <input id="web-storage-rate" type="number" min="0" step="1" data-i18n-ph="pk.unlimited" placeholder="unlimited" />
+            </label>
+            <label class="opt-check web-storage-download-only">
+              <input id="web-storage-preview" type="checkbox" checked />
+              <span data-i18n="cfg.allowPreview">Allow in-browser preview</span>
+            </label>
+            <label class="opt-check web-storage-download-only">
+              <input id="web-storage-burn" type="checkbox" />
+              <span data-i18n="pk.burn">One-time link (revoke after first download)</span>
+            </label>
+            <div id="web-storage-write-options" class="hidden web-storage-write-options">
+              <div class="fld-row">
+                <label class="fld">
+                  <span data-i18n="inbox.maxFiles">Max files</span>
+                  <input id="web-storage-maxfiles" type="number" min="0" step="1" data-i18n-ph="pk.unlimited" placeholder="unlimited" />
+                </label>
+                <label class="fld">
+                  <span data-i18n="inbox.maxFilesPerUpload">Max files / upload</span>
+                  <input id="web-storage-maxfiles-upload" type="number" min="0" step="1" data-i18n-ph="pk.unlimited" placeholder="unlimited" />
+                </label>
+              </div>
+              <div class="fld-row">
+                <label class="fld">
+                  <span data-i18n="inbox.maxFileSize">Max size / file (MB)</span>
+                  <input id="web-storage-maxfile" type="number" min="0" step="1" data-i18n-ph="pk.unlimited" placeholder="unlimited" />
+                </label>
+                <label class="fld">
+                  <span data-i18n="inbox.maxTotalSize">Total quota (MB)</span>
+                  <input id="web-storage-maxtotal" type="number" min="0" step="1" data-i18n-ph="pk.unlimited" placeholder="unlimited" />
+                </label>
+              </div>
+              <div id="web-storage-inbox-sender-limits" class="fld-row">
+                <label class="fld">
+                  <span data-i18n="inbox.maxFilesPerSender">Max files / sender</span>
+                  <input id="web-storage-maxfiles-sender" type="number" min="0" step="1" data-i18n-ph="pk.unlimited" placeholder="unlimited" />
+                </label>
+                <label class="fld">
+                  <span data-i18n="inbox.maxBytesPerSender">Max MB / sender</span>
+                  <input id="web-storage-maxmb-sender" type="number" min="0" step="1" data-i18n-ph="pk.unlimited" placeholder="unlimited" />
+                </label>
+              </div>
+              <label class="fld">
+                <span data-i18n="inbox.allowExt">Allowed types (comma-separated, optional)</span>
+                <input id="web-storage-allow" type="text" autocomplete="off" spellcheck="false" data-i18n-ph="inbox.extPh" placeholder="e.g. pdf, jpg, png" />
+              </label>
+              <label class="fld">
+                <span data-i18n="inbox.blockExt">Blocked types (optional)</span>
+                <input id="web-storage-block" type="text" autocomplete="off" spellcheck="false" data-i18n-ph="inbox.extPh" placeholder="e.g. exe, bat, sh" />
+              </label>
+              <label class="fld opt-check">
+                <input id="web-storage-block-exec" type="checkbox" />
+                <span data-i18n="inbox.blockExec">Reject executables (magic-byte check)</span>
+              </label>
+              <label id="web-storage-inbox-group-row" class="fld opt-check">
+                <input id="web-storage-group-sender" type="checkbox" />
+                <span data-i18n="inbox.groupSender">Sort uploads into per-sender subfolders</span>
+              </label>
+              <label id="web-storage-inbox-tag-row" class="fld opt-check">
+                <input id="web-storage-tag-sender" type="checkbox" />
+                <span data-i18n="inbox.tagSender">Prefix received filenames with sender name</span>
+              </label>
+              <label id="web-storage-inbox-require-row" class="fld opt-check">
+                <input id="web-storage-require-sender" type="checkbox" />
+                <span data-i18n="inbox.requireSender">Require the visitor to enter a name</span>
+              </label>
+              <label id="web-storage-collab-delete-row" class="fld opt-check hidden">
+                <input id="web-storage-allow-delete" type="checkbox" />
+                <span data-i18n="collab.allowDelete">Let visitors delete content</span>
+              </label>
+              <p class="muted sm" data-i18n="webStorage.writeHint">Uploads are staged temporarily for resumability and security checks, then transferred to cloud storage and removed locally.</p>
+            </div>
+            <label class="pk-note-field">
+              <span data-i18n="pk.note">Message shown to the visitor (optional)</span>
+              <textarea id="web-storage-note" rows="2" maxlength="2000"></textarea>
+            </label>
+          </div>
+        </div>
+        <div class="modal-foot">
+          <span id="web-storage-hint" class="muted sm" data-i18n="webStorage.directHint">Files are streamed directly from the cloud; they are not copied locally.</span>
+          <div class="modal-actions">
+            <button id="web-storage-cancel" class="btn ghost sm" type="button" data-i18n="pk.cancel">Cancel</button>
+            <button id="web-storage-create" class="btn sm" type="button" disabled data-i18n="webStorage.create">Create link</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- ===================== Edit link (modal) ===================== -->
     <div id="edit-overlay" class="overlay hidden">
       <div class="modal" role="dialog" aria-modal="true">
@@ -2168,12 +2308,22 @@
       </div>
     </div>
 
-    <!-- ===================== Configuration (modal) ===================== -->
-    <div id="config-overlay" class="overlay hidden">
-      <div class="modal" role="dialog" aria-modal="true">
-        <div class="modal-head">
-          <h3 data-i18n="cfg.title">Configuration</h3>
-          <button id="config-close" class="icon-btn" aria-label="Close">✕</button>
+    <!-- ===================== Configuration (full page) ===================== -->
+    <main id="config-page" class="app-view hidden">
+      <header class="topbar">
+        <div class="brand">
+          <button id="config-close" class="icon-btn" data-i18n-title="photo.back" title="Back" aria-label="Back">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M15.5 4.5 8 12l7.5 7.5 1.4-1.4L10.8 12l6.1-6.1z"/></svg>
+          </button>
+          <img class="brand-logo brand-home" src="/logo.svg" alt="" role="link" tabindex="0" data-i18n-title="menu.backToShares" title="Back to shares" />
+          <span class="brand-home" role="link" tabindex="0" data-i18n-title="menu.backToShares" title="Back to shares" data-i18n="cfg.title">Configuration</span>
+        </div>
+        <div class="topbar-menus"></div>
+      </header>
+
+      <section class="card config-page-card">
+        <div class="card-head config-page-head">
+          <h2 data-i18n="cfg.title">Configuration</h2>
         </div>
         <form id="config-form" autocomplete="off">
           <div class="cfg-section" data-i18n="cfg.security">Security</div>
@@ -2915,8 +3065,12 @@
             </div>
           </div>
         </form>
-      </div>
-    </div>
+      </section>
+
+      <footer class="app-footer">
+        Direct-Xfer <span class="app-year"></span> · <span class="app-version"></span>
+      </footer>
+    </main>
 
     <!-- Keyboard shortcuts help -->
     <div id="keys-overlay" class="overlay hidden">
@@ -3026,7 +3180,7 @@
     <div id="toast" class="toast hidden"></div>
     <script src="/login-vault.js"></script>
     <script src="/dxcrypto.js"></script>
-    <script src="/app.js?v=307"></script>
+    <script src="/app.js?v=308"></script>
     <script src="/standard-productivity.js?v=4"></script>
     <script src="/server-health-dashboard.js?v=4"></script>
   </body>

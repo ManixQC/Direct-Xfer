@@ -485,7 +485,7 @@ const I18N = {
     'connector.choose': 'Connecteur', 'connector.remotePath': 'Chemin du fichier distant',
     'connector.localPath': 'Chemin local/hôte', 'connector.transferHint': "Pour l’import, le champ local est un chemin facultatif sous /Direct-Xfer/Imports. Pour l’export, indiquez un fichier hôte, reçu ou image existant.",
     'connector.import': 'Importer', 'connector.export': 'Exporter', 'connector.refresh': 'Actualiser',
-    'connector.ready': '{version} prêt', 'connector.unavailable': 'rclone est indisponible dans ce conteneur.',
+    'connector.ready': '{version} prêt', 'connector.unavailable': 'rclone n’est pas installé ou est indisponible. Activez le composant rclone pour utiliser les connecteurs.',
     'connector.none': 'Aucun connecteur configuré.', 'connector.test': 'Tester', 'connector.testing': 'Test en cours…',
     'connector.testOk': 'Connexion réussie.', 'connector.testFail': 'Échec du test du connecteur.',
     'connector.edit': 'Modifier', 'connector.delete': 'Supprimer', 'connector.deleteConfirm': 'Supprimer le connecteur « {name} » ?',
@@ -1087,6 +1087,34 @@ const I18N = {
     'tr.zipTitle': 'Plusieurs fichiers regroupés et téléchargés dans une seule archive .zip',
     'sh.title': 'Partages en cours',
     'sh.new': '＋ Nouveau partage',
+    'webStorage.new': '☁ Lien de stockage web',
+    'webStorage.newInbox': '☁＋ Lien de réception web',
+    'webStorage.newCollab': '☁🔁 Lien de collaboration web',
+    'webStorage.inboxTitle': 'Lien de réception web',
+    'webStorage.collabTitle': 'Lien de collaboration web',
+    'webStorage.writeHint': 'Les fichiers reçus sont temporairement préparés pour la reprise et les contrôles de sécurité, puis transférés vers le stockage cloud et supprimés localement.',
+    'webStorage.noneWritable': 'Aucun connecteur inscriptible n’est configuré. Ajoutez ou activez un connecteur non lecture seule dans Configuration → Connecteurs de stockage.',
+    'webStorage.inboxCreated': 'Lien de réception web créé ✓',
+    'webStorage.collabCreated': 'Lien de collaboration web créé ✓',
+    'webStorage.deleteNeedsPassword': 'La suppression par les visiteurs exige un mot de passe sur le lien de collaboration.',
+    'webStorage.title': 'Lien de stockage web',
+    'sh.webStorage': 'Stockage web',
+    'webStorage.connector': 'Connecteur de stockage',
+    'webStorage.name': 'Nom public du lien (facultatif)',
+    'webStorage.location': 'Emplacement cloud :',
+    'webStorage.up': '↑ Parent',
+    'webStorage.selectFolder': 'Sélectionner ce dossier',
+    'webStorage.refresh': '↻ Actualiser',
+    'webStorage.selection': 'Sélection :',
+    'webStorage.directHint': 'Les fichiers sont diffusés directement depuis le cloud sans copie locale.',
+    'webStorage.create': 'Créer le lien',
+    'webStorage.none': 'Aucun connecteur configuré. Ajoutez-en un dans Configuration → Connecteurs de stockage.',
+    'webStorage.empty': 'Ce dossier cloud est vide.',
+    'webStorage.rcloneMissing': 'rclone est indisponible. Activez le composant optionnel rclone puis réessayez.',
+    'webStorage.loadFail': 'Impossible de parcourir ce stockage cloud.',
+    'webStorage.createFail': 'Impossible de créer le lien de stockage web : {error}',
+    'webStorage.created': 'Lien de stockage web créé ✓',
+
     'sh.moreCreateAria': 'Plus de types de partage',
     'sh.actionConfig': 'Config',
     'sh.newInbox': '＋ Lien de réception',
@@ -2067,7 +2095,7 @@ const I18N = {
     'connector.choose': 'Connector', 'connector.remotePath': 'Remote file path',
     'connector.localPath': 'Local/host file path', 'connector.transferHint': 'For import, the local field is an optional path below /Direct-Xfer/Imports. For export, enter an existing host, reception or image file.',
     'connector.import': 'Import', 'connector.export': 'Export', 'connector.refresh': 'Refresh',
-    'connector.ready': '{version} ready', 'connector.unavailable': 'rclone is unavailable in this container.',
+    'connector.ready': '{version} ready', 'connector.unavailable': 'rclone is not installed or is unavailable. Enable the rclone component to use storage connectors.',
     'connector.none': 'No connector configured.', 'connector.test': 'Test', 'connector.testing': 'Testing…',
     'connector.testOk': 'Connection successful.', 'connector.testFail': 'Connector test failed.',
     'connector.edit': 'Edit', 'connector.delete': 'Delete', 'connector.deleteConfirm': 'Delete connector “{name}”?',
@@ -2668,6 +2696,34 @@ const I18N = {
     'tr.zipTitle': 'Multiple files bundled into a single .zip archive',
     'sh.title': 'Active shares',
     'sh.new': '＋ New share',
+    'webStorage.new': '☁ Web storage link',
+    'webStorage.newInbox': '☁＋ Web reception link',
+    'webStorage.newCollab': '☁🔁 Web collaboration link',
+    'webStorage.inboxTitle': 'Web reception link',
+    'webStorage.collabTitle': 'Web collaboration link',
+    'webStorage.writeHint': 'Received files are staged temporarily for resumability and security checks, then transferred to cloud storage and removed locally.',
+    'webStorage.noneWritable': 'No writable connector is configured. Add or enable a non-read-only connector under Configuration → Storage connectors.',
+    'webStorage.inboxCreated': 'Web reception link created ✓',
+    'webStorage.collabCreated': 'Web collaboration link created ✓',
+    'webStorage.deleteNeedsPassword': 'Visitor deletion requires a password on the collaboration link.',
+    'webStorage.title': 'Web storage link',
+    'sh.webStorage': 'Web storage',
+    'webStorage.connector': 'Storage connector',
+    'webStorage.name': 'Public link name (optional)',
+    'webStorage.location': 'Cloud location:',
+    'webStorage.up': '↑ Parent',
+    'webStorage.selectFolder': 'Select this folder',
+    'webStorage.refresh': '↻ Refresh',
+    'webStorage.selection': 'Selection:',
+    'webStorage.directHint': 'Files are streamed directly from cloud storage without a local copy.',
+    'webStorage.create': 'Create link',
+    'webStorage.none': 'No connector is configured. Add one under Configuration → Storage connectors.',
+    'webStorage.empty': 'This cloud folder is empty.',
+    'webStorage.rcloneMissing': 'rclone is unavailable. Enable the optional rclone component and try again.',
+    'webStorage.loadFail': 'Could not browse this cloud storage.',
+    'webStorage.createFail': 'Could not create the web storage link: {error}',
+    'webStorage.created': 'Web storage link created ✓',
+
     'sh.moreCreateAria': 'More share types',
     'sh.actionConfig': 'Config',
     'sh.newInbox': '＋ Reception link',
@@ -3647,7 +3703,7 @@ const I18N = {
     'connector.choose': 'Conector', 'connector.remotePath': 'Ruta del archivo remoto',
     'connector.localPath': 'Ruta local/del host', 'connector.transferHint': 'Para importar, el campo local es una ruta opcional bajo /Direct-Xfer/Imports. Para exportar, indica un archivo existente del host, de recepción o de imágenes.',
     'connector.import': 'Importar', 'connector.export': 'Exportar', 'connector.refresh': 'Actualizar',
-    'connector.ready': '{version} listo', 'connector.unavailable': 'rclone no está disponible en este contenedor.',
+    'connector.ready': '{version} listo', 'connector.unavailable': 'rclone no está instalado o no está disponible. Active el componente rclone para usar los conectores.',
     'connector.none': 'No hay conectores configurados.', 'connector.test': 'Probar', 'connector.testing': 'Probando…',
     'connector.testOk': 'Conexión correcta.', 'connector.testFail': 'Falló la prueba del conector.',
     'connector.edit': 'Editar', 'connector.delete': 'Eliminar', 'connector.deleteConfirm': '¿Eliminar el conector «{name}»?',
@@ -4249,6 +4305,34 @@ const I18N = {
     'tr.zipTitle': 'Varios archivos agrupados en un solo archivo .zip',
     'sh.title': 'Comparticiones activas',
     'sh.new': '＋ Nueva compartición',
+    'webStorage.new': '☁ Enlace de almacenamiento web',
+    'webStorage.newInbox': '☁＋ Enlace de recepción web',
+    'webStorage.newCollab': '☁🔁 Enlace de colaboración web',
+    'webStorage.inboxTitle': 'Enlace de recepción web',
+    'webStorage.collabTitle': 'Enlace de colaboración web',
+    'webStorage.writeHint': 'Los archivos recibidos se preparan temporalmente para reanudación y controles de seguridad, luego se transfieren al almacenamiento en la nube y se eliminan localmente.',
+    'webStorage.noneWritable': 'No hay conectores con escritura configurados. Añade o activa un conector que no sea de solo lectura en Configuración → Conectores de almacenamiento.',
+    'webStorage.inboxCreated': 'Enlace de recepción web creado ✓',
+    'webStorage.collabCreated': 'Enlace de colaboración web creado ✓',
+    'webStorage.deleteNeedsPassword': 'La eliminación por visitantes requiere una contraseña en el enlace de colaboración.',
+    'webStorage.title': 'Enlace de almacenamiento web',
+    'sh.webStorage': 'Almacenamiento web',
+    'webStorage.connector': 'Conector de almacenamiento',
+    'webStorage.name': 'Nombre público del enlace (opcional)',
+    'webStorage.location': 'Ubicación en la nube:',
+    'webStorage.up': '↑ Superior',
+    'webStorage.selectFolder': 'Seleccionar esta carpeta',
+    'webStorage.refresh': '↻ Actualizar',
+    'webStorage.selection': 'Selección:',
+    'webStorage.directHint': 'Los archivos se transmiten directamente desde la nube sin copia local.',
+    'webStorage.create': 'Crear enlace',
+    'webStorage.none': 'No hay conectores configurados. Añade uno en Configuración → Conectores de almacenamiento.',
+    'webStorage.empty': 'Esta carpeta en la nube está vacía.',
+    'webStorage.rcloneMissing': 'rclone no está disponible. Activa el componente opcional rclone y vuelve a intentarlo.',
+    'webStorage.loadFail': 'No se pudo explorar este almacenamiento en la nube.',
+    'webStorage.createFail': 'No se pudo crear el enlace de almacenamiento web: {error}',
+    'webStorage.created': 'Enlace de almacenamiento web creado ✓',
+
     'sh.moreCreateAria': 'Más tipos de compartición',
     'sh.actionConfig': 'Config',
     'sh.newInbox': '＋ Enlace de recepción',
@@ -5663,7 +5747,7 @@ function el(tag, opts = {}) {
 }
 
 function isLoggedIn() {
-  return ['app-view', 'images-page', 'dashboards-page', 'system-health-page', 'activity-page'].some((id) => {
+  return ['app-view', 'images-page', 'dashboards-page', 'system-health-page', 'activity-page', 'config-page'].some((id) => {
     const view = $(id);
     return !!view && !view.classList.contains('hidden');
   });
@@ -5794,11 +5878,19 @@ function clearAuthenticatedClientState() {
   state.lastPhotoHistoryMetaSig = '';
   // Clear password/sensitive editable fields retained by hidden modals. They are
   // rehydrated from the new principal's server state when opened again.
-  document.querySelectorAll('.overlay input[type="password"], .overlay input[type="file"], .overlay textarea').forEach((node) => { try { node.value = ''; } catch (_) {} });
+  document.querySelectorAll('.overlay input[type="password"], .overlay input[type="file"], .overlay textarea, #config-page input[type="password"], #config-page input[type="file"], #config-page textarea').forEach((node) => { try { node.value = ''; } catch (_) {} });
   try { renderTransfers([]); } catch (_) {}
   try { renderHistory([]); } catch (_) {}
   try { renderShares([]); } catch (_) {}
   try { renderActivity(); } catch (_) {}
+  // Configuration is now a full page rather than an overlay. Clear account-specific
+  // connector/status output immediately on logout so a different account can never
+  // see stale connector names while its first refresh is still in flight.
+  ['connector-list','connector-jobs','connector-capability','connector-editor-status','connector-transfer-status'].forEach((id) => {
+    const node = $(id); if (node) { node.textContent = ''; node.className = id === 'connector-capability' ? 'muted sm' : node.className; }
+  });
+  const configError = $('config-error'); if (configError) { configError.textContent = ''; configError.classList.add('hidden'); }
+  try { closeWebStorageModal(); } catch (_) {}
   // Dashboard pages are hidden on logout but their generated charts/lists are not
   // rebuilt until the next network response. Clear output-only containers so a
   // newly signed-in account can never reveal the previous account while offline.
@@ -5825,7 +5917,7 @@ function showLogin() {
     renderNotifications(); closeNotificationsMenu();
   } catch (_) {}
   placeUserMenu('admin');
-  ['images-page', 'dashboards-page', 'system-health-page', 'activity-page'].forEach((id) => {
+  ['images-page', 'dashboards-page', 'system-health-page', 'activity-page', 'config-page'].forEach((id) => {
     const page = $(id);
     if (page) page.classList.add('hidden');
   });
@@ -5839,7 +5931,7 @@ function showLogin() {
 }
 function showApp() {
   $('login-view').classList.add('hidden');
-  ['images-page', 'dashboards-page', 'system-health-page', 'activity-page'].forEach((id) => {
+  ['images-page', 'dashboards-page', 'system-health-page', 'activity-page', 'config-page'].forEach((id) => {
     const page = $(id);
     if (page) page.classList.add('hidden');
   });
@@ -6469,7 +6561,7 @@ async function loadNotificationPrefs(preserveStatus = false) {
     loaded = true;
     if (!preserveStatus) setNotificationPrefsStatus('');
   } catch (_) {
-    if ($('config-overlay') && !$('config-overlay').classList.contains('hidden')) setNotificationPrefsStatus('notifications.settingsError', 'cfg-bad');
+    if (configPageOpen()) setNotificationPrefsStatus('notifications.settingsError', 'cfg-bad');
   }
   // Keep this false on network/server failure so reopening Preferences retries
   // instead of pinning optimistic defaults for the rest of the session.
@@ -6581,6 +6673,7 @@ function placeUserMenu(view) {
     dashboards: '#dashboards-page .topbar-menus',
     systemHealth: '#system-health-page .topbar-menus',
     activity: '#activity-page .topbar-menus',
+    config: '#config-page .topbar-menus',
   };
   const target = document.querySelector(targets[view] || targets.admin);
   if (notifications && target && notifications.parentElement !== target) target.appendChild(notifications);
@@ -6620,6 +6713,7 @@ function showActivityView() {
   const imagesPage = $('images-page'); if (imagesPage) imagesPage.classList.add('hidden');
   const dashboardsPage = $('dashboards-page'); if (dashboardsPage) dashboardsPage.classList.add('hidden');
   const systemHealthPage = $('system-health-page'); if (systemHealthPage) systemHealthPage.classList.add('hidden');
+  const configPage = $('config-page'); if (configPage) configPage.classList.add('hidden');
   $('app-view').classList.add('hidden');
   placeUserMenu('activity');
   $('activity-page').classList.remove('hidden');
@@ -6739,6 +6833,7 @@ function showDashboardsView(tab = state.dashboardTab) {
   if (activityPage) activityPage.classList.add('hidden');
   const systemHealthPage = $('system-health-page');
   if (systemHealthPage) systemHealthPage.classList.add('hidden');
+  const configPage = $('config-page'); if (configPage) configPage.classList.add('hidden');
   $('app-view').classList.add('hidden');
   placeUserMenu('dashboards');
   $('dashboards-page').classList.remove('hidden');
@@ -6810,6 +6905,7 @@ function showSystemHealthView() {
   const imagesPage = $('images-page'); if (imagesPage) imagesPage.classList.add('hidden');
   const dashboardsPage = $('dashboards-page'); if (dashboardsPage) dashboardsPage.classList.add('hidden');
   const activityPage = $('activity-page'); if (activityPage) activityPage.classList.add('hidden');
+  const configPage = $('config-page'); if (configPage) configPage.classList.add('hidden');
   $('app-view').classList.add('hidden');
   placeUserMenu('systemHealth');
   $('system-health-page').classList.remove('hidden');
@@ -6889,6 +6985,8 @@ function showImagesView() {
   if (activityPage) activityPage.classList.add('hidden');
   const systemHealthPage = $('system-health-page');
   if (systemHealthPage) systemHealthPage.classList.add('hidden');
+  const configPage = $('config-page');
+  if (configPage) configPage.classList.add('hidden');
   $('app-view').classList.add('hidden');
   placeUserMenu('images');
   $('images-page').classList.remove('hidden');
@@ -6951,6 +7049,10 @@ function syncAdminRouteFromUrl() {
     if (showSystemHealthView()) return;
     try { history.replaceState({ dxView:'home' }, '', '/'); } catch (_) {}
   }
+  if (location.pathname === CONFIG_PATH) {
+    if (showConfigView()) return;
+    try { history.replaceState({ dxView:'home' }, '', '/'); } catch (_) {}
+  }
   if (location.pathname === IMAGES_PATH) {
     showImagesView();
     return;
@@ -6960,6 +7062,7 @@ function syncAdminRouteFromUrl() {
   hideDashboardsView(false);
   hideSystemHealthView(false);
   hideImagesView(false);
+  hideConfigView(false);
   placeUserMenu('admin');
   $('app-view').classList.remove('hidden');
   document.title = t('app.docTitle');
@@ -6985,7 +7088,7 @@ if ($('images-back')) $('images-back').addEventListener('click', closeImagesPage
 // shares admin page, regardless of how the current sub-page was reached.
 function goToSharesHome() {
   if (!isLoggedIn()) return;
-  if (activityPageOpen() || dashboardsPageOpen() || systemHealthPageOpen() || imagesPageOpen()) {
+  if (activityPageOpen() || dashboardsPageOpen() || systemHealthPageOpen() || imagesPageOpen() || configPageOpen()) {
     try {
       if (location.pathname !== '/') history.pushState({ dxView: 'home' }, '', '/');
     } catch (_) {}
@@ -8620,7 +8723,7 @@ $('shutdown-toggle').addEventListener('change', async (e) => {
 // ------------------------------------------------------------------
 // Idle auto-lock (optional). Locks the admin UI after N minutes with no REAL
 // user activity — background polling deliberately does not count, so a
-// forgotten tab still locks. Configured in the Configuration window and stored
+// forgotten tab still locks. Configured on the Configuration page and stored
 // server-side (settings.idleLockMinutes; 0 = off).
 // ------------------------------------------------------------------
 const IDLE_EVENTS = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'wheel'];
@@ -8662,7 +8765,7 @@ async function idleLockNow() {
 }
 
 // --- Configuration window (user menu) ---
-async function openConfigModal() {
+async function populateConfigPage() {
   closeUserMenu();
   const s = state.settings || {};
   syncShareQuickActionConfig();
@@ -8917,7 +9020,6 @@ async function openConfigModal() {
   enc.textContent = s.dataEncrypted ? t('cfg.encOn') : t('cfg.encOff');
   enc.className = 'muted sm' + (s.dataEncrypted ? ' cfg-ok' : '');
   $('config-error').classList.add('hidden');
-  $('config-overlay').classList.remove('hidden');
   void refreshStorageConnectors();
   // The periodic poll omits the custom logo (it can be ~256 KB) and sends only a
   // `publicLogoSet` flag. The modal is already visible, so fetch the full settings
@@ -8961,7 +9063,7 @@ if ($('cfg-ransom-refresh')) $('cfg-ransom-refresh').addEventListener('click', r
 // Storage connectors (rclone-backed, credentials never reach
 // the browser). Management and transfers are intentionally independent from the
 // main settings form so a connector test/import cannot accidentally save unrelated
-// fields in the long Configuration dialog.
+// fields on the Configuration page.
 let storageConnectors = [];
 let connectorEditingId = null;
 let connectorRefreshTimer = null;
@@ -9000,7 +9102,7 @@ function renderStorageConnectors(data) {
     cap.textContent = available
       ? t('connector.ready', { version:data.capabilities.version || 'rclone' })
       : t('connector.unavailable');
-    cap.className = 'sm ' + (available ? 'cfg-ok' : 'cfg-bad');
+    cap.className = 'sm ' + (available ? 'cfg-ok' : 'cfg-warn');
   }
   const datalist = $('connector-remotes');
   if (datalist) {
@@ -9066,13 +9168,22 @@ function renderStorageConnectors(data) {
     });
   }
   if (connectorRefreshTimer) { clearTimeout(connectorRefreshTimer); connectorRefreshTimer = null; }
-  if ((data && data.jobs || []).some((job) => ['queued','running'].includes(job.status)) && $('config-overlay') && !$('config-overlay').classList.contains('hidden')) {
+  if ((data && data.jobs || []).some((job) => ['queued','running'].includes(job.status)) && configPageOpen()) {
     connectorRefreshTimer = setTimeout(() => { connectorRefreshTimer = null; void refreshStorageConnectors(); }, 2500);
   }
 }
 async function refreshStorageConnectors() {
   try { renderStorageConnectors(await api('GET', '/api/storage/connectors', null, 30000)); }
-  catch (_) { connectorStatus('connector-capability', 'connector.loadFail', true); }
+  catch (error) {
+    // A genuinely failed API request is distinct from optional rclone being absent:
+    // the server returns HTTP 200 + capabilities.available=false for that normal case.
+    // Clear stale connector UI so a failed refresh never shows data from an older view.
+    storageConnectors = [];
+    updateConnectorTransferActions();
+    const list = $('connector-list'); if (list) list.replaceChildren();
+    const jobs = $('connector-jobs'); if (jobs) jobs.replaceChildren();
+    connectorStatus('connector-capability', 'connector.loadFail', true);
+  }
 }
 if ($('connector-add')) $('connector-add').addEventListener('click', async () => {
   const payload = connectorPayload();
@@ -9101,21 +9212,245 @@ if ($('connector-export')) $('connector-export').addEventListener('click', () =>
 if ($('connector-transfer-id')) $('connector-transfer-id').addEventListener('change', updateConnectorTransferActions);
 if ($('connector-refresh')) $('connector-refresh').addEventListener('click', refreshStorageConnectors);
 
-function closeConfigModal() {
-  $('config-overlay').classList.add('hidden');
-  if (connectorRefreshTimer) { clearTimeout(connectorRefreshTimer); connectorRefreshTimer = null; }
+// Web-storage links ---------------------------------------------------------
+// A web-storage link freezes the selected connector route server-side. Read-only
+// links stream downloads through rclone; reception/collaboration links stage each
+// upload temporarily for resumability/security checks, then publish it remotely.
+let webStorageMode = 'share';
+let webStoragePath = '';
+let webStorageSelectedPath = null;
+let webStorageSelectedIsDir = false;
+let webStorageLoadSerial = 0;
+function closeWebStorageModal() {
+  const overlay = $('web-storage-overlay'); if (!overlay) return;
+  overlay.classList.add('hidden');
+  webStorageLoadSerial++;
+  webStorageMode='share';
+  webStorageSelectedPath = null; webStorageSelectedIsDir = false; webStoragePath = '';
+  if ($('web-storage-connector')) $('web-storage-connector').replaceChildren();
+  if ($('web-storage-list')) $('web-storage-list').replaceChildren();
+  if ($('web-storage-path')) $('web-storage-path').textContent='/';
+  if ($('web-storage-selection')) $('web-storage-selection').textContent='—';
+  for (const id of ['web-storage-password','web-storage-name','web-storage-note','web-storage-maxdl','web-storage-rate','web-storage-maxfiles','web-storage-maxfiles-upload','web-storage-maxfile','web-storage-maxtotal','web-storage-maxfiles-sender','web-storage-maxmb-sender','web-storage-allow','web-storage-block']) if ($(id)) $(id).value='';
+  for (const id of ['web-storage-preview','web-storage-burn','web-storage-block-exec','web-storage-group-sender','web-storage-tag-sender','web-storage-require-sender','web-storage-allow-delete']) if ($(id)) $(id).checked=false;
+  if ($('web-storage-preview')) $('web-storage-preview').checked=true;
+  if ($('web-storage-write-options')) $('web-storage-write-options').classList.add('hidden');
+  if ($('web-storage-collab-delete-row')) $('web-storage-collab-delete-row').classList.add('hidden');
+  if ($('web-storage-inbox-group-row')) $('web-storage-inbox-group-row').classList.remove('hidden');
+  if ($('web-storage-inbox-tag-row')) $('web-storage-inbox-tag-row').classList.remove('hidden');
+  if ($('web-storage-inbox-sender-limits')) $('web-storage-inbox-sender-limits').classList.remove('hidden');
+  if ($('web-storage-inbox-require-row')) $('web-storage-inbox-require-row').classList.remove('hidden');
+  document.querySelectorAll('.web-storage-download-only').forEach((node)=>node.classList.remove('hidden'));
+  if ($('web-storage-error')) { $('web-storage-error').textContent=''; $('web-storage-error').classList.add('hidden'); }
 }
+function webStorageSetError(message) {
+  const node=$('web-storage-error'); if(!node)return;
+  node.textContent=message||''; node.classList.toggle('hidden', !message);
+}
+function webStorageSetSelection(path, isDir, name) {
+  webStorageSelectedPath = path == null ? null : String(path);
+  webStorageSelectedIsDir = !!isDir;
+  const label=$('web-storage-selection');
+  if (label) label.textContent = webStorageSelectedPath == null ? '—' : (name || webStorageSelectedPath || '/');
+  const create=$('web-storage-create'); if(create) create.disabled = webStorageSelectedPath == null || (webStorageMode!=='share' && !webStorageSelectedIsDir);
+  const list=$('web-storage-list');
+  if (list) Array.from(list.querySelectorAll('.web-storage-row')).forEach((row)=>row.classList.toggle('is-selected', row.dataset.path === webStorageSelectedPath));
+}
+function webStorageParentPath(value) {
+  const parts=String(value||'').split('/').filter(Boolean); parts.pop(); return parts.join('/');
+}
+async function loadWebStoragePath(pathValue) {
+  const connectorId=$('web-storage-connector') && $('web-storage-connector').value;
+  if (!connectorId) return;
+  const serial=++webStorageLoadSerial;
+  const clean=String(pathValue||'').replace(/^\/+|\/+$/g,'');
+  const list=$('web-storage-list');
+  if(list) list.replaceChildren(el('div',{class:'muted sm',text:'…'}));
+  webStorageSetError('');
+  try {
+    const data=await api('GET', `/api/storage/connectors/${encodeURIComponent(connectorId)}/list?path=${encodeURIComponent(clean)}`, null, 60000);
+    if (serial !== webStorageLoadSerial) return;
+    webStoragePath=String(data && data.path || clean || '');
+    if($('web-storage-path')) $('web-storage-path').textContent='/' + webStoragePath;
+    if($('web-storage-up')) $('web-storage-up').disabled=!webStoragePath;
+    if(list) list.textContent='';
+    const entries=Array.isArray(data && data.entries)?data.entries:[];
+    if(!entries.length && list) list.appendChild(el('div',{class:'muted sm',text:t('webStorage.empty')}));
+    entries.forEach((entry)=>{
+      if(!entry || !entry.path) return;
+      const row=el('button',{class:'web-storage-row',attrs:{type:'button'}});
+      row.dataset.path=entry.path;
+      row.appendChild(el('span',{text:entry.isDir?'📁':'☁'}));
+      row.appendChild(el('span',{class:'web-storage-row-name',text:entry.name||entry.path}));
+      row.appendChild(el('span',{class:'web-storage-row-size muted sm',text:entry.isDir?'—':formatBytes(entry.size||0)}));
+      row.addEventListener('click',()=>{
+        if(entry.isDir) { webStorageSetSelection(null,false); void loadWebStoragePath(entry.path); }
+        else if(webStorageMode==='share') webStorageSetSelection(entry.path,false,entry.name);
+      });
+      if(list) list.appendChild(row);
+    });
+  } catch (error) {
+    if(serial!==webStorageLoadSerial)return;
+    if(list) list.textContent='';
+    webStorageSetError(error && error.data && error.data.error === 'rclone-unavailable' ? t('webStorage.rcloneMissing') : t('webStorage.loadFail'));
+  }
+}
+async function openWebStorageModal(mode='share') {
+  webStorageMode=['inbox','collab'].includes(mode)?mode:'share';
+  const overlay=$('web-storage-overlay'); if(!overlay)return;
+  webStorageSetError(''); webStorageSetSelection(null,false); webStoragePath='';
+  const writable=webStorageMode!=='share';
+  const title=$('web-storage-title');
+  if(title) title.textContent=t(webStorageMode==='inbox'?'webStorage.inboxTitle':webStorageMode==='collab'?'webStorage.collabTitle':'webStorage.title');
+  const hint=$('web-storage-hint');
+  if(hint) hint.textContent=t(writable?'webStorage.writeHint':'webStorage.directHint');
+  document.querySelectorAll('.web-storage-download-only').forEach((node)=>node.classList.toggle('hidden',writable));
+  if($('web-storage-write-options')) $('web-storage-write-options').classList.toggle('hidden',!writable);
+  if($('web-storage-collab-delete-row')) $('web-storage-collab-delete-row').classList.toggle('hidden',webStorageMode!=='collab');
+  if($('web-storage-inbox-group-row')) $('web-storage-inbox-group-row').classList.toggle('hidden',webStorageMode!=='inbox');
+  if($('web-storage-inbox-tag-row')) $('web-storage-inbox-tag-row').classList.toggle('hidden',webStorageMode!=='inbox');
+  if($('web-storage-inbox-sender-limits')) $('web-storage-inbox-sender-limits').classList.toggle('hidden',webStorageMode!=='inbox');
+  if($('web-storage-inbox-require-row')) $('web-storage-inbox-require-row').classList.toggle('hidden',webStorageMode!=='inbox');
+  try {
+    const data=await api('GET','/api/storage/connectors',null,30000);
+    const available=!!(data && data.capabilities && data.capabilities.available);
+    let connectors=Array.isArray(data && data.connectors)?data.connectors:[];
+    if(writable) connectors=connectors.filter((connector)=>connector && !connector.readOnly);
+    if(!available) { toast(t('webStorage.rcloneMissing'),'err'); return; }
+    if(!connectors.length) { toast(t(writable?'webStorage.noneWritable':'webStorage.none'),'warn'); return; }
+    const select=$('web-storage-connector'); select.textContent='';
+    connectors.forEach((connector)=>select.appendChild(el('option',{attrs:{value:connector.id},text:connector.name})));
+    const settings=state.settings||{};
+    const forceNever=settings.newSharesNeverExpire===true;
+    if($('web-storage-expiry')) $('web-storage-expiry').value=forceNever?'0':String(settings.defaultExpiry||0);
+    if($('web-storage-password')) { $('web-storage-password').value=''; $('web-storage-password').required=!!settings.defaultRequirePassword; }
+    for(const id of ['web-storage-maxdl','web-storage-rate','web-storage-maxfiles','web-storage-maxfiles-upload','web-storage-maxfile','web-storage-maxtotal','web-storage-maxfiles-sender','web-storage-maxmb-sender','web-storage-allow','web-storage-block','web-storage-name','web-storage-note']) if($(id)) $(id).value='';
+    if($('web-storage-preview')) $('web-storage-preview').checked=settings.defaultAllowPreview!==false;
+    if($('web-storage-burn')) $('web-storage-burn').checked=!!settings.defaultBurnAfterDownload;
+    for(const id of ['web-storage-block-exec','web-storage-group-sender','web-storage-require-sender','web-storage-allow-delete']) if($(id)) $(id).checked=false;
+    overlay.classList.remove('hidden');
+    if (select) select.focus();
+    await loadWebStoragePath('');
+  } catch (_) { toast(t('webStorage.loadFail'),'err'); }
+}
+if($('new-web-storage-btn')) $('new-web-storage-btn').addEventListener('click',()=>openWebStorageModal('share'));
+if($('new-web-inbox-btn')) $('new-web-inbox-btn').addEventListener('click',()=>openWebStorageModal('inbox'));
+if($('new-web-collab-btn')) $('new-web-collab-btn').addEventListener('click',()=>openWebStorageModal('collab'));
+if($('web-storage-close')) $('web-storage-close').addEventListener('click',closeWebStorageModal);
+if($('web-storage-cancel')) $('web-storage-cancel').addEventListener('click',closeWebStorageModal);
+if($('web-storage-overlay')) $('web-storage-overlay').addEventListener('click',(e)=>{if(e.target===$('web-storage-overlay'))closeWebStorageModal();});
+document.addEventListener('keydown',(e)=>{if(e.key==='Escape'&&$('web-storage-overlay')&&!$('web-storage-overlay').classList.contains('hidden')){e.preventDefault();closeWebStorageModal();}});
+if($('web-storage-connector')) $('web-storage-connector').addEventListener('change',()=>{webStorageSetSelection(null,false);void loadWebStoragePath('');});
+if($('web-storage-up')) $('web-storage-up').addEventListener('click',()=>{webStorageSetSelection(null,false);void loadWebStoragePath(webStorageParentPath(webStoragePath));});
+if($('web-storage-refresh')) $('web-storage-refresh').addEventListener('click',()=>void loadWebStoragePath(webStoragePath));
+if($('web-storage-select-folder')) $('web-storage-select-folder').addEventListener('click',()=>webStorageSetSelection(webStoragePath,true,webStoragePath||'/'));
+if($('web-storage-create')) $('web-storage-create').addEventListener('click',async()=>{
+  if(webStorageSelectedPath==null || (webStorageMode!=='share'&&!webStorageSelectedIsDir))return;
+  const password=String($('web-storage-password').value||'');
+  if($('web-storage-password').required&&!password){toast(t('cfg.pwRequired'),'err');$('web-storage-password').focus();return;}
+  if(webStorageMode==='collab' && $('web-storage-allow-delete') && $('web-storage-allow-delete').checked && !password){webStorageSetError(t('webStorage.deleteNeedsPassword'));$('web-storage-password').focus();return;}
+  const button=$('web-storage-create'); button.disabled=true; webStorageSetError('');
+  const payload={
+    connectorId:$('web-storage-connector').value,
+    remotePath:webStorageSelectedPath,
+    name:String($('web-storage-name').value||'').trim(),
+    expiresInSeconds:parseInt($('web-storage-expiry').value,10)||0,
+    password,
+    note:String($('web-storage-note').value||''),
+  };
+  let endpoint='/api/shares/web-storage';
+  if(webStorageMode==='share'){
+    const rateRaw=String($('web-storage-rate').value||'').trim(),rateKBps=rateRaw===''?0:Number(rateRaw);
+    if(!Number.isInteger(rateKBps)||rateKBps<0){webStorageSetError(t('sh.addFail',{error:'invalid-rate'}));button.disabled=false;return;}
+    Object.assign(payload,{maxDownloads:parseInt($('web-storage-maxdl').value,10)||0,rateKBps,noPreview:!$('web-storage-preview').checked,burnAfterDownload:$('web-storage-burn').checked});
+  } else {
+    const csv=(id)=>String($(id)&&$(id).value||'').split(',').map((v)=>v.trim()).filter(Boolean);
+    Object.assign(payload,{
+      maxFiles:parseInt($('web-storage-maxfiles').value,10)||0,
+      maxFilesPerUpload:parseInt($('web-storage-maxfiles-upload').value,10)||0,
+      maxFileBytes:mbToBytes($('web-storage-maxfile')&&$('web-storage-maxfile').value),
+      maxTotalBytes:mbToBytes($('web-storage-maxtotal')&&$('web-storage-maxtotal').value),
+      allowExt:csv('web-storage-allow'), blockExt:csv('web-storage-block'),
+      blockExecutables:!!($('web-storage-block-exec')&&$('web-storage-block-exec').checked),
+    });
+    if(webStorageMode==='inbox') Object.assign(payload,{
+      maxFilesPerSender:parseInt($('web-storage-maxfiles-sender').value,10)||0,
+      maxBytesPerSender:mbToBytes($('web-storage-maxmb-sender').value),
+      groupBySender:!!$('web-storage-group-sender').checked,
+      tagBySender:!!$('web-storage-tag-sender').checked,
+      requireSenderName:!!$('web-storage-require-sender').checked,
+    });
+    else Object.assign(payload,{allowDelete:!!$('web-storage-allow-delete').checked});
+    endpoint=webStorageMode==='inbox'?'/api/inbox/web-storage':'/api/collab/web-storage';
+  }
+  try {
+    const resp=webStorageMode==='inbox'?await api('POST',endpoint,payload):await apiWithDlpOverride('POST',endpoint,payload);
+    if(password&&resp&&resp.share)rememberLinkPassword(resp.share.url,password);
+    if(resp&&resp.share)showCreatedShareLink(resp.share);
+    toast(t(webStorageMode==='inbox'?'webStorage.inboxCreated':webStorageMode==='collab'?'webStorage.collabCreated':'webStorage.created'),'ok');
+    closeWebStorageModal(); await refreshShares();
+  } catch(error) {
+    const code=error&&error.data&&error.data.error||error.message||'error';
+    webStorageSetError(code==='rclone-unavailable'?t('webStorage.rcloneMissing'):t('webStorage.createFail',{error:code}));
+  } finally { if(button && !$('web-storage-overlay').classList.contains('hidden')) button.disabled=webStorageSelectedPath==null||(webStorageMode!=='share'&&!webStorageSelectedIsDir); }
+});
+
+// --- Configuration page — dedicated owner/admin full-page view --------------
+const CONFIG_PATH = '/configuration';
+function configPageOpen() {
+  const page = $('config-page');
+  return !!page && !page.classList.contains('hidden');
+}
+function showConfigView() {
+  if (!['owner','admin',''].includes(state.role || '')) return false;
+  closeUserMenu();
+  stopDashboardAutoRefresh();
+  ['images-page','dashboards-page','system-health-page','activity-page'].forEach((id) => {
+    const page = $(id); if (page) page.classList.add('hidden');
+  });
+  $('app-view').classList.add('hidden');
+  placeUserMenu('config');
+  $('config-page').classList.remove('hidden');
+  document.title = t('app.name') + ' — ' + t('cfg.title');
+  void populateConfigPage();
+  window.scrollTo(0, 0);
+  return true;
+}
+function hideConfigView(showHome = true) {
+  const page = $('config-page'); if (!page) return;
+  closeUserMenu();
+  page.classList.add('hidden');
+  if (connectorRefreshTimer) { clearTimeout(connectorRefreshTimer); connectorRefreshTimer = null; }
+  if (showHome) {
+    placeUserMenu('admin');
+    $('app-view').classList.remove('hidden');
+    document.title = t('app.docTitle');
+  }
+}
+function openConfigPage() {
+  if (configPageOpen()) { void populateConfigPage(); return; }
+  if (!showConfigView()) return;
+  try { if (location.pathname !== CONFIG_PATH) history.pushState({ dxView:'config' }, '', CONFIG_PATH); } catch (_) {}
+}
+function closeConfigPage() {
+  if (!configPageOpen()) return;
+  if (history.state && history.state.dxView === 'config') history.back();
+  else {
+    hideConfigView();
+    if (location.pathname === CONFIG_PATH) { try { history.replaceState({ dxView:'home' }, '', '/'); } catch (_) {} }
+  }
+}
+// Compatibility names retained for older internal callers and restored historical tests.
+function openConfigModal() { openConfigPage(); }
+function closeConfigModal() { closeConfigPage(); }
 if ($('config-btn')) $('config-btn').addEventListener('click', (e) => {
   e.stopPropagation();
   closeUserMenu();
   closeDashMenu();
-  openConfigModal();
+  openConfigPage();
 });
-if ($('config-close')) $('config-close').addEventListener('click', closeConfigModal);
-if ($('config-cancel')) $('config-cancel').addEventListener('click', closeConfigModal);
-if ($('config-overlay')) $('config-overlay').addEventListener('click', (e) => {
-  if (e.target === $('config-overlay')) closeConfigModal();
-});
+if ($('config-close')) $('config-close').addEventListener('click', closeConfigPage);
+if ($('config-cancel')) $('config-cancel').addEventListener('click', closeConfigPage);
 if ($('cfg-idle-enable')) $('cfg-idle-enable').addEventListener('change', () => {
   $('cfg-idle-mins').disabled = !$('cfg-idle-enable').checked;
 });
@@ -9650,7 +9985,7 @@ if ($('config-form')) $('config-form').addEventListener('submit', async (e) => {
     if (r) { state.settings = r; applyBranding(r); }
     loadUndoPreview();
     applyIdleLock(idleLockMinutes);
-    closeConfigModal();
+    $('config-error').classList.add('hidden');
     if (r && r.persisted === false) toast(t('cfg.savedTemp'), 'warn');
     else if (r && r.tlsRestartRequired) toast(t('cfg.savedTlsRestart'), 'warn');
     else toast(t('cfg.saved'), 'ok');
@@ -9664,7 +9999,7 @@ if ($('config-form')) $('config-form').addEventListener('submit', async (e) => {
   }
 });
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && $('config-overlay') && !$('config-overlay').classList.contains('hidden')) closeConfigModal();
+  if (e.key === 'Escape' && configPageOpen() && !document.querySelector('.overlay:not(.hidden)')) closeConfigPage();
   if (e.key === 'Escape' && $('edit-overlay') && !$('edit-overlay').classList.contains('hidden')) closeEditModal();
 });
 
@@ -9852,6 +10187,9 @@ function applyRole(role) {
   show('share-config-menu', true);
   show('new-inbox-btn', canCreate);
   show('new-collab-btn', canCreate);
+  show('new-web-storage-btn', isFull);
+  show('new-web-inbox-btn', isFull);
+  show('new-web-collab-btn', isFull);
   show('new-secret-btn', canCreate && (window.DXCrypto && window.DXCrypto.available));
   show('new-enc-btn', canCreate && (window.DXCrypto && window.DXCrypto.available));
   show('export-csv-btn', isFull);
@@ -10676,7 +11014,7 @@ async function openShareModeration(s) {
 }
 
 function shareTypeLabel(s) {
-  return s.type === 'inbox' ? t('sh.inbox') : s.type === 'collab' ? t('sh.collab') : s.type === 'folder' ? t('sh.folder') : s.type === 'secret' ? t('sh.secret') : t('sh.file');
+  return s.type === 'inbox' ? t('sh.inbox') : s.type === 'collab' ? t('sh.collab') : s.type === 'web-storage' ? t('sh.webStorage') : s.type === 'folder' ? t('sh.folder') : s.type === 'secret' ? t('sh.secret') : t('sh.file');
 }
 function shareStatusLabel(s) {
   if (s.revoked) return t('sh.revoke');
@@ -10929,7 +11267,8 @@ function renderShares(shares) {
   pageShares.forEach((s) => {
     const isInbox = s.type === 'inbox';
     const isCollab = s.type === 'collab';
-    const noSize = isInbox || isCollab; // types without a single "size"
+    const isWebStorage = s.type === 'web-storage';
+    const noSize = isInbox || isCollab || (isWebStorage && s.webStorage && s.webStorage.isDir); // types without a single "size"
     const isPendingDelete = pendingShareDeletionFor(s.id);
     const card = el('div', { class: 'share' + (s.active ? '' : ' inactive') + (s.pinned ? ' pinned' : '') + (s.archived ? ' archived' : '') + (s.color ? ' share-colored' : '') + (isPendingDelete ? ' pending-delete' : ''), attrs: { 'data-share-id': s.id } });
     if (s.color) card.style.setProperty('--share-color', s.color);
@@ -10950,7 +11289,7 @@ function renderShares(shares) {
     headline.appendChild(sel);
     // A custom per-link emoji marker replaces the generic type glyph
     // when set (the type is still conveyed by the coloured badge below); empty → default.
-    const typeIco = isInbox ? '📥' : isCollab ? '🔁' : s.type === 'folder' ? '📁' : '📄';
+    const typeIco = isInbox ? '📥' : isCollab ? '🔁' : isWebStorage ? '☁' : s.type === 'folder' ? '📁' : '📄';
     const icoSpan = el('span', { class: 'ico', text: s.emoji || typeIco });
     if (s.emoji) icoSpan.setAttribute('title', t('sh.emojiTip'));
     headline.appendChild(icoSpan);
@@ -10971,21 +11310,22 @@ function renderShares(shares) {
     badges.appendChild(
       el('span', {
         class: 'badge ' + s.type,
-        text: isInbox ? t('sh.inbox') : isCollab ? t('sh.collab') : s.type === 'folder' ? t('sh.folder') : t('sh.file'),
+        text: isInbox ? t('sh.inbox') : isCollab ? t('sh.collab') : isWebStorage ? t('sh.webStorage') : s.type === 'folder' ? t('sh.folder') : t('sh.file'),
       })
     );
+    if (s.webStorage && !isWebStorage) badges.appendChild(el('span', { class: 'badge web-storage', text: '☁ ' + t('sh.webStorage') }));
     if (s.pinned) badges.appendChild(el('span', { class: 'badge pinned-badge', text: t('sh.pinned') }));
     if (s.archived) badges.appendChild(el('span', { class: 'badge archived-badge', text: t('sh.archived') }));
     if (s.dlp && (s.dlp.count || s.dlp.incomplete)) { const db=el(Array.isArray(s.dlp.findings)&&s.dlp.findings.length?'button':'span', { class: 'badge dlp-badge', text:s.dlp.incomplete && !s.dlp.count ? 'DLP ?' : t('dlp.badge', { n:s.dlp.count }), attrs:{ title:Array.isArray(s.dlp.findings)&&s.dlp.findings.length?t('dlp.showDetails'):(s.dlp.incomplete ? t('dlp.incompleteConfirm', { skipped:s.dlp.filesSkipped || 0, ocr:s.dlp.ocrErrors || 0, scan:s.dlp.scanErrors || 0 }) : (s.dlp.types || []).join(', ')), type:'button' } }); if(db.tagName==='BUTTON')db.addEventListener('click',(ev)=>{ev.preventDefault();ev.stopPropagation();showDlpDetails(s.dlp);}); badges.appendChild(db); }
     const totalUsage = Math.max(Number(s.views) || 0, Number(s.downloads) || 0, Number(s.stats && s.stats.count) || 0);
-    const downloadable = s.type === 'file' || s.type === 'folder';
+    const downloadable = s.type === 'file' || s.type === 'folder' || s.type === 'web-storage';
     if (downloadable && (Number(s.downloadsUsed) || 0) === 0) badges.appendChild(el('span', { class: 'badge never-used', text: t('sh.neverDownloaded') }));
     else if (totalUsage === 0) badges.appendChild(el('span', { class: 'badge never-used', text: t('sh.neverUsed') }));
     else if ((Number(s.views) || 0) >= 100 || (Number(s.downloads) || 0) >= 25 || (Number(s.stats && s.stats.count) || 0) >= 50) badges.appendChild(el('span', { class: 'badge very-active', text: t('sh.veryActive') }));
     if (s.hasPassword) badges.appendChild(el('span', { class: 'badge locked', text: t('sh.protected') }));
     if (isCollab && s.collab && s.collab.allowDelete) badges.appendChild(el('span', { class: 'badge burn', text: t('sh.canDelete') }));
     // Only meaningful where a .zip is actually offered (folders or multi-file collections).
-    if (!noSize && s.allowZip === false && (s.type === 'folder' || s.itemCount > 1)) {
+    if (!isWebStorage && !noSize && s.allowZip === false && (s.type === 'folder' || s.itemCount > 1)) {
       badges.appendChild(el('span', { class: 'badge zipoff', text: t('sh.zipOff') }));
     }
     if (!isInbox && s.burnAfterDownload) badges.appendChild(el('span', { class: 'badge burn', text: t('sh.oneTime') }));
@@ -16035,15 +16375,16 @@ function openEditModal(s) {
   $('edit-clearpw').checked = false;
   $('edit-clearpw').parentElement.classList.toggle('hidden', !s.hasPassword); // only when one exists
   $('edit-rate').value = s.rateKBps ? String(s.rateKBps) : '';
-  $('edit-allowzip').checked = s.allowZip !== false;
+  $('edit-allowzip').checked = s.webStorage ? false : s.allowZip !== false;
+  $('edit-allowzip').disabled = !!s.webStorage;
   $('edit-preview').checked = !s.noPreview;
   $('edit-burn').checked = !!s.burnAfterDownload;
   // The access gate applies to file + folder download links (both go
   // through requireActiveShare). The feedback form is rendered on the
   // file/collection page only, so it's offered for 'file' shares (single or bundle),
   // not folders. Hidden entirely for reception/collab/image links.
-  const gateType = s.type === 'file' || s.type === 'folder';
-  const fbType = s.type === 'file';
+  const gateType = s.type === 'file' || s.type === 'folder' || s.type === 'web-storage';
+  const fbType = s.type === 'file' || (s.type === 'web-storage' && !(s.webStorage && s.webStorage.isDir));
   if ($('edit-requestaccess')) { $('edit-requestaccess').checked = !!s.requestAccess; $('edit-requestaccess').parentElement.classList.toggle('hidden', !gateType); }
   if ($('edit-feedback')) { $('edit-feedback').checked = !!s.allowFeedback; $('edit-feedback').parentElement.classList.toggle('hidden', !fbType); }
   if ($('edit-color')) $('edit-color').value = s.color || '';
@@ -16071,7 +16412,9 @@ function openEditModal(s) {
     $('edit-rx-blockext').value = Array.isArray(rx.blockExt) ? rx.blockExt.join(', ') : '';
     $('edit-rx-groupsender').checked = !!rx.groupBySender; $('edit-rx-tagsender').checked = !!rx.tagBySender;
     $('edit-rx-rejectdup').checked = !!rx.rejectDuplicates; $('edit-rx-requiresender').checked = !!rx.requireSenderName;
+    $('edit-rx-rejectdup').disabled = !!s.webStorage;
     $('edit-rx-blockexec').checked = !!rx.blockExecutables; $('edit-rx-moderated').checked = !!rx.moderated;
+    $('edit-rx-moderated').disabled = !!s.webStorage;
     $('edit-rx-allowdelete').checked = !!rx.allowDelete; $('edit-rx-allowdelete-row').classList.toggle('hidden', s.type !== 'collab');
   }
   $('edit-error').classList.add('hidden');

@@ -13,6 +13,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Win32;
 
 
@@ -20,9 +21,9 @@ namespace DirectXfer.WindowsServerHost
 {
     internal static class Program
     {
-        internal const string AppVersion = "1.66.6";
-        internal const string RuntimeAppBuild = "1.66.6-launcher82-csharp";
-        internal const string HostVersion = "1.66.6-serverhost55-csharp";
+        internal const string AppVersion = "1.67.1";
+        internal const string RuntimeAppBuild = "1.67.1-launcher87-csharp";
+        internal const string HostVersion = "1.67.1-serverhost60-csharp";
         internal const int DefaultPort = 55750;
         internal const int MaxFallbackPort = 55769;
         internal const int StartupReadyTimeoutMs = 60000;
@@ -112,19 +113,24 @@ namespace DirectXfer.WindowsServerHost
         private static readonly IDictionary<string, string> CriticalRuntimeSha256 =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                { "package.json", "6a07fb99643002fe898a682ee73555249cf78a853e2120398b4ac50d8ced741d" },
-                { "package-lock.json", "130479dd2110d569980e7b9f3d1c3c3469a9d1d3b639e40102248c97bb86a535" },
-                { "server.js", "a91794477ab1431bd9509924f53f939e23d0ef34e074f6d613a31cd3d8117dae" },
-                { "lib/server/public-pages.js", "96954ccf1705f068c5579806c69f4f1d56916c2a803d1fc160be874c908f0615" },
+                { "package.json", "cd497fef46924eb963a76631de1e29ebd21698eb896a63a9bbf0acf56f42d757" },
+                { "package-lock.json", "135670b17465d9ed7b45335cfec43d14f5df126ce073e11acf37c165a3b465de" },
+                { "server.js", "f643b567005939004c16d5710f5d1f6b4040e0127a6685d35ad9dca6448662f0" },
+                { "lib/server/public-pages.js", "de434eac7cef447abbda40604621a354ff6c23320a42823cdcb8969dcc16c533" },
                 { "lib/server/tls-manager.js", "b82a1b195b6cb36d47d8d431b890e0479aaf9ca8d47f98e8ef9e046390610f7f" },
                 { "lib/server/network-services.js", "fd4a119ca1a75127b82c758c3d3555c12384c01b487bee3b3150a398217e4bdf" },
                 { "lib/server/backup-service.js", "65cb07c147b326475a833be6cbc668db733fc8183ec0b4eec919a876b3f04bc2" },
                 { "lib/server/notification-service.js", "a55beb8d5fdb09754eeb7f7d01974896efaad20dde3b9cf00e83bf4f7a7b9baa" },
-                { "public/app.js", "d50010dbae1548634d8bf1f711d301cd1d20d6ca2e2b5b2f76dee5ae632e6350" },
-                { "pwa/app.js", "b2a4a62f2eea3150ee63bceb60d44d72cfbca000996313604fce34efcec8c9d6" },
-                { "lib/dlp-utils.js", "dd4d15a3ebb1cc2e7183e9b68434cf69d50532f54fcbb9e90b5ffeb0cfdad086" },
-                { "lib/fd-utils.js", "322abf15ce7a15310d6d27ac1b0ca40892658d5f21198510f7e84b78b0070b13" },
+                { "public/app.js", "b4b27ccfd2973b5d9ee5c3d694da2995e434c8b6b0d7d10b63e96a094afd204d" },
+                { "pwa/app.js", "670f55d2456cc3439fb1eef891c0bee26246ebc59ea44d5af62bdd4b1d499ed6" },
+                { "lib/dlp-utils.js", "3ec0c2a1fb447aecbe82c7a6518621eb12de6eb5e9ac7de66f8a9fa3ee1d84a3" },
+                { "lib/fd-utils.js", "3ee5dafdb49f688b8cfab7446132adf9175f75ee45f00c25987ae88430d0ac14" },
                 { "pwa/dlp-local.js", "246267542621fc92f759438b2295b87f777ba6d6aa88b3c4d23dea25aebe7390" },
+                { "lib/storage-connectors.js", "a7b3ca52fbf7e94bfc821bfda2974ab1bb10518080608c48c9e4d90e4b8a7b74" },
+                { "lib/web-storage-share.js", "7a575bd6ed1e98eedd748bc96510e8e85a08eeb3c7dff64608a3fc97b3c8bbdf" },
+                { "lib/web-storage-writable.js", "afebff2f33a373d48a98e920bb55b2f0f5783c3cdfe6e640004532474becc102" },
+                { "public/index.html", "5f439207afd575d53acef27e5fe16cd61153192da6c8f7ec5744592ae66904bc" },
+                { "public/style.css", "3776d0f8de279b6612571025eb148ee469a327fde6f95e24c5eeb6c8f3d8e432" },
                 { "node_modules/express/package.json", "c7db3b72582355c80cdcef1ad7b2c9a8f53557550724c6bef8502e9818c2ebe7" }
             };
 
@@ -298,10 +304,20 @@ namespace DirectXfer.WindowsServerHost
         private int RunConfiguredCycle()
         {
             _config = LoadConfig();
-            var appDir = EnsureApplicationRuntime();
-            var node = EnsureNode();
+            var startupWatch = Stopwatch.StartNew();
+            var validationWatch = Stopwatch.StartNew();
+
+            // Application-integrity verification and Node verification are independent.
+            // Running them concurrently removes their cumulative startup cost while
+            // preserving the exact same fail-closed checks before Node is launched.
+            var appValidation = Task.Run(EnsureApplicationRuntime);
+            var nodeValidation = Task.Run(EnsureNode);
+            var appDir = appValidation.GetAwaiter().GetResult();
+            var node = nodeValidation.GetAwaiter().GetResult();
+
             OpenRuntimeLog();
-            AppendLog("[server-host] Direct-Xfer " + Program.AppVersion + " " + Program.HostVersion + " starting runtime cycle.");
+            AppendLog("[server-host] Direct-Xfer " + Program.AppVersion + " " + Program.HostVersion + " starting runtime cycle; validation=" +
+                validationWatch.ElapsedMilliseconds.ToString(CultureInfo.InvariantCulture) + " ms.");
 
             _port = ChooseRuntimePort();
             _token = RandomToken();
@@ -327,7 +343,8 @@ namespace DirectXfer.WindowsServerHost
                 return 1;
             }
 
-            AppendLog("[server-host] server ready on " + _scheme + "://127.0.0.1:" + _port.ToString(CultureInfo.InvariantCulture));
+            AppendLog("[server-host] server ready on " + _scheme + "://127.0.0.1:" + _port.ToString(CultureInfo.InvariantCulture) +
+                "; startup=" + startupWatch.ElapsedMilliseconds.ToString(CultureInfo.InvariantCulture) + " ms.");
             var readyWatch = Stopwatch.StartNew();
             var nextHealthProbeMs = (long)Program.HealthProbeIntervalMs;
             var consecutiveHealthFailures = 0;
@@ -592,8 +609,12 @@ namespace DirectXfer.WindowsServerHost
 
         private static string FileSha256(string path)
         {
+            // node.exe is tens of megabytes. SequentialScan plus a large userspace
+            // buffer avoids thousands of tiny reads while keeping full SHA-256
+            // verification on every cold ServerHost start.
             using (var sha = SHA256.Create())
-            using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+            using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read,
+                1024 * 1024, FileOptions.SequentialScan))
                 return BitConverter.ToString(sha.ComputeHash(stream)).Replace("-", string.Empty).ToLowerInvariant();
         }
 
@@ -874,6 +895,17 @@ namespace DirectXfer.WindowsServerHost
                 }
 
                 if (!string.Equals(FileSha256(full), expectedHash, StringComparison.OrdinalIgnoreCase)) return false;
+
+                // For Direct-Xfer's pinned private Node binary the exact SHA-256 and
+                // AMD64 PE checks already identify the executable byte-for-byte. Spawning
+                // a second Node process only to ask --version adds cold-start overhead
+                // without adding an integrity property. External/user-supplied Node paths
+                // still execute --version below to enforce the supported-version policy.
+                if (bundled)
+                {
+                    return Version.TryParse(Program.NodeVersion, out var pinnedVersion) && pinnedVersion != null &&
+                        IsSupportedNodeVersion(pinnedVersion);
+                }
 
                 using (var process = new Process())
                 {

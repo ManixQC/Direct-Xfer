@@ -9,8 +9,8 @@
 (function () {
   // Build tag, shown in the footer so a user can confirm at a glance which version
   // is actually running after an update. Keep it in lock-step with sw.js VERSION.
-  var APP_VERSION = '1.66.6';
-  var APP_BUILD = '2026.08.18-pwa356';
+  var APP_VERSION = '1.67.1';
+  var APP_BUILD = '2026.08.18-pwa360';
   // Upload blocks are deliberately small on mobile. A number of reverse proxies
   // still default to a 1 MiB request-body limit; an 8 MiB first block can therefore
   // be rejected before the browser emits any useful progress event, which looks like
@@ -526,17 +526,17 @@
   Object.assign(STRINGS.fr, {
     sharesStatsButton:'📊 Stats', shareStatsTitle:'Statistiques détaillées', shareStatsLoading:'Chargement des statistiques…', shareStatsUnavailable:'Statistiques indisponibles',
     shareStatsOverview:'Vue d’ensemble', shareStatsTransfers:'Transferts', shareStatsVolume:'Volume', shareStatsAverageSize:'Taille moyenne', shareStatsSuccess:'Taux de réussite', shareStatsCompleted:'Terminés', shareStatsInterrupted:'Interrompus', shareStatsSpeed:'Vitesse moyenne', shareStatsViews:'Vues', shareStatsVisitors:'Visiteurs', shareStatsStorage:'Stockage', shareStatsDownloads:'Téléchargements',
-    shareStatsDetails:'Informations du partage', shareStatsStatus:'État', shareStatsType:'Type', shareStatsOwner:'Propriétaire', shareStatsCreated:'Créé', shareStatsExpiry:'Expiration', shareStatsItems:'Éléments', shareStatsLastActivity:'Dernière activité', shareStatsFirstActivity:'Première activité', shareStatsTags:'Tags', shareStatsPath:'Chemin', shareStatsUrl:'URL', shareStatsQuota:'Quotas', shareStatsFiles:'Fichiers', shareStatsLive:'Transferts en cours', shareStatsActivity14:'Activité — 14 derniers jours', shareStatsCountries:'Pays', shareStatsClients:'Clients', shareStatsRecent:'Transferts récents', shareStatsNoRecent:'Aucun transfert récent.', shareStatsUnknown:'Inconnu', shareStatsNever:'Jamais', shareStatsActive:'Actif', shareStatsInactive:'Inactif', shareStatsPaused:'En pause', shareStatsScheduled:'Planifié', shareStatsExpired:'Expiré', shareStatsRevoked:'Révoqué', shareStatsNoData:'Aucune donnée disponible.', shareStatsFile:'Fichier', shareStatsFolder:'Dossier', shareStatsCollab:'Collaboration'
+    shareStatsDetails:'Informations du partage', shareStatsStatus:'État', shareStatsType:'Type', shareStatsOwner:'Propriétaire', shareStatsCreated:'Créé', shareStatsExpiry:'Expiration', shareStatsItems:'Éléments', shareStatsLastActivity:'Dernière activité', shareStatsFirstActivity:'Première activité', shareStatsTags:'Tags', shareStatsPath:'Chemin', shareStatsUrl:'URL', shareStatsQuota:'Quotas', shareStatsFiles:'Fichiers', shareStatsLive:'Transferts en cours', shareStatsActivity14:'Activité — 14 derniers jours', shareStatsCountries:'Pays', shareStatsClients:'Clients', shareStatsRecent:'Transferts récents', shareStatsNoRecent:'Aucun transfert récent.', shareStatsUnknown:'Inconnu', shareStatsNever:'Jamais', shareStatsActive:'Actif', shareStatsInactive:'Inactif', shareStatsPaused:'En pause', shareStatsScheduled:'Planifié', shareStatsExpired:'Expiré', shareStatsRevoked:'Révoqué', shareStatsNoData:'Aucune donnée disponible.', shareStatsFile:'Fichier', shareStatsFolder:'Dossier', shareStatsCollab:'Collaboration', shareStatsWebStorage:'Stockage web'
   });
   Object.assign(STRINGS.en, {
     sharesStatsButton:'📊 Stats', shareStatsTitle:'Detailed statistics', shareStatsLoading:'Loading statistics…', shareStatsUnavailable:'Statistics unavailable',
     shareStatsOverview:'Overview', shareStatsTransfers:'Transfers', shareStatsVolume:'Volume', shareStatsAverageSize:'Average size', shareStatsSuccess:'Success rate', shareStatsCompleted:'Completed', shareStatsInterrupted:'Interrupted', shareStatsSpeed:'Average speed', shareStatsViews:'Views', shareStatsVisitors:'Visitors', shareStatsStorage:'Storage', shareStatsDownloads:'Downloads',
-    shareStatsDetails:'Share information', shareStatsStatus:'Status', shareStatsType:'Type', shareStatsOwner:'Owner', shareStatsCreated:'Created', shareStatsExpiry:'Expiry', shareStatsItems:'Items', shareStatsLastActivity:'Last activity', shareStatsFirstActivity:'First activity', shareStatsTags:'Tags', shareStatsPath:'Path', shareStatsUrl:'URL', shareStatsQuota:'Quotas', shareStatsFiles:'Files', shareStatsLive:'Active transfers', shareStatsActivity14:'Activity — last 14 days', shareStatsCountries:'Countries', shareStatsClients:'Clients', shareStatsRecent:'Recent transfers', shareStatsNoRecent:'No recent transfers.', shareStatsUnknown:'Unknown', shareStatsNever:'Never', shareStatsActive:'Active', shareStatsInactive:'Inactive', shareStatsPaused:'Paused', shareStatsScheduled:'Scheduled', shareStatsExpired:'Expired', shareStatsRevoked:'Revoked', shareStatsNoData:'No data available.', shareStatsFile:'File', shareStatsFolder:'Folder', shareStatsCollab:'Collaboration'
+    shareStatsDetails:'Share information', shareStatsStatus:'Status', shareStatsType:'Type', shareStatsOwner:'Owner', shareStatsCreated:'Created', shareStatsExpiry:'Expiry', shareStatsItems:'Items', shareStatsLastActivity:'Last activity', shareStatsFirstActivity:'First activity', shareStatsTags:'Tags', shareStatsPath:'Path', shareStatsUrl:'URL', shareStatsQuota:'Quotas', shareStatsFiles:'Files', shareStatsLive:'Active transfers', shareStatsActivity14:'Activity — last 14 days', shareStatsCountries:'Countries', shareStatsClients:'Clients', shareStatsRecent:'Recent transfers', shareStatsNoRecent:'No recent transfers.', shareStatsUnknown:'Unknown', shareStatsNever:'Never', shareStatsActive:'Active', shareStatsInactive:'Inactive', shareStatsPaused:'Paused', shareStatsScheduled:'Scheduled', shareStatsExpired:'Expired', shareStatsRevoked:'Revoked', shareStatsNoData:'No data available.', shareStatsFile:'File', shareStatsFolder:'Folder', shareStatsCollab:'Collaboration', shareStatsWebStorage:'Web storage'
   });
   Object.assign(STRINGS.es, {
     sharesStatsButton:'📊 Stats', shareStatsTitle:'Estadísticas detalladas', shareStatsLoading:'Cargando estadísticas…', shareStatsUnavailable:'Estadísticas no disponibles',
     shareStatsOverview:'Resumen', shareStatsTransfers:'Transferencias', shareStatsVolume:'Volumen', shareStatsAverageSize:'Tamaño medio', shareStatsSuccess:'Tasa de éxito', shareStatsCompleted:'Completadas', shareStatsInterrupted:'Interrumpidas', shareStatsSpeed:'Velocidad media', shareStatsViews:'Vistas', shareStatsVisitors:'Visitantes', shareStatsStorage:'Almacenamiento', shareStatsDownloads:'Descargas',
-    shareStatsDetails:'Información del recurso', shareStatsStatus:'Estado', shareStatsType:'Tipo', shareStatsOwner:'Propietario', shareStatsCreated:'Creado', shareStatsExpiry:'Caducidad', shareStatsItems:'Elementos', shareStatsLastActivity:'Última actividad', shareStatsFirstActivity:'Primera actividad', shareStatsTags:'Etiquetas', shareStatsPath:'Ruta', shareStatsUrl:'URL', shareStatsQuota:'Cuotas', shareStatsFiles:'Archivos', shareStatsLive:'Transferencias activas', shareStatsActivity14:'Actividad — últimos 14 días', shareStatsCountries:'Países', shareStatsClients:'Clientes', shareStatsRecent:'Transferencias recientes', shareStatsNoRecent:'No hay transferencias recientes.', shareStatsUnknown:'Desconocido', shareStatsNever:'Nunca', shareStatsActive:'Activo', shareStatsInactive:'Inactivo', shareStatsPaused:'En pausa', shareStatsScheduled:'Programado', shareStatsExpired:'Caducado', shareStatsRevoked:'Revocado', shareStatsNoData:'No hay datos disponibles.', shareStatsFile:'Archivo', shareStatsFolder:'Carpeta', shareStatsCollab:'Colaboración'
+    shareStatsDetails:'Información del recurso', shareStatsStatus:'Estado', shareStatsType:'Tipo', shareStatsOwner:'Propietario', shareStatsCreated:'Creado', shareStatsExpiry:'Caducidad', shareStatsItems:'Elementos', shareStatsLastActivity:'Última actividad', shareStatsFirstActivity:'Primera actividad', shareStatsTags:'Etiquetas', shareStatsPath:'Ruta', shareStatsUrl:'URL', shareStatsQuota:'Cuotas', shareStatsFiles:'Archivos', shareStatsLive:'Transferencias activas', shareStatsActivity14:'Actividad — últimos 14 días', shareStatsCountries:'Países', shareStatsClients:'Clientes', shareStatsRecent:'Transferencias recientes', shareStatsNoRecent:'No hay transferencias recientes.', shareStatsUnknown:'Desconocido', shareStatsNever:'Nunca', shareStatsActive:'Activo', shareStatsInactive:'Inactivo', shareStatsPaused:'En pausa', shareStatsScheduled:'Programado', shareStatsExpired:'Caducado', shareStatsRevoked:'Revocado', shareStatsNoData:'No hay datos disponibles.', shareStatsFile:'Archivo', shareStatsFolder:'Carpeta', shareStatsCollab:'Colaboración', shareStatsWebStorage:'Almacenamiento web'
   });
 
 
@@ -615,7 +615,7 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
       });
     });
     var manifest = document.getElementById('app-manifest');
-    if (manifest) manifest.href = (lang === 'fr' ? '/direct-xfer-pwa.webmanifest' : '/direct-xfer-pwa-' + lang + '.webmanifest') + '?v=356';
+    if (manifest) manifest.href = (lang === 'fr' ? '/direct-xfer-pwa.webmanifest' : '/direct-xfer-pwa-' + lang + '.webmanifest') + '?v=360';
     $('lang-select').value = lang;
     $('dest-save-btn').textContent = editingToken ? t('updateDestination') : t('saveDestination');
     renderDests(); renderQueue(); renderHistory(); renderDeviceStatus();
@@ -3162,12 +3162,13 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
       var meta = document.createElement('div'); meta.className = 'muted sm';
       var bits = [];
       if (s.type === 'folder') bits.push('📁');
+      if (s.type === 'web-storage') bits.push('☁');
       if (s.type === 'collab') bits.push('🔁');
       if (s.itemCount != null) bits.push(t('sharesItems', { n: s.itemCount }));
       var totalBytes = Number(s.logicalBytes);
       if (s.logicalBytesReady !== false && Number.isFinite(totalBytes) && totalBytes >= 0) bits.push(t('sharesTotalSize', { size: fmtBytes(totalBytes) }));
       else if (s.logicalBytesReady !== false && s.size != null) bits.push(t('sharesTotalSize', { size: fmtBytes(s.size) }));
-      if ((s.type === 'file' || s.type === 'folder') && (Number(s.downloadsUsed) || 0) === 0) bits.push('◌ ' + t('sharesNeverDownloaded'));
+      if ((s.type === 'file' || s.type === 'folder' || s.type === 'web-storage') && (Number(s.downloadsUsed) || 0) === 0) bits.push('◌ ' + t('sharesNeverDownloaded'));
       if (s.hasPassword) bits.push('🔒 ' + t('sharesPasswordProtected'));
       var expiry = Number(s.effectiveExpiresAt) || 0;
       if (expiry > Date.now() && expiry - Date.now() <= 86400000) bits.push('⏳ ' + t('sharesExpiresSoon'));
@@ -3200,7 +3201,7 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
       var pin=document.createElement('button');pin.type='button';pin.className='btn ghost sm';pin.textContent=t(s.pinned?'sharesUnpin':'sharesPin');pin.addEventListener('click',function(){toggleHostSharePin(s);});actions.appendChild(pin);
       var archive=document.createElement('button');archive.type='button';archive.className='btn ghost sm';archive.textContent=t(s.archived?'sharesUnarchive':'sharesArchive');archive.addEventListener('click',function(){toggleHostShareArchive(s);});actions.appendChild(archive);
       if(s.revoked){var react=document.createElement('button');react.type='button';react.className='btn ghost sm';react.textContent=t('sharesReactivate');react.addEventListener('click',function(){reactivateHostShare(s);});actions.appendChild(react);}
-      if (s.type === 'file' || s.type === 'folder') {
+      if (s.type === 'file' || s.type === 'folder' || s.type === 'web-storage') {
         var rate = document.createElement('button'); rate.type='button'; rate.className='btn ghost sm'; rate.textContent='⚡ '+t('sharesRateEdit');
         rate.addEventListener('click', function(){ editHostShareRate(s); }); actions.appendChild(rate);
       }
@@ -3230,7 +3231,7 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
     return t(map[String(status || '').toLowerCase()] || 'shareStatsUnknown');
   }
   function shareStatsTypeLabel(type) {
-    var map = { file:'shareStatsFile', folder:'shareStatsFolder', collab:'shareStatsCollab' };
+    var map = { file:'shareStatsFile', folder:'shareStatsFolder', collab:'shareStatsCollab', 'web-storage':'shareStatsWebStorage' };
     return t(map[String(type || '').toLowerCase()] || 'shareStatsUnknown');
   }
   function shareStatsMetric(icon, value, label, detail) {
@@ -9534,7 +9535,7 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
   function registerServiceWorker() {
     if (!navigator.serviceWorker || typeof navigator.serviceWorker.register !== 'function') return;
     navigator.serviceWorker.addEventListener('controllerchange', refreshToNewVersion);
-    var registrationPromise = navigator.serviceWorker.register('/direct-xfer-pwa-sw.js?v=356', { scope: '/app/' }).then(function (reg) {
+    var registrationPromise = navigator.serviceWorker.register('/direct-xfer-pwa-sw.js?v=360', { scope: '/app/' }).then(function (reg) {
       swReg = reg;
       navigator.serviceWorker.ready.then(function () {
         swReadyForInstall = true;

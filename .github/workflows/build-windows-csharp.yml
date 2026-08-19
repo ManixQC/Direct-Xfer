@@ -1,5 +1,5 @@
 name: Build Direct-Xfer Windows C# + Installer
-run-name: v1.66.6
+run-name: v1.67.1
 
 on:
   workflow_dispatch:
@@ -27,9 +27,9 @@ jobs:
   build-windows:
     runs-on: windows-2025
     env:
-      DX_VERSION: '1.66.6'
-      DX_RUNTIME_BUILD: '1.66.6-launcher82-csharp'
-      DX_SERVER_HOST_BUILD: '1.66.6-serverhost55-csharp'
+      DX_VERSION: '1.67.1'
+      DX_RUNTIME_BUILD: '1.67.1-launcher87-csharp'
+      DX_SERVER_HOST_BUILD: '1.67.1-serverhost60-csharp'
       DX_DOTNET_RUNTIME_VERSION: '10.0.11'
       DX_DOTNET_RUNTIME_ZIP_SHA512: 'd9ab9c0d9916b8fa3585b5f403057f594ffffb8364dac09e0007dd8ac671c86754935b980d8fb5da83cb1b82ac3cd57cc407c969e6d837aaa2fae21047cb7448'
       DX_NODE_VERSION: '24.19.0'
@@ -368,11 +368,11 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed: $LASTEXITCODE" }
       - uses: actions/upload-artifact@v6
         with:
-          name: Direct-Xfer-1.66.6-Windows-CSharp
-          path: dist/Direct-Xfer-1.66.6-Windows-CSharp/**
+          name: Direct-Xfer-1.67.1-Windows-CSharp
+          path: dist/Direct-Xfer-1.67.1-Windows-CSharp/**
           if-no-files-found: error
       - uses: actions/upload-artifact@v6
         with:
-          name: Direct-Xfer-Setup-1.66.6
-          path: dist/installer/Direct-Xfer-Setup-1.66.6.exe
+          name: Direct-Xfer-Setup-1.67.1
+          path: dist/installer/Direct-Xfer-Setup-1.67.1.exe
           if-no-files-found: error

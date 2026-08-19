@@ -1,5 +1,4 @@
 'use strict';
-
 /*
  * Direct-Xfer — direct HTTP file sharing, single server.
  * Backend entry point (config, state, routes and feature orchestration).
@@ -19,7 +18,6 @@
  *
  * Large cohesive services should live in ./lib/server rather than growing this file.
  */
-
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -49,6 +47,8 @@ const { createNetworkServices } = require('./lib/server/network-services');
 const { createNotificationService } = require('./lib/server/notification-service');
 const { createPublicPages } = require('./lib/server/public-pages');
 const { createBackupService } = require('./lib/server/backup-service');
+const { createWebStorageShareTools } = require('./lib/web-storage-share');
+const { createWebStorageWritableTools, createWebStorageUploadHandler, connectorStatus:webStorageConnectorStatus } = require('./lib/web-storage-writable');
 const { openFd, closeFd, statFd, readFd } = require('./lib/fd-utils');
 const { renderKind, highlightCode, renderMarkdown } = require('./lib/text-render');
 const { SEMANTIC_GROUPS, normalizeSearchText, searchTokens, semanticStem, semanticTerms } = require('./lib/search-utils');
@@ -82,7 +82,6 @@ try { nodemailer = require('nodemailer'); } catch (_) { nodemailer = null; }
 let webpush = null;
 try { webpush = require('web-push'); } catch (_) { webpush = null; }
 const pkg = require('./package.json');
-
 // Application identity.
 const APP_NAME = 'Direct-Xfer';
 // Version: single source = package.json. Copyright year.
@@ -99,26 +98,20 @@ const RELEASE_DATE = (() => {
   try { return fs.statSync(path.join(__dirname, 'package.json')).mtime.toISOString(); }
   catch (_) { return null; }
 })();
-
 // ===================================================================
 //  CONFIGURATION (environment variables)
 // ===================================================================
-
 const PORT = int(process.env.PORT, 55750);
 const BIND = process.env.BIND || '0.0.0.0';
-
-
 // Windows ServerHost integration. The token is random and exists only for the
 // lifetime of the supervised Node process; it enables loopback-only private
 // lifecycle routes and distinguishes the Windows runtime from normal Node/Docker use.
 const DX_WINDOWS_LAUNCHER_TOKEN = String(process.env.DX_WINDOWS_LAUNCHER_TOKEN || '').trim();
 const DX_WINDOWS_SHUTDOWN_MARKER = String(process.env.DX_WINDOWS_SHUTDOWN_MARKER || '').trim();
-
 function ensureWindowsPortableFirewallAccess() {
   if (process.platform !== 'win32' || !DX_WINDOWS_LAUNCHER_TOKEN) return;
   if (!(BIND === '0.0.0.0' || BIND === '::')) return;
   const ruleName = `Direct-Xfer-TCP-${PORT}`;
-
   // Do not trust a rule merely because its display name exists. A previous
   // Direct-Xfer run, a manual edit or Windows migration can leave a disabled,
   // outbound, wrong-port or overly broad rule behind. Query the structured
@@ -145,7 +138,6 @@ function ensureWindowsPortableFirewallAccess() {
       console.log(`  • Windows Firewall : rule ready for TCP ${PORT} (local subnet)`);
       return;
     }
-
     // The portable EXE normally runs unelevated. Ask Windows for elevation only
     // if the exact rule is absent/invalid. Delete stale rules with our generated
     // name before recreating one so duplicate or disabled rules cannot shadow the
@@ -170,7 +162,6 @@ function ensureWindowsPortableFirewallAccess() {
     });
   });
 }
-
 // Native HTTPS. Priority: explicit TLS_CERT/TLS_KEY > Direct-Xfer Local CA.
 // TLS_SELF_SIGNED is retained as a legacy environment switch for Local CA mode.
 // Host filesystem, mounted read-only inside the container (/:/host:ro).
@@ -179,17 +170,14 @@ function ensureWindowsPortableFirewallAccess() {
 const HOST_ROOT = path.resolve(process.env.HOST_ROOT || '/host');
 // Persistent data (shares, generated password).
 const DATA_DIR = path.resolve(process.env.DATA_DIR || '/data');
-
 const PUBLIC_HOST = (process.env.PUBLIC_HOST || '').trim();
 const PUBLIC_URL = (process.env.PUBLIC_URL || '').trim().replace(/\/+$/, '');
-
 // Host LAN IP, to be provided: behind Docker's bridge network,
 // the container only sees its internal IP (e.g. 192.168.80.2), not the host's.
 const LOCAL_IP = (() => {
   const v = (process.env.LOCAL_IP || '').trim();
   return /^\d{1,3}(\.\d{1,3}){3}$/.test(v) ? v : '';
 })();
-
 const tlsManager = createTlsManager({
   fs, path, crypto, os, net, tls, forge, bool, isPrivateIp,
   BIND, DATA_DIR, PUBLIC_HOST, PUBLIC_URL, LOCAL_IP,
@@ -206,23 +194,18 @@ const {
   refreshProvidedTlsServerContext, refreshLocalTlsServerContext,
 } = tlsManager;
 const { TLS_CERT, TLS_KEY, TLS_DAY_MS, TLS_REFRESH_INTERVAL_MS } = tlsManager.config;
-
 // trust proxy: "true"/"1" => 1 hop (NPM), an integer => n hops, otherwise false.
 const TRUST_PROXY = parseTrustProxy(process.env.TRUST_PROXY);
-
 // Initial value of auto-shutdown (then controlled from the admin interface).
 const SHUTDOWN_AFTER_DOWNLOAD = bool(process.env.SHUTDOWN_AFTER_DOWNLOAD);
-
 const SESSION_TTL_MS = int(process.env.SESSION_TTL_HOURS, 8) * 3600 * 1000;
 const MAX_ZIP_BYTES = int(process.env.MAX_ZIP_BYTES, 20 * 1024 ** 3); // 20 GiB; set 0 to disable
 const MAX_CONCURRENT_ZIPS = Math.max(1, int(process.env.MAX_CONCURRENT_ZIPS, 2));
-
 // Optional at-rest encryption of the metadata store (shares.json). When set, the
 // file — which holds host paths, filenames, hostnames and password hashes — is
 // written as an AES-256-GCM envelope instead of plaintext JSON. The key is
 // derived from this secret; without it the file cannot be read (startup aborts).
 const DATA_KEY = (process.env.DATA_KEY || '').trim();
-
 // Destination folder for incoming files (reception links).
 // Mount a WRITABLE host folder here in the container (e.g. -v /path/incoming:/Direct-Xfer).
 const INBOX_DIR = path.resolve(process.env.INBOX_DIR || '/Direct-Xfer');
@@ -257,7 +240,6 @@ try { fs.mkdirSync(ENC_DIR, { recursive: true }); } catch (_) {}
 // never holds the key), deleted on first read. Kept under DATA_DIR.
 const SECRETS_DIR = path.join(DATA_DIR, 'secrets');
 try { fs.mkdirSync(SECRETS_DIR, { recursive: true }); } catch (_) {}
-
 // Photos tab — all managed image bytes live under one configurable root. Full
 // images are copied here (the source file remains untouched); Mini and Micro are
 // generated in the browser. The legacy paths remain readable for upgrades.
@@ -276,7 +258,6 @@ const LEGACY_PHOTO_HISTORY_DIR = path.join(DATA_DIR, 'photo-history');
 for (const dir of [IMAGE_STORE_DIR, FULL_IMAGES_DIR, THUMBS_DIR, MICROS_DIR, PHOTO_HISTORY_DIR, PHOTO_VERSIONS_DIR, ADAPTIVE_IMAGES_DIR, DLP_QUARANTINE_DIR]) {
   try { fs.mkdirSync(dir, { recursive: true }); } catch (_) {}
 }
-
 // Startup storage check: warn (console banner + login page) when the reception
 // folder (/Direct-Xfer) or the images folder (/Images) was left un-configured in
 // docker-compose.yml. Two cases are caught:
@@ -359,7 +340,6 @@ const PHOTO_HISTORY_MAX = 50;
 const IMAGE_MAX_BYTES = 40 * 1024 * 1024; // per uploaded image (PWA image links)
 const THUMB_MAX_BYTES = 2 * 1024 * 1024;  // per client-generated thumbnail
 const MICRO_MAX_BYTES = 1024 * 1024;       // per client-generated micro image
-
 // Optional antivirus scan of received files via a co-located clamd
 // (ClamAV daemon). Enabled by setting CLAMAV_HOST (e.g. "clamav"). Infected
 // uploads are quarantined and never delivered; a security alert is dispatched.
@@ -367,35 +347,29 @@ const CLAMAV_HOST = (process.env.CLAMAV_HOST || '').trim();
 const CLAMAV_PORT = int(process.env.CLAMAV_PORT, 3310);
 const QUARANTINE_DIR = path.join(DATA_DIR, 'quarantine');
 function clamavEnabled() { return !!CLAMAV_HOST; }
-
 // Persistent transfer journal (JSONL, one record per finished transfer). Kept
 // separate from the in-memory "recent history" so it survives beyond the last
 // 50 entries and can be exported. Soft-capped: trimmed to the tail on startup.
 const MAX_LOG_BYTES = int(process.env.MAX_LOG_BYTES, 8 * 1024 * 1024); // 0 = unlimited
-
 // Access to the admin interface: restricted to the local network by default
 // (auto-detected). Set ADMIN_ALLOW_ANY=true to allow it from any network.
 const ADMIN_ALLOW_ANY = bool(process.env.ADMIN_ALLOW_ANY);
-
 // Allowlist of IPs permitted to reach the admin (IPv4 IP or CIDR,
 // separated by commas/spaces). Empty = disabled. When set,
 // ONLY these IPs (plus loopback) can reach the admin — useful behind a
 // reverse proxy (set TRUST_PROXY there to see the real visitor IP).
 const ADMIN_ALLOWED_IPS = parseIpList(process.env.ADMIN_ALLOWED_IPS);
-
 // Webhook notifications (optional): URL called via POST on every
 // complete download or received file. Format auto-detected (Discord / Slack /
 // ntfy) or forced via WEBHOOK_FORMAT (discord | slack | ntfy | json).
 const WEBHOOK_URL = (process.env.WEBHOOK_URL || '').trim();
 const WEBHOOK_FORMAT = (process.env.WEBHOOK_FORMAT || '').trim().toLowerCase();
-
 // E-mail (SMTP) notifications (optional): when SMTP_URL is set in the environment
 // (e.g. smtps://user:pass@smtp.example.com:465), it overrides the UI SMTP fields.
 // EMAIL_FROM / EMAIL_TO set the default sender / recipient.
 const SMTP_URL = (process.env.SMTP_URL || '').trim();
 const EMAIL_FROM = (process.env.EMAIL_FROM || '').trim();
 const EMAIL_TO = (process.env.EMAIL_TO || '').trim();
-
 // Update check: at startup, compare the running version against the newest
 // published tag of this Docker image. UPDATE_IMAGE names the image whose tag is
 // the reference ("latest"); set UPDATE_CHECK=false to disable.
@@ -406,12 +380,10 @@ const UPDATE_CHECK = String(process.env.UPDATE_CHECK == null ? 'true' : process.
 const _updColon = UPDATE_IMAGE.lastIndexOf(':');
 const UPDATE_REPO = _updColon > 0 ? UPDATE_IMAGE.slice(0, _updColon) : UPDATE_IMAGE;
 const UPDATE_TAG = _updColon > 0 ? UPDATE_IMAGE.slice(_updColon + 1) : 'latest';
-
 fs.mkdirSync(DATA_DIR, { recursive: true });
 try {
   fs.mkdirSync(INBOX_DIR, { recursive: true });
 } catch (_) {}
-
 // --- Admin password hashing (scrypt via built-in crypto; no plaintext at rest) ---
 // The password file only ever holds a salted hash: "scrypt$<saltB64>$<hashB64>".
 // The password is verified, never recovered.
@@ -428,7 +400,6 @@ let ADMIN_PASSWORD_FRESH = false;
 let ADMIN_PASSWORD_PLAINTEXT_ONCE = null;   // shown once at first launch, then null
 // A fixed dummy hash so login timing is similar whether or not the username exists.
 const DUMMY_PW_REC = parseHash(hashPassword(crypto.randomBytes(8).toString('hex')));
-
 function normUsername(u) { return String(u || '').trim().toLowerCase().slice(0, 40); }
 function accountList() { return (state.meta && Array.isArray(state.meta.accounts)) ? state.meta.accounts : []; }
 function findAccountByName(username) {
@@ -438,7 +409,6 @@ function findAccountByName(username) {
 function getAccountById(id) { return accountList().find((a) => a.id === id) || null; }
 function ownerAccount() { return accountList().find((a) => a.role === 'owner') || null; }
 function newAccountId() { return crypto.randomBytes(8).toString('hex'); }
-
 // Effective password record for verifying an account (owner honors ADMIN_PASSWORD).
 function accountPwRec(acc) {
   if (acc && acc.role === 'owner' && adminPwFromEnv && envOwnerHash) return envOwnerHash;
@@ -450,12 +420,10 @@ function accountNeedsPwChange(acc) {
   if (acc.role === 'owner' && adminPwFromEnv) return false; // env-managed
   return !acc.pwChanged;
 }
-
 // Resolves the admin accounts on startup. Migrates a legacy single-admin setup
 // (admin-password.txt, then state.meta.ah + state.meta.totp) into an owner account.
 function initAccounts() {
   if (!state.meta) state.meta = {};
-
   // One-time migration of an old admin-password.txt into state.meta.ah.
   const legacyFile = path.join(DATA_DIR, 'admin-password.txt');
   try {
@@ -468,7 +436,6 @@ function initAccounts() {
     }
     fs.unlinkSync(legacyFile);
   } catch (_) { /* no legacy file */ }
-
   // ADMIN_PASSWORD overrides the OWNER account's password (session-only, not stored).
   const fromEnv = (process.env.ADMIN_PASSWORD || '').trim();
   if (fromEnv) { envOwnerHash = parseHash(hashPassword(fromEnv)); adminPwFromEnv = true; }
@@ -2763,6 +2730,7 @@ async function shareReactivationAvailability(sh) {
       const st = await fs.promises.stat(sh.encPath);
       return { available:st.isFile(), reason:st.isFile() ? null : 'data-missing' };
     }
+    if (sh.webStorage) { const meta=webStorageShareMeta(sh), st=await webStorageStat(sh,'',{fresh:true}); const available=!!meta&&!!st&&!!st.isDir===!!meta.isDir; return { available, reason:available?null:'data-missing' }; }
     if (sh.type === 'photo') {
       let abs = firstExistingPhotoFile(photoOriginalPaths(sh));
       if (!abs && sh.hostPath) {
@@ -4564,6 +4532,7 @@ const {
   encDecryptPage,
   secretPage,
   folderPage,
+  webStorageFolderPage,
   errorPage,
   albumPage,
   mediaPlayerPage,
@@ -5035,6 +5004,7 @@ let universalSearchPostings = new Map();
 let universalSemanticPostings = new Map();
 let searchIndexBuilding = false;
 let searchIndexEpoch = 0; // invalidates an in-flight build after destructive state replacement
+let searchIndexBuildGeneration = 0; // prevents deferred cache hydration from overwriting a newer live rebuild
 let searchIndexError = null;
 let searchIndexTimer = null;
 let searchIndexRebuildPromise = null;
@@ -5058,12 +5028,54 @@ function rebuildSearchPostings() {
     }
   }
 }
+async function buildSearchPostingsDeferred(index) {
+  const docsById = new Map(), postings = new Map(), semanticPostings = new Map();
+  const docs = (index && index.docs) || [];
+  for (let i = 0; i < docs.length; i++) {
+    const doc = docs[i];
+    if (doc && doc.id) {
+      docsById.set(doc.id, doc);
+      const toks = searchTokens((doc.metaText || '') + ' ' + (doc.searchText || ''));
+      for (const tok of toks) {
+        let set = postings.get(tok);
+        if (!set) postings.set(tok, set = new Set());
+        set.add(doc.id);
+      }
+      const sem = Array.isArray(doc.semanticTerms) ? doc.semanticTerms : semanticTerms((doc.metaText || '') + ' ' + (doc.searchText || ''));
+      for (const tok of sem) {
+        let set = semanticPostings.get(tok);
+        if (!set) semanticPostings.set(tok, set = new Set());
+        set.add(doc.id);
+      }
+    }
+    // Large cached indexes used to monopolize the event loop before listen().
+    // Yield in bounded chunks so the first page/API requests stay responsive.
+    if ((i & 127) === 127) await new Promise((resolve) => setImmediate(resolve));
+  }
+  return { docsById, postings, semanticPostings };
+}
+
 function loadSearchIndex() {
   try {
     const parsed = deserializeStore(fs.readFileSync(SEARCH_INDEX_FILE, 'utf8'));
     if (parsed && parsed.version === SEARCH_INDEX_VERSION && Array.isArray(parsed.docs)) universalSearchIndex = parsed;
   } catch (e) { if (!e || e.code !== 'ENOENT') console.warn('[search-index] cached index could not be loaded; it will be rebuilt:', String((e && e.message) || e)); }
   rebuildSearchPostings();
+}
+async function loadSearchIndexDeferred(expectedGeneration, expectedEpoch) {
+  try {
+    const parsed = deserializeStore(await fs.promises.readFile(SEARCH_INDEX_FILE, 'utf8'));
+    if (!parsed || parsed.version !== SEARCH_INDEX_VERSION || !Array.isArray(parsed.docs)) return;
+    const built = await buildSearchPostingsDeferred(parsed);
+    // A user action may have started a fresh rebuild while the cached file was
+    // being read/parsed. Publish the cache atomically only when it is still the
+    // newest search state; otherwise let the live rebuild win.
+    if (searchIndexBuildGeneration !== expectedGeneration || searchIndexEpoch !== expectedEpoch) return;
+    universalSearchIndex = parsed;
+    universalSearchDocs = built.docsById;
+    universalSearchPostings = built.postings;
+    universalSemanticPostings = built.semanticPostings;
+  } catch (e) { if (!e || e.code !== 'ENOENT') console.warn('[search-index] cached index could not be loaded; it will be rebuilt:', String((e && e.message) || e)); }
 }
 function persistSearchIndexSync(index) {
   const tmp = SEARCH_INDEX_FILE + '.tmp-' + process.pid;
@@ -5259,6 +5271,13 @@ function loadSearchOcrCache() {
   try {
     const parsed = deserializeStore(fs.readFileSync(SEARCH_OCR_CACHE_FILE, 'utf8'));
     if (parsed && parsed.version === SEARCH_OCR_CACHE_VERSION && parsed.entries && typeof parsed.entries === 'object') searchOcrCache = parsed;
+  } catch (e) { if (!e || e.code !== 'ENOENT') console.warn('[search-ocr] cache could not be loaded; OCR entries will be rebuilt:', String((e && e.message) || e)); }
+}
+async function loadSearchOcrCacheDeferred(expectedGeneration, expectedEpoch) {
+  try {
+    const parsed = deserializeStore(await fs.promises.readFile(SEARCH_OCR_CACHE_FILE, 'utf8'));
+    if (parsed && parsed.version === SEARCH_OCR_CACHE_VERSION && parsed.entries && typeof parsed.entries === 'object' &&
+        searchIndexBuildGeneration === expectedGeneration && searchIndexEpoch === expectedEpoch) searchOcrCache = parsed;
   } catch (e) { if (!e || e.code !== 'ENOENT') console.warn('[search-ocr] cache could not be loaded; OCR entries will be rebuilt:', String((e && e.message) || e)); }
 }
 function persistSearchOcrCacheSync(usedKeys) {
@@ -5677,6 +5696,7 @@ async function walkUniversalFiles(absDir, relBase, onFile, budget) {
 async function buildUniversalSearchIndex() {
   if (searchIndexBuilding) return searchIndexRebuildPromise;
   searchIndexBuilding = true; searchIndexError = null;
+  searchIndexBuildGeneration += 1;
   const buildEpoch = searchIndexEpoch;
   searchIndexRebuildPromise = (async () => {
     const docs = [], budget = { count: 0 };
@@ -5719,7 +5739,7 @@ async function buildUniversalSearchIndex() {
         } else if (s.type === 'folder') {
           let abs; try { abs = hostToContainer(s.hostPath); await assertRealWithin(HOST_ROOT, abs); } catch (_) { continue; }
           await walkUniversalFiles(abs, '', (a,r) => add(s,a,r), budget);
-        } else if (s.type === 'inbox' || s.type === 'collab') {
+        } else if ((s.type === 'inbox' || s.type === 'collab') && !s.webStorage) {
           let root; try { root = resolveWithin(INBOX_DIR, s.relDir || ''); await assertRealWithin(INBOX_DIR, root); } catch (_) { continue; }
           await walkUniversalFiles(root, '', (a,r) => add(s,a,r), budget);
         } else if (s.type === 'photo') {
@@ -6013,10 +6033,17 @@ function globalMetadataSearch(q, req, limit, options) {
   return rows.slice(0, max).map((x) => ({ ...x.row, relevanceScore:Number(x.score) || 0, matchField:x.row.matchField || 'metadata', highlightTerms:x.row.highlightTerms || [globalSearchText(q).trim()].filter(Boolean) }));
 }
 
-function initUniversalSearchIndex() {
-  loadSearchOcrCache();
-  loadSearchIndex();
-  // A cached index serves immediately; a background rebuild reconciles disk state.
+async function initUniversalSearchIndex() {
+  // Search acceleration must not delay the HTTP listener. Load the two caches with
+  // asynchronous I/O after startup and yield while rebuilding large posting maps.
+  // Until this finishes the search endpoint safely uses the already initialized
+  // empty maps plus live metadata; the normal background rebuild then reconciles disk.
+  const hydrationGeneration = searchIndexBuildGeneration;
+  const hydrationEpoch = searchIndexEpoch;
+  await Promise.all([
+    loadSearchOcrCacheDeferred(hydrationGeneration, hydrationEpoch),
+    loadSearchIndexDeferred(hydrationGeneration, hydrationEpoch),
+  ]);
   setImmediate(() => buildUniversalSearchIndex().catch(() => {}));
   const timer = setInterval(() => scheduleSearchReindex(1000), 15 * 60 * 1000);
   if (timer.unref) timer.unref();
@@ -6807,6 +6834,145 @@ async function listDir(absDir, allowedRoot = absDir) {
   return [...dirs, ...files];
 }
 
+const WEB_STORAGE_STAT_CACHE_MS = Math.min(60000, Math.max(1000, int(process.env.WEB_STORAGE_STAT_CACHE_MS, 15000)));
+const WEB_STORAGE_STREAM_IDLE_MS = Math.min(30 * 60 * 1000, Math.max(10000, int(process.env.WEB_STORAGE_STREAM_IDLE_MS, 120000)));
+const { shareMeta:webStorageShareMeta, importMeta:webStorageImportMeta, joinedPath:webStorageJoinedPath, stat:webStorageStat,
+  list:webStorageList, walkFiles:webStorageWalkFiles, invalidate:webStorageInvalidate, etag:webStorageEtag, parseRange:parseWebStorageRange } =
+  createWebStorageShareTools({ storageConnectorService, cacheMs:WEB_STORAGE_STAT_CACHE_MS });
+const webStorageWritable=createWebStorageWritableTools({storageConnectorService,shareMeta:webStorageShareMeta,joinedPath:webStorageJoinedPath,stat:webStorageStat,invalidate:webStorageInvalidate});
+function sendWebStorageStreamError(req, res, status) {
+  if (res.headersSent) { res.destroy(); return; }
+  // Streaming headers describe the remote object, not the HTML/text error body.
+  // Clear them before delegating to the normal error renderer or a failed rclone
+  // spawn could leave the client waiting for the object's Content-Length.
+  for (const name of ['Content-Length','Content-Range','Content-Disposition','ETag','Last-Modified','Accept-Ranges','X-Direct-Xfer-Resumable']) {
+    try { res.removeHeader(name); } catch (_) {}
+  }
+  return sendError(req, res, status, 'fileUnavailable');
+}
+function serveWebStorageFile(req, res, s, relative, options = {}) {
+  return (async () => {
+    const meta = webStorageShareMeta(s);
+    const full = webStorageJoinedPath(s, relative);
+    if (!meta || full === null) return sendError(req, res, 404, 'fileUnavailable');
+    let stat;
+    try { stat = await webStorageStat(s, relative, { fresh:!!req.headers['if-range'] }); }
+    catch (error) {
+      const code = connectorErrorCode(error);
+      return sendError(req, res, code === 'remote-not-found' ? 404 : 503, 'fileUnavailable');
+    }
+    if (stat.isDir) return sendError(req, res, 404, 'notFound');
+    const total = Math.max(0, Number(stat.size) || 0);
+    if (options.challenge && req.method === 'GET' && challengeRequired(total) && !hasValidPow(req)) {
+      return res.status(200).type('html').send(challengePage(pickLang(req)));
+    }
+    const filename = String(options.filename || stat.name || s.name || 'download').replace(/[\r\n\0]/g, ' ').slice(0,240) || 'download';
+    const inline = !!options.inline, countStats=options.countStats!==false;
+    const etag = webStorageEtag(s, stat, relative);
+    if (etag) res.setHeader('ETag', etag);
+    const modifiedAt = stat.modTime ? Date.parse(String(stat.modTime)) : NaN;
+    if (Number.isFinite(modifiedAt)) res.setHeader('Last-Modified', new Date(modifiedAt).toUTCString());
+    res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('X-Direct-Xfer-Resumable', '0');
+    res.setHeader('Content-Type', inline && options.contentType ? options.contentType : 'application/octet-stream');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Content-Disposition', (inline ? 'inline' : 'attachment') + `; filename*=UTF-8''${encodeURIComponent(filename)}`);
+    res.setHeader('Cache-Control', 'no-store');
+    const range = parseWebStorageRange(req, total, etag);
+    if (range.error) {
+      res.setHeader('Content-Range', `bytes */${total}`);
+      return res.status(416).end();
+    }
+    const { start, end, status } = range;
+    if (status === 206) res.setHeader('Content-Range', `bytes ${start}-${end}/${total}`);
+    res.status(status);
+    res.setHeader('Content-Length', Math.max(0, end - start + 1));
+    const fullGet = req.method === 'GET' && start === 0 && end >= total - 1;
+    let burnClaim = null;
+    if (fullGet && !inline && countStats) {
+      const claimed = claimOneTimeDownload(s.id);
+      if (claimed === false) return res.status(409).type('text/plain').send('One-time link is already being downloaded.');
+      burnClaim = claimed;
+    }
+    if (req.method === 'HEAD') return res.end();
+
+    const expected = Math.max(0, end - start + 1);
+    const transfer = !inline ? startTransfer(req, { shareId:s.id, name:filename, type:'web-storage' }, expected) : null;
+    if (transfer) {
+      transfer.notify = fullGet;
+      if (burnClaim) transfer.burnClaim = burnClaim;
+      if (transfer.notify) noteCenterConcurrentDownloadStart(transfer);
+    }
+    let child;
+    try { child = storageConnectorService.streamFile(meta, full, { offset:start, count:expected }); }
+    catch (_) {
+      if (burnClaim) releaseOneTimeDownload(s.id, burnClaim);
+      endTransfer(transfer, false, 'connector-failed');
+      return sendWebStorageStreamError(req, res, 503);
+    }
+    let stderr = '', childDone = false, childOk = false, outputDone = false, responseFinished = false, responseClosed = false, finalized = false;
+    let idleTimer = null;
+    const touchIdle = () => {
+      if (idleTimer) clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        try { child.kill('SIGTERM'); } catch (_) {}
+        if (transfer) transfer.failureReason = 'timeout';
+      }, WEB_STORAGE_STREAM_IDLE_MS);
+      if (idleTimer.unref) idleTimer.unref();
+    };
+    const finalize = () => {
+      if (finalized || !childDone || (!responseFinished && !responseClosed)) return;
+      finalized = true;
+      if (idleTimer) clearTimeout(idleTimer);
+      const completed = childOk && responseFinished && (!transfer || transfer.bytes === expected);
+      if (completed && !inline && countStats) noteBytesServed(s.id, expected);
+      if (completed && fullGet && !inline && countStats) {
+        incrementDownloads(s.id);
+        onDownloadComplete({ type:'file', name:filename });
+      }
+      endTransfer(transfer, completed, completed ? null : (transfer && transfer.failureReason) || (childOk ? 'connection-closed' : 'connector-failed'));
+      if (burnClaim && !transfer) releaseOneTimeDownload(s.id, burnClaim);
+    };
+    if (transfer) transfer.abort = () => { try { child.kill('SIGTERM'); res.destroy(); } catch (_) {} };
+    child.stdout.on('data', (chunk) => { if (transfer) { transfer.bytes += chunk.length; transfer.lastActivity = Date.now(); } touchIdle(); });
+    child.stderr.on('data', (chunk) => { if (stderr.length < 16384) stderr += Buffer.from(chunk).toString('utf8').slice(0, 16384 - stderr.length); });
+    child.once('error', (error) => {
+      childDone = true; childOk = false;
+      if (transfer) transfer.failureReason = error && error.code === 'ENOENT' ? 'rclone-unavailable' : 'connector-failed';
+      if (!res.headersSent) sendWebStorageStreamError(req, res, 503); else res.destroy();
+      finalize();
+    });
+    const maybeEndResponse = () => {
+      if (!childDone || !outputDone || res.writableEnded || res.destroyed) return;
+      if (childOk) res.end();
+      else if (!res.headersSent) sendWebStorageStreamError(req, res, 502);
+      else res.destroy();
+    };
+    child.once('close', (code) => {
+      childDone = true; childOk = code === 0;
+      if (!childOk && transfer && !transfer.failureReason) transfer.failureReason = 'connector-failed';
+      maybeEndResponse();
+      finalize();
+    });
+    res.once('finish', () => { responseFinished = true; finalize(); });
+    res.once('close', () => {
+      responseClosed = true;
+      if (!res.writableFinished) { try { child.kill('SIGTERM'); } catch (_) {} }
+      finalize();
+    });
+    touchIdle();
+    const rateBps = inline ? 0 : rateForMeta({ shareId:s.id });
+    const throttle = rateBps > 0 ? new Throttle(() => rateConstraintsForMeta({ shareId:s.id })) : null;
+    const output = throttle || child.stdout;
+    output.once('end', () => { outputDone = true; maybeEndResponse(); });
+    // Do not let stdout end the HTTP response on its own. rclone can terminate
+    // with a provider error after producing no bytes; automatic pipe end would
+    // otherwise commit an empty HTTP 200/206 before its exit code is known.
+    if (throttle) child.stdout.pipe(throttle);
+    output.pipe(res, { end:false });
+  })().catch(() => { if (!res.headersSent) sendWebStorageStreamError(req, res, 503); else res.destroy(); });
+}
+
 downloadRouter.get('/s/:token', (req, res) => {
   const s = requireActiveShare(req, res);
   if (!s) return;
@@ -6815,6 +6981,13 @@ downloadRouter.get('/s/:token', (req, res) => {
   if (s.encrypted) return res.type('html').send(encDecryptPage(pickLang(req), s, req.params.token));
   const tk = req.params.token; // preserve the visited token (main link or a sub-link)
   const wm = previewWatermark(req, tk);
+  if (s.type === 'web-storage') {
+    const meta = webStorageShareMeta(s);
+    if (!meta) return sendError(req, res, 404, 'fileUnavailable');
+    if (meta.isDir) return res.redirect(302, `/s/${tk}/browse`);
+    const displayShare = { ...s, previewName: String(s.webStorage && s.webStorage.sourceName || s.name || '') };
+    return res.type('html').send(filePage(pickLang(req), displayShare, `/s/${tk}/download`, tk, wm));
+  }
   if (s.type === 'file') {
     const items = shareItems(s);
     if (items.length > 1) return res.type('html').send(collectionPage(pickLang(req), s, items, tk, wm));
@@ -6837,8 +7010,13 @@ downloadRouter.get('/s/:token/enc', (req, res) => {
 });
 
 downloadRouter.get('/s/:token/download', async (req, res) => {
-  const s = requireActiveShare(req, res, { countDownload: true });
+  const s = requireActiveShare(req, res, { countDownload: req.method === 'GET' });
   if (!s) return;
+  if (s.type === 'web-storage') {
+    const meta = webStorageShareMeta(s);
+    if (!meta || meta.isDir) return sendError(req, res, 404, 'notFound');
+    return serveWebStorageFile(req, res, s, '', { filename:s.name || meta.sourceName || 'download', challenge:true });
+  }
   if (s.type !== 'file') return sendError(req, res, 404, 'notFound');
   const items = shareItems(s);
   const item = items[clampIndex(req.query.i, items.length)];
@@ -6860,6 +7038,16 @@ downloadRouter.get('/s/:token/download', async (req, res) => {
 downloadRouter.get('/s/:token/view', async (req, res) => {
   const s = requireActiveShare(req, res);
   if (!s) return;
+  if (s.type === 'web-storage') {
+    const meta = webStorageShareMeta(s);
+    if (!meta || meta.isDir) return sendError(req, res, 404, 'notFound');
+    if (s.noPreview) return res.redirect(302, `/s/${req.params.token}/download`);
+    const sourceName = String(s.webStorage && s.webStorage.sourceName || s.name || 'download');
+    const info = previewInfo(sourceName);
+    if (!info) return res.redirect(302, `/s/${req.params.token}/download`);
+    if (info.kind === 'pdf') { res.setHeader('X-Frame-Options','SAMEORIGIN'); res.setHeader('Content-Security-Policy', "frame-ancestors 'self'"); }
+    return serveWebStorageFile(req, res, s, '', { filename:s.name || sourceName, inline:true, contentType:info.contentType });
+  }
   if (s.type !== 'file') return sendError(req, res, 404, 'notFound');
   const items = shareItems(s);
   const idx = clampIndex(req.query.i, items.length);
@@ -7144,6 +7332,7 @@ downloadRouter.post('/g/:token/c/:secret/remove/:imageToken', async (req, res) =
 downloadRouter.get('/s/:token/render', async (req, res) => {
   const s = requireActiveShare(req, res);
   if (!s) return;
+  if (s.type === 'web-storage') return res.redirect(302, `/s/${req.params.token}/view`);
   if (s.type !== 'file') return sendError(req, res, 404, 'notFound');
   const items = shareItems(s);
   const idx = clampIndex(req.query.i, items.length);
@@ -7392,6 +7581,25 @@ function collectionFolderItem(req, res, s) {
 downloadRouter.get(['/s/:token/browse', '/s/:token/browse/*'], async (req, res) => {
   const s = requireActiveShare(req, res);
   if (!s) return;
+  if (s.type === 'web-storage') {
+    const meta = webStorageShareMeta(s);
+    if (!meta || !meta.isDir) return sendError(req, res, 404, 'notFound');
+    const rel = cleanConnectorPath(req.params[0] || '');
+    if (rel === null) return sendError(req, res, 404, 'notFound');
+    try {
+      const entries = await webStorageList(s, rel);
+      const base = `/s/${req.params.token}/browse`;
+      const links = {
+        browseBase:base,
+        browse:(p) => base + (p ? '/' + encodePath(p) : ''),
+        file:(p) => `/s/${req.params.token}/file/${encodePath(p)}`,
+      };
+      return res.type('html').send(webStorageFolderPage(pickLang(req), s, rel, entries, links, previewWatermark(req, req.params.token)));
+    } catch (e) {
+      const code = connectorErrorCode(e);
+      return sendError(req, res, code === 'remote-not-found' ? 404 : 503, 'folderUnavailable');
+    }
+  }
   if (s.type !== 'folder') return sendError(req, res, 404, 'notFound');
   try {
     await serveFolderBrowse(req, res, s, hostToContainer(s.hostPath), req.params[0] || '', `/s/${req.params.token}`, s.name);
@@ -7401,8 +7609,31 @@ downloadRouter.get(['/s/:token/browse', '/s/:token/browse/*'], async (req, res) 
 });
 
 downloadRouter.get('/s/:token/file/*', async (req, res) => {
-  const s = requireActiveShare(req, res, { countDownload: !req.query.view && !req.query.render });
+  const s = requireActiveShare(req, res, { countDownload: req.method === 'GET' && !req.query.view && !req.query.render });
   if (!s) return;
+  if (s.type === 'web-storage') {
+    const meta = webStorageShareMeta(s);
+    if (!meta || !meta.isDir) return sendError(req, res, 404, 'notFound');
+    const rel = cleanConnectorPath(req.params[0], false);
+    if (rel === null) return sendError(req, res, 404, 'notFound');
+    try {
+      const stat = await webStorageStat(s, rel);
+      if (stat.isDir) return res.redirect(302, `/s/${req.params.token}/browse/${encodePath(rel)}`);
+      const inlineRequested = req.query.view === '1' || req.query.render === '1';
+      const info = inlineRequested && !s.noPreview ? previewInfo(stat.name) : null;
+      if (inlineRequested && !info) return res.redirect(302, `/s/${req.params.token}/file/${encodePath(rel)}`);
+      if (inlineRequested && info.kind === 'pdf') { res.setHeader('X-Frame-Options','SAMEORIGIN'); res.setHeader('Content-Security-Policy', "frame-ancestors 'self'"); }
+      return serveWebStorageFile(req, res, s, rel, {
+        filename:stat.name,
+        inline:!!info,
+        contentType:info && info.contentType,
+        challenge:!info,
+      });
+    } catch (e) {
+      const code = connectorErrorCode(e);
+      return sendError(req, res, code === 'remote-not-found' ? 404 : 503, 'fileUnavailable');
+    }
+  }
   if (s.type !== 'folder') return sendError(req, res, 404, 'notFound');
   try {
     await serveFolderFile(req, res, s, hostToContainer(s.hostPath), req.params[0] || '');
@@ -7427,6 +7658,7 @@ downloadRouter.get(['/s/:token/zip', '/s/:token/zip/*'], async (req, res) => {
 downloadRouter.get(['/s/:token/sha256', '/s/:token/sha256/*'], async (req, res) => {
   const s = requireActiveShare(req, res);
   if (!s) return;
+  if (s.type === 'web-storage') return sendError(req, res, 404, 'notFound');
   try {
     const files = s.type === 'folder'
       ? await shareManifestFiles(s, hostToContainer(s.hostPath), req.params[0] || '')
@@ -7610,10 +7842,10 @@ function currentReceptionBytes(excludePendingId = null) {
   // Active links and recoverable-trash links both retain managed reception bytes on
   // disk. Ignoring trash made the global storage cap reopen immediately after a
   // revocation even though the files were still consuming the same volume.
-  for (const s of state.shares) if (s && (s.type === 'inbox' || s.type === 'collab')) total += Math.max(0, Number(s.bytesReceived) || 0);
+  for (const s of state.shares) if (s && !s.webStorage && (s.type === 'inbox' || s.type === 'collab')) total += Math.max(0, Number(s.bytesReceived) || 0);
   for (const rec of (Array.isArray(state.trash) ? state.trash : [])) {
     const s = rec && rec.share;
-    if (s && (s.type === 'inbox' || s.type === 'collab')) total += Math.max(0, Number(s.bytesReceived) || 0);
+    if (s && !s.webStorage && (s.type === 'inbox' || s.type === 'collab')) total += Math.max(0, Number(s.bytesReceived) || 0);
   }
   // Moderated uploads already occupy .dxpending and therefore must reserve global
   // capacity before approval.
@@ -7702,7 +7934,7 @@ function inboxRejectReason(s, name, sizeHint, opts = {}) {
     if (usedBytes >= Number(s.maxTotalBytes)) maybeCenterReceptionQuota(s);
     return 'quota-full';
   }
-  if (receptionCapExceeded(sizeHint, opts.excludePendingId || null)) return 'storage-cap'; // global cap
+  if (!s.webStorage && receptionCapExceeded(sizeHint, opts.excludePendingId || null)) return 'storage-cap'; // global local-disk cap
   return null;
 }
 
@@ -8297,6 +8529,7 @@ async function scanGate(part, name, s, req) {
 function safeUploadId(id) {
   return /^[A-Za-z0-9_-]{6,64}$/.test(String(id || '')) ? String(id) : null;
 }
+function safeUploadByteCount(value) { const raw=String(value==null?'':value),n=/^\d+$/.test(raw)?Number(raw):NaN; return Number.isSafeInteger(n)&&n>=0?n:null; }
 function scopedUploadId(s, id) {
   return crypto.createHash('sha256').update(String(s.id)).update('\0').update(id).digest('hex');
 }
@@ -9226,9 +9459,10 @@ downloadRouter.get('/c/:token', (req, res) => {
 downloadRouter.get('/c/:token/list', async (req, res) => {
   const s = requireActiveCollab(req, res);
   if (!s) return;
+  const sub = String(req.query.sub || '');
+  if(s.webStorage){const cloudSub=cleanConnectorPath(sub);if(cloudSub===null)return res.status(400).json({error:'invalid-path'});try{const entries=await webStorageList(s,cloudSub);return res.json({sub:cloudSub,allowDelete:!!s.allowDelete,allowZip:false,bytesReceived:s.bytesReceived||0,maxTotalBytes:s.maxTotalBytes||0,entries});}catch(error){return res.status(webStorageConnectorStatus(error)).json({error:connectorErrorCode(error)});}}
   const root = collabRoot(s);
   try { await fs.promises.mkdir(root, { recursive: true }); } catch (_) {}
-  const sub = String(req.query.sub || '');
   let absDir;
   try {
     absDir = resolveWithin(root, sub);
@@ -9248,15 +9482,15 @@ downloadRouter.get('/c/:token/list', async (req, res) => {
 });
 
 downloadRouter.get(['/c/:token/file', '/c/:token/file/*'], async (req, res) => {
-  const s = requireActiveCollab(req, res);
-  if (!s) return;
-  try { await serveFolderFile(req, res, s, collabRoot(s), req.params[0] || ''); }
-  catch (e) { sendError(req, res, e.code === 'ENOENT' ? 404 : 403, 'fileUnavailable'); }
+  const s=requireActiveCollab(req,res);if(!s)return;
+  if(s.webStorage){const rel=cleanConnectorPath(req.params[0]||'',false);if(rel===null)return sendError(req,res,404,'fileUnavailable');try{const st=await webStorageStat(s,rel);if(st.isDir)return sendError(req,res,404,'fileUnavailable');return serveWebStorageFile(req,res,s,rel,{filename:st.name||path.posix.basename(rel)||'download'});}catch(e){const code=connectorErrorCode(e);return sendError(req,res,code==='remote-not-found'?404:503,'fileUnavailable');}}
+  try{await serveFolderFile(req,res,s,collabRoot(s),req.params[0]||'');}catch(e){sendError(req,res,e.code==='ENOENT'?404:403,'fileUnavailable');}
 });
 
 downloadRouter.get(['/c/:token/zip', '/c/:token/zip/*'], async (req, res) => {
   const s = requireActiveCollab(req, res);
   if (!s) return;
+  if(s.webStorage)return sendError(req,res,404,'notFound');
   if (s.allowZip === false) return sendError(req, res, 404, 'notFound');
   try { await serveFolderZip(req, res, s, collabRoot(s), req.params[0] || '', s.name); }
   catch (_) { sendError(req, res, 404, 'folderNotFound'); }
@@ -9265,6 +9499,7 @@ downloadRouter.get(['/c/:token/zip', '/c/:token/zip/*'], async (req, res) => {
 downloadRouter.get(['/c/:token/sha256', '/c/:token/sha256/*'], async (req, res) => {
   const s = requireActiveCollab(req, res);
   if (!s) return;
+  if(s.webStorage)return sendError(req,res,404,'notFound');
   try {
     const files = await shareManifestFiles(s, collabRoot(s), req.params[0] || '');
     await sendSha256Manifest(res, files, (s.name || 'files') + '.sha256');
@@ -9274,6 +9509,7 @@ downloadRouter.get(['/c/:token/sha256', '/c/:token/sha256/*'], async (req, res) 
 downloadRouter.post('/c/:token/zip-select', selParser, async (req, res) => {
   const s = requireActiveCollab(req, res);
   if (!s) return;
+  if(s.webStorage)return sendError(req,res,404,'notFound');
   if (s.allowZip === false) return sendError(req, res, 404, 'notFound');
   const items = await selectionToItems(collabRoot(s), parseSelList(req.body.sel).slice(0, ZIP_SELECTION_MAX));
   if (!items.length) return sendError(req, res, 400, 'notFound');
@@ -9343,6 +9579,7 @@ downloadRouter.post('/c/:token/delete', collabDeleteParser, async (req, res) => 
   if (!s.allowDelete) return res.status(403).json({ error: 'delete-disabled' });
   const rel = String((req.body && req.body.path) || '');
   if (!rel) return res.status(400).json({ error: 'missing-path' });
+  if(s.webStorage){try{const outcome=await withShareUploadLock(s.id,async()=>{const st=await webStorageStat(s,rel,{fresh:true}),metrics=st.isDir?await webStorageWritable.metrics(s,rel):{files:1};const blocked=recordRansomwareEvent(req,'delete',rel,Math.max(1,metrics.files));if(blocked)return{blocked};await webStorageWritable.remove(s,rel,{isDir:!!st.isDir});const freed=webStorageWritable.releaseTracked(s,rel);if(freed)s.bytesReceived=Math.max(0,(s.bytesReceived||0)-freed);scheduleFlush();return{ok:true};});if(outcome.blocked){const blocked=outcome.blocked;res.setHeader('Retry-After',String(Math.max(1,Math.ceil((blocked.until-Date.now())/1000))));return res.status(423).json({error:'security-blocked',reason:blocked.reason,until:blocked.until});}logAudit('collab-delete',{username:'visitor',ip:clientIp(req),detail:(s.name||s.id)+': '+rel});return res.json({ok:true});}catch(error){const code=connectorErrorCode(error);return res.status(code==='remote-not-found'?404:webStorageConnectorStatus(error)).json({error:code});}}
   const root = collabRoot(s);
   let abs;
   try {
@@ -9388,6 +9625,7 @@ async function handleCreateUploadFolder(req, res) {
   const name = safeUploadFolderName(body.name);
   const parentSegs = safeUploadParentSegments(body.parent);
   if (!name || parentSegs === null) return res.status(400).json({ error: 'invalid-folder' });
+  if(s.webStorage){try{const senderSegs=s.type==='inbox'?senderSubdirSegs(s,req):[],rel=[...senderSegs,...parentSegs,name].join('/'),result=await withShareUploadLock(s.id,async()=>{const parent=[...senderSegs,...parentSegs].join('/');if(senderSegs.length)await webStorageWritable.mkdir(s,senderSegs.join('/'));if(parentSegs.length){const pst=await webStorageStat(s,parent,{fresh:true});if(!pst.isDir)return{error:'invalid-folder',status:400};}if(await webStorageWritable.exists(s,rel))return{error:'folder-exists',status:409};await webStorageWritable.mkdir(s,rel);return{ok:true};});if(!result.ok)return res.status(result.status).json({error:result.error});logAudit('upload-folder-created',{username:'visitor',ip:clientIp(req),detail:(s.name||s.id)+': '+rel});return res.status(201).json({ok:true,name,path:[...parentSegs,name].join('/')});}catch(error){const code=connectorErrorCode(error);return res.status(code==='remote-not-found'?404:webStorageConnectorStatus(error)).json({error:code});}}
 
   try {
     const root = resolveWithin(INBOX_DIR, s.relDir || '');
@@ -9622,6 +9860,7 @@ async function handleUploadDedupe(req, res) {
   if (s.pwHash && !isUnlocked(req, s)) return res.status(401).json({ error: 'locked' });
   // Moderated links must still enter the approval queue, so they intentionally use
   // the normal upload path instead of materializing a deduplicated file directly.
+  if (s.webStorage) return res.json({ ok:true, deduped:false, reason:'web-storage' });
   if (s.moderated) return res.json({ ok: true, deduped: false, reason: 'moderated' });
 
   cleanupDedupeChallenges();
@@ -9696,6 +9935,7 @@ function handleUploadDuplicateCheck(req, res) {
   if (s.pwHash && !isUnlocked(req, s)) return res.status(401).json({ error:'locked' });
   const sha = validSha256Hex(req.query.sha256);
   if (!sha) return res.status(400).json({ error:'invalid-sha256' });
+  if(s.webStorage){res.setHeader('Cache-Control','no-store');return res.json({duplicate:false,existingName:null,policy:'allow'});}
   const duplicate = receptionHashSeen(s, sha);
   const stored = duplicate ? receptionDuplicateStoredPath(s, sha) : null;
   res.setHeader('Cache-Control', 'no-store');
@@ -9749,6 +9989,8 @@ async function handleUploadCancel(req, res) {
 downloadRouter.post('/u/:token/upload-cancel', handleUploadCancel);
 downloadRouter.post('/c/:token/upload-cancel', handleUploadCancel);
 
+const webStorageUploadHandler=createWebStorageUploadHandler({tools:webStorageWritable,deps:{PARTS_DIR,safeUploadRelPath,safeUploadId,scopedUploadId,partPath,completedUploadReceipt,rememberCompletedUpload,cleanSenderName,senderSubdirSegs,senderTaggedName,uploadSenderKey,inboxRejectReason,perSenderRejectReason,inboxRejectStatus,beginPublicUpload,effMaxUpload,startTransfer,endTransfer,withShareUploadLock,clamavEnabled,scanGate,inboxContentReason,rejectSuspendedUploadFinalize,hashFileSha256,applyReceptionAccountingState,persistNow,finalizeReceptionAccountingEffects,recordRansomwareEvent,restorePlainObject,scheduleSearchReindex,emitInboxEvent,validSha256Hex,uploadsInFlight,uploadTransfers,stoppedUploads}});
+
 // Receiving a file. Resumable: the body carries the bytes FROM ?offset= to the end;
 // they are appended to a .part file keyed by ?id=, moved into the destination tree
 // once it reaches ?size=. An interrupted upload keeps its .part so the visitor can
@@ -9760,6 +10002,7 @@ async function handleUpload(req, res) {
   const s = getByToken(req.params.token);
   if (!acceptsUpload(s) || !isActive(s)) return res.status(403).json({ error: 'revoked' });
   if (s.pwHash && !isUnlocked(req, s)) return res.status(401).json({ error: 'locked' });
+  if(s.webStorage)return webStorageUploadHandler(req,res,s);
   // Some links require the visitor to identify themselves.
   const senderName = cleanSenderName(req);
   if (s.requireSenderName && !senderName) { req.resume(); return res.status(400).json({ error: 'sender-required' }); }
@@ -9769,11 +10012,12 @@ async function handleUpload(req, res) {
   const relForCheck = [...parsed.dirSegs, parsed.filename].join('/');
   const senderSegs = senderSubdirSegs(s, req); // <sender>/<date>/ prefix (or [])
 
-  const declared = parseInt(req.query.size, 10);
-  const clen = parseInt(req.headers['content-length'], 10);
-  const total = Number.isFinite(declared) && declared > 0 ? declared
-    : (Number.isFinite(clen) && clen > 0 ? clen : 0);
+  const hasDeclaredSize = req.query.size != null;
+  const declared = hasDeclaredSize ? safeUploadByteCount(req.query.size) : null;
+  const clen = req.headers['content-length'] == null ? null : safeUploadByteCount(req.headers['content-length']);
   const id = safeUploadId(req.query.id);
+  if ((hasDeclaredSize && declared === null) || (id && declared === null)) { req.resume(); return res.status(400).json({ error:'invalid-size' }); }
+  const total = declared !== null ? declared : (clen !== null ? clen : 0);
   const uploadId = id ? scopedUploadId(s, id) : null;
   const expireSec = clampExpireSec(req.query.expire); // optional per-file self-destruct
   const clientSha256 = validSha256Hex(req.query.sha256);
@@ -10015,6 +10259,7 @@ async function handleUpload(req, res) {
 
     // One transfer per upload id, reused across every chunk request.
     let transfer = uploadTransfers.get(uploadId);
+    if (transfer && (String(transfer.name || '') !== displayName || Number(transfer.expectedBytes || 0) !== total)) { uploadsInFlight.delete(uploadId); req.resume(); return res.status(409).json({ error:'upload-id-conflict', offset:onDisk }); }
     if (!transfer) {
       transfer = startTransfer(req, { shareId: s.id, name: displayName, type: 'inbox', direction: 'up' }, total);
       transfer.notify = true;
@@ -10641,7 +10886,7 @@ function decorateShare(s, req, context=null) {
     pinned: !!s.pinned,
     archived: !!s.archived,
     logicalBytes: shareLogicalBytes(s),
-    logicalBytesReady: !shareNeedsLogicalBytesScan(s) || !!shareLogicalBytesCache.get(s.id),
+    logicalBytesReady: s.webStorage && s.webStorage.isDir ? false : (!shareNeedsLogicalBytesScan(s) || !!shareLogicalBytesCache.get(s.id)),
     backing: shareBackingHealthSnapshot(s),
     itemCount: shareLogicalFileCount(s),
     lastActivityAt: shareActivityAt(s),
@@ -10700,6 +10945,14 @@ function decorateShare(s, req, context=null) {
       };
     })() : null,
     // Shareable image gallery: a public /g/<token> page over member images.
+    webStorage: s.webStorage ? {
+      connectorId:String(s.webStorage.connectorId || ''),
+      connectorName:String(s.webStorage.connectorName || '').slice(0,80),
+      connectorType:String(s.webStorage.connectorType || '').slice(0,40),
+      path:String(s.webStorage.path || '').slice(0,4096),
+      isDir:!!s.webStorage.isDir,
+      sourceName:String(s.webStorage.sourceName || '').slice(0,255),
+    } : null,
     album: s.type === 'album' ? (() => {
       const ib = getSettings().imageBase || base;
       return {
@@ -11353,19 +11606,37 @@ async function connectorProbeSnapshot() {
   }
   if (connectorProbeCache.pending) return connectorProbeCache.pending;
   connectorProbeCache.pending = (async () => {
-    const capabilities = await storageConnectorService.capabilities();
+    let capabilities;
     let remotes = [];
-    if (capabilities.available) {
-      try { remotes = await storageConnectorService.configuredRemotes(); } catch (_) {}
+    try {
+      capabilities = await storageConnectorService.capabilities();
+      if (!capabilities || typeof capabilities !== 'object') capabilities = { available:false, error:'rclone-unavailable' };
+      if (capabilities.available) {
+        try { remotes = await storageConnectorService.configuredRemotes(); }
+        catch (error) {
+          // A missing/invalid rclone.conf must not make the whole Configuration
+          // page fail to load. The runtime capability is still useful and the
+          // admin can configure a remote afterwards.
+          capabilities = { ...capabilities, remotesError:String(error && (error.code || error.message) || 'remote-list-failed').slice(0,120) };
+        }
+      }
+    } catch (error) {
+      // Optional rclone is allowed to be absent. Always return a stable snapshot
+      // so GET /api/storage/connectors remains usable before the component is
+      // installed or while a broken installation is being repaired.
+      capabilities = { available:false, error:String(error && (error.code || error.message) || 'rclone-unavailable').slice(0,120) };
+      remotes = [];
     }
     const value = { capabilities, remotes };
     connectorProbeCache = { at:Date.now(), value, pending:null };
     return value;
-  })().catch((error) => {
-    connectorProbeCache.pending = null;
-    throw error;
-  });
-  return connectorProbeCache.pending;
+  })();
+  try { return await connectorProbeCache.pending; }
+  finally {
+    // The resolved value is retained in connectorProbeCache.value; only clear a
+    // still-pending reference. This also makes a rejected probe self-healing.
+    if (connectorProbeCache.pending) connectorProbeCache.pending = null;
+  }
 }
 function connectorStore() {
   if (!state.meta || typeof state.meta !== 'object') state.meta = {};
@@ -11378,14 +11649,27 @@ function connectorJobStore() {
   return state.meta.storageConnectorJobs;
 }
 function publicConnector(connector) {
+  if (!connector || typeof connector !== 'object') return null;
+  const id = String(connector.id || '').trim();
+  const name = String(connector.name || '').trim();
+  const type = String(connector.type || '').trim();
+  const remote = String(connector.remote || '').trim();
+  if (!id || !name || !type || !remote) return null;
   return {
-    id:connector.id, name:connector.name, type:connector.type, remote:connector.remote,
-    root:connector.root || '', readOnly:!!connector.readOnly,
-    createdAt:connector.createdAt || 0, updatedAt:connector.updatedAt || 0,
+    id:id.slice(0, 128), name:name.slice(0, 80), type:type.slice(0, 40), remote:remote.slice(0, 64),
+    root:String(connector.root || '').slice(0, 4096), readOnly:!!connector.readOnly,
+    createdAt:Number(connector.createdAt) || 0, updatedAt:Number(connector.updatedAt) || 0,
   };
 }
 function getStorageConnector(id) {
   return connectorStore().find((item) => item && item.id === String(id || '')) || null;
+}
+function webStorageShareReferencesConnector(connectorId) {
+  const id=String(connectorId||'');if(!id)return[];const refs=[];
+  const add=(share,trashed)=>{if(share&&share.webStorage&&share.webStorage.connectorId===id)refs.push({id:share.id,name:share.name||'',type:share.type||'',writable:share.type==='inbox'||share.type==='collab',trashed});};
+  for(const share of(Array.isArray(state.shares)?state.shares:[]))add(share,false);
+  try{for(const record of trashItems())add(record&&record.share,true);}catch(_){}
+  return refs;
 }
 function publicConnectorJob(job) {
   return {
@@ -11528,17 +11812,26 @@ function queueStorageConnectorJob(req, connector, direction, input) {
 }
 
 adminRouter.get('/storage/connectors', requireFullAdmin, async (req, res) => {
-  const { capabilities, remotes } = await connectorProbeSnapshot();
-  // Do not expose the absolute rclone config path to browser clients. The PWA
-  // only needs availability/version and configured remote names; credentials and
-  // their filesystem location stay server-side.
+  let probe;
+  try { probe = await connectorProbeSnapshot(); }
+  catch (error) {
+    // rclone is optional on Windows since 1.66.x. A probe failure must never turn
+    // the Configuration page into an HTTP 500; expose the component as unavailable
+    // while still returning stored connector metadata and jobs.
+    probe = { capabilities:{ available:false, error:String(error && (error.code || error.message) || 'rclone-unavailable').slice(0,120) }, remotes:[] };
+  }
+  const capabilities = probe && probe.capabilities || { available:false, error:'rclone-unavailable' };
+  const remotes = Array.isArray(probe && probe.remotes) ? probe.remotes : [];
+  // Do not expose the absolute rclone config path to browser clients. The UI only
+  // needs availability/version and configured remote names; credentials and their
+  // filesystem location stay server-side.
   const publicCapabilities = {
-    available:!!(capabilities && capabilities.available),
-    version:capabilities && capabilities.version ? String(capabilities.version).slice(0, 160) : null,
-    error:capabilities && capabilities.error ? String(capabilities.error).slice(0, 120) : null,
+    available:!!capabilities.available,
+    version:capabilities.version ? String(capabilities.version).slice(0, 160) : null,
+    error:capabilities.error ? String(capabilities.error).slice(0, 120) : null,
   };
   res.json({
-    connectors:connectorStore().map(publicConnector),
+    connectors:connectorStore().map(publicConnector).filter(Boolean),
     jobs:pruneConnectorJobs().map(publicConnectorJob),
     capabilities:publicCapabilities, remotes, types:Array.from(CONNECTOR_TYPES),
   });
@@ -11561,6 +11854,13 @@ adminRouter.patch('/storage/connectors/:id', requireFullAdmin, (req, res) => {
   let next;
   try { next = normalizeConnector(req.body || {}, current); }
   catch (error) { return res.status(400).json({ error:error.message || 'invalid-connector' }); }
+  const refs = webStorageShareReferencesConnector(current.id);
+  if (refs.length && (next.remote !== current.remote || next.root !== current.root || next.type !== current.type)) {
+    return res.status(409).json({ error:'connector-used-by-web-share', references:refs.slice(0,20) });
+  }
+  if (refs.some((r)=>r.writable) && !current.readOnly && next.readOnly) {
+    return res.status(409).json({ error:'connector-used-by-web-share', references:refs.slice(0,20) });
+  }
   const before = { ...current }; Object.assign(current, next, { id:before.id, createdAt:before.createdAt });
   if (!persistNow()) { Object.assign(current, before); return res.status(503).json({ error:'write-error' }); }
   auditReq(req, 'storage-connector-updated', `${current.name} (${current.type}/${current.remote})`);
@@ -11569,6 +11869,8 @@ adminRouter.patch('/storage/connectors/:id', requireFullAdmin, (req, res) => {
 adminRouter.delete('/storage/connectors/:id', requireFullAdmin, (req, res) => {
   const list = connectorStore(), index = list.findIndex((item) => item && item.id === req.params.id);
   if (index < 0) return res.status(404).json({ error:'not-found' });
+  const refs = webStorageShareReferencesConnector(req.params.id);
+  if (refs.length) return res.status(409).json({ error:'connector-used-by-web-share', references:refs.slice(0,20) });
   if (connectorJobStore().some((job) => job && job.connectorId === req.params.id && activeConnectorJobs.has(job.id))) {
     return res.status(409).json({ error:'connector-busy' });
   }
@@ -13062,7 +13364,7 @@ async function detailedShareStatsPayload(s, req) {
   return {
     period:{days,label:days?String(days)+'d':'all',startAt:cutoff||null,endAt:now,granularity:timelineData.granularity,bucketDays:timelineData.bucketDays||1},
     comparison,
-    share:{id:s.id,name:s.name||'',type:s.type||'',status,active:isActive(s),createdAt:s.createdAt||0,startsAt:s.startsAt||0,expiresAt:s.expiresAt||0,effectiveExpiresAt,ownerName:s.ownerName||null,url:s.type==='photo'&&decorated.photo?decorated.photo.imgUrl:decorated.url,path:s.hostPath||s.relDir||null,tags:Array.isArray(s.tags)?s.tags:[],itemCount:items.length||decorated.itemCount||0,logicalBytes,views:Math.max(0,(Number(s.views)||0)-statsBaseline.views),uniqueVisitors:Math.max(0,(Array.isArray(s.visitors)?s.visitors.length:0)-statsBaseline.visitors),downloads:Math.max(0,(Number(s.downloads)||0)-statsBaseline.downloads)},
+    share:{id:s.id,name:s.name||'',type:s.type||'',status,active:isActive(s),createdAt:s.createdAt||0,startsAt:s.startsAt||0,expiresAt:s.expiresAt||0,effectiveExpiresAt,ownerName:s.ownerName||null,url:s.type==='photo'&&decorated.photo?decorated.photo.imgUrl:decorated.url,path:s.webStorage?(s.webStorage.path||'/'):(s.hostPath||s.relDir||null),tags:Array.isArray(s.tags)?s.tags:[],itemCount:items.length||decorated.itemCount||0,logicalBytes,views:Math.max(0,(Number(s.views)||0)-statsBaseline.views),uniqueVisitors:Math.max(0,(Array.isArray(s.visitors)?s.visitors.length:0)-statsBaseline.visitors),downloads:Math.max(0,(Number(s.downloads)||0)-statsBaseline.downloads)},
     aggregate,
     quota,live,timeline:timelineData.points,
     countries:[...countryMap.values()].sort((a,b)=>b.count-a.count||b.bytes-a.bytes).slice(0,12),
@@ -13079,7 +13381,7 @@ async function detailedShareStatsPayload(s, req) {
 adminRouter.get('/shares/:id/visitor-test', async (req, res) => {
   const sh=getById(req.params.id); if(!sh||!ownsShare(req,sh))return res.status(404).json({error:'not-found'});
   const now=Date.now();
-  const backing=await refreshShareBackingHealth(sh,true).catch(()=>({available:false,reason:'data-missing',at:Date.now()}));
+  const backing=sh.webStorage?await shareReactivationAvailability(sh).catch(()=>({available:false,reason:'data-missing'})):await refreshShareBackingHealth(sh,true).catch(()=>({available:false,reason:'data-missing',at:Date.now()}));
   let verdict='ready', expectedStatus=200;
   if (sh.revoked) { verdict='revoked'; expectedStatus=404; }
   else if (sh.disabled) { verdict='paused'; expectedStatus=404; }
@@ -13162,17 +13464,16 @@ function safeReceivedFilePath(share, rel) {
 // each one for download or — images only — inline so the dashboard can render real
 // thumbnails. Server-backed like the PWA's /app/inbox view, so it survives any
 // client-side storage loss.
-adminRouter.get('/shares/:id/received', (req, res) => {
-  const s = getById(req.params.id);
-  if (!s || (s.type !== 'inbox' && s.type !== 'collab') || !ownsShare(req, s)) return res.status(404).json({ error: 'not-found' });
-  const files = inboxReceivedFiles(s).map((f) => ({ ...f, image: !!imageContentType(f.name) }));
-  res.setHeader('Cache-Control', 'no-store');
-  res.json({ shareId: s.id, name: s.name || '', count: files.length, files });
+adminRouter.get('/shares/:id/received', async (req, res) => {
+  const s=getById(req.params.id);if(!s||(s.type!=='inbox'&&s.type!=='collab')||!ownsShare(req,s))return res.status(404).json({error:'not-found'});
+  let files,truncated=false;if(s.webStorage){try{const walked=await webStorageWalkFiles(s,{maxFiles:5000,maxDirs:1000,maxDepth:24});files=walked.files.map((row)=>({name:row.name,path:row.rel,size:row.size,mtime:0,image:!!imageContentType(row.name)}));truncated=!!walked.truncated;}catch(error){return res.status(webStorageConnectorStatus(error)).json({error:connectorErrorCode(error)});}}else files=inboxReceivedFiles(s).map((f)=>({...f,image:!!imageContentType(f.name)}));
+  res.setHeader('Cache-Control','no-store');res.json({shareId:s.id,name:s.name||'',count:files.length,truncated,files});
 });
-adminRouter.get('/shares/:id/received-file', (req, res) => {
+adminRouter.get('/shares/:id/received-file', async (req, res) => {
   const s = getById(req.params.id);
   if (!s || (s.type !== 'inbox' && s.type !== 'collab') || !ownsShare(req, s)) return res.status(404).json({ error: 'not-found' });
   const rel = String(req.query.path || '');
+  if(s.webStorage){const inline=req.query.inline==='1'||req.query.inline==='true',type=imageContentType(path.posix.basename(rel));return serveWebStorageFile(req,res,s,rel,{filename:path.posix.basename(rel||'download'),inline:inline&&!!type,contentType:type||'application/octet-stream',countStats:false});}
   const abs = safeReceivedFilePath(s, rel);
   if (!abs) return res.status(404).json({ error: 'not-found' });
   let st;
@@ -13230,13 +13531,19 @@ adminRouter.post('/shares/import', (req, res) => {
   const tokens = new Set(state.shares.map((s) => s.token));
   let added = 0, skipped = 0;
   for (const raw of incoming) {
-    if (!raw || typeof raw !== 'object' || !['file', 'folder', 'inbox'].includes(raw.type) || !raw.name) { skipped += 1; continue; }
+    if (!raw || typeof raw !== 'object' || !['file', 'folder', 'inbox', 'collab', 'web-storage'].includes(raw.type) || !raw.name) { skipped += 1; continue; }
     const rec = { ...raw };
+    if (rec.webStorage && ['web-storage','inbox','collab'].includes(rec.type)) {
+      const imported=webStorageImportMeta(rec,getStorageConnector(rec.webStorage&&rec.webStorage.connectorId)); if(!imported||((rec.type==='inbox'||rec.type==='collab')&&(imported.readOnly||!imported.isDir))){skipped+=1;continue;}
+      rec.webStorage=imported;rec.allowZip=false;delete rec.hostPath;delete rec.relDir;delete rec.items;delete rec.collection;
+      if(rec.type==='inbox'||rec.type==='collab'){rec.moderated=false;rec.rejectDuplicates=false;delete rec.encrypted;delete rec.encMode;webStorageWritable.sanitizeTracked(rec);}else delete rec.webStorageUploaded;
+    }
     rec.id = crypto.randomBytes(8).toString('hex');
     if (!rec.token || tokens.has(rec.token)) rec.token = newToken();
     tokens.add(rec.token);
     if (typeof rec.downloads !== 'number') rec.downloads = 0;
     rec.revoked = !!rec.revoked;
+    if (rec.type === 'collab') { if (rec.allowDelete === true && rec.pwHash) rec.allowDelete = true; else delete rec.allowDelete; }
     delete rec.expiryWarnedAt; // re-arm expiry alerts on the destination instance
     // A configuration export never contains the encrypted blob itself. Never
     // trust/import an absolute encPath from JSON: a crafted config could otherwise
@@ -13296,6 +13603,141 @@ function reqPathList(body) {
   const raw = Array.isArray(body.paths) ? body.paths : (body.path != null ? [body.path] : []);
   return [...new Set(raw.map((p) => String(p || '').trim()).filter(Boolean))];
 }
+
+function webStorageConnectorSnapshot(connector) {
+  return {
+    connectorId:String(connector.id || ''),
+    connectorName:String(connector.name || '').slice(0,80),
+    connectorType:String(connector.type || '').slice(0,40),
+    remote:String(connector.remote || '').slice(0,64),
+    root:String(connector.root || '').slice(0,4096),
+    readOnly:!!connector.readOnly,
+  };
+}
+
+function webStorageDlpGate(req, res, body, share) {
+  const settings = getSettings();
+  if (settings.dlpEnabled === false) return false;
+  const scan = {
+    count:0, highest:null, types:[], findings:[], incomplete:true,
+    filesScanned:0, filesSkipped:1, ocrErrors:0, ocrUnavailable:false,
+    scanErrors:1, incompleteEntries:0, truncated:false,
+  };
+  const mode = dlpEffectiveAction(settings, scan);
+  if ((mode === 'block' || mode === 'quarantine')) {
+    auditReq(req, 'dlp-blocked', { code:'dlp-result', params:{ source:'web-storage-share-create', count:0, highest:'none', incomplete:true, types:'' }, fallback:'web-storage-share-create: remote content was not inspected locally' });
+    return res.status(403).json({ error:'dlp-remote-unscanned', dlp:scan }), true;
+  }
+  if (mode === 'warn' && body.dlpOverride !== true) {
+    auditReq(req, 'dlp-warning', { code:'dlp-result', params:{ source:'web-storage-share-create', count:0, highest:'none', incomplete:true, types:'' }, fallback:'web-storage-share-create: remote content was not inspected locally' });
+    return res.status(409).json({ error:'dlp-warning', reason:'remote-unscanned', dlp:scan }), true;
+  }
+  if (mode === 'warn') auditReq(req, 'dlp-overridden', 'web-storage-share-create: remote content was not inspected locally');
+  applyDlpSummary(share, scan);
+  return false;
+}
+
+function applyWebStorageShareOptions(share, body) {
+  const color = normalizeShareColor(body.color);
+  if (color === null) return 'invalid-color';
+  if (color) share.color = color;
+  const tags = normalizeTags(body.tags || []); if (tags.length) share.tags = tags;
+  const descriptionMd = normalizeDescriptionMd(body.descriptionMd); if (descriptionMd) share.descriptionMd = descriptionMd;
+  if (body.expiryReminderHours !== undefined && body.expiryReminderHours !== null && body.expiryReminderHours !== '') {
+    const h = Number(body.expiryReminderHours); if (!Number.isFinite(h) || h < 0 || h > 8760) return 'invalid-reminder';
+    share.expiryReminderHours = Math.round(h * 10) / 10;
+  }
+  const forceNeverExpire = getSettings().newSharesNeverExpire === true;
+  const firstUseExpirySeconds = forceNeverExpire ? 0 : boundedSeconds(body.firstUseExpirySeconds); if (firstUseExpirySeconds) share.firstUseExpirySeconds = firstUseExpirySeconds;
+  const inactiveExpirySeconds = forceNeverExpire ? 0 : boundedSeconds(body.inactiveExpirySeconds); if (inactiveExpirySeconds) share.inactiveExpirySeconds = inactiveExpirySeconds;
+  const password = String(body.password || '');
+  if (getSettings().defaultRequirePassword && !password) return 'password-required';
+  if (password) Object.assign(share, makeSharePassword(password));
+  if (password) { const hint = normalizePwHint(body.pwHint); if (hint) share.pwHint = hint; }
+  const maxDlPerIp = parseMaxDownloadsPerIp(body.maxDownloadsPerIp); if (maxDlPerIp) share.maxDownloadsPerIp = maxDlPerIp;
+  const shareEmoji = normalizeShareEmoji(body.emoji); if (shareEmoji) share.emoji = shareEmoji;
+  const maxBytesServed = parseMaxBytesServed(body.maxBytesServed); if (maxBytesServed) share.maxBytesServed = maxBytesServed;
+  const parsedRate = parseLinkRateKBps(body.rateKBps, { optional:true });
+  if (!parsedRate.ok) return 'invalid-rate';
+  if (parsedRate.value > 0) share.rateBps = parsedRate.value * 1024;
+  // Cloud folders are intentionally never materialized locally merely to build
+  // a ZIP. Keep the flag false for both files and folders so PATCH/import paths
+  // cannot accidentally advertise a local ZIP capability later.
+  share.allowZip = false;
+  if (body.noPreview === true) share.noPreview = true;
+  if (body.burnAfterDownload === true) share.burnAfterDownload = true;
+  if (typeof body.note === 'string') {
+    const note = body.note.replace(/\r\n/g, '\n').trim().slice(0, 2000); if (note) share.note = note;
+  }
+  const maxVisitors = parseMaxVisitors(body.maxVisitors); if (maxVisitors > 0) share.maxVisitors = maxVisitors;
+  const dlThreshold = Math.max(0, Math.floor(Number(body.notifyDownloadThreshold) || 0)); if (dlThreshold > 0) share.notifyDownloadThreshold = dlThreshold;
+  if (body.requestAccess === true) share.requestAccess = true;
+  if (body.allowFeedback === true) share.allowFeedback = true;
+  applyAccessRules(share, body);
+  return null;
+}
+
+async function createWebWritableShare(req,res,type){
+  const body=req.body||{},current=getStorageConnector(body.connectorId);if(!current)return res.status(404).json({error:'connector-not-found'});
+  const connector=Object.freeze({...current});if(connector.readOnly)return res.status(409).json({error:'connector-read-only'});
+  if(!Object.prototype.hasOwnProperty.call(body,'remotePath'))return res.status(400).json({error:'missing-remote-path'});
+  const remotePath=cleanConnectorPath(body.remotePath);if(remotePath===null)return res.status(400).json({error:'invalid-remote-path'});
+  let stat;try{stat=await storageConnectorService.stat(connector,remotePath);}catch(error){const code=connectorErrorCode(error);return res.status(code==='rclone-unavailable'?503:code==='remote-not-found'?404:502).json({error:code});}
+  if(!stat.isDir)return res.status(400).json({error:'remote-not-directory'});
+  const live=getStorageConnector(connector.id);if(!live||live.remote!==connector.remote||live.root!==connector.root||live.type!==connector.type||!!live.readOnly!==!!connector.readOnly)return res.status(409).json({error:'connector-changed-during-create'});
+  const nn=(v)=>{const n=Math.floor(Number(v));return Number.isFinite(n)&&n>0?n:0;},password=String(body.password||'');
+  if(getSettings().defaultRequirePassword&&!password)return res.status(400).json({error:'password-required'});
+  if(body.moderated===true)return res.status(400).json({error:'web-storage-moderation-unavailable'});
+  if(body.encrypted===true)return res.status(400).json({error:'web-storage-encryption-unavailable'});
+  const share={type,name:String(body.name||'').replace(/[\r\n\t]+/g,' ').trim().slice(0,240)||(type==='collab'?'Web collaboration':'Web reception'),startsAt:parseStartsAt(body.startsAt),expiresAt:resolveNewShareExpiry(body),maxFiles:nn(body.maxFiles),maxFileBytes:nn(body.maxFileBytes),maxTotalBytes:nn(body.maxTotalBytes),allowExt:normExtList(body.allowExt),blockExt:normExtList(body.blockExt),groupBySender:type==='inbox'&&!!body.groupBySender,tagBySender:!!body.tagBySender,rejectDuplicates:false,requireSenderName:type==='inbox'&&!!body.requireSenderName,blockExecutables:!!body.blockExecutables,maxFilesPerSender:nn(body.maxFilesPerSender),maxBytesPerSender:nn(body.maxBytesPerSender),maxFilesPerUpload:nn(body.maxFilesPerUpload),moderated:false,bytesReceived:0,allowZip:false,allowDelete:type==='collab'&&!!body.allowDelete&&!!password,webStorage:{...webStorageConnectorSnapshot(connector),path:remotePath,isDir:true,sourceId:stat.id||null,sourceName:String(stat.name||'').slice(0,255)}};
+  const note=(String(body.note||'').replace(/\r\n/g,'\n').trim()||String(getSettings().receptionBanner||'')).slice(0,2000);if(note)share.note=note;
+  if(password)Object.assign(share,makeSharePassword(password));applyAccessRules(share,body);if(share.expiresAt)share.expirySetAt=Date.now();
+  if(type==='collab'&&webStorageDlpGate(req,res,body,share))return;
+  stampOwner(share,req);const rec=addShareDurable(share,req);if(!rec)return res.status(503).json({error:'write-error'});
+  auditReq(req,type==='collab'?'collab-created':'inbox-created',`web-storage ${share.name} via ${connector.name}`);
+  return res.status(201).json({share:decorateShare(rec,req)});
+}
+adminRouter.post('/inbox/web-storage',requireFullAdmin,(req,res)=>createWebWritableShare(req,res,'inbox'));
+adminRouter.post('/collab/web-storage',requireFullAdmin,(req,res)=>createWebWritableShare(req,res,'collab'));
+
+adminRouter.post('/shares/web-storage', requireFullAdmin, async (req, res) => {
+  const body = req.body || {};
+  const currentConnector = getStorageConnector(body.connectorId);
+  if (!currentConnector) return res.status(404).json({ error:'connector-not-found' });
+  const connector = Object.freeze({ ...currentConnector });
+  if (!Object.prototype.hasOwnProperty.call(body, 'remotePath')) return res.status(400).json({ error:'missing-remote-path' });
+  const remotePath = cleanConnectorPath(body.remotePath);
+  if (remotePath === null) return res.status(400).json({ error:'invalid-remote-path' });
+  let stat;
+  try { stat = await storageConnectorService.stat(connector, remotePath); }
+  catch (error) {
+    const code = connectorErrorCode(error);
+    return res.status(code === 'rclone-unavailable' ? 503 : code === 'remote-not-found' ? 404 : 502).json({ error:code });
+  }
+  const recheckedConnector = getStorageConnector(connector.id);
+  if (!recheckedConnector || recheckedConnector.remote !== connector.remote || recheckedConnector.root !== connector.root || recheckedConnector.type !== connector.type) {
+    return res.status(409).json({ error:'connector-changed-during-create' });
+  }
+  const requestedName = String(body.name || '').replace(/[\r\n\t]+/g, ' ').trim().slice(0, 240);
+  const share = {
+    type:'web-storage',
+    name:requestedName || stat.name || path.posix.basename(remotePath) || connector.name || 'cloud-share',
+    size:stat.isDir ? null : Math.max(0, Number(stat.size) || 0),
+    startsAt:parseStartsAt(body.startsAt),
+    expiresAt:resolveNewShareExpiry(body),
+    maxDownloads:parseMaxDownloads(body.maxDownloads),
+    webStorage:{ ...webStorageConnectorSnapshot(connector), path:remotePath, isDir:!!stat.isDir, sourceId:stat.id || null, sourceName:String(stat.name || '').slice(0,255) },
+  };
+  if (share.expiresAt) share.expirySetAt = Date.now();
+  const optionError = applyWebStorageShareOptions(share, body);
+  if (optionError) return res.status(optionError === 'password-required' ? 400 : 400).json({ error:optionError });
+  if (webStorageDlpGate(req, res, body, share)) return;
+  stampOwner(share, req);
+  const rec = addShareDurable(share, req);
+  if (!rec) return res.status(503).json({ error:'write-error' });
+  auditReq(req, 'share-created', `web-storage ${share.name || ''} via ${connector.name}`);
+  res.status(201).json({ share:decorateShare(rec, req) });
+});
 
 adminRouter.post('/shares', async (req, res) => {
   const body = req.body || {};
@@ -14007,7 +14449,7 @@ adminRouter.post('/shares/:id/clone', async (req, res) => {
     'firstViewNotifiedAt', 'firstViewKind', 'firstViewIp', 'firstViewPushPending', 'firstViewPushQueuedAt', 'firstViewPushAcceptedAt', 'downloadThresholdNotifiedAt',
     'centerFirstDepositAt', 'centerProtectedFirstAccessAt', 'centerNotificationCountries',
     'centerViewMilestones', 'centerDownloadMilestones', 'centerVisitorAgents', 'centerExpiredDeadline',
-    'receivedHashes', 'senderStats', 'versions', 'editHistory', 'cacheRevision', 'cacheInvalidatedAt',
+    'receivedHashes', 'senderStats', 'webStorageUploaded', 'versions', 'editHistory', 'cacheRevision', 'cacheInvalidatedAt',
     'ipDownloads', 'bytesServed', 'firstViewPushAcceptedCount', 'centerFileSignature', 'centerFileFingerprint',
     'retentionReason', 'retentionRevokedAt', 'uploadDeviceName', 'uploadSource',
   ]) delete clone[key];
@@ -14027,7 +14469,7 @@ adminRouter.post('/shares/:id/clone', async (req, res) => {
   const copiedPhotoFiles = [];
 
   try {
-    if (source.type === 'inbox' || source.type === 'collab') {
+    if ((source.type === 'inbox' || source.type === 'collab') && !source.webStorage) {
       const base = nextName
         .replace(/[^A-Za-z0-9 _.-]/g, '_')
         .replace(/^\.+/, '')
@@ -14038,6 +14480,7 @@ adminRouter.post('/shares/:id/clone', async (req, res) => {
       freshInboxDir = resolveWithin(INBOX_DIR, clone.relDir);
       await fs.promises.mkdir(freshInboxDir, { recursive: true });
     }
+    if(source.webStorage&&(source.type==='inbox'||source.type==='collab')){delete clone.relDir;clone.bytesReceived=0;clone.allowZip=false;}
 
     if (source.type === 'photo') {
       let original = firstExistingPhotoFile(photoOriginalPaths(source));
@@ -14383,9 +14826,11 @@ adminRouter.patch('/shares/:id', (req, res) => {
     if (kb !== current) { if (kb > 0) s.rateBps = kb * 1024; else delete s.rateBps; changed.push('rateKBps'); }
   }
   if (typeof body.allowZip === 'boolean' && body.allowZip !== (s.allowZip !== false)) {
+    if (s.webStorage && body.allowZip) return res.status(400).json({ error:'zip-unavailable-for-web-storage' });
     if (body.allowZip) delete s.allowZip; else s.allowZip = false;
     changed.push('allowZip');
   }
+  if (s.webStorage) s.allowZip = false;
   if (typeof body.noPreview === 'boolean' && body.noPreview !== !!s.noPreview) {
     if (body.noPreview) s.noPreview = true; else delete s.noPreview;
     changed.push('noPreview');
@@ -14556,6 +15001,7 @@ adminRouter.patch('/shares/:id', (req, res) => {
         if (next.join('\0') !== cur.join('\0')) { if (next.length) s[key] = next; else delete s[key]; changed.push(key); }
       }
     }
+    if(s.webStorage&&((body.moderated===true)||(body.rejectDuplicates===true)))return res.status(400).json({error:'web-storage-write-policy-unavailable'});
     for (const key of ['groupBySender','tagBySender','rejectDuplicates','requireSenderName','blockExecutables','moderated']) {
       if (typeof body[key] === 'boolean' && body[key] !== !!s[key]) { if (body[key]) s[key] = true; else delete s[key]; changed.push(key); }
     }
@@ -21201,7 +21647,7 @@ app.post('/app/host/shares', pwaJsonParser, async (req, res) => {
 app.post('/app/host/shares/:token/rate', pwaJsonParser, (req, res) => {
   const session = pwaHostAdminSession(req, res); if (!session) return;
   const share = getByToken(req.params.token);
-  if (!share || !['file','folder'].includes(share.type)) return res.status(404).json({ error:'not-found' });
+  if (!share || !['file','folder','web-storage'].includes(share.type)) return res.status(404).json({ error:'not-found' });
   if (session.role === 'operator' && String(share.ownerId || '') !== String(session.accountId || '')) return res.status(403).json({ error:'forbidden' });
   const parsedRate = parseLinkRateKBps(req.body && req.body.rateKBps);
   if (!parsedRate.ok) return res.status(400).json({ error:'invalid-rate' });
@@ -21222,7 +21668,7 @@ app.get('/app/host/shares', (req, res) => {
   // without a live session (unlike FS browse / create above, which stay session-only).
   if (!pwaViewerIsAdmin(req)) return res.status(403).json({ error: 'admin-required' });
   const source = state.shares
-    .filter((s) => s && (s.type === 'file' || s.type === 'folder' || s.type === 'collab') && canManagePwaImage(req, s));
+    .filter((s) => s && (s.type === 'file' || s.type === 'folder' || s.type === 'collab' || s.type === 'web-storage') && canManagePwaImage(req, s));
   const pending = source.filter((s) => shareNeedsLogicalBytesScan(s) && !shareLogicalBytesCache.get(s.id));
   if (pending.length) void mapLimit(pending, 2, (s) => queueShareLogicalBytesRefresh(s)).catch(() => {});
   const list = source
@@ -21238,7 +21684,7 @@ app.get('/app/host/shares', (req, res) => {
 // library. These never require filesystem browsing and therefore also work from
 // an owner/admin paired device, not only from a live browser admin session.
 function pwaCanManageHostShare(req, share) {
-  if (!share || !['file','folder','collab'].includes(share.type)) return false;
+  if (!share || !['file','folder','collab','web-storage'].includes(share.type)) return false;
   return canManagePwaImage(req, share);
 }
 // 1.60.0 — expose the same detailed share statistics as the standard dashboard
@@ -21302,15 +21748,16 @@ app.post('/app/host/shares/:token/clone', pwaJsonParser, async (req, res) => {
   const requested=String(body.name||'').replace(/[\r\n\t]+/g,' ').trim().slice(0,200);
   const name=requested||((source.name||'Share')+' (copy)').slice(0,200);
   const clone=JSON.parse(JSON.stringify(source));
-  for(const key of ['id','token','createdAt','downloads','revoked','disabled','burnedAt','burnedReason','visitors','views','messages','pending','recipients','ownerId','ownerName','ownerDeviceId','pstats','bytesReceived','pinned','archived','autoArchivedAt','favorite','changeHistory','lastViewAt','lastUseAt','lastDownload','lastUpload','firstUsedAt','firstUseExpiresAt','firstUseExpiryWarnedDeadline','expirySetAt','inactiveExpiryWarnedDeadline','statsBaseline','adminComments','editedAt','firstViewNotifiedAt','firstViewKind','firstViewIp','firstViewPushPending','firstViewPushQueuedAt','firstViewPushAcceptedAt','downloadThresholdNotifiedAt','centerFirstDepositAt','centerProtectedFirstAccessAt','centerNotificationCountries','centerViewMilestones','centerDownloadMilestones','centerVisitorAgents','centerExpiredDeadline','receivedHashes','senderStats','expiryWarnedAt','downloadLimitReachedAt','ipDownloads','bytesServed','firstViewPushAcceptedCount','centerFileSignature','centerFileFingerprint','retentionReason','retentionRevokedAt']) delete clone[key];
+  for(const key of ['id','token','createdAt','downloads','revoked','disabled','burnedAt','burnedReason','visitors','views','messages','pending','recipients','ownerId','ownerName','ownerDeviceId','pstats','bytesReceived','pinned','archived','autoArchivedAt','favorite','changeHistory','lastViewAt','lastUseAt','lastDownload','lastUpload','firstUsedAt','firstUseExpiresAt','firstUseExpiryWarnedDeadline','expirySetAt','inactiveExpiryWarnedDeadline','statsBaseline','adminComments','editedAt','firstViewNotifiedAt','firstViewKind','firstViewIp','firstViewPushPending','firstViewPushQueuedAt','firstViewPushAcceptedAt','downloadThresholdNotifiedAt','centerFirstDepositAt','centerProtectedFirstAccessAt','centerNotificationCountries','centerViewMilestones','centerDownloadMilestones','centerVisitorAgents','centerExpiredDeadline','receivedHashes','senderStats','webStorageUploaded','expiryWarnedAt','downloadLimitReachedAt','ipDownloads','bytesServed','firstViewPushAcceptedCount','centerFileSignature','centerFileFingerprint','retentionReason','retentionRevokedAt']) delete clone[key];
   clone.name=name; clone.downloads=0; clone.revoked=false;
   let freshDir=null;
   try {
-    if(source.type==='collab'){
+    if(source.type==='collab'&&!source.webStorage){
       const base=name.replace(/[^A-Za-z0-9 _.-]/g,'_').replace(/^\.+/,'').trim().slice(0,50)||'collab';
       clone.relDir=base+'-'+crypto.randomBytes(3).toString('hex'); clone.bytesReceived=0;
       freshDir=resolveWithin(INBOX_DIR,clone.relDir); await fs.promises.mkdir(freshDir,{recursive:true});
     }
+    if(source.type==='collab'&&source.webStorage){delete clone.relDir;clone.bytesReceived=0;clone.allowZip=false;}
     stampPwaRecordOwner(req,clone);
     applyNewShareLifetimePolicy(clone);
     const rec=addShare(clone,req,{action:'created-from-duplicate',fields:['name'],before:{name:source.name||''}},false);
@@ -21608,21 +22055,18 @@ function inboxReceivedFiles(share) {
   files.sort((a, b) => (b.mtime || 0) - (a.mtime || 0));
   return files;
 }
-app.get('/app/inbox/:token/files', (req, res) => {
-  const s = getByToken(req.params.token);
-  if (!s || (s.type !== 'inbox' && s.type !== 'collab') || !canManagePwaImage(req, s)) {
-    return res.status(404).json({ error: 'not-found' });
-  }
-  const files = inboxReceivedFiles(s);
-  res.setHeader('Cache-Control', 'no-store');
-  res.json({ token: s.token, name: s.name || '', count: files.length, files });
+app.get('/app/inbox/:token/files', async (req, res) => {
+  const s=getByToken(req.params.token);if(!s||(s.type!=='inbox'&&s.type!=='collab')||!canManagePwaImage(req,s))return res.status(404).json({error:'not-found'});
+  let files,truncated=false;if(s.webStorage){try{const walked=await webStorageWalkFiles(s,{maxFiles:5000,maxDirs:1000,maxDepth:24});files=walked.files.map((row)=>({name:row.name,path:row.rel,size:row.size,mtime:0}));truncated=!!walked.truncated;}catch(error){return res.status(webStorageConnectorStatus(error)).json({error:connectorErrorCode(error)});}}else files=inboxReceivedFiles(s);
+  res.setHeader('Cache-Control','no-store');res.json({token:s.token,name:s.name||'',count:files.length,truncated,files});
 });
-app.get('/app/inbox/:token/file', (req, res) => {
+app.get('/app/inbox/:token/file', async (req, res) => {
   const s = getByToken(req.params.token);
   if (!s || (s.type !== 'inbox' && s.type !== 'collab') || !canManagePwaImage(req, s)) {
     return res.status(404).json({ error: 'not-found' });
   }
   const rel = String(req.query.path || '');
+  if(s.webStorage)return serveWebStorageFile(req,res,s,rel,{filename:path.posix.basename(rel||'download'),countStats:false});
   const abs = safeReceivedFilePath(s, rel);
   if (!abs) return res.status(404).json({ error: 'not-found' });
   let st;
@@ -22014,6 +22458,13 @@ app.get('/api/meta', (req, res) => {
 // Admin API (local network + password).
 app.use('/api', adminGuard, jsonParser, adminRouter);
 
+// The Configuration admin surface is a client-routed full page of the SPA.
+// Serving index.html here keeps reloads/direct links at /configuration working.
+app.get('/configuration', adminGuard, (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache');
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 // The Images admin surface is a client-routed sub-page of the SPA (URL /images).
 // Serving the same index.html here means a direct hit or a reload on /images lands on
 // the app — which reads the URL and opens the Images page — instead of a 404. It sits
@@ -22071,8 +22522,6 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'server-error' });
 });
 
-initUniversalSearchIndex();
-
 let tlsOptions = null;
 try {
   tlsOptions = loadTlsOptions();
@@ -22084,7 +22533,20 @@ let serverReady = false;
 const onServerListening = () => {
   serverReady = true;
   printStartupBanner();
-  ensureWindowsPortableFirewallAccess();
+
+  // The listener/readiness endpoint is now available before non-essential cache
+  // hydration. A short grace period lets the initial browser navigation/static
+  // assets win disk and CPU time on cold Windows boots.
+  const startupMaintenance = setTimeout(() => {
+    void initUniversalSearchIndex().catch((e) => console.warn('[search-index] deferred startup init failed:', String((e && e.message) || e)));
+  }, 750);
+  if (startupMaintenance.unref) startupMaintenance.unref();
+
+  // PowerShell cold-start + firewall cmdlet discovery is surprisingly expensive on
+  // some Windows systems and the rule normally already exists after first install.
+  // Keep it out of the first-page critical path; local loopback access is unaffected.
+  const firewallMaintenance = setTimeout(() => ensureWindowsPortableFirewallAccess(), 2500);
+  if (firewallMaintenance.unref) firewallMaintenance.unref();
 };
 const server = tlsOptions
   ? https.createServer(tlsOptions, app).listen(PORT, BIND, onServerListening)

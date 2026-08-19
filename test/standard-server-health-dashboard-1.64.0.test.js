@@ -14,7 +14,7 @@ test('system health is a dedicated topbar page and no longer a dashboards sub-ta
   assert.match(html,/id="system-health-page"/);
   assert.match(html,/server-health-dashboard\.css\?v=3/);
   assert.match(html,/server-health-dashboard\.js\?v=4/);
-  assert.match(html,/app\.js\?v=307/);
+  assert.match(html,/app\.js\?v=308/);
   assert.match(app,/const SYSTEM_HEALTH_PATH = '\/system-health'/);
   assert.match(app,/DirectXferServerHealth/);
   assert.match(server,/app\.get\('\/system-health'/);
@@ -73,7 +73,7 @@ test('real server protects and serves the complete health dashboard',{timeout:30
     for(const asset of ['/server-health-dashboard.js?v=4','/server-health-dashboard.css?v=3']){const r=await fetch(base+asset);assert.equal(r.status,200);}
     const login=await fetch(base+'/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:'admin',password:'HealthPass123!'})});assert.equal(login.status,200);const cookie=cookieHeader(login);
     const r=await fetch(base+'/api/server-health-dashboard?range=24h',{headers:{Cookie:cookie}});assert.equal(r.status,200,await r.clone().text());const b=await r.json();
-    assert.equal(b.version,'1.66.6');assert.ok(Number.isFinite(b.score));assert.ok(b.completeness&&Array.isArray(b.completeness.missing));assert.ok(b.health&&b.health.cpu&&b.health.memory&&b.health.process&&b.health.eventLoop);assert.ok(b.history&&Array.isArray(b.history.points));assert.ok(b.workload&&b.workload.shares&&b.workload.transfers);assert.ok(b.deep&&b.deep.storage&&Array.isArray(b.deep.storage.volumes));assert.ok(b.deep.security&&b.deep.tls&&b.deep.search&&b.deep.connectors&&b.deep.runtime);assert.ok(Array.isArray(b.alerts));
+    assert.equal(b.version,'1.67.1');assert.ok(Number.isFinite(b.score));assert.ok(b.completeness&&Array.isArray(b.completeness.missing));assert.ok(b.health&&b.health.cpu&&b.health.memory&&b.health.process&&b.health.eventLoop);assert.ok(b.history&&Array.isArray(b.history.points));assert.ok(b.workload&&b.workload.shares&&b.workload.transfers);assert.ok(b.deep&&b.deep.storage&&Array.isArray(b.deep.storage.volumes));assert.ok(b.deep.security&&b.deep.tls&&b.deep.search&&b.deep.connectors&&b.deep.runtime);assert.ok(Array.isArray(b.alerts));
     await new Promise(r=>setTimeout(r,1100));
     const e1=await (await fetch(base+'/api/server-health-dashboard?range=24h',{headers:{Cookie:cookie}})).json();
     const e2=await (await fetch(base+'/api/server-health-dashboard?range=24h',{headers:{Cookie:cookie}})).json();

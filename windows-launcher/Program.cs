@@ -19,16 +19,16 @@ namespace DirectXfer.WindowsLauncher
 {
     internal static class Program
     {
-        internal const string AppVersion = "1.66.6";
-        internal const string RuntimeAppBuild = "1.66.6-launcher82-csharp";
+        internal const string AppVersion = "1.67.1";
+        internal const string RuntimeAppBuild = "1.67.1-launcher87-csharp";
         internal const string ServerHostFileName = "Direct-Xfer.ServerHost.exe";
-        internal const string ServerHostVersion = "1.66.6.0";
+        internal const string ServerHostVersion = "1.67.1.0";
         internal const int DefaultPort = 55750;
         internal const int MaxFallbackPort = 55769;
         internal const int StartupReadyTimeoutMs = 60000;
         internal const string MutexName = @"Local\DirectXferLauncherInstance";
         internal const string OpenEventName = @"Local\DirectXferLauncherOpen";
-        internal const string ServerHostBuild = "1.66.6-serverhost55-csharp";
+        internal const string ServerHostBuild = "1.67.1-serverhost60-csharp";
         internal const string ServerHostReloadEventName = @"Local\DirectXferServerHostReload";
         internal const string RcloneVersion = "1.74.4";
         internal const string RcloneZipSha256 = "ef097ef9de37a57feb7d9f9c7afb34148ad3c65be8025f1d8f7f521554a701ea";
@@ -142,6 +142,7 @@ namespace DirectXfer.WindowsLauncher
         private bool _exiting;
         private bool _disposed;
         private bool _optionalToolBusy;
+        private int _deferredMaintenanceScheduled;
         private string _lastAttachFailure = string.Empty;
 
         internal LauncherContext(string[] args)
@@ -158,8 +159,10 @@ namespace DirectXfer.WindowsLauncher
             _tray.LeftClick = OpenBrowser;
             _tray.MenuFactory = BuildTrayMenu;
             _tray.CommandInvoked = HandleTrayCommand;
-            CleanupStaleOptionalWorkDirectories();
-            if (MigrateLegacyOptionalActivationState()) SignalServerHostReload();
+            // Keep the startup path lean. Optional-component migration and stale-work
+            // cleanup are housekeeping only; doing them before ServerHost attachment can
+            // launch rclone/Tesseract probes and traverse old work folders before the UI
+            // is usable. Run that maintenance after the backend is ready instead.
             RebuildTrayMenu();
 
             bool eventCreated;
@@ -500,7 +503,30 @@ namespace DirectXfer.WindowsLauncher
             if (_runtimePort != Program.DefaultPort)
                 NativeUi.Info(_tray.WindowHandle, Tr.AppTitle, string.Format(Tr.PortFallback, Program.DefaultPort, _runtimePort));
             ShowInitialAdminPassword();
-            if (_config.openBrowser && !_exiting) OpenBrowser();
+            // Readiness was just authenticated above; do not immediately perform a
+            // second session read + HTTP readiness probe only to open the same URL.
+            if (_config.openBrowser && !_exiting) OpenRuntimeUrl();
+            ScheduleDeferredMaintenance();
+        }
+
+        private void ScheduleDeferredMaintenance()
+        {
+            if (Interlocked.Exchange(ref _deferredMaintenanceScheduled, 1) != 0) return;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    // Give the first browser/navigation requests priority over optional
+                    // component housekeeping and antivirus-visible filesystem scans.
+                    await Task.Delay(1500, _lifetime.Token).ConfigureAwait(false);
+                    if (_lifetime.IsCancellationRequested || _exiting) return;
+                    CleanupStaleOptionalWorkDirectories();
+                    if (_lifetime.IsCancellationRequested || _exiting) return;
+                    if (MigrateLegacyOptionalActivationState()) SignalServerHostReload();
+                }
+                catch (OperationCanceledException) { }
+                catch { /* Deferred housekeeping is best-effort and must never break startup. */ }
+            });
         }
 
         private bool TryReady(int port, string token, string preferredScheme, int expectedPid, out string usedScheme)
@@ -734,6 +760,12 @@ namespace DirectXfer.WindowsLauncher
                 NativeUi.Warning(_tray.WindowHandle, Tr.AppTitle, Tr.ServerHostUnavailable);
                 return;
             }
+            OpenRuntimeUrl();
+        }
+
+        private void OpenRuntimeUrl()
+        {
+            if (_runtimePort <= 0) return;
             OpenUrl(_runtimeScheme + "://127.0.0.1:" + _runtimePort.ToString(CultureInfo.InvariantCulture) + "/");
         }
 

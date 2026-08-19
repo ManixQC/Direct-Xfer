@@ -4006,3 +4006,66 @@ body.share-details-open { overflow:hidden; }
 .dash-daily-summary{order:-10}.dash-widget-tools{display:none;position:absolute;right:8px;top:8px;z-index:4;gap:4px;padding:4px;border:1px solid var(--border);border-radius:9px;background:color-mix(in srgb,var(--panel) 92%,transparent);box-shadow:0 5px 20px #0004}.dashboard-customizing .chart-panel{position:relative;outline:1px dashed color-mix(in srgb,var(--accent) 45%,transparent);min-height:90px}.dashboard-customizing .dash-widget-tools{display:flex}.dash-widget-tool{border:0;background:transparent;color:var(--text);border-radius:6px;padding:4px 6px;cursor:pointer}.dash-widget-tool:hover{background:var(--border-soft)}.dashboard-customizing .chart-panel.dragging{opacity:.55}.dash-widget-hidden-preview{opacity:.38;filter:saturate(.45)}
 .guided-summary{border:1px solid var(--border-soft);border-radius:12px;padding:12px;font-weight:800}.guided-bad{border-color:color-mix(in srgb,var(--danger) 48%,var(--border))}.guided-warn{border-color:color-mix(in srgb,var(--warn) 48%,var(--border))}
 @media(max-width:640px){.std-enh-row,.guided-row{align-items:stretch;flex-direction:column}.share-context-menu{min-width:min(260px,calc(100vw - 16px))}}
+
+/* -------------------- Configuration full page (1.67.1) -------------------- */
+#config-page .brand {
+  font-size: 2.4rem;
+}
+#config-page .brand-logo {
+  width: 88px;
+  height: 88px;
+}
+.config-page-card {
+  max-width: 1120px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.config-page-head {
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-soft);
+}
+#config-page #config-form {
+  display: block;
+  overflow: visible;
+  min-height: 0;
+  padding-right: 0;
+}
+#config-page #config-form .modal-foot {
+  position: sticky;
+  bottom: 12px;
+  z-index: 4;
+  margin: 22px -8px 0;
+  padding: 12px 8px;
+  border-top: 1px solid var(--border-soft);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--card) 94%, transparent);
+  box-shadow: 0 -10px 24px color-mix(in srgb, var(--navy-900) 34%, transparent);
+  backdrop-filter: blur(8px);
+}
+#config-page .cfg-section {
+  scroll-margin-top: 112px;
+}
+@media (max-width: 640px) {
+  #config-page .brand { font-size: 1.45rem; }
+  #config-page .brand-logo { width: 48px; height: 48px; }
+  .config-page-card { padding: 16px 14px; }
+  #config-page #config-form .modal-foot { bottom: 6px; margin-left: -4px; margin-right: -4px; }
+}
+
+/* Web-storage share browser. Reuses the standard picker modal but keeps cloud
+   navigation controls visible while long remote listings scroll independently. */
+.web-storage-modal { max-width: 980px; }
+.web-storage-browser-head { display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin:8px 0; }
+.web-storage-browser-actions { display:flex; gap:6px; flex-wrap:wrap; }
+.web-storage-list { min-height:180px; max-height:38vh; overflow:auto; }
+.web-storage-list .web-storage-row { display:flex; align-items:center; gap:10px; width:100%; padding:9px 10px; border:0; border-bottom:1px solid var(--border); background:transparent; color:inherit; text-align:left; cursor:pointer; }
+.web-storage-list .web-storage-row:hover, .web-storage-list .web-storage-row:focus-visible { background:var(--card-2); outline:none; }
+.web-storage-list .web-storage-row.is-selected { box-shadow:inset 3px 0 0 currentColor; background:var(--card-2); }
+.web-storage-list .web-storage-row .web-storage-row-name { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.web-storage-list .web-storage-row .web-storage-row-size { flex:0 0 auto; }
+.web-storage-write-options { flex:1 0 100%; display:flex; flex-wrap:wrap; gap:12px; padding:10px 0 2px; }
+.web-storage-write-options.hidden { display:none; }
+.web-storage-write-options .fld-row { display:flex; gap:12px; flex-wrap:wrap; width:100%; }
+.web-storage-write-options > .fld, .web-storage-write-options .fld-row > .fld { flex:1 1 220px; }
+.web-storage-write-options > p { flex:1 0 100%; margin:0; }
+@media (max-width: 720px) { .web-storage-modal { width:min(96vw,980px); } .web-storage-list { max-height:32vh; } }

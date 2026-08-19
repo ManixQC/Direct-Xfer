@@ -88,6 +88,9 @@ link domain is set in the UI.
 - **Storage connectors** — admin-managed imports and exports through rclone remotes:
   SFTP, SMB, WebDAV, Google Drive, OneDrive, Dropbox and Box. Credentials remain in
   the protected rclone configuration, outside Direct-Xfer metadata and browser APIs.
+- **Web storage links** — create read-only cloud shares, **web reception links** that
+  deposit uploads into a selected cloud folder, and **web collaboration links** for
+  browsing/downloading/uploading, folder creation and optional visitor deletion.
 - **Destructive-event protection & audit proofs** — ransomware-like upload bursts and
   mass deletion suspend both the client and affected writable link. The append-only
   HMAC audit journal can be exported as an Ed25519-signed proof for offline verification.
@@ -214,6 +217,10 @@ compagnon installable est à `…/app`. Le domaine des liens se règle dans l'in
 - **Connecteurs de stockage** — imports et exports administrés via des destinations
   rclone SFTP, SMB, WebDAV, Google Drive, OneDrive, Dropbox et Box. Les identifiants
   restent dans la configuration rclone protégée, hors des métadonnées et du navigateur.
+- **Liens de stockage web** — créez des partages cloud en lecture, des **liens de
+  réception web** qui déposent les fichiers dans un dossier cloud choisi et des
+  **liens de collaboration web** avec navigation, téléchargement, dépôt, création de
+  dossiers et suppression visiteur optionnelle.
 - **Protection destructive et preuves d’audit** — les rafales typiques de rançongiciel
   et suppressions massives suspendent le client et le lien inscriptible concerné. Le
   journal HMAC append-only s’exporte en preuve Ed25519 vérifiable hors ligne.
@@ -337,6 +344,10 @@ está en `…/app`. El dominio de los enlaces se ajusta en la interfaz.
 - **Conectores de almacenamiento** — importación y exportación administradas mediante
   rclone: SFTP, SMB, WebDAV, Google Drive, OneDrive, Dropbox y Box. Las credenciales no
   entran en los metadatos de Direct-Xfer ni en el navegador.
+- **Enlaces de almacenamiento web** — crea recursos cloud de solo lectura, **enlaces
+  de recepción web** que depositan archivos en una carpeta cloud elegida y **enlaces de
+  colaboración web** con navegación, descarga, subida, creación de carpetas y borrado
+  opcional por visitantes.
 - **Protección destructiva y pruebas de auditoría** — las ráfagas de ransomware y los
   borrados masivos suspenden al cliente y al enlace afectado. El diario HMAC append-only
   se puede exportar como prueba Ed25519 verificable sin conexión.

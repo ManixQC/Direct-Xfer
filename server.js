@@ -11715,11 +11715,7 @@ async function connectorExportSource(raw) {
 }
 function connectorErrorCode(error) {
   const code = String(error && error.code || 'connector-failed');
-  return [
-    'rclone-unavailable','remote-not-found','connector-failed','connector-cancelled',
-    'connector-terminated','connector-timeout','connector-staging-unavailable',
-    'read-only','not-file','invalid-source','name-exhausted','infected','server-restarted',
-  ].includes(code) ? code : 'connector-failed';
+  return ['rclone-unavailable','remote-not-found','connector-failed','connector-cancelled','connector-terminated','connector-timeout','connector-staging-unavailable','connector-auth-failed','connector-forbidden','connector-unreachable','connector-rate-limited','connector-response','read-only','not-file','invalid-source','name-exhausted','infected','server-restarted'].includes(code) ? code : 'connector-failed';
 }
 function queueStorageConnectorJob(req, connector, direction, input) {
   if (activeConnectorJobs.size >= MAX_ACTIVE_CONNECTOR_JOBS) {
@@ -11897,7 +11893,10 @@ adminRouter.get('/storage/connectors/:id/list', requireFullAdmin, async (req, re
   const relative = cleanConnectorPath(req.query.path || '');
   if (relative === null) return res.status(400).json({ error:'invalid-remote-path' });
   try { res.json({ path:relative, entries:await storageConnectorService.list(connector, relative) }); }
-  catch (error) { res.status(502).json({ error:connectorErrorCode(error) }); }
+  catch (error) {
+    const code = connectorErrorCode(error), status = code === 'rclone-unavailable' ? 503 : code === 'remote-not-found' ? 404 : code === 'connector-timeout' ? 504 : code === 'connector-rate-limited' ? 503 : 502;
+    res.status(status).json({ error:code });
+  }
 });
 adminRouter.post('/storage/connectors/:id/import', requireFullAdmin, (req, res) => {
   const connector = getStorageConnector(req.params.id);

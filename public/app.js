@@ -269,8 +269,8 @@ const I18N = {
     'dec.badKey': 'Échec du déchiffrement : clé ou phrase secrète incorrecte, ou fichier corrompu.',
     'dec.done': 'Fichier déchiffré ✓',
     // --- End-to-end encryption (added) ---
-    'enc.newShare': '🔒 Partage chiffré',
-    'secret.new': '🔑 Note secrète',
+    'enc.newShare': 'Partage chiffré',
+    'secret.new': 'Note secrète',
     'secret.title': 'Nouvelle note secrète',
     'secret.intro': 'Partagez un mot de passe, une clé ou un court message. Chiffré de bout en bout dans votre navigateur et détruit à la première lecture.',
     'secret.text': 'Secret',
@@ -1087,9 +1087,9 @@ const I18N = {
     'tr.zipTitle': 'Plusieurs fichiers regroupés et téléchargés dans une seule archive .zip',
     'sh.title': 'Partages en cours',
     'sh.new': '＋ Nouveau partage',
-    'webStorage.new': '☁ Lien de stockage web',
-    'webStorage.newInbox': '☁＋ Lien de réception web',
-    'webStorage.newCollab': '☁🔁 Lien de collaboration web',
+    'webStorage.new': 'Lien de stockage web',
+    'webStorage.newInbox': 'Lien de réception web',
+    'webStorage.newCollab': 'Lien de collaboration web',
     'webStorage.inboxTitle': 'Lien de réception web',
     'webStorage.collabTitle': 'Lien de collaboration web',
     'webStorage.writeHint': 'Les fichiers reçus sont temporairement préparés pour la reprise et les contrôles de sécurité, puis transférés vers le stockage cloud et supprimés localement.',
@@ -1112,13 +1112,27 @@ const I18N = {
     'webStorage.empty': 'Ce dossier cloud est vide.',
     'webStorage.rcloneMissing': 'rclone est indisponible. Activez le composant optionnel rclone puis réessayez.',
     'webStorage.loadFail': 'Impossible de parcourir ce stockage cloud.',
+    'webStorage.connectorListFail': 'Impossible de charger la liste des connecteurs de stockage.',
+    'webStorage.connectorApiMissing': 'Le service des connecteurs de stockage n’est pas disponible dans cette version du serveur. Rechargez la page après la mise à jour de Direct-Xfer.',
+    'webStorage.connectorForbidden': 'Votre compte n’a pas accès aux connecteurs de stockage.',
+    'webStorage.connectorMissing': 'Ce connecteur n’existe plus. Vérifiez Configuration → Connecteurs de stockage.',
+    'webStorage.remoteMissing': 'Le stockage distant configuré pour ce connecteur est introuvable. Vérifiez le remote rclone dans Configuration → Connecteurs de stockage.',
+    'webStorage.authFailed': 'L’authentification du fournisseur cloud a échoué ou a expiré. Reconnectez ce stockage dans rclone puis testez le connecteur.',
+    'webStorage.providerForbidden': 'Le fournisseur cloud refuse l’accès à cet emplacement. Vérifiez les permissions du compte et du dossier distant.',
+    'webStorage.providerUnavailable': 'Le fournisseur cloud est injoignable. Vérifiez la connexion réseau et l’état du service, puis réessayez.',
+    'webStorage.providerRateLimited': 'Le fournisseur cloud limite temporairement les requêtes. Réessayez dans quelques instants.',
+    'webStorage.providerTimeout': 'Le stockage cloud n’a pas répondu dans le délai prévu. Réessayez ou testez le connecteur dans Configuration.',
+    'webStorage.invalidResponse': 'Le fournisseur cloud a renvoyé une réponse invalide. Testez le connecteur et vérifiez la configuration rclone.',
+    'webStorage.browseInterrupted': 'Le parcours du stockage cloud a été interrompu. Réessayez.',
+    'webStorage.connectorGeneric': 'Le connecteur cloud a échoué. Testez-le dans Configuration → Connecteurs de stockage pour obtenir un diagnostic.',
+    'webStorage.requestTimeout': 'Direct-Xfer n’a pas reçu de réponse du serveur à temps. Réessayez.',
     'webStorage.createFail': 'Impossible de créer le lien de stockage web : {error}',
     'webStorage.created': 'Lien de stockage web créé ✓',
 
     'sh.moreCreateAria': 'Plus de types de partage',
     'sh.actionConfig': 'Config',
-    'sh.newInbox': '＋ Lien de réception',
-    'sh.newCollab': '🔁 Lien de collaboration',
+    'sh.newInbox': 'Lien de réception',
+    'sh.newCollab': 'Lien de collaboration',
     'sh.secret': 'Note secrète',
     'sh.clone': '⧉ Dupliquer',
     'sh.cloneTitle': 'Dupliquer ce partage avec un nouveau lien et des compteurs remis à zéro',
@@ -1879,8 +1893,8 @@ const I18N = {
     'dec.badKey': 'Decryption failed: wrong key or passphrase, or corrupted file.',
     'dec.done': 'File decrypted ✓',
     // --- End-to-end encryption (added) ---
-    'enc.newShare': '🔒 Encrypted share',
-    'secret.new': '🔑 Secret note',
+    'enc.newShare': 'Encrypted share',
+    'secret.new': 'Secret note',
     'secret.title': 'New secret note',
     'secret.intro': 'Share a password, key or short message. It is end-to-end encrypted in your browser and destroyed the first time it is read.',
     'secret.text': 'Secret',
@@ -2696,9 +2710,9 @@ const I18N = {
     'tr.zipTitle': 'Multiple files bundled into a single .zip archive',
     'sh.title': 'Active shares',
     'sh.new': '＋ New share',
-    'webStorage.new': '☁ Web storage link',
-    'webStorage.newInbox': '☁＋ Web reception link',
-    'webStorage.newCollab': '☁🔁 Web collaboration link',
+    'webStorage.new': 'Web storage link',
+    'webStorage.newInbox': 'Web reception link',
+    'webStorage.newCollab': 'Web collaboration link',
     'webStorage.inboxTitle': 'Web reception link',
     'webStorage.collabTitle': 'Web collaboration link',
     'webStorage.writeHint': 'Received files are staged temporarily for resumability and security checks, then transferred to cloud storage and removed locally.',
@@ -2721,13 +2735,27 @@ const I18N = {
     'webStorage.empty': 'This cloud folder is empty.',
     'webStorage.rcloneMissing': 'rclone is unavailable. Enable the optional rclone component and try again.',
     'webStorage.loadFail': 'Could not browse this cloud storage.',
+    'webStorage.connectorListFail': 'Could not load the storage connector list.',
+    'webStorage.connectorApiMissing': 'The storage connector service is not available in this server version. Reload the page after updating Direct-Xfer.',
+    'webStorage.connectorForbidden': 'Your account does not have access to storage connectors.',
+    'webStorage.connectorMissing': 'This connector no longer exists. Check Configuration → Storage connectors.',
+    'webStorage.remoteMissing': 'The remote configured for this connector could not be found. Check the rclone remote under Configuration → Storage connectors.',
+    'webStorage.authFailed': 'Cloud-provider authentication failed or expired. Reconnect this storage in rclone, then test the connector.',
+    'webStorage.providerForbidden': 'The cloud provider denied access to this location. Check the account and remote-folder permissions.',
+    'webStorage.providerUnavailable': 'The cloud provider is unreachable. Check the network connection and service status, then try again.',
+    'webStorage.providerRateLimited': 'The cloud provider is temporarily rate-limiting requests. Try again in a moment.',
+    'webStorage.providerTimeout': 'The cloud storage did not respond in time. Try again or test the connector in Configuration.',
+    'webStorage.invalidResponse': 'The cloud provider returned an invalid response. Test the connector and check the rclone configuration.',
+    'webStorage.browseInterrupted': 'Cloud-storage browsing was interrupted. Try again.',
+    'webStorage.connectorGeneric': 'The cloud connector failed. Test it under Configuration → Storage connectors for a more detailed diagnostic.',
+    'webStorage.requestTimeout': 'Direct-Xfer did not receive a server response in time. Try again.',
     'webStorage.createFail': 'Could not create the web storage link: {error}',
     'webStorage.created': 'Web storage link created ✓',
 
     'sh.moreCreateAria': 'More share types',
     'sh.actionConfig': 'Config',
-    'sh.newInbox': '＋ Reception link',
-    'sh.newCollab': '🔁 Collaboration link',
+    'sh.newInbox': 'Reception link',
+    'sh.newCollab': 'Collaboration link',
     'sh.secret': 'Secret note',
     'sh.clone': '⧉ Duplicate',
     'sh.cloneTitle': 'Duplicate this share with a new link and reset counters',
@@ -3487,8 +3515,8 @@ const I18N = {
     'dec.badKey': 'Fallo al descifrar: clave o frase incorrecta, o archivo dañado.',
     'dec.done': 'Archivo descifrado ✓',
     // --- End-to-end encryption (added) ---
-    'enc.newShare': '🔒 Compartir cifrado',
-    'secret.new': '🔑 Nota secreta',
+    'enc.newShare': 'Compartir cifrado',
+    'secret.new': 'Nota secreta',
     'secret.title': 'Nueva nota secreta',
     'secret.intro': 'Comparte una contraseña, clave o mensaje corto. Se cifra de extremo a extremo en tu navegador y se destruye la primera vez que se lee.',
     'secret.text': 'Secreto',
@@ -4305,9 +4333,9 @@ const I18N = {
     'tr.zipTitle': 'Varios archivos agrupados en un solo archivo .zip',
     'sh.title': 'Comparticiones activas',
     'sh.new': '＋ Nueva compartición',
-    'webStorage.new': '☁ Enlace de almacenamiento web',
-    'webStorage.newInbox': '☁＋ Enlace de recepción web',
-    'webStorage.newCollab': '☁🔁 Enlace de colaboración web',
+    'webStorage.new': 'Enlace de almacenamiento web',
+    'webStorage.newInbox': 'Enlace de recepción web',
+    'webStorage.newCollab': 'Enlace de colaboración web',
     'webStorage.inboxTitle': 'Enlace de recepción web',
     'webStorage.collabTitle': 'Enlace de colaboración web',
     'webStorage.writeHint': 'Los archivos recibidos se preparan temporalmente para reanudación y controles de seguridad, luego se transfieren al almacenamiento en la nube y se eliminan localmente.',
@@ -4330,13 +4358,27 @@ const I18N = {
     'webStorage.empty': 'Esta carpeta en la nube está vacía.',
     'webStorage.rcloneMissing': 'rclone no está disponible. Activa el componente opcional rclone y vuelve a intentarlo.',
     'webStorage.loadFail': 'No se pudo explorar este almacenamiento en la nube.',
+    'webStorage.connectorListFail': 'No se pudo cargar la lista de conectores de almacenamiento.',
+    'webStorage.connectorApiMissing': 'El servicio de conectores de almacenamiento no está disponible en esta versión del servidor. Recarga la página después de actualizar Direct-Xfer.',
+    'webStorage.connectorForbidden': 'Tu cuenta no tiene acceso a los conectores de almacenamiento.',
+    'webStorage.connectorMissing': 'Este conector ya no existe. Revisa Configuración → Conectores de almacenamiento.',
+    'webStorage.remoteMissing': 'No se encontró el almacenamiento remoto configurado para este conector. Revisa el remote de rclone en Configuración → Conectores de almacenamiento.',
+    'webStorage.authFailed': 'La autenticación del proveedor cloud falló o caducó. Vuelve a conectar este almacenamiento en rclone y prueba el conector.',
+    'webStorage.providerForbidden': 'El proveedor cloud rechazó el acceso a esta ubicación. Revisa los permisos de la cuenta y de la carpeta remota.',
+    'webStorage.providerUnavailable': 'No se puede acceder al proveedor cloud. Revisa la conexión de red y el estado del servicio e inténtalo de nuevo.',
+    'webStorage.providerRateLimited': 'El proveedor cloud está limitando temporalmente las solicitudes. Inténtalo de nuevo en unos instantes.',
+    'webStorage.providerTimeout': 'El almacenamiento cloud no respondió a tiempo. Inténtalo de nuevo o prueba el conector en Configuración.',
+    'webStorage.invalidResponse': 'El proveedor cloud devolvió una respuesta no válida. Prueba el conector y revisa la configuración de rclone.',
+    'webStorage.browseInterrupted': 'La exploración del almacenamiento cloud se interrumpió. Inténtalo de nuevo.',
+    'webStorage.connectorGeneric': 'El conector cloud falló. Pruébalo en Configuración → Conectores de almacenamiento para obtener un diagnóstico.',
+    'webStorage.requestTimeout': 'Direct-Xfer no recibió respuesta del servidor a tiempo. Inténtalo de nuevo.',
     'webStorage.createFail': 'No se pudo crear el enlace de almacenamiento web: {error}',
     'webStorage.created': 'Enlace de almacenamiento web creado ✓',
 
     'sh.moreCreateAria': 'Más tipos de compartición',
     'sh.actionConfig': 'Config',
-    'sh.newInbox': '＋ Enlace de recepción',
-    'sh.newCollab': '🔁 Enlace de colaboración',
+    'sh.newInbox': 'Enlace de recepción',
+    'sh.newCollab': 'Enlace de colaboración',
     'sh.secret': 'Nota secreta',
     'sh.clone': '⧉ Duplicar',
     'sh.cloneTitle': 'Duplicar este recurso con un enlace nuevo y contadores a cero',
@@ -9259,6 +9301,28 @@ function webStorageSetSelection(path, isDir, name) {
 function webStorageParentPath(value) {
   const parts=String(value||'').split('/').filter(Boolean); parts.pop(); return parts.join('/');
 }
+function webStorageBrowseErrorMessage(error, context='browse') {
+  const code=String(error && error.data && error.data.error || error && error.message || '').trim();
+  if(code==='rclone-unavailable') return t('webStorage.rcloneMissing');
+  if(code==='connector-not-found'||code==='not-found') return t('webStorage.connectorMissing');
+  if(code==='remote-not-found') return t('webStorage.remoteMissing');
+  if(code==='connector-auth-failed') return t('webStorage.authFailed');
+  if(code==='connector-forbidden') return t('webStorage.providerForbidden');
+  if(code==='connector-unreachable') return t('webStorage.providerUnavailable');
+  if(code==='connector-rate-limited') return t('webStorage.providerRateLimited');
+  if(code==='connector-timeout') return t('webStorage.providerTimeout');
+  if(code==='connector-response') return t('webStorage.invalidResponse');
+  if(code==='connector-cancelled'||code==='connector-terminated') return t('webStorage.browseInterrupted');
+  if(code==='fetch-timeout') return t('webStorage.requestTimeout');
+  if(code==='not-authenticated'||code==='stale-auth') return '';
+  if(context==='connectors') {
+    if(error && error.status===403) return t('webStorage.connectorForbidden');
+    if(error && error.status===404) return t('webStorage.connectorApiMissing');
+    return t('webStorage.connectorListFail');
+  }
+  if(code==='connector-failed') return t('webStorage.connectorGeneric');
+  return t('webStorage.loadFail');
+}
 async function loadWebStoragePath(pathValue) {
   const connectorId=$('web-storage-connector') && $('web-storage-connector').value;
   if (!connectorId) return;
@@ -9292,7 +9356,7 @@ async function loadWebStoragePath(pathValue) {
   } catch (error) {
     if(serial!==webStorageLoadSerial)return;
     if(list) list.textContent='';
-    webStorageSetError(error && error.data && error.data.error === 'rclone-unavailable' ? t('webStorage.rcloneMissing') : t('webStorage.loadFail'));
+    webStorageSetError(webStorageBrowseErrorMessage(error,'browse'));
   }
 }
 async function openWebStorageModal(mode='share') {
@@ -9316,8 +9380,11 @@ async function openWebStorageModal(mode='share') {
     const available=!!(data && data.capabilities && data.capabilities.available);
     let connectors=Array.isArray(data && data.connectors)?data.connectors:[];
     if(writable) connectors=connectors.filter((connector)=>connector && !connector.readOnly);
-    if(!available) { toast(t('webStorage.rcloneMissing'),'err'); return; }
+    // Missing connector configuration is the first actionable condition. This is
+    // more precise than reporting the optional rclone runtime when nothing has
+    // been configured yet.
     if(!connectors.length) { toast(t(writable?'webStorage.noneWritable':'webStorage.none'),'warn'); return; }
+    if(!available) { toast(t('webStorage.rcloneMissing'),'err'); return; }
     const select=$('web-storage-connector'); select.textContent='';
     connectors.forEach((connector)=>select.appendChild(el('option',{attrs:{value:connector.id},text:connector.name})));
     const settings=state.settings||{};
@@ -9331,7 +9398,10 @@ async function openWebStorageModal(mode='share') {
     overlay.classList.remove('hidden');
     if (select) select.focus();
     await loadWebStoragePath('');
-  } catch (_) { toast(t('webStorage.loadFail'),'err'); }
+  } catch (error) {
+    const message=webStorageBrowseErrorMessage(error,'connectors');
+    if(message) toast(message,'err');
+  }
 }
 if($('new-web-storage-btn')) $('new-web-storage-btn').addEventListener('click',()=>openWebStorageModal('share'));
 if($('new-web-inbox-btn')) $('new-web-inbox-btn').addEventListener('click',()=>openWebStorageModal('inbox'));

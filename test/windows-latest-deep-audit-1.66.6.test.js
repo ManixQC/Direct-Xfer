@@ -22,17 +22,17 @@ function sliceBetween(source, startMarker, endMarker) {
   return source.slice(start, end);
 }
 
-test('1.67.3 version, Windows builds and PWA generation are synchronized', () => {
-  assert.equal(pkg.version, '1.67.3');
-  assert.equal(lock.version, '1.67.3');
-  assert.equal(lock.packages[''].version, '1.67.3');
-  assert.match(workflow, /^run-name: v1\.67\.3$/m);
-  assert.match(workflow, /DX_RUNTIME_BUILD: '1\.67\.3-launcher90-csharp'/);
-  assert.match(workflow, /DX_SERVER_HOST_BUILD: '1\.67\.3-serverhost63-csharp'/);
-  assert.match(launcher, /AppVersion = "1\.67\.3"/);
-  assert.match(host, /AppVersion = "1\.67\.3"/);
+test('1.67.5 version, Windows builds and PWA generation are synchronized', () => {
+  assert.equal(pkg.version, '1.67.5');
+  assert.equal(lock.version, '1.67.5');
+  assert.equal(lock.packages[''].version, '1.67.5');
+  assert.match(workflow, /^run-name: v1\.67\.5$/m);
+  assert.match(workflow, /DX_RUNTIME_BUILD: '1\.67\.5-launcher92-csharp'/);
+  assert.match(workflow, /DX_SERVER_HOST_BUILD: '1\.67\.5-serverhost65-csharp'/);
+  assert.match(launcher, /AppVersion = "1\.67\.5"/);
+  assert.match(host, /AppVersion = "1\.67\.5"/);
   for (const rel of ['pwa/theme-init.js','pwa/mobile-intelligence.js','pwa/index.html','pwa/admin-advanced.js','pwa/app.js','pwa/sw.js']) {
-    assert.match(read(rel), /1\.67\.3|pwa362/);
+    assert.match(read(rel), /1\.67\.5|pwa364/);
   }
   for (const rel of ['pwa/login.html','pwa/theme-init.js','pwa/index.html','pwa/login.js','pwa/admin-advanced.js','pwa/app.js','pwa/sw.js']) {
     assert.doesNotMatch(read(rel), /v=356/);

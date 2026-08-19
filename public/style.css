@@ -889,6 +889,31 @@ code {
   text-align: left;
   white-space: normal;
 }
+/* Keep every create-link row on the same icon/text columns. Emoji glyphs have
+   different intrinsic widths, so a fixed icon column prevents the labels from
+   drifting horizontally (especially the combined cloud icons). */
+.share-action-menu-panel .share-create-menu-item {
+  display: grid;
+  grid-template-columns: 2.35rem minmax(0, 1fr);
+  align-items: center;
+  column-gap: 8px;
+  min-height: 40px;
+  padding: 8px 10px;
+}
+.share-create-menu-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.35rem;
+  min-width: 2.35rem;
+  line-height: 1;
+  text-align: center;
+}
+.share-create-menu-label {
+  min-width: 0;
+  line-height: 1.25;
+  text-align: left;
+}
 .share-action-menu-panel .count {
   margin-left: auto;
 }
@@ -4007,7 +4032,7 @@ body.share-details-open { overflow:hidden; }
 .guided-summary{border:1px solid var(--border-soft);border-radius:12px;padding:12px;font-weight:800}.guided-bad{border-color:color-mix(in srgb,var(--danger) 48%,var(--border))}.guided-warn{border-color:color-mix(in srgb,var(--warn) 48%,var(--border))}
 @media(max-width:640px){.std-enh-row,.guided-row{align-items:stretch;flex-direction:column}.share-context-menu{min-width:min(260px,calc(100vw - 16px))}}
 
-/* -------------------- Configuration full page (1.67.3) -------------------- */
+/* -------------------- Configuration full page (1.67.5) -------------------- */
 #config-page .brand {
   font-size: 2.4rem;
 }

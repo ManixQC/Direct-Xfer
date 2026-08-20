@@ -15,7 +15,7 @@ const editBlock = html.slice(
   html.indexOf('<!-- ===================== Video preview (modal) ===================== -->')
 );
 
-test('1.68.1 edit-link modal has a dedicated scroll body with pinned header/actions', () => {
+test('1.68.2 edit-link modal has a dedicated scroll body with pinned header/actions', () => {
   assert.match(editBlock, /class="modal modal-edit"/);
   assert.match(editBlock, /id="edit-modal-body" class="edit-modal-body"/);
   assert.ok(editBlock.indexOf('id="edit-modal-body"') < editBlock.indexOf('id="edit-error"'));
@@ -25,7 +25,7 @@ test('1.68.1 edit-link modal has a dedicated scroll body with pinned header/acti
   assert.match(css, /\.modal-edit\s*>\s*\.modal-foot\s*\{[^}]*flex:\s*0\s+0\s+auto/s);
 });
 
-test('1.68.1 edit-link options are grouped instead of one unstructured flex row', () => {
+test('1.68.2 edit-link options are grouped instead of one unstructured flex row', () => {
   for (const id of [
     'edit-section-general', 'edit-section-limits', 'edit-section-security',
     'edit-section-behavior', 'edit-section-reception', 'edit-section-appearance'
@@ -35,7 +35,7 @@ test('1.68.1 edit-link options are grouped instead of one unstructured flex row'
   assert.match(css, /#edit-overlay\s*\{\s*padding:\s*12px/);
 });
 
-test('1.68.1 keeps every edit control exactly once after reorganizing the modal', () => {
+test('1.68.2 keeps every edit control exactly once after reorganizing the modal', () => {
   const ids = [
     'edit-name','edit-expiry','edit-expireat','edit-startsat','edit-maxdl','edit-maxvisitors',
     'edit-dlthreshold','edit-maxdlperip','edit-maxbytesserved','edit-emoji','edit-password','edit-pwhint',
@@ -52,7 +52,7 @@ test('1.68.1 keeps every edit control exactly once after reorganizing the modal'
   }
 });
 
-test('1.68.1 access-rule translations no longer collide with Admin accounts', () => {
+test('1.68.2 access-rule translations no longer collide with Admin accounts', () => {
   assert.doesNotMatch(html, /data-i18n="acc\.title">Access rules/);
   assert.match(html, /data-i18n="access\.title">Access rules/);
   assert.match(html, /data-i18n="acc\.title">Admin accounts/);
@@ -60,6 +60,6 @@ test('1.68.1 access-rule translations no longer collide with Admin accounts', ()
   assert.match(app, /'acc\.title':\s*'Comptes admin'/);
 });
 
-test('1.68.1 reopening the edit dialog starts at the top of its internal scroller', () => {
+test('1.68.2 reopening the edit dialog starts at the top of its internal scroller', () => {
   assert.match(app, /const editBody = \$\('edit-modal-body'\);\s*if \(editBody\) editBody\.scrollTop = 0;/);
 });

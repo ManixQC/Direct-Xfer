@@ -58,7 +58,7 @@ function harness({mismatch=false}={}){
   return {call,req};
 }
 
-test('1.68.1 Google OAuth session reports requested and broker-returned scopes to the admin UI',async()=>{
+test('1.68.2 Google OAuth session reports requested and broker-returned scopes to the admin UI',async()=>{
   const h=harness();
   const start=await h.call('POST','/storage/remotes/google-oauth/start',h.req({body:{remote:'gdrive',scope:'limited'}}));
   assert.equal(start.statusCode,201);
@@ -74,7 +74,7 @@ test('1.68.1 Google OAuth session reports requested and broker-returned scopes t
   assert.equal(done.payload.broker,true);
 });
 
-test('1.68.1 preserves the actual broker scope even when least-privilege validation rejects it',async()=>{
+test('1.68.2 preserves the actual broker scope even when least-privilege validation rejects it',async()=>{
   const h=harness({mismatch:true});
   const start=await h.call('POST','/storage/remotes/google-oauth/start',h.req({body:{remote:'gdrive',scope:'limited'}}));
   await h.call('GET','/storage/oauth/google-session/:id',h.req({params:{id:start.payload.id}}));
@@ -85,7 +85,7 @@ test('1.68.1 preserves the actual broker scope even when least-privilege validat
   assert.match(failed.payload.grantedScope,/\/drive$/);
 });
 
-test('1.68.1 connection modal displays requested scope, broker-returned scope and sensitivity',()=>{
+test('1.68.2 connection modal displays requested scope, broker-returned scope and sensitivity',()=>{
   const html=fs.readFileSync(path.join(ROOT,'public/index.html'),'utf8');
   const app=fs.readFileSync(path.join(ROOT,'public/app.js'),'utf8');
   assert.match(html,/id="connector-config-google-scope-info"/);

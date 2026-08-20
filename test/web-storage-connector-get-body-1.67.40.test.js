@@ -5,7 +5,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const ROOT = path.join(__dirname, '..');
-const app = fs.readFileSync(path.join(ROOT, 'public', 'app.js'), 'utf8');
+const rawApp = fs.readFileSync(path.join(ROOT, 'public', 'app.js'), 'utf8');
+const app = rawApp.replace(/\r\n?/g, '\n');
 
 function extractApiFunction() {
   const start = app.indexOf('async function api(method, url, body, timeoutMs)');
@@ -14,7 +15,17 @@ function extractApiFunction() {
   return app.slice(start, end);
 }
 
-test('1.68.0 api GET/HEAD never attach a request body even when null is passed as timeout placeholder', async () => {
+
+
+test('1.68.1 api helper extraction is portable across LF and CRLF checkouts', () => {
+  const crlfApp = app.replace(/\n/g, '\r\n');
+  const normalized = crlfApp.replace(/\r\n?/g, '\n');
+  const start = normalized.indexOf('async function api(method, url, body, timeoutMs)');
+  const end = normalized.indexOf('// ------------------------------------------------------------------\n// UI helpers', start);
+  assert.ok(start >= 0 && end > start, 'api() helper should be extractable from a CRLF checkout');
+});
+
+test('1.68.1 api GET/HEAD never attach a request body even when null is passed as timeout placeholder', async () => {
   const calls = [];
   const context = {
     state:{ authEpoch:1, csrf:'csrf-token' },
@@ -38,13 +49,13 @@ test('1.68.0 api GET/HEAD never attach a request body even when null is passed a
   }
 });
 
-test('1.68.0 connector and web-storage reads still use the shared api helper', () => {
+test('1.68.1 connector and web-storage reads still use the shared api helper', () => {
   assert.match(app, /api\('GET','\/api\/storage\/connectors\/summary',null,10000\)/);
   assert.match(app, /api\('GET','\/api\/storage\/connectors',null,30000\)/);
   assert.match(app, /loadWebStoragePath[\s\S]*api\('GET', `\/api\/storage\/connectors\/\$\{encodeURIComponent\(connectorId\)\}\/list/);
 });
 
-test('1.68.0 write requests still serialize JSON and include CSRF', async () => {
+test('1.68.1 write requests still serialize JSON and include CSRF', async () => {
   const calls = [];
   const context = {
     state:{ authEpoch:1, csrf:'csrf-token' },

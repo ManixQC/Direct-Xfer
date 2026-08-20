@@ -120,6 +120,8 @@ uploads progress live. On **Unraid**, set `PUID: "99"` / `PGID: "100"` so data p
 
 ### Google Drive — central Direct-Xfer OAuth service
 
+**Direct-Xfer 1.68.1 fixes Windows/GitHub Actions test portability for the connector GET/HEAD regression guard.** The test suite now normalizes CRLF/LF line endings before extracting the shared `api()` helper and includes an explicit CRLF regression case, while the runtime GET/HEAD protection itself remains unchanged.
+
 **Direct-Xfer 1.68.0 adds in-place cloud-folder creation to Web reception/collaboration link setup.** Administrators can create a folder directly in the remote browser before creating the link; Direct-Xfer validates the name and write permissions, prevents an accidental duplicate, creates it through rclone, opens it, and selects it automatically as the reception destination.
 
 **Direct-Xfer 1.67.44 reorganizes and hardens the standard ‘Edit link’ modal.** The dialog now has a wide responsive layout, grouped sections, a dedicated internal scroll area, and permanently reachable header/save actions on Firefox, 4K displays and short-height windows. It also separates access-rule translation keys from the Admin accounts namespace so geo/IP labels no longer get overwritten by account-management text.

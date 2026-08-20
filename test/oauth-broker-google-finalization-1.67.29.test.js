@@ -28,7 +28,7 @@ function harness() {
   };
 }
 
-test('1.68.0 waits for Cloudflare Google-secret propagation instead of failing on the first stale google:false response', async () => {
+test('1.68.1 waits for Cloudflare Google-secret propagation instead of failing on the first stale google:false response', async () => {
   const accountId = 'a'.repeat(32);
   const databaseId = '11111111-2222-3333-4444-555555555555';
   const brokerUrl = 'https://direct-xfer-oauth-broker.example-subdomain.workers.dev';
@@ -79,7 +79,7 @@ test('1.68.0 waits for Cloudflare Google-secret propagation instead of failing o
   }
 });
 
-test('1.68.0 surfaces Google-secret propagation as a specific stage instead of the generic deployment failure', () => {
+test('1.68.1 surfaces Google-secret propagation as a specific stage instead of the generic deployment failure', () => {
   const server = read('lib/server/oauth-broker-deployment.js');
   const app = read('public/app.js');
   assert.match(server, /waitForGoogleBrokerReady/);

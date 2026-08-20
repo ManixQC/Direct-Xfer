@@ -14,7 +14,7 @@ function blockBetween(startNeedle, endNeedle) {
   return app.slice(start, end);
 }
 
-test('1.68.0 provides an in-app confirmation modal independent of browser confirm()', () => {
+test('1.68.1 provides an in-app confirmation modal independent of browser confirm()', () => {
   const block = blockBetween('function confirmDirectXferAction(message, options)', 'function dlpWarningParts(data)');
   assert.match(block, /id:'dx-confirm-overlay'/);
   assert.match(block, /role:'dialog'/);
@@ -23,13 +23,13 @@ test('1.68.0 provides an in-app confirmation modal independent of browser confir
   assert.doesNotMatch(block, /window\.confirm|\bconfirm\(/);
 });
 
-test('1.68.0 single-share revoke no longer depends on native confirm()', () => {
+test('1.68.1 single-share revoke no longer depends on native confirm()', () => {
   const block = blockBetween('async function revokeShare(s)', 'async function reactivateShare');
   assert.match(block, /await confirmDirectXferAction\(t\('sh\.revokeConfirm'/);
   assert.doesNotMatch(block, /window\.confirm|\bconfirm\(/);
 });
 
-test('1.68.0 transfer history purge uses the in-app confirmation modal', () => {
+test('1.68.1 transfer history purge uses the in-app confirmation modal', () => {
   const start = app.indexOf("if ($('history-clear-btn')) $('history-clear-btn').addEventListener('click', async () => {");
   assert.ok(start >= 0);
   const block = app.slice(start, start + 650);
@@ -38,7 +38,7 @@ test('1.68.0 transfer history purge uses the in-app confirmation modal', () => {
   assert.doesNotMatch(block, /window\.confirm|\bconfirm\(/);
 });
 
-test('1.68.0 bulk share/photo revoke and photo-history purge also avoid native confirm()', () => {
+test('1.68.1 bulk share/photo revoke and photo-history purge also avoid native confirm()', () => {
   for (const needle of ["if ($('bulk-revoke')) $('bulk-revoke').addEventListener", "if ($('photos-bulk-revoke')) $('photos-bulk-revoke').addEventListener", "if ($('photos-history-purge')) $('photos-history-purge').addEventListener"]) {
     const start = app.indexOf(needle);
     assert.ok(start >= 0, `missing ${needle}`);

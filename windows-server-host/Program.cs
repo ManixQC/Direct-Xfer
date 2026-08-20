@@ -21,9 +21,9 @@ namespace DirectXfer.WindowsServerHost
 {
     internal static class Program
     {
-        internal const string AppVersion = "1.68.0";
-        internal const string RuntimeAppBuild = "1.68.0-launcher124-csharp";
-        internal const string HostVersion = "1.68.0-serverhost97-csharp";
+        internal const string AppVersion = "1.68.1";
+        internal const string RuntimeAppBuild = "1.68.1-launcher125-csharp";
+        internal const string HostVersion = "1.68.1-serverhost98-csharp";
         internal const int DefaultPort = 55750;
         internal const int MaxFallbackPort = 55769;
         internal const int StartupReadyTimeoutMs = 60000;
@@ -113,8 +113,8 @@ namespace DirectXfer.WindowsServerHost
         private static readonly IDictionary<string, string> CriticalRuntimeSha256 =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                { "package.json", "cf18d2c564691a69d3bdb640e25537fac15c0e29ec318e1a1afb4f0fa2d89fec" },
-                { "package-lock.json", "160a8ac361e4cc9041e5a570db5b3328edf1279f3bf89e6053e20041e1be33f7" },
+                { "package.json", "6f1beb68f29fd164cd045c1d3698b4df1bb7eeed44dcdcc8a7f18c2a84a93ce8" },
+                { "package-lock.json", "8cc08739156b5826553daa67dbe9dc7e06f7c76a316a383d872d106474d7dfbf" },
                 { "server.js", "832d2de2ae6ef20ea909ec7ab18c43f40d4c469a798a5cf72b112900a48ef173" },
                 { "lib/server/public-pages.js", "de434eac7cef447abbda40604621a354ff6c23320a42823cdcb8969dcc16c533" },
                 { "lib/server/tls-manager.js", "b82a1b195b6cb36d47d8d431b890e0479aaf9ca8d47f98e8ef9e046390610f7f" },
@@ -129,14 +129,14 @@ namespace DirectXfer.WindowsServerHost
                 { "lib/google-oauth-broker-client.js", "b64d80e6ce5229b858769e55b2a7420aeaeaa0d8d4b68d4debfc34e991f90f89" },
                 { "lib/server/notification-service.js", "a55beb8d5fdb09754eeb7f7d01974896efaad20dde3b9cf00e83bf4f7a7b9baa" },
                 { "public/app.js", "4414185087daaf14a99a8d9ac1938e741b5b48b9a0abf33a8e2b214311639307" },
-                { "pwa/app.js", "187a59ac05f7ec4e4748949bcc04e45ac8ec3367f6e24d72b360732a35e9e6c4" },
+                { "pwa/app.js", "ff86626852681993b3a57c1378efa31c7aef4fec6d4fdd48d325c89648d1fa07" },
                 { "lib/dlp-utils.js", "0d8f768c3457ec713199ce9e82f9483be21df2ea01dce6ead26675d240fde768" },
                 { "lib/fd-utils.js", "322abf15ce7a15310d6d27ac1b0ca40892658d5f21198510f7e84b78b0070b13" },
                 { "pwa/dlp-local.js", "246267542621fc92f759438b2295b87f777ba6d6aa88b3c4d23dea25aebe7390" },
                 { "lib/storage-connectors.js", "90cc270a3e713b11460d950d013eee737b5aaaf8cb01d53db75ef3e8f4184e91" },
                 { "lib/web-storage-share.js", "7a575bd6ed1e98eedd748bc96510e8e85a08eeb3c7dff64608a3fc97b3c8bbdf" },
                 { "lib/web-storage-writable.js", "d4a076866d4c09228e261e09405e8a7e3da1a04604c9bbf4c55e2edfac80070f" },
-                { "public/index.html", "e5cc7965330c6184ca56571747d8c85d3e73b0bc09f3abca33916dfdb3819e4f" },
+                { "public/index.html", "0f64cea73b3fed307f51e3f1689ffc702e93e46e7bf3b21fe26c087c8b18931f" },
                 { "public/oauth-bridge.html", "7c08c6d54d523b0ed3976293e99fe7e4f43c01ff359fd4be170dfd0f0ab344c3" },
                 { "public/oauth-bridge.css", "32a468581ae0ae93c818fe00217a55cdec62dc5cb4796c748003ad4f71bbbbbb" },
                 { "public/oauth-bridge.js", "853b1582d7367eb4a68cd891d568923a3e399abfad442f36d38c06812cb27f3e" },

@@ -120,7 +120,7 @@ uploads progress live. On **Unraid**, set `PUID: "99"` / `PGID: "100"` so data p
 
 ### Google Drive — central Direct-Xfer OAuth service
 
-**Direct-Xfer 1.68.2 is the maintenance version bump following the Windows CI health-dashboard version assertion fix.** Current-version checks now follow the package version instead of pinning the previous release, preventing the GitHub Actions health-dashboard test from failing on future version bumps.
+**Direct-Xfer 1.68.3 fixes the remaining Windows CI OAuth-broker regression.** Repositories upgraded in place can still contain the obsolete `oauth-broker-integrated-autodeploy-1.67.27.test.js`; 1.68.3 replaces that stale regression with a compatibility check while retaining the current Cloudflare token-verification coverage. Version metadata is synchronized across the web app, PWA, Windows launcher/ServerHost, installer, OAuth broker, and GitHub Actions.
 
 **Direct-Xfer 1.68.1 fixes Windows/GitHub Actions test portability for the connector GET/HEAD regression guard.** The test suite now normalizes CRLF/LF line endings before extracting the shared `api()` helper and includes an explicit CRLF regression case, while the runtime GET/HEAD protection itself remains unchanged.
 

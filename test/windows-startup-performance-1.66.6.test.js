@@ -9,7 +9,7 @@ const launcher = read('windows-launcher/Program.cs');
 const host = read('windows-server-host/Program.cs');
 const server = read('server.js');
 
-test('1.68.2 launcher defers optional-component housekeeping until backend startup completes', () => {
+test('1.68.3 launcher defers optional-component housekeeping until backend startup completes', () => {
   const ctor = launcher.match(/internal LauncherContext\(string\[\] args\)[\s\S]*?private Texts Tr/);
   assert.ok(ctor);
   assert.doesNotMatch(ctor[0], /CleanupStaleOptionalWorkDirectories\(\);/);
@@ -21,7 +21,7 @@ test('1.68.2 launcher defers optional-component housekeeping until backend start
   assert.match(launcher, /Task\.Delay\(1500, _lifetime\.Token\)/);
 });
 
-test('1.68.2 ServerHost validates app runtime and Node concurrently', () => {
+test('1.68.3 ServerHost validates app runtime and Node concurrently', () => {
   assert.match(host, /var appValidation = Task\.Run\(EnsureApplicationRuntime\);/);
   assert.match(host, /var nodeValidation = Task\.Run\(EnsureNode\);/);
   assert.match(host, /var appDir = appValidation\.GetAwaiter\(\)\.GetResult\(\);[\s\S]{0,160}?var node = nodeValidation\.GetAwaiter\(\)\.GetResult\(\);/);
@@ -29,7 +29,7 @@ test('1.68.2 ServerHost validates app runtime and Node concurrently', () => {
   assert.match(host, /startupWatch\.ElapsedMilliseconds/);
 });
 
-test('1.68.2 Node hashing uses a large sequential buffer and pinned private Node skips redundant version process', () => {
+test('1.68.3 Node hashing uses a large sequential buffer and pinned private Node skips redundant version process', () => {
   assert.match(host, /1024 \* 1024, FileOptions\.SequentialScan/);
   assert.match(host, /if \(bundled\)[\s\S]{0,260}?Version\.TryParse\(Program\.NodeVersion/);
   const nodeUsable = host.match(/private static bool NodeUsable\(string path\)[\s\S]*?private static bool IsHexDigit/);
@@ -38,7 +38,7 @@ test('1.68.2 Node hashing uses a large sequential buffer and pinned private Node
   assert.ok(nodeUsable[0].indexOf('if (bundled)') < nodeUsable[0].indexOf('Arguments = "--version"'));
 });
 
-test('1.68.2 search cache hydration is deferred while transfer-log trimming stays race-safe before listen', () => {
+test('1.68.3 search cache hydration is deferred while transfer-log trimming stays race-safe before listen', () => {
   const beforeListen = server.slice(0, server.indexOf('const onServerListening ='));
   assert.doesNotMatch(beforeListen, /initUniversalSearchIndex\(\);/);
   assert.match(server, /async function loadSearchIndexDeferred\([^)]*\)[\s\S]{0,700}?fs\.promises\.readFile\(SEARCH_INDEX_FILE/);
@@ -49,9 +49,9 @@ test('1.68.2 search cache hydration is deferred while transfer-log trimming stay
   assert.match(server, /initAccounts\(\);\ntrimLogIfNeeded\(\);\npruneHistory\(\);/);
 });
 
-test('1.68.2 internal Windows build identifiers reflect startup optimization revision', () => {
-  assert.match(launcher, /RuntimeAppBuild = "1\.68\.2-launcher125-csharp"/);
-  assert.match(launcher, /ServerHostBuild = "1\.68\.2-serverhost98-csharp"/);
-  assert.match(host, /RuntimeAppBuild = "1\.68\.2-launcher125-csharp"/);
-  assert.match(host, /HostVersion = "1\.68\.2-serverhost98-csharp"/);
+test('1.68.3 internal Windows build identifiers reflect startup optimization revision', () => {
+  assert.match(launcher, /RuntimeAppBuild = "1\.68\.3-launcher125-csharp"/);
+  assert.match(launcher, /ServerHostBuild = "1\.68\.3-serverhost98-csharp"/);
+  assert.match(host, /RuntimeAppBuild = "1\.68\.3-launcher125-csharp"/);
+  assert.match(host, /HostVersion = "1\.68\.3-serverhost98-csharp"/);
 });

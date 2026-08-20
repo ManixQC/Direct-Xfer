@@ -21,14 +21,14 @@ function brokerCredentials(){
   };
 }
 
-test('1.68.2 Google broker finalization works with rclone releases that do not implement --no-output',async()=>{
+test('1.68.3 Google broker finalization works with rclone releases that do not implement --no-output',async()=>{
   const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'dx-rclone-legacy-'));
   const service=new StorageConnectorService({bin:writeLegacyRclone(tmp),configPath:path.join(tmp,'rclone','rclone.conf')});
   const result=await service.createGoogleBrokerRemote('gdrive',brokerCredentials(),{scope:'limited'});
   assert.equal(result.verified,true);
 });
 
-test('1.68.2 local Google OAuth finalization also avoids the unsupported --no-output flag',async()=>{
+test('1.68.3 local Google OAuth finalization also avoids the unsupported --no-output flag',async()=>{
   const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'dx-rclone-legacy-web-'));
   const service=new StorageConnectorService({bin:writeLegacyRclone(tmp),configPath:path.join(tmp,'rclone','rclone.conf')});
   const result=await service.createGoogleOAuthTokenRemote('gdrive',{
@@ -39,7 +39,7 @@ test('1.68.2 local Google OAuth finalization also avoids the unsupported --no-ou
   assert.equal(result.verified,true);
 });
 
-test('1.68.2 service-account Google creation is compatible with the same legacy rclone command surface',async()=>{
+test('1.68.3 service-account Google creation is compatible with the same legacy rclone command surface',async()=>{
   const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'dx-rclone-legacy-sa-'));
   const service=new StorageConnectorService({bin:writeLegacyRclone(tmp),configPath:path.join(tmp,'rclone','rclone.conf')});
   const args=service._googleDirectArgs('gdrive','/tmp/service-account.json',{readOnly:false,rootFolderId:'abcdefghijk',resourceKey:'',impersonate:''});

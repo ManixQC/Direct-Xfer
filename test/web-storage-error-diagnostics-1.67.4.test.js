@@ -11,19 +11,20 @@ const ROOT = path.resolve(__dirname, '..');
 const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8').replace(/\r\n?/g, '\n');
 const app = read('public/app.js');
 const server = read('server.js');
+const connectorLib = read('lib/storage-connectors.js');
 
-test('1.67.7 reports no configured cloud connector before optional-rclone state', () => {
+test('1.67.26 reports no configured cloud connector before optional-rclone state', () => {
   const start = app.indexOf("async function openWebStorageModal(mode='share')");
   const end = app.indexOf("if($('new-web-storage-btn'))", start);
   assert.ok(start >= 0 && end > start);
   const block = app.slice(start, end);
   const none = block.indexOf("if(!connectors.length)");
-  const runtime = block.indexOf("if(!available)");
+  const runtime = block.indexOf("if(!available && !pending)");
   assert.ok(none >= 0 && runtime >= 0 && none < runtime);
   assert.match(block, /webStorage\.noneWritable.*webStorage\.none/);
 });
 
-test('1.67.7 maps connector/browser failures to actionable messages instead of one generic browse error', () => {
+test('1.67.26 maps connector/browser failures to actionable messages instead of one generic browse error', () => {
   assert.match(app, /function webStorageBrowseErrorMessage\(error, context='browse'\)/);
   for (const [code, key] of [
     ['rclone-unavailable', 'webStorage.rcloneMissing'],
@@ -58,7 +59,7 @@ async function failureCode(stderr) {
   }
 }
 
-test('1.67.7 classifies common rclone authentication/config/network errors safely', async () => {
+test('1.67.26 classifies common rclone authentication/config/network errors safely', async () => {
   assert.equal(await failureCode('Failed to authenticate: invalid_grant'), 'connector-auth-failed');
   assert.equal(await failureCode(`didn't find section in config file ("cloud")`), 'remote-not-found');
   assert.equal(await failureCode('403 Forbidden: access denied'), 'connector-forbidden');
@@ -66,15 +67,15 @@ test('1.67.7 classifies common rclone authentication/config/network errors safel
   assert.equal(await failureCode('dial tcp: connection refused'), 'connector-unreachable');
 });
 
-test('1.67.7 connector list API preserves diagnostic codes and meaningful HTTP status classes', () => {
+test('1.67.26 connector list API preserves diagnostic codes and meaningful HTTP status classes', () => {
   for (const code of ['connector-auth-failed','connector-forbidden','connector-unreachable','connector-rate-limited','connector-response']) {
-    assert.match(server, new RegExp(code));
+    assert.match(connectorLib, new RegExp(code));
   }
-  const routeStart = server.indexOf("adminRouter.get('/storage/connectors/:id/list'");
-  const routeEnd = server.indexOf("adminRouter.post('/storage/connectors/:id/import'", routeStart);
-  const block = server.slice(routeStart, routeEnd);
-  assert.match(block, /code === 'rclone-unavailable' \? 503/);
-  assert.match(block, /code === 'remote-not-found' \? 404/);
-  assert.match(block, /code === 'connector-timeout' \? 504/);
-  assert.match(block, /code === 'connector-rate-limited' \? 503/);
+  assert.match(connectorLib, /code === 'remote-not-found' \|\| code === 'connector-not-found'\) return 404/);
+  assert.match(connectorLib, /code === 'connector-timeout'\) return options\.public \? 503 : 504/);
+  assert.match(connectorLib, /connector-rate-limited[^\n]+return 503/);
+  const browserRoutes = read('lib/server/storage-connector-browser.js');
+  assert.match(server, /createStorageConnectorBrowserRoutes/);
+  assert.match(browserRoutes, /adminRouter\.get\('\/storage\/connectors\/:id\/list'/);
+  assert.match(browserRoutes, /connectorErrorCode\(error\), status = connectorHttpStatus\(code\)/);
 });

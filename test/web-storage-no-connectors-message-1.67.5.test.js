@@ -10,7 +10,7 @@ const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8').replace(/\r\n?/g
 const app = read('public/app.js');
 const server = read('server.js');
 
-test('1.67.7 web-storage creation checks connector metadata before rclone probe', () => {
+test('1.67.26 web-storage creation checks connector metadata before rclone probe', () => {
   const start = app.indexOf("async function openWebStorageModal(mode='share')");
   const end = app.indexOf("if($('new-web-storage-btn'))", start);
   assert.ok(start >= 0 && end > start);
@@ -23,7 +23,7 @@ test('1.67.7 web-storage creation checks connector metadata before rclone probe'
   assert.match(block, /if\(writable && !writableConfigured\)/);
 });
 
-test('1.67.7 connector summary endpoint never probes rclone', () => {
+test('1.67.26 connector summary endpoint never probes rclone', () => {
   const start = server.indexOf("adminRouter.get('/storage/connectors/summary'");
   const end = server.indexOf("adminRouter.get('/storage/connectors',", start);
   assert.ok(start >= 0 && end > start);
@@ -34,7 +34,7 @@ test('1.67.7 connector summary endpoint never probes rclone', () => {
   assert.doesNotMatch(block, /connectorProbeSnapshot|storageConnectorService/);
 });
 
-test('1.67.7 no-connector and connector-check failures are actionable in all UI languages', () => {
+test('1.67.26 no-connector and connector-check failures are actionable in all UI languages', () => {
   assert.match(app, /Aucun connecteur configuré\. Ajoutez-en un dans Configuration → Connecteurs de stockage\./);
   assert.match(app, /No connector is configured\. Add one under Configuration → Storage connectors\./);
   assert.match(app, /No hay conectores configurados\. Añade uno en Configuración → Conectores de almacenamiento\./);

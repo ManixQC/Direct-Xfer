@@ -16,7 +16,7 @@
       })();
     </script>
     <link rel="manifest" href="/admin-pwa-detect.webmanifest" />
-    <link rel="stylesheet" href="/style.css?v=292" />
+    <link rel="stylesheet" href="/style.css?v=311" />
     <link rel="stylesheet" href="/server-health-dashboard.css?v=3" />
   </head>
   <body>
@@ -1312,7 +1312,18 @@
             <div class="web-storage-browser-actions">
               <button id="web-storage-up" class="btn ghost xs" type="button" data-i18n="webStorage.up">↑ Parent</button>
               <button id="web-storage-select-folder" class="btn ghost xs" type="button" data-i18n="webStorage.selectFolder">Select this folder</button>
+              <button id="web-storage-new-folder" class="btn ghost xs hidden" type="button" data-i18n="webStorage.newFolder">＋ New folder</button>
               <button id="web-storage-refresh" class="btn ghost xs" type="button" data-i18n="webStorage.refresh">↻ Refresh</button>
+            </div>
+          </div>
+          <div id="web-storage-new-folder-row" class="web-storage-new-folder hidden">
+            <label class="fld">
+              <span data-i18n="webStorage.newFolderName">New folder name</span>
+              <input id="web-storage-new-folder-name" type="text" maxlength="255" autocomplete="off" spellcheck="false" data-i18n-ph="webStorage.newFolderPh" placeholder="e.g. Client uploads" />
+            </label>
+            <div class="web-storage-new-folder-actions">
+              <button id="web-storage-new-folder-cancel" class="btn ghost xs" type="button" data-i18n="pk.cancel">Cancel</button>
+              <button id="web-storage-new-folder-create" class="btn xs" type="button" data-i18n="webStorage.createFolder">Create folder</button>
             </div>
           </div>
           <div id="web-storage-list" class="browser-list web-storage-list" aria-live="polite"></div>
@@ -1428,169 +1439,205 @@
 
     <!-- ===================== Edit link (modal) ===================== -->
     <div id="edit-overlay" class="overlay hidden">
-      <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal modal-edit" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title">
         <div class="modal-head">
-          <h3 data-i18n="ed.title">Edit link</h3>
-          <button id="edit-close" class="icon-btn" aria-label="Close">✕</button>
+          <h3 id="edit-modal-title" data-i18n="ed.title">Edit link</h3>
+          <button id="edit-close" class="icon-btn" type="button" aria-label="Close">✕</button>
         </div>
-        <p class="muted sm"><span data-i18n="ed.editing">Editing:</span> <strong id="edit-name-label">—</strong></p>
-        <div class="share-options">
-          <label>
-            <span data-i18n="ed.rename">Name</span>
-            <input id="edit-name" type="text" autocomplete="off" spellcheck="false" maxlength="200" />
-          </label>
-          <label>
-            <span data-i18n="pk.expiration">Expiration</span>
-            <select id="edit-expiry">
-              <option value="keep" data-i18n="ed.keep">Keep unchanged</option>
-              <option value="0" data-i18n="pk.never">Never</option>
-              <option value="3600" data-i18n="pk.h1">1 hour</option>
-              <option value="86400" data-i18n="pk.d1">1 day</option>
-              <option value="604800" data-i18n="pk.d7">7 days</option>
-              <option value="2592000" data-i18n="pk.d30">30 days</option>
-            </select>
-          </label>
-          <label>
-            <span data-i18n="pk.expireAt">Exact expiry date (optional)</span>
-            <input id="edit-expireat" type="datetime-local" />
-          </label>
-          <label>
-            <span data-i18n="pk.startsAt">Active from (optional)</span>
-            <input id="edit-startsat" type="datetime-local" />
-          </label>
-          <label>
-            <span data-i18n="pk.maxDl">Max downloads</span>
-            <input id="edit-maxdl" type="number" min="0" data-i18n-ph="pk.unlimited" placeholder="unlimited" />
-          </label>
-          <label>
-            <span data-i18n="pk.maxVisitors">Max unique visitors</span>
-            <input id="edit-maxvisitors" type="number" min="0" max="20000" data-i18n-ph="pk.unlimited" placeholder="unlimited" />
-          </label>
-          <label>
-            <span data-i18n="pk.dlThreshold">Notify at N downloads</span>
-            <input id="edit-dlthreshold" type="number" min="0" data-i18n-ph="pk.off" placeholder="off" />
-          </label>
-          <label>
-            <span data-i18n="pk.maxDlPerIp">Max downloads / IP</span>
-            <input id="edit-maxdlperip" type="number" min="0" data-i18n-ph="pk.unlimited" placeholder="unlimited" />
-          </label>
-          <label>
-            <span data-i18n="pk.maxBandwidth">Total bandwidth cap (GB)</span>
-            <input id="edit-maxbytesserved" type="number" min="0" step="0.1" data-i18n-ph="pk.unlimited" placeholder="unlimited" />
-          </label>
-          <label>
-            <span data-i18n="pk.emoji">Emoji marker (optional)</span>
-            <input id="edit-emoji" type="text" maxlength="8" autocomplete="off" placeholder="📁" />
-          </label>
-          <label>
-            <span data-i18n="ed.password">Password</span>
-            <input id="edit-password" type="text" autocomplete="off" spellcheck="false" data-i18n-ph="ed.pwPh" placeholder="leave blank to keep" />
-          </label>
-          <label>
-            <span data-i18n="pk.pwHint">Password hint (optional)</span>
-            <input id="edit-pwhint" type="text" maxlength="200" autocomplete="off" data-i18n-ph="pk.pwHintPh" placeholder="e.g. our home town" />
-          </label>
-          <label class="opt-check">
-            <input id="edit-clearpw" type="checkbox" />
-            <span data-i18n="ed.clearPw">Remove the password</span>
-          </label>
-          <label>
-            <span data-i18n="pk.rate">Max speed (KB/s)</span>
-            <input id="edit-rate" type="number" min="0" step="1" data-i18n-ph="pk.unlimited" placeholder="unlimited" />
-          </label>
-          <label class="opt-check">
-            <input id="edit-allowzip" type="checkbox" />
-            <span data-i18n="pk.allowZip">Allow "download all (.zip)"</span>
-          </label>
-          <label class="opt-check">
-            <input id="edit-preview" type="checkbox" />
-            <span data-i18n="cfg.allowPreview">Allow in-browser preview</span>
-          </label>
-          <label class="opt-check">
-            <input id="edit-burn" type="checkbox" />
-            <span data-i18n="pk.burn">One-time link (revoke after first download)</span>
-          </label>
-          <label class="opt-check">
-            <input id="edit-requestaccess" type="checkbox" />
-            <span data-i18n="pk.requestAccess">Require access approval (visitor requests, you approve)</span>
-          </label>
-          <label class="opt-check">
-            <input id="edit-feedback" type="checkbox" />
-            <span data-i18n="pk.allowFeedback">Allow moderated visitor comments</span>
-          </label>
-          <div id="edit-reception-options" class="access-rules hidden">
-            <div class="cfg-section" data-i18n="ed.receptionRules">Règles de réception / collaboration</div>
-            <div class="fld-grid">
-              <label class="fld"><span data-i18n="inbox.maxFiles">Fichiers max</span><input id="edit-rx-maxfiles" type="number" min="0" /></label>
-              <label class="fld"><span data-i18n="inbox.maxFilesPerUpload">Fichiers max / envoi</span><input id="edit-rx-maxfilesupload" type="number" min="0" /></label>
-              <label class="fld"><span data-i18n="inbox.maxFileSize">Taille max / fichier (Mo)</span><input id="edit-rx-maxfilemb" type="number" min="0" step="1" /></label>
-              <label class="fld"><span data-i18n="inbox.maxTotalSize">Quota total (Mo)</span><input id="edit-rx-maxtotalmb" type="number" min="0" step="1" /></label>
-              <label class="fld"><span data-i18n="inbox.maxFilesPerSender">Fichiers max / expéditeur</span><input id="edit-rx-maxfilessender" type="number" min="0" /></label>
-              <label class="fld"><span data-i18n="inbox.maxBytesPerSender">Quota / expéditeur (Mo)</span><input id="edit-rx-maxmbsender" type="number" min="0" step="1" /></label>
-              <label class="fld"><span data-i18n="inbox.allowExt">Types autorisés</span><input id="edit-rx-allowext" type="text" autocomplete="off" placeholder="pdf, jpg, png" /></label>
-              <label class="fld"><span data-i18n="inbox.blockExt">Types bloqués</span><input id="edit-rx-blockext" type="text" autocomplete="off" placeholder="exe, bat" /></label>
-            </div>
-            <div class="edit-rx-checks">
-              <label class="opt-check"><input id="edit-rx-groupsender" type="checkbox" /><span data-i18n="inbox.groupSender">Ranger par expéditeur</span></label>
-              <label class="opt-check"><input id="edit-rx-tagsender" type="checkbox" /><span data-i18n="inbox.tagSender">Préfixer avec l’expéditeur</span></label>
-              <label class="opt-check"><input id="edit-rx-rejectdup" type="checkbox" /><span data-i18n="ed.rejectDuplicates">Refuser les doublons</span></label>
-              <label class="opt-check"><input id="edit-rx-requiresender" type="checkbox" /><span data-i18n="ed.requireSender">Nom de l’expéditeur obligatoire</span></label>
-              <label class="opt-check"><input id="edit-rx-blockexec" type="checkbox" /><span data-i18n="ed.blockExecutables">Bloquer les exécutables détectés</span></label>
-              <label class="opt-check"><input id="edit-rx-moderated" type="checkbox" /><span data-i18n="ed.moderated">Approbation avant publication</span></label>
-              <label id="edit-rx-allowdelete-row" class="opt-check hidden"><input id="edit-rx-allowdelete" type="checkbox" /><span data-i18n="collab.allowDelete">Autoriser les visiteurs à supprimer du contenu</span></label>
-            </div>
+        <div id="edit-modal-body" class="edit-modal-body">
+          <p class="muted sm edit-modal-lead"><span data-i18n="ed.editing">Editing:</span> <strong id="edit-name-label">—</strong></p>
+          <div class="share-options edit-options">
+            <section class="edit-section" aria-labelledby="edit-section-general">
+              <h4 id="edit-section-general" class="edit-section-title" data-i18n="ed.sectionGeneral">General</h4>
+              <div class="edit-grid edit-grid-3">
+                <label class="edit-span-2">
+                  <span data-i18n="ed.rename">Name</span>
+                  <input id="edit-name" type="text" autocomplete="off" spellcheck="false" maxlength="200" />
+                </label>
+                <label>
+                  <span data-i18n="pk.expiration">Expiration</span>
+                  <select id="edit-expiry">
+                    <option value="keep" data-i18n="ed.keep">Keep unchanged</option>
+                    <option value="0" data-i18n="pk.never">Never</option>
+                    <option value="3600" data-i18n="pk.h1">1 hour</option>
+                    <option value="86400" data-i18n="pk.d1">1 day</option>
+                    <option value="604800" data-i18n="pk.d7">7 days</option>
+                    <option value="2592000" data-i18n="pk.d30">30 days</option>
+                  </select>
+                </label>
+                <label>
+                  <span data-i18n="pk.expireAt">Exact expiry date (optional)</span>
+                  <input id="edit-expireat" type="datetime-local" />
+                </label>
+                <label>
+                  <span data-i18n="pk.startsAt">Active from (optional)</span>
+                  <input id="edit-startsat" type="datetime-local" />
+                </label>
+                <label>
+                  <span data-i18n="sh.reminderHours">Expiry reminder (hours, blank = global)</span>
+                  <input id="edit-reminder" type="number" min="0" max="8760" step="1" />
+                </label>
+              </div>
+            </section>
+
+            <section class="edit-section" aria-labelledby="edit-section-limits">
+              <h4 id="edit-section-limits" class="edit-section-title" data-i18n="ed.sectionLimits">Limits and automatic expiry</h4>
+              <div class="edit-grid edit-grid-3">
+                <label>
+                  <span data-i18n="pk.maxDl">Max downloads</span>
+                  <input id="edit-maxdl" type="number" min="0" data-i18n-ph="pk.unlimited" placeholder="unlimited" />
+                </label>
+                <label>
+                  <span data-i18n="pk.maxVisitors">Max unique visitors</span>
+                  <input id="edit-maxvisitors" type="number" min="0" max="20000" data-i18n-ph="pk.unlimited" placeholder="unlimited" />
+                </label>
+                <label>
+                  <span data-i18n="pk.dlThreshold">Notify at N downloads</span>
+                  <input id="edit-dlthreshold" type="number" min="0" data-i18n-ph="pk.off" placeholder="off" />
+                </label>
+                <label>
+                  <span data-i18n="pk.maxDlPerIp">Max downloads / IP</span>
+                  <input id="edit-maxdlperip" type="number" min="0" data-i18n-ph="pk.unlimited" placeholder="unlimited" />
+                </label>
+                <label>
+                  <span data-i18n="pk.maxBandwidth">Total bandwidth cap (GB)</span>
+                  <input id="edit-maxbytesserved" type="number" min="0" step="0.1" data-i18n-ph="pk.unlimited" placeholder="unlimited" />
+                </label>
+                <label>
+                  <span data-i18n="pk.rate">Max speed (KB/s)</span>
+                  <input id="edit-rate" type="number" min="0" step="1" data-i18n-ph="pk.unlimited" placeholder="unlimited" />
+                </label>
+                <label>
+                  <span data-i18n="sh.firstUseHours">Expire after first use (hours)</span>
+                  <input id="edit-firstuse" type="number" min="0" max="87600" step="1" />
+                </label>
+                <label>
+                  <span data-i18n="sh.inactiveDays">Expire after inactivity (days)</span>
+                  <input id="edit-inactive" type="number" min="0" max="3650" step="1" />
+                </label>
+              </div>
+            </section>
+
+            <section class="edit-section" aria-labelledby="edit-section-security">
+              <h4 id="edit-section-security" class="edit-section-title" data-i18n="ed.sectionSecurity">Password and access</h4>
+              <div class="edit-grid edit-grid-2">
+                <label>
+                  <span data-i18n="ed.password">Password</span>
+                  <input id="edit-password" type="text" autocomplete="off" spellcheck="false" data-i18n-ph="ed.pwPh" placeholder="leave blank to keep" />
+                </label>
+                <label>
+                  <span data-i18n="pk.pwHint">Password hint (optional)</span>
+                  <input id="edit-pwhint" type="text" maxlength="200" autocomplete="off" data-i18n-ph="pk.pwHintPh" placeholder="e.g. our home town" />
+                </label>
+              </div>
+              <div class="edit-check-grid">
+                <label class="opt-check">
+                  <input id="edit-clearpw" type="checkbox" />
+                  <span data-i18n="ed.clearPw">Remove the password</span>
+                </label>
+                <label class="opt-check">
+                  <input id="edit-requestaccess" type="checkbox" />
+                  <span data-i18n="pk.requestAccess">Require access approval (visitor requests, you approve)</span>
+                </label>
+                <label class="opt-check">
+                  <input id="edit-feedback" type="checkbox" />
+                  <span data-i18n="pk.allowFeedback">Allow moderated visitor comments</span>
+                </label>
+              </div>
+              <div class="edit-access-rules">
+                <h5 class="edit-subsection-title" data-i18n="access.title">Access rules (geo / IP)</h5>
+                <div class="edit-grid edit-grid-2">
+                  <label>
+                    <span data-i18n="access.geoMode">Countries</span>
+                    <select id="edit-geomode">
+                      <option value="off" data-i18n="access.off">No restriction</option>
+                      <option value="allow" data-i18n="access.allowOnly">Allow only</option>
+                      <option value="deny" data-i18n="access.deny">Block</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span data-i18n="access.countries">Country codes (ISO, comma-separated)</span>
+                    <input id="edit-geocountries" type="text" autocomplete="off" spellcheck="false" placeholder="FR, BE, CA" />
+                  </label>
+                  <label>
+                    <span data-i18n="access.ipMode">IP addresses</span>
+                    <select id="edit-ipmode">
+                      <option value="off" data-i18n="access.off">No restriction</option>
+                      <option value="allow" data-i18n="access.allowOnly">Allow only</option>
+                      <option value="deny" data-i18n="access.deny">Block</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span data-i18n="access.ips">IP / CIDR (comma-separated)</span>
+                    <input id="edit-iplist" type="text" autocomplete="off" spellcheck="false" placeholder="203.0.113.5, 198.51.100.0/24" />
+                  </label>
+                </div>
+                <p class="muted sm edit-section-hint" data-i18n="access.hint">Loopback is always allowed. Country rules need IP geolocation on; visitors whose country can't be determined are allowed (IP rules are the hard boundary).</p>
+              </div>
+            </section>
+
+            <section class="edit-section" aria-labelledby="edit-section-behavior">
+              <h4 id="edit-section-behavior" class="edit-section-title" data-i18n="ed.sectionBehavior">Link behavior</h4>
+              <div class="edit-check-grid">
+                <label class="opt-check">
+                  <input id="edit-allowzip" type="checkbox" />
+                  <span data-i18n="pk.allowZip">Allow "download all (.zip)"</span>
+                </label>
+                <label class="opt-check">
+                  <input id="edit-preview" type="checkbox" />
+                  <span data-i18n="cfg.allowPreview">Allow in-browser preview</span>
+                </label>
+                <label class="opt-check">
+                  <input id="edit-burn" type="checkbox" />
+                  <span data-i18n="pk.burn">One-time link (revoke after first download)</span>
+                </label>
+              </div>
+            </section>
+
+            <section id="edit-reception-options" class="edit-section hidden" aria-labelledby="edit-section-reception">
+              <h4 id="edit-section-reception" class="edit-section-title" data-i18n="ed.receptionRules">Reception / collaboration rules</h4>
+              <div class="edit-grid edit-grid-4">
+                <label><span data-i18n="inbox.maxFiles">Max files</span><input id="edit-rx-maxfiles" type="number" min="0" /></label>
+                <label><span data-i18n="inbox.maxFilesPerUpload">Max files / upload</span><input id="edit-rx-maxfilesupload" type="number" min="0" /></label>
+                <label><span data-i18n="inbox.maxFileSize">Max size / file (MB)</span><input id="edit-rx-maxfilemb" type="number" min="0" step="1" /></label>
+                <label><span data-i18n="inbox.maxTotalSize">Total quota (MB)</span><input id="edit-rx-maxtotalmb" type="number" min="0" step="1" /></label>
+                <label><span data-i18n="inbox.maxFilesPerSender">Max files / sender</span><input id="edit-rx-maxfilessender" type="number" min="0" /></label>
+                <label><span data-i18n="inbox.maxBytesPerSender">Quota / sender (MB)</span><input id="edit-rx-maxmbsender" type="number" min="0" step="1" /></label>
+                <label class="edit-span-2"><span data-i18n="inbox.allowExt">Allowed types</span><input id="edit-rx-allowext" type="text" autocomplete="off" placeholder="pdf, jpg, png" /></label>
+                <label class="edit-span-2"><span data-i18n="inbox.blockExt">Blocked types</span><input id="edit-rx-blockext" type="text" autocomplete="off" placeholder="exe, bat" /></label>
+              </div>
+              <div class="edit-check-grid edit-rx-checks">
+                <label class="opt-check"><input id="edit-rx-groupsender" type="checkbox" /><span data-i18n="inbox.groupSender">Group by sender</span></label>
+                <label class="opt-check"><input id="edit-rx-tagsender" type="checkbox" /><span data-i18n="inbox.tagSender">Prefix with sender</span></label>
+                <label class="opt-check"><input id="edit-rx-rejectdup" type="checkbox" /><span data-i18n="ed.rejectDuplicates">Reject duplicates</span></label>
+                <label class="opt-check"><input id="edit-rx-requiresender" type="checkbox" /><span data-i18n="ed.requireSender">Require sender name</span></label>
+                <label class="opt-check"><input id="edit-rx-blockexec" type="checkbox" /><span data-i18n="ed.blockExecutables">Block detected executables</span></label>
+                <label class="opt-check"><input id="edit-rx-moderated" type="checkbox" /><span data-i18n="ed.moderated">Approval before publishing</span></label>
+                <label id="edit-rx-allowdelete-row" class="opt-check hidden"><input id="edit-rx-allowdelete" type="checkbox" /><span data-i18n="collab.allowDelete">Allow visitors to delete content</span></label>
+              </div>
+            </section>
+
+            <section class="edit-section" aria-labelledby="edit-section-appearance">
+              <h4 id="edit-section-appearance" class="edit-section-title" data-i18n="ed.sectionAppearance">Appearance and visitor messages</h4>
+              <div class="edit-grid edit-grid-3">
+                <label><span data-i18n="pk.emoji">Emoji marker (optional)</span><input id="edit-emoji" type="text" maxlength="8" autocomplete="off" placeholder="📁" /></label>
+                <label><span data-i18n="sh.color">Card color</span><input id="edit-color" type="text" maxlength="7" autocomplete="off" spellcheck="false" placeholder="#3b82f6" /></label>
+                <label><span data-i18n="sh.tagsField">Labels</span><input id="edit-tags" type="text" maxlength="300" autocomplete="off" data-i18n-ph="sh.tagsPh" placeholder="Client, Urgent" /></label>
+              </div>
+              <label class="pk-note-field"><span data-i18n="sh.descriptionMd">Markdown description shown to the visitor (optional)</span><textarea id="edit-description" rows="4" maxlength="8000" data-i18n-ph="sh.descriptionPh" placeholder="## Information"></textarea></label>
+              <label class="pk-note-field">
+                <span data-i18n="pk.note">Message shown to the visitor (optional)</span>
+                <textarea id="edit-note" rows="2" maxlength="2000" data-i18n-ph="pk.notePh" placeholder="e.g. Here is the file you asked for."></textarea>
+              </label>
+            </section>
           </div>
-          <div class="access-rules">
-            <div class="cfg-section" data-i18n="acc.title">Access rules (geo / IP)</div>
-            <div class="fld-grid">
-              <label class="fld">
-                <span data-i18n="acc.geoMode">Countries</span>
-                <select id="edit-geomode">
-                  <option value="off" data-i18n="acc.off">No restriction</option>
-                  <option value="allow" data-i18n="acc.allowOnly">Allow only</option>
-                  <option value="deny" data-i18n="acc.deny">Block</option>
-                </select>
-              </label>
-              <label class="fld">
-                <span data-i18n="acc.countries">Country codes (ISO, comma-separated)</span>
-                <input id="edit-geocountries" type="text" autocomplete="off" spellcheck="false" placeholder="FR, BE, CA" />
-              </label>
-            </div>
-            <div class="fld-grid">
-              <label class="fld">
-                <span data-i18n="acc.ipMode">IP addresses</span>
-                <select id="edit-ipmode">
-                  <option value="off" data-i18n="acc.off">No restriction</option>
-                  <option value="allow" data-i18n="acc.allowOnly">Allow only</option>
-                  <option value="deny" data-i18n="acc.deny">Block</option>
-                </select>
-              </label>
-              <label class="fld">
-                <span data-i18n="acc.ips">IP / CIDR (comma-separated)</span>
-                <input id="edit-iplist" type="text" autocomplete="off" spellcheck="false" placeholder="203.0.113.5, 198.51.100.0/24" />
-              </label>
-            </div>
-            <p class="muted sm" data-i18n="acc.hint">Loopback is always allowed. Country rules need IP geolocation on; visitors whose country can't be determined are allowed (IP rules are the hard boundary).</p>
-          </div>
-          <div class="fld-grid share-extra-grid">
-            <label class="fld"><span data-i18n="sh.color">Card color</span><input id="edit-color" type="text" maxlength="7" autocomplete="off" spellcheck="false" placeholder="#3b82f6" /></label>
-            <label class="fld"><span data-i18n="sh.tagsField">Labels</span><input id="edit-tags" type="text" maxlength="300" autocomplete="off" data-i18n-ph="sh.tagsPh" placeholder="Client, Urgent" /></label>
-            <label class="fld"><span data-i18n="sh.reminderHours">Expiry reminder (hours, blank = global)</span><input id="edit-reminder" type="number" min="0" max="8760" step="1" /></label>
-            <label class="fld"><span data-i18n="sh.firstUseHours">Expire after first use (hours)</span><input id="edit-firstuse" type="number" min="0" max="87600" step="1" /></label>
-            <label class="fld"><span data-i18n="sh.inactiveDays">Expire after inactivity (days)</span><input id="edit-inactive" type="number" min="0" max="3650" step="1" /></label>
-          </div>
-          <label class="pk-note-field"><span data-i18n="sh.descriptionMd">Markdown description shown to the visitor (optional)</span><textarea id="edit-description" rows="4" maxlength="8000" data-i18n-ph="sh.descriptionPh" placeholder="## Information"></textarea></label>
-          <label class="pk-note-field">
-            <span data-i18n="pk.note">Message shown to the visitor (optional)</span>
-            <textarea id="edit-note" rows="2" maxlength="2000" data-i18n-ph="pk.notePh" placeholder="e.g. Here is the file you asked for."></textarea>
-          </label>
         </div>
-        <p id="edit-error" class="error hidden"></p>
+        <p id="edit-error" class="error hidden" role="alert"></p>
         <div class="modal-foot">
           <div></div>
           <div class="modal-actions">
-            <button id="edit-cancel" class="btn ghost sm" data-i18n="pk.cancel">Cancel</button>
-            <button id="edit-save" class="btn sm" data-i18n="net.save">Save</button>
+            <button id="edit-cancel" class="btn ghost sm" type="button" data-i18n="pk.cancel">Cancel</button>
+            <button id="edit-save" class="btn sm" type="button" data-i18n="net.save">Save</button>
           </div>
         </div>
       </div>
@@ -1818,20 +1865,20 @@
             <textarea id="ib-note" rows="2" maxlength="2000" data-i18n-ph="inbox.notePh" placeholder="e.g. Please send the signed contract in PDF."></textarea>
           </label>
           <div class="access-rules">
-            <div class="cfg-section" data-i18n="acc.title">Access rules (geo / IP)</div>
+            <div class="cfg-section" data-i18n="access.title">Access rules (geo / IP)</div>
             <div class="fld-grid">
-              <label class="fld"><span data-i18n="acc.geoMode">Countries</span>
-                <select id="ib-geomode"><option value="off" data-i18n="acc.off">No restriction</option><option value="allow" data-i18n="acc.allowOnly">Allow only</option><option value="deny" data-i18n="acc.deny">Block</option></select>
+              <label class="fld"><span data-i18n="access.geoMode">Countries</span>
+                <select id="ib-geomode"><option value="off" data-i18n="access.off">No restriction</option><option value="allow" data-i18n="access.allowOnly">Allow only</option><option value="deny" data-i18n="access.deny">Block</option></select>
               </label>
-              <label class="fld"><span data-i18n="acc.countries">Country codes (ISO, comma-separated)</span>
+              <label class="fld"><span data-i18n="access.countries">Country codes (ISO, comma-separated)</span>
                 <input id="ib-geocountries" type="text" autocomplete="off" spellcheck="false" placeholder="FR, BE, CA" />
               </label>
             </div>
             <div class="fld-grid">
-              <label class="fld"><span data-i18n="acc.ipMode">IP addresses</span>
-                <select id="ib-ipmode"><option value="off" data-i18n="acc.off">No restriction</option><option value="allow" data-i18n="acc.allowOnly">Allow only</option><option value="deny" data-i18n="acc.deny">Block</option></select>
+              <label class="fld"><span data-i18n="access.ipMode">IP addresses</span>
+                <select id="ib-ipmode"><option value="off" data-i18n="access.off">No restriction</option><option value="allow" data-i18n="access.allowOnly">Allow only</option><option value="deny" data-i18n="access.deny">Block</option></select>
               </label>
-              <label class="fld"><span data-i18n="acc.ips">IP / CIDR (comma-separated)</span>
+              <label class="fld"><span data-i18n="access.ips">IP / CIDR (comma-separated)</span>
                 <input id="ib-iplist" type="text" autocomplete="off" spellcheck="false" placeholder="203.0.113.5, 198.51.100.0/24" />
               </label>
             </div>
@@ -1964,20 +2011,20 @@
             <textarea id="cl-note" rows="2" maxlength="2000" data-i18n-ph="collab.notePh" placeholder="e.g. Drop your revisions here; download the latest brief."></textarea>
           </label>
           <div class="access-rules">
-            <div class="cfg-section" data-i18n="acc.title">Access rules (geo / IP)</div>
+            <div class="cfg-section" data-i18n="access.title">Access rules (geo / IP)</div>
             <div class="fld-grid">
-              <label class="fld"><span data-i18n="acc.geoMode">Countries</span>
-                <select id="cl-geomode"><option value="off" data-i18n="acc.off">No restriction</option><option value="allow" data-i18n="acc.allowOnly">Allow only</option><option value="deny" data-i18n="acc.deny">Block</option></select>
+              <label class="fld"><span data-i18n="access.geoMode">Countries</span>
+                <select id="cl-geomode"><option value="off" data-i18n="access.off">No restriction</option><option value="allow" data-i18n="access.allowOnly">Allow only</option><option value="deny" data-i18n="access.deny">Block</option></select>
               </label>
-              <label class="fld"><span data-i18n="acc.countries">Country codes (ISO, comma-separated)</span>
+              <label class="fld"><span data-i18n="access.countries">Country codes (ISO, comma-separated)</span>
                 <input id="cl-geocountries" type="text" autocomplete="off" spellcheck="false" placeholder="FR, BE, CA" />
               </label>
             </div>
             <div class="fld-grid">
-              <label class="fld"><span data-i18n="acc.ipMode">IP addresses</span>
-                <select id="cl-ipmode"><option value="off" data-i18n="acc.off">No restriction</option><option value="allow" data-i18n="acc.allowOnly">Allow only</option><option value="deny" data-i18n="acc.deny">Block</option></select>
+              <label class="fld"><span data-i18n="access.ipMode">IP addresses</span>
+                <select id="cl-ipmode"><option value="off" data-i18n="access.off">No restriction</option><option value="allow" data-i18n="access.allowOnly">Allow only</option><option value="deny" data-i18n="access.deny">Block</option></select>
               </label>
-              <label class="fld"><span data-i18n="acc.ips">IP / CIDR (comma-separated)</span>
+              <label class="fld"><span data-i18n="access.ips">IP / CIDR (comma-separated)</span>
                 <input id="cl-iplist" type="text" autocomplete="off" spellcheck="false" placeholder="203.0.113.5, 198.51.100.0/24" />
               </label>
             </div>
@@ -3033,6 +3080,24 @@
           <div class="cfg-section" data-i18n="connector.title">Storage connectors</div>
           <p class="muted sm" data-i18n="connector.hint">Import and export files through an rclone remote: SFTP, SMB, WebDAV, Google Drive, OneDrive, Dropbox or Box. Credentials stay in /data/rclone/rclone.conf.</p>
           <p id="connector-capability" class="muted sm" role="status"></p>
+          <div id="connector-google-profile" class="connector-google-profile hidden">
+            <div><strong data-i18n="connector.googleQuickTitle">Google Drive — connexion normale</strong><p id="connector-google-profile-status" class="muted sm"></p></div>
+            <div class="connector-google-profile-actions"><button id="connector-google-profile-change" type="button" class="btn ghost sm" data-i18n="connector.googleAdvancedOptions">Options avancées</button><button id="connector-google-profile-clear" type="button" class="btn ghost sm hidden" data-i18n="connector.googleProfileClear">Oublier la configuration Google</button></div>
+          </div>
+          <div id="connector-google-access-wrap" class="connector-google-profile hidden">
+            <div>
+              <strong data-i18n="connector.googleAccessTitle">Accès Google Drive</strong>
+              <p id="connector-google-access-hint" class="muted sm" data-i18n="connector.googleAccessLimitedHint">Recommandé : Direct-Xfer accède seulement aux fichiers et dossiers qu’il crée avec cette autorisation.</p>
+            </div>
+            <label class="fld">
+              <span data-i18n="connector.googleAccessMode">Portée OAuth</span>
+              <select id="connector-google-access">
+                <option value="limited" selected data-i18n="connector.googleAccessLimited">Limité — fichiers créés par Direct-Xfer</option>
+                <option value="readonly" data-i18n="connector.googleAccessReadonly">Lecture seule — tous les fichiers Drive</option>
+                <option value="full" data-i18n="connector.googleAccessFull">Complet — tous les fichiers Drive</option>
+              </select>
+            </label>
+          </div>
           <div class="connector-editor">
             <div class="fld-grid">
               <label class="fld"><span data-i18n="connector.name">Name</span><input id="connector-name" type="text" maxlength="80" autocomplete="off" placeholder="NAS" /></label>
@@ -3042,7 +3107,7 @@
             </div>
             <datalist id="connector-remotes"></datalist>
             <label class="fld opt-check"><input id="connector-readonly" type="checkbox" /><span data-i18n="connector.readOnly">Read-only connector</span></label>
-            <div class="cfg-test-row"><button id="connector-add" type="button" class="btn ghost sm" data-i18n="connector.add">Add connector</button><span id="connector-editor-status" class="muted sm"></span></div>
+            <div class="cfg-test-row"><button id="connector-configure-remote" type="button" class="btn ghost sm" data-i18n="connector.configureRemote">Configure / connect remote…</button><button id="connector-add" type="button" class="btn ghost sm" data-i18n="connector.add">Add connector</button><span id="connector-editor-status" class="muted sm"></span></div>
           </div>
           <div id="connector-list" class="connector-list" aria-live="polite"></div>
           <div class="connector-transfer">
@@ -3071,6 +3136,133 @@
         Direct-Xfer <span class="app-year"></span> · <span class="app-version"></span>
       </footer>
     </main>
+
+    <!-- rclone remote configuration wizard -->
+    <div id="connector-remote-wizard" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="connector-config-title">
+      <div class="modal modal-sm connector-config-modal">
+        <div class="modal-head">
+          <div><h3 id="connector-config-title" data-i18n="connector.configTitle">Configure rclone remote</h3><p id="connector-config-subtitle" class="muted sm"></p></div>
+          <button id="connector-config-x" type="button" class="btn ghost sm" aria-label="Close">×</button>
+        </div>
+        <div class="connector-config-body">
+          <p id="connector-config-status" class="muted sm" role="status"></p>
+          <div id="connector-config-google-scope-info" class="connector-google-scope-info hidden" aria-live="polite">
+            <div class="connector-google-scope-row">
+              <span data-i18n="connector.googleRequestedScope">Autorisation demandée :</span>
+              <strong id="connector-config-google-scope-requested"></strong>
+            </div>
+            <div class="connector-google-scope-row">
+              <span id="connector-config-google-scope-returned-label" data-i18n="connector.googleBrokerReturnedScope">Scope retourné par le broker :</span>
+              <strong id="connector-config-google-scope-returned"></strong>
+            </div>
+            <p id="connector-config-google-scope-warning" class="cfg-bad sm hidden"></p>
+          </div>
+          <div id="connector-config-google-credentials" class="hidden connector-config-google-credentials">
+            <strong data-i18n="connector.googleQuickSetupTitle">Préparer la connexion Google — une seule fois</strong>
+            <p class="muted sm" data-i18n="connector.googleQuickSetupHint">Cette étape configure Direct-Xfer sur ce serveur. Elle ne concerne pas les identifiants de votre compte Google et aucun fichier JSON n’est requis.</p>
+            <details class="connector-google-broker" open>
+              <summary data-i18n="connector.googleBrokerTitle">Service OAuth central Direct-Xfer</summary>
+              <p class="muted sm" data-i18n="connector.googleBrokerHint">Pour connecter Google Drive depuis un autre appareil, indiquez l’URL HTTPS du broker OAuth public Direct-Xfer.</p>
+              <label class="fld"><span data-i18n="connector.googleBrokerUrlLabel">URL du broker OAuth public</span><input id="connector-config-google-broker-url" type="url" maxlength="1000" autocomplete="off" spellcheck="false" placeholder="https://direct-xfer-oauth-broker.example.workers.dev" /></label>
+              <p id="connector-config-google-broker-status" class="muted sm"></p>
+              <div class="connector-broker-actions">
+                <button id="connector-config-google-broker-auto" type="button" class="btn sm" data-i18n="connector.googleBrokerAuto">Configurer automatiquement</button>
+                <button id="connector-config-google-broker-save" type="button" class="btn ghost sm" data-i18n="connector.googleBrokerSaveTest">Enregistrer et tester</button>
+              </div>
+              <div id="connector-config-google-broker-auto-panel" class="connector-broker-auto hidden">
+                <p class="muted sm" data-i18n="connector.googleBrokerAutoHint">Direct-Xfer peut créer et publier le broker directement dans votre compte Cloudflare. Aucun fichier source, PowerShell, npm ou Wrangler n’est requis.</p>
+                <div class="connector-broker-step">
+                  <strong data-i18n="connector.googleBrokerAutoStepCloudflare">1. Autoriser le déploiement Cloudflare</strong>
+                  <p class="muted sm" data-i18n="connector.googleBrokerTokenHint">Créez un jeton API temporaire avec les permissions Compte → Workers Scripts → Modifier et D1 → Modifier. Le jeton reste seulement en mémoire pendant cet assistant.</p>
+                  <div class="connector-google-guide-links">
+                    <a class="btn ghost sm" href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noopener noreferrer" data-i18n="connector.googleBrokerOpenCloudflare">Ouvrir les jetons Cloudflare</a>
+                  </div>
+                  <label class="fld"><span data-i18n="connector.googleBrokerTokenLabel">Jeton API Cloudflare</span><input id="connector-config-google-cf-token" type="password" maxlength="4096" autocomplete="off" spellcheck="false" /></label>
+                  <label id="connector-config-google-cf-account-wrap" class="fld"><span data-i18n="connector.googleBrokerAccountLabel">ID du compte Cloudflare (facultatif — demandé seulement si la détection automatique échoue)</span><input id="connector-config-google-cf-account" type="text" maxlength="64" autocomplete="off" spellcheck="false" /></label>
+                  <div class="connector-google-guide-links"><a class="btn ghost sm" href="https://developers.cloudflare.com/fundamentals/account/find-account-and-zone-ids/" target="_blank" rel="noopener noreferrer" data-i18n="connector.googleBrokerAccountHelp">Trouver mon ID de compte</a></div>
+                  <select id="connector-config-google-cf-account-select" class="hidden" aria-label="Cloudflare account"></select>
+                  <button id="connector-config-google-cf-deploy" type="button" class="btn sm" data-i18n="connector.googleBrokerDeploy">Déployer automatiquement le broker</button>
+                </div>
+                <div id="connector-config-google-cf-google-step" class="connector-broker-step hidden">
+                  <strong data-i18n="connector.googleBrokerAutoStepGoogle">2. Relier le broker à Google</strong>
+                  <p class="muted sm" data-i18n="connector.googleBrokerGoogleHint">Direct-Xfer a terminé le déploiement Cloudflare. Dans Google Cloud, créez un client OAuth « Application Web » et utilisez exactement le callback ci-dessous.</p>
+                  <label class="fld"><span data-i18n="connector.googleBrokerCallbackLabel">Callback Google à autoriser</span><div class="connector-copy-row"><input id="connector-config-google-cf-callback" type="text" readonly autocomplete="off" spellcheck="false" /><button id="connector-config-google-cf-copy" type="button" class="btn ghost sm" data-i18n="connector.copy">Copier</button></div></label>
+                  <div class="connector-google-guide-links">
+                    <a class="btn ghost sm" href="https://console.cloud.google.com/apis/library/drive.googleapis.com" target="_blank" rel="noopener noreferrer" data-i18n="connector.googleGuideEnableDrive">Ouvrir Google Drive API</a>
+                    <a class="btn ghost sm" href="https://console.cloud.google.com/auth/clients" target="_blank" rel="noopener noreferrer" data-i18n="connector.googleQuickOpenCloud">Ouvrir Google Cloud</a>
+                  </div>
+                  <label class="fld"><span data-i18n="connector.googleClientId">Google Client ID</span><input id="connector-config-google-cf-client-id" type="text" maxlength="1024" autocomplete="off" spellcheck="false" placeholder="…apps.googleusercontent.com" /></label>
+                  <label class="fld"><span data-i18n="connector.googleClientSecret">Google Client Secret</span><input id="connector-config-google-cf-client-secret" type="password" maxlength="4096" autocomplete="off" spellcheck="false" /></label>
+                  <button id="connector-config-google-cf-finish" type="button" class="btn sm" data-i18n="connector.googleBrokerFinish">Terminer automatiquement</button>
+                </div>
+                <p id="connector-config-google-cf-status" class="muted sm" role="status"></p>
+              </div>
+            </details>
+            <label class="fld"><span data-i18n="connector.googleWebCallbackLabel">Adresse de retour Direct-Xfer à autoriser</span><input id="connector-config-google-callback" type="text" readonly autocomplete="off" spellcheck="false" /></label>
+            <details class="connector-google-manual" open>
+              <summary data-i18n="connector.googleManualTitle">Configuration administrateur Google</summary>
+              <p class="muted sm" data-i18n="connector.googleAdminHint">À faire une seule fois par serveur : renseignez le Client ID et le Client Secret de l’application Web Direct-Xfer. Les utilisateurs n’auront ensuite qu’à choisir leur compte Google et cliquer Autoriser.</p>
+              <label class="fld"><span data-i18n="connector.googleClientId">Google Client ID</span><input id="connector-config-google-client-id" type="text" maxlength="1024" autocomplete="off" spellcheck="false" placeholder="…apps.googleusercontent.com" /></label>
+              <label class="fld"><span data-i18n="connector.googleClientSecret">Google Client Secret</span><input id="connector-config-google-client-secret" type="password" maxlength="2048" autocomplete="off" spellcheck="false" /></label>
+              <button id="connector-config-google-start" type="button" class="btn sm" data-i18n="connector.googleSaveContinue">Enregistrer et continuer</button>
+            </details>
+            <details class="connector-google-guide">
+              <summary data-i18n="connector.googleGuideTitle">Comment préparer Direct-Xfer dans Google Cloud</summary>
+              <div class="connector-google-guide-body">
+                <ol>
+                  <li data-i18n="connector.googleGuideStep1">Créez ou sélectionnez un projet Google Cloud dédié à Direct-Xfer.</li>
+                  <li data-i18n="connector.googleGuideStep2">Activez Google Drive API.</li>
+                  <li data-i18n="connector.googleGuideStep5">Dans Google Auth Platform → Clients, créez un client.</li>
+                  <li data-i18n="connector.googleGuideStep6">Choisissez Application Web et ajoutez exactement l’adresse de retour affichée ci-dessus.</li>
+                  <li data-i18n="connector.googleGuideStep7">Copiez le Client ID et le Client Secret ci-dessus. C’est la seule configuration technique à faire.</li>
+                </ol>
+                <div class="connector-google-guide-links">
+                  <a class="btn ghost sm" href="https://console.cloud.google.com/auth/clients" target="_blank" rel="noopener noreferrer" data-i18n="connector.googleQuickOpenCloud">Ouvrir Google Cloud</a>
+                  <a class="btn ghost sm" href="https://console.cloud.google.com/apis/library/drive.googleapis.com" target="_blank" rel="noopener noreferrer" data-i18n="connector.googleGuideEnableDrive">Ouvrir Google Drive API</a>
+                </div>
+              </div>
+            </details>
+          </div>
+          <a id="connector-config-auth-link" class="btn sm hidden connector-config-auth-link" target="_blank" rel="noopener" data-i18n="connector.openLogin">Open sign-in page</a>
+          <div id="connector-config-question" class="hidden">
+            <label class="fld"><span id="connector-config-label"></span><div id="connector-config-control"></div></label>
+            <p id="connector-config-help" class="muted sm connector-config-help"></p>
+          </div>
+          <div id="connector-config-oauth" class="hidden connector-config-oauth">
+            <p class="muted sm" data-i18n="connector.oauthChoice">Direct-Xfer will open the provider sign-in page. Authorize the account, then return here.</p>
+            <button id="connector-config-oauth-local" type="button" class="btn sm" data-i18n="connector.oauthLocal">Open sign-in</button>
+            <p id="connector-config-oauth-note" class="muted sm" data-i18n="connector.oauthLocalHint">The browser may be on another computer than Direct-Xfer. rclone is not required on that computer.</p>
+            <details class="connector-config-advanced">
+              <summary data-i18n="connector.advanced">Advanced options</summary>
+              <button id="connector-config-oauth-remote" type="button" class="btn ghost sm" data-i18n="connector.oauthRemote">Manual rclone authorize</button>
+            </details>
+          </div>
+          <div id="connector-config-callback" class="hidden connector-config-callback">
+            <strong data-i18n="connector.callbackTitle">Last step when the browser is on another machine</strong>
+            <p class="muted sm" data-i18n="connector.callbackHint">If the final page says localhost or 127.0.0.1 cannot be reached, copy the complete address-bar URL. Direct-Xfer can finish the connection with it.</p>
+            <div class="connector-config-callback-actions"><button id="connector-config-callback-paste" type="button" class="btn sm" data-i18n="connector.callbackPasteFinish">Paste URL and finish</button></div>
+            <details class="connector-config-advanced">
+              <summary data-i18n="connector.advanced">Advanced options</summary>
+              <label class="fld"><span data-i18n="connector.callbackLabel">URL shown after authorization</span><textarea id="connector-config-callback-url" rows="3" autocomplete="off" spellcheck="false" placeholder="http://127.0.0.1:53682/?state=…&amp;code=…"></textarea></label>
+              <button id="connector-config-callback-submit" type="button" class="btn ghost sm" data-i18n="connector.callbackSubmit">Finish connection</button>
+            </details>
+          </div>
+          <div id="connector-config-token-help" class="hidden connector-config-token-help">
+            <p class="muted sm" data-i18n="connector.tokenHint">Run this command on a computer with a browser and rclone, complete sign-in, then paste the returned token below.</p>
+            <code id="connector-config-command"></code>
+          </div>
+        </div>
+        <div class="modal-foot">
+          <button id="connector-config-cancel" type="button" class="btn ghost sm" data-i18n="connector.configCancel">Cancel configuration</button>
+          <div class="modal-actions">
+            <button id="connector-config-answer" type="button" class="btn sm" data-i18n="connector.configContinue">Continue</button>
+            <button id="connector-config-retry" type="button" class="btn sm hidden" data-i18n="connector.retry">Retry connection</button>
+            <button id="connector-config-replace" type="button" class="btn sm hidden" data-i18n="connector.replace">Reconnect / replace</button>
+            <button id="connector-config-done" type="button" class="btn sm hidden" data-i18n="connector.configDone">Done</button>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- Keyboard shortcuts help -->
     <div id="keys-overlay" class="overlay hidden">
@@ -3180,7 +3372,7 @@
     <div id="toast" class="toast hidden"></div>
     <script src="/login-vault.js"></script>
     <script src="/dxcrypto.js"></script>
-    <script src="/app.js?v=308"></script>
+    <script src="/app.js?v=340"></script>
     <script src="/standard-productivity.js?v=4"></script>
     <script src="/server-health-dashboard.js?v=4"></script>
   </body>

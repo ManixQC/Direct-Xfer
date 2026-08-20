@@ -5,7 +5,6 @@
  * Reusable helpers live under ./lib; large server subsystems live under ./lib/server.
  * server.js remains the composition root for configuration, state, routes and lifecycle.
  * The static web interface is served from ./public.
- *
  * Architecture map
  * ----------------
  *  1. Bootstrap + environment configuration
@@ -24,14 +23,18 @@ const crypto = require('crypto');
 const os = require('os');
 const net = require('net');
 const https = require('https');
-const tls = require('tls');
-const zlib = require('zlib');
+const tls = require('tls'); const zlib = require('zlib');
 const { execFile, spawnSync } = require('child_process');
 const {
   StorageConnectorService,
   CONNECTOR_TYPES,
+  OAUTH_CONNECTOR_TYPES,
+  connectorBackendType,
   normalizeConnector,
   cleanRelativePath: cleanConnectorPath,
+  safeRcloneErrorDetail,
+  connectorErrorCode,
+  connectorHttpStatus,
 } = require('./lib/storage-connectors');
 const {
   int, bool, parseTrustProxy, compareSemver, isPrivateIp, ipToInt, intToIp, maskToPrefix,
@@ -47,6 +50,9 @@ const { createNetworkServices } = require('./lib/server/network-services');
 const { createNotificationService } = require('./lib/server/notification-service');
 const { createPublicPages } = require('./lib/server/public-pages');
 const { createBackupService } = require('./lib/server/backup-service');
+const { createStorageConnectorConfigRoutes } = require('./lib/server/storage-connector-config'); const { createOAuthBrokerDeploymentRoutes } = require('./lib/server/oauth-broker-deployment'); const { createStorageConnectorBrowserRoutes } = require('./lib/server/storage-connector-browser');
+const { GoogleOAuthProfileStore } = require('./lib/google-oauth-profile');
+const { GoogleOAuthBrokerClient, cleanBrokerUrl } = require('./lib/google-oauth-broker-client');
 const { createWebStorageShareTools } = require('./lib/web-storage-share');
 const { createWebStorageWritableTools, createWebStorageUploadHandler, connectorStatus:webStorageConnectorStatus } = require('./lib/web-storage-writable');
 const { openFd, closeFd, statFd, readFd } = require('./lib/fd-utils');
@@ -206,6 +212,8 @@ const MAX_CONCURRENT_ZIPS = Math.max(1, int(process.env.MAX_CONCURRENT_ZIPS, 2))
 // written as an AES-256-GCM envelope instead of plaintext JSON. The key is
 // derived from this secret; without it the file cannot be read (startup aborts).
 const DATA_KEY = (process.env.DATA_KEY || '').trim();
+const googleOAuthProfileStore = new GoogleOAuthProfileStore({ dataDir:DATA_DIR, dataKey:DATA_KEY });
+const GOOGLE_OAUTH_BROKER_URL_ENV = String(process.env.DIRECT_XFER_OAUTH_BROKER_URL || '').trim(), googleOAuthBrokerClient = new GoogleOAuthBrokerClient({ baseUrl:GOOGLE_OAUTH_BROKER_URL_ENV, version:APP_VERSION });
 // Destination folder for incoming files (reception links).
 // Mount a WRITABLE host folder here in the container (e.g. -v /path/incoming:/Direct-Xfer).
 const INBOX_DIR = path.resolve(process.env.INBOX_DIR || '/Direct-Xfer');
@@ -439,7 +447,6 @@ function initAccounts() {
   // ADMIN_PASSWORD overrides the OWNER account's password (session-only, not stored).
   const fromEnv = (process.env.ADMIN_PASSWORD || '').trim();
   if (fromEnv) { envOwnerHash = parseHash(hashPassword(fromEnv)); adminPwFromEnv = true; }
-
   // Already on the accounts model.
   if (Array.isArray(state.meta.accounts) && state.meta.accounts.length) {
     // Keep the owner's login name in sync with ADMIN_USERNAME when env-managed.
@@ -447,7 +454,6 @@ function initAccounts() {
     ADMIN_PASSWORD_GENERATED = !adminPwFromEnv;
     return;
   }
-
   // Migrate a single legacy admin (state.meta.ah [+ state.meta.totp]) → owner account.
   const legacyHash = (state.meta.ah && parseHash(state.meta.ah)) ? state.meta.ah : null;
   let ownerHash = legacyHash;
@@ -483,11 +489,9 @@ function initAccounts() {
   persistNow(); // durable so the (possibly generated) owner survives an immediate restart
   ADMIN_PASSWORD_GENERATED = !adminPwFromEnv;
 }
-
 // ===================================================================
 //  UTILITIES: safe paths + bounded concurrency
 // ===================================================================
-
 // True if `target` equals `root` or is strictly contained in it (no `..`).
 function withinRoot(root, target) {
   const rel = path.relative(root, target);
@@ -496,7 +500,6 @@ function withinRoot(root, target) {
   const segments = rel.split(path.sep);
   return !segments.includes('..');
 }
-
 // Resolves a user-provided sub-path, neutralizing any traversal.
 function resolveWithin(root, sub) {
   const raw = String(sub == null ? '' : sub).replace(/\\/g, '/');
@@ -514,7 +517,6 @@ function resolveWithin(root, sub) {
   }
   return target;
 }
-
 // Checks that the REAL path (symlinks resolved) stays within the real root.
 async function assertRealWithin(root, target) {
   const realRoot = await fs.promises.realpath(root);
@@ -526,19 +528,16 @@ async function assertRealWithin(root, target) {
   }
   return realTarget;
 }
-
 // Real host path (absolute POSIX) of a container path located under HOST_ROOT.
 // e.g. /host/home/me/movie.mp4  ->  /home/me/movie.mp4   ;   HOST_ROOT itself -> '/'.
 function containerToHost(containerAbs) {
   const rel = path.relative(HOST_ROOT, containerAbs).split(path.sep).join('/');
   return '/' + rel;
 }
-
 // Real container path matching a host path, with anti-traversal guard.
 function hostToContainer(hostPath) {
   return resolveWithin(HOST_ROOT, hostPath);
 }
-
 // Runs `fn` with at most `limit` concurrent executions.
 async function mapLimit(items, limit, fn) {
   const results = new Array(items.length);
@@ -554,7 +553,6 @@ async function mapLimit(items, limit, fn) {
   await Promise.all(workers);
   return results;
 }
-
 const networkServices = createNetworkServices({
   net, os, LOCAL_IP, APP_VERSION, UPDATE_REPO, UPDATE_TAG,
   compareSemver, updateCheckEnabled, addAdminCenterNotification,
@@ -566,11 +564,9 @@ const {
   getLocalIPv4s, checkForUpdate, getPublicIP, getPublicIPCached,
   checkPort, isLocalNetwork, geolocate,
 } = networkServices;
-
 // ===================================================================
 //  ACTIVE TRANSFERS: transfers in progress (IP + country)
 // ===================================================================
-
 const activeTransfers = new Map(); // id -> transfer
 const TRANSFER_STALL_MS = Math.max(15000, Math.min(10 * 60 * 1000, Number(process.env.TRANSFER_STALL_MS) || 45000));
 const HISTORY_MAX = 2000; // persistent transfer history kept in shares.json
@@ -1114,6 +1110,7 @@ const DEFAULT_SETTINGS = {
   shutdownAfterDownload: !!SHUTDOWN_AFTER_DOWNLOAD,
   linkBase: '',
   imageBase: '', // optional separate domain for direct image links (Images page); '' = use linkBase
+  googleOAuthBrokerUrl: '', // persistent central Google OAuth broker URL; env DIRECT_XFER_OAUTH_BROKER_URL wins
   imageHotlinkHosts: [], // anti-hotlink allowlist of referring hosts; [] = allow any site
   pwChanged: false, // set to true after the mandatory password change on first login
   idleLockMinutes: 0, // auto-lock the admin UI after N minutes of inactivity (0 = off)
@@ -3151,7 +3148,7 @@ function settingsForClient(req, lite) {
   const role = req && req.session && req.session.role;
   const fullAdmin = role === 'owner' || role === 'admin';
   delete s.pwChanged;
-  const hasPass = !!s.smtpPass;
+  s.googleOAuthBrokerManaged = !!GOOGLE_OAUTH_BROKER_URL_ENV; if (GOOGLE_OAUTH_BROKER_URL_ENV) s.googleOAuthBrokerUrl = GOOGLE_OAUTH_BROKER_URL_ENV; const hasPass = !!s.smtpPass;
   delete s.smtpPass; // never expose the SMTP password to the client
   const hasDavPass = !!s.backupWebdavPass;
   const hasS3Secret = !!s.backupS3Secret;
@@ -5670,7 +5667,7 @@ function dlpDecision(req, res, body, scan, source, quarantine) {
   }
   if (mode === 'warn' && !override) {
     auditReq(req, 'dlp-warning', structuredDlpDetail);
-    res.status(409).json({ error:'dlp-warning', dlp:scan }); return true;
+    res.status(409).json({ error:'dlp-warning', reason:scan.count ? (incomplete ? 'findings-and-incomplete' : 'findings') : 'incomplete-scan', dlp:scan }); return true;
   }
   auditReq(req, mode === 'warn' ? 'dlp-overridden' : 'dlp-detected', structuredDlpDetail);
   return false;
@@ -6859,7 +6856,7 @@ function serveWebStorageFile(req, res, s, relative, options = {}) {
     try { stat = await webStorageStat(s, relative, { fresh:!!req.headers['if-range'] }); }
     catch (error) {
       const code = connectorErrorCode(error);
-      return sendError(req, res, code === 'remote-not-found' ? 404 : 503, 'fileUnavailable');
+      return sendError(req, res, ['remote-not-found','connector-not-found'].includes(code) ? 404 : 503, 'fileUnavailable');
     }
     if (stat.isDir) return sendError(req, res, 404, 'notFound');
     const total = Math.max(0, Number(stat.size) || 0);
@@ -7597,7 +7594,7 @@ downloadRouter.get(['/s/:token/browse', '/s/:token/browse/*'], async (req, res) 
       return res.type('html').send(webStorageFolderPage(pickLang(req), s, rel, entries, links, previewWatermark(req, req.params.token)));
     } catch (e) {
       const code = connectorErrorCode(e);
-      return sendError(req, res, code === 'remote-not-found' ? 404 : 503, 'folderUnavailable');
+      return sendError(req, res, (code === 'remote-not-found' || code === 'connector-not-found') ? 404 : 503, 'folderUnavailable');
     }
   }
   if (s.type !== 'folder') return sendError(req, res, 404, 'notFound');
@@ -7631,7 +7628,7 @@ downloadRouter.get('/s/:token/file/*', async (req, res) => {
       });
     } catch (e) {
       const code = connectorErrorCode(e);
-      return sendError(req, res, code === 'remote-not-found' ? 404 : 503, 'fileUnavailable');
+      return sendError(req, res, (code === 'remote-not-found' || code === 'connector-not-found') ? 404 : 503, 'fileUnavailable');
     }
   }
   if (s.type !== 'folder') return sendError(req, res, 404, 'notFound');
@@ -9483,7 +9480,7 @@ downloadRouter.get('/c/:token/list', async (req, res) => {
 
 downloadRouter.get(['/c/:token/file', '/c/:token/file/*'], async (req, res) => {
   const s=requireActiveCollab(req,res);if(!s)return;
-  if(s.webStorage){const rel=cleanConnectorPath(req.params[0]||'',false);if(rel===null)return sendError(req,res,404,'fileUnavailable');try{const st=await webStorageStat(s,rel);if(st.isDir)return sendError(req,res,404,'fileUnavailable');return serveWebStorageFile(req,res,s,rel,{filename:st.name||path.posix.basename(rel)||'download'});}catch(e){const code=connectorErrorCode(e);return sendError(req,res,code==='remote-not-found'?404:503,'fileUnavailable');}}
+  if(s.webStorage){const rel=cleanConnectorPath(req.params[0]||'',false);if(rel===null)return sendError(req,res,404,'fileUnavailable');try{const st=await webStorageStat(s,rel);if(st.isDir)return sendError(req,res,404,'fileUnavailable');return serveWebStorageFile(req,res,s,rel,{filename:st.name||path.posix.basename(rel)||'download'});}catch(e){const code=connectorErrorCode(e);return sendError(req,res,(code==='remote-not-found'||code==='connector-not-found')?404:503,'fileUnavailable');}}
   try{await serveFolderFile(req,res,s,collabRoot(s),req.params[0]||'');}catch(e){sendError(req,res,e.code==='ENOENT'?404:403,'fileUnavailable');}
 });
 
@@ -9579,7 +9576,7 @@ downloadRouter.post('/c/:token/delete', collabDeleteParser, async (req, res) => 
   if (!s.allowDelete) return res.status(403).json({ error: 'delete-disabled' });
   const rel = String((req.body && req.body.path) || '');
   if (!rel) return res.status(400).json({ error: 'missing-path' });
-  if(s.webStorage){try{const outcome=await withShareUploadLock(s.id,async()=>{const st=await webStorageStat(s,rel,{fresh:true}),metrics=st.isDir?await webStorageWritable.metrics(s,rel):{files:1};const blocked=recordRansomwareEvent(req,'delete',rel,Math.max(1,metrics.files));if(blocked)return{blocked};await webStorageWritable.remove(s,rel,{isDir:!!st.isDir});const freed=webStorageWritable.releaseTracked(s,rel);if(freed)s.bytesReceived=Math.max(0,(s.bytesReceived||0)-freed);scheduleFlush();return{ok:true};});if(outcome.blocked){const blocked=outcome.blocked;res.setHeader('Retry-After',String(Math.max(1,Math.ceil((blocked.until-Date.now())/1000))));return res.status(423).json({error:'security-blocked',reason:blocked.reason,until:blocked.until});}logAudit('collab-delete',{username:'visitor',ip:clientIp(req),detail:(s.name||s.id)+': '+rel});return res.json({ok:true});}catch(error){const code=connectorErrorCode(error);return res.status(code==='remote-not-found'?404:webStorageConnectorStatus(error)).json({error:code});}}
+  if(s.webStorage){try{const outcome=await withShareUploadLock(s.id,async()=>{const st=await webStorageStat(s,rel,{fresh:true}),metrics=st.isDir?await webStorageWritable.metrics(s,rel):{files:1};const blocked=recordRansomwareEvent(req,'delete',rel,Math.max(1,metrics.files));if(blocked)return{blocked};await webStorageWritable.remove(s,rel,{isDir:!!st.isDir});const freed=webStorageWritable.releaseTracked(s,rel);if(freed)s.bytesReceived=Math.max(0,(s.bytesReceived||0)-freed);scheduleFlush();return{ok:true};});if(outcome.blocked){const blocked=outcome.blocked;res.setHeader('Retry-After',String(Math.max(1,Math.ceil((blocked.until-Date.now())/1000))));return res.status(423).json({error:'security-blocked',reason:blocked.reason,until:blocked.until});}logAudit('collab-delete',{username:'visitor',ip:clientIp(req),detail:(s.name||s.id)+': '+rel});return res.json({ok:true});}catch(error){const code=connectorErrorCode(error);return res.status((code==='remote-not-found'||code==='connector-not-found')?404:webStorageConnectorStatus(error)).json({error:code});}}
   const root = collabRoot(s);
   let abs;
   try {
@@ -9625,7 +9622,7 @@ async function handleCreateUploadFolder(req, res) {
   const name = safeUploadFolderName(body.name);
   const parentSegs = safeUploadParentSegments(body.parent);
   if (!name || parentSegs === null) return res.status(400).json({ error: 'invalid-folder' });
-  if(s.webStorage){try{const senderSegs=s.type==='inbox'?senderSubdirSegs(s,req):[],rel=[...senderSegs,...parentSegs,name].join('/'),result=await withShareUploadLock(s.id,async()=>{const parent=[...senderSegs,...parentSegs].join('/');if(senderSegs.length)await webStorageWritable.mkdir(s,senderSegs.join('/'));if(parentSegs.length){const pst=await webStorageStat(s,parent,{fresh:true});if(!pst.isDir)return{error:'invalid-folder',status:400};}if(await webStorageWritable.exists(s,rel))return{error:'folder-exists',status:409};await webStorageWritable.mkdir(s,rel);return{ok:true};});if(!result.ok)return res.status(result.status).json({error:result.error});logAudit('upload-folder-created',{username:'visitor',ip:clientIp(req),detail:(s.name||s.id)+': '+rel});return res.status(201).json({ok:true,name,path:[...parentSegs,name].join('/')});}catch(error){const code=connectorErrorCode(error);return res.status(code==='remote-not-found'?404:webStorageConnectorStatus(error)).json({error:code});}}
+  if(s.webStorage){try{const senderSegs=s.type==='inbox'?senderSubdirSegs(s,req):[],rel=[...senderSegs,...parentSegs,name].join('/'),result=await withShareUploadLock(s.id,async()=>{const parent=[...senderSegs,...parentSegs].join('/');if(senderSegs.length)await webStorageWritable.mkdir(s,senderSegs.join('/'));if(parentSegs.length){const pst=await webStorageStat(s,parent,{fresh:true});if(!pst.isDir)return{error:'invalid-folder',status:400};}if(await webStorageWritable.exists(s,rel))return{error:'folder-exists',status:409};await webStorageWritable.mkdir(s,rel);return{ok:true};});if(!result.ok)return res.status(result.status).json({error:result.error});logAudit('upload-folder-created',{username:'visitor',ip:clientIp(req),detail:(s.name||s.id)+': '+rel});return res.status(201).json({ok:true,name,path:[...parentSegs,name].join('/')});}catch(error){const code=connectorErrorCode(error);return res.status((code==='remote-not-found'||code==='connector-not-found')?404:webStorageConnectorStatus(error)).json({error:code});}}
 
   try {
     const root = resolveWithin(INBOX_DIR, s.relDir || '');
@@ -11589,7 +11586,6 @@ adminRouter.get('/audit/export', requireAuditAccess, (req, res) => {
 
 // ---------------------------------------------------------------------------
 // Bidirectional storage connectors.
-//
 // Direct-Xfer stores only connector metadata (name/type/rclone remote/root).
 // OAuth tokens, passwords and private keys stay in /data/rclone/rclone.conf,
 // which can be created with `rclone config` and must remain mode 0600. This keeps
@@ -11598,14 +11594,29 @@ const activeConnectorJobs = new Map(); // job id -> AbortController
 const MAX_ACTIVE_CONNECTOR_JOBS = Math.min(64, Math.max(1, int(process.env.MAX_ACTIVE_CONNECTOR_JOBS, 4)));
 const MAX_STORAGE_CONNECTORS = 100;
 const CONNECTOR_PROBE_CACHE_MS = 15000;
+let connectorProbeEpoch = 0;
 let connectorProbeCache = { at:0, value:null, pending:null };
+function invalidateConnectorProbe() {
+  connectorProbeEpoch += 1;
+  connectorProbeCache = { at:0, value:null, pending:null };
+}
+
+// Configuration never blocks indefinitely on the optional rclone capability probe.
+const CONNECTOR_CONFIG_PROBE_WAIT_MS = 4000;
+function connectorProbeFallback() { return connectorProbeCache.value || { capabilities:{ available:false, error:null, pending:true }, remotes:[] }; }
+async function connectorProbeForConfiguration() {
+  const probePromise=connectorProbeSnapshot(); let timer;
+  const timeout=new Promise((resolve)=>{timer=setTimeout(()=>resolve(null),CONNECTOR_CONFIG_PROBE_WAIT_MS);if(timer.unref)timer.unref();});
+  try { const resolved=await Promise.race([probePromise,timeout]); if(resolved)return resolved; probePromise.catch(()=>{}); return connectorProbeFallback(); } finally { if(timer)clearTimeout(timer); }
+}
 async function connectorProbeSnapshot() {
   const now = Date.now();
   if (connectorProbeCache.value && now - connectorProbeCache.at < CONNECTOR_PROBE_CACHE_MS) {
     return connectorProbeCache.value;
   }
   if (connectorProbeCache.pending) return connectorProbeCache.pending;
-  connectorProbeCache.pending = (async () => {
+  const epoch = connectorProbeEpoch;
+  const pending = (async () => {
     let capabilities;
     let remotes = [];
     try {
@@ -11613,31 +11624,29 @@ async function connectorProbeSnapshot() {
       if (!capabilities || typeof capabilities !== 'object') capabilities = { available:false, error:'rclone-unavailable' };
       if (capabilities.available) {
         try { remotes = await storageConnectorService.configuredRemotes(); }
-        catch (error) {
-          // A missing/invalid rclone.conf must not make the whole Configuration
-          // page fail to load. The runtime capability is still useful and the
-          // admin can configure a remote afterwards.
-          capabilities = { ...capabilities, remotesError:String(error && (error.code || error.message) || 'remote-list-failed').slice(0,120) };
-        }
+        catch (error) { capabilities = { ...capabilities, remotesError:String(error && (error.code || error.message) || 'remote-list-failed').slice(0,120) }; }
       }
     } catch (error) {
-      // Optional rclone is allowed to be absent. Always return a stable snapshot
-      // so GET /api/storage/connectors remains usable before the component is
-      // installed or while a broken installation is being repaired.
+      // Keep connector inventory readable while optional rclone is absent or broken.
       capabilities = { available:false, error:String(error && (error.code || error.message) || 'rclone-unavailable').slice(0,120) };
       remotes = [];
     }
     const value = { capabilities, remotes };
-    connectorProbeCache = { at:Date.now(), value, pending:null };
-    return value;
+    // A stale pre-mutation probe must never repopulate the cache.
+    if (epoch === connectorProbeEpoch) connectorProbeCache = { at:Date.now(), value, pending:null };
+    return epoch === connectorProbeEpoch ? value : null;
   })();
-  try { return await connectorProbeCache.pending; }
-  finally {
-    // The resolved value is retained in connectorProbeCache.value; only clear a
-    // still-pending reference. This also makes a rejected probe self-healing.
-    if (connectorProbeCache.pending) connectorProbeCache.pending = null;
+  connectorProbeCache.pending = pending;
+  try {
+    const value = await pending;
+    if (value) return value;
+    // Mutation raced this probe: join/start the new generation.
+    return connectorProbeSnapshot();
+  } finally {
+    if (connectorProbeCache.pending === pending) connectorProbeCache.pending = null;
   }
 }
+
 function connectorStore() {
   if (!state.meta || typeof state.meta !== 'object') state.meta = {};
   if (!Array.isArray(state.meta.storageConnectors)) state.meta.storageConnectors = [];
@@ -11712,10 +11721,6 @@ async function connectorExportSource(raw) {
   // Paths outside managed writable storage use the same host-path convention as
   // normal Direct-Xfer shares and remain confined to the read-only HOST_ROOT.
   return assertRealWithin(HOST_ROOT, hostToContainer(value));
-}
-function connectorErrorCode(error) {
-  const code = String(error && error.code || 'connector-failed');
-  return ['rclone-unavailable','remote-not-found','connector-failed','connector-cancelled','connector-terminated','connector-timeout','connector-staging-unavailable','connector-auth-failed','connector-forbidden','connector-unreachable','connector-rate-limited','connector-response','read-only','not-file','invalid-source','name-exhausted','infected','server-restarted'].includes(code) ? code : 'connector-failed';
 }
 function queueStorageConnectorJob(req, connector, direction, input) {
   if (activeConnectorJobs.size >= MAX_ACTIVE_CONNECTOR_JOBS) {
@@ -11807,44 +11812,37 @@ function queueStorageConnectorJob(req, connector, direction, input) {
   return job;
 }
 
-adminRouter.get('/storage/connectors/summary', requireFullAdmin, (req, res) => { const connectors = connectorStore().map(publicConnector).filter(Boolean); res.json({ configured:connectors.length, writable:connectors.filter((connector) => !connector.readOnly).length }); });
+createStorageConnectorConfigRoutes({ adminRouter, requireFullAdmin, storageConnectorService, googleOAuthProfileStore, googleOAuthBrokerClient, CONNECTOR_TYPES, OAUTH_CONNECTOR_TYPES, connectorBackendType, safeRcloneErrorDetail, crypto, isLoopback, clientIp, auditReq, logAudit, getAccountById, invalidateConnectorProbe, googleOAuthPublicOrigin:() => normalizeLinkBase(getSettings().linkBase || PUBLIC_URL || '') || '', googleOAuthBrokerUrl:() => GOOGLE_OAUTH_BROKER_URL_ENV || String(getSettings().googleOAuthBrokerUrl || '').trim(), googleOAuthBrokerManaged:() => !!GOOGLE_OAUTH_BROKER_URL_ENV });
+createOAuthBrokerDeploymentRoutes({ adminRouter, requireFullAdmin, crypto, auditReq });
+createStorageConnectorBrowserRoutes({ adminRouter, requireFullAdmin, storageConnectorService, getStorageConnector, cleanConnectorPath, connectorErrorCode, connectorHttpStatus, auditReq });
+adminRouter.get('/storage/connectors/summary', requireFullAdmin, (req, res) => { const connectors = connectorStore().map(publicConnector).filter(Boolean); res.setHeader('Cache-Control', 'no-store'); res.json({ configured:connectors.length, writable:connectors.filter((connector) => !connector.readOnly).length }); });
 
 adminRouter.get('/storage/connectors', requireFullAdmin, async (req, res) => {
   let probe;
-  try { probe = await connectorProbeSnapshot(); }
-  catch (error) {
-    // rclone is optional on Windows since 1.66.x. A probe failure must never turn
-    // the Configuration page into an HTTP 500; expose the component as unavailable
-    // while still returning stored connector metadata and jobs.
-    probe = { capabilities:{ available:false, error:String(error && (error.code || error.message) || 'rclone-unavailable').slice(0,120) }, remotes:[] };
-  }
+  try { probe = await connectorProbeForConfiguration(); }
+  catch (error) { probe = { capabilities:{ available:false, error:String(error&&(error.code||error.message)||'rclone-unavailable').slice(0,120) }, remotes:[] }; }
   const capabilities = probe && probe.capabilities || { available:false, error:'rclone-unavailable' };
   const remotes = Array.isArray(probe && probe.remotes) ? probe.remotes : [];
-  // Do not expose the absolute rclone config path to browser clients. The UI only
-  // needs availability/version and configured remote names; credentials and their
-  // filesystem location stay server-side.
-  const publicCapabilities = {
-    available:!!capabilities.available,
-    version:capabilities.version ? String(capabilities.version).slice(0, 160) : null,
-    error:capabilities.error ? String(capabilities.error).slice(0, 120) : null,
-  };
-  res.json({
-    connectors:connectorStore().map(publicConnector).filter(Boolean),
-    jobs:pruneConnectorJobs().map(publicConnectorJob),
-    capabilities:publicCapabilities, remotes, types:Array.from(CONNECTOR_TYPES),
-  });
+  // Never expose the absolute rclone config path or credentials.
+  const publicCapabilities = { available:!!capabilities.available, pending:!!capabilities.pending, version:capabilities.version?String(capabilities.version).slice(0,160):null, error:capabilities.error?String(capabilities.error).slice(0,120):null };
+  let connectors = [], jobs = [];
+  try { connectors = connectorStore().map(publicConnector).filter(Boolean); } catch (_) {}
+  try { jobs = pruneConnectorJobs().map(publicConnectorJob); } catch (_) {}
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ connectors, jobs, capabilities:publicCapabilities, remotes, types:Array.from(CONNECTOR_TYPES) });
 });
 adminRouter.post('/storage/connectors', requireFullAdmin, (req, res) => {
-  if (connectorStore().length >= MAX_STORAGE_CONNECTORS) return res.status(409).json({ error:'too-many-connectors' });
-  let connector;
-  try {
-    connector = normalizeConnector(req.body || {});
-    connector.id = crypto.randomBytes(12).toString('hex');
-  } catch (error) { return res.status(400).json({ error:error.message || 'invalid-connector' }); }
-  const list = connectorStore(); list.push(connector);
+  let connector; try { connector = normalizeConnector(req.body || {}); } catch (error) { return res.status(400).json({ error:error.message || 'invalid-connector' }); }
+  const list = connectorStore(); // Exact POST retries are idempotent, avoiding duplicates after a transient UI retry.
+  const existing = list.find((item) => item && String(item.name || '') === connector.name && String(item.type || '') === connector.type
+    && String(item.remote || '') === connector.remote && String(item.root || '') === String(connector.root || '') && !!item.readOnly === !!connector.readOnly);
+  if (existing) { const connectors = list.map(publicConnector).filter(Boolean); res.setHeader('Cache-Control', 'no-store'); return res.json({ connector:publicConnector(existing), connectors, duplicate:true }); }
+  if (list.length >= MAX_STORAGE_CONNECTORS) return res.status(409).json({ error:'too-many-connectors' });
+  connector.id = crypto.randomBytes(12).toString('hex');
+  list.push(connector);
   if (!persistNow()) { list.pop(); return res.status(503).json({ error:'write-error' }); }
   auditReq(req, 'storage-connector-created', `${connector.name} (${connector.type}/${connector.remote})`);
-  res.status(201).json({ connector:publicConnector(connector) });
+  const connectors = connectorStore().map(publicConnector).filter(Boolean); res.setHeader('Cache-Control', 'no-store'); res.status(201).json({ connector:publicConnector(connector), connectors });
 });
 adminRouter.patch('/storage/connectors/:id', requireFullAdmin, (req, res) => {
   const current = getStorageConnector(req.params.id);
@@ -11862,7 +11860,7 @@ adminRouter.patch('/storage/connectors/:id', requireFullAdmin, (req, res) => {
   const before = { ...current }; Object.assign(current, next, { id:before.id, createdAt:before.createdAt });
   if (!persistNow()) { Object.assign(current, before); return res.status(503).json({ error:'write-error' }); }
   auditReq(req, 'storage-connector-updated', `${current.name} (${current.type}/${current.remote})`);
-  res.json({ connector:publicConnector(current) });
+  const connectors = connectorStore().map(publicConnector).filter(Boolean); res.setHeader('Cache-Control', 'no-store'); res.json({ connector:publicConnector(current), connectors });
 });
 adminRouter.delete('/storage/connectors/:id', requireFullAdmin, (req, res) => {
   const list = connectorStore(), index = list.findIndex((item) => item && item.id === req.params.id);
@@ -11887,17 +11885,6 @@ adminRouter.post('/storage/connectors/:id/test', requireFullAdmin, async (req, r
   } catch (error) {
     auditReq(req, 'storage-connector-tested', `${connector.name}: ${connectorErrorCode(error)}`);
     res.status(502).json({ error:connectorErrorCode(error) });
-  }
-});
-adminRouter.get('/storage/connectors/:id/list', requireFullAdmin, async (req, res) => {
-  const connector = getStorageConnector(req.params.id);
-  if (!connector) return res.status(404).json({ error:'not-found' });
-  const relative = cleanConnectorPath(req.query.path || '');
-  if (relative === null) return res.status(400).json({ error:'invalid-remote-path' });
-  try { res.json({ path:relative, entries:await storageConnectorService.list(connector, relative) }); }
-  catch (error) {
-    const code = connectorErrorCode(error), status = code === 'rclone-unavailable' ? 503 : code === 'remote-not-found' ? 404 : code === 'connector-timeout' ? 504 : code === 'connector-rate-limited' ? 503 : 502;
-    res.status(status).json({ error:code });
   }
 });
 adminRouter.post('/storage/connectors/:id/import', requireFullAdmin, (req, res) => {
@@ -12597,6 +12584,10 @@ function computeSettingsPatch(body) {
     const norm = normalizeLinkBase(body.imageBase);
     if (norm === null) return { error: 'invalid-domain' };
     patch.imageBase = norm; // '' = fall back to linkBase
+  }
+  if (typeof body.googleOAuthBrokerUrl === 'string' && !GOOGLE_OAUTH_BROKER_URL_ENV) {
+    const raw = String(body.googleOAuthBrokerUrl || '').trim(); try { patch.googleOAuthBrokerUrl = raw ? cleanBrokerUrl(raw) : ''; }
+    catch (_) { return { error:'invalid-oauth-broker-url' }; }
   }
   if (body.imageHotlinkHosts !== undefined) {
     patch.imageHotlinkHosts = parseHotlinkHosts(body.imageHotlinkHosts); // [] = allow any site
@@ -13683,7 +13674,7 @@ async function createWebWritableShare(req,res,type){
   const connector=Object.freeze({...current});if(connector.readOnly)return res.status(409).json({error:'connector-read-only'});
   if(!Object.prototype.hasOwnProperty.call(body,'remotePath'))return res.status(400).json({error:'missing-remote-path'});
   const remotePath=cleanConnectorPath(body.remotePath);if(remotePath===null)return res.status(400).json({error:'invalid-remote-path'});
-  let stat;try{stat=await storageConnectorService.stat(connector,remotePath);}catch(error){const code=connectorErrorCode(error);return res.status(code==='rclone-unavailable'?503:code==='remote-not-found'?404:502).json({error:code});}
+  let stat;try{stat=await storageConnectorService.stat(connector,remotePath);}catch(error){const code=connectorErrorCode(error);return res.status(connectorHttpStatus(code)).json({error:code});}
   if(!stat.isDir)return res.status(400).json({error:'remote-not-directory'});
   const live=getStorageConnector(connector.id);if(!live||live.remote!==connector.remote||live.root!==connector.root||live.type!==connector.type||!!live.readOnly!==!!connector.readOnly)return res.status(409).json({error:'connector-changed-during-create'});
   const nn=(v)=>{const n=Math.floor(Number(v));return Number.isFinite(n)&&n>0?n:0;},password=String(body.password||'');
@@ -13713,7 +13704,7 @@ adminRouter.post('/shares/web-storage', requireFullAdmin, async (req, res) => {
   try { stat = await storageConnectorService.stat(connector, remotePath); }
   catch (error) {
     const code = connectorErrorCode(error);
-    return res.status(code === 'rclone-unavailable' ? 503 : code === 'remote-not-found' ? 404 : 502).json({ error:code });
+    return res.status(connectorHttpStatus(code)).json({ error:code });
   }
   const recheckedConnector = getStorageConnector(connector.id);
   if (!recheckedConnector || recheckedConnector.remote !== connector.remote || recheckedConnector.root !== connector.root || recheckedConnector.type !== connector.type) {

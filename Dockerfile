@@ -24,6 +24,7 @@ WORKDIR /app
 RUN apt-get update \
   && DEBIAN_FRONTEND=noninteractive apt-get dist-upgrade -y \
   && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    ca-certificates \
     gosu \
     poppler-utils \
     rclone \
@@ -31,11 +32,13 @@ RUN apt-get update \
     tesseract-ocr-eng \
     tesseract-ocr-fra \
     tesseract-ocr-spa \
+  && update-ca-certificates \
+  && test -s /etc/ssl/certs/ca-certificates.crt \
   && giflib_version="$(dpkg-query -W -f='${Version}' libgif7)" \
   && dpkg --compare-versions "$giflib_version" ge '5.2.2-1+deb13u1' \
   && mkdir -p /usr/share/doc/direct-xfer \
   && dpkg-query -W -f='${Package}\t${Version}\n' \
-    libcairo2 libgif7 libnss3 poppler-utils rclone tesseract-ocr \
+    ca-certificates libcairo2 libgif7 libnss3 poppler-utils rclone tesseract-ocr \
     > /usr/share/doc/direct-xfer/os-packages.tsv \
   && rm -f /usr/bin/pdftocairo /usr/bin/text2image \
   && test ! -e /usr/bin/pdftocairo \

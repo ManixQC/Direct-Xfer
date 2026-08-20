@@ -33,6 +33,6 @@ test('release is 1.54.0 with a fresh PWA cache', () => {
   assert.match(read('pwa', 'app.js'), /APP_VERSION = '1\.63\.5'/);
   assert.match(read('pwa', 'app.js'), /APP_BUILD = '2026\.08\.16-pwa318'/);
   assert.match(read('pwa', 'sw.js'), /VERSION = '2026\.08\.16-pwa318'/);
-  assert.match(read('pwa', 'index.html'), /app\.js\?v=298/);
-  assert.match(read('pwa', 'sw.js'), /app\.js\?v=298/);
+  assert.match(read('pwa', 'index.html'), /app\.js\?v=299/);
+  assert.match(read('pwa', 'sw.js'), /app\.js\?v=299/);
 });

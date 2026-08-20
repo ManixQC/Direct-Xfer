@@ -11,7 +11,7 @@ const html = read('public/index.html');
 const css = read('public/style.css');
 const app = read('public/app.js');
 
-test('1.67.7 standard + menu uses one fixed icon column for every create-link action', () => {
+test('1.67.26 standard + menu uses one fixed icon column for every create-link action', () => {
   const ids = [
     'new-collab-btn', 'new-inbox-btn', 'new-secret-btn', 'new-enc-btn',
     'new-web-storage-btn', 'new-web-inbox-btn', 'new-web-collab-btn'
@@ -25,7 +25,7 @@ test('1.67.7 standard + menu uses one fixed icon column for every create-link ac
   assert.match(css, /\.share-create-menu-label\s*\{[^}]*text-align:\s*left/s);
 });
 
-test('1.67.7 create-menu translations no longer embed icon glyphs that would duplicate the fixed icon column', () => {
+test('1.67.26 create-menu translations no longer embed icon glyphs that would duplicate the fixed icon column', () => {
   for (const key of ['sh.newCollab','sh.newInbox','secret.new','enc.newShare','webStorage.new','webStorage.newInbox','webStorage.newCollab']) {
     const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const matches = [...app.matchAll(new RegExp(`'${escaped}':\\s*'([^']+)'`, 'g'))];

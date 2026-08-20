@@ -21,9 +21,9 @@ namespace DirectXfer.WindowsServerHost
 {
     internal static class Program
     {
-        internal const string AppVersion = "1.67.7";
-        internal const string RuntimeAppBuild = "1.67.7-launcher94-csharp";
-        internal const string HostVersion = "1.67.7-serverhost67-csharp";
+        internal const string AppVersion = "1.68.0";
+        internal const string RuntimeAppBuild = "1.68.0-launcher124-csharp";
+        internal const string HostVersion = "1.68.0-serverhost97-csharp";
         internal const int DefaultPort = 55750;
         internal const int MaxFallbackPort = 55769;
         internal const int StartupReadyTimeoutMs = 60000;
@@ -31,7 +31,7 @@ namespace DirectXfer.WindowsServerHost
         internal const int HealthProbeFailureThreshold = 3;
         internal const long EmergencyLogMaxBytes = 2L * 1024 * 1024;
         internal const string NodeVersion = "24.19.0";
-        internal const string RcloneVersion = "1.74.4";
+        internal const string RcloneVersion = "1.75.0";
         internal const string TesseractVersion = "5.5.3";
         internal const string OptionalActivationMarkerFileName = ".direct-xfer-enabled";
         internal const string NodeExeSha256 = "3602f2bb1a10f2cbab4c36886218a33c1ab3db87290e73b033c46c77147d0237";
@@ -113,24 +113,35 @@ namespace DirectXfer.WindowsServerHost
         private static readonly IDictionary<string, string> CriticalRuntimeSha256 =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                { "package.json", "908483eeea61dedf3722993363f58c3d227a50a3aba48d322ccb1683474b9be3" },
-                { "package-lock.json", "83e25855a64a450187a1f85a64918be0ca53411e97e22245a8070f73461dc983" },
-                { "server.js", "f41a1ca21707ea4bb9fe232cb67d16fdfc21b64163642adb8cdd31da3c2df432" },
+                { "package.json", "cf18d2c564691a69d3bdb640e25537fac15c0e29ec318e1a1afb4f0fa2d89fec" },
+                { "package-lock.json", "160a8ac361e4cc9041e5a570db5b3328edf1279f3bf89e6053e20041e1be33f7" },
+                { "server.js", "832d2de2ae6ef20ea909ec7ab18c43f40d4c469a798a5cf72b112900a48ef173" },
                 { "lib/server/public-pages.js", "de434eac7cef447abbda40604621a354ff6c23320a42823cdcb8969dcc16c533" },
                 { "lib/server/tls-manager.js", "b82a1b195b6cb36d47d8d431b890e0479aaf9ca8d47f98e8ef9e046390610f7f" },
                 { "lib/server/network-services.js", "fd4a119ca1a75127b82c758c3d3555c12384c01b487bee3b3150a398217e4bdf" },
                 { "lib/server/backup-service.js", "65cb07c147b326475a833be6cbc668db733fc8183ec0b4eec919a876b3f04bc2" },
+                { "lib/server/storage-connector-config.js", "04830567b2b2393510dd69dd8c610765252ef7312218068fceba09ec68125437" },
+                { "lib/server/storage-connector-browser.js", "bb3fb333a7d04069cc78151912196dc4eec4d932dcd90bb06ad6de60929c1a7d" },
+                { "lib/server/oauth-broker-deployment.js", "f87d48ad2dac90fc4bb725879ee30adfb2013a792fafda1f3fb5e1163b0699d5" },
+                { "lib/assets/oauth-broker-worker.mjs", "75b0cc4a7ac1f230c450a486fa3eeb250997c25b0952316309bbd892ccae3d29" },
+                { "lib/assets/oauth-broker-schema.sql", "ff745a72b9599399b02f0e81a9c376d7daf2934f86dedec05cce4c1268b5642f" },
+                { "lib/google-oauth-profile.js", "6a3cac0ad7c419442f57ee28e53c5f8f15bd3dd6f3bb1a1242a415f941ceaa78" },
+                { "lib/google-oauth-broker-client.js", "b64d80e6ce5229b858769e55b2a7420aeaeaa0d8d4b68d4debfc34e991f90f89" },
                 { "lib/server/notification-service.js", "a55beb8d5fdb09754eeb7f7d01974896efaad20dde3b9cf00e83bf4f7a7b9baa" },
-                { "public/app.js", "523798424c30581466843747bac23b2678492d4ffe96161242cffff2edbb7577" },
-                { "pwa/app.js", "a7d235cb915d0a0985e35afbba85bcfa35bc4e890d057e8cbf1c9fe600aa502d" },
-                { "lib/dlp-utils.js", "dd4d15a3ebb1cc2e7183e9b68434cf69d50532f54fcbb9e90b5ffeb0cfdad086" },
+                { "public/app.js", "4414185087daaf14a99a8d9ac1938e741b5b48b9a0abf33a8e2b214311639307" },
+                { "pwa/app.js", "187a59ac05f7ec4e4748949bcc04e45ac8ec3367f6e24d72b360732a35e9e6c4" },
+                { "lib/dlp-utils.js", "0d8f768c3457ec713199ce9e82f9483be21df2ea01dce6ead26675d240fde768" },
                 { "lib/fd-utils.js", "322abf15ce7a15310d6d27ac1b0ca40892658d5f21198510f7e84b78b0070b13" },
                 { "pwa/dlp-local.js", "246267542621fc92f759438b2295b87f777ba6d6aa88b3c4d23dea25aebe7390" },
-                { "lib/storage-connectors.js", "cacd27e095ddfa594f4092f5ecff6d22103c924033adc8177e40a7062313e008" },
+                { "lib/storage-connectors.js", "90cc270a3e713b11460d950d013eee737b5aaaf8cb01d53db75ef3e8f4184e91" },
                 { "lib/web-storage-share.js", "7a575bd6ed1e98eedd748bc96510e8e85a08eeb3c7dff64608a3fc97b3c8bbdf" },
-                { "lib/web-storage-writable.js", "afebff2f33a373d48a98e920bb55b2f0f5783c3cdfe6e640004532474becc102" },
-                { "public/index.html", "38d43168c68117b2edac8db179791ed6e372031d1fc4971656744d4cc9f63390" },
-                { "public/style.css", "568a40ab07a4e3a7fd7a54df007dc932bb77ef9fffd15405cefb15dfe5be07c9" },
+                { "lib/web-storage-writable.js", "d4a076866d4c09228e261e09405e8a7e3da1a04604c9bbf4c55e2edfac80070f" },
+                { "public/index.html", "e5cc7965330c6184ca56571747d8c85d3e73b0bc09f3abca33916dfdb3819e4f" },
+                { "public/oauth-bridge.html", "7c08c6d54d523b0ed3976293e99fe7e4f43c01ff359fd4be170dfd0f0ab344c3" },
+                { "public/oauth-bridge.css", "32a468581ae0ae93c818fe00217a55cdec62dc5cb4796c748003ad4f71bbbbbb" },
+                { "public/oauth-bridge.js", "853b1582d7367eb4a68cd891d568923a3e399abfad442f36d38c06812cb27f3e" },
+                { "public/google-oauth-complete.js", "da9a4028d6c3e4e5f3bae22921a18eceb105b89aecd0fc42b21a9bdde86520cc" },
+                { "public/style.css", "2fd95d94438e9680cebcc7051abc853bafec9f268fe320a4dc28c409cb59937e" },
                 { "node_modules/express/package.json", "c7db3b72582355c80cdcef1ad7b2c9a8f53557550724c6bef8502e9818c2ebe7" }
             };
 

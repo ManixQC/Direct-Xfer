@@ -19,19 +19,19 @@ namespace DirectXfer.WindowsLauncher
 {
     internal static class Program
     {
-        internal const string AppVersion = "1.67.7";
-        internal const string RuntimeAppBuild = "1.67.7-launcher94-csharp";
+        internal const string AppVersion = "1.68.0";
+        internal const string RuntimeAppBuild = "1.68.0-launcher124-csharp";
         internal const string ServerHostFileName = "Direct-Xfer.ServerHost.exe";
-        internal const string ServerHostVersion = "1.67.7.0";
+        internal const string ServerHostVersion = "1.68.0.0";
         internal const int DefaultPort = 55750;
         internal const int MaxFallbackPort = 55769;
         internal const int StartupReadyTimeoutMs = 60000;
         internal const string MutexName = @"Local\DirectXferLauncherInstance";
         internal const string OpenEventName = @"Local\DirectXferLauncherOpen";
-        internal const string ServerHostBuild = "1.67.7-serverhost67-csharp";
+        internal const string ServerHostBuild = "1.68.0-serverhost97-csharp";
         internal const string ServerHostReloadEventName = @"Local\DirectXferServerHostReload";
-        internal const string RcloneVersion = "1.74.4";
-        internal const string RcloneZipSha256 = "ef097ef9de37a57feb7d9f9c7afb34148ad3c65be8025f1d8f7f521554a701ea";
+        internal const string RcloneVersion = "1.75.0";
+        internal const string RcloneZipSha256 = "203581f0a7baeae873f2347483a798c79e2eaf5c384a4e9d866aa374f1c89ac0";
         internal const string TesseractVersion = "5.5.3";
         internal const string TesseractPackageVersion = "5.5.3.20260724";
         internal const string TesseractSetupSha256 = "bee9e3434bd94fd65387d9be28cd467a41f61b1275383b55b0f59a1331270ae4";
@@ -1628,7 +1628,7 @@ namespace DirectXfer.WindowsLauncher
                         AppTitle = "Direct-Xfer " + Program.AppVersion, Open = "Ouvrir Direct-Xfer", Logs = "Ouvrir les journaux",
                         Configure = "Configurer les dossiers…", ResetAdminPassword = "Réinitialiser le mot de passe admin…",
                         Language = "Langue", Stop = "Quitter la systray",
-                        OptionalComponents = "Composants optionnels", ActivateRclone = "Activer rclone (télécharger)…", RemoveRclone = "Désactiver et supprimer rclone", RcloneActive = "✓ rclone 1.74.4 activé",
+                        OptionalComponents = "Composants optionnels", ActivateRclone = "Activer rclone (télécharger)…", RemoveRclone = "Désactiver et supprimer rclone", RcloneActive = "✓ rclone 1.75.0 activé",
                         ActivateTesseract = "Activer Tesseract OCR (télécharger)…", RemoveTesseract = "Désactiver et supprimer Tesseract OCR", TesseractActive = "✓ Tesseract OCR 5.5.3 activé",
                         OptionalInstallConfirm = "{0} est optionnel et n’est pas inclus dans l’installateur Direct-Xfer. Le télécharger et l’activer maintenant ?",
                         OptionalRemoveConfirm = "Désactiver et supprimer {0} de cet utilisateur ?", OptionalInstalling = "Téléchargement et installation de {0}…",
@@ -1657,7 +1657,7 @@ namespace DirectXfer.WindowsLauncher
                         AppTitle = "Direct-Xfer " + Program.AppVersion, Open = "Abrir Direct-Xfer", Logs = "Abrir registros",
                         Configure = "Configurar carpetas…", ResetAdminPassword = "Restablecer la contraseña de administrador…",
                         Language = "Idioma", Stop = "Salir de la bandeja",
-                        OptionalComponents = "Componentes opcionales", ActivateRclone = "Activar rclone (descargar)…", RemoveRclone = "Desactivar y eliminar rclone", RcloneActive = "✓ rclone 1.74.4 activado",
+                        OptionalComponents = "Componentes opcionales", ActivateRclone = "Activar rclone (descargar)…", RemoveRclone = "Desactivar y eliminar rclone", RcloneActive = "✓ rclone 1.75.0 activado",
                         ActivateTesseract = "Activar Tesseract OCR (descargar)…", RemoveTesseract = "Desactivar y eliminar Tesseract OCR", TesseractActive = "✓ Tesseract OCR 5.5.3 activado",
                         OptionalInstallConfirm = "{0} es opcional y no está incluido en el instalador de Direct-Xfer. ¿Descargarlo y activarlo ahora?",
                         OptionalRemoveConfirm = "¿Desactivar y eliminar {0} para este usuario?", OptionalInstalling = "Descargando e instalando {0}…",
@@ -1686,7 +1686,7 @@ namespace DirectXfer.WindowsLauncher
                         AppTitle = "Direct-Xfer " + Program.AppVersion, Open = "Open Direct-Xfer", Logs = "Open logs",
                         Configure = "Configure folders…", ResetAdminPassword = "Reset admin password…",
                         Language = "Language", Stop = "Exit tray",
-                        OptionalComponents = "Optional components", ActivateRclone = "Activate rclone (download)…", RemoveRclone = "Deactivate and remove rclone", RcloneActive = "✓ rclone 1.74.4 active",
+                        OptionalComponents = "Optional components", ActivateRclone = "Activate rclone (download)…", RemoveRclone = "Deactivate and remove rclone", RcloneActive = "✓ rclone 1.75.0 active",
                         ActivateTesseract = "Activate Tesseract OCR (download)…", RemoveTesseract = "Deactivate and remove Tesseract OCR", TesseractActive = "✓ Tesseract OCR 5.5.3 active",
                         OptionalInstallConfirm = "{0} is optional and is not included in the Direct-Xfer installer. Download and activate it now?",
                         OptionalRemoveConfirm = "Deactivate and remove {0} for this user?", OptionalInstalling = "Downloading and installing {0}…",

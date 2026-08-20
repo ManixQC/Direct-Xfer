@@ -22,17 +22,19 @@ function sliceBetween(source, startMarker, endMarker) {
   return source.slice(start, end);
 }
 
-test('1.67.7 version, Windows builds and PWA generation are synchronized', () => {
-  assert.equal(pkg.version, '1.67.7');
-  assert.equal(lock.version, '1.67.7');
-  assert.equal(lock.packages[''].version, '1.67.7');
-  assert.match(workflow, /^run-name: v1\.67\.7$/m);
-  assert.match(workflow, /DX_RUNTIME_BUILD: '1\.67\.7-launcher94-csharp'/);
-  assert.match(workflow, /DX_SERVER_HOST_BUILD: '1\.67\.7-serverhost67-csharp'/);
-  assert.match(launcher, /AppVersion = "1\.67\.7"/);
-  assert.match(host, /AppVersion = "1\.67\.7"/);
+test('1.68.0 version, Windows builds and PWA generation are synchronized', () => {
+  assert.equal(pkg.version, '1.68.0');
+  assert.equal(lock.version, '1.68.0');
+  assert.equal(lock.packages[''].version, '1.68.0');
+  assert.match(workflow, /^run-name: v1\.68\.0$/m);
+  assert.match(workflow, /DX_RUNTIME_BUILD: '1\.68\.0-launcher124-csharp'/);
+  assert.match(workflow, /DX_SERVER_HOST_BUILD: '1\.68\.0-serverhost97-csharp'/);
+  assert.match(launcher, /AppVersion = "1\.68\.0"/);
+  assert.match(host, /AppVersion = "1\.68\.0"/);
+  assert.match(read('windows-launcher/app.manifest'), /assemblyIdentity version="1\.68\.0\.0"/);
+  assert.match(read('windows-server-host/app.manifest'), /assemblyIdentity version="1\.68\.0\.0"/);
   for (const rel of ['pwa/theme-init.js','pwa/mobile-intelligence.js','pwa/index.html','pwa/admin-advanced.js','pwa/app.js','pwa/sw.js']) {
-    assert.match(read(rel), /1\.67\.7|pwa366/);
+    assert.match(read(rel), /1\.68\.0|pwa405/);
   }
   for (const rel of ['pwa/login.html','pwa/theme-init.js','pwa/index.html','pwa/login.js','pwa/admin-advanced.js','pwa/app.js','pwa/sw.js']) {
     assert.doesNotMatch(read(rel), /v=356/);

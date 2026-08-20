@@ -43,6 +43,11 @@ services:
       # /app mutations such as creating a reception link fail with 403 invalid-origin
       # ("Could not create the link" in the PWA). Also fixes generated link URLs.
       # PUBLIC_URL: "https://your-domain.example"
+      # Public OAuth broker: preferred for zero-preparation Google Drive sign-in,
+      # including when the browser is on another machine. Deploy oauth-broker/cloudflare-worker
+      # once, then set its root HTTPS origin here (no path suffix). Direct-Xfer falls
+      # back to an existing local Web profile or same-host rclone OAuth if necessary.
+      # DIRECT_XFER_OAUTH_BROKER_URL: "https://direct-xfer-oauth-broker.<your-subdomain>.workers.dev"
       # Public resource guards (defaults shown). Set a byte cap to 0 only if a
       # reverse proxy or another layer already enforces equivalent limits.
       # MAX_UPLOAD_BYTES: "10737418240"       # 10 GiB per received file
@@ -73,9 +78,22 @@ services:
       # /data automatically. The public key can safely be distributed.
       # AUDIT_SIGNING_PRIVATE_KEY_FILE: "/run/secrets/direct-xfer-audit-ed25519.pem"
       # Storage connectors (SFTP, SMB, WebDAV, Google Drive, OneDrive, Dropbox,
-      # Box) use rclone. Run `docker exec -it direct-xfer rclone config` once;
-      # credentials stay in this protected file and never enter shares.json.
+      # Box) use rclone. Configure them from Direct-Xfer; credentials stay server-side.
+      # Google Drive standard mode: click Connect Google Drive, choose the Google account
+      # and allow access. No JSON file or service-account key is used in the normal UI.
+      # Per-instance Google Web credentials are an ADVANCED FALLBACK only when no
+      # central broker is used. The normal broker path needs no Google client on this instance.
+      # DIRECT_XFER_GOOGLE_WEB_CLIENT_ID: "...apps.googleusercontent.com"
+      # DIRECT_XFER_GOOGLE_WEB_CLIENT_SECRET: "GOCSPX-..."
+      # Legacy Desktop/rclone-loopback credentials remain supported only for advanced fallback:
+      # DIRECT_XFER_GOOGLE_OAUTH_CLIENT_ID: "...apps.googleusercontent.com"
+      # DIRECT_XFER_GOOGLE_OAUTH_CLIENT_SECRET: "GOCSPX-..."
       # RCLONE_CONFIG: "/data/rclone/rclone.conf"
+      # If an HTTPS-inspecting proxy/antivirus presents a private CA to rclone,
+      # place its PEM root certificate in /data/rclone/ca/ (persistent /data).
+      # Direct-Xfer merges it with public/system roots automatically; TLS verification
+      # remains enabled. An explicit file can also be selected with:
+      # DIRECT_XFER_RCLONE_CA_FILE: "/data/rclone/ca/company-root.pem"
       # CONNECTOR_IMPORT_DIR: "/Direct-Xfer/Imports"
       # MAX_ACTIVE_CONNECTOR_JOBS: "4"
       # Native HTTPS (so encrypted shares / secret notes / E2E reception work

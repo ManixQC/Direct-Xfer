@@ -1,0 +1,18 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "direct-xfer-oauth-broker",
+  "main": "src/index.js",
+  "compatibility_date": "2026-08-19",
+  "workers_dev": true,
+  "observability": { "enabled": true },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "direct-xfer-oauth-broker",
+      "database_id": "REPLACE_WITH_D1_DATABASE_ID"
+    }
+  ],
+  "secrets": {
+    "required": ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "BROKER_DATA_KEY"]
+  }
+}

@@ -4032,7 +4032,7 @@ body.share-details-open { overflow:hidden; }
 .guided-summary{border:1px solid var(--border-soft);border-radius:12px;padding:12px;font-weight:800}.guided-bad{border-color:color-mix(in srgb,var(--danger) 48%,var(--border))}.guided-warn{border-color:color-mix(in srgb,var(--warn) 48%,var(--border))}
 @media(max-width:640px){.std-enh-row,.guided-row{align-items:stretch;flex-direction:column}.share-context-menu{min-width:min(260px,calc(100vw - 16px))}}
 
-/* -------------------- Configuration full page (1.67.7) -------------------- */
+/* -------------------- Configuration full page (1.67.30) -------------------- */
 #config-page .brand {
   font-size: 2.4rem;
 }
@@ -4082,6 +4082,10 @@ body.share-details-open { overflow:hidden; }
 .web-storage-modal { max-width: 980px; }
 .web-storage-browser-head { display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin:8px 0; }
 .web-storage-browser-actions { display:flex; gap:6px; flex-wrap:wrap; }
+.web-storage-new-folder { display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; margin:0 0 8px; padding:10px; border:1px solid var(--border); border-radius:10px; background:var(--card-2); }
+.web-storage-new-folder.hidden { display:none; }
+.web-storage-new-folder .fld { flex:1 1 260px; min-width:0; }
+.web-storage-new-folder-actions { display:flex; gap:6px; flex-wrap:wrap; }
 .web-storage-list { min-height:180px; max-height:38vh; overflow:auto; }
 .web-storage-list .web-storage-row { display:flex; align-items:center; gap:10px; width:100%; padding:9px 10px; border:0; border-bottom:1px solid var(--border); background:transparent; color:inherit; text-align:left; cursor:pointer; }
 .web-storage-list .web-storage-row:hover, .web-storage-list .web-storage-row:focus-visible { background:var(--card-2); outline:none; }
@@ -4093,4 +4097,245 @@ body.share-details-open { overflow:hidden; }
 .web-storage-write-options .fld-row { display:flex; gap:12px; flex-wrap:wrap; width:100%; }
 .web-storage-write-options > .fld, .web-storage-write-options .fld-row > .fld { flex:1 1 220px; }
 .web-storage-write-options > p { flex:1 0 100%; margin:0; }
-@media (max-width: 720px) { .web-storage-modal { width:min(96vw,980px); } .web-storage-list { max-height:32vh; } }
+@media (max-width: 720px) { .web-storage-modal { width:min(96vw,980px); } .web-storage-list { max-height:32vh; } .web-storage-new-folder-actions, .web-storage-new-folder-actions .btn { width:100%; } }
+
+/* ---------------- rclone configuration wizard ---------------- */
+/* Keep the rclone wizard anchored to the top of the viewport.  Unlike the
+   generic centered modal overlay, this wizard can become tall (OAuth guide,
+   callback help, provider questions), so starting at the top keeps the header
+   and first actionable control immediately visible on every screen size. */
+#connector-remote-wizard{
+  align-items:flex-start;
+  justify-content:center;
+  overflow-y:auto;
+  padding-top:max(20px,env(safe-area-inset-top));
+  padding-bottom:max(20px,env(safe-area-inset-bottom));
+}
+#connector-remote-wizard .connector-config-modal{
+  margin:0 auto;
+  max-height:calc(100dvh - 40px);
+}
+.connector-config-modal{max-width:620px}
+.connector-config-body{display:flex;flex-direction:column;gap:10px;min-height:140px;overflow-y:auto;min-width:0;padding-right:2px}
+.connector-config-help{white-space:pre-wrap;overflow-wrap:anywhere;margin:5px 0 0}
+#connector-config-control input,#connector-config-control select,#connector-config-control textarea{width:100%}
+#connector-config-control textarea{min-height:110px;resize:vertical;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.78rem}
+.connector-config-google-credentials{display:flex;flex-direction:column;gap:9px;border:1px solid var(--border-soft);border-radius:9px;padding:12px;background:var(--card-2)}
+.connector-config-google-credentials p{margin:0}
+.connector-config-google-credentials .fld{margin:0}
+.connector-config-google-credentials input[type="text"],.connector-config-google-credentials input[type="password"],.connector-config-google-credentials input[type="file"]{width:100%}
+.connector-config-google-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.connector-google-guide{border:1px solid var(--border-soft);border-radius:9px;background:var(--panel);overflow:hidden}
+.connector-google-guide>summary{cursor:pointer;padding:9px 10px;font-weight:700;font-size:.82rem;user-select:none}
+.connector-google-guide[open]>summary{border-bottom:1px solid var(--border-soft)}
+.connector-google-guide-body{display:flex;flex-direction:column;gap:8px;padding:10px}
+.connector-google-guide-body>p{margin:0}
+.connector-google-guide-body ol{margin:0;padding-left:1.35rem;display:grid;gap:7px;font-size:.8rem;line-height:1.42}
+.connector-google-guide-body li{padding-left:2px}
+.connector-google-guide-note{border-left:3px solid var(--accent);padding-left:8px}
+.connector-google-guide-links{display:flex;gap:7px;flex-wrap:wrap}
+.connector-google-guide-links .btn{text-decoration:none}
+.connector-config-oauth{display:flex;flex-wrap:wrap;gap:8px;align-items:center;border:1px solid var(--border-soft);border-radius:9px;padding:10px;background:var(--card-2)}
+.connector-config-oauth p{flex-basis:100%;margin:0}
+.connector-config-callback{border:1px solid var(--border-soft);border-radius:9px;padding:10px;background:var(--card-2);display:flex;flex-direction:column;gap:8px}
+.connector-config-callback p{margin:0}.connector-config-callback textarea{width:100%;min-height:82px;resize:vertical;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.78rem}
+.connector-config-callback-actions{display:flex;gap:8px;flex-wrap:wrap}
+.connector-config-token-help{border:1px solid var(--border-soft);border-radius:9px;padding:10px;background:var(--card-2)}
+.connector-config-token-help code{display:block;margin-top:6px;padding:8px;border-radius:7px;background:var(--panel);overflow-wrap:anywhere;user-select:all}
+@media(max-width:600px){.connector-config-oauth .btn,.connector-config-callback-actions .btn,.connector-config-google-actions .btn,.connector-google-guide-links .btn{width:100%}.connector-config-modal{width:min(96vw,620px)}}
+
+.connector-google-scope-info{display:grid;gap:7px;border:1px solid var(--border-soft);border-radius:9px;padding:10px 11px;background:var(--card-2)}
+.connector-google-scope-row{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;font-size:.82rem;line-height:1.4}
+.connector-google-scope-row>span{color:var(--muted);min-width:0}.connector-google-scope-row>strong{text-align:right;overflow-wrap:anywhere;word-break:break-word}
+.connector-google-scope-info p{margin:2px 0 0}
+@media(max-width:600px){.connector-google-scope-row{flex-direction:column;gap:2px}.connector-google-scope-row>strong{text-align:left}}
+.connector-config-auth-link{align-self:flex-start;text-decoration:none}
+.connector-config-advanced{flex-basis:100%;width:100%;margin-top:2px}
+.connector-config-advanced summary{cursor:pointer;color:var(--muted);font-size:.78rem;user-select:none}
+.connector-config-advanced[open]{padding-top:4px}
+.connector-config-advanced .btn{margin-top:8px}
+.connector-config-advanced .fld{margin-top:8px}
+.connector-google-profile{display:flex;gap:12px;align-items:center;justify-content:space-between;border:1px solid var(--border-soft);border-radius:10px;padding:10px 12px;background:var(--card-2);margin:6px 0 12px}
+.connector-google-profile p{margin:2px 0 0}.connector-google-profile-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.connector-google-quick-steps{display:grid;gap:8px;margin:12px 0}.connector-google-quick-steps>div{display:flex;gap:9px;align-items:flex-start;padding:8px 10px;border:1px solid var(--border-soft);border-radius:9px;background:var(--card-2)}
+.connector-google-step-num{display:inline-grid;place-items:center;flex:0 0 24px;height:24px;border-radius:50%;font-weight:700;background:var(--accent);color:var(--accent-contrast,#fff)}
+.connector-google-primary-actions{margin-top:10px}.connector-google-import-btn{cursor:pointer}.connector-google-manual{margin-top:10px}.connector-google-manual .fld{margin-top:10px}.connector-google-manual .btn{margin-top:10px}
+@media(max-width:700px){.connector-google-profile{align-items:stretch;flex-direction:column}.connector-google-profile-actions,.connector-google-profile-actions .btn,.connector-google-primary-actions,.connector-google-primary-actions .btn{width:100%}.connector-google-primary-actions{display:grid}}
+.connector-config-google-direct{display:flex;flex-direction:column;gap:9px;border:1px solid var(--border-soft);border-radius:9px;padding:12px;background:var(--card-2)}
+.connector-config-google-direct p{margin:0}.connector-config-google-direct .fld{margin:0}.connector-config-google-direct input[type="text"],.connector-config-google-direct input[type="email"]{width:100%}
+.connector-google-direct-steps{display:grid;gap:8px;margin:4px 0}.connector-google-direct-steps>div{display:flex;gap:9px;align-items:flex-start;padding:8px 10px;border:1px solid var(--border-soft);border-radius:9px;background:var(--panel)}
+.connector-google-direct-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.connector-google-direct-actions .btn{text-decoration:none}
+.connector-google-service-info{display:flex;gap:8px;align-items:center;flex-wrap:wrap;border:1px solid var(--border-soft);border-radius:9px;padding:9px 10px;background:var(--panel)}
+.connector-google-service-info code{user-select:all;overflow-wrap:anywhere;flex:1 1 260px}.connector-google-direct-advanced,.connector-google-oauth-alternative{border-top:1px solid var(--border-soft);padding-top:7px}
+.connector-google-direct-advanced>summary,.connector-google-oauth-alternative>summary{cursor:pointer;color:var(--muted);font-size:.8rem;user-select:none}.connector-google-oauth-alternative .btn{margin-top:8px}
+@media(max-width:600px){.connector-google-direct-actions,.connector-google-direct-actions .btn,#connector-config-google-direct-start{width:100%}.connector-google-direct-actions{display:grid}.connector-google-service-info{align-items:stretch}.connector-google-service-info .btn{width:100%}}
+.connector-broker-actions{display:flex;gap:7px;flex-wrap:wrap}
+.connector-broker-auto{display:flex;flex-direction:column;gap:10px;margin-top:10px;padding:10px;border:1px solid var(--border-soft);border-radius:9px;background:var(--panel)}
+.connector-broker-step{display:flex;flex-direction:column;gap:8px;padding:10px;border:1px solid var(--border-soft);border-radius:8px;background:var(--card-2)}
+.connector-broker-step .fld{margin:0}
+.connector-copy-row{display:flex;gap:7px;align-items:center}
+.connector-copy-row input{min-width:0;flex:1}
+#connector-config-google-cf-account-select{width:100%}
+@media(max-width:600px){.connector-broker-actions .btn,.connector-copy-row .btn{width:100%}.connector-copy-row{flex-direction:column;align-items:stretch}}
+
+/* -------------------- Edit-link modal: organized + viewport-safe -------------------- */
+/* The edit form is one of the longest admin dialogs. Keep the header/actions reachable
+   and let only the form body scroll, including on Firefox/4K and short-height windows. */
+#edit-overlay {
+  padding: 12px;
+}
+.modal-edit {
+  width: min(1040px, calc(100vw - 24px));
+  max-width: 1040px;
+  max-height: calc(100vh - 24px);
+  max-height: calc(100dvh - 24px);
+  padding: 0;
+  overflow: hidden;
+}
+.modal-edit > .modal-head {
+  flex: 0 0 auto;
+  padding: 18px 22px 14px;
+  border-bottom: 1px solid var(--border-soft);
+  background: var(--card-2);
+}
+.edit-modal-body {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  padding: 0 22px 20px;
+}
+.edit-modal-lead {
+  margin: 14px 0 10px;
+  overflow-wrap: anywhere;
+}
+.modal-edit .edit-options {
+  display: block;
+  margin: 0;
+}
+.edit-section {
+  margin: 12px 0 0;
+  padding: 14px;
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--card-2) 72%, transparent);
+  min-width: 0;
+}
+.edit-section-title {
+  margin: 0 0 12px;
+  color: var(--text);
+  font-size: .9rem;
+  line-height: 1.3;
+}
+.edit-subsection-title {
+  margin: 14px 0 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-soft);
+  color: var(--muted);
+  font-size: .78rem;
+  line-height: 1.3;
+}
+.edit-grid {
+  display: grid;
+  gap: 11px 12px;
+  align-items: end;
+  min-width: 0;
+}
+.edit-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.edit-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.edit-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.edit-grid > label,
+.modal-edit .pk-note-field {
+  min-width: 0;
+}
+.edit-grid > label > span,
+.modal-edit .pk-note-field > span {
+  overflow-wrap: anywhere;
+}
+.edit-span-2 { grid-column: span 2; }
+.modal-edit .share-options select,
+.modal-edit .share-options input,
+.modal-edit .share-options textarea {
+  box-sizing: border-box;
+  min-width: 0;
+  width: 100%;
+}
+.edit-check-grid,
+.edit-rx-checks {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 12px;
+  margin-top: 12px;
+}
+.modal-edit .edit-check-grid .opt-check {
+  width: auto;
+  min-width: 0;
+  margin: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--border-soft);
+  border-radius: 9px;
+  background: var(--panel);
+}
+.modal-edit .edit-check-grid .opt-check > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.edit-access-rules { min-width: 0; }
+.edit-section-hint { margin: 9px 0 0; line-height: 1.45; }
+.modal-edit .pk-note-field {
+  display: flex;
+  margin-top: 12px;
+}
+.modal-edit > #edit-error {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 10px 22px 0;
+  max-height: 96px;
+  overflow: auto;
+}
+.modal-edit > .modal-foot {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 14px 22px 18px;
+  background: var(--card);
+  box-shadow: 0 -8px 18px -14px rgba(0,0,0,.7);
+}
+.modal-edit > .modal-foot .modal-actions { margin-left: auto; }
+
+@media (max-width: 900px) {
+  .edit-grid-3,
+  .edit-grid-4,
+  .edit-check-grid,
+  .edit-rx-checks { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 620px) {
+  #edit-overlay { padding: 0; align-items: stretch; }
+  .modal-edit {
+    width: 100vw;
+    max-width: none;
+    max-height: 100vh;
+    max-height: 100dvh;
+    border-radius: 0;
+    border-left: 0;
+    border-right: 0;
+  }
+  .modal-edit > .modal-head { padding: 14px 14px 12px; }
+  .edit-modal-body { padding: 0 14px 16px; }
+  .modal-edit > #edit-error { padding-left: 14px; padding-right: 14px; }
+  .modal-edit > .modal-foot { padding: 12px 14px max(12px, env(safe-area-inset-bottom)); }
+  .edit-grid-2,
+  .edit-grid-3,
+  .edit-grid-4,
+  .edit-check-grid,
+  .edit-rx-checks { grid-template-columns: 1fr; }
+  .edit-span-2 { grid-column: auto; }
+  .modal-edit > .modal-foot .modal-actions,
+  .modal-edit > .modal-foot .modal-actions .btn { width: 100%; }
+  .modal-edit > .modal-foot .modal-actions { display: grid; grid-template-columns: 1fr 1fr; }
+}
+@media (max-height: 560px) and (min-width: 621px) {
+  #edit-overlay { align-items: flex-start; overflow-y: auto; }
+  .modal-edit { margin: 0 auto; }
+  .modal-edit > .modal-head { padding-block: 12px; }
+  .modal-edit > .modal-foot { padding-block: 10px; }
+}

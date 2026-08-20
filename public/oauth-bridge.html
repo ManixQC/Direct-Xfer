@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Direct-Xfer — OAuth</title>
+  <link rel="icon" href="/favicon.png" type="image/png">
+  <link rel="stylesheet" href="/oauth-bridge.css">
+</head>
+<body>
+  <main class="oauth-bridge-card" role="status" aria-live="polite">
+    <div class="oauth-bridge-mark" aria-hidden="true">DX</div>
+    <h1 id="oauth-bridge-title">Préparation de la connexion…</h1>
+    <p id="oauth-bridge-status">Direct-Xfer prépare la page d’autorisation.</p>
+    <div class="oauth-bridge-spinner" aria-hidden="true"></div>
+    <p id="oauth-bridge-help" class="oauth-bridge-help">Cette page se redirigera automatiquement vers le fournisseur OAuth.</p>
+    <button id="oauth-bridge-close" type="button" class="oauth-bridge-close hidden">Fermer cet onglet</button>
+  </main>
+  <script src="/oauth-bridge.js?v=3" defer></script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+services:
+  direct-xfer-oauth-broker:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "55810:55810"
+    environment:
+      DIRECT_XFER_OAUTH_BROKER_PUBLIC_URL: "https://oauth.example.com"
+      DIRECT_XFER_GOOGLE_WEB_CLIENT_ID: "YOUR_GOOGLE_WEB_CLIENT_ID"
+      DIRECT_XFER_GOOGLE_WEB_CLIENT_SECRET: "YOUR_GOOGLE_WEB_CLIENT_SECRET"
+      # Recommended: set a long random value and keep it backed up.
+      DIRECT_XFER_OAUTH_BROKER_DATA_KEY: "CHANGE_ME_TO_A_LONG_RANDOM_SECRET"
+    volumes:
+      - ./data:/data

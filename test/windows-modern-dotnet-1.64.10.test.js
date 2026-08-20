@@ -200,9 +200,9 @@ test('SDK-generated assembly metadata replaces manual assembly attributes', () =
   const hostSource = read('windows-server-host/Program.cs');
   for (const project of [launcherProject, hostProject]) {
     assert.doesNotMatch(project, /<GenerateAssemblyInfo>\s*false\s*<\/GenerateAssemblyInfo>/);
-    assert.match(project, /<AssemblyVersion>1\.67\.7\.0<\/AssemblyVersion>/);
-    assert.match(project, /<FileVersion>1\.67\.7\.0<\/FileVersion>/);
-    assert.match(project, /<InformationalVersion>1\.67\.7-(?:launcher94|serverhost67)-csharp<\/InformationalVersion>/);
+    assert.match(project, /<AssemblyVersion>1\.68\.0\.0<\/AssemblyVersion>/);
+    assert.match(project, /<FileVersion>1\.68\.0\.0<\/FileVersion>/);
+    assert.match(project, /<InformationalVersion>1\.68\.0-(?:launcher124|serverhost97)-csharp<\/InformationalVersion>/);
   }
   assert.doesNotMatch(launcherSource, /\[assembly:\s*Assembly(?:Title|Description|Company|Product|Copyright|Version|FileVersion|InformationalVersion)/);
   assert.doesNotMatch(hostSource, /\[assembly:\s*Assembly(?:Title|Description|Company|Product|Copyright|Version|FileVersion|InformationalVersion)/);
@@ -326,8 +326,8 @@ test('Windows rclone is an on-demand per-user component instead of installer pay
   assert.match(workflow, /optional rclone\/Tesseract excluded/);
   assert.match(workflow, /runtime\\rclone','runtime\\tesseract/);
 
-  assert.match(launcher, /RcloneVersion = "1\.74\.4"/);
-  assert.match(launcher, /RcloneZipSha256 = "ef097ef9de37a57feb7d9f9c7afb34148ad3c65be8025f1d8f7f521554a701ea"/i);
+  assert.match(launcher, /RcloneVersion = "1\.75\.0"/);
+  assert.match(launcher, /RcloneZipSha256 = "203581f0a7baeae873f2347483a798c79e2eaf5c384a4e9d866aa374f1c89ac0"/i);
   assert.match(launcher, /downloads\.rclone\.org\/v" \+ Program\.RcloneVersion/);
   assert.match(launcher, /DownloadOptionalFile\(url, zip, Program\.RcloneZipSha256/);
   assert.match(launcher, /OptionalRclonePath/);
@@ -340,5 +340,5 @@ test('Windows rclone is an on-demand per-user component instead of installer pay
   assert.match(server, /function resolveRcloneBinary\(\)/);
   assert.match(installer, /\{app\}\\runtime\\rclone/); // upgrade cleanup only
   assert.match(portable, /rclone is optional on Windows/i);
-  assert.match(portable, /%LOCALAPPDATA%\\Direct-Xfer\\tools\\rclone\\1\.74\.4/);
+  assert.match(portable, /%LOCALAPPDATA%\\Direct-Xfer\\tools\\rclone\\1\.75\.0/);
 });

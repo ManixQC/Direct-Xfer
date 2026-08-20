@@ -10,7 +10,7 @@ const launcher = read('windows-launcher/Program.cs');
 const host = read('windows-server-host/Program.cs');
 const workflow = read('.github/workflows/build-windows-csharp.yml');
 
-test('1.67.7 keeps optional helpers opt-in with explicit activation markers', () => {
+test('1.68.0 keeps optional helpers opt-in with explicit activation markers', () => {
   assert.match(launcher, /OptionalActivationMarkerFileName = "\.direct-xfer-enabled"/);
   assert.match(launcher, /File\.Exists\(OptionalRcloneActivationMarker\).*RcloneBinaryMatchesPinnedVersion\(OptionalRclonePath\)/s);
   assert.match(launcher, /File\.Exists\(OptionalTesseractActivationMarker\).*TesseractBinaryMatchesPinnedVersion\(OptionalTesseractPath\)/s);
@@ -110,8 +110,8 @@ test('launcher session parsing is bounded and stale optional download work is cl
   assert.match(launcher, /menu\.AddItem\(TrayStop, tr\.Stop, !_optionalToolBusy\)/);
 });
 
-test('default Windows payload still excludes rclone and Tesseract in 1.67.7', () => {
-  assert.match(workflow, /DX_VERSION: '1\.67\.7'/);
+test('default Windows payload still excludes rclone and Tesseract in 1.68.0', () => {
+  assert.match(workflow, /DX_VERSION: '1\.68\.0'/);
   assert.doesNotMatch(workflow, /downloads\.rclone\.org|tesseract-ocr-w64-setup/);
   assert.match(workflow, /Optional Windows component leaked into the default payload/);
 });

@@ -235,15 +235,15 @@ const I18N = {
     'rcp.expiryPrompt': 'Expiration pour « {name} » en jours (vide = jamais) :',
     'rcp.limitsSaved': 'Limites du destinataire enregistrées',
     'rcp.limitsFail': 'Échec de l’enregistrement',
-    'acc.title': 'Règles d’accès (géo / IP)',
-    'acc.geoMode': 'Pays',
-    'acc.off': 'Aucune restriction',
-    'acc.allowOnly': 'Autoriser seulement',
-    'acc.deny': 'Bloquer',
-    'acc.countries': 'Codes pays (ISO, séparés par des virgules)',
-    'acc.ipMode': 'Adresses IP',
-    'acc.ips': 'IP / CIDR (séparés par des virgules)',
-    'acc.hint': 'La boucle locale est toujours autorisée. Les règles par pays nécessitent la géolocalisation IP ; un visiteur dont le pays est indéterminé est autorisé (les règles IP sont la barrière stricte).',
+    'access.title': 'Règles d’accès (géo / IP)',
+    'access.geoMode': 'Pays',
+    'access.off': 'Aucune restriction',
+    'access.allowOnly': 'Autoriser seulement',
+    'access.deny': 'Bloquer',
+    'access.countries': 'Codes pays (ISO, séparés par des virgules)',
+    'access.ipMode': 'Adresses IP',
+    'access.ips': 'IP / CIDR (séparés par des virgules)',
+    'access.hint': 'La boucle locale est toujours autorisée. Les règles par pays nécessitent la géolocalisation IP ; un visiteur dont le pays est indéterminé est autorisé (les règles IP sont la barrière stricte).',
     'rcp.removeConfirm': 'Supprimer le sous-lien de « {name} » ?\nSon lien cessera de fonctionner.',
     'rcp.added': 'Sous-lien(s) créé(s) ✓',
     'rcp.addFail': 'Création impossible',
@@ -479,20 +479,60 @@ const I18N = {
     'cfg.bkSaveHint': 'Enregistrez vos réglages avant « Sauvegarder maintenant » / « Tester ». La restauration remplace tout et est irréversible.',
     'connector.title': 'Connecteurs de stockage',
     'connector.hint': 'Importez et exportez des fichiers par une destination rclone : SFTP, SMB, WebDAV, Google Drive, OneDrive, Dropbox ou Box. Les identifiants restent dans /data/rclone/rclone.conf.',
-    'connector.name': 'Nom', 'connector.type': 'Type', 'connector.remote': 'Destination rclone',
+    'connector.name': 'Nom', 'connector.type': 'Type', 'connector.remote': 'Destination rclone', 'connector.remoteAutomatic': 'Automatique pour OAuth',
     'connector.root': 'Dossier racine (facultatif)', 'connector.readOnly': 'Connecteur en lecture seule',
-    'connector.readOnlyShort': 'lecture seule', 'connector.add': 'Ajouter le connecteur', 'connector.save': 'Enregistrer',
+    'connector.readOnlyShort': 'lecture seule', 'connector.googleAccessTitle': 'Accès Google Drive', 'connector.googleAccessMode': 'Portée OAuth', 'connector.googleAccessLimited': 'Limité — fichiers créés par Direct-Xfer', 'connector.googleAccessReadonly': 'Lecture seule — tous les fichiers Drive', 'connector.googleAccessFull': 'Complet — tous les fichiers Drive', 'connector.googleAccessLimitedHint': 'Recommandé : Direct-Xfer accède seulement aux fichiers et dossiers qu’il crée avec cette autorisation. Ce scope drive.file est non sensible.', 'connector.googleAccessReadonlyHint': 'Permet d’importer et parcourir les fichiers Drive existants sans les modifier. Google classe drive.readonly comme scope restreint.', 'connector.googleAccessFullHint': 'À utiliser seulement si Direct-Xfer doit lire et modifier des fichiers Drive existants. Google classe ce scope complet comme restreint.', 'connector.googleScopeMismatch': 'Google a renvoyé une autorisation différente de la portée demandée. Révoquez l’ancien accès Direct-Xfer dans votre compte Google puis reconnectez-vous.', 'connector.googleRequestedScope': 'Autorisation demandée :', 'connector.googleBrokerReturnedScope': 'Scope retourné par le broker :', 'connector.googleProviderReturnedScope': 'Scope retourné par Google :', 'connector.googleConfiguredScope': 'Scope configuré dans rclone :', 'connector.googleScopeWaiting': 'En attente de Google…', 'connector.googleScopeNonSensitive': 'non sensible', 'connector.googleScopeRestricted': 'restreint', 'connector.googleScopeUnknown': 'classification inconnue', 'connector.add': 'Ajouter le connecteur', 'connector.save': 'Enregistrer',
     'connector.choose': 'Connecteur', 'connector.remotePath': 'Chemin du fichier distant',
     'connector.localPath': 'Chemin local/hôte', 'connector.transferHint': "Pour l’import, le champ local est un chemin facultatif sous /Direct-Xfer/Imports. Pour l’export, indiquez un fichier hôte, reçu ou image existant.",
     'connector.import': 'Importer', 'connector.export': 'Exporter', 'connector.refresh': 'Actualiser',
-    'connector.ready': '{version} prêt', 'connector.unavailable': 'rclone n’est pas installé ou est indisponible. Activez le composant rclone pour utiliser les connecteurs.',
-    'connector.none': 'Aucun connecteur configuré.', 'connector.test': 'Tester', 'connector.testing': 'Test en cours…',
+    'connector.ready': '{version} prêt', 'connector.runtimeChecking': 'Vérification de rclone en arrière-plan…', 'connector.remoteConfiguredReady': 'Destination rclone configurée et vérifiée. Vous pouvez maintenant ajouter le connecteur.', 'connector.remoteReadyNoConnector': 'Destination rclone détectée. Sélectionnez-la ci-dessous puis cliquez sur Ajouter le connecteur.', 'connector.unavailable': 'rclone n’est pas installé ou est indisponible. Activez le composant rclone pour utiliser les connecteurs.',
+    'connector.none': 'Aucun connecteur configuré.', 'connector.noneHint': 'Aucun connecteur configuré. Ajoutez-en un ci-dessous pour utiliser un stockage cloud.', 'connector.test': 'Tester', 'connector.testing': 'Test en cours…',
     'connector.testOk': 'Connexion réussie.', 'connector.testFail': 'Échec du test du connecteur.',
     'connector.edit': 'Modifier', 'connector.delete': 'Supprimer', 'connector.deleteConfirm': 'Supprimer le connecteur « {name} » ?',
     'connector.deleteFail': 'Échec de la suppression.', 'connector.saved': 'Connecteur enregistré.',
     'connector.saveFail': 'Échec de l’enregistrement.', 'connector.required': 'Remplissez les chemins et champs requis.',
     'connector.queued': 'Transfert ajouté à la file.', 'connector.transferFail': 'Impossible de démarrer le transfert.',
     'connector.cancel': 'Annuler', 'connector.loadFail': 'Impossible de charger les connecteurs.',
+    'connector.configureRemote': 'Configurer / connecter la destination…', 'connector.configTitle': 'Configurer la destination rclone',
+    'connector.configStarting': 'Initialisation de la configuration…', 'connector.configContinue': 'Continuer', 'connector.configDone': 'Terminé',
+    'connector.configCancel': 'Annuler la configuration', 'connector.configured': 'Destination rclone configurée. Vous pouvez maintenant ajouter le connecteur.',
+    'connector.configFailed': 'Échec de la configuration rclone.', 'connector.configStorageFailed': 'Direct-Xfer ne peut pas préparer le dossier de configuration rclone.', 'connector.configWriteFailed': 'rclone n’a pas pu enregistrer la connexion Google Drive.', 'connector.googleProbeFailed': 'La connexion a été enregistrée, mais sa vérification Google Drive a échoué.', 'connector.tlsCaUntrusted': 'rclone ne fait pas confiance au certificat HTTPS présenté par Google. Direct-Xfer utilise un bundle CA public + système sans désactiver TLS. Si l’erreur persiste, ajoutez le certificat racine PEM de votre proxy/antivirus dans le dossier rclone/ca des données Direct-Xfer, puis réessayez.', 'connector.tokenInvalid': 'Le jeton OAuth transmis à rclone est invalide.', 'connector.driveApiDisabled': 'L’API Google Drive semble désactivée pour ce projet Google Cloud.', 'connector.diagnosticStage': 'Étape', 'connector.diagnosticExit': 'Code de sortie', 'connector.diagnosticDetail': 'Détail', 'connector.remoteExists': 'Cette destination rclone existe déjà.', 'connector.remoteExistsFix': 'Si elle provient d’une tentative OAuth échouée, reconnectez-la pour repartir proprement.', 'connector.remoteAlreadyConnected': 'Google Drive est déjà connecté à cette destination rclone. Aucune nouvelle autorisation Google n’est nécessaire.',
+    'connector.connectProvider': 'Connecter {provider}', 'connector.retry': 'Réessayer la connexion', 'connector.replace': 'Reconnecter / remplacer', 'connector.advanced': 'Options avancées',
+    'connector.retryHint': 'La tentative précédente a été nettoyée. Vous pouvez relancer la connexion immédiatement.', 'connector.oauthFailedRetry': 'La connexion OAuth a échoué ou a été annulée. Vous pouvez réessayer immédiatement.',
+    'connector.oauthGoogleClientRequired': 'Google a refusé le client OAuth intégré. Ouvrez Options avancées pour utiliser un Client ID Google personnalisé, puis réessayez.',
+    'connector.googleClientSetup': 'Identifiants Google OAuth', 'connector.googleClientSetupHint': 'Pour une connexion distante automatique, utilisez une application OAuth Google de type « Application Web ».',
+    'connector.googleCredentialsTitle': 'Configuration Google unique', 'connector.googleCredentialsHint': 'Créez une application OAuth Google de type « Application Web », autorisez exactement l’URI de retour affiché ci-dessous, puis collez une seule fois son Client ID et son Client Secret. Aucun fichier JSON n’est nécessaire.',
+    'connector.googleGuideTitle': 'Instructions détaillées — créer le client OAuth Google', 'connector.googleGuideIntro': 'Cette configuration ne se fait qu’une fois dans Google Cloud. Gardez cette fenêtre ouverte et suivez les étapes ci-dessous.',
+    'connector.googleGuideStep1': 'Ouvrez Google Cloud Console. Créez un nouveau projet (par exemple « Direct-Xfer ») ou sélectionnez un projet existant réservé à Direct-Xfer.',
+    'connector.googleGuideStep2': 'Ouvrez API et services → Bibliothèque, recherchez « Google Drive API », ouvrez-la puis cliquez sur Activer.',
+    'connector.googleGuideStep3': 'Ouvrez Google Auth Platform → Branding. Si Google Auth n’est pas encore configuré, cliquez sur Commencer, indiquez un nom d’application comme « Direct-Xfer », choisissez votre adresse e-mail d’assistance, puis terminez la configuration.',
+    'connector.googleGuideStep4': 'Dans Google Auth Platform → Audience, choisissez Externe pour un compte Gmail personnel ou des comptes hors de votre organisation Workspace. Choisissez Interne seulement si tous les comptes appartiennent à la même organisation Google Workspace. Si l’application est Externe et en mode Test, ajoutez le compte Google à connecter dans Utilisateurs tests.',
+    'connector.googleGuideStep5': 'Ouvrez Google Auth Platform → Clients puis cliquez sur Créer un client.',
+    'connector.googleGuideStep6': 'Dans Type d’application, choisissez Application Web. Ajoutez exactement l’URI de redirection Direct-Xfer affiché dans cette fenêtre.',
+    'connector.googleGuideStep7': 'Copiez le Client ID et le Client Secret dans la section ci-dessous. Aucun fichier JSON n’est nécessaire.',
+    'connector.googleGuideTestingNote': 'Si Google affiche un avertissement « application non vérifiée » pendant que votre propre projet est en mode Test, continuez uniquement après avoir confirmé que le nom du projet/de l’application est bien le vôtre.',
+    'connector.googleGuideOpenCloud': 'Ouvrir Google Cloud Console', 'connector.googleGuideEnableDrive': 'Ouvrir Google Drive API', 'connector.googleGuideOpenClients': 'Ouvrir les clients OAuth Google', 'connector.googleGuideOfficial': 'Guide officiel Google',
+    'connector.googleJsonImport': 'Import JSON OAuth (ancien mode)', 'connector.googleContinue': 'Continuer vers Google', 'connector.googleCredentialsMissing': 'Saisissez le Client ID et le Client Secret de l’application Web Google.', 'connector.googleJsonInvalid': 'Ce fichier JSON ne contient pas un client OAuth Google valide.', 'connector.googleDesktopRequired': 'Utilisez une application OAuth Google de type « Application Web » avec l’URI de redirection Direct-Xfer.',
+    'connector.googleDirectTitle': 'Google Drive — connexion directe sans OAuth', 'connector.googleDirectHint': 'Utilisez un compte de service Google. Aucun popup OAuth, aucun callback localhost et aucun Client ID OAuth n’est nécessaire.', 'connector.googleDirectStep1': 'Créez un compte de service Google et téléchargez sa clé JSON.', 'connector.googleDirectStep2': 'Importez la clé ici. Direct-Xfer affichera l’adresse à laquelle partager votre dossier Drive.', 'connector.googleDirectStep3': 'Partagez le dossier Google Drive avec cette adresse en rôle Éditeur pour importer/exporter (Lecteur suffit en lecture seule), puis collez l’URL du dossier ci-dessous.', 'connector.googleDirectOpenCloud': '1. Ouvrir les comptes de service Google', 'connector.googleDirectImport': '2. Importer la clé JSON', 'connector.googleDirectShareWith': 'Partagez votre dossier avec :', 'connector.googleDirectCopyEmail': 'Copier l’adresse', 'connector.googleDirectFolder': 'URL ou ID du dossier Google Drive à utiliser', 'connector.googleDirectImpersonate': 'Utilisateur Google Workspace à impersonner (délégation de domaine seulement)', 'connector.googleDirectConnect': '3. Connecter Google Drive sans OAuth', 'connector.googleDirectLimit': 'Cette méthode accède au dossier partagé avec le compte de service. Pour accéder à tout « Mon Drive » d’un compte personnel, Google exige OAuth.', 'connector.googleOAuthAlternative': 'Connexion au compte Google avec OAuth', 'connector.googleOAuthAlternativeHint': 'Utilisez cette méthode seulement si vous avez besoin de l’ensemble de Mon Drive.', 'connector.googleOAuthUse': 'Utiliser OAuth', 'connector.googleDirectReady': 'Connexion directe prête — importez une clé de compte de service Google.', 'connector.googleDirectImporting': 'Lecture de la clé Google…', 'connector.googleDirectShareNow': 'Clé valide. Partagez maintenant le dossier Drive avec l’adresse affichée, puis collez son URL.', 'connector.googleDirectJsonRequired': 'Importez d’abord la clé JSON d’un compte de service Google.', 'connector.googleDirectJsonInvalid': 'Ce fichier n’est pas une clé JSON de compte de service Google valide.', 'connector.googleDirectFolderRequired': 'Collez l’URL ou l’ID du dossier Google Drive partagé avec le compte de service.', 'connector.googleDirectImpersonateInvalid': 'L’adresse Google Workspace à impersonner est invalide.', 'connector.googleDirectConnecting': 'Connexion directe à Google Drive…', 'connector.googleDirectConnected': 'Google Drive est connecté directement, sans OAuth.', 'connector.googleDirectEmailCopied': 'Adresse du compte de service copiée.', 'connector.googleDirectAuthFailed': 'Google a refusé la clé du compte de service. Vérifiez que la clé JSON est toujours active, puis réessayez.', 'connector.googleDirectForbidden': 'Le compte de service n’a pas accès à ce dossier. Partagez le dossier avec l’adresse affichée, puis réessayez.', 'connector.googleDirectNotFound': 'Le dossier Google Drive est introuvable pour ce compte de service. Vérifiez l’URL et le partage du dossier.', 'connector.googleDirectUnavailable': 'Direct-Xfer ne peut pas joindre Google Drive depuis le serveur. Vérifiez Internet, DNS ou le proxy, puis réessayez.', 'connector.googleDirectRateLimited': 'Google Drive limite temporairement les requêtes. Réessayez dans quelques instants.', 'connector.googleDirectStorageUnsafe': 'Le dossier local de clés de comptes de service n’est pas sûr. Vérifiez /data/rclone/service-accounts et réessayez.', 'connector.googleDirectRollbackFailed': 'La nouvelle connexion a échoué et Direct-Xfer n’a pas pu restaurer automatiquement l’ancienne configuration. Vérifiez rclone.conf avant de poursuivre.',
+    'connector.googleQuickTitle': 'Google Drive', 'connector.googleStandardReady': 'Prêt — cliquez sur « Connecter Google Drive », choisissez votre compte Google puis autorisez l’accès.', 'connector.googleAdvancedOptions': 'Options avancées', 'connector.googleServiceAdvanced': 'Compte de service (API seulement)', 'connector.googleProfileReady': 'Prêt — la connexion Google est configurée sur ce serveur.', 'connector.googleProfileReadyEnv': 'Prêt — la connexion Google est gérée par la configuration du serveur.', 'connector.googleProfileMissing': 'Service OAuth central non disponible.', 'connector.googleProfileChange': 'Configuration serveur Google', 'connector.googleProfileClear': 'Réinitialiser la configuration Google', 'connector.googleProfileClearConfirm': 'Réinitialiser la configuration Google mémorisée par Direct-Xfer ?', 'connector.googleProfileCleared': 'Configuration Google supprimée.', 'connector.googleProfileSaved': 'Configuration serveur Google enregistrée. Les connexions aux comptes Google sont maintenant directes.',
+    'connector.oauthBrokerReady': 'Prêt — Google Drive utilise le service OAuth central Direct-Xfer.', 'connector.googleRcloneFallbackReady': 'Prêt — connexion Google locale automatique disponible si le service central est hors ligne.', 'connector.oauthBrokerNotConfigured': 'Le service OAuth central Direct-Xfer n’est pas configuré sur cette installation.', 'connector.oauthBrokerUnavailable': 'Le service OAuth central Direct-Xfer est temporairement injoignable. Vérifiez la connexion Internet du serveur puis réessayez.', 'connector.oauthBrokerRateLimited': 'Le service OAuth central limite temporairement les nouvelles connexions. Réessayez dans quelques instants.', 'connector.oauthBrokerGoogleNotConfigured': 'Le service OAuth central n’est pas encore relié à Google Drive.', 'connector.oauthBrokerFailed': 'Le service OAuth central n’a pas pu terminer la connexion Google Drive. Réessayez.', 'connector.oauthBrokerScopeUpgrade': 'Le broker OAuth public utilise encore l’ancienne portée Google Drive complète. Relancez « Configurer automatiquement » pour mettre à jour le Worker Cloudflare, puis reconnectez Google Drive.', 'connector.googleBrokerTitle': 'Service OAuth central Direct-Xfer', 'connector.googleBrokerHint': 'Pour connecter Google Drive depuis un autre appareil, indiquez l’URL HTTPS du broker OAuth public Direct-Xfer.', 'connector.googleBrokerUrlLabel': 'URL du broker OAuth public', 'connector.googleBrokerSaveTest': 'Enregistrer et tester', 'connector.googleBrokerReadySaved': 'Broker enregistré et joignable. La connexion Google peut démarrer.', 'connector.googleBrokerSavedUnavailable': 'URL enregistrée, mais le broker ne répond pas ou n’est pas prêt.', 'connector.googleBrokerManagedHint': 'Cette URL est imposée par DIRECT_XFER_OAUTH_BROKER_URL.', 'connector.googleBrokerMissingHint': 'Aucun broker public n’est configuré. Une connexion depuis un autre ordinateur ne peut pas fonctionner tant qu’une URL de broker HTTPS valide n’est pas définie.', 'connector.googleBrokerInvalidUrl': 'Entrez une URL HTTPS de broker valide.', 'connector.googleBrokerAuto': 'Configurer automatiquement', 'connector.googleBrokerAutoHint': 'Direct-Xfer peut créer et publier le broker directement dans votre compte Cloudflare. Aucun fichier source, PowerShell, npm ou Wrangler n’est requis.', 'connector.googleBrokerAutoStepCloudflare': '1. Autoriser le déploiement Cloudflare', 'connector.googleBrokerTokenHint': 'Créez un jeton API temporaire avec les permissions Compte → Workers Scripts → Modifier et D1 → Modifier. Le jeton reste seulement en mémoire pendant cet assistant.', 'connector.googleBrokerOpenCloudflare': 'Ouvrir les jetons Cloudflare', 'connector.googleBrokerTokenLabel': 'Jeton API Cloudflare', 'connector.googleBrokerAccountLabel': 'ID du compte Cloudflare (facultatif — demandé seulement si la détection automatique échoue)', 'connector.googleBrokerAccountHelp': 'Trouver mon ID de compte', 'connector.googleBrokerDeploy': 'Déployer automatiquement le broker', 'connector.googleBrokerAutoStepGoogle': '2. Relier le broker à Google', 'connector.googleBrokerGoogleHint': 'Direct-Xfer a terminé le déploiement Cloudflare. Dans Google Cloud, créez un client OAuth « Application Web » et utilisez exactement le callback ci-dessous.', 'connector.googleBrokerCallbackLabel': 'Callback Google à autoriser', 'connector.copy': 'Copier', 'connector.googleBrokerFinish': 'Terminer automatiquement', 'connector.googleBrokerDeploying': 'Déploiement Cloudflare en cours…', 'connector.googleBrokerCloudflareReady': 'Broker Cloudflare déployé. Il reste seulement à créer le client OAuth Web dans Google Cloud.', 'connector.googleBrokerCopied': 'Callback copié.', 'connector.googleBrokerFinishing': 'Configuration Google du broker…', 'connector.googleBrokerAutoReady': 'Broker OAuth public prêt et enregistré dans Direct-Xfer.', 'connector.googleBrokerAccountRequired': 'Cloudflare n’a pas pu déterminer automatiquement le compte. Collez son ID de 32 caractères puis réessayez.', 'connector.googleBrokerAccountChoose': 'Choisissez le compte Cloudflare puis relancez le déploiement.', 'connector.googleBrokerTokenInvalid': 'Le jeton Cloudflare est invalide ou incomplet.', 'connector.googleBrokerPermission': 'Le jeton Cloudflare n’a pas les permissions nécessaires. Ajoutez Workers Scripts → Modifier et D1 → Modifier pour ce compte.', 'connector.googleBrokerTimeout': 'Cloudflare n’a pas répondu à temps. Réessayez.', 'connector.googleBrokerDeployFailed': 'Le déploiement automatique du broker a échoué.', 'connector.googleBrokerNetwork': 'Direct-Xfer ne parvient pas à joindre l’API Cloudflare depuis le serveur.', 'connector.googleBrokerHealthPending': 'Le Worker est déployé, mais son adresse workers.dev n’est pas encore joignable.', 'connector.googleBrokerStage': 'Étape', 'connector.googleBrokerStageToken': 'validation du jeton', 'connector.googleBrokerStageAccount': 'détection du compte', 'connector.googleBrokerStageSubdomain': 'configuration workers.dev', 'connector.googleBrokerStageD1': 'base D1', 'connector.googleBrokerStageWorker': 'publication du Worker', 'connector.googleBrokerStageSecrets': 'secrets du Worker', 'connector.googleBrokerStageHealth': 'test du broker public', 'connector.googleBrokerStageGoogle': 'secrets Google', 'connector.googleBrokerGooglePropagation': 'Les secrets Google ont été acceptés par Cloudflare, mais le Worker public ne les a pas encore activés. Direct-Xfer attend maintenant leur propagation automatiquement.', 'connector.googleBrokerExpired': 'La session de déploiement a expiré. Relancez l’étape Cloudflare.',
+    'connector.googleQuickSetupTitle': 'Préparer la connexion Google — une seule fois', 'connector.googleQuickSetupHint': 'Cette étape prépare Direct-Xfer sur ce serveur. Elle ne concerne pas les identifiants de votre compte Google et aucun fichier JSON n’est requis.', 'connector.googleQuickStep1': 'Ouvrez Google Cloud et créez le client Web utilisé par ce serveur Direct-Xfer.', 'connector.googleQuickStep2': 'Ajoutez exactement l’adresse de retour Direct-Xfer affichée ci-dessous.', 'connector.googleQuickStep3': 'Enregistrez le Client ID et le Client Secret une seule fois. Les utilisateurs n’auront ensuite qu’à choisir leur compte Google.', 'connector.googleQuickOpenCloud': 'Ouvrir Google Cloud', 'connector.googleQuickImport': 'Ancien import JSON OAuth', 'connector.googleImporting': 'Enregistrement sécurisé de la configuration Google…', 'connector.googleSavedConnecting': 'Configuration enregistrée. Ouverture de Google…', 'connector.googleManualTitle': 'Configuration administrateur Google', 'connector.googleAdminHint': 'À faire une seule fois par serveur : renseignez le Client ID et le Client Secret de l’application Web Direct-Xfer. Les utilisateurs n’auront ensuite qu’à choisir leur compte Google et cliquer Autoriser.', 'connector.googleSaveContinue': 'Enregistrer et continuer', 'connector.googleProfileManaged': 'Cette configuration Google est gérée par le serveur.', 'connector.googleWebCallbackLabel': 'Adresse de retour Direct-Xfer à autoriser', 'connector.googleWebSetupNeeded': 'Connexion Google locale disponible sur cette machine.', 'connector.googleRemoteSetupRequired': 'Ce navigateur est sur une autre machine que Direct-Xfer. Google ne peut pas retourner vers le callback localhost de rclone. Un service OAuth central actif ou un callback Web Google est requis pour une connexion distante.', 'connector.googleWebProfileRequired': 'La connexion Google doit être préparée une seule fois sur ce serveur. Aucun fichier JSON n’est requis.', 'connector.googleWebHttpsRequired': 'La connexion Google distante exige une URL HTTPS Direct-Xfer (HTTP est accepté seulement sur localhost).', 'connector.googleWebRedirectMismatch': 'Google refuse l’URI de redirection. Ajoutez exactement l’URI affiché dans Google Cloud → client OAuth Web.', 'connector.googleWebInvalidGrant': 'Google a refusé le code OAuth. Relancez la connexion; aucun copier-coller n’est nécessaire.', 'connector.googleWebRefreshMissing': 'Google n’a pas fourni de jeton de renouvellement. Retirez l’accès Direct-Xfer de votre compte Google puis reconnectez-vous.', 'connector.googleWebWaiting': 'Choisissez votre compte Google et autorisez l’accès. Le retour vers Direct-Xfer est automatique.',
+    'connector.googleClientId': 'Google Client ID', 'connector.googleClientIdHint': 'Collez le Client ID de votre application OAuth Google de type « Application Web ».',
+    'connector.googleClientSecret': 'Google Client Secret', 'connector.googleClientSecretHint': 'Collez le Client Secret associé au Client ID Google. Il est transmis uniquement à rclone côté serveur.',
+    'connector.googleUseOwnClient': 'Configurer mon propre Client ID (recommandé)', 'connector.googleUseSharedClient': 'Essayer l’ancien Client ID partagé (peut échouer)', 'connector.googleClientGuide': 'Ouvrir le guide officiel rclone pour créer le Client ID Google',
+    'connector.oauthInvalidClient': 'Le fournisseur a refusé l’identifiant OAuth de l’application. Vérifiez le Client ID / Client Secret puis réessayez.',
+    'connector.oauthPortBusy': 'Le port OAuth local 53682 est déjà utilisé sur la machine Direct-Xfer. Fermez un ancien processus rclone/OAuth puis réessayez.',
+    'connector.oauthAccessDenied': 'L’autorisation a été refusée ou annulée dans le navigateur. Réessayez et acceptez l’accès demandé.',
+    'connector.oauthTokenExchangeFailed': 'Le fournisseur a accepté la connexion, mais l’échange du code OAuth contre un jeton a échoué. Vérifiez le Client ID / secret et réessayez.',
+    'connector.oauthProviderUnreachable': 'Direct-Xfer ne peut pas joindre le fournisseur OAuth depuis le serveur. Vérifiez DNS, proxy et accès Internet du serveur.',
+    'connector.oauthRcloneProtocolFailed': 'Le dialogue de configuration OAuth avec rclone n’a pas pu être terminé. La tentative a été nettoyée; réessayez avec une version récente de rclone.',
+    'connector.oauthChoice': 'Direct-Xfer va ouvrir la page de connexion du fournisseur. Autorisez le compte puis revenez ici.', 'connector.oauthLocal': 'Ouvrir la connexion', 'connector.oauthRemote': 'Méthode rclone manuelle',
+    'connector.oauthLocalHint': 'Le navigateur peut être sur un autre ordinateur que Direct-Xfer. rclone n’est pas requis sur cet ordinateur.',
+    'connector.oauthOpening': 'Préparation de la page de connexion…', 'connector.oauthWaiting': 'Autorisez le compte dans l’onglet ouvert. Si la dernière redirection vers localhost échoue, copiez simplement l’URL de la barre d’adresse puis utilisez « Coller l’URL et terminer » ici.', 'connector.openLogin': 'Ouvrir / rouvrir la page de connexion',
+    'connector.callbackTitle': 'Dernière étape si le navigateur est sur une autre machine', 'connector.callbackHint': 'Si la page finale indique que localhost ou 127.0.0.1 est inaccessible, copiez l’URL complète de la barre d’adresse. Direct-Xfer peut terminer la connexion avec cette URL.',
+    'connector.callbackLabel': 'URL affichée après l’autorisation', 'connector.callbackPaste': 'Coller seulement', 'connector.callbackPasteFinish': 'Coller l’URL et terminer', 'connector.callbackSubmit': 'Terminer la connexion',
+    'connector.callbackMissing': 'Collez l’URL affichée après l’autorisation.', 'connector.callbackRelaying': 'Validation du retour OAuth…', 'connector.callbackInvalid': 'URL de retour OAuth invalide ou expirée.', 'connector.callbackPasteFail': 'Impossible de lire le presse-papiers. Collez l’URL manuellement.',
+    'connector.tokenHint': 'Méthode de secours : exécutez cette commande sur un ordinateur avec un navigateur et rclone, terminez la connexion, puis collez ci-dessous le jeton retourné.',
     'connector.status.queued': 'en attente', 'connector.status.running': 'en cours',
     'connector.status.completed': 'terminé', 'connector.status.failed': 'échoué', 'connector.status.cancelled': 'annulé',
     'cfg.bkNever': 'Aucune sauvegarde effectuée pour l’instant.',
@@ -541,7 +581,7 @@ const I18N = {
     'cfg.dlpHint': 'Analyse locale avant publication. Les secrets détectés sont toujours masqués dans les journaux et l’interface.',
     'cfg.dlpMode': 'Politique de secours', 'cfg.dlpWarn': 'Avertir + confirmer', 'cfg.dlpBlock': 'Bloquer', 'cfg.dlpLog': 'Journaliser seulement', 'cfg.dlpQuarantine':'Quarantainer', 'cfg.dlpRules':'Réaction automatique selon la gravité', 'cfg.dlpLow':'Faible', 'cfg.dlpMedium':'Moyenne', 'cfg.dlpHigh':'Élevée', 'cfg.dlpCritical':'Critique', 'cfg.dlpQuarantineView':'Quarantaine',
     'cfg.dlpMaxFiles': 'Fichiers max par analyse', 'cfg.dlpMaxMb': 'Taille max par fichier (Mo)', 'cfg.dlpOcr': 'Utiliser l’OCR serveur pour les images/PDF scannés',
-    'dlp.warningTitle': 'DLP : contenu sensible détecté', 'dlp.warningConfirm': '{n} détection(s) sensible(s) ({level}) dans {files} fichier(s). Continuer et publier quand même ?', 'dlp.incompleteConfirm': 'L’analyse DLP est incomplète ({skipped} ignoré(s), {ocr} erreur(s) OCR, {scan} erreur(s) de lecture, {archive} élément(s) d’archive non inspecté(s)). Publier quand même ?', 'dlp.ocrUnavailableConfirm': 'Analyse DLP du texte (OCR) indisponible sur le serveur : les images/PDF n’ont pas été inspectés pour du contenu sensible. Publier quand même ?',
+    'dlp.warningTitle': 'DLP : contenu sensible détecté', 'dlp.incompleteTitle': 'DLP : analyse incomplète', 'dlp.warningConfirm': '{n} détection(s) sensible(s) ({level}) dans {files} fichier(s).', 'dlp.incompleteConfirm': 'L’analyse DLP est incomplète ({skipped} fichier(s) non analysé(s), {ocr} erreur(s) OCR, {scan} erreur(s) de lecture, {archive} élément(s) d’archive non inspecté(s)).', 'dlp.ocrUnavailableConfirm': 'Analyse DLP du texte (OCR) indisponible sur le serveur : les images/PDF n’ont pas été inspectés pour du contenu sensible.', 'dlp.skippedSizeHint': 'Les fichiers non analysés dépassent la limite DLP de {limit} Mo.', 'dlp.warningQuestion': 'Voulez-vous publier quand même ?', 'dlp.publishAnyway': 'Publier quand même', 'dlp.cancelWarning': 'Annuler', 'dlp.cancelled': 'Publication annulée après l’avertissement DLP.', 'confirm.title': 'Confirmation', 'confirm.cancel': 'Annuler',
     'dlp.blocked': 'Publication bloquée par la politique DLP.', 'dlp.quarantined': 'Contenu placé en quarantaine par la politique DLP.', 'dlp.quarantineFailed': 'La mise en quarantaine DLP a échoué; aucun contenu n’a été publié.', 'dlp.badge': 'DLP {n}',
     'cfg.allowlistConfirm': 'Restreindre l’accès admin à ces IP ? Une erreur peut vous empêcher d’accéder à l’administration (seul le loopback restera autorisé).',
     'cfg.qrDefault': 'Afficher le QR code juste après la création d’un lien',
@@ -602,6 +642,11 @@ const I18N = {
     'cfg.emailFail': '✗ Échec de l’envoi',
     'cfg.emailNotConfigured': '✗ SMTP non configuré',
     'ed.title': 'Modifier le lien',
+    'ed.sectionGeneral': 'Général',
+    'ed.sectionLimits': 'Limites et expiration automatique',
+    'ed.sectionSecurity': 'Mot de passe et accès',
+    'ed.sectionBehavior': 'Comportement du lien',
+    'ed.sectionAppearance': 'Apparence et messages visiteur',
     'ed.editing': 'Modification :',
     'ed.rename': 'Nom',
     'ed.keep': 'Ne pas changer',
@@ -1104,6 +1149,15 @@ const I18N = {
     'webStorage.location': 'Emplacement cloud :',
     'webStorage.up': '↑ Parent',
     'webStorage.selectFolder': 'Sélectionner ce dossier',
+    'webStorage.newFolder': '＋ Nouveau dossier',
+    'webStorage.newFolderName': 'Nom du nouveau dossier',
+    'webStorage.newFolderPh': 'ex. Dépôts clients',
+    'webStorage.createFolder': 'Créer le dossier',
+    'webStorage.folderCreated': 'Dossier créé et sélectionné ✓',
+    'webStorage.folderExists': 'Un fichier ou un dossier portant ce nom existe déjà ici.',
+    'webStorage.folderInvalid': 'Entrez un nom de dossier valide, sans / ni \\.',
+    'webStorage.folderReadOnly': 'Ce connecteur est en lecture seule et ne peut pas créer de dossier.',
+    'webStorage.folderCreateFail': 'Impossible de créer le dossier dans ce stockage cloud.',
     'webStorage.refresh': '↻ Actualiser',
     'webStorage.selection': 'Sélection :',
     'webStorage.directHint': 'Les fichiers sont diffusés directement depuis le cloud sans copie locale.',
@@ -1111,6 +1165,9 @@ const I18N = {
     'webStorage.none': 'Aucun connecteur configuré. Ajoutez-en un dans Configuration → Connecteurs de stockage.',
     'webStorage.empty': 'Ce dossier cloud est vide.',
     'webStorage.rcloneMissing': 'rclone est indisponible. Activez le composant optionnel rclone puis réessayez.',
+    'webStorage.tlsCaUntrusted': 'rclone ne fait pas confiance au certificat TLS du fournisseur. Vérifiez les certificats CA dans Configuration → Connecteurs de stockage.',
+    'webStorage.apiDisabled': 'L’API du fournisseur cloud est désactivée pour ce projet. Activez-la puis réessayez.',
+    'webStorage.configStorage': 'Direct-Xfer ne peut pas lire ou écrire la configuration rclone. Vérifiez le dossier de données rclone et ses permissions.',
     'webStorage.loadFail': 'Impossible de parcourir ce stockage cloud.',
     'webStorage.connectorListFail': 'Impossible de charger la liste des connecteurs de stockage.',
     'webStorage.connectorCheckFail': 'Impossible de vérifier la configuration des connecteurs. Ouvrez Configuration → Connecteurs de stockage et vérifiez que cette section se charge correctement.',
@@ -1860,15 +1917,15 @@ const I18N = {
     'rcp.expiryPrompt': 'Expiry for "{name}" in days (blank = never):',
     'rcp.limitsSaved': 'Recipient limits saved',
     'rcp.limitsFail': 'Could not save',
-    'acc.title': 'Access rules (geo / IP)',
-    'acc.geoMode': 'Countries',
-    'acc.off': 'No restriction',
-    'acc.allowOnly': 'Allow only',
-    'acc.deny': 'Block',
-    'acc.countries': 'Country codes (ISO, comma-separated)',
-    'acc.ipMode': 'IP addresses',
-    'acc.ips': 'IP / CIDR (comma-separated)',
-    'acc.hint': 'Loopback is always allowed. Country rules need IP geolocation on; visitors whose country can’t be determined are allowed (IP rules are the hard boundary).',
+    'access.title': 'Access rules (geo / IP)',
+    'access.geoMode': 'Countries',
+    'access.off': 'No restriction',
+    'access.allowOnly': 'Allow only',
+    'access.deny': 'Block',
+    'access.countries': 'Country codes (ISO, comma-separated)',
+    'access.ipMode': 'IP addresses',
+    'access.ips': 'IP / CIDR (comma-separated)',
+    'access.hint': 'Loopback is always allowed. Country rules need IP geolocation on; visitors whose country can’t be determined are allowed (IP rules are the hard boundary).',
     'rcp.removeConfirm': 'Remove {name}\'s sub-link?\nTheir link will stop working.',
     'rcp.added': 'Sub-link(s) created ✓',
     'rcp.addFail': 'Could not add',
@@ -2104,20 +2161,60 @@ const I18N = {
     'cfg.bkSaveHint': 'Save your settings before Backup now / Test. Restore replaces everything and cannot be undone.',
     'connector.title': 'Storage connectors',
     'connector.hint': 'Import and export files through an rclone remote: SFTP, SMB, WebDAV, Google Drive, OneDrive, Dropbox or Box. Credentials stay in /data/rclone/rclone.conf.',
-    'connector.name': 'Name', 'connector.type': 'Type', 'connector.remote': 'rclone remote',
+    'connector.name': 'Name', 'connector.type': 'Type', 'connector.remote': 'rclone remote', 'connector.remoteAutomatic': 'Automatic for OAuth',
     'connector.root': 'Root folder (optional)', 'connector.readOnly': 'Read-only connector',
-    'connector.readOnlyShort': 'read only', 'connector.add': 'Add connector', 'connector.save': 'Save',
+    'connector.readOnlyShort': 'read only', 'connector.googleAccessTitle': 'Google Drive access', 'connector.googleAccessMode': 'OAuth scope', 'connector.googleAccessLimited': 'Limited — files created by Direct-Xfer', 'connector.googleAccessReadonly': 'Read-only — all Drive files', 'connector.googleAccessFull': 'Full — all Drive files', 'connector.googleAccessLimitedHint': 'Recommended: Direct-Xfer can access only files and folders it creates with this authorization. The drive.file scope is non-sensitive.', 'connector.googleAccessReadonlyHint': 'Lets Direct-Xfer browse and import existing Drive files without modifying them. Google classifies drive.readonly as restricted.', 'connector.googleAccessFullHint': 'Use only when Direct-Xfer must read and modify existing Drive files. Google classifies the full Drive scope as restricted.', 'connector.googleScopeMismatch': 'Google returned a different permission scope than requested. Revoke the old Direct-Xfer access in your Google account, then reconnect.', 'connector.googleRequestedScope': 'Requested authorization:', 'connector.googleBrokerReturnedScope': 'Scope returned by broker:', 'connector.googleProviderReturnedScope': 'Scope returned by Google:', 'connector.googleConfiguredScope': 'Scope configured in rclone:', 'connector.googleScopeWaiting': 'Waiting for Google…', 'connector.googleScopeNonSensitive': 'non-sensitive', 'connector.googleScopeRestricted': 'restricted', 'connector.googleScopeUnknown': 'unknown classification', 'connector.add': 'Add connector', 'connector.save': 'Save',
     'connector.choose': 'Connector', 'connector.remotePath': 'Remote file path',
     'connector.localPath': 'Local/host file path', 'connector.transferHint': 'For import, the local field is an optional path below /Direct-Xfer/Imports. For export, enter an existing host, reception or image file.',
     'connector.import': 'Import', 'connector.export': 'Export', 'connector.refresh': 'Refresh',
-    'connector.ready': '{version} ready', 'connector.unavailable': 'rclone is not installed or is unavailable. Enable the rclone component to use storage connectors.',
-    'connector.none': 'No connector configured.', 'connector.test': 'Test', 'connector.testing': 'Testing…',
+    'connector.ready': '{version} ready', 'connector.runtimeChecking': 'Checking rclone in the background…', 'connector.remoteConfiguredReady': 'rclone remote configured and verified. You can now add the connector.', 'connector.remoteReadyNoConnector': 'rclone remote detected. Select it below, then click Add connector.', 'connector.unavailable': 'rclone is not installed or is unavailable. Enable the rclone component to use storage connectors.',
+    'connector.none': 'No connector configured.', 'connector.noneHint': 'No connector is configured. Add one below to use cloud storage.', 'connector.test': 'Test', 'connector.testing': 'Testing…',
     'connector.testOk': 'Connection successful.', 'connector.testFail': 'Connector test failed.',
     'connector.edit': 'Edit', 'connector.delete': 'Delete', 'connector.deleteConfirm': 'Delete connector “{name}”?',
     'connector.deleteFail': 'Could not delete connector.', 'connector.saved': 'Connector saved.',
     'connector.saveFail': 'Could not save connector.', 'connector.required': 'Complete the required fields and paths.',
     'connector.queued': 'Transfer queued.', 'connector.transferFail': 'Could not start the transfer.',
     'connector.cancel': 'Cancel', 'connector.loadFail': 'Could not load storage connectors.',
+    'connector.configureRemote': 'Configure / connect remote…', 'connector.configTitle': 'Configure rclone remote',
+    'connector.configStarting': 'Starting configuration…', 'connector.configContinue': 'Continue', 'connector.configDone': 'Done',
+    'connector.configCancel': 'Cancel configuration', 'connector.configured': 'rclone remote configured. You can now add the connector.',
+    'connector.configFailed': 'rclone configuration failed.', 'connector.configStorageFailed': 'Direct-Xfer cannot prepare the rclone configuration folder.', 'connector.configWriteFailed': 'rclone could not save the Google Drive connection.', 'connector.googleProbeFailed': 'The connection was saved, but its Google Drive verification failed.', 'connector.tlsCaUntrusted': 'rclone does not trust the HTTPS certificate presented by Google. Direct-Xfer uses a merged public + system CA bundle without disabling TLS. If the error persists, add your proxy/antivirus root CA PEM file to the Direct-Xfer data rclone/ca folder, then retry.', 'connector.tokenInvalid': 'The OAuth token passed to rclone is invalid.', 'connector.driveApiDisabled': 'The Google Drive API appears to be disabled for this Google Cloud project.', 'connector.diagnosticStage': 'Stage', 'connector.diagnosticExit': 'Exit code', 'connector.diagnosticDetail': 'Detail', 'connector.remoteExists': 'This rclone remote already exists.', 'connector.remoteExistsFix': 'If it came from a failed OAuth attempt, reconnect it to start cleanly.', 'connector.remoteAlreadyConnected': 'Google Drive is already connected to this rclone remote. No new Google authorization is required.',
+    'connector.connectProvider': 'Connect {provider}', 'connector.retry': 'Retry connection', 'connector.replace': 'Reconnect / replace', 'connector.advanced': 'Advanced options',
+    'connector.retryHint': 'The previous attempt was cleaned up. You can start the connection again immediately.', 'connector.oauthFailedRetry': 'OAuth sign-in failed or was cancelled. You can retry immediately.',
+    'connector.oauthGoogleClientRequired': 'Google rejected the OAuth client. In 2026 rclone’s shared Google client ID is being retired: configure your own Google Client ID and Client Secret when rclone prompts for them, then retry.',
+    'connector.googleClientSetup': 'Google OAuth credentials', 'connector.googleClientSetupHint': 'For automatic remote-browser sign-in, use a Google OAuth client of type “Web application”.',
+    'connector.googleCredentialsTitle': 'One-time Google setup', 'connector.googleCredentialsHint': 'Create a Google OAuth client of type “Web application”, authorize the exact Direct-Xfer redirect URI shown below, then paste its Client ID and Client Secret once. No JSON file is required.',
+    'connector.googleGuideTitle': 'Detailed instructions — create the Google OAuth client', 'connector.googleGuideIntro': 'This setup is done once in Google Cloud. Keep this window open and follow the steps below.',
+    'connector.googleGuideStep1': 'Open Google Cloud Console. Create a new project (for example “Direct-Xfer”) or select an existing project dedicated to Direct-Xfer.',
+    'connector.googleGuideStep2': 'Open APIs & Services → Library, search for “Google Drive API”, open it, then click Enable.',
+    'connector.googleGuideStep3': 'Open Google Auth Platform → Branding. If Google Auth is not configured yet, click Get started, enter an app name such as “Direct-Xfer”, choose your support email, then complete the setup.',
+    'connector.googleGuideStep4': 'In Google Auth Platform → Audience, choose External for a personal Gmail account or accounts outside your Workspace organization. Choose Internal only if every account is in the same Google Workspace organization. If the app is External and in Testing, add the Google account you want to connect under Test users.',
+    'connector.googleGuideStep5': 'Open Google Auth Platform → Clients and click Create client.',
+    'connector.googleGuideStep6': 'For Application type, select Web application. Add the exact Direct-Xfer redirect URI shown above to Authorized redirect URIs.',
+    'connector.googleGuideStep7': 'Copy the Client ID and Client Secret into the section below. This is required only once on this Direct-Xfer server.',
+    'connector.googleGuideTestingNote': 'If Google shows an “unverified app” warning while your own project is in Testing, continue only after confirming the project/app name is yours.',
+    'connector.googleGuideOpenCloud': 'Open Google Cloud Console', 'connector.googleGuideEnableDrive': 'Open Google Drive API', 'connector.googleGuideOpenClients': 'Open Google OAuth Clients', 'connector.googleGuideOfficial': 'Google official guide',
+    'connector.googleJsonImport': 'Legacy OAuth JSON import', 'connector.googleContinue': 'Continue to Google', 'connector.googleCredentialsMissing': 'Enter the Client ID and Client Secret for the Google Web application.', 'connector.googleJsonInvalid': 'This JSON file does not contain a valid Google OAuth client.', 'connector.googleDesktopRequired': 'Use a Google OAuth client of type “Web application” with the Direct-Xfer redirect URI.',
+    'connector.googleDirectTitle': 'Google Drive — direct connection without OAuth', 'connector.googleDirectHint': 'Use a Google service account. No OAuth popup, localhost callback, or OAuth Client ID is required.', 'connector.googleDirectStep1': 'Create a Google service account and download its JSON key.', 'connector.googleDirectStep2': 'Import the key here. Direct-Xfer will show the address you must share your Drive folder with.', 'connector.googleDirectStep3': 'Share the Google Drive folder with that address as Editor for imports/exports (Viewer is enough for read-only), then paste the folder URL below.', 'connector.googleDirectOpenCloud': '1. Open Google service accounts', 'connector.googleDirectImport': '2. Import JSON key', 'connector.googleDirectShareWith': 'Share your folder with:', 'connector.googleDirectCopyEmail': 'Copy address', 'connector.googleDirectFolder': 'Google Drive folder URL or ID to use', 'connector.googleDirectImpersonate': 'Google Workspace user to impersonate (domain delegation only)', 'connector.googleDirectConnect': '3. Connect Google Drive without OAuth', 'connector.googleDirectLimit': 'This method accesses the folder shared with the service account. To access an entire personal My Drive, Google requires OAuth.', 'connector.googleOAuthAlternative': 'Connect Google account with OAuth', 'connector.googleOAuthAlternativeHint': 'Use this only when you need the whole My Drive.', 'connector.googleOAuthUse': 'Use OAuth', 'connector.googleDirectReady': 'Direct connection ready — import a Google service-account key.', 'connector.googleDirectImporting': 'Reading Google key…', 'connector.googleDirectShareNow': 'Valid key. Share the Drive folder with the displayed address, then paste its URL.', 'connector.googleDirectJsonRequired': 'Import a Google service-account JSON key first.', 'connector.googleDirectJsonInvalid': 'This file is not a valid Google service-account JSON key.', 'connector.googleDirectFolderRequired': 'Paste the URL or ID of the Google Drive folder shared with the service account.', 'connector.googleDirectImpersonateInvalid': 'The Google Workspace impersonation address is invalid.', 'connector.googleDirectConnecting': 'Connecting directly to Google Drive…', 'connector.googleDirectConnected': 'Google Drive is connected directly, without OAuth.', 'connector.googleDirectEmailCopied': 'Service-account address copied.', 'connector.googleDirectAuthFailed': 'Google rejected the service-account key. Make sure the JSON key is still active, then retry.', 'connector.googleDirectForbidden': 'The service account cannot access this folder. Share the folder with the displayed address, then retry.', 'connector.googleDirectNotFound': 'The Google Drive folder cannot be found by this service account. Check the folder URL and sharing settings.', 'connector.googleDirectUnavailable': 'Direct-Xfer cannot reach Google Drive from the server. Check Internet, DNS or proxy settings, then retry.', 'connector.googleDirectRateLimited': 'Google Drive is temporarily rate-limiting requests. Retry in a moment.', 'connector.googleDirectStorageUnsafe': 'The local service-account key directory is unsafe. Check /data/rclone/service-accounts and retry.', 'connector.googleDirectRollbackFailed': 'The new connection failed and Direct-Xfer could not automatically restore the previous configuration. Check rclone.conf before continuing.',
+    'connector.googleQuickTitle': 'Google Drive', 'connector.googleStandardReady': 'Ready — click “Connect Google Drive”, choose your Google account, then allow access.', 'connector.googleAdvancedOptions': 'Advanced options', 'connector.googleServiceAdvanced': 'Use a service account (advanced)', 'connector.googleProfileReady': 'Ready — Google sign-in is configured on this server.', 'connector.googleProfileReadyEnv': 'Ready — Google sign-in is managed by the server configuration.', 'connector.googleProfileMissing': 'Central OAuth service unavailable.', 'connector.googleProfileChange': 'Google server configuration', 'connector.googleProfileClear': 'Reset Google configuration', 'connector.googleProfileClearConfirm': 'Forget the Google OAuth configuration stored by Direct-Xfer?', 'connector.googleProfileCleared': 'Google configuration removed.', 'connector.googleProfileSaved': 'Google server configuration saved. Google account connections are now direct.',
+    'connector.oauthBrokerReady': 'Ready — Google Drive is using the Direct-Xfer central OAuth service.', 'connector.googleRcloneFallbackReady': 'Ready — automatic local Google sign-in is available if the central service is offline.', 'connector.oauthBrokerNotConfigured': 'The Direct-Xfer central OAuth service is not configured for this installation.', 'connector.oauthBrokerUnavailable': 'The Direct-Xfer central OAuth service is temporarily unreachable. Check the server Internet connection and try again.', 'connector.oauthBrokerRateLimited': 'The central OAuth service is temporarily rate limiting new connections. Try again shortly.', 'connector.oauthBrokerGoogleNotConfigured': 'The central OAuth service is not connected to Google Drive yet.', 'connector.oauthBrokerFailed': 'The central OAuth service could not complete the Google Drive connection. Try again.', 'connector.oauthBrokerScopeUpgrade': 'The public OAuth broker is still using the old full Google Drive scope. Run “Configure automatically” again to update the Cloudflare Worker, then reconnect Google Drive.', 'connector.googleBrokerTitle': 'Direct-Xfer central OAuth service', 'connector.googleBrokerHint': 'To connect Google Drive from another device, enter the HTTPS URL of the public Direct-Xfer OAuth broker.', 'connector.googleBrokerUrlLabel': 'Public OAuth broker URL', 'connector.googleBrokerSaveTest': 'Save and test', 'connector.googleBrokerReadySaved': 'Broker saved and reachable. Google sign-in can start.', 'connector.googleBrokerSavedUnavailable': 'URL saved, but the broker is unreachable or not ready.', 'connector.googleBrokerManagedHint': 'This URL is enforced by DIRECT_XFER_OAUTH_BROKER_URL.', 'connector.googleBrokerMissingHint': 'No public broker is configured. Sign-in from another computer cannot work until a valid HTTPS broker URL is set.', 'connector.googleBrokerInvalidUrl': 'Enter a valid HTTPS broker URL.', 'connector.googleBrokerAuto': 'Configure automatically', 'connector.googleBrokerAutoHint': 'Direct-Xfer can create and publish the broker directly in your Cloudflare account. No source files, PowerShell, npm, or Wrangler are required.', 'connector.googleBrokerAutoStepCloudflare': '1. Authorize Cloudflare deployment', 'connector.googleBrokerTokenHint': 'Create a temporary API token with Account → Workers Scripts → Edit and D1 → Edit permissions. The token stays in memory only while this wizard is open.', 'connector.googleBrokerOpenCloudflare': 'Open Cloudflare API tokens', 'connector.googleBrokerTokenLabel': 'Cloudflare API token', 'connector.googleBrokerAccountLabel': 'Cloudflare account ID (optional — only needed if auto-detection fails)', 'connector.googleBrokerAccountHelp': 'Find my account ID', 'connector.googleBrokerDeploy': 'Deploy broker automatically', 'connector.googleBrokerAutoStepGoogle': '2. Connect the broker to Google', 'connector.googleBrokerGoogleHint': 'Direct-Xfer finished the Cloudflare deployment. In Google Cloud, create a Web application OAuth client and use exactly the callback below.', 'connector.googleBrokerCallbackLabel': 'Authorized Google callback', 'connector.copy': 'Copy', 'connector.googleBrokerFinish': 'Finish automatically', 'connector.googleBrokerDeploying': 'Deploying to Cloudflare…', 'connector.googleBrokerCloudflareReady': 'Cloudflare broker deployed. Only the Google Web OAuth client remains to be created.', 'connector.googleBrokerCopied': 'Callback copied.', 'connector.googleBrokerFinishing': 'Configuring Google on the broker…', 'connector.googleBrokerAutoReady': 'Public OAuth broker is ready and saved in Direct-Xfer.', 'connector.googleBrokerAccountRequired': 'Cloudflare could not detect the account automatically. Paste its 32-character account ID and try again.', 'connector.googleBrokerAccountChoose': 'Choose the Cloudflare account and run deployment again.', 'connector.googleBrokerTokenInvalid': 'The Cloudflare token is invalid or incomplete.', 'connector.googleBrokerPermission': 'The Cloudflare token is missing required permissions. Add Workers Scripts → Edit and D1 → Edit for this account.', 'connector.googleBrokerTimeout': 'Cloudflare did not respond in time. Try again.', 'connector.googleBrokerDeployFailed': 'Automatic broker deployment failed.', 'connector.googleBrokerNetwork': 'Direct-Xfer cannot reach the Cloudflare API from the server.', 'connector.googleBrokerHealthPending': 'The Worker is deployed, but its workers.dev address is not reachable yet.', 'connector.googleBrokerStage': 'Stage', 'connector.googleBrokerStageToken': 'token validation', 'connector.googleBrokerStageAccount': 'account detection', 'connector.googleBrokerStageSubdomain': 'workers.dev configuration', 'connector.googleBrokerStageD1': 'D1 database', 'connector.googleBrokerStageWorker': 'Worker deployment', 'connector.googleBrokerStageSecrets': 'Worker secrets', 'connector.googleBrokerStageHealth': 'public broker check', 'connector.googleBrokerStageGoogle': 'Google secrets', 'connector.googleBrokerGooglePropagation': 'Cloudflare accepted the Google secrets, but the public Worker has not activated them yet. Direct-Xfer now waits for propagation automatically.', 'connector.googleBrokerExpired': 'The deployment session expired. Run the Cloudflare step again.',
+    'connector.googleQuickSetupTitle': 'Prepare Google sign-in — one time only', 'connector.googleQuickSetupHint': 'This prepares Direct-Xfer on this server. It does not use your Google account password and no JSON file is required.', 'connector.googleQuickStep1': 'Open Google Cloud and create the Web client used by this Direct-Xfer server.', 'connector.googleQuickStep2': 'Add the exact Direct-Xfer return address shown below.', 'connector.googleQuickStep3': 'Save the Client ID and Client Secret once. Users will then only choose their Google account.', 'connector.googleQuickOpenCloud': 'Open Google Cloud', 'connector.googleQuickImport': 'Legacy OAuth JSON import', 'connector.googleImporting': 'Storing the Google configuration securely…', 'connector.googleSavedConnecting': 'Configuration saved. Opening Google…', 'connector.googleManualTitle': 'Google server configuration', 'connector.googleAdminHint': 'Do this once per server: enter the Client ID and Client Secret of the Direct-Xfer Web application. Users will then only choose their Google account and click Allow.', 'connector.googleSaveContinue': 'Save and continue', 'connector.googleProfileManaged': 'This Google configuration is managed by the server.', 'connector.googleWebCallbackLabel': 'Direct-Xfer return address to authorize', 'connector.googleWebSetupNeeded': 'Local Google sign-in is available on this machine.', 'connector.googleRemoteSetupRequired': 'This browser is on a different machine from Direct-Xfer. Google cannot return to rclone’s localhost callback. An active central OAuth service or a Google Web callback is required for remote sign-in.', 'connector.googleWebProfileRequired': 'Google sign-in must be prepared once on this server. No JSON file is required.', 'connector.googleWebHttpsRequired': 'Remote Google sign-in requires Direct-Xfer to use HTTPS (HTTP is accepted only on localhost).', 'connector.googleWebRedirectMismatch': 'Google rejected the redirect URI. Add the exact URI shown here to the Google OAuth Web client.', 'connector.googleWebInvalidGrant': 'Google rejected the OAuth code. Start the sign-in again; no copy/paste is required.', 'connector.googleWebRefreshMissing': 'Google did not return a refresh token. Remove Direct-Xfer access from your Google Account and reconnect.', 'connector.googleWebWaiting': 'Choose your Google account and allow access. The return to Direct-Xfer is automatic.',
+    'connector.googleClientId': 'Google Client ID', 'connector.googleClientIdHint': 'Paste the Client ID for your Google OAuth application of type “Web application”.',
+    'connector.googleClientSecret': 'Google Client Secret', 'connector.googleClientSecretHint': 'Paste the Client Secret associated with the Google Client ID. It is sent only to rclone on the server.',
+    'connector.googleUseOwnClient': 'Configure my own Client ID (recommended)', 'connector.googleUseSharedClient': 'Try the old shared Client ID (may fail)', 'connector.googleClientGuide': 'Open the official rclone guide to create a Google Client ID',
+    'connector.oauthInvalidClient': 'The provider rejected the application OAuth identity. Check the Client ID / Client Secret and retry.',
+    'connector.oauthPortBusy': 'Local OAuth port 53682 is already in use on the Direct-Xfer machine. Stop an old rclone/OAuth process and retry.',
+    'connector.oauthAccessDenied': 'Authorization was denied or cancelled in the browser. Retry and accept the requested access.',
+    'connector.oauthTokenExchangeFailed': 'The provider accepted sign-in, but exchanging the OAuth code for a token failed. Check the Client ID / secret and retry.',
+    'connector.oauthProviderUnreachable': 'Direct-Xfer cannot reach the OAuth provider from the server. Check the server DNS, proxy and Internet access.',
+    'connector.oauthRcloneProtocolFailed': 'The OAuth configuration dialogue with rclone could not be completed. The attempt was cleaned up; retry with a recent rclone version.',
+    'connector.oauthChoice': 'Direct-Xfer will open the provider sign-in page. Authorize the account, then return here.', 'connector.oauthLocal': 'Open sign-in', 'connector.oauthRemote': 'Manual rclone authorize',
+    'connector.oauthLocalHint': 'The browser may be on another computer than Direct-Xfer. rclone is not required on that computer.',
+    'connector.oauthOpening': 'Preparing the sign-in page…', 'connector.oauthWaiting': 'Authorize the account in the opened tab. If the final localhost redirect fails, simply copy the address-bar URL and use “Paste URL and finish” here.', 'connector.openLogin': 'Open / reopen sign-in page',
+    'connector.callbackTitle': 'Last step when the browser is on another machine', 'connector.callbackHint': 'If the final page says localhost or 127.0.0.1 cannot be reached, copy the complete address-bar URL. Direct-Xfer can finish the connection with it.',
+    'connector.callbackLabel': 'URL shown after authorization', 'connector.callbackPaste': 'Paste only', 'connector.callbackPasteFinish': 'Paste URL and finish', 'connector.callbackSubmit': 'Finish connection',
+    'connector.callbackMissing': 'Paste the URL shown after authorization.', 'connector.callbackRelaying': 'Validating OAuth return…', 'connector.callbackInvalid': 'The OAuth return URL is invalid or expired.', 'connector.callbackPasteFail': 'Could not read the clipboard. Paste the URL manually.',
+    'connector.tokenHint': 'Fallback method: run this command on a computer with a browser and rclone, complete sign-in, then paste the returned token below.',
     'connector.status.queued': 'queued', 'connector.status.running': 'running',
     'connector.status.completed': 'completed', 'connector.status.failed': 'failed', 'connector.status.cancelled': 'cancelled',
     'cfg.bkNever': 'No backup taken yet.',
@@ -2166,7 +2263,7 @@ const I18N = {
     'cfg.dlpHint': 'Local scan before publishing. Detected secrets are always redacted in logs and the interface.',
     'cfg.dlpMode': 'Fallback policy', 'cfg.dlpWarn': 'Warn + confirm', 'cfg.dlpBlock': 'Block', 'cfg.dlpLog': 'Log only', 'cfg.dlpQuarantine':'Quarantine', 'cfg.dlpRules':'Automatic reaction by severity', 'cfg.dlpLow':'Low', 'cfg.dlpMedium':'Medium', 'cfg.dlpHigh':'High', 'cfg.dlpCritical':'Critical', 'cfg.dlpQuarantineView':'Quarantine',
     'cfg.dlpMaxFiles': 'Max files per scan', 'cfg.dlpMaxMb': 'Max size per file (MB)', 'cfg.dlpOcr': 'Use server OCR for images/scanned PDFs',
-    'dlp.warningTitle': 'DLP: sensitive content detected', 'dlp.warningConfirm': '{n} sensitive finding(s) ({level}) in {files} file(s). Publish anyway?', 'dlp.incompleteConfirm': 'The DLP scan is incomplete ({skipped} skipped, {ocr} OCR error(s), {scan} read error(s), {archive} archive item(s) not inspected). Publish anyway?', 'dlp.ocrUnavailableConfirm': 'Server-side text scanning (OCR) is unavailable, so images/PDFs weren’t inspected for sensitive text. Publish anyway?',
+    'dlp.warningTitle': 'DLP: sensitive content detected', 'dlp.incompleteTitle': 'DLP: incomplete scan', 'dlp.warningConfirm': '{n} sensitive finding(s) ({level}) in {files} file(s).', 'dlp.incompleteConfirm': 'The DLP scan is incomplete ({skipped} file(s) not inspected, {ocr} OCR error(s), {scan} read error(s), {archive} archive item(s) not inspected).', 'dlp.ocrUnavailableConfirm': 'Server-side text scanning (OCR) is unavailable, so images/PDFs weren’t inspected for sensitive text.', 'dlp.skippedSizeHint': 'Files not inspected exceed the DLP limit of {limit} MB.', 'dlp.warningQuestion': 'Do you want to publish anyway?', 'dlp.publishAnyway': 'Publish anyway', 'dlp.cancelWarning': 'Cancel', 'dlp.cancelled': 'Publishing cancelled after the DLP warning.', 'confirm.title': 'Confirmation', 'confirm.cancel': 'Cancel',
     'dlp.blocked': 'Publishing blocked by the DLP policy.', 'dlp.quarantined': 'Content was quarantined by the DLP policy.', 'dlp.quarantineFailed': 'DLP quarantine failed; no content was published.', 'dlp.badge': 'DLP {n}',
     'cfg.allowlistConfirm': 'Restrict admin access to these IPs? A mistake can lock you out of the admin (only loopback will remain allowed).',
     'cfg.qrDefault': 'Show the QR code right after creating a link',
@@ -2227,6 +2324,11 @@ const I18N = {
     'cfg.emailFail': '✗ Send failed',
     'cfg.emailNotConfigured': '✗ SMTP not configured',
     'ed.title': 'Edit link',
+    'ed.sectionGeneral': 'General',
+    'ed.sectionLimits': 'Limits and automatic expiry',
+    'ed.sectionSecurity': 'Password and access',
+    'ed.sectionBehavior': 'Link behavior',
+    'ed.sectionAppearance': 'Appearance and visitor messages',
     'ed.editing': 'Editing:',
     'ed.rename': 'Name',
     'ed.keep': 'Keep unchanged',
@@ -2728,6 +2830,15 @@ const I18N = {
     'webStorage.location': 'Cloud location:',
     'webStorage.up': '↑ Parent',
     'webStorage.selectFolder': 'Select this folder',
+    'webStorage.newFolder': '＋ New folder',
+    'webStorage.newFolderName': 'New folder name',
+    'webStorage.newFolderPh': 'e.g. Client uploads',
+    'webStorage.createFolder': 'Create folder',
+    'webStorage.folderCreated': 'Folder created and selected ✓',
+    'webStorage.folderExists': 'A file or folder with this name already exists here.',
+    'webStorage.folderInvalid': 'Enter a valid folder name without / or \\.',
+    'webStorage.folderReadOnly': 'This connector is read-only and cannot create folders.',
+    'webStorage.folderCreateFail': 'Could not create the folder in this cloud storage.',
     'webStorage.refresh': '↻ Refresh',
     'webStorage.selection': 'Selection:',
     'webStorage.directHint': 'Files are streamed directly from cloud storage without a local copy.',
@@ -2735,6 +2846,9 @@ const I18N = {
     'webStorage.none': 'No connector is configured. Add one under Configuration → Storage connectors.',
     'webStorage.empty': 'This cloud folder is empty.',
     'webStorage.rcloneMissing': 'rclone is unavailable. Enable the optional rclone component and try again.',
+    'webStorage.tlsCaUntrusted': 'rclone does not trust the provider TLS certificate. Check CA certificates under Configuration → Storage connectors.',
+    'webStorage.apiDisabled': 'The cloud provider API is disabled for this project. Enable it and try again.',
+    'webStorage.configStorage': 'Direct-Xfer cannot read or write the rclone configuration. Check the rclone data folder and permissions.',
     'webStorage.loadFail': 'Could not browse this cloud storage.',
     'webStorage.connectorListFail': 'Could not load the storage connector list.',
     'webStorage.connectorCheckFail': 'Could not verify the connector configuration. Open Configuration → Storage connectors and check that this section loads correctly.',
@@ -3483,15 +3597,15 @@ const I18N = {
     'rcp.expiryPrompt': 'Caducidad para «{name}» en días (vacío = nunca):',
     'rcp.limitsSaved': 'Límites del destinatario guardados',
     'rcp.limitsFail': 'No se pudo guardar',
-    'acc.title': 'Reglas de acceso (geo / IP)',
-    'acc.geoMode': 'Países',
-    'acc.off': 'Sin restricción',
-    'acc.allowOnly': 'Permitir solo',
-    'acc.deny': 'Bloquear',
-    'acc.countries': 'Códigos de país (ISO, separados por comas)',
-    'acc.ipMode': 'Direcciones IP',
-    'acc.ips': 'IP / CIDR (separados por comas)',
-    'acc.hint': 'El bucle local siempre se permite. Las reglas por país requieren geolocalización IP; los visitantes cuyo país no se puede determinar se permiten (las reglas IP son la barrera estricta).',
+    'access.title': 'Reglas de acceso (geo / IP)',
+    'access.geoMode': 'Países',
+    'access.off': 'Sin restricción',
+    'access.allowOnly': 'Permitir solo',
+    'access.deny': 'Bloquear',
+    'access.countries': 'Códigos de país (ISO, separados por comas)',
+    'access.ipMode': 'Direcciones IP',
+    'access.ips': 'IP / CIDR (separados por comas)',
+    'access.hint': 'El bucle local siempre se permite. Las reglas por país requieren geolocalización IP; los visitantes cuyo país no se puede determinar se permiten (las reglas IP son la barrera estricta).',
     'rcp.removeConfirm': '¿Eliminar el sub-enlace de «{name}»?\nSu enlace dejará de funcionar.',
     'rcp.added': 'Sub-enlace(s) creado(s) ✓',
     'rcp.addFail': 'No se pudo añadir',
@@ -3727,20 +3841,60 @@ const I18N = {
     'cfg.bkSaveHint': 'Guarda tus ajustes antes de Copiar ahora / Probar. La restauración reemplaza todo y no se puede deshacer.',
     'connector.title': 'Conectores de almacenamiento',
     'connector.hint': 'Importa y exporta archivos mediante un remoto rclone: SFTP, SMB, WebDAV, Google Drive, OneDrive, Dropbox o Box. Las credenciales permanecen en /data/rclone/rclone.conf.',
-    'connector.name': 'Nombre', 'connector.type': 'Tipo', 'connector.remote': 'Remoto rclone',
+    'connector.name': 'Nombre', 'connector.type': 'Tipo', 'connector.remote': 'Remoto rclone', 'connector.remoteAutomatic': 'Automático para OAuth',
     'connector.root': 'Carpeta raíz (opcional)', 'connector.readOnly': 'Conector de solo lectura',
-    'connector.readOnlyShort': 'solo lectura', 'connector.add': 'Añadir conector', 'connector.save': 'Guardar',
+    'connector.readOnlyShort': 'solo lectura', 'connector.googleAccessTitle': 'Acceso a Google Drive', 'connector.googleAccessMode': 'Alcance OAuth', 'connector.googleAccessLimited': 'Limitado — archivos creados por Direct-Xfer', 'connector.googleAccessReadonly': 'Solo lectura — todos los archivos de Drive', 'connector.googleAccessFull': 'Completo — todos los archivos de Drive', 'connector.googleAccessLimitedHint': 'Recomendado: Direct-Xfer solo puede acceder a archivos y carpetas que crea con esta autorización. El alcance drive.file no es sensible.', 'connector.googleAccessReadonlyHint': 'Permite explorar e importar archivos existentes de Drive sin modificarlos. Google clasifica drive.readonly como alcance restringido.', 'connector.googleAccessFullHint': 'Úsalo solo si Direct-Xfer debe leer y modificar archivos existentes de Drive. Google clasifica el alcance completo como restringido.', 'connector.googleScopeMismatch': 'Google devolvió un alcance de permisos distinto del solicitado. Revoca el acceso anterior de Direct-Xfer en tu cuenta Google y vuelve a conectar.', 'connector.googleRequestedScope': 'Autorización solicitada:', 'connector.googleBrokerReturnedScope': 'Alcance devuelto por el broker:', 'connector.googleProviderReturnedScope': 'Alcance devuelto por Google:', 'connector.googleConfiguredScope': 'Alcance configurado en rclone:', 'connector.googleScopeWaiting': 'Esperando a Google…', 'connector.googleScopeNonSensitive': 'no sensible', 'connector.googleScopeRestricted': 'restringido', 'connector.googleScopeUnknown': 'clasificación desconocida', 'connector.add': 'Añadir conector', 'connector.save': 'Guardar',
     'connector.choose': 'Conector', 'connector.remotePath': 'Ruta del archivo remoto',
     'connector.localPath': 'Ruta local/del host', 'connector.transferHint': 'Para importar, el campo local es una ruta opcional bajo /Direct-Xfer/Imports. Para exportar, indica un archivo existente del host, de recepción o de imágenes.',
     'connector.import': 'Importar', 'connector.export': 'Exportar', 'connector.refresh': 'Actualizar',
-    'connector.ready': '{version} listo', 'connector.unavailable': 'rclone no está instalado o no está disponible. Active el componente rclone para usar los conectores.',
-    'connector.none': 'No hay conectores configurados.', 'connector.test': 'Probar', 'connector.testing': 'Probando…',
+    'connector.ready': '{version} listo', 'connector.runtimeChecking': 'Comprobando rclone en segundo plano…', 'connector.remoteConfiguredReady': 'El destino rclone está configurado y verificado. Ya puede añadir el conector.', 'connector.remoteReadyNoConnector': 'Destino rclone detectado. Selecciónalo abajo y pulsa Añadir conector.', 'connector.unavailable': 'rclone no está instalado o no está disponible. Active el componente rclone para usar los conectores.',
+    'connector.none': 'No hay conectores configurados.', 'connector.noneHint': 'No hay conectores configurados. Añade uno abajo para usar almacenamiento en la nube.', 'connector.test': 'Probar', 'connector.testing': 'Probando…',
     'connector.testOk': 'Conexión correcta.', 'connector.testFail': 'Falló la prueba del conector.',
     'connector.edit': 'Editar', 'connector.delete': 'Eliminar', 'connector.deleteConfirm': '¿Eliminar el conector «{name}»?',
     'connector.deleteFail': 'No se pudo eliminar.', 'connector.saved': 'Conector guardado.',
     'connector.saveFail': 'No se pudo guardar.', 'connector.required': 'Completa los campos y rutas obligatorios.',
     'connector.queued': 'Transferencia añadida a la cola.', 'connector.transferFail': 'No se pudo iniciar la transferencia.',
     'connector.cancel': 'Cancelar', 'connector.loadFail': 'No se pudieron cargar los conectores.',
+    'connector.configureRemote': 'Configurar / conectar remoto…', 'connector.configTitle': 'Configurar remoto rclone',
+    'connector.configStarting': 'Iniciando configuración…', 'connector.configContinue': 'Continuar', 'connector.configDone': 'Terminado',
+    'connector.configCancel': 'Cancelar configuración', 'connector.configured': 'Remoto rclone configurado. Ahora puede añadir el conector.',
+    'connector.configFailed': 'Falló la configuración de rclone.', 'connector.configStorageFailed': 'Direct-Xfer no puede preparar la carpeta de configuración de rclone.', 'connector.configWriteFailed': 'rclone no pudo guardar la conexión de Google Drive.', 'connector.googleProbeFailed': 'La conexión se guardó, pero falló su verificación con Google Drive.', 'connector.tlsCaUntrusted': 'rclone no confía en el certificado HTTPS presentado por Google. Direct-Xfer usa un paquete de CA públicas + del sistema sin desactivar TLS. Si el error persiste, añade el certificado raíz PEM de tu proxy/antivirus a la carpeta de datos rclone/ca de Direct-Xfer y vuelve a intentarlo.', 'connector.tokenInvalid': 'El token OAuth transmitido a rclone no es válido.', 'connector.driveApiDisabled': 'La API de Google Drive parece estar desactivada para este proyecto de Google Cloud.', 'connector.diagnosticStage': 'Etapa', 'connector.diagnosticExit': 'Código de salida', 'connector.diagnosticDetail': 'Detalle', 'connector.remoteExists': 'Este remoto rclone ya existe.', 'connector.remoteExistsFix': 'Si proviene de un intento OAuth fallido, vuelve a conectarlo para empezar de cero.', 'connector.remoteAlreadyConnected': 'Google Drive ya está conectado a este remoto rclone. No se necesita una nueva autorización de Google.',
+    'connector.connectProvider': 'Conectar {provider}', 'connector.retry': 'Reintentar conexión', 'connector.replace': 'Reconectar / reemplazar', 'connector.advanced': 'Opciones avanzadas',
+    'connector.retryHint': 'El intento anterior se limpió. Puedes iniciar la conexión otra vez inmediatamente.', 'connector.oauthFailedRetry': 'El inicio de sesión OAuth falló o fue cancelado. Puedes reintentarlo inmediatamente.',
+    'connector.oauthGoogleClientRequired': 'Google rechazó el cliente OAuth. En 2026 se está retirando el Client ID compartido de rclone: configura tu propio Client ID y Client Secret de Google cuando rclone los solicite y vuelve a intentarlo.',
+    'connector.googleClientSetup': 'Credenciales OAuth de Google', 'connector.googleClientSetupHint': 'Para el acceso automático desde un navegador remoto, usa un cliente OAuth de Google de tipo “Aplicación web”.',
+    'connector.googleCredentialsTitle': 'Configuración única de Google', 'connector.googleCredentialsHint': 'Crea un cliente OAuth de Google de tipo “Aplicación web”, autoriza exactamente el URI de retorno de Direct-Xfer mostrado abajo y pega una sola vez su Client ID y Client Secret. No se necesita archivo JSON.',
+    'connector.googleGuideTitle': 'Instrucciones detalladas — crear el cliente OAuth de Google', 'connector.googleGuideIntro': 'Esta configuración se realiza una sola vez en Google Cloud. Mantén esta ventana abierta y sigue los pasos siguientes.',
+    'connector.googleGuideStep1': 'Abre Google Cloud Console. Crea un proyecto nuevo (por ejemplo, “Direct-Xfer”) o selecciona un proyecto existente dedicado a Direct-Xfer.',
+    'connector.googleGuideStep2': 'Abre APIs y servicios → Biblioteca, busca “Google Drive API”, ábrela y haz clic en Habilitar.',
+    'connector.googleGuideStep3': 'Abre Google Auth Platform → Branding. Si Google Auth aún no está configurado, haz clic en Comenzar, introduce un nombre de aplicación como “Direct-Xfer”, elige tu correo de asistencia y completa la configuración.',
+    'connector.googleGuideStep4': 'En Google Auth Platform → Audience, elige Externo para una cuenta personal de Gmail o cuentas fuera de tu organización Workspace. Elige Interno solo si todas las cuentas pertenecen a la misma organización de Google Workspace. Si la aplicación es Externa y está en modo Prueba, añade la cuenta de Google que vas a conectar en Usuarios de prueba.',
+    'connector.googleGuideStep5': 'Abre Google Auth Platform → Clients y haz clic en Crear cliente.',
+    'connector.googleGuideStep6': 'En Tipo de aplicación, selecciona Aplicación web y añade exactamente el URI de redirección de Direct-Xfer mostrado arriba a los URI autorizados.',
+    'connector.googleGuideStep7': 'Copia el Client ID y el Client Secret en la sección inferior. Solo se hace una vez en este servidor Direct-Xfer.',
+    'connector.googleGuideTestingNote': 'Si Google muestra una advertencia de “aplicación no verificada” mientras tu propio proyecto está en modo Prueba, continúa solo después de confirmar que el nombre del proyecto/aplicación es el tuyo.',
+    'connector.googleGuideOpenCloud': 'Abrir Google Cloud Console', 'connector.googleGuideEnableDrive': 'Abrir Google Drive API', 'connector.googleGuideOpenClients': 'Abrir clientes OAuth de Google', 'connector.googleGuideOfficial': 'Guía oficial de Google',
+    'connector.googleJsonImport': 'Importación JSON OAuth heredada', 'connector.googleContinue': 'Continuar a Google', 'connector.googleCredentialsMissing': 'Introduce el Client ID y Client Secret de la aplicación web de Google.', 'connector.googleJsonInvalid': 'Este archivo JSON no contiene un cliente OAuth de Google válido.', 'connector.googleDesktopRequired': 'Usa un cliente OAuth de Google de tipo “Aplicación web” con el URI de redirección de Direct-Xfer.',
+    'connector.googleDirectTitle': 'Google Drive — conexión directa sin OAuth', 'connector.googleDirectHint': 'Usa una cuenta de servicio de Google. No requiere ventana OAuth, callback localhost ni Client ID OAuth.', 'connector.googleDirectStep1': 'Crea una cuenta de servicio de Google y descarga su clave JSON.', 'connector.googleDirectStep2': 'Importa la clave aquí. Direct-Xfer mostrará la dirección con la que debes compartir tu carpeta de Drive.', 'connector.googleDirectStep3': 'Comparte la carpeta de Google Drive con esa dirección como Editor para importar/exportar (Lector basta en solo lectura) y pega abajo la URL de la carpeta.', 'connector.googleDirectOpenCloud': '1. Abrir cuentas de servicio de Google', 'connector.googleDirectImport': '2. Importar clave JSON', 'connector.googleDirectShareWith': 'Comparte tu carpeta con:', 'connector.googleDirectCopyEmail': 'Copiar dirección', 'connector.googleDirectFolder': 'URL o ID de la carpeta de Google Drive', 'connector.googleDirectImpersonate': 'Usuario de Google Workspace a suplantar (solo delegación de dominio)', 'connector.googleDirectConnect': '3. Conectar Google Drive sin OAuth', 'connector.googleDirectLimit': 'Este método accede a la carpeta compartida con la cuenta de servicio. Para acceder a todo Mi unidad de una cuenta personal, Google exige OAuth.', 'connector.googleOAuthAlternative': 'Conectar cuenta de Google con OAuth', 'connector.googleOAuthAlternativeHint': 'Usa este método solo si necesitas todo Mi unidad.', 'connector.googleOAuthUse': 'Usar OAuth', 'connector.googleDirectReady': 'Conexión directa lista — importa una clave de cuenta de servicio de Google.', 'connector.googleDirectImporting': 'Leyendo la clave de Google…', 'connector.googleDirectShareNow': 'Clave válida. Comparte la carpeta de Drive con la dirección mostrada y pega su URL.', 'connector.googleDirectJsonRequired': 'Primero importa una clave JSON de cuenta de servicio de Google.', 'connector.googleDirectJsonInvalid': 'Este archivo no es una clave JSON válida de cuenta de servicio de Google.', 'connector.googleDirectFolderRequired': 'Pega la URL o el ID de la carpeta de Google Drive compartida con la cuenta de servicio.', 'connector.googleDirectImpersonateInvalid': 'La dirección de Google Workspace para suplantar no es válida.', 'connector.googleDirectConnecting': 'Conectando directamente a Google Drive…', 'connector.googleDirectConnected': 'Google Drive está conectado directamente, sin OAuth.', 'connector.googleDirectEmailCopied': 'Dirección de la cuenta de servicio copiada.', 'connector.googleDirectAuthFailed': 'Google rechazó la clave de la cuenta de servicio. Comprueba que la clave JSON siga activa y vuelve a intentarlo.', 'connector.googleDirectForbidden': 'La cuenta de servicio no tiene acceso a esta carpeta. Comparte la carpeta con la dirección mostrada y vuelve a intentarlo.', 'connector.googleDirectNotFound': 'La cuenta de servicio no puede encontrar la carpeta de Google Drive. Comprueba la URL y el uso compartido.', 'connector.googleDirectUnavailable': 'Direct-Xfer no puede contactar con Google Drive desde el servidor. Comprueba Internet, DNS o el proxy y vuelve a intentarlo.', 'connector.googleDirectRateLimited': 'Google Drive está limitando temporalmente las solicitudes. Vuelve a intentarlo en unos instantes.', 'connector.googleDirectStorageUnsafe': 'La carpeta local de claves de cuentas de servicio no es segura. Comprueba /data/rclone/service-accounts y vuelve a intentarlo.', 'connector.googleDirectRollbackFailed': 'La nueva conexión falló y Direct-Xfer no pudo restaurar automáticamente la configuración anterior. Comprueba rclone.conf antes de continuar.',
+    'connector.googleQuickTitle': 'Google Drive', 'connector.googleStandardReady': 'Listo — haz clic en “Conectar Google Drive”, elige tu cuenta Google y autoriza el acceso.', 'connector.googleAdvancedOptions': 'Opciones avanzadas', 'connector.googleServiceAdvanced': 'Usar una cuenta de servicio (avanzado)', 'connector.googleProfileReady': 'Listo — la conexión con Google está configurada en este servidor.', 'connector.googleProfileReadyEnv': 'Listo — la conexión con Google está gestionada por la configuración del servidor.', 'connector.googleProfileMissing': 'Servicio OAuth central no disponible.', 'connector.googleProfileChange': 'Configuración del servidor Google', 'connector.googleProfileClear': 'Restablecer configuración de Google', 'connector.googleProfileClearConfirm': '¿Restablecer la configuración de Google guardada por Direct-Xfer?', 'connector.googleProfileCleared': 'Configuración de Google eliminada.', 'connector.googleProfileSaved': 'Configuración del servidor Google guardada. Las conexiones con cuentas Google ahora son directas.',
+    'connector.oauthBrokerReady': 'Listo — Google Drive utiliza el servicio OAuth central de Direct-Xfer.', 'connector.googleRcloneFallbackReady': 'Listo — el inicio de sesión local automático de Google está disponible si el servicio central está desconectado.', 'connector.oauthBrokerNotConfigured': 'El servicio OAuth central de Direct-Xfer no está configurado en esta instalación.', 'connector.oauthBrokerUnavailable': 'El servicio OAuth central de Direct-Xfer no está disponible temporalmente. Comprueba la conexión a Internet del servidor e inténtalo de nuevo.', 'connector.oauthBrokerRateLimited': 'El servicio OAuth central limita temporalmente las nuevas conexiones. Inténtalo de nuevo en unos instantes.', 'connector.oauthBrokerGoogleNotConfigured': 'El servicio OAuth central todavía no está conectado a Google Drive.', 'connector.oauthBrokerFailed': 'El servicio OAuth central no pudo completar la conexión con Google Drive. Inténtalo de nuevo.', 'connector.oauthBrokerScopeUpgrade': 'El broker OAuth público aún usa el antiguo alcance completo de Google Drive. Ejecuta de nuevo «Configurar automáticamente» para actualizar el Worker de Cloudflare y vuelve a conectar Google Drive.', 'connector.googleBrokerTitle': 'Servicio OAuth central de Direct-Xfer', 'connector.googleBrokerHint': 'Para conectar Google Drive desde otro dispositivo, introduce la URL HTTPS del broker OAuth público de Direct-Xfer.', 'connector.googleBrokerUrlLabel': 'URL del broker OAuth público', 'connector.googleBrokerSaveTest': 'Guardar y probar', 'connector.googleBrokerReadySaved': 'Broker guardado y accesible. Ya puede iniciarse la conexión con Google.', 'connector.googleBrokerSavedUnavailable': 'La URL se guardó, pero el broker no responde o no está listo.', 'connector.googleBrokerManagedHint': 'Esta URL está impuesta por DIRECT_XFER_OAUTH_BROKER_URL.', 'connector.googleBrokerMissingHint': 'No hay ningún broker público configurado. La conexión desde otro ordenador no puede funcionar hasta definir una URL HTTPS válida.', 'connector.googleBrokerInvalidUrl': 'Introduce una URL HTTPS de broker válida.', 'connector.googleBrokerAuto': 'Configurar automáticamente', 'connector.googleBrokerAutoHint': 'Direct-Xfer puede crear y publicar el broker directamente en tu cuenta de Cloudflare. No se requieren archivos fuente, PowerShell, npm ni Wrangler.', 'connector.googleBrokerAutoStepCloudflare': '1. Autorizar el despliegue en Cloudflare', 'connector.googleBrokerTokenHint': 'Crea un token API temporal con permisos Cuenta → Workers Scripts → Editar y D1 → Editar. El token permanece solo en memoria durante este asistente.', 'connector.googleBrokerOpenCloudflare': 'Abrir tokens API de Cloudflare', 'connector.googleBrokerTokenLabel': 'Token API de Cloudflare', 'connector.googleBrokerAccountLabel': 'ID de cuenta de Cloudflare (opcional — solo si falla la detección automática)', 'connector.googleBrokerAccountHelp': 'Encontrar mi ID de cuenta', 'connector.googleBrokerDeploy': 'Desplegar broker automáticamente', 'connector.googleBrokerAutoStepGoogle': '2. Conectar el broker con Google', 'connector.googleBrokerGoogleHint': 'Direct-Xfer terminó el despliegue en Cloudflare. En Google Cloud, crea un cliente OAuth de tipo Aplicación web y usa exactamente el callback siguiente.', 'connector.googleBrokerCallbackLabel': 'Callback de Google autorizado', 'connector.copy': 'Copiar', 'connector.googleBrokerFinish': 'Terminar automáticamente', 'connector.googleBrokerDeploying': 'Desplegando en Cloudflare…', 'connector.googleBrokerCloudflareReady': 'Broker de Cloudflare desplegado. Solo queda crear el cliente OAuth web de Google.', 'connector.googleBrokerCopied': 'Callback copiado.', 'connector.googleBrokerFinishing': 'Configurando Google en el broker…', 'connector.googleBrokerAutoReady': 'Broker OAuth público listo y guardado en Direct-Xfer.', 'connector.googleBrokerAccountRequired': 'Cloudflare no pudo detectar la cuenta automáticamente. Pega su ID de 32 caracteres y vuelve a intentarlo.', 'connector.googleBrokerAccountChoose': 'Elige la cuenta de Cloudflare y vuelve a ejecutar el despliegue.', 'connector.googleBrokerTokenInvalid': 'El token de Cloudflare es inválido o está incompleto.', 'connector.googleBrokerPermission': 'Al token de Cloudflare le faltan permisos. Añade Workers Scripts → Editar y D1 → Editar para esta cuenta.', 'connector.googleBrokerTimeout': 'Cloudflare no respondió a tiempo. Vuelve a intentarlo.', 'connector.googleBrokerDeployFailed': 'El despliegue automático del broker falló.', 'connector.googleBrokerNetwork': 'Direct-Xfer no puede acceder a la API de Cloudflare desde el servidor.', 'connector.googleBrokerHealthPending': 'El Worker está desplegado, pero su dirección workers.dev todavía no responde.', 'connector.googleBrokerStage': 'Etapa', 'connector.googleBrokerStageToken': 'validación del token', 'connector.googleBrokerStageAccount': 'detección de la cuenta', 'connector.googleBrokerStageSubdomain': 'configuración de workers.dev', 'connector.googleBrokerStageD1': 'base D1', 'connector.googleBrokerStageWorker': 'publicación del Worker', 'connector.googleBrokerStageSecrets': 'secretos del Worker', 'connector.googleBrokerStageHealth': 'prueba del broker público', 'connector.googleBrokerStageGoogle': 'secretos de Google', 'connector.googleBrokerExpired': 'La sesión de despliegue caducó. Ejecuta de nuevo el paso de Cloudflare.',
+    'connector.googleQuickSetupTitle': 'Preparar la conexión con Google — una sola vez', 'connector.googleQuickSetupHint': 'Esta etapa prepara Direct-Xfer en este servidor. No usa la contraseña de tu cuenta Google y no requiere archivo JSON.', 'connector.googleQuickStep1': 'Abre Google Cloud y crea el cliente Web usado por este servidor Direct-Xfer.', 'connector.googleQuickStep2': 'Añade exactamente la dirección de retorno de Direct-Xfer mostrada abajo.', 'connector.googleQuickStep3': 'Guarda el Client ID y Client Secret una sola vez. Después los usuarios solo elegirán su cuenta Google.', 'connector.googleQuickOpenCloud': 'Abrir Google Cloud', 'connector.googleQuickImport': 'Importación JSON OAuth heredada', 'connector.googleImporting': 'Guardando de forma segura la configuración de Google…', 'connector.googleSavedConnecting': 'Configuración guardada. Abriendo Google…', 'connector.googleManualTitle': 'Configuración del servidor Google', 'connector.googleAdminHint': 'Hazlo una sola vez por servidor: introduce el Client ID y Client Secret de la aplicación Web Direct-Xfer. Después, los usuarios solo tendrán que elegir su cuenta Google y pulsar Permitir.', 'connector.googleSaveContinue': 'Guardar y continuar', 'connector.googleProfileManaged': 'Esta configuración de Google está gestionada por el servidor.', 'connector.googleWebCallbackLabel': 'Dirección de retorno de Direct-Xfer que debes autorizar', 'connector.googleWebSetupNeeded': 'El acceso local a Google está disponible en esta máquina.', 'connector.googleRemoteSetupRequired': 'Este navegador está en otro equipo distinto de Direct-Xfer. Google no puede volver al callback localhost de rclone. Para el acceso remoto se necesita un servicio OAuth central activo o un callback Web de Google.', 'connector.googleWebProfileRequired': 'La conexión con Google debe prepararse una sola vez en este servidor. No se necesita archivo JSON.', 'connector.googleWebHttpsRequired': 'El acceso remoto a Google requiere HTTPS en Direct-Xfer (HTTP solo se acepta en localhost).', 'connector.googleWebRedirectMismatch': 'Google rechazó el URI de redirección. Añade exactamente el URI mostrado al cliente OAuth Web de Google.', 'connector.googleWebInvalidGrant': 'Google rechazó el código OAuth. Inicia de nuevo la conexión; no hace falta copiar ni pegar.', 'connector.googleWebRefreshMissing': 'Google no devolvió token de renovación. Retira el acceso de Direct-Xfer en tu cuenta Google y reconecta.', 'connector.googleWebWaiting': 'Elige tu cuenta Google y autoriza el acceso. El regreso a Direct-Xfer es automático.',
+    'connector.googleClientId': 'Google Client ID', 'connector.googleClientIdHint': 'Pega el Client ID de tu aplicación OAuth de Google de tipo “Aplicación web”.',
+    'connector.googleClientSecret': 'Google Client Secret', 'connector.googleClientSecretHint': 'Pega el Client Secret asociado al Client ID de Google. Solo se envía a rclone en el servidor.',
+    'connector.googleUseOwnClient': 'Configurar mi propio Client ID (recomendado)', 'connector.googleUseSharedClient': 'Probar el antiguo Client ID compartido (puede fallar)', 'connector.googleClientGuide': 'Abrir la guía oficial de rclone para crear el Client ID de Google',
+    'connector.oauthInvalidClient': 'El proveedor rechazó la identidad OAuth de la aplicación. Comprueba el Client ID / Client Secret y vuelve a intentarlo.',
+    'connector.oauthPortBusy': 'El puerto OAuth local 53682 ya está ocupado en el equipo Direct-Xfer. Detén un proceso rclone/OAuth antiguo y vuelve a intentarlo.',
+    'connector.oauthAccessDenied': 'La autorización fue rechazada o cancelada en el navegador. Vuelve a intentarlo y acepta el acceso solicitado.',
+    'connector.oauthTokenExchangeFailed': 'El proveedor aceptó el inicio de sesión, pero falló el intercambio del código OAuth por un token. Comprueba el Client ID / secret y vuelve a intentarlo.',
+    'connector.oauthProviderUnreachable': 'Direct-Xfer no puede contactar con el proveedor OAuth desde el servidor. Comprueba DNS, proxy y acceso a Internet del servidor.',
+    'connector.oauthRcloneProtocolFailed': 'No se pudo completar el diálogo de configuración OAuth con rclone. El intento se limpió; vuelve a intentarlo con una versión reciente de rclone.',
+    'connector.oauthChoice': 'Direct-Xfer abrirá la página de inicio de sesión del proveedor. Autoriza la cuenta y vuelve aquí.', 'connector.oauthLocal': 'Abrir inicio de sesión', 'connector.oauthRemote': 'Método rclone manual',
+    'connector.oauthLocalHint': 'El navegador puede estar en otro equipo distinto de Direct-Xfer. No se necesita rclone en ese equipo.',
+    'connector.oauthOpening': 'Preparando la página de inicio de sesión…', 'connector.oauthWaiting': 'Autoriza la cuenta en la pestaña abierta. Si falla la redirección final a localhost, copia la URL de la barra de direcciones y usa “Pegar URL y finalizar” aquí.', 'connector.openLogin': 'Abrir / reabrir inicio de sesión',
+    'connector.callbackTitle': 'Último paso si el navegador está en otro equipo', 'connector.callbackHint': 'Si la página final indica que localhost o 127.0.0.1 no está disponible, copia la URL completa de la barra de direcciones. Direct-Xfer puede finalizar la conexión con ella.',
+    'connector.callbackLabel': 'URL mostrada después de autorizar', 'connector.callbackPaste': 'Solo pegar', 'connector.callbackPasteFinish': 'Pegar URL y finalizar', 'connector.callbackSubmit': 'Finalizar conexión',
+    'connector.callbackMissing': 'Pega la URL mostrada después de autorizar.', 'connector.callbackRelaying': 'Validando el retorno OAuth…', 'connector.callbackInvalid': 'La URL de retorno OAuth no es válida o ha caducado.', 'connector.callbackPasteFail': 'No se pudo leer el portapapeles. Pega la URL manualmente.',
+    'connector.tokenHint': 'Método alternativo: ejecuta este comando en un equipo con navegador y rclone, completa el inicio de sesión y pega abajo el token devuelto.',
     'connector.status.queued': 'en espera', 'connector.status.running': 'en curso',
     'connector.status.completed': 'terminada', 'connector.status.failed': 'fallida', 'connector.status.cancelled': 'cancelada',
     'cfg.bkNever': 'Aún no se ha hecho ninguna copia.',
@@ -3789,7 +3943,7 @@ const I18N = {
     'cfg.dlpHint': 'Análisis local antes de publicar. Los secretos detectados se ocultan siempre en registros e interfaz.',
     'cfg.dlpMode': 'Política de respaldo', 'cfg.dlpWarn': 'Avisar + confirmar', 'cfg.dlpBlock': 'Bloquear', 'cfg.dlpLog': 'Solo registrar', 'cfg.dlpQuarantine':'Cuarentena', 'cfg.dlpRules':'Reacción automática según gravedad', 'cfg.dlpLow':'Baja', 'cfg.dlpMedium':'Media', 'cfg.dlpHigh':'Alta', 'cfg.dlpCritical':'Crítica', 'cfg.dlpQuarantineView':'Cuarentena',
     'cfg.dlpMaxFiles': 'Archivos máx. por análisis', 'cfg.dlpMaxMb': 'Tamaño máx. por archivo (MB)', 'cfg.dlpOcr': 'Usar OCR del servidor para imágenes/PDF escaneados',
-    'dlp.warningTitle': 'DLP: contenido sensible detectado', 'dlp.warningConfirm': '{n} detección(es) sensible(s) ({level}) en {files} archivo(s). ¿Publicar de todos modos?', 'dlp.incompleteConfirm': 'El análisis DLP está incompleto ({skipped} omitido(s), {ocr} error(es) OCR, {scan} error(es) de lectura, {archive} elemento(s) de archivo no inspeccionado(s)). ¿Publicar de todos modos?', 'dlp.ocrUnavailableConfirm': 'El análisis de texto (OCR) no está disponible en el servidor: las imágenes/PDF no se inspeccionaron en busca de texto sensible. ¿Publicar de todos modos?',
+    'dlp.warningTitle': 'DLP: contenido sensible detectado', 'dlp.incompleteTitle': 'DLP: análisis incompleto', 'dlp.warningConfirm': '{n} detección(es) sensible(s) ({level}) en {files} archivo(s).', 'dlp.incompleteConfirm': 'El análisis DLP está incompleto ({skipped} archivo(s) no analizado(s), {ocr} error(es) OCR, {scan} error(es) de lectura, {archive} elemento(s) de archivo no inspeccionado(s)).', 'dlp.ocrUnavailableConfirm': 'El análisis de texto (OCR) no está disponible en el servidor: las imágenes/PDF no se inspeccionaron en busca de texto sensible.', 'dlp.skippedSizeHint': 'Los archivos no analizados superan el límite DLP de {limit} MB.', 'dlp.warningQuestion': '¿Deseas publicar de todos modos?', 'dlp.publishAnyway': 'Publicar de todos modos', 'dlp.cancelWarning': 'Cancelar', 'dlp.cancelled': 'Publicación cancelada tras la advertencia DLP.', 'confirm.title': 'Confirmación', 'confirm.cancel': 'Cancelar',
     'dlp.blocked': 'Publicación bloqueada por la política DLP.', 'dlp.quarantined': 'El contenido fue puesto en cuarentena por la política DLP.', 'dlp.quarantineFailed': 'Falló la cuarentena DLP; no se publicó ningún contenido.', 'dlp.badge': 'DLP {n}',
     'cfg.allowlistConfirm': '¿Restringir el acceso admin a estas IP? Un error puede impedirte acceder a la administración (solo el loopback seguirá permitido).',
     'cfg.qrDefault': 'Mostrar el código QR justo después de crear un enlace',
@@ -3850,6 +4004,11 @@ const I18N = {
     'cfg.emailFail': '✗ Error al enviar',
     'cfg.emailNotConfigured': '✗ SMTP no configurado',
     'ed.title': 'Editar enlace',
+    'ed.sectionGeneral': 'General',
+    'ed.sectionLimits': 'Límites y expiración automática',
+    'ed.sectionSecurity': 'Contraseña y acceso',
+    'ed.sectionBehavior': 'Comportamiento del enlace',
+    'ed.sectionAppearance': 'Apariencia y mensajes al visitante',
     'ed.editing': 'Editando:',
     'ed.rename': 'Nombre',
     'ed.keep': 'No cambiar',
@@ -4352,6 +4511,15 @@ const I18N = {
     'webStorage.location': 'Ubicación en la nube:',
     'webStorage.up': '↑ Superior',
     'webStorage.selectFolder': 'Seleccionar esta carpeta',
+    'webStorage.newFolder': '＋ Nueva carpeta',
+    'webStorage.newFolderName': 'Nombre de la nueva carpeta',
+    'webStorage.newFolderPh': 'p. ej. Entregas de clientes',
+    'webStorage.createFolder': 'Crear carpeta',
+    'webStorage.folderCreated': 'Carpeta creada y seleccionada ✓',
+    'webStorage.folderExists': 'Ya existe aquí un archivo o una carpeta con este nombre.',
+    'webStorage.folderInvalid': 'Introduce un nombre de carpeta válido, sin / ni \\.',
+    'webStorage.folderReadOnly': 'Este conector es de solo lectura y no puede crear carpetas.',
+    'webStorage.folderCreateFail': 'No se pudo crear la carpeta en este almacenamiento cloud.',
     'webStorage.refresh': '↻ Actualizar',
     'webStorage.selection': 'Selección:',
     'webStorage.directHint': 'Los archivos se transmiten directamente desde la nube sin copia local.',
@@ -4359,6 +4527,9 @@ const I18N = {
     'webStorage.none': 'No hay conectores configurados. Añade uno en Configuración → Conectores de almacenamiento.',
     'webStorage.empty': 'Esta carpeta en la nube está vacía.',
     'webStorage.rcloneMissing': 'rclone no está disponible. Activa el componente opcional rclone y vuelve a intentarlo.',
+    'webStorage.tlsCaUntrusted': 'rclone no confía en el certificado TLS del proveedor. Revisa los certificados CA en Configuración → Conectores de almacenamiento.',
+    'webStorage.apiDisabled': 'La API del proveedor cloud está desactivada para este proyecto. Actívala y vuelve a intentarlo.',
+    'webStorage.configStorage': 'Direct-Xfer no puede leer o escribir la configuración de rclone. Revisa la carpeta de datos de rclone y sus permisos.',
     'webStorage.loadFail': 'No se pudo explorar este almacenamiento en la nube.',
     'webStorage.connectorListFail': 'No se pudo cargar la lista de conectores de almacenamiento.',
     'webStorage.connectorCheckFail': 'No se pudo verificar la configuración de los conectores. Abre Configuración → Conectores de almacenamiento y comprueba que esta sección se cargue correctamente.',
@@ -5656,8 +5827,13 @@ function fetchWithTimeout(url, options = {}, timeoutMs = 20000) {
 }
 async function api(method, url, body, timeoutMs) {
   const requestAuthEpoch = state.authEpoch;
+  method = String(method || 'GET').toUpperCase();
   const opts = { method, headers: {}, credentials: 'same-origin' };
-  if (body !== undefined) {
+  if (['GET', 'HEAD'].includes(method)) opts.cache = 'no-store';
+  // Fetch forbids request bodies on GET/HEAD. Some callers pass null only as the
+  // placeholder third argument when overriding the timeout; never serialize that
+  // placeholder (or any accidental payload) on a read-only request.
+  if (!['GET', 'HEAD'].includes(method) && body !== undefined) {
     opts.headers['Content-Type'] = 'application/json';
     opts.body = JSON.stringify(body);
   }
@@ -5926,6 +6102,19 @@ function clearAuthenticatedClientState() {
   // Clear password/sensitive editable fields retained by hidden modals. They are
   // rehydrated from the new principal's server state when opened again.
   document.querySelectorAll('.overlay input[type="password"], .overlay input[type="file"], .overlay textarea, #config-page input[type="password"], #config-page input[type="file"], #config-page textarea').forEach((node) => { try { node.value = ''; } catch (_) {} });
+  // The connector wizard can hold a Google service-account private key in memory and
+  // account-specific text fields. Clear both JS state and every editable/output field
+  // on principal changes so a later account cannot inherit a hidden credential.
+  try {
+    stopConnectorConfigPoll();
+    connectorConfigSession = null; connectorConfigPendingGoogle = null; connectorGoogleServiceAccount = null;
+    connectorConfigCloseAuthWindow();
+    const wizard = $('connector-remote-wizard'); if (wizard) wizard.classList.add('hidden');
+    document.querySelectorAll('#connector-remote-wizard input, #connector-remote-wizard textarea').forEach((node) => { try { node.value = ''; } catch (_) {} });
+    const serviceEmail = $('connector-config-google-service-email'); if (serviceEmail) serviceEmail.textContent = '';
+    const serviceInfo = $('connector-config-google-service-info'); if (serviceInfo) serviceInfo.classList.add('hidden');
+    const configStatus = $('connector-config-status'); if (configStatus) { configStatus.textContent = ''; configStatus.className = 'muted sm'; }
+  } catch (_) {}
   try { renderTransfers([]); } catch (_) {}
   try { renderHistory([]); } catch (_) {}
   try { renderShares([]); } catch (_) {}
@@ -9107,13 +9296,154 @@ async function refreshRansomwareStatus() {
 }
 if ($('cfg-ransom-refresh')) $('cfg-ransom-refresh').addEventListener('click', refreshRansomwareStatus);
 
-// Storage connectors (rclone-backed, credentials never reach
-// the browser). Management and transfers are intentionally independent from the
+// Storage connectors (rclone-backed). Secrets entered during first-time remote
+// configuration are sent only to the authenticated server endpoint and are never
+// returned by API responses. Management and transfers are intentionally independent from the
 // main settings form so a connector test/import cannot accidentally save unrelated
 // fields on the Configuration page.
 let storageConnectors = [];
 let connectorEditingId = null;
 let connectorRefreshTimer = null;
+let connectorInitialLoadRetryTimer = null;
+let connectorInitialLoadFailures = 0;
+let connectorRefreshSerial = 0;
+let connectorInventoryConfirmed = false;
+let storageConnectorRemotes = [];
+let connectorConfigSession = null;
+let connectorConfigPollTimer = null;
+let connectorConfigAuthWindow = null;
+let connectorConfigOpenedAuthUrl = '';
+let connectorConfigPendingGoogle = null;
+let connectorGoogleServiceAccount = null;
+let googleOAuthProfileState = { loaded:false, configured:false, source:'none', managed:false, clientIdHint:'', kind:'none' };
+let connectorGoogleBrokerDeployment = null;
+const CONNECTOR_OAUTH_TYPES = new Set(['google-drive','onedrive','dropbox','box']);
+const GOOGLE_DRIVE_ACCESS_SCOPES = Object.freeze({
+  limited:'https://www.googleapis.com/auth/drive.file',
+  readonly:'https://www.googleapis.com/auth/drive.readonly',
+  full:'https://www.googleapis.com/auth/drive',
+});
+function selectedGoogleDriveScope(){
+  const mode=String($('connector-google-access')&&$('connector-google-access').value||'limited');
+  return GOOGLE_DRIVE_ACCESS_SCOPES[mode]||GOOGLE_DRIVE_ACCESS_SCOPES.limited;
+}
+function selectedGoogleDriveAccessMode(){
+  const mode=String($('connector-google-access')&&$('connector-google-access').value||'limited');
+  return Object.prototype.hasOwnProperty.call(GOOGLE_DRIVE_ACCESS_SCOPES,mode)?mode:'limited';
+}
+function googleDriveScopeShortName(value){
+  const raw=String(value||'').trim();
+  if(raw===GOOGLE_DRIVE_ACCESS_SCOPES.limited||raw==='drive.file')return 'drive.file';
+  if(raw===GOOGLE_DRIVE_ACCESS_SCOPES.readonly||raw==='drive.readonly')return 'drive.readonly';
+  if(raw===GOOGLE_DRIVE_ACCESS_SCOPES.full||raw==='drive')return 'drive';
+  return raw.replace(/^https:\/\/www\.googleapis\.com\/auth\//,'')||'—';
+}
+function googleDriveScopeSummary(value){
+  const raw=String(value||'').trim();
+  if(!raw)return '';
+  const scopes=raw.split(/\s+/).filter(Boolean);
+  const names=scopes.map(googleDriveScopeShortName);
+  let sensitivity='connector.googleScopeUnknown';
+  if(scopes.length===1&&(scopes[0]===GOOGLE_DRIVE_ACCESS_SCOPES.limited||scopes[0]==='drive.file'))sensitivity='connector.googleScopeNonSensitive';
+  else if(scopes.some((scope)=>scope===GOOGLE_DRIVE_ACCESS_SCOPES.readonly||scope===GOOGLE_DRIVE_ACCESS_SCOPES.full||scope==='drive.readonly'||scope==='drive'))sensitivity='connector.googleScopeRestricted';
+  return `${names.join(' + ')} — ${t(sensitivity)}`;
+}
+function googleDriveScopeMismatch(requested,granted){
+  const req=String(requested||'').trim(), actual=String(granted||'').trim();
+  if(!req||!actual)return false;
+  const grantedScopes=new Set(actual.split(/\s+/).filter(Boolean));
+  if(!grantedScopes.has(req))return true;
+  return req!==GOOGLE_DRIVE_ACCESS_SCOPES.full&&grantedScopes.has(GOOGLE_DRIVE_ACCESS_SCOPES.full);
+}
+function connectorConfigRenderGoogleScopeInfo(data){
+  const panel=$('connector-config-google-scope-info');if(!panel)return;
+  const item=data&&typeof data==='object'?data:{};
+  const google=item.type==='google-drive'||(connectorConfigPendingGoogle&&connectorConfigPendingGoogle.type==='google-drive');
+  const requested=String(item.requestedScope||item.scope||(google&&connectorConfigPendingGoogle&&connectorConfigPendingGoogle.scope)||'').trim();
+  if(!google||!requested){panel.classList.add('hidden');return;}
+  panel.classList.remove('hidden');
+  const requestedNode=$('connector-config-google-scope-requested');
+  if(requestedNode)requestedNode.textContent=googleDriveScopeSummary(requested);
+  const returnedLabel=$('connector-config-google-scope-returned-label');
+  const broker=item.broker!==false;
+  const granted=String(item.grantedScope||'').trim();
+  const configured=String(item.configuredScope||'').trim();
+  if(returnedLabel)returnedLabel.textContent=t(granted?(broker?'connector.googleBrokerReturnedScope':'connector.googleProviderReturnedScope'):(configured?'connector.googleConfiguredScope':(broker?'connector.googleBrokerReturnedScope':'connector.googleProviderReturnedScope')));
+  const returnedNode=$('connector-config-google-scope-returned');
+  const displayed=granted||configured;
+  if(returnedNode)returnedNode.textContent=displayed?googleDriveScopeSummary(displayed):t('connector.googleScopeWaiting');
+  const warning=$('connector-config-google-scope-warning');
+  if(warning){
+    const mismatch=googleDriveScopeMismatch(requested,granted);
+    warning.textContent=mismatch?t('connector.googleScopeMismatch'):'';
+    warning.classList.toggle('hidden',!mismatch);
+  }
+}
+function updateGoogleDriveAccessMode(){
+  const type=$('connector-type')&&$('connector-type').value;
+  const wrap=$('connector-google-access-wrap');if(wrap)wrap.classList.toggle('hidden',type!=='google-drive');
+  const mode=selectedGoogleDriveAccessMode(),hint=$('connector-google-access-hint');
+  if(hint)hint.textContent=t(mode==='readonly'?'connector.googleAccessReadonlyHint':mode==='full'?'connector.googleAccessFullHint':'connector.googleAccessLimitedHint');
+  const ro=$('connector-readonly');
+  if(ro){
+    if(type==='google-drive'&&mode==='readonly'){
+      if(ro.dataset.googleScopeForced!=='1')ro.dataset.googleScopePrevious=ro.checked?'1':'0';
+      ro.checked=true;ro.disabled=true;ro.dataset.googleScopeForced='1';
+    }else{
+      if(ro.dataset.googleScopeForced==='1'){ro.checked=ro.dataset.googleScopePrevious==='1';delete ro.dataset.googleScopeForced;delete ro.dataset.googleScopePrevious;}
+      ro.disabled=false;
+    }
+  }
+}
+function connectorProviderName(type) {
+  return ({'google-drive':'Google Drive',onedrive:'OneDrive',dropbox:'Dropbox',box:'Box'})[String(type||'')] || 'OAuth';
+}
+function connectorConfigIsOAuth(type) { return CONNECTOR_OAUTH_TYPES.has(String(type||'')); }
+function connectorConfigSuggestedRemote(type) {
+  const field=$('connector-remote'); if(!field)return '';
+  const current=field.value.trim().replace(/:$/,''); if(current)return current;
+  const raw=($('connector-name')&&$('connector-name').value.trim())||connectorProviderName(type)||String(type||'remote');
+  let base=String(raw).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9._-]+/g,'-').replace(/^[^a-z0-9]+|[-._]+$/g,'').slice(0,48);
+  if(!base||!/^[a-z0-9]/.test(base))base=String(type||'remote').replace(/[^a-z0-9._-]/gi,'-').toLowerCase()||'remote';
+  const used=new Set((storageConnectorRemotes||[]).map((value)=>String(value||'').replace(/:$/,'').toLowerCase()));
+  let candidate=base, suffix=2;
+  while(used.has(candidate.toLowerCase())&&suffix<1000){candidate=`${base.slice(0,Math.max(1,60-String(suffix).length))}-${suffix++}`;}
+  field.value=candidate; return candidate;
+}
+function updateConnectorConfigureButton() {
+  const btn=$('connector-configure-remote'); if(!btn)return;
+  const type=$('connector-type')&&$('connector-type').value;
+  const oauth=connectorConfigIsOAuth(type);
+  btn.textContent=oauth?t('connector.connectProvider',{provider:connectorProviderName(type)}):t('connector.configureRemote');
+  const remote=$('connector-remote'); if(remote)remote.placeholder=oauth?t('connector.remoteAutomatic'):'myremote';
+  renderGoogleOAuthProfileState();
+  updateGoogleDriveAccessMode();
+}
+function renderGoogleOAuthProfileState() {
+  const box=$('connector-google-profile'); if(!box)return;
+  const type=$('connector-type')&&$('connector-type').value;
+  box.classList.toggle('hidden',type!=='google-drive');
+  if(type!=='google-drive')return;
+  const status=$('connector-google-profile-status');
+  if(status){
+    const ready=googleOAuthProfileState.configured&&['web','broker','web-fallback','rclone-local'].includes(googleOAuthProfileState.kind);
+    status.textContent=ready
+      ?(googleOAuthProfileState.kind==='broker'?t('connector.oauthBrokerReady'):(googleOAuthProfileState.kind==='rclone-local'?t('connector.googleRcloneFallbackReady'):(googleOAuthProfileState.managed?t('connector.googleProfileReadyEnv'):t('connector.googleProfileReady'))))
+      :t('connector.googleWebSetupNeeded');
+    status.className='sm '+(ready?'cfg-ok':'muted');
+  }
+  const change=$('connector-google-profile-change'), clear=$('connector-google-profile-clear');
+  if(change){change.classList.toggle('hidden',!!googleOAuthProfileState.managed);change.textContent=t('connector.googleAdvancedOptions');}
+  if(clear)clear.classList.toggle('hidden',!googleOAuthProfileState.configured||!!googleOAuthProfileState.managed);
+}
+async function refreshGoogleOAuthProfileStatus() {
+  try{
+    const data=await api('GET','/api/storage/oauth/google-web-info',undefined,10000);
+    googleOAuthProfileState={loaded:true,configured:!!(data&&data.configured),source:data&&data.kind==='broker'?'broker':'server',managed:!!(data&&data.managed),clientIdHint:'',kind:String(data&&data.kind||'none')};
+  }catch(_){googleOAuthProfileState={loaded:false,configured:false,source:'none',managed:false,clientIdHint:'',kind:'none'};}
+  renderGoogleOAuthProfileState();
+  return googleOAuthProfileState;
+}
 function updateConnectorTransferActions() {
   const select = $('connector-transfer-id');
   const selected = storageConnectors.find((connector) => connector.id === (select && select.value));
@@ -9131,8 +9461,10 @@ function resetConnectorEditor() {
   if ($('connector-type')) $('connector-type').value = 'sftp';
   if ($('connector-remote')) $('connector-remote').value = '';
   if ($('connector-root')) $('connector-root').value = '';
-  if ($('connector-readonly')) $('connector-readonly').checked = false;
+  if ($('connector-readonly')) {const ro=$('connector-readonly');ro.checked=false;ro.disabled=false;delete ro.dataset.googleScopeForced;delete ro.dataset.googleScopePrevious;}
+  if ($('connector-google-access')) $('connector-google-access').value = 'limited';
   if ($('connector-add')) $('connector-add').textContent = t('connector.add');
+  updateConnectorConfigureButton();
 }
 function connectorPayload() {
   return {
@@ -9141,21 +9473,821 @@ function connectorPayload() {
     readOnly:$('connector-readonly').checked,
   };
 }
+function stopConnectorConfigPoll() {
+  if (connectorConfigPollTimer) clearTimeout(connectorConfigPollTimer);
+  connectorConfigPollTimer = null;
+}
+function connectorConfigSetStatus(text, bad) {
+  const node=$('connector-config-status'); if(!node)return;
+  node.textContent=text||''; node.className='sm '+(bad?'cfg-bad':'muted');
+}
+function connectorConfigErrorText(code) {
+  const value=String(code||'').trim();
+  if(value==='oauth-invalid-client'){
+    if(connectorConfigSession&&connectorConfigSession.type==='google-drive'){
+      return googleOAuthProfileState.configured?t('connector.oauthInvalidClient'):t('connector.oauthGoogleClientRequired');
+    }
+    return t('connector.oauthInvalidClient');
+  }
+  if(value==='oauth-google-client-id-required'||value==='oauth-google-client-secret-required'||value==='oauth-google-profile-required')return t('connector.googleCredentialsMissing');
+  if(value==='oauth-google-client-id-invalid'||value==='oauth-google-client-secret-invalid')return t('connector.oauthInvalidClient');
+  if(value==='oauth-broker-scope-mismatch'||value==='google-web-oauth-scope-mismatch'||value==='invalid-google-drive-scope')return t('connector.googleScopeMismatch');
+  if(value==='google-service-account-invalid')return t('connector.googleDirectJsonInvalid');
+  if(value==='google-drive-folder-required'||value==='google-drive-folder-invalid')return t('connector.googleDirectFolderRequired');
+  if(value==='google-drive-impersonate-invalid')return t('connector.googleDirectImpersonateInvalid');
+  const googleDirect=!!(connectorConfigSession&&connectorConfigSession.type==='google-drive'&&String(connectorConfigSession.status||'').startsWith('google-direct'));
+  if(googleDirect&&value==='google-service-account-storage-unsafe')return t('connector.googleDirectStorageUnsafe');
+  if(googleDirect&&value==='connector-rollback-failed')return t('connector.googleDirectRollbackFailed');
+  if(googleDirect&&value==='connector-auth-failed')return t('connector.googleDirectAuthFailed');
+  if(googleDirect&&value==='connector-forbidden')return t('connector.googleDirectForbidden');
+  if(googleDirect&&value==='connector-not-found')return t('connector.googleDirectNotFound');
+  if(googleDirect&&value==='connector-unreachable')return t('connector.googleDirectUnavailable');
+  if(googleDirect&&value==='connector-rate-limited')return t('connector.googleDirectRateLimited');
+  if(value==='google-oauth-profile-managed')return t('connector.googleProfileManaged');
+  if(value==='oauth-loopback-port-unavailable')return t('connector.oauthPortBusy');
+  if(value==='oauth-access-denied')return t('connector.oauthAccessDenied');
+  if(value==='oauth-token-exchange-failed')return t('connector.oauthTokenExchangeFailed');
+  if(value==='google-standard-signin-unavailable'||value==='google-remote-oauth-required')return t('connector.googleRemoteSetupRequired');
+  if(value==='google-local-rclone-fallback')return t('connector.googleRcloneFallbackReady');
+  if(value==='invalid-oauth-broker-url'||value==='oauth-broker-https-required'||value==='oauth-broker-url-invalid')return t('connector.googleBrokerInvalidUrl');
+  if(value==='oauth-broker-not-configured')return t('connector.oauthBrokerNotConfigured');
+  if(value==='oauth-broker-unreachable'||value==='oauth-broker-timeout')return t('connector.oauthBrokerUnavailable');
+  if(value==='oauth-broker-rate-limited'||value==='rate-limited')return t('connector.oauthBrokerRateLimited');
+  if(value==='broker-google-not-configured')return t('connector.oauthBrokerGoogleNotConfigured');
+  if(value==='oauth-broker-scope-upgrade-required')return t('connector.oauthBrokerScopeUpgrade');
+  if(value==='oauth-broker-credential-invalid'||value==='oauth-broker-response-invalid'||value==='oauth-broker-failed')return t('connector.oauthBrokerFailed');
+  if(value==='google-web-oauth-profile-required')return t('connector.googleWebProfileRequired');
+  if(value==='google-web-oauth-https-required')return t('connector.googleWebHttpsRequired');
+  if(value==='google-web-oauth-redirect-mismatch')return t('connector.googleWebRedirectMismatch');
+  if(value==='google-web-oauth-invalid-grant')return t('connector.googleWebInvalidGrant');
+  if(value==='google-web-oauth-refresh-token-missing')return t('connector.googleWebRefreshMissing');
+  if(value==='oauth-provider-unreachable')return t('connector.oauthProviderUnreachable');
+  if(['oauth-authorize-command-missing','oauth-authorize-backend-mismatch','oauth-authorize-config-invalid','oauth-token-step-missing','connector-config-transition'].includes(value))return t('connector.oauthRcloneProtocolFailed');
+  if(['oauth-failed','oauth-token-missing','oauth-local-url-invalid','oauth-state-missing','oauth-provider-url-missing','oauth-local-auth-timeout','oauth-local-auth-unreachable','connector-timeout','connector-terminated'].includes(value))return t('connector.oauthFailedRetry');
+  if(value==='connector-config-storage')return t('connector.configStorageFailed');
+  if(value==='connector-config-write-failed')return t('connector.configWriteFailed');
+  if(value==='connector-google-probe-failed')return t('connector.googleProbeFailed');
+  if(value==='connector-tls-ca-untrusted')return t('connector.tlsCaUntrusted');
+  if(value==='connector-token-invalid')return t('connector.tokenInvalid');
+  if(value==='connector-api-disabled')return t('connector.driveApiDisabled');
+  if(value.startsWith('oauth-callback-'))return t('connector.callbackInvalid');
+  return `${t('connector.configFailed')}${value?` ${value}`:''}`;
+}
+function connectorConfigDiagnosticText(data) {
+  const base=connectorConfigErrorText(data&&data.error);
+  const detail=data&&data.diagnostic&&typeof data.diagnostic==='object'?data.diagnostic:null;
+  if(!detail)return base;
+  const parts=[];
+  if(detail.stage)parts.push(`${t('connector.diagnosticStage')}: ${String(detail.stage).slice(0,80)}`);
+  if(Number.isInteger(detail.exitCode))parts.push(`${t('connector.diagnosticExit')}: ${detail.exitCode}`);
+  if(detail.diagnostic)parts.push(`${t('connector.diagnosticDetail')}: ${String(detail.diagnostic).slice(0,500)}`);
+  return parts.length?`${base} ${parts.join(' · ')}`:base;
+}
+function connectorConfigControlValue() {
+  const node=$('connector-config-control') && $('connector-config-control').querySelector('input,select,textarea');
+  return node ? node.value : '';
+}
+function connectorConfigPrepareAuthWindow(session,allowPending) {
+  const current=session||connectorConfigSession||null;
+  const id=String(current&&current.id||'').trim();
+  if(!id&&!allowPending)return null;
+  const provider=connectorProviderName(current&&current.type||'OAuth');
+  const lang=String(document.documentElement&&document.documentElement.lang||navigator.language||'en').slice(0,8);
+  const params={provider,lang}; if(id)params.session=id; else params.pending='1';
+  const fragment=new URLSearchParams(params).toString();
+  const bridge=`/oauth-bridge.html#${fragment}`;
+  try {
+    try { if(connectorConfigAuthWindow&&!connectorConfigAuthWindow.closed) connectorConfigAuthWindow.close(); } catch (_) {}
+    connectorConfigAuthWindow=window.open(bridge,'dx-rclone-oauth');
+    try { if(connectorConfigAuthWindow)connectorConfigAuthWindow.focus(); } catch (_) {}
+  } catch (_) { connectorConfigAuthWindow=null; }
+  return connectorConfigAuthWindow;
+}
+function connectorConfigBindAuthWindow(session){
+  const id=String(session&&session.id||'').trim(); if(!id)return;
+  try{if(connectorConfigAuthWindow&&!connectorConfigAuthWindow.closed)connectorConfigAuthWindow.postMessage({type:'dx-oauth-session',session:id},window.location.origin);}catch(_){}
+}
+function connectorConfigCloseAuthWindow() {
+  try{if(connectorConfigAuthWindow&&!connectorConfigAuthWindow.closed)connectorConfigAuthWindow.close();}catch(_){}
+  connectorConfigAuthWindow=null; connectorConfigOpenedAuthUrl='';
+}
+function connectorConfigOpenAuthUrl(url) {
+  if (!url || connectorConfigOpenedAuthUrl===url) return;
+  connectorConfigOpenedAuthUrl=url;
+  try {
+    if (connectorConfigAuthWindow && !connectorConfigAuthWindow.closed) {
+      connectorConfigAuthWindow.postMessage({type:'dx-oauth-url',url:String(url)},window.location.origin);
+    }
+  } catch (_) {}
+}
+function connectorConfigRender(data) {
+  connectorConfigSession=data||null; stopConnectorConfigPoll();
+  const overlay=$('connector-remote-wizard'); if(!overlay)return; overlay.classList.remove('hidden');
+  connectorConfigRenderGoogleScopeInfo(data);
+  const title=$('connector-config-title'); if(title) title.textContent=data&&data.type==='google-drive'?t('connector.connectProvider',{provider:'Google Drive'}):t('connector.configTitle');
+  const subtitle=$('connector-config-subtitle'); if(subtitle) subtitle.textContent=data?`${connectorProviderName(data.type)==='OAuth'?data.type:connectorProviderName(data.type)} · ${data.remote||''}`:'';
+  const qbox=$('connector-config-question'), oauth=$('connector-config-oauth'), callback=$('connector-config-callback'), tokenHelp=$('connector-config-token-help'), authLink=$('connector-config-auth-link'), googleCredentials=$('connector-config-google-credentials'), googleDirect=$('connector-config-google-direct');
+  const answerBtn=$('connector-config-answer'), doneBtn=$('connector-config-done'), retryBtn=$('connector-config-retry'), replaceBtn=$('connector-config-replace');
+  [qbox,oauth,callback,tokenHelp,authLink,googleCredentials,googleDirect,answerBtn,doneBtn,retryBtn,replaceBtn].forEach((node)=>{if(node)node.classList.add('hidden');});
+  if(!data)return;
+  if(data.status==='google-direct'){
+    connectorConfigSetStatus(t('connector.googleDirectReady'));
+    if(googleDirect)googleDirect.classList.remove('hidden');
+    return;
+  }
+  if(data.status==='google-direct-completed'){
+    connectorConfigSetStatus(t('connector.googleDirectConnected'));
+    if(doneBtn)doneBtn.classList.remove('hidden');
+    if($('connector-remote'))$('connector-remote').value=data.remote||'';
+    if($('connector-name')&&!$('connector-name').value.trim())$('connector-name').value='Google Drive';
+    rememberConfiguredStorageRemote(data.remote);
+    return;
+  }
+  if(data.status==='google-credentials'){
+    connectorConfigSetStatus(t('connector.googleQuickSetupHint'));
+    if(googleCredentials)googleCredentials.classList.remove('hidden');
+    const clientIdField=$('connector-config-google-client-id');
+    setTimeout(()=>{try{if(clientIdField)clientIdField.focus();}catch(_){}},0);
+    return;
+  }
+  if(data.status==='google-profile-saved'){
+    connectorConfigSetStatus(t('connector.googleProfileSaved'));
+    if(doneBtn)doneBtn.classList.remove('hidden');
+    return;
+  }
+  if(data.status==='completed'){
+    connectorConfigSetStatus(t('connector.configured'));
+    if(doneBtn)doneBtn.classList.remove('hidden');
+    if($('connector-remote'))$('connector-remote').value=data.remote||'';
+    if($('connector-name')&&!$('connector-name').value.trim())$('connector-name').value=connectorProviderName(data.type);
+    connectorConfigCloseAuthWindow();
+    rememberConfiguredStorageRemote(data.remote);
+    return;
+  }
+  if(data.status==='already-connected'){
+    connectorConfigSetStatus(t('connector.remoteAlreadyConnected'));
+    if(doneBtn)doneBtn.classList.remove('hidden');
+    if(replaceBtn)replaceBtn.classList.remove('hidden');
+    if($('connector-remote'))$('connector-remote').value=data.remote||'';
+    if($('connector-name')&&!$('connector-name').value.trim())$('connector-name').value='Google Drive';
+    connectorConfigCloseAuthWindow();
+    rememberConfiguredStorageRemote(data.remote);
+    return;
+  }
+  if(data.status==='remote-exists'){
+    connectorConfigSetStatus(`${t('connector.remoteExists')} ${t('connector.remoteExistsFix')}`,true);
+    if(replaceBtn)replaceBtn.classList.remove('hidden');
+    if(doneBtn)doneBtn.classList.remove('hidden');
+    return;
+  }
+  if(data.status==='error'){
+    connectorConfigSetStatus(connectorConfigDiagnosticText(data),true);
+    const brokerIssue=String(data.error||'').startsWith('oauth-broker-')||data.error==='broker-google-not-configured'||data.error==='google-remote-oauth-required'||data.setupRequired===true;
+    if(data.type==='google-drive'&&brokerIssue&&googleCredentials){googleCredentials.classList.remove('hidden');setTimeout(()=>void loadGoogleOAuthSetupInfo(),0);}
+    const nonRetryable=data.error==='google-remote-oauth-required'||data.retryable===false;
+    if(nonRetryable){if(doneBtn)doneBtn.classList.remove('hidden');}
+    else if(retryBtn)retryBtn.classList.remove('hidden');
+    return;
+  }
+  if(data.status==='oauth-starting'||data.status==='oauth-waiting'){
+    connectorConfigSetStatus(data.authUrl?t('connector.oauthWaiting'):t('connector.oauthOpening'));
+    if(data.authUrl){
+      connectorConfigOpenAuthUrl(data.authUrl);
+      if(authLink){authLink.href=data.authUrl;authLink.classList.remove('hidden');}
+      if(data.oauthCallbackRequired&&callback)callback.classList.remove('hidden');
+    }
+    connectorConfigPollTimer=setTimeout(()=>void connectorConfigPoll(),700);
+    return;
+  }
+  const q=data.question;
+  if(!q){ connectorConfigSetStatus(t('connector.configStarting')); connectorConfigPollTimer=setTimeout(()=>void connectorConfigPoll(),700); return; }
+  connectorConfigSetStatus(q.error||'');
+  if(q.name==='config_is_local'){
+    if(oauth)oauth.classList.remove('hidden');
+    const loginBtn=$('connector-config-oauth-local');
+    if(loginBtn)loginBtn.textContent=t('connector.connectProvider',{provider:connectorProviderName(data.type)});
+    return;
+  }
+  if(qbox)qbox.classList.remove('hidden'); if(answerBtn)answerBtn.classList.remove('hidden');
+  const googleOAuth=data.type==='google-drive';
+  let questionLabel=q.name||'rclone', questionHelp=q.help||'';
+  if(googleOAuth&&q.name==='client_id_warning'){
+    questionLabel=t('connector.googleClientSetup'); questionHelp=t('connector.googleClientSetupHint');
+  }else if(googleOAuth&&q.name==='client_id'){
+    questionLabel=t('connector.googleClientId'); questionHelp=t('connector.googleClientIdHint');
+  }else if(googleOAuth&&q.name==='client_secret'){
+    questionLabel=t('connector.googleClientSecret'); questionHelp=t('connector.googleClientSecretHint');
+  }
+  const label=$('connector-config-label'); if(label)label.textContent=questionLabel;
+  const help=$('connector-config-help'); if(help){
+    help.replaceChildren(document.createTextNode(questionHelp));
+    if(googleOAuth&&['client_id_warning','client_id','client_secret'].includes(q.name)){
+      help.appendChild(document.createElement('br'));
+      help.appendChild(el('a',{attrs:{href:'https://rclone.org/drive/#making-your-own-client-id',target:'_blank',rel:'noopener noreferrer'},text:t('connector.googleClientGuide')}));
+    }
+  }
+  const control=$('connector-config-control'); if(control){
+    control.replaceChildren(); let field;
+    if(q.exclusive&&Array.isArray(q.examples)&&q.examples.length){
+      field=el('select'); q.examples.forEach((example)=>field.appendChild(el('option',{attrs:{value:example.value},text:example.help?`${example.help} (${example.value})`:example.value})));
+      if(q.default!==undefined)field.value=String(q.default);
+    }else if(q.type==='bool'){
+      field=el('select');
+      if(googleOAuth&&q.name==='client_id_warning'){
+        field.append(el('option',{attrs:{value:'false'},text:t('connector.googleUseOwnClient')}),el('option',{attrs:{value:'true'},text:t('connector.googleUseSharedClient')}));
+        field.value=String(q.default)==='true'?'true':'false';
+      }else{
+        field.append(el('option',{attrs:{value:'true'},text:'Yes / true'}),el('option',{attrs:{value:'false'},text:'No / false'})); field.value=String(q.default)==='false'?'false':'true';
+      }
+    }else if(q.name==='config_token'){
+      field=el('textarea',{attrs:{rows:'5',autocomplete:'off',spellcheck:'false'}}); field.value='';
+    }else{
+      field=el('input',{attrs:{type:q.password?'password':'text',autocomplete:'off'}}); field.value=q.default||'';
+    }
+    field.id='connector-config-value'; control.appendChild(field); setTimeout(()=>{try{field.focus();}catch(_){}},0);
+  }
+  if(q.name==='config_token'&&tokenHelp){
+    tokenHelp.classList.remove('hidden');
+    const code=$('connector-config-command');
+    if(code){
+      const match=String(q.help||'').match(/rclone\s+authorize\s+[^\r\n]+/i);
+      code.textContent=match?match[0]:`rclone authorize "${data.backend}"`;
+    }
+  }
+}
+async function connectorConfigPoll(){
+  stopConnectorConfigPoll(); if(!connectorConfigSession||!connectorConfigSession.id)return;
+  try{const data=await api('GET',`/api/storage/remotes/config/${encodeURIComponent(connectorConfigSession.id)}`,undefined,10000);connectorConfigRender(data);}
+  catch(error){
+    if(error&&error.status===404){
+      connectorConfigRender({...connectorConfigSession,status:'error',error:'config-session-not-found'});
+      return;
+    }
+    connectorConfigSetStatus(connectorConfigErrorText(error&&error.message),true);
+    connectorConfigPollTimer=setTimeout(()=>void connectorConfigPoll(),1500);
+  }
+}
+async function startConnectorLocalOAuth(options){
+  if(!connectorConfigSession||!connectorConfigSession.id)return;
+  const opts=options||{};
+  if(opts.reuseWindow)connectorConfigBindAuthWindow(connectorConfigSession); else connectorConfigPrepareAuthWindow(connectorConfigSession);
+  const btn=$('connector-config-oauth-local'); if(btn)btn.disabled=true; connectorConfigSetStatus(t('connector.oauthOpening'));
+  try{
+    const previous=connectorConfigSession;
+    const data=await api('POST',`/api/storage/remotes/config/${encodeURIComponent(connectorConfigSession.id)}/oauth`,{},60000);
+    connectorConfigRender(previous&&previous.type==='google-drive'?{...previous,...data,type:'google-drive'}:data);
+  }catch(error){
+    connectorConfigCloseAuthWindow();
+    connectorConfigSetStatus(connectorConfigErrorText(error&&error.message),true);
+    if(connectorConfigSession&&connectorConfigSession.question&&connectorConfigSession.question.name==='config_is_local'){
+      const oauth=$('connector-config-oauth'); if(oauth)oauth.classList.remove('hidden');
+    }
+  } finally{if(btn)btn.disabled=false;}
+}
+async function loadGoogleOAuthSetupInfo(){
+  try{
+    const info=await api('GET','/api/storage/oauth/google-web-info',undefined,10000);
+    const cb=$('connector-config-google-callback');if(cb)cb.value=String(info&&info.callbackUrl||'');
+    const broker=$('connector-config-google-broker-url'), save=$('connector-config-google-broker-save'), status=$('connector-config-google-broker-status');
+    if(broker){broker.value=String(info&&info.brokerUrl||'');broker.disabled=!!(info&&info.brokerManaged);}
+    if(save)save.disabled=!!(info&&info.brokerManaged);
+    const auto=$('connector-config-google-broker-auto'); if(auto)auto.disabled=!!(info&&info.brokerManaged);
+    if(status){
+      if(info&&info.brokerManaged)status.textContent=t('connector.googleBrokerManagedHint');
+      else if(info&&info.brokerAvailable)status.textContent=t('connector.googleBrokerReadySaved');
+      else if(info&&info.brokerConfigured)status.textContent=connectorConfigErrorText(info.brokerError||'oauth-broker-unreachable');
+      else status.textContent=t('connector.googleBrokerMissingHint');
+      status.className='sm '+(info&&info.brokerAvailable?'cfg-ok':'muted');
+    }
+    return info;
+  }catch(_){return null;}
+}
+async function saveGoogleOAuthBrokerUrl(){
+  const field=$('connector-config-google-broker-url'), btn=$('connector-config-google-broker-save');
+  const raw=String(field&&field.value||'').trim();
+  if(!raw){connectorConfigSetStatus(t('connector.googleBrokerMissingHint'),true);return false;}
+  try{
+    const parsed=new URL(raw);
+    const local=parsed.protocol==='http:'&&['localhost','127.0.0.1','::1'].includes(parsed.hostname);
+    if((parsed.protocol!=='https:'&&!local)||parsed.username||parsed.password||parsed.search||parsed.hash||(parsed.pathname&&parsed.pathname!=='/'))throw new Error('invalid-oauth-broker-url');
+  }catch(_){connectorConfigSetStatus(t('connector.googleBrokerInvalidUrl'),true);return false;}
+  if(btn)btn.disabled=true;
+  connectorConfigSetStatus(t('connector.configStarting'));
+  try{
+    await api('POST','/api/settings',{googleOAuthBrokerUrl:raw},20000);
+    const info=await loadGoogleOAuthSetupInfo();
+    if(!(info&&info.brokerAvailable)){
+      const code=String(info&&info.brokerError||(!info||!info.brokerConfigured?'oauth-broker-not-configured':'oauth-broker-unreachable'));
+      connectorConfigSetStatus(connectorConfigErrorText(code),true);
+      return false;
+    }
+    connectorConfigSetStatus(t('connector.googleBrokerReadySaved'));
+    const current=connectorConfigPendingGoogle;
+    if(current&&current.connectAfterSave!==false){
+      return await startGoogleWebOAuth(current.remote,!!current.replace,{scope:current.scope||selectedGoogleDriveScope()});
+    }
+    return true;
+  }catch(error){connectorConfigSetStatus(connectorConfigErrorText(error&&error.message),true);return false;}
+  finally{if(btn)btn.disabled=false;}
+}
+
+function googleBrokerAutoSetStatus(message,error){
+  const out=$('connector-config-google-cf-status'); if(!out)return;
+  out.textContent=String(message||''); out.className='sm '+(error?'error':'muted');
+}
+function googleBrokerAutoErrorText(error){
+  const code=String(error&&error.message||error||'');
+  const data=error&&error.data&&typeof error.data==='object'?error.data:{};
+  const stage=String(data.stage||'').trim();
+  const detail=String(data.detail||'').trim();
+  const stageLabels={
+    'token-verify':t('connector.googleBrokerStageToken'),
+    'account-detect':t('connector.googleBrokerStageAccount'),
+    'workers-subdomain':t('connector.googleBrokerStageSubdomain'),
+    'd1-database':t('connector.googleBrokerStageD1'),
+    'd1-credentials-check':t('connector.googleBrokerStageD1'),
+    'worker-inspect':t('connector.googleBrokerStageWorker'),
+    'worker-upload':t('connector.googleBrokerStageWorker'),
+    'worker-secrets':t('connector.googleBrokerStageSecrets'),
+    'worker-enable':t('connector.googleBrokerStageWorker'),
+    'broker-health':t('connector.googleBrokerStageHealth'),
+    'google-client-id-secret':t('connector.googleBrokerStageGoogle'),
+    'google-client-secret':t('connector.googleBrokerStageGoogle'),
+    'google-propagation':t('connector.googleBrokerStageGoogle')
+  };
+  let base='';
+  if(code==='cloudflare-token-invalid'||code==='cloudflare-token-inactive')base=t('connector.googleBrokerTokenInvalid');
+  else if(code==='cloudflare-account-id-required'||code==='cloudflare-account-id-invalid')base=t('connector.googleBrokerAccountRequired');
+  else if(code==='cloudflare-account-selection-required')base=t('connector.googleBrokerAccountChoose');
+  else if(code==='cloudflare-timeout')base=t('connector.googleBrokerTimeout');
+  else if(code==='cloudflare-network-error')base=t('connector.googleBrokerNetwork');
+  else if(code==='oauth-broker-unreachable')base=t('connector.googleBrokerHealthPending');
+  else if(code==='oauth-broker-google-propagation-pending'||code==='oauth-broker-google-propagation-timeout'||code==='oauth-broker-google-not-configured')base=t('connector.googleBrokerGooglePropagation');
+  else if(code==='oauth-broker-deployment-expired')base=t('connector.googleBrokerExpired');
+  else if((code==='cloudflare-api-error'||(error&&error.status===403))&&(error&&error.status===403))base=t('connector.googleBrokerPermission');
+  else if(code==='oauth-google-client-id-invalid'||code==='oauth-google-client-secret-invalid')return connectorConfigErrorText(code);
+  else base=t('connector.googleBrokerDeployFailed');
+  const stageText=stageLabels[stage]||stage;
+  const http=Number(data.cloudflareStatus||0)>0?` HTTP ${Number(data.cloudflareStatus)}`:'';
+  return `${base}${stageText?` — ${t('connector.googleBrokerStage')}: ${stageText}`:''}${http}${detail?` — ${detail}`:''}`;
+}
+function toggleGoogleBrokerAuto(){
+  const panel=$('connector-config-google-broker-auto-panel'); if(!panel)return;
+  panel.classList.toggle('hidden');
+  if(!panel.classList.contains('hidden'))setTimeout(()=>{try{$('connector-config-google-cf-token')?.focus();}catch(_){}},0);
+}
+async function deployGoogleBrokerAutomatically(){
+  const tokenField=$('connector-config-google-cf-token'), accountField=$('connector-config-google-cf-account'), btn=$('connector-config-google-cf-deploy');
+  const apiToken=String(tokenField&&tokenField.value||'').trim(), accountId=String(accountField&&accountField.value||'').trim();
+  if(!apiToken){googleBrokerAutoSetStatus(t('connector.googleBrokerTokenInvalid'),true);return;}
+  if(btn)btn.disabled=true; googleBrokerAutoSetStatus(t('connector.googleBrokerDeploying'));
+  try{
+    const data=await api('POST','/api/storage/oauth/broker-auto/prepare',{apiToken,accountId},120000);
+    connectorGoogleBrokerDeployment={id:String(data.deploymentId||''),brokerUrl:String(data.brokerUrl||''),callbackUrl:String(data.callbackUrl||'')};
+    if(tokenField)tokenField.value='';
+    const broker=$('connector-config-google-broker-url'); if(broker&&!broker.disabled)broker.value=connectorGoogleBrokerDeployment.brokerUrl;
+    const callback=$('connector-config-google-cf-callback'); if(callback)callback.value=connectorGoogleBrokerDeployment.callbackUrl;
+    const googleStep=$('connector-config-google-cf-google-step'); if(googleStep)googleStep.classList.remove('hidden');
+    const select=$('connector-config-google-cf-account-select'); if(select)select.classList.add('hidden');
+    if(data.google){
+      await api('POST','/api/settings',{googleOAuthBrokerUrl:connectorGoogleBrokerDeployment.brokerUrl},20000);
+      try{await api('POST','/api/storage/oauth/broker-auto/cancel',{deploymentId:connectorGoogleBrokerDeployment.id},10000);}catch(_){}
+      connectorGoogleBrokerDeployment=null;
+      await loadGoogleOAuthSetupInfo();
+      googleBrokerAutoSetStatus(t('connector.googleBrokerAutoReady'));
+      const current=connectorConfigPendingGoogle;if(current&&current.connectAfterSave!==false)await startGoogleWebOAuth(current.remote,!!current.replace,{scope:current.scope||selectedGoogleDriveScope()});
+      return;
+    }
+    googleBrokerAutoSetStatus(t('connector.googleBrokerCloudflareReady'));
+    try{if(navigator.clipboard&&connectorGoogleBrokerDeployment.callbackUrl)await navigator.clipboard.writeText(connectorGoogleBrokerDeployment.callbackUrl);}catch(_){}
+  }catch(error){
+    const accounts=error&&error.data&&Array.isArray(error.data.accounts)?error.data.accounts:[];
+    if(accounts.length){
+      const select=$('connector-config-google-cf-account-select');
+      if(select){select.replaceChildren(el('option',{attrs:{value:''},text:t('connector.googleBrokerAccountChoose')}));accounts.forEach((item)=>select.appendChild(el('option',{attrs:{value:String(item.id||'')},text:String(item.name||item.id||'')})));select.classList.remove('hidden');}
+    }
+    googleBrokerAutoSetStatus(googleBrokerAutoErrorText(error),true);
+  }finally{if(btn)btn.disabled=false;}
+}
+async function copyGoogleBrokerCallback(){
+  const field=$('connector-config-google-cf-callback'), value=String(field&&field.value||''); if(!value)return;
+  try{await navigator.clipboard.writeText(value);googleBrokerAutoSetStatus(t('connector.googleBrokerCopied'));}catch(_){try{field.select();document.execCommand('copy');googleBrokerAutoSetStatus(t('connector.googleBrokerCopied'));}catch(__){}}
+}
+async function finishGoogleBrokerAutomatically(replaceExisting){
+  const deploy=connectorGoogleBrokerDeployment, btn=$('connector-config-google-cf-finish');
+  if(!deploy||!deploy.id){googleBrokerAutoSetStatus(t('connector.googleBrokerExpired'),true);return;}
+  const clientId=String($('connector-config-google-cf-client-id')&&$('connector-config-google-cf-client-id').value||'').trim();
+  const clientSecret=String($('connector-config-google-cf-client-secret')&&$('connector-config-google-cf-client-secret').value||'').trim();
+  if(!clientId||!clientSecret){googleBrokerAutoSetStatus(connectorConfigErrorText(!clientId?'oauth-google-client-id-invalid':'oauth-google-client-secret-invalid'),true);return;}
+  if(btn)btn.disabled=true;googleBrokerAutoSetStatus(t('connector.googleBrokerFinishing'));
+  try{
+    const data=await api('POST','/api/storage/oauth/broker-auto/google',{deploymentId:deploy.id,clientId,clientSecret,replaceExisting:replaceExisting===true},120000);
+    const secret=$('connector-config-google-cf-client-secret');if(secret)secret.value='';
+    await api('POST','/api/settings',{googleOAuthBrokerUrl:String(data.brokerUrl||deploy.brokerUrl)},20000);
+    connectorGoogleBrokerDeployment=null;
+    await loadGoogleOAuthSetupInfo();
+    googleBrokerAutoSetStatus(t('connector.googleBrokerAutoReady'));
+    const current=connectorConfigPendingGoogle;if(current&&current.connectAfterSave!==false)await startGoogleWebOAuth(current.remote,!!current.replace);
+  }catch(error){
+    if(error&&error.message==='oauth-broker-google-replace-confirm-required'&&replaceExisting!==true){
+      const ok=window.confirm(t('connector.googleProfileClearConfirm'));if(ok)return await finishGoogleBrokerAutomatically(true);
+    }
+    googleBrokerAutoSetStatus(googleBrokerAutoErrorText(error),true);
+  }finally{if(btn)btn.disabled=false;}
+}
+function showGoogleOAuthProfileSetup(options){
+  const opts=options||{};
+  const type='google-drive';
+  let remote=String(opts.remote||($('connector-remote')&&$('connector-remote').value)||'').trim().replace(/:$/,'');
+  if(!remote)remote=connectorConfigSuggestedRemote(type);
+  const scope=String(opts.scope||selectedGoogleDriveScope());
+  connectorConfigPendingGoogle={type,remote,replace:opts.replace===true,connectAfterSave:opts.connectAfterSave!==false,scope};
+  connectorConfigSession=null;
+  connectorConfigRender({status:'google-credentials',type,remote,scope,requestedScope:scope,broker:true});
+  void loadGoogleOAuthSetupInfo();
+}
+async function pollGoogleWebOAuth(){
+  stopConnectorConfigPoll();
+  const session=connectorConfigSession;
+  if(!session||!session.googleWeb||!session.id)return;
+  try{
+    const data=await api('GET',`/api/storage/oauth/google-session/${encodeURIComponent(session.id)}`,undefined,10000);
+    const current={...session,...data,type:'google-drive',googleWeb:true,requestedScope:String(data.requestedScope||session.requestedScope||session.scope||''),grantedScope:String(data.grantedScope||session.grantedScope||'')};
+    connectorConfigSession=current;
+    connectorConfigRenderGoogleScopeInfo(current);
+    if(data.status==='completed'){
+      connectorConfigRender({...current,status:'completed',remote:data.remote||session.remote});
+      return;
+    }
+    if(data.status==='error'){
+      connectorConfigRender({...current,status:'error',error:data.error,diagnostic:data.diagnostic||null});
+      return;
+    }
+    connectorConfigSetStatus(t('connector.googleWebWaiting'));
+    connectorConfigPollTimer=setTimeout(()=>void pollGoogleWebOAuth(),700);
+  }catch(error){
+    connectorConfigSetStatus(connectorConfigErrorText(error&&error.message),true);
+    connectorConfigPollTimer=setTimeout(()=>void pollGoogleWebOAuth(),1500);
+  }
+}
+async function startGoogleWebOAuth(remote,replace,options){
+  const opts=options||{};
+  if(!opts.reuseWindow)connectorConfigPrepareAuthWindow({type:'google-drive'},true);
+  connectorConfigSetStatus(t('connector.oauthOpening'));
+  try{
+    const browserHost=String(window.location&&window.location.hostname||'').toLowerCase();
+    const localBrowser=['localhost','127.0.0.1','::1'].includes(browserHost);
+    const scope=String(opts.scope||selectedGoogleDriveScope());
+    connectorConfigRenderGoogleScopeInfo({type:'google-drive',remote,scope,requestedScope:scope,broker:true,status:'oauth-starting'});
+    const data=await api('POST','/api/storage/remotes/google-oauth/start',{remote,replace:!!replace,localBrowser,scope},30000);
+    if(data&&data.status==='already-connected'){
+      connectorConfigSession={...data,type:'google-drive',remote,status:'already-connected',googleWeb:true,broker:data.broker!==false,scope:String(data.scope||scope),requestedScope:String(data.requestedScope||data.configuredScope||data.scope||scope),configuredScope:String(data.configuredScope||data.scope||scope),grantedScope:String(data.grantedScope||'')};
+      connectorConfigRender(connectorConfigSession);
+      return true;
+    }
+    if(data&&data.fallback==='rclone-local'){
+      return await startGoogleRcloneLocalFallback(remote,!!replace,{reuseWindow:true,scope});
+    }
+    connectorConfigSession={id:String(data.id||''),type:'google-drive',remote,status:'oauth-waiting',googleWeb:true,broker:data.broker!==false,scope:String(data.scope||scope),requestedScope:String(data.requestedScope||data.scope||scope),grantedScope:String(data.grantedScope||'')};
+    connectorConfigRenderGoogleScopeInfo(connectorConfigSession);
+    connectorConfigOpenAuthUrl(data.authUrl);
+    connectorConfigSetStatus(t('connector.googleWebWaiting'));
+    connectorConfigPollTimer=setTimeout(()=>void pollGoogleWebOAuth(),700);
+    return true;
+  }catch(error){
+    connectorConfigCloseAuthWindow();
+    if(error&&error.status===409&&error.message==='remote-exists'){
+      connectorConfigRender({status:'remote-exists',type:'google-drive',remote,error:'remote-exists',scope,requestedScope:scope,configuredScope:scope});
+      return false;
+    }
+    if(error&&error.status===409&&error.data&&error.data.fallback==='rclone-local'){
+      connectorConfigSetStatus(t('connector.oauthOpening'));
+      return await startGoogleRcloneLocalFallback(remote,!!replace,{scope});
+    }
+    const detail=error&&error.data&&typeof error.data==='object'?error.data:{};
+    connectorConfigRender({...detail,status:'error',type:'google-drive',remote,error:error&&error.message||detail.error||'google-web-oauth-start-failed',retryable:detail.retryable!==false});
+    return false;
+  }
+}
+async function advanceGoogleRcloneLocalFallback(data){
+  let current=data;
+  for(let step=0;step<16;step++){
+    connectorConfigSession={...current,type:'google-drive',googleWeb:false,googleRcloneFallback:true};
+    if(!current||current.status==='completed'){connectorConfigRender(connectorConfigSession);return true;}
+    if(current.status!=='question'||!current.question){connectorConfigRender(connectorConfigSession);return false;}
+    if(current.question.name==='config_is_local'){
+      connectorConfigRender(connectorConfigSession);
+      await startConnectorLocalOAuth({reuseWindow:true});
+      return true;
+    }
+    // Google Drive's standard rclone path has safe defaults before authorization
+    // (scope/root/service-account fields). Use them automatically so the user sees
+    // a normal Google sign-in instead of rclone's internal configuration wizard.
+    const q=current.question;
+    let result=q.default==null?'':String(q.default);
+    if(q.name==='client_id_warning'&&!result)result='true';
+    if(q.required&&!result&&q.name!=='client_id'&&q.name!=='client_secret'){
+      connectorConfigRender(connectorConfigSession);return false;
+    }
+    current={...current,...await api('POST',`/api/storage/remotes/config/${encodeURIComponent(current.id)}/answer`,{result},60000)};
+  }
+  throw new Error('connector-config-transition');
+}
+async function startGoogleRcloneLocalFallback(remote,replace,options){
+  const opts=options||{};
+  try{
+    if(!opts.reuseWindow)connectorConfigPrepareAuthWindow({type:'google-drive'},true);
+    const scope=String(opts.scope||selectedGoogleDriveScope());
+    const data=await api('POST','/api/storage/remotes/config/start',{type:'google-drive',remote,replace:!!replace,oauthConfig:{scope}},60000);
+    connectorConfigSession={...data,type:'google-drive',remote,googleWeb:false,googleRcloneFallback:true,broker:false,scope,requestedScope:scope,grantedScope:''};
+    connectorConfigRenderGoogleScopeInfo(connectorConfigSession);
+    return await advanceGoogleRcloneLocalFallback(connectorConfigSession);
+  }catch(error){
+    connectorConfigCloseAuthWindow();
+    if(error&&error.status===409&&error.message==='remote-exists'){
+      connectorConfigRender({status:'remote-exists',type:'google-drive',remote,error:'remote-exists'});
+      return false;
+    }
+    connectorConfigRender({status:'error',type:'google-drive',remote,error:error&&error.message||'connector-failed'});
+    return false;
+  }
+}
+async function openConnectorConfigWizard(options){
+  const opts=options||{}, type=$('connector-type').value;
+  let remote=$('connector-remote').value.trim().replace(/:$/,'');
+  if(!remote&&connectorConfigIsOAuth(type))remote=connectorConfigSuggestedRemote(type);
+  if(!remote)return connectorStatus('connector-editor-status','connector.required',true);
+  stopConnectorConfigPoll(); connectorConfigSession=null; connectorConfigOpenedAuthUrl='';
+  $('connector-remote-wizard').classList.remove('hidden');
+  if(type==='google-drive'){
+    const title=$('connector-config-title'); if(title)title.textContent=t('connector.connectProvider',{provider:'Google Drive'});
+    const scope=selectedGoogleDriveScope();
+    connectorConfigPendingGoogle={type,remote,replace:opts.replace===true,connectAfterSave:true,scope};
+    connectorConfigRenderGoogleScopeInfo({type:'google-drive',remote,scope,requestedScope:scope,broker:true,status:'oauth-starting'});
+    await startGoogleWebOAuth(remote,opts.replace===true,{reuseWindow:!!opts.skipAuthPreopen,scope});
+    return;
+  }
+  connectorConfigSetStatus(t('connector.configStarting'));
+  try{
+    const data=await api('POST','/api/storage/remotes/config/start',{type,remote,replace:opts.replace===true,oauthConfig:opts.oauthConfig||undefined},60000);
+    connectorConfigRender(data);
+  }catch(error){
+    connectorConfigCloseAuthWindow();
+    if(error&&error.status===409&&error.message==='remote-exists'){
+      connectorConfigRender({status:'remote-exists',type,remote,error:'remote-exists'});
+      await refreshStorageConnectors(true); return;
+    }
+    connectorConfigRender({status:'error',type,remote,error:error&&error.message||'connector-failed'});
+  }
+}
+function parseGoogleServiceAccountJson(parsed){
+  const data=parsed&&typeof parsed==='object'?parsed:null;
+  const email=String(data&&data.client_email||'').trim().toLowerCase();
+  const key=String(data&&data.private_key||'');
+  if(!data||data.type!=='service_account'||!email.endsWith('.gserviceaccount.com')||!key.includes('BEGIN PRIVATE KEY'))throw new Error('google-service-account-invalid');
+  return {data,email};
+}
+async function importGoogleServiceAccountJson(file){
+  if(!file)return;
+  connectorConfigSetStatus(t('connector.googleDirectImporting'));
+  try{
+    if(file.size>1024*1024)throw new Error('google-service-account-invalid');
+    const parsed=parseGoogleServiceAccountJson(JSON.parse(await file.text()));
+    connectorGoogleServiceAccount=parsed.data;
+    const email=$('connector-config-google-service-email');if(email)email.textContent=parsed.email;
+    const info=$('connector-config-google-service-info');if(info)info.classList.remove('hidden');
+    connectorConfigSetStatus(t('connector.googleDirectShareNow'));
+  }catch(error){
+    connectorGoogleServiceAccount=null;
+    const info=$('connector-config-google-service-info');if(info)info.classList.add('hidden');
+    connectorConfigSetStatus(connectorConfigErrorText(error&&error.message),true);
+  }finally{const input=$('connector-config-google-service-json');if(input)input.value='';}
+}
+async function copyGoogleServiceAccountEmail(){
+  const value=String($('connector-config-google-service-email')&&$('connector-config-google-service-email').textContent||'').trim();
+  if(!value)return;
+  try{await navigator.clipboard.writeText(value);toast(t('connector.googleDirectEmailCopied'),'ok');}
+  catch(_){toast(value,'ok');}
+}
+async function connectGoogleServiceAccountDirect(){
+  const current=connectorConfigPendingGoogle||{type:'google-drive',remote:connectorConfigSuggestedRemote('google-drive'),replace:false,scope:selectedGoogleDriveScope()};
+  if(!connectorGoogleServiceAccount){connectorConfigSetStatus(t('connector.googleDirectJsonRequired'),true);return;}
+  const folder=String($('connector-config-google-folder')&&$('connector-config-google-folder').value||'').trim();
+  if(!folder){connectorConfigSetStatus(t('connector.googleDirectFolderRequired'),true);return;}
+  const impersonate=String($('connector-config-google-impersonate')&&$('connector-config-google-impersonate').value||'').trim();
+  const btn=$('connector-config-google-direct-start');if(btn)btn.disabled=true;
+  connectorConfigSetStatus(t('connector.googleDirectConnecting'));
+  try{
+    const data=await api('POST','/api/storage/remotes/google-direct',{
+      remote:current.remote,replace:!!current.replace,credentials:connectorGoogleServiceAccount,folder,
+      readOnly:!!($('connector-readonly')&&$('connector-readonly').checked),impersonate,
+    },60000);
+    connectorGoogleServiceAccount=null;
+    connectorConfigRender({status:'google-direct-completed',type:'google-drive',remote:String(data&&data.remote||current.remote),method:'service-account'});
+  }catch(error){
+    if(error&&error.status===409&&error.message==='remote-exists'){
+      connectorConfigRender({status:'remote-exists',type:'google-drive',remote:current.remote,error:'remote-exists'});
+      return;
+    }
+    connectorConfigSetStatus(connectorConfigErrorText(error&&error.message),true);
+  }finally{if(btn)btn.disabled=false;}
+}
+function useGoogleOAuthAlternative(){
+  const current=connectorConfigPendingGoogle||{type:'google-drive',remote:connectorConfigSuggestedRemote('google-drive'),replace:false};
+  connectorGoogleServiceAccount=null;
+  void openConnectorConfigWizard({replace:!!current.replace});
+}
+async function saveGoogleOAuthProfile(clientId,clientSecret){
+  const data=await api('POST','/api/storage/oauth/google-profile',{clientId,clientSecret,kind:'web'},30000);
+  googleOAuthProfileState={loaded:true,configured:!!(data&&data.configured),source:String(data&&data.source||'stored'),managed:!!(data&&data.managed),clientIdHint:String(data&&data.clientIdHint||''),kind:String(data&&data.kind||'web')};
+  renderGoogleOAuthProfileState();
+  return data;
+}
+function googleProfileSavedOnly(current){
+  connectorConfigCloseAuthWindow();
+  connectorConfigSession=null;
+  connectorConfigRender({status:'google-profile-saved',type:'google-drive',remote:String(current&&current.remote||'')});
+}
+async function startGoogleConnectorConfig(){
+  const current=connectorConfigPendingGoogle||{type:'google-drive',remote:connectorConfigSuggestedRemote('google-drive'),replace:false,connectAfterSave:true};
+  const clientId=String($('connector-config-google-client-id')&&$('connector-config-google-client-id').value||'').trim();
+  const clientSecret=String($('connector-config-google-client-secret')&&$('connector-config-google-client-secret').value||'').trim();
+  if(!clientId||!clientSecret){connectorConfigSetStatus(t('connector.googleCredentialsMissing'),true);return;}
+  if(!clientId.toLowerCase().endsWith('.apps.googleusercontent.com')){connectorConfigSetStatus(t('connector.googleJsonInvalid'),true);return;}
+  if(current.connectAfterSave!==false)connectorConfigPrepareAuthWindow({type:'google-drive'},true);
+  const btn=$('connector-config-google-start'); if(btn)btn.disabled=true;
+  connectorConfigSetStatus(t('connector.googleImporting'));
+  try{
+    await saveGoogleOAuthProfile(clientId,clientSecret);
+    if(current.connectAfterSave===false){googleProfileSavedOnly(current);return;}
+    connectorConfigSetStatus(t('connector.googleSavedConnecting'));
+    await startGoogleWebOAuth(current.remote,!!current.replace,{reuseWindow:true,scope:current.scope||selectedGoogleDriveScope()});
+  }catch(error){
+    connectorConfigCloseAuthWindow();
+    connectorConfigSetStatus(connectorConfigErrorText(error&&error.message),true);
+  }finally{if(btn)btn.disabled=false;}
+}
+async function importGoogleOauthJson(file){
+  if(!file)return;
+  const current=connectorConfigPendingGoogle||{type:'google-drive',remote:connectorConfigSuggestedRemote('google-drive'),replace:false,connectAfterSave:true};
+  if(current.connectAfterSave!==false)connectorConfigPrepareAuthWindow({type:'google-drive'},true);
+  connectorConfigSetStatus(t('connector.googleImporting'));
+  try{
+    if(file.size>1024*1024)throw new Error('too-large');
+    const parsed=JSON.parse(await file.text());
+    const cfg=parsed&&parsed.web&&typeof parsed.web==='object'?parsed.web:(parsed&&parsed.installed&&typeof parsed.installed==='object'?parsed.installed:parsed);
+    const clientId=String(cfg&&cfg.client_id||'').trim(), clientSecret=String(cfg&&cfg.client_secret||'').trim();
+    if(!clientId||!clientSecret||!clientId.toLowerCase().endsWith('.apps.googleusercontent.com'))throw new Error('invalid');
+    if($('connector-config-google-client-id'))$('connector-config-google-client-id').value=clientId;
+    if($('connector-config-google-client-secret'))$('connector-config-google-client-secret').value=clientSecret;
+    await saveGoogleOAuthProfile(clientId,clientSecret);
+    if(current.connectAfterSave===false){googleProfileSavedOnly(current);return;}
+    connectorConfigSetStatus(t('connector.googleSavedConnecting'));
+    await startGoogleWebOAuth(current.remote,!!current.replace,{reuseWindow:true,scope:current.scope||selectedGoogleDriveScope()});
+  }catch(error){
+    connectorConfigCloseAuthWindow();
+    const message=error&&error.message;
+    connectorConfigSetStatus((message==='invalid'||message==='too-large'?t('connector.googleJsonInvalid'):connectorConfigErrorText(message)),true);
+  }finally{const input=$('connector-config-google-json');if(input)input.value='';}
+}
+async function clearGoogleOAuthProfile(){
+  if(googleOAuthProfileState.managed){toast(t('connector.googleProfileManaged'),'err');return;}
+  if(!confirm(t('connector.googleProfileClearConfirm')))return;
+  const btn=$('connector-google-profile-clear');if(btn)btn.disabled=true;
+  try{
+    const data=await api('DELETE','/api/storage/oauth/google-profile',{},20000);
+    googleOAuthProfileState={loaded:true,configured:!!(data&&data.configured),source:String(data&&data.source||'none'),managed:!!(data&&data.managed),clientIdHint:String(data&&data.clientIdHint||''),kind:String(data&&data.kind||'none')};
+    renderGoogleOAuthProfileState(); toast(t('connector.googleProfileCleared'),'ok');
+  }catch(error){toast(connectorConfigErrorText(error&&error.message),'err');}
+  finally{if(btn)btn.disabled=false;}
+}
+async function retryConnectorConfig(){
+  const session=connectorConfigSession;
+  if(!session||!session.id){await openConnectorConfigWizard();return;}
+  if(session.googleWeb){await startGoogleWebOAuth(session.remote,false,{scope:session.scope||selectedGoogleDriveScope()});return;}
+  const btn=$('connector-config-retry'); if(btn)btn.disabled=true; connectorConfigSetStatus(t('connector.configStarting'));
+  try{
+    const data=await api('POST',`/api/storage/remotes/config/${encodeURIComponent(session.id)}/retry`,{},60000);
+    connectorConfigRender(data);
+  }catch(error){
+    connectorConfigCloseAuthWindow();
+    connectorConfigRender({...session,status:'error',error:error&&error.message||'connector-failed'});
+  } finally{if(btn)btn.disabled=false;}
+}
+async function replaceExistingConnectorRemote(){
+  const btn=$('connector-config-replace'); if(btn)btn.disabled=true;
+  try{await openConnectorConfigWizard({replace:true});}finally{if(btn)btn.disabled=false;}
+}
+async function answerConnectorConfig(result){
+  if(!connectorConfigSession||!connectorConfigSession.id)return; const btn=$('connector-config-answer'); if(btn)btn.disabled=true;
+  try{const data=await api('POST',`/api/storage/remotes/config/${encodeURIComponent(connectorConfigSession.id)}/answer`,{result},60000);connectorConfigRender(data);}
+  catch(error){connectorConfigSetStatus(connectorConfigErrorText(error&&error.message),true);}
+  finally{if(btn)btn.disabled=false;}
+}
+async function submitConnectorOAuthCallback(value){
+  if(!connectorConfigSession||!connectorConfigSession.id)return;
+  const url=String(value==null?($('connector-config-callback-url')&&$('connector-config-callback-url').value||''):value).trim();
+  if(!url){connectorConfigSetStatus(t('connector.callbackMissing'),true);return;}
+  const btn=$('connector-config-callback-submit'); if(btn)btn.disabled=true; connectorConfigSetStatus(t('connector.callbackRelaying'));
+  try{
+    const data=await api('POST',`/api/storage/remotes/config/${encodeURIComponent(connectorConfigSession.id)}/oauth/callback`,{url},15000);
+    if($('connector-config-callback-url'))$('connector-config-callback-url').value=''; connectorConfigRender(data);
+  }catch(error){connectorConfigSetStatus(`${t('connector.callbackInvalid')} ${error&&error.message||''}`,true);}
+  finally{if(btn)btn.disabled=false;}
+}
+async function pasteConnectorOAuthCallback(){
+  try{
+    if(!navigator.clipboard||typeof navigator.clipboard.readText!=='function')throw new Error('clipboard-unavailable');
+    const value=String(await navigator.clipboard.readText()||'').trim();
+    if(!value)throw new Error('clipboard-empty');
+    if($('connector-config-callback-url'))$('connector-config-callback-url').value=value;
+    await submitConnectorOAuthCallback(value);
+  }catch(_){
+    connectorConfigSetStatus(t('connector.callbackPasteFail'),true);
+    const input=$('connector-config-callback-url');
+    if(input){
+      const details=input.closest&&input.closest('details'); if(details)details.open=true;
+      try{input.focus();}catch(_){}
+    }
+  }
+}
+async function closeConnectorConfigWizard(cancel){
+  stopConnectorConfigPoll(); const session=connectorConfigSession; connectorConfigSession=null; connectorConfigPendingGoogle=null; connectorGoogleServiceAccount=null;
+  const brokerDeploy=connectorGoogleBrokerDeployment; connectorGoogleBrokerDeployment=null; if(brokerDeploy&&brokerDeploy.id){try{await api('POST','/api/storage/oauth/broker-auto/cancel',{deploymentId:brokerDeploy.id},10000);}catch(_){}}
+  if(session&&session.id&&session.status!=='completed'){try{await api('DELETE',`/api/storage/remotes/config/${encodeURIComponent(session.id)}`);}catch(_){}}
+  const overlay=$('connector-remote-wizard'); if(overlay)overlay.classList.add('hidden');
+  if(cancel||!session||session.status!=='oauth-waiting')connectorConfigCloseAuthWindow();
+}
+window.addEventListener('message',(event)=>{if(event.origin!==window.location.origin)return;const data=event.data||{};if(data.type==='dx-google-oauth-result'&&connectorConfigSession&&connectorConfigSession.googleWeb){connectorConfigPollTimer=setTimeout(()=>void pollGoogleWebOAuth(),0);}});
+if($('connector-configure-remote'))$('connector-configure-remote').addEventListener('click',()=>void openConnectorConfigWizard());
+if($('connector-config-google-start'))$('connector-config-google-start').addEventListener('click',()=>void startGoogleConnectorConfig());
+if($('connector-config-google-broker-save'))$('connector-config-google-broker-save').addEventListener('click',()=>void saveGoogleOAuthBrokerUrl());
+if($('connector-config-google-broker-auto'))$('connector-config-google-broker-auto').addEventListener('click',toggleGoogleBrokerAuto);
+if($('connector-config-google-cf-deploy'))$('connector-config-google-cf-deploy').addEventListener('click',()=>void deployGoogleBrokerAutomatically());
+if($('connector-config-google-cf-copy'))$('connector-config-google-cf-copy').addEventListener('click',()=>void copyGoogleBrokerCallback());
+if($('connector-config-google-cf-finish'))$('connector-config-google-cf-finish').addEventListener('click',()=>void finishGoogleBrokerAutomatically(false));
+if($('connector-config-google-cf-account-select'))$('connector-config-google-cf-account-select').addEventListener('change',(event)=>{const field=$('connector-config-google-cf-account');if(field)field.value=String(event.target&&event.target.value||'');});
+if($('connector-google-profile-change'))$('connector-google-profile-change').addEventListener('click',()=>showGoogleOAuthProfileSetup({connectAfterSave:false}));
+if($('connector-google-profile-clear'))$('connector-google-profile-clear').addEventListener('click',()=>void clearGoogleOAuthProfile());
+if($('connector-type'))$('connector-type').addEventListener('change',updateConnectorConfigureButton);
+if($('connector-google-access'))$('connector-google-access').addEventListener('change',updateGoogleDriveAccessMode);
+if($('connector-config-answer'))$('connector-config-answer').addEventListener('click',()=>void answerConnectorConfig(connectorConfigControlValue()));
+if($('connector-config-oauth-local'))$('connector-config-oauth-local').addEventListener('click',()=>void startConnectorLocalOAuth());
+if($('connector-config-oauth-remote'))$('connector-config-oauth-remote').addEventListener('click',()=>void answerConnectorConfig('false'));
+if($('connector-config-callback-paste'))$('connector-config-callback-paste').addEventListener('click',()=>void pasteConnectorOAuthCallback());
+if($('connector-config-callback-submit'))$('connector-config-callback-submit').addEventListener('click',()=>void submitConnectorOAuthCallback());
+if($('connector-config-retry'))$('connector-config-retry').addEventListener('click',()=>void retryConnectorConfig());
+if($('connector-config-replace'))$('connector-config-replace').addEventListener('click',()=>void replaceExistingConnectorRemote());
+if($('connector-config-cancel'))$('connector-config-cancel').addEventListener('click',()=>void closeConnectorConfigWizard(true));
+if($('connector-config-x'))$('connector-config-x').addEventListener('click',()=>void closeConnectorConfigWizard(true));
+if($('connector-config-done'))$('connector-config-done').addEventListener('click',()=>void closeConnectorConfigWizard(false));
+if($('connector-remote-wizard'))$('connector-remote-wizard').addEventListener('click',(event)=>{if(event.target===$('connector-remote-wizard'))void closeConnectorConfigWizard(true);});
+updateConnectorConfigureButton();
+function rememberConfiguredStorageRemote(remote) {
+  const clean=String(remote||'').trim().replace(/:$/,'');
+  if(!clean)return;
+  if(!storageConnectorRemotes.includes(clean))storageConnectorRemotes.push(clean);
+  const datalist=$('connector-remotes');
+  if(datalist){
+    datalist.textContent='';
+    storageConnectorRemotes.forEach((name)=>datalist.appendChild(el('option',{attrs:{value:name}})));
+  }
+  connectorInitialLoadFailures=0;
+  const cap=$('connector-capability');
+  if(cap){cap.textContent=t('connector.remoteConfiguredReady');cap.className='sm cfg-ok';}
+}
 function renderStorageConnectors(data) {
   storageConnectors = Array.isArray(data && data.connectors) ? data.connectors : [];
+  const returnedRemotes = Array.isArray(data && data.remotes) ? data.remotes.slice() : [];
   const cap = $('connector-capability');
   if (cap) {
+    const skipped = !!(data && data.capabilities && data.capabilities.skipped);
+    const pending = !!(data && data.capabilities && data.capabilities.pending);
     const available = data && data.capabilities && data.capabilities.available;
-    cap.textContent = available
-      ? t('connector.ready', { version:data.capabilities.version || 'rclone' })
-      : t('connector.unavailable');
-    cap.className = 'sm ' + (available ? 'cfg-ok' : 'cfg-warn');
+    if (!storageConnectors.length && returnedRemotes.length) {
+      cap.textContent = t('connector.remoteReadyNoConnector');
+      cap.className = 'sm cfg-ok';
+    } else if (skipped) {
+      cap.textContent = t('connector.noneHint');
+      cap.className = 'muted sm';
+    } else if (pending) {
+      cap.textContent = t('connector.runtimeChecking');
+      cap.className = 'muted sm';
+    } else {
+      cap.textContent = available
+        ? t('connector.ready', { version:data.capabilities.version || 'rclone' })
+        : t('connector.unavailable');
+      cap.className = 'sm ' + (available ? 'cfg-ok' : 'cfg-warn');
+    }
   }
+  storageConnectorRemotes = returnedRemotes;
   const datalist = $('connector-remotes');
   if (datalist) {
     datalist.textContent = '';
-    (Array.isArray(data && data.remotes) ? data.remotes : []).forEach((remote) => datalist.appendChild(el('option', { attrs:{ value:remote } })));
+    storageConnectorRemotes.forEach((remote) => datalist.appendChild(el('option', { attrs:{ value:remote } })));
   }
+  const remoteField=$('connector-remote');
+  if(remoteField&&!remoteField.value.trim()&&storageConnectorRemotes.length===1)remoteField.value=storageConnectorRemotes[0];
   const select = $('connector-transfer-id');
   if (select) {
     const previous = select.value; select.textContent = '';
@@ -9197,10 +10329,11 @@ function renderStorageConnectors(data) {
       actions.append(testBtn, editBtn, delBtn); row.append(main, actions); list.appendChild(row);
     });
   }
+  const connectorJobs = Array.isArray(data && data.jobs) ? data.jobs : [];
   const jobs = $('connector-jobs');
   if (jobs) {
     jobs.textContent = '';
-    (Array.isArray(data && data.jobs) ? data.jobs : []).slice(0, 25).forEach((job) => {
+    connectorJobs.slice(0, 25).forEach((job) => {
       const row = el('div', { class:`connector-job is-${job.status || 'queued'}` });
       const main = el('div', { class:'connector-main' });
       main.appendChild(el('strong', { text:`${job.direction === 'import' ? '↓' : '↑'} ${job.sourceName || '?'} → ${job.targetName || '?'}` }));
@@ -9215,21 +10348,71 @@ function renderStorageConnectors(data) {
     });
   }
   if (connectorRefreshTimer) { clearTimeout(connectorRefreshTimer); connectorRefreshTimer = null; }
-  if ((data && data.jobs || []).some((job) => ['queued','running'].includes(job.status)) && configPageOpen()) {
+  if (connectorJobs.some((job) => job && ['queued','running'].includes(job.status)) && configPageOpen()) {
     connectorRefreshTimer = setTimeout(() => { connectorRefreshTimer = null; void refreshStorageConnectors(); }, 2500);
   }
 }
-async function refreshStorageConnectors() {
-  try { renderStorageConnectors(await api('GET', '/api/storage/connectors', null, 30000)); }
-  catch (error) {
-    // A genuinely failed API request is distinct from optional rclone being absent:
-    // the server returns HTTP 200 + capabilities.available=false for that normal case.
-    // Clear stale connector UI so a failed refresh never shows data from an older view.
-    storageConnectors = [];
+async function refreshStorageConnectors(forceProbe) {
+  const refreshSerial = ++connectorRefreshSerial;
+  if(!googleOAuthProfileState.loaded)void refreshGoogleOAuthProfileStatus();
+  // The Configuration page must never treat a first-use/empty connector state as
+  // an error. The summary endpoint is only an optimization: if it is unavailable
+  // (for example during an upgrade where browser assets and ServerHost briefly differ),
+  // fall back to the canonical connector endpoint before surfacing any error.
+  if (connectorInitialLoadRetryTimer) { clearTimeout(connectorInitialLoadRetryTimer); connectorInitialLoadRetryTimer = null; }
+  // Keep the lightweight summary preflight for a fast neutral first paint, but do
+  // not return early when it reports zero Direct-Xfer connector records. A configured
+  // rclone remote can already exist at that point (notably just after Google OAuth),
+  // so the canonical endpoint still has to run and restore the remote list.
+  if (!forceProbe) {
+    try {
+      const summary = await api('GET', '/api/storage/connectors/summary', null, 10000);
+      const configured = Math.max(0, Number(summary && summary.configured) || 0);
+      if (!configured && !forceProbe && storageConnectors.length === 0 && refreshSerial === connectorRefreshSerial) {
+        connectorInitialLoadFailures = 0;
+        // Summary is advisory only. Never let it clear the rendered connector list;
+        // the canonical endpoint below is the sole source of truth for inventory.
+      }
+    } catch (_) {
+      // Deliberately silent. The canonical connector endpoint below remains the
+      // source of truth and now has a bounded rclone probe.
+    }
+  }
+  try {
+    const data = await api('GET', '/api/storage/connectors', null, 30000);
+    if (refreshSerial !== connectorRefreshSerial) return;
+    connectorInitialLoadFailures = 0;
+    connectorInventoryConfirmed = true;
+    const connectors = Array.isArray(data && data.connectors) ? data.connectors : [];
+    if (!connectors.length && !forceProbe) {
+      const remotes=Array.isArray(data&&data.remotes)?data.remotes:[];
+      renderStorageConnectors({ ...data, connectors:[], capabilities:{ ...(data && data.capabilities || {}), skipped:!remotes.length } });
+      return;
+    }
+    renderStorageConnectors(data);
+  } catch (error) {
+    if (refreshSerial !== connectorRefreshSerial) return;
+    // On the automatic first load, avoid a scary red banner before the user has
+    // configured anything. Keep the UI usable, retry once silently, and reserve the
+    // red diagnostic for an explicit refresh or for a previously loaded connector set.
+    if (!forceProbe && storageConnectors.length === 0) {
+      connectorInitialLoadFailures += 1;
+      renderStorageConnectors({ connectors:[], jobs:[], capabilities:{ skipped:true }, remotes:[], types:[] });
+      if (connectorInitialLoadFailures < 2 && configPageOpen()) {
+        connectorInitialLoadRetryTimer = setTimeout(() => { connectorInitialLoadRetryTimer = null; void refreshStorageConnectors(false); }, 1200);
+      }
+      return;
+    }
+    // Preserve the last server-confirmed connector snapshot on transient read
+    // failures. Once inventory has been confirmed, a background refresh failure is
+    // not an inventory-load failure and must never replace a valid connector list
+    // with the scary red "Could not load connectors" banner. Keep the last
+    // capability state intact; an explicit refresh with no confirmed snapshot may
+    // still surface the diagnostic below.
     updateConnectorTransferActions();
-    const list = $('connector-list'); if (list) list.replaceChildren();
-    const jobs = $('connector-jobs'); if (jobs) jobs.replaceChildren();
-    connectorStatus('connector-capability', 'connector.loadFail', true);
+    if (!connectorInventoryConfirmed && storageConnectors.length === 0) {
+      connectorStatus('connector-capability', 'connector.loadFail', true);
+    }
   }
 }
 if ($('connector-add')) $('connector-add').addEventListener('click', async () => {
@@ -9237,9 +10420,23 @@ if ($('connector-add')) $('connector-add').addEventListener('click', async () =>
   if (!payload.name || !payload.remote) return connectorStatus('connector-editor-status', 'connector.required', true);
   $('connector-add').disabled = true;
   try {
-    if (connectorEditingId) await api('PATCH', `/api/storage/connectors/${encodeURIComponent(connectorEditingId)}`, payload);
-    else await api('POST', '/api/storage/connectors', payload);
-    resetConnectorEditor(); connectorStatus('connector-editor-status', 'connector.saved'); await refreshStorageConnectors();
+    const result = connectorEditingId
+      ? await api('PATCH', `/api/storage/connectors/${encodeURIComponent(connectorEditingId)}`, payload)
+      : await api('POST', '/api/storage/connectors', payload);
+    const saved = result && result.connector;
+    const authoritative = Array.isArray(result && result.connectors) ? result.connectors : null;
+    if (authoritative || (saved && saved.id)) connectorInventoryConfirmed = true;
+    if (authoritative) {
+      renderStorageConnectors({ connectors:authoritative, jobs:[], capabilities:{ pending:true }, remotes:storageConnectorRemotes.slice(), types:[] });
+    } else if (saved && saved.id) {
+      const next = storageConnectors.filter((item) => item && item.id !== saved.id);
+      next.push(saved);
+      renderStorageConnectors({ connectors:next, jobs:[], capabilities:{ pending:true }, remotes:storageConnectorRemotes.slice(), types:[] });
+    }
+    // Invalidate any older in-flight connector reads before a post-save refresh.
+    connectorRefreshSerial += 1;
+    resetConnectorEditor(); connectorStatus('connector-editor-status', 'connector.saved');
+    void refreshStorageConnectors(false);
   } catch (_) { connectorStatus('connector-editor-status', 'connector.saveFail', true); }
   finally { $('connector-add').disabled = false; }
 });
@@ -9257,7 +10454,7 @@ async function startConnectorTransfer(direction) {
 if ($('connector-import')) $('connector-import').addEventListener('click', () => startConnectorTransfer('import'));
 if ($('connector-export')) $('connector-export').addEventListener('click', () => startConnectorTransfer('export'));
 if ($('connector-transfer-id')) $('connector-transfer-id').addEventListener('change', updateConnectorTransferActions);
-if ($('connector-refresh')) $('connector-refresh').addEventListener('click', refreshStorageConnectors);
+if ($('connector-refresh')) $('connector-refresh').addEventListener('click', () => refreshStorageConnectors(true));
 
 // Web-storage links ---------------------------------------------------------
 // A web-storage link freezes the selected connector route server-side. Read-only
@@ -9288,11 +10485,27 @@ function closeWebStorageModal() {
   if ($('web-storage-inbox-sender-limits')) $('web-storage-inbox-sender-limits').classList.remove('hidden');
   if ($('web-storage-inbox-require-row')) $('web-storage-inbox-require-row').classList.remove('hidden');
   document.querySelectorAll('.web-storage-download-only').forEach((node)=>node.classList.remove('hidden'));
+  if ($('web-storage-new-folder')) $('web-storage-new-folder').classList.add('hidden');
+  webStorageShowNewFolder(false);
   if ($('web-storage-error')) { $('web-storage-error').textContent=''; $('web-storage-error').classList.add('hidden'); }
 }
 function webStorageSetError(message) {
   const node=$('web-storage-error'); if(!node)return;
   node.textContent=message||''; node.classList.toggle('hidden', !message);
+}
+function webStorageShowNewFolder(show) {
+  const row=$('web-storage-new-folder-row'), input=$('web-storage-new-folder-name');
+  if(row) row.classList.toggle('hidden', !show);
+  if(!show && input) input.value='';
+  if(show && input) { input.value=''; input.focus(); input.select(); }
+}
+function webStorageFolderErrorMessage(error) {
+  const code=String(error && error.data && error.data.error || error && error.message || '').trim();
+  if(code==='folder-exists') return t('webStorage.folderExists');
+  if(code==='invalid-folder-name'||code==='invalid-remote-path') return t('webStorage.folderInvalid');
+  if(code==='read-only') return t('webStorage.folderReadOnly');
+  if(code.startsWith('connector-')||code==='rclone-unavailable'||code==='remote-not-found'||code==='not-found') return webStorageBrowseErrorMessage(error,'browse');
+  return t('webStorage.folderCreateFail');
 }
 function webStorageSetSelection(path, isDir, name) {
   webStorageSelectedPath = path == null ? null : String(path);
@@ -9315,7 +10528,10 @@ function webStorageBrowseErrorMessage(error, context='browse') {
   if(code==='rclone-unavailable') return t('webStorage.rcloneMissing');
   if(code==='connector-not-found'||code==='not-found') return t('webStorage.connectorMissing');
   if(code==='remote-not-found') return t('webStorage.remoteMissing');
-  if(code==='connector-auth-failed') return t('webStorage.authFailed');
+  if(code==='connector-auth-failed'||code==='connector-token-invalid') return t('webStorage.authFailed');
+  if(code==='connector-tls-ca-untrusted') return t('webStorage.tlsCaUntrusted');
+  if(code==='connector-api-disabled') return t('webStorage.apiDisabled');
+  if(code==='connector-config-storage') return t('webStorage.configStorage');
   if(code==='connector-forbidden') return t('webStorage.providerForbidden');
   if(code==='connector-unreachable') return t('webStorage.providerUnavailable');
   if(code==='connector-rate-limited') return t('webStorage.providerRateLimited');
@@ -9373,6 +10589,8 @@ async function openWebStorageModal(mode='share') {
   const overlay=$('web-storage-overlay'); if(!overlay)return;
   webStorageSetError(''); webStorageSetSelection(null,false); webStoragePath='';
   const writable=webStorageMode!=='share';
+  if($('web-storage-new-folder')) $('web-storage-new-folder').classList.toggle('hidden', !writable);
+  webStorageShowNewFolder(false);
   const title=$('web-storage-title');
   if(title) title.textContent=t(webStorageMode==='inbox'?'webStorage.inboxTitle':webStorageMode==='collab'?'webStorage.collabTitle':'webStorage.title');
   const hint=$('web-storage-hint');
@@ -9401,14 +10619,18 @@ async function openWebStorageModal(mode='share') {
     if(writable && !writableConfigured) { webStorageToast(t('webStorage.noneWritable'),'warn'); return; }
 
     const data=await api('GET','/api/storage/connectors',null,30000);
-    const available=!!(data && data.capabilities && data.capabilities.available);
+    const capabilities=data && data.capabilities || {};
+    const available=!!capabilities.available, pending=!!capabilities.pending;
     let connectors=Array.isArray(data && data.connectors)?data.connectors:[];
     if(writable) connectors=connectors.filter((connector)=>connector && !connector.readOnly);
     // Missing connector configuration is the first actionable condition. This is
     // more precise than reporting the optional rclone runtime when nothing has
     // been configured yet.
     if(!connectors.length) { webStorageToast(t(writable?'webStorage.noneWritable':'webStorage.none'),'warn'); return; }
-    if(!available) { webStorageToast(t('webStorage.rcloneMissing'),'err'); return; }
+    // A bounded configuration probe may still be running. Do not reject a
+    // confirmed connector merely because that optional probe timed out; the real
+    // browse request below is authoritative and will return a precise rclone error.
+    if(!available && !pending) { webStorageToast(t('webStorage.rcloneMissing'),'err'); return; }
     const select=$('web-storage-connector'); select.textContent='';
     connectors.forEach((connector)=>select.appendChild(el('option',{attrs:{value:connector.id},text:connector.name})));
     const settings=state.settings||{};
@@ -9434,10 +10656,39 @@ if($('web-storage-close')) $('web-storage-close').addEventListener('click',close
 if($('web-storage-cancel')) $('web-storage-cancel').addEventListener('click',closeWebStorageModal);
 if($('web-storage-overlay')) $('web-storage-overlay').addEventListener('click',(e)=>{if(e.target===$('web-storage-overlay'))closeWebStorageModal();});
 document.addEventListener('keydown',(e)=>{if(e.key==='Escape'&&$('web-storage-overlay')&&!$('web-storage-overlay').classList.contains('hidden')){e.preventDefault();closeWebStorageModal();}});
-if($('web-storage-connector')) $('web-storage-connector').addEventListener('change',()=>{webStorageSetSelection(null,false);void loadWebStoragePath('');});
-if($('web-storage-up')) $('web-storage-up').addEventListener('click',()=>{webStorageSetSelection(null,false);void loadWebStoragePath(webStorageParentPath(webStoragePath));});
+if($('web-storage-connector')) $('web-storage-connector').addEventListener('change',()=>{webStorageShowNewFolder(false);webStorageSetSelection(null,false);void loadWebStoragePath('');});
+if($('web-storage-up')) $('web-storage-up').addEventListener('click',()=>{webStorageShowNewFolder(false);webStorageSetSelection(null,false);void loadWebStoragePath(webStorageParentPath(webStoragePath));});
 if($('web-storage-refresh')) $('web-storage-refresh').addEventListener('click',()=>void loadWebStoragePath(webStoragePath));
 if($('web-storage-select-folder')) $('web-storage-select-folder').addEventListener('click',()=>webStorageSetSelection(webStoragePath,true,webStoragePath||'/'));
+if($('web-storage-new-folder')) $('web-storage-new-folder').addEventListener('click',()=>{if(webStorageMode!=='share'){webStorageSetError('');webStorageShowNewFolder(true);}});
+if($('web-storage-new-folder-cancel')) $('web-storage-new-folder-cancel').addEventListener('click',()=>webStorageShowNewFolder(false));
+async function createWebStorageFolder() {
+  if(webStorageMode==='share') return;
+  const connectorId=$('web-storage-connector') && $('web-storage-connector').value;
+  const input=$('web-storage-new-folder-name'), button=$('web-storage-new-folder-create');
+  const name=String(input && input.value || '').trim();
+  if(!connectorId||!name){webStorageSetError(t('webStorage.folderInvalid'));if(input)input.focus();return;}
+  const parentPath=webStoragePath;
+  if(button) button.disabled=true;
+  webStorageSetError('');
+  try {
+    const result=await api('POST',`/api/storage/connectors/${encodeURIComponent(connectorId)}/mkdir`,{parentPath,name},60000);
+    const createdPath=String(result && result.path || [parentPath,name].filter(Boolean).join('/'));
+    const createdName=String(result && result.name || name);
+    webStorageShowNewFolder(false);
+    await loadWebStoragePath(createdPath);
+    webStorageSetSelection(createdPath,true,createdName);
+    toast(t('webStorage.folderCreated'),'ok');
+  } catch(error) {
+    webStorageSetError(webStorageFolderErrorMessage(error));
+    if(input){input.focus();input.select();}
+  } finally { if(button) button.disabled=false; }
+}
+if($('web-storage-new-folder-create')) $('web-storage-new-folder-create').addEventListener('click',()=>void createWebStorageFolder());
+if($('web-storage-new-folder-name')) $('web-storage-new-folder-name').addEventListener('keydown',(event)=>{
+  if(event.key==='Enter'){event.preventDefault();void createWebStorageFolder();}
+  else if(event.key==='Escape'){event.preventDefault();event.stopPropagation();webStorageShowNewFolder(false);}
+});
 if($('web-storage-create')) $('web-storage-create').addEventListener('click',async()=>{
   if(webStorageSelectedPath==null || (webStorageMode!=='share'&&!webStorageSelectedIsDir))return;
   const password=String($('web-storage-password').value||'');
@@ -9484,8 +10735,10 @@ if($('web-storage-create')) $('web-storage-create').addEventListener('click',asy
     toast(t(webStorageMode==='inbox'?'webStorage.inboxCreated':webStorageMode==='collab'?'webStorage.collabCreated':'webStorage.created'),'ok');
     closeWebStorageModal(); await refreshShares();
   } catch(error) {
-    const code=error&&error.data&&error.data.error||error.message||'error';
-    webStorageSetError(code==='rclone-unavailable'?t('webStorage.rcloneMissing'):t('webStorage.createFail',{error:code}));
+    if (isDlpCancelled(error)) { toast(t('dlp.cancelled'),'warn'); return; }
+    const code=String(error&&error.data&&error.data.error||error.message||'error');
+    const connectorFailure=code==='rclone-unavailable'||code==='remote-not-found'||code==='connector-not-found'||code.startsWith('connector-');
+    webStorageSetError(connectorFailure?webStorageBrowseErrorMessage(error,'browse'):t('webStorage.createFail',{error:code}));
   } finally { if(button && !$('web-storage-overlay').classList.contains('hidden')) button.disabled=webStorageSelectedPath==null||(webStorageMode!=='share'&&!webStorageSelectedIsDir); }
 });
 
@@ -12024,9 +13277,11 @@ document.addEventListener('keydown', (e) => {
   else if (e.key === 'r' || e.key === 'R') click('new-inbox-btn');
   else if (e.key === 'c' || e.key === 'C') click('new-collab-btn');
 });
-if ($('bulk-revoke')) $('bulk-revoke').addEventListener('click', () => {
+if ($('bulk-revoke')) $('bulk-revoke').addEventListener('click', async () => {
   const n = state.selShares ? state.selShares.size : 0;
-  if (n && ((!state.settings || state.settings.confirmShareRevoke !== false) ? confirm(t('sh.bulkRevokeConfirm', { n })) : true)) bulkAction('revoke');
+  if (!n) return;
+  if ((!state.settings || state.settings.confirmShareRevoke !== false) && !(await confirmDirectXferAction(t('sh.bulkRevokeConfirm', { n }), { confirmText:t('sh.bulkRevoke'), danger:true }))) return;
+  bulkAction('revoke');
 });
 if ($('bulk-copy')) $('bulk-copy').addEventListener('click', copySelectedLinks);
 if ($('bulk-pin')) $('bulk-pin').addEventListener('click', (e) => bulkAction(e.currentTarget.dataset.action || 'pin'));
@@ -12421,7 +13676,7 @@ async function commitPendingShareDeletion(id) {
 
 async function revokeShare(s) {
   if (pendingShareDeletionFor(s.id)) return;
-  if ((!state.settings || state.settings.confirmShareRevoke !== false) && !confirm(t('sh.revokeConfirm', { name: s.name }))) return;
+  if ((!state.settings || state.settings.confirmShareRevoke !== false) && !(await confirmDirectXferAction(t('sh.revokeConfirm', { name: s.name }), { confirmText:t('sh.revoke'), danger:true }))) return;
   // Only one share can be recoverable at once. Starting another deletion makes
   // the previous one permanent before opening a fresh five-second window.
   if (state.pendingShareDeletion) {
@@ -13642,7 +14897,7 @@ if ($('history-filter-bar')) $('history-filter-bar').addEventListener('keydown',
 });
 
 if ($('history-clear-btn')) $('history-clear-btn').addEventListener('click', async () => {
-  if (!confirm(t('hi.clearConfirm'))) return;
+  if (!(await confirmDirectXferAction(t('hi.clearConfirm'), { confirmText:t('hi.clear'), danger:true }))) return;
   try {
     await api('DELETE', '/api/history');
     toast(t('hi.cleared'), 'ok');
@@ -14025,6 +15280,7 @@ async function createPhotos(paths) {
   let r;
   try { r = await apiWithDlpOverride('POST', '/api/photos', { paths }); }
   catch (e) {
+    if (isDlpCancelled(e)) { toast(t('dlp.cancelled'),'warn'); return; }
     if (e && e.data && e.data.error === 'duplicate-content' && window.confirm(t('imgDuplicateFound'))) {
       try { r = await apiWithDlpOverride('POST', '/api/photos', { paths, duplicateOverride:true }); }
       catch (retryError) { e = retryError; }
@@ -14255,7 +15511,7 @@ function renderPhotoHistory(history) {
       });
       deleteBtn.addEventListener('click', async () => {
         const name = record.name || '';
-        if (!confirm(t('photo.historyDeleteConfirm', { name }))) return;
+        if (!(await confirmDirectXferAction(t('photo.historyDeleteConfirm', { name }), { confirmText:t('photo.historyDelete'), danger:true }))) return;
         deleteBtn.disabled = true;
         try {
           const result = await api('DELETE', '/api/photos/history/' + encodeURIComponent(record.id));
@@ -14313,7 +15569,7 @@ function renderPhotoHistory(history) {
 }
 
 if ($('photos-history-purge')) $('photos-history-purge').addEventListener('click', async () => {
-  if (!confirm(t('photo.purgeConfirm'))) return;
+  if (!(await confirmDirectXferAction(t('photo.purgeConfirm'), { confirmText:t('photo.purge'), danger:true }))) return;
   try {
     const result = await api('DELETE', '/api/photos/history');
     state.lastPhotoHistoryMetaSig = photoHistoryMetaSignature(result.meta);
@@ -15383,9 +16639,11 @@ async function photoBulk(action, extra) {
     if (action === 'revoke') loadUndoPreview();
   } catch (e) { toast(t('sh.bulkFail'), 'err'); }
 }
-if ($('photos-bulk-revoke')) $('photos-bulk-revoke').addEventListener('click', () => {
+if ($('photos-bulk-revoke')) $('photos-bulk-revoke').addEventListener('click', async () => {
   const n = state.photoSelection.size;
-  if (n && ((!state.settings || state.settings.confirmShareRevoke !== false) ? confirm(t('sh.bulkRevokeConfirm', { n })) : true)) photoBulk('revoke');
+  if (!n) return;
+  if ((!state.settings || state.settings.confirmShareRevoke !== false) && !(await confirmDirectXferAction(t('sh.bulkRevokeConfirm', { n }), { confirmText:t('sh.bulkRevoke'), danger:true }))) return;
+  photoBulk('revoke');
 });
 if ($('photos-bulk-expiry')) $('photos-bulk-expiry').addEventListener('change', (e) => {
   const v = e.target.value;
@@ -15598,25 +16856,121 @@ function showDlpDetails(d,title){const o=$('dlp-details-overlay'),list=$('dlp-de
 if($('dlp-details-close'))$('dlp-details-close').addEventListener('click',closeDlpDetails);
 if($('dlp-details-overlay'))$('dlp-details-overlay').addEventListener('click',(e)=>{if(e.target===$('dlp-details-overlay'))closeDlpDetails();});
 
-function confirmDlpWarning(data) {
-  const d = data && data.dlp;
-  if (!d || (!d.count && !d.incomplete)) return false;
-  // The scan's only gap is the OCR tool not being installed on the server — a
-  // clearer message than "incomplete (0 skipped, 0 OCR errors, …)".
-  const onlyOcrUnavailable = d.ocrUnavailable && !d.count && !d.filesSkipped && !d.ocrErrors && !d.scanErrors && !d.incompleteEntries && !d.truncated;
-  let msg = onlyOcrUnavailable
-    ? t('dlp.ocrUnavailableConfirm')
-    : d.incomplete
-      ? t('dlp.incompleteConfirm', { skipped:d.filesSkipped || 0, ocr:d.ocrErrors || 0, scan:d.scanErrors || 0, archive:d.incompleteEntries || 0 })
-      : t('dlp.warningConfirm', { n:d.count || 0, level:d.highest || '—', files:d.filesScanned || 0 });
-  const lines=dlpFindingLines(d,5); if(lines.length) msg += '\n\n' + lines.join('\n');
-  return window.confirm(msg);
+let activeDirectXferConfirmCancel = null;
+function confirmDirectXferAction(message, options) {
+  options = options || {};
+  if (typeof activeDirectXferConfirmCancel === 'function') activeDirectXferConfirmCancel();
+  return new Promise((resolve) => {
+    const previousFocus = document.activeElement;
+    const overlay = el('div', { class:'overlay', attrs:{ id:'dx-confirm-overlay' } });
+    const modal = el('div', { class:'modal', attrs:{ role:'dialog', 'aria-modal':'true', 'aria-labelledby':'dx-confirm-title' } });
+    const head = el('div', { class:'modal-head' });
+    const title = el('h3', { text:options.title || t('confirm.title'), attrs:{ id:'dx-confirm-title' } });
+    const close = el('button', { class:'icon-btn', text:'✕', attrs:{ type:'button', 'aria-label':t('confirm.cancel') } });
+    head.append(title, close);
+    const text = el('p', { class:'muted sm', text:String(message || '') });
+    text.style.whiteSpace = 'pre-line';
+    const actions = el('div', { class:'modal-actions' });
+    const cancel = el('button', { class:'btn ghost', text:options.cancelText || t('confirm.cancel'), attrs:{ type:'button' } });
+    const confirm = el('button', { class:options.danger ? 'btn danger' : 'btn primary', text:options.confirmText || t('confirm.title'), attrs:{ type:'button' } });
+    actions.append(cancel, confirm); modal.append(head, text, actions); overlay.appendChild(modal); document.body.appendChild(overlay);
+    let settled = false;
+    let cancelCurrent = null;
+    const finish = (approved) => {
+      if (settled) return;
+      settled = true;
+      document.removeEventListener('keydown', onKey, true);
+      if (activeDirectXferConfirmCancel === cancelCurrent) activeDirectXferConfirmCancel = null;
+      overlay.remove();
+      try { if (previousFocus && typeof previousFocus.focus === 'function') previousFocus.focus(); } catch (_) {}
+      resolve(approved);
+    };
+    cancelCurrent = () => finish(false);
+    activeDirectXferConfirmCancel = cancelCurrent;
+    const onKey = (event) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault(); event.stopPropagation(); finish(false);
+    };
+    close.addEventListener('click', cancelCurrent);
+    cancel.addEventListener('click', cancelCurrent);
+    confirm.addEventListener('click', () => finish(true));
+    overlay.addEventListener('click', (event) => { if (event.target === overlay) finish(false); });
+    document.addEventListener('keydown', onKey, true);
+    setTimeout(() => { try { confirm.focus(); } catch (_) {} }, 0);
+  });
 }
+
+function dlpWarningParts(data) {
+  const d = data && data.dlp;
+  if (!d || (!d.count && !d.incomplete && !d.ocrUnavailable && !d.filesSkipped && !d.ocrErrors && !d.scanErrors && !d.incompleteEntries && !d.truncated)) return null;
+  const onlyOcrUnavailable = d.ocrUnavailable && !d.count && !d.filesSkipped && !d.ocrErrors && !d.scanErrors && !d.incompleteEntries && !d.truncated;
+  const parts = [];
+  if (d.count) parts.push(t('dlp.warningConfirm', { n:d.count || 0, level:d.highest || '—', files:d.filesScanned || 0 }));
+  if (onlyOcrUnavailable) parts.push(t('dlp.ocrUnavailableConfirm'));
+  else if (d.incomplete || d.filesSkipped || d.ocrErrors || d.scanErrors || d.incompleteEntries || d.truncated || d.ocrUnavailable) {
+    parts.push(t('dlp.incompleteConfirm', { skipped:d.filesSkipped || 0, ocr:d.ocrErrors || 0, scan:d.scanErrors || 0, archive:d.incompleteEntries || 0 }));
+    if ((d.filesSkipped || 0) > 0 && Number(d.maxFileMB) > 0) parts.push(t('dlp.skippedSizeHint', { limit:Number(d.maxFileMB).toFixed(Number(d.maxFileMB) % 1 ? 1 : 0) }));
+  }
+  parts.push(t('dlp.warningQuestion'));
+  return { d, text:parts.join('\n\n') };
+}
+function confirmDlpWarning(data) {
+  const warning = dlpWarningParts(data);
+  if (!warning) return Promise.resolve(false);
+  return new Promise((resolve) => {
+    const previousFocus = document.activeElement;
+    const overlay = el('div', { class:'overlay', attrs:{ id:'dlp-warning-overlay' } });
+    const modal = el('div', { class:'modal', attrs:{ role:'dialog', 'aria-modal':'true', 'aria-labelledby':'dlp-warning-title' } });
+    const head = el('div', { class:'modal-head' });
+    const title = el('h3', { text:t(warning.d.count ? 'dlp.warningTitle' : 'dlp.incompleteTitle'), attrs:{ id:'dlp-warning-title' } });
+    const close = el('button', { class:'icon-btn', text:'✕', attrs:{ type:'button', 'aria-label':t('dlp.cancelWarning') } });
+    head.append(title, close);
+    const message = el('p', { class:'muted sm', text:warning.text });
+    message.style.whiteSpace = 'pre-line';
+    modal.append(head, message);
+    const findings = warning.d && Array.isArray(warning.d.findings) ? warning.d.findings.slice(0, 5) : [];
+    if (findings.length) {
+      const list = el('div', { class:'dlp-details-list' });
+      findings.forEach((f) => {
+        const row = el('div', { class:'dlp-detail-row' });
+        row.appendChild(el('strong', { text:dlpRuleLabel(f.type) }));
+        const grid = el('div', { class:'dlp-detail-grid' });
+        [[t('dlp.file'), f.file || '—'], [t('dlp.sample'), f.sample || '—'], [t('dlp.reason'), dlpRuleReason(f)]].forEach(([label, value]) => {
+          const cell = el('div', { class:'dlp-detail-cell' });
+          cell.append(el('span', { class:'muted sm', text:label }), el('span', { text:value }));
+          grid.appendChild(cell);
+        });
+        row.appendChild(grid); list.appendChild(row);
+      });
+      modal.appendChild(list);
+    }
+    const actions = el('div', { class:'modal-actions' });
+    const cancel = el('button', { class:'btn ghost', text:t('dlp.cancelWarning'), attrs:{ type:'button' } });
+    const proceed = el('button', { class:'btn primary', text:t('dlp.publishAnyway'), attrs:{ type:'button' } });
+    actions.append(cancel, proceed); modal.appendChild(actions); overlay.appendChild(modal); document.body.appendChild(overlay);
+    let settled = false;
+    const finish = (approved) => {
+      if (settled) return; settled = true;
+      document.removeEventListener('keydown', onKey);
+      overlay.remove();
+      try { if (previousFocus && typeof previousFocus.focus === 'function') previousFocus.focus(); } catch (_) {}
+      resolve(approved);
+    };
+    const onKey = (event) => { if (event.key === 'Escape') { event.preventDefault(); finish(false); } };
+    close.addEventListener('click', () => finish(false)); cancel.addEventListener('click', () => finish(false)); proceed.addEventListener('click', () => finish(true));
+    overlay.addEventListener('click', (event) => { if (event.target === overlay) finish(false); });
+    document.addEventListener('keydown', onKey);
+    setTimeout(() => { try { proceed.focus(); } catch (_) {} }, 0);
+  });
+}
+function dlpCancelledError(data) { const err = new Error('dlp-cancelled'); err.code = 'dlp-cancelled'; err.data = data || null; err.userCancelled = true; return err; }
+function isDlpCancelled(error) { return !!(error && (error.userCancelled === true || error.code === 'dlp-cancelled' || error.message === 'dlp-cancelled')); }
 async function apiWithDlpOverride(method, url, payload) {
   try { return await api(method, url, payload); }
   catch (e) {
-    if (e && e.data && e.data.error === 'dlp-warning' && confirmDlpWarning(e.data)) {
-      return api(method, url, Object.assign({}, payload || {}, { dlpOverride:true }));
+    if (e && e.data && e.data.error === 'dlp-warning') {
+      if (await confirmDlpWarning(e.data)) return api(method, url, Object.assign({}, payload || {}, { dlpOverride:true }));
+      throw dlpCancelledError(e.data);
     }
     if(e&&e.data&&['dlp-blocked','dlp-quarantined','dlp-quarantine-failed'].includes(e.data.error)&&e.data.dlp)showDlpDetails(e.data.dlp,t('dlp.detailsTitle'));
     throw e;
@@ -15651,6 +17005,7 @@ $('create-share-btn').addEventListener('click', async () => {
       closePicker();
       refreshShares();
     } catch (e) {
+      if (isDlpCancelled(e)) { toast(t('dlp.cancelled'),'warn'); return; }
       toast(dlpErrorMessage(e) || t('sh.addFail', { error: (e.data && e.data.error) || e.message }), 'err');
     }
     return;
@@ -15740,6 +17095,7 @@ $('create-share-btn').addEventListener('click', async () => {
       openQr(resp.share);
     }
   } catch (e) {
+    if (isDlpCancelled(e)) { toast(t('dlp.cancelled'),'warn'); return; }
     toast(dlpErrorMessage(e) || t('sh.createFail', { error: (e.data && e.data.error) || e.message }), 'err');
   }
 });
@@ -16513,6 +17869,8 @@ function openEditModal(s) {
   }
   $('edit-error').classList.add('hidden');
   $('edit-overlay').classList.remove('hidden');
+  const editBody = $('edit-modal-body');
+  if (editBody) editBody.scrollTop = 0;
 }
 function closeEditModal() { $('edit-overlay').classList.add('hidden'); editShareId = null; }
 if ($('edit-close')) $('edit-close').addEventListener('click', closeEditModal);

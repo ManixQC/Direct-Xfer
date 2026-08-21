@@ -11,7 +11,7 @@ const read=(f)=>fs.readFileSync(path.join(root,f),'utf8');
 const app=read('public/app.js'), mod=read('public/standard-productivity.js'), html=read('public/index.html'), css=read('public/style.css'), server=read('server.js');
 
 test('standard view loads the isolated productivity module with bumped cache keys',()=>{
-  assert.match(html,/style\.css\?v=313/); assert.match(html,/app\.js\?v=343/); assert.match(html,/standard-productivity\.js\?v=4/);
+  assert.match(html,/style\.css\?v=315/); assert.match(html,/app\.js\?v=346/); assert.match(html,/standard-productivity\.js\?v=4/);
   assert.match(app,/window\.DXStandard = Object\.freeze/); assert.match(mod,/window\.DXStandard/);
 });
 

@@ -18,12 +18,12 @@ const server = read('server.js');
 
 function manifest(file) { return JSON.parse(read(file)); }
 
-test('pwa407 loads and precaches the mobile intelligence module as a public shell asset', () => {
+test('pwa409 loads and precaches the mobile intelligence module as a public shell asset', () => {
   for (const file of ['pwa/app.js','pwa/index.html','pwa/sw.js','pwa/theme-init.js','pwa/admin-advanced.js']) {
-    assert.match(read(file), /pwa407|v=397/);
+    assert.match(read(file), /pwa409|v=399/);
   }
-  assert.match(index, /mobile-intelligence\.js\?v=397/);
-  assert.match(sw, /\/app\/mobile-intelligence\.js\?v=397/);
+  assert.match(index, /mobile-intelligence\.js\?v=399/);
+  assert.match(sw, /\/app\/mobile-intelligence\.js\?v=399/);
   assert.match(server, /'\/mobile-intelligence\.js'/);
   assert.doesNotMatch(index + sw, /pwa323|v=323/);
 });
@@ -147,11 +147,11 @@ test('fresh unauthenticated PWA bootstrap can fetch the new module and manifests
   child.stderr.on('data', (d) => logs.push(d.toString()));
   try {
     await waitFor(base + '/healthz', child, logs);
-    const mod = await fetch(base + '/app/mobile-intelligence.js?v=397');
+    const mod = await fetch(base + '/app/mobile-intelligence.js?v=399');
     assert.equal(mod.status, 200);
     assert.match(await mod.text(), /SpeechRecognition/);
     for (const name of ['manifest.webmanifest','manifest-en.webmanifest','manifest-es.webmanifest']) {
-      const r = await fetch(base + '/app/' + name + '?v=397');
+      const r = await fetch(base + '/app/' + name + '?v=399');
       assert.equal(r.status, 200);
       const body = await r.json();
       assert.ok((body.shortcuts || []).some((x) => x.url === '/app/?action=widget'));

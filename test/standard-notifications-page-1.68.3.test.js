@@ -26,3 +26,12 @@ test('standard notification center is an independent full page', () => {
   assert.match(css, /\.notifications-page-card/);
   assert.match(css, /\.notification-list \{ display:flex; flex-direction:column/);
 });
+
+test('notification page destructive and Escape behavior use the in-app UX', () => {
+  assert.match(app, /notifications-clear[\s\S]*?confirmDirectXferAction\(t\('notifications\.clearConfirm'\)/);
+  assert.doesNotMatch(app, /notifications-clear'\)\) \$\('notifications-clear'\)\.addEventListener[\s\S]{0,260}?\bconfirm\(/);
+  assert.match(app, /invalidateNotificationsFetch\(\);[\s\S]{0,160}?accountNotifications = \[\]/);
+  assert.match(app, /userDropdown[\s\S]{0,180}?closeUserMenu\(\); return;[\s\S]{0,220}?notifications-prefs[\s\S]{0,180}?closeNotificationsMenu\(\); return;/);
+  assert.match(app, /notifications\.priorityUrgent/);
+  assert.match(app, /notifications\.priorityHigh/);
+});

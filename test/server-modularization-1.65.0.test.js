@@ -56,7 +56,7 @@ test('network module keeps exported update state live across checks', async () =
       ok: true,
       text: async () => JSON.stringify({ results: [
         { name:'latest', digest:'sha256:new' },
-        { name:'1.69.0', digest:'sha256:new' },
+        { name:'1.69.2', digest:'sha256:new' },
         { name:'1.67.26', digest:'sha256:current' },
         { name:'1.65.0', digest:'sha256:old' },
       ] }),
@@ -71,7 +71,7 @@ test('network module keeps exported update state live across checks', async () =
     const live = svc.updateState;
     await svc.checkForUpdate();
     assert.strictEqual(svc.updateState, live);
-    assert.equal(live.latest, '1.69.0');
+    assert.equal(live.latest, '1.69.2');
     assert.equal(live.available, true);
   } finally { global.fetch = oldFetch; }
 });

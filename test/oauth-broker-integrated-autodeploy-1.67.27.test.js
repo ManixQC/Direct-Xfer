@@ -7,7 +7,7 @@ const path = require('node:path');
 const ROOT = path.join(__dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 
-test('1.69.0 legacy 1.67.27 OAuth-broker test is superseded by token-verification coverage', () => {
+test('1.69.2 legacy 1.67.27 OAuth-broker test is superseded by token-verification coverage', () => {
   const deployment = read('lib/server/oauth-broker-deployment.js');
   const currentTest = read('test/oauth-broker-integrated-autodeploy-1.67.28.test.js');
   assert.match(deployment, /\/user\/tokens\/verify/);

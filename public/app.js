@@ -160,6 +160,9 @@ const I18N = {
     'notifications.title': 'Notifications',
     'notifications.back': 'Retour',
     'notifications.pageHint': 'Consultez, filtrez et gérez toutes les notifications de ce compte.',
+    'notifications.priorityUrgent': '⚠ priorité urgente',
+    'notifications.priorityHigh': '↑ priorité élevée',
+    'notifications.clearError': 'Impossible de supprimer les notifications.',
     'notifications.loading': 'Chargement…',
     'notifications.empty': 'Aucune notification.',
     'notifications.firstView': 'Première vue de « {name} »',
@@ -1844,6 +1847,9 @@ const I18N = {
     'notifications.title': 'Notifications',
     'notifications.back': 'Back',
     'notifications.pageHint': 'Review, filter and manage all notifications for this account.',
+    'notifications.priorityUrgent': '⚠ urgent priority',
+    'notifications.priorityHigh': '↑ high priority',
+    'notifications.clearError': 'Could not delete notifications.',
     'notifications.loading': 'Loading…',
     'notifications.empty': 'No notifications.',
     'notifications.firstView': 'First view of “{name}”',
@@ -3526,6 +3532,9 @@ const I18N = {
     'notifications.title': 'Notificaciones',
     'notifications.back': 'Volver',
     'notifications.pageHint': 'Consulta, filtra y gestiona todas las notificaciones de esta cuenta.',
+    'notifications.priorityUrgent': '⚠ prioridad urgente',
+    'notifications.priorityHigh': '↑ prioridad alta',
+    'notifications.clearError': 'No se pudieron eliminar las notificaciones.',
     'notifications.loading': 'Cargando…',
     'notifications.empty': 'No hay notificaciones.',
     'notifications.firstView': 'Primera vista de «{name}»',
@@ -6539,7 +6548,7 @@ function renderNotifications() {
     const main = el('div', { class:'notification-item-main' });
     const titleText=notificationTypeIcon(n)+' '+notificationTitleText(n)+(Number(n.groupCount)>1?' ×'+Number(n.groupCount):'');
     main.appendChild(el('div', { class:'notification-item-title', text:titleText }));
-    if(n.priority==='urgent'||n.priority==='high')main.appendChild(el('span',{class:'notification-priority '+n.priority,text:n.priority==='urgent'?'⚠ priorité urgente':'↑ priorité élevée'}));
+    if(n.priority==='urgent'||n.priority==='high')main.appendChild(el('span',{class:'notification-priority '+n.priority,text:t(n.priority==='urgent'?'notifications.priorityUrgent':'notifications.priorityHigh')}));
     const metaEl = el('div', { class:'notification-item-meta', text:notificationMetaText(n) });
     if (n.at) metaEl.setAttribute('title', formatDate(n.at)); // absolute date on hover
     main.appendChild(metaEl);
@@ -6771,7 +6780,26 @@ function onNotificationFilterChanged() { notificationsShown = NOTIFICATIONS_PAGE
 ['notifications-category-filter','notifications-severity-filter'].forEach((id)=>{ const node=$(id); if(node) node.addEventListener('change', onNotificationFilterChanged); });
 if ($('notifications-search')) $('notifications-search').addEventListener('input', onNotificationFilterChanged);
 if ($('notifications-btn')) $('notifications-btn').addEventListener('click', (e)=>{ e.stopPropagation(); closeUserMenu(); closeDashMenu(); openNotificationsPage(); });
-if ($('notifications-clear')) $('notifications-clear').addEventListener('click', async (e)=>{ e.stopPropagation(); if(!accountNotifications.length || !confirm(t('notifications.clearConfirm')))return; await api('DELETE','/api/notifications'); notificationsRequestSeq += 1; accountNotifications=[]; renderNotifications(); if(!notificationsRequestInFlight) await refreshNotifications(true); });
+if ($('notifications-clear')) $('notifications-clear').addEventListener('click', async (e)=>{
+  e.stopPropagation();
+  if (!accountNotifications.length) return;
+  if (!(await confirmDirectXferAction(t('notifications.clearConfirm'), { confirmText:t('notifications.clearAll'), danger:true }))) return;
+  const button = $('notifications-clear');
+  if (button) button.disabled = true;
+  try {
+    await api('DELETE','/api/notifications');
+    // Cancel/ignore any GET that captured the pre-delete list so it cannot
+    // resurrect rows after a successful "Delete all" operation.
+    invalidateNotificationsFetch();
+    accountNotifications = [];
+    renderNotifications();
+    if (!notificationsRequestInFlight) await refreshNotifications(true);
+  } catch (_) {
+    toast(t('notifications.clearError'), 'err');
+  } finally {
+    if (button) button.disabled = false;
+  }
+});
 
 // Optional arrival sound, remembered locally (default off).
 function updateNotificationsSoundBtn() {
@@ -6960,7 +6988,16 @@ if ($('notifications-prefs-btn')) {
     if (opening && !notificationPrefsLoaded) loadNotificationPrefs();
   });
 }
-document.addEventListener('keydown',(e)=>{ if(e.key==='Escape' && notificationsPageOpen() && !document.querySelector('.overlay:not(.hidden)')) closeNotificationsPage(); });
+document.addEventListener('keydown',(e)=>{
+  if (e.key !== 'Escape' || !notificationsPageOpen() || document.querySelector('.overlay:not(.hidden)')) return;
+  // Escape first dismisses transient controls on the page. A second Escape
+  // leaves Notifications, matching the modal-first behavior of the other admin pages.
+  const userDropdown = $('user-dropdown');
+  if (userDropdown && !userDropdown.classList.contains('hidden')) { closeUserMenu(); return; }
+  const prefs = $('notifications-prefs');
+  if (prefs && !prefs.classList.contains('hidden')) { closeNotificationsMenu(); return; }
+  closeNotificationsPage();
+});
 
 // --- User menu (account icon) ---
 // Reuse the exact same menu on all full-page views. Moving the existing node

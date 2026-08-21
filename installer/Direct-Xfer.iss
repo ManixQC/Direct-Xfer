@@ -2,13 +2,13 @@
 #if EnvAppVersion != ""
   #define AppVersion EnvAppVersion
 #else
-  #define AppVersion "1.69.2"
+  #define AppVersion "1.69.3"
 #endif
 #define EnvSourceDir GetEnv("DX_INNO_SOURCE_DIR")
 #if EnvSourceDir != ""
   #define SourceDir EnvSourceDir
 #else
-  #define SourceDir "..\dist\Direct-Xfer-1.69.2-Windows-CSharp"
+  #define SourceDir "..\dist\Direct-Xfer-1.69.3-Windows-CSharp"
 #endif
 #define EnvOutputDir GetEnv("DX_INNO_OUTPUT_DIR")
 #if EnvOutputDir != ""
@@ -45,9 +45,14 @@ AppName={#AppName}
 AppVersion={#AppVersion}
 AppVerName={#AppName} {#AppVersion}
 AppPublisher={#AppPublisher}
+AppPublisherURL=https://github.com/ManixQC/Direct-Xfer
+AppSupportURL=https://github.com/ManixQC/Direct-Xfer/issues
+AppUpdatesURL=https://github.com/ManixQC/Direct-Xfer/releases
 VersionInfoVersion={#AppVersion}.0
 VersionInfoCompany={#AppPublisher}
+VersionInfoCopyright=Copyright © Direct-Xfer 2026
 VersionInfoDescription=Direct-Xfer Windows Installer
+VersionInfoOriginalFileName=Direct-Xfer-Setup-{#AppVersion}.exe
 VersionInfoProductName={#AppName}
 VersionInfoProductVersion={#AppVersion}
 DefaultDirName={autopf64}\Direct-Xfer
@@ -72,8 +77,12 @@ UsePreviousAppDir=yes
 SetupLogging=yes
 Uninstallable=yes
 CreateUninstallRegKey=yes
+InfoBeforeFile=..\PRIVACY.md
 
 [Tasks]
+Name: "autostart"; Description: "Start Direct-Xfer automatically with Windows"; GroupDescription: "Installation options:"
+Name: "updatecheck"; Description: "Allow automatic update checks (contacts Docker Hub)"; GroupDescription: "Privacy and network options:"
+Name: "publicip"; Description: "Allow public IP discovery at startup (contacts public IP services)"; GroupDescription: "Privacy and network options:"
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional shortcuts:"; Flags: unchecked
 
 [InstallDelete]
@@ -84,6 +93,11 @@ Type: filesandordirs; Name: "{app}\runtime\rclone"
 Type: filesandordirs; Name: "{app}\runtime\tesseract"
 ; Retire the external-Node receipt used by the short-lived on-demand installer architecture.
 Type: files; Name: "{app}\runtime\node\external-node.ini"
+; Re-evaluate privacy choices on every install/upgrade. The selected marker is consumed by the server after it is durably applied to settings.
+Type: files; Name: "{localappdata}\Direct-Xfer\install-update-check-enable.flag"
+Type: files; Name: "{localappdata}\Direct-Xfer\install-update-check-disable.flag"
+Type: files; Name: "{localappdata}\Direct-Xfer\install-public-ip-enable.flag"
+Type: files; Name: "{localappdata}\Direct-Xfer\install-public-ip-disable.flag"
 
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Excludes: "runtime\app\runtime-build.txt"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -91,10 +105,15 @@ Source: "{#SourceDir}\*"; DestDir: "{app}"; Excludes: "runtime\app\runtime-build
 ; no Node.js download and always installs the pinned private runtime.
 ; Runtime marker is copied explicitly because dot/marker-style files are too important to rely on wildcard packaging semantics.
 Source: "{#SourceDir}\runtime\app\runtime-build.txt"; DestDir: "{app}\runtime\app"; DestName: "runtime-build.txt"; Flags: ignoreversion; AfterInstall: ValidateInstalledPrivateDotNet
+; These one-shot markers communicate the installer privacy choices to the first server launch.
+Source: "install-preference.flag"; DestDir: "{localappdata}\Direct-Xfer"; DestName: "install-update-check-enable.flag"; Flags: ignoreversion; Check: UpdateCheckSelected
+Source: "install-preference.flag"; DestDir: "{localappdata}\Direct-Xfer"; DestName: "install-update-check-disable.flag"; Flags: ignoreversion; Check: UpdateCheckDisabled
+Source: "install-preference.flag"; DestDir: "{localappdata}\Direct-Xfer"; DestName: "install-public-ip-enable.flag"; Flags: ignoreversion; Check: PublicIpSelected
+Source: "install-preference.flag"; DestDir: "{localappdata}\Direct-Xfer"; DestName: "install-public-ip-disable.flag"; Flags: ignoreversion; Check: PublicIpDisabled
 
 [Icons]
 Name: "{autoprograms}\Direct-Xfer"; Filename: "{app}\{#AppExeName}"; WorkingDir: "{app}"
-Name: "{userstartup}\Direct-Xfer Server Host"; Filename: "{app}\Direct-Xfer.ServerHost.exe"; WorkingDir: "{app}"
+Name: "{userstartup}\Direct-Xfer Server Host"; Filename: "{app}\Direct-Xfer.ServerHost.exe"; WorkingDir: "{app}"; Tasks: autostart
 Name: "{autodesktop}\Direct-Xfer"; Filename: "{app}\{#AppExeName}"; WorkingDir: "{app}"; Tasks: desktopicon
 
 [Run]
@@ -106,6 +125,15 @@ const
   EventModifyState = $0002;
   Scs64BitBinary = 6;
   FileAttributeReparsePoint = $0400;
+
+function UpdateCheckSelected: Boolean;
+begin Result := WizardIsTaskSelected('updatecheck'); end;
+function UpdateCheckDisabled: Boolean;
+begin Result := not WizardIsTaskSelected('updatecheck'); end;
+function PublicIpSelected: Boolean;
+begin Result := WizardIsTaskSelected('publicip'); end;
+function PublicIpDisabled: Boolean;
+begin Result := not WizardIsTaskSelected('publicip'); end;
 
 function OpenEvent(dwDesiredAccess: LongWord; bInheritHandle: Boolean; lpName: string): THandle;
   external 'OpenEventW@kernel32.dll stdcall';

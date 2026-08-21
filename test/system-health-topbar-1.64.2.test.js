@@ -59,7 +59,7 @@ test('System Health launcher keeps its dedicated button shape despite user-btn b
 });
 
 test('corrected standard assets use fresh cache busters',()=>{
-  assert.match(html,/style\.css\?v=315/);
-  assert.match(html,/app\.js\?v=346/);
+  assert.match(html,/style\.css\?v=316/);
+  assert.match(html,/app\.js\?v=347/);
   assert.match(html,/server-health-dashboard\.js\?v=4/);
 });

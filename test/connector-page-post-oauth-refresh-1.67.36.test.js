@@ -8,7 +8,7 @@ const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8').replace(/\r\
 const app = read('public/app.js');
 const server = read('server.js');
 
-test('1.69.2 successful Google setup updates the remote locally instead of forcing a blocking connector probe', () => {
+test('1.69.3 successful Google setup updates the remote locally instead of forcing a blocking connector probe', () => {
   const start = app.indexOf('function connectorConfigRender(data)');
   const end = app.indexOf('async function pasteConnectorOAuthCallback', start);
   assert.ok(start >= 0 && end > start);
@@ -20,7 +20,7 @@ test('1.69.2 successful Google setup updates the remote locally instead of forci
   assert.doesNotMatch(direct, /refreshStorageConnectors\(true\)/);
 });
 
-test('1.69.2 connector API bounds optional rclone probing and exposes a neutral pending snapshot', () => {
+test('1.69.3 connector API bounds optional rclone probing and exposes a neutral pending snapshot', () => {
   assert.match(server, /const CONNECTOR_CONFIG_PROBE_WAIT_MS = 4000/);
   assert.match(server, /async function connectorProbeForConfiguration\(\)/);
   assert.match(server, /Promise\.race\(\[probePromise,\s*timeout\]\)/);
@@ -35,7 +35,7 @@ test('1.69.2 connector API bounds optional rclone probing and exposes a neutral 
   assert.match(route, /try \{ jobs = pruneConnectorJobs\(\)\.map\(publicConnectorJob\); \} catch \(_\) \{\}/);
 });
 
-test('1.69.2 connector UI renders pending runtime probes without a red load failure', () => {
+test('1.69.3 connector UI renders pending runtime probes without a red load failure', () => {
   const start = app.indexOf('function renderStorageConnectors(data)');
   const end = app.indexOf('async function refreshStorageConnectors(forceProbe)', start);
   const block = app.slice(start, end);

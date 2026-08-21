@@ -47,6 +47,7 @@ const { SUBTITLE_MAX_BYTES, srtToVtt, subtitleTracksFor } = require('./lib/subti
 const { readZipEntries, readFileCapped } = require('./lib/file-content-utils');
 const { createTlsManager } = require('./lib/server/tls-manager');
 const { createNetworkServices } = require('./lib/server/network-services');
+const { applyWindowsInstallPreferences, consumeWindowsInstallPreferenceMarkers } = require('./lib/server/windows-install-preferences');
 const { createNotificationService } = require('./lib/server/notification-service');
 const { createPublicPages } = require('./lib/server/public-pages');
 const { createBackupService } = require('./lib/server/backup-service');
@@ -385,6 +386,7 @@ const UPDATE_IMAGE = (process.env.UPDATE_IMAGE || 'manixqc/direct-xfer:latest').
 const UPDATE_CHECK = String(process.env.UPDATE_CHECK == null ? 'true' : process.env.UPDATE_CHECK)
   .trim()
   .toLowerCase() !== 'false';
+const PUBLIC_IP_DISCOVERY = String(process.env.PUBLIC_IP_DISCOVERY == null ? 'true' : process.env.PUBLIC_IP_DISCOVERY).trim().toLowerCase() !== 'false';
 const _updColon = UPDATE_IMAGE.lastIndexOf(':');
 const UPDATE_REPO = _updColon > 0 ? UPDATE_IMAGE.slice(0, _updColon) : UPDATE_IMAGE;
 const UPDATE_TAG = _updColon > 0 ? UPDATE_IMAGE.slice(_updColon + 1) : 'latest';
@@ -555,7 +557,7 @@ async function mapLimit(items, limit, fn) {
 }
 const networkServices = createNetworkServices({
   net, os, LOCAL_IP, APP_VERSION, UPDATE_REPO, UPDATE_TAG,
-  compareSemver, updateCheckEnabled, addAdminCenterNotification,
+  compareSemver, updateCheckEnabled, publicIpDiscoveryEnabled, addAdminCenterNotification,
   getState: () => state, persist, maskToPrefix, ipToInt, intToIp, isPrivateIp,
   getSettings, flagFromCode, noteCenterServiceState,
 });
@@ -574,7 +576,6 @@ const AUDIT_MAX = 500;  // most recent admin audit entries kept (state.audit, sh
 const UNDO_LOG_MAX = 25; // most recent undoable admin actions kept (state.undoLog, shares.json)
 const UNDO_DESCRIPTOR_MAX_BYTES = 256 * 1024; // hard cap per serialized reversal snapshot
 let historyViewRevision = 0; // IP labels/privacy settings that affect rendered records
-
 // Country from the cache (no network call), otherwise null.
 function geoSync(ip) {
   const clean = String(ip || '').replace(/^::ffff:/i, '');
@@ -1208,6 +1209,7 @@ const DEFAULT_SETTINGS = {
   diskFreeWarnPercent: 10, // warn when free disk space falls to/below this percentage (0 = off)
   // Maintenance.
   updateCheck: true, // check for a newer version at startup (UPDATE_CHECK env can force off)
+  publicIpDiscovery: true, // resolve the public IP via external services unless disabled
   // History / privacy.
   historyRetentionDays: 0, // auto-purge history older than N days (0 = keep all)
   logRetentionDays: 0, // purge transfers.log entries older than N days (0 = keep all)
@@ -1696,13 +1698,15 @@ function storeLoad() {
       process.exit(1);
     }
   }
+  const installPreferences = applyWindowsInstallPreferences(state, process.env);
   const lifecycleMigrated = migrateLegacyFirstUseExpiryState();
   const quarantineStateMigrated = sanitizeDlpQuarantineState();
   const quarantineFilesMigrated = reconcileDlpQuarantineFiles();
   const quarantineMigrated = quarantineStateMigrated || quarantineFilesMigrated;
   reindex();
   let migrationsPersisted = true;
-  if (lifecycleMigrated || activityMigrated || quarantineMigrated) migrationsPersisted = persistNow();
+  if (lifecycleMigrated || activityMigrated || quarantineMigrated || installPreferences.changed) migrationsPersisted = persistNow();
+  if (migrationsPersisted) consumeWindowsInstallPreferenceMarkers(fs, installPreferences.markers);
   // Quarantine is an internal managed directory. Once metadata has been loaded
   // (and any sanitization was durably saved), remove files that no longer have a
   // record — including leftovers from an interrupted delete or an older >200 cap.
@@ -2892,13 +2896,12 @@ async function migrateLegacyPhotoStorage() {
   if (stateChanged) await persist();
   if (copied) console.log(`[images] migrated ${copied} file(s) into ${IMAGE_STORE_DIR}`);
 }
-
 // Effective limits: a UI setting (when > 0) overrides the env default at runtime.
 function effMaxUpload() { const s = Math.floor(Number(getSettings().maxUploadBytes)) || 0; return s > 0 ? s : MAX_UPLOAD_BYTES; }
 function effMaxZip() { const s = Math.floor(Number(getSettings().maxZipBytes)) || 0; return s > 0 ? s : MAX_ZIP_BYTES; }
 // Update check: on unless the env var forces it off or the admin disabled it.
 function updateCheckEnabled() { return UPDATE_CHECK && getSettings().updateCheck !== false; }
-
+function publicIpDiscoveryEnabled() { return PUBLIC_IP_DISCOVERY && getSettings().publicIpDiscovery !== false; }
 function incrementDownloads(id) {
   const s = getById(id);
   if (!s) return;
@@ -3189,6 +3192,7 @@ function settingsForClient(req, lite) {
     lastBackup: (state.meta && state.meta.lastBackup) || null,
     allowlistFromEnv: ADMIN_ALLOWED_IPS.length > 0,
     updateCheckEnv: !UPDATE_CHECK, // env forces the update check off
+    publicIpDiscoveryEnv: !PUBLIC_IP_DISCOVERY, // env can force public-IP discovery off
     tlsManagedByEnv: tlsManagedByEnvironment(),
     tlsProvidedCertificate: !!(TLS_CERT && TLS_KEY),
     tlsProvidedCertificateExpiresAt: tlsManager.activeProvidedTlsExpiresAt || 0,
@@ -12730,6 +12734,7 @@ function computeSettingsPatch(body) {
   if (body.diskFreeWarnPercent !== undefined) patch.diskFreeWarnPercent = clampNum(body.diskFreeWarnPercent, 0, 50, 10);
   // Maintenance.
   if (typeof body.updateCheck === 'boolean') patch.updateCheck = body.updateCheck;
+  if (typeof body.publicIpDiscovery === 'boolean') patch.publicIpDiscovery = body.publicIpDiscovery;
   // History / privacy.
   if (body.historyRetentionDays !== undefined) patch.historyRetentionDays = clampNum(body.historyRetentionDays, 0, 3650, 0);
   if (body.logRetentionDays !== undefined) patch.logRetentionDays = clampNum(body.logRetentionDays, 0, 3650, 0);
@@ -22809,8 +22814,7 @@ function printStartupBanner() {
 }
 
 async function detectNetwork() {
-  // Detects the public IP (caches it for links). The external-access test
-  // is NOT run at startup: it triggers on demand from the interface.
+  if (!publicIpDiscoveryEnabled()) { console.log('  • Public IP discovery: disabled by privacy setting\n'); return; }
   try {
     const ip = await getPublicIP();
     if (ip) console.log(`  • Public IP detected : ${ip}`);

@@ -14,5 +14,5 @@ test('rclone configuration wizard is anchored to the top of the viewport', () =>
 });
 
 test('standard page cache-busts the rclone modal positioning CSS', () => {
-  assert.match(html, /style\.css\?v=315/);
+  assert.match(html, /style\.css\?v=316/);
 });

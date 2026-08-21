@@ -16,7 +16,7 @@
       })();
     </script>
     <link rel="manifest" href="/admin-pwa-detect.webmanifest" />
-    <link rel="stylesheet" href="/style.css?v=315" />
+    <link rel="stylesheet" href="/style.css?v=316" />
     <link rel="stylesheet" href="/server-health-dashboard.css?v=3" />
   </head>
   <body>
@@ -2961,6 +2961,11 @@
             <span data-i18n="cfg.updateCheck">Check for updates at startup</span>
           </label>
           <p class="muted sm" data-i18n="cfg.updateCheckHint">Compares the running version against the latest published image tag. No data is sent beyond the version query.</p>
+          <label class="fld opt-check">
+            <input id="cfg-public-ip-discovery" type="checkbox" />
+            <span data-i18n="cfg.publicIpDiscovery">Detect public IP automatically</span>
+          </label>
+          <p class="muted sm" data-i18n="cfg.publicIpDiscoveryHint">Contacts documented public-IP services only when enabled. Disable this to prevent startup public-IP requests.</p>
 
           <div class="cfg-section" data-i18n="cfg.panicTitle">Emergency stop</div>
           <p class="muted sm" data-i18n="cfg.panicDesc">Immediately pause every active link (reversible). Files are left untouched.</p>
@@ -3398,7 +3403,7 @@
     <div id="toast" class="toast hidden"></div>
     <script src="/login-vault.js"></script>
     <script src="/dxcrypto.js"></script>
-    <script src="/app.js?v=346"></script>
+    <script src="/app.js?v=347"></script>
     <script src="/standard-productivity.js?v=4"></script>
     <script src="/server-health-dashboard.js?v=4"></script>
   </body>

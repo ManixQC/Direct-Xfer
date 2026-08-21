@@ -21,9 +21,9 @@ namespace DirectXfer.WindowsServerHost
 {
     internal static class Program
     {
-        internal const string AppVersion = "1.69.2";
-        internal const string RuntimeAppBuild = "1.69.2-launcher125-csharp";
-        internal const string HostVersion = "1.69.2-serverhost98-csharp";
+        internal const string AppVersion = "1.69.3";
+        internal const string RuntimeAppBuild = "1.69.3-launcher126-csharp";
+        internal const string HostVersion = "1.69.3-serverhost99-csharp";
         internal const int DefaultPort = 55750;
         internal const int MaxFallbackPort = 55769;
         internal const int StartupReadyTimeoutMs = 60000;
@@ -113,12 +113,13 @@ namespace DirectXfer.WindowsServerHost
         private static readonly IDictionary<string, string> CriticalRuntimeSha256 =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                { "package.json", "12b21429d3292dcfb4c0ac583300a64bb7efca878b18ceb5b58af222ea48af97" },
-                { "package-lock.json", "d62b247100fcc320f7b647ffac14312864cce671903c62cd62373d687e75c345" },
-                { "server.js", "8452e5cafc4fbf44f735ff6d918d921939b4a8b6dff81751665c4b7e08c47ff9" },
+                { "package.json", "84a78582e27ed6bbade569fc7946b3b02c58a89d85022d6474a659db6a109f34" },
+                { "package-lock.json", "347357d2b0213b587d78f3aad72bdd5c86d15e6b45466b19147a1d13f8bbedb8" },
+                { "server.js", "80c478e7478403c463fdb57459ce3d3dc62e3d29ad4973907b1691806876ff91" },
                 { "lib/server/public-pages.js", "de434eac7cef447abbda40604621a354ff6c23320a42823cdcb8969dcc16c533" },
                 { "lib/server/tls-manager.js", "b82a1b195b6cb36d47d8d431b890e0479aaf9ca8d47f98e8ef9e046390610f7f" },
-                { "lib/server/network-services.js", "fd4a119ca1a75127b82c758c3d3555c12384c01b487bee3b3150a398217e4bdf" },
+                { "lib/server/network-services.js", "b97171bb682f5e862d03a0f3670c48efdfe0d62316e7d24bb69f5d3b06a78cfb" },
+                { "lib/server/windows-install-preferences.js", "2ea81b6c40e0e96aaab8ecff8cee6003db8fd943e43d2b2019c12676671b5494" },
                 { "lib/server/backup-service.js", "65cb07c147b326475a833be6cbc668db733fc8183ec0b4eec919a876b3f04bc2" },
                 { "lib/server/storage-connector-config.js", "04830567b2b2393510dd69dd8c610765252ef7312218068fceba09ec68125437" },
                 { "lib/server/storage-connector-browser.js", "bb3fb333a7d04069cc78151912196dc4eec4d932dcd90bb06ad6de60929c1a7d" },
@@ -128,15 +129,15 @@ namespace DirectXfer.WindowsServerHost
                 { "lib/google-oauth-profile.js", "6a3cac0ad7c419442f57ee28e53c5f8f15bd3dd6f3bb1a1242a415f941ceaa78" },
                 { "lib/google-oauth-broker-client.js", "b64d80e6ce5229b858769e55b2a7420aeaeaa0d8d4b68d4debfc34e991f90f89" },
                 { "lib/server/notification-service.js", "a55beb8d5fdb09754eeb7f7d01974896efaad20dde3b9cf00e83bf4f7a7b9baa" },
-                { "public/app.js", "e78a866969edcc7b9fbe5429a5f9678256d3bd6af3521df033ac0e3172f9c184" },
-                { "pwa/app.js", "830427ae92c83414d1f51bea70c0d8a4b2e7410953809ddffc539f06a2026a79" },
+                { "public/app.js", "38796d8199de3a959bbd93d792524984c900e51f27ca5542998da190523d5b2f" },
+                { "pwa/app.js", "219b6fe1020dd6906757fdea53e5dbe87911988b90f67b74bfc43d4800675a06" },
                 { "lib/dlp-utils.js", "0d8f768c3457ec713199ce9e82f9483be21df2ea01dce6ead26675d240fde768" },
                 { "lib/fd-utils.js", "322abf15ce7a15310d6d27ac1b0ca40892658d5f21198510f7e84b78b0070b13" },
                 { "pwa/dlp-local.js", "246267542621fc92f759438b2295b87f777ba6d6aa88b3c4d23dea25aebe7390" },
                 { "lib/storage-connectors.js", "90cc270a3e713b11460d950d013eee737b5aaaf8cb01d53db75ef3e8f4184e91" },
                 { "lib/web-storage-share.js", "7a575bd6ed1e98eedd748bc96510e8e85a08eeb3c7dff64608a3fc97b3c8bbdf" },
                 { "lib/web-storage-writable.js", "d4a076866d4c09228e261e09405e8a7e3da1a04604c9bbf4c55e2edfac80070f" },
-                { "public/index.html", "dcf22438da4528e49fbea3c45c5181b23033d9a483953ca71a8e256c45b17b75" },
+                { "public/index.html", "a52b905d55cf0e45766c87c2976b27c65138b4f56037eadcb74d6b971fb34960" },
                 { "public/oauth-bridge.html", "7c08c6d54d523b0ed3976293e99fe7e4f43c01ff359fd4be170dfd0f0ab344c3" },
                 { "public/oauth-bridge.css", "32a468581ae0ae93c818fe00217a55cdec62dc5cb4796c748003ad4f71bbbbbb" },
                 { "public/oauth-bridge.js", "853b1582d7367eb4a68cd891d568923a3e399abfad442f36d38c06812cb27f3e" },
@@ -192,6 +193,10 @@ namespace DirectXfer.WindowsServerHost
         }
         private static string ConfigPath { get { return Path.Combine(BaseDirectory, "launcher-config.json"); } }
         private static string SessionPath { get { return Path.Combine(BaseDirectory, "launcher-session.json"); } }
+        private static string InstallUpdateCheckEnableMarker { get { return Path.Combine(BaseDirectory, "install-update-check-enable.flag"); } }
+        private static string InstallUpdateCheckDisableMarker { get { return Path.Combine(BaseDirectory, "install-update-check-disable.flag"); } }
+        private static string InstallPublicIpEnableMarker { get { return Path.Combine(BaseDirectory, "install-public-ip-enable.flag"); } }
+        private static string InstallPublicIpDisableMarker { get { return Path.Combine(BaseDirectory, "install-public-ip-disable.flag"); } }
 
         private static string PortableRoot
         {
@@ -1008,6 +1013,30 @@ namespace DirectXfer.WindowsServerHost
             start.EnvironmentVariables["INBOX_DIR"] = config.inboxDir;
             start.EnvironmentVariables["HOST_ROOT"] = config.hostRoot;
             start.EnvironmentVariables["IMAGES_DIR"] = config.imagesDir;
+            // Inno Setup writes exactly one one-shot marker for each privacy choice.
+            // Node applies the selected values durably to Direct-Xfer settings, then consumes
+            // the marker from this per-user writable directory. This makes the installer
+            // choice effective on upgrades without permanently locking the in-app setting.
+            if (File.Exists(InstallUpdateCheckEnableMarker))
+            {
+                start.EnvironmentVariables["DX_WINDOWS_INSTALL_UPDATE_CHECK"] = "1";
+                start.EnvironmentVariables["DX_WINDOWS_INSTALL_UPDATE_CHECK_MARKER"] = InstallUpdateCheckEnableMarker;
+            }
+            else if (File.Exists(InstallUpdateCheckDisableMarker))
+            {
+                start.EnvironmentVariables["DX_WINDOWS_INSTALL_UPDATE_CHECK"] = "0";
+                start.EnvironmentVariables["DX_WINDOWS_INSTALL_UPDATE_CHECK_MARKER"] = InstallUpdateCheckDisableMarker;
+            }
+            if (File.Exists(InstallPublicIpEnableMarker))
+            {
+                start.EnvironmentVariables["DX_WINDOWS_INSTALL_PUBLIC_IP_DISCOVERY"] = "1";
+                start.EnvironmentVariables["DX_WINDOWS_INSTALL_PUBLIC_IP_DISCOVERY_MARKER"] = InstallPublicIpEnableMarker;
+            }
+            else if (File.Exists(InstallPublicIpDisableMarker))
+            {
+                start.EnvironmentVariables["DX_WINDOWS_INSTALL_PUBLIC_IP_DISCOVERY"] = "0";
+                start.EnvironmentVariables["DX_WINDOWS_INSTALL_PUBLIC_IP_DISCOVERY_MARKER"] = InstallPublicIpDisableMarker;
+            }
             // Explicit administrator overrides always win. rclone and Tesseract are optional
             // Windows components installed per-user by the launcher only after activation.
             // Legacy runtime\rclone and runtime\tesseract paths remain accepted for upgrades

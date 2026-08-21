@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <parameters>
+    <parameter name="version" required="true" />
+  </parameters>
+  <zip-file>
+    <pe-file path="Direct-Xfer-Setup-${version}.exe"
+             product-name="Direct-Xfer"
+             product-version="${version}"
+             file-version="${version}.0"
+             company-name="Direct-Xfer"
+             copyright="Copyright © Direct-Xfer 2026"
+             original-filename="Direct-Xfer-Setup-${version}.exe">
+      <authenticode-sign hash-algorithm="sha256" description="Direct-Xfer Windows Installer" description-url="https://github.com/ManixQC/Direct-Xfer" />
+    </pe-file>
+  </zip-file>
+</artifact-configuration>

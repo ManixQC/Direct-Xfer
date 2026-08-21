@@ -44,7 +44,7 @@ function routeHarness(overrides = {}) {
   return { routes, calls, connector };
 }
 
-test('1.69.2 web-reception browser exposes an in-modal new-folder workflow', () => {
+test('1.69.3 web-reception browser exposes an in-modal new-folder workflow', () => {
   const html = read('public/index.html');
   const app = read('public/app.js');
   const css = read('public/style.css');
@@ -57,12 +57,12 @@ test('1.69.2 web-reception browser exposes an in-modal new-folder workflow', () 
   assert.match(css, /\.web-storage-new-folder\s*\{/);
 });
 
-test('1.69.2 folder names are single safe remote path segments', () => {
+test('1.69.3 folder names are single safe remote path segments', () => {
   assert.equal(cleanFolderName('Client uploads'), 'Client uploads');
   for (const bad of ['', ' ', '.', '..', ' nested ', 'a/b', 'a\\b', 'bad\nname']) assert.equal(cleanFolderName(bad), null);
 });
 
-test('1.69.2 writable connector mkdir creates the folder and returns its selectable path', async () => {
+test('1.69.3 writable connector mkdir creates the folder and returns its selectable path', async () => {
   const h = routeHarness();
   const handler = h.routes.get('POST /storage/connectors/:id/mkdir');
   const res = response();
@@ -72,7 +72,7 @@ test('1.69.2 writable connector mkdir creates the folder and returns its selecta
   assert.deepEqual(h.calls, ['Incoming/August']);
 });
 
-test('1.69.2 mkdir rejects duplicates and read-only connectors without mutating cloud storage', async () => {
+test('1.69.3 mkdir rejects duplicates and read-only connectors without mutating cloud storage', async () => {
   let h = routeHarness({ service:{ list:async()=>[{name:'August', path:'Incoming/August', isDir:true}] } });
   let res = response();
   await h.routes.get('POST /storage/connectors/:id/mkdir')({ params:{id:'c1'}, body:{parentPath:'Incoming', name:'August'} }, res);

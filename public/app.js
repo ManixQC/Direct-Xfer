@@ -595,6 +595,8 @@ const I18N = {
     'cfg.maintenance': 'Maintenance',
     'cfg.updateCheck': 'Vérifier les mises à jour au démarrage',
     'cfg.updateCheckHint': 'Compare la version en cours au dernier tag publié de l’image. Rien n’est transmis au-delà de la requête de version.',
+    'cfg.publicIpDiscovery': 'Détecter automatiquement l’IP publique',
+    'cfg.publicIpDiscoveryHint': 'Contacte uniquement des services publics d’IP documentés lorsque cette option est activée. Désactivez-la pour empêcher ces requêtes au démarrage.',
     'cfg.tfaRequired': 'La double authentification est requise — veuillez la configurer maintenant.',
     'cfg.anonIps': 'Anonymiser les IP des visiteurs (masquer la fin)',
     'cfg.keepNames': 'Conserver les surnoms de clients',
@@ -2282,6 +2284,8 @@ const I18N = {
     'cfg.maintenance': 'Maintenance',
     'cfg.updateCheck': 'Check for updates at startup',
     'cfg.updateCheckHint': 'Compares the running version against the latest published image tag. No data is sent beyond the version query.',
+    'cfg.publicIpDiscovery': 'Detect public IP automatically',
+    'cfg.publicIpDiscoveryHint': 'Contacts documented public-IP services only when enabled. Disable it to prevent startup public-IP requests.',
     'cfg.tfaRequired': 'Two-factor authentication is required — please set it up now.',
     'cfg.anonIps': 'Anonymize visitor IPs (mask the last part)',
     'cfg.keepNames': 'Keep client nicknames',
@@ -3967,6 +3971,8 @@ const I18N = {
     'cfg.maintenance': 'Mantenimiento',
     'cfg.updateCheck': 'Buscar actualizaciones al iniciar',
     'cfg.updateCheckHint': 'Compara la versión en ejecución con la última etiqueta publicada de la imagen. No se envía nada más allá de la consulta de versión.',
+    'cfg.publicIpDiscovery': 'Detectar automáticamente la IP pública',
+    'cfg.publicIpDiscoveryHint': 'Contacta únicamente servicios públicos de IP documentados cuando está activado. Desactívalo para impedir estas solicitudes al inicio.',
     'cfg.tfaRequired': 'Se requiere doble factor: configúralo ahora.',
     'cfg.anonIps': 'Anonimizar las IP de los visitantes (ocultar el final)',
     'cfg.keepNames': 'Conservar los apodos de clientes',
@@ -9286,6 +9292,8 @@ async function populateConfigPage() {
   // Maintenance
   $('cfg-update-check').checked = s.updateCheck !== false;
   $('cfg-update-check').disabled = !!s.updateCheckEnv;
+  $('cfg-public-ip-discovery').checked = s.publicIpDiscovery !== false;
+  $('cfg-public-ip-discovery').disabled = !!s.publicIpDiscoveryEnv;
   // Scheduled bandwidth cap
   $('cfg-sched-enable').checked = !!s.scheduleRateEnabled;
   $('cfg-sched-rate').value = s.scheduleRateKBps ? String(s.scheduleRateKBps) : '';
@@ -11351,6 +11359,7 @@ if ($('config-form')) $('config-form').addEventListener('submit', async (e) => {
     receptionStorageCapGB: $('cfg-reception-cap') ? (parseFloat($('cfg-reception-cap').value) || 0) : 0,
     diskFreeWarnPercent: $('cfg-disk-warn') ? Math.max(0, Math.min(50, parseInt($('cfg-disk-warn').value, 10) || 0)) : 10,
     updateCheck: $('cfg-update-check').checked,
+    publicIpDiscovery: $('cfg-public-ip-discovery').checked,
     scheduleRateEnabled: $('cfg-sched-enable').checked,
     scheduleRateKBps: parseInt($('cfg-sched-rate').value, 10) || 0,
     scheduleStart: $('cfg-sched-start').value || '08:00',

@@ -39,7 +39,7 @@ function assertTokenConfigCommand(calls){
   assert.ok(probe,'remote must still be verified after creation');
 }
 
-test('1.68.3 broker OAuth keeps the token already issued by Direct-Xfer instead of starting a second rclone OAuth flow',async()=>{
+test('1.69.0 broker OAuth keeps the token already issued by Direct-Xfer instead of starting a second rclone OAuth flow',async()=>{
   const {service,calls}=fakeService();
   await service.createGoogleBrokerRemote('gdrive',{
     clientId:'dxc_abcdefghijk',
@@ -50,7 +50,7 @@ test('1.68.3 broker OAuth keeps the token already issued by Direct-Xfer instead 
   assertTokenConfigCommand(calls);
 });
 
-test('1.68.3 local Web OAuth also keeps its completed Google token during rclone remote creation',async()=>{
+test('1.69.0 local Web OAuth also keeps its completed Google token during rclone remote creation',async()=>{
   const {service,calls}=fakeService();
   await service.createGoogleOAuthTokenRemote('gdrive',{
     clientId:'1234567890-test.apps.googleusercontent.com',

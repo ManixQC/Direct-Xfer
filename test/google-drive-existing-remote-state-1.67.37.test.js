@@ -11,7 +11,7 @@ const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8').replace(/\r\
 
 function tempDir(){ return fs.mkdtempSync(path.join(os.tmpdir(), 'dx-existing-remote-')); }
 
-test('1.68.3 reads only safe Google scope metadata from an existing rclone remote', async () => {
+test('1.69.0 reads only safe Google scope metadata from an existing rclone remote', async () => {
   const dir = tempDir();
   const configPath = path.join(dir, 'rclone.conf');
   fs.writeFileSync(configPath, [
@@ -38,7 +38,7 @@ test('1.68.3 reads only safe Google scope metadata from an existing rclone remot
   assert.equal(JSON.stringify(info).includes('super-secret-value'), false);
 });
 
-test('1.68.3 Google OAuth start treats an existing remote as already connected rather than an OAuth error', () => {
+test('1.69.0 Google OAuth start treats an existing remote as already connected rather than an OAuth error', () => {
   const route = read('lib/server/storage-connector-config.js');
   const start = route.indexOf("adminRouter.post('/storage/remotes/google-oauth/start'");
   const end = route.indexOf("adminRouter.get('/storage/oauth/google-session/:id'", start);
@@ -51,7 +51,7 @@ test('1.68.3 Google OAuth start treats an existing remote as already connected r
   assert.doesNotMatch(block, /existing\.includes\(remote\) && !replace\) return res\.status\(409\)/);
 });
 
-test('1.68.3 connector UI does not show Waiting for Google for an existing configured remote', () => {
+test('1.69.0 connector UI does not show Waiting for Google for an existing configured remote', () => {
   const app = read('public/app.js');
   assert.match(app, /connector\.googleConfiguredScope/);
   assert.match(app, /if\(data\.status==='already-connected'\)/);
@@ -60,7 +60,7 @@ test('1.68.3 connector UI does not show Waiting for Google for an existing confi
   assert.match(app, /data&&data\.status==='already-connected'/);
 });
 
-test('1.68.3 configuration page always reloads rclone remotes even before a Direct-Xfer connector record exists', () => {
+test('1.69.0 configuration page always reloads rclone remotes even before a Direct-Xfer connector record exists', () => {
   const app = read('public/app.js');
   const start = app.indexOf('async function refreshStorageConnectors(forceProbe)');
   const end = app.indexOf("if ($('connector-add'))", start);

@@ -32,7 +32,7 @@ test('1.67.26 Configuration page is owner/admin only and moves shared account co
   assert.match(app, /if \(!\['owner','admin',''\]\.includes\(state\.role \|\| ''\)\) return false;/);
   assert.match(app, /config: '#config-page \.topbar-menus'/);
   assert.match(app, /placeUserMenu\('config'\)/);
-  assert.match(app, /'config-page'\]\.some/);
+  assert.match(app, /'config-page'(?:, 'notifications-page')?\]\.some/);
 });
 
 test('1.67.26 optional rclone absence cannot turn connector listing into an HTTP 500', () => {

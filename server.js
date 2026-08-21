@@ -22457,6 +22457,13 @@ app.get('/configuration', adminGuard, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// The notification center is a client-routed full page of the SPA. Serving the
+// same shell here keeps /notifications directly reloadable behind the admin guard.
+app.get('/notifications', adminGuard, (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache');
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 // The Images admin surface is a client-routed sub-page of the SPA (URL /images).
 // Serving the same index.html here means a direct hit or a reload on /images lands on
 // the app — which reads the URL and opens the Images page — instead of a 404. It sits

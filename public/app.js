@@ -158,6 +158,8 @@
 const I18N = {
   fr: {
     'notifications.title': 'Notifications',
+    'notifications.back': 'Retour',
+    'notifications.pageHint': 'Consultez, filtrez et gérez toutes les notifications de ce compte.',
     'notifications.loading': 'Chargement…',
     'notifications.empty': 'Aucune notification.',
     'notifications.firstView': 'Première vue de « {name} »',
@@ -1840,6 +1842,8 @@ const I18N = {
 
   en: {
     'notifications.title': 'Notifications',
+    'notifications.back': 'Back',
+    'notifications.pageHint': 'Review, filter and manage all notifications for this account.',
     'notifications.loading': 'Loading…',
     'notifications.empty': 'No notifications.',
     'notifications.firstView': 'First view of “{name}”',
@@ -3520,6 +3524,8 @@ const I18N = {
 
   es: {
     'notifications.title': 'Notificaciones',
+    'notifications.back': 'Volver',
+    'notifications.pageHint': 'Consulta, filtra y gestiona todas las notificaciones de esta cuenta.',
     'notifications.loading': 'Cargando…',
     'notifications.empty': 'No hay notificaciones.',
     'notifications.firstView': 'Primera vista de «{name}»',
@@ -5970,7 +5976,7 @@ function el(tag, opts = {}) {
 }
 
 function isLoggedIn() {
-  return ['app-view', 'images-page', 'dashboards-page', 'system-health-page', 'activity-page', 'config-page'].some((id) => {
+  return ['app-view', 'images-page', 'dashboards-page', 'system-health-page', 'activity-page', 'config-page', 'notifications-page'].some((id) => {
     const view = $(id);
     return !!view && !view.classList.contains('hidden');
   });
@@ -6153,7 +6159,7 @@ function showLogin() {
     renderNotifications(); closeNotificationsMenu();
   } catch (_) {}
   placeUserMenu('admin');
-  ['images-page', 'dashboards-page', 'system-health-page', 'activity-page', 'config-page'].forEach((id) => {
+  ['images-page', 'dashboards-page', 'system-health-page', 'activity-page', 'config-page', 'notifications-page'].forEach((id) => {
     const page = $(id);
     if (page) page.classList.add('hidden');
   });
@@ -6167,7 +6173,7 @@ function showLogin() {
 }
 function showApp() {
   $('login-view').classList.add('hidden');
-  ['images-page', 'dashboards-page', 'system-health-page', 'activity-page', 'config-page'].forEach((id) => {
+  ['images-page', 'dashboards-page', 'system-health-page', 'activity-page', 'config-page', 'notifications-page'].forEach((id) => {
     const page = $(id);
     if (page) page.classList.add('hidden');
   });
@@ -6452,7 +6458,7 @@ function announceNewNotifications(fresh) {
   if (newest) toast('🔔 ' + notificationTitleText(newest), (newest.severity === 'critical' || newest.severity === 'warning') ? 'warn' : '');
   if (notificationsSoundOn) playNotificationSound();
 }
-// The panel renders a bounded page and grows on demand rather than
+// The notification page renders a bounded batch and grows on demand rather than
 // building up to NOTIFICATION_CENTER_MAX_PER_ACCOUNT (500) rows in one pass.
 const NOTIFICATIONS_PAGE_SIZE = 20;
 let notificationsShown = NOTIFICATIONS_PAGE_SIZE;
@@ -6476,6 +6482,10 @@ function openNotificationTarget(n) {
   if (typeof closeImagesPage === 'function') closeImagesPage();
   if (typeof hideDashboardsView === 'function' && typeof dashboardsPageOpen === 'function' && dashboardsPageOpen()) hideDashboardsView(true);
   if (typeof hideSystemHealthView === 'function' && typeof systemHealthPageOpen === 'function' && systemHealthPageOpen()) hideSystemHealthView(true);
+  if (notificationsPageOpen()) {
+    try { if (location.pathname !== '/') history.pushState({ dxView:'home' }, '', '/'); } catch (_) {}
+    syncAdminRouteFromUrl();
+  }
   try { window.scrollTo(0, 0); } catch (_) {}
 }
 // Contextual quick actions per notification, wired to existing safe
@@ -6514,7 +6524,10 @@ function renderNotifications() {
   const filtersActive = !!(($('notifications-category-filter')&&$('notifications-category-filter').value)||($('notifications-severity-filter')&&$('notifications-severity-filter').value)||normalizeNotificationSearch(($('notifications-search')&&$('notifications-search').value)||''));
   const unreadCount = rows.reduce((n, row) => n + ((row && (row.unread === true || !(Number(row.readAt)>0))) ? 1 : 0), 0);
   if (badge) { badge.textContent = unreadCount > 99 ? '99+' : String(unreadCount); badge.classList.toggle('hidden', !unreadCount); }
-  if (count) count.textContent = rows.length ? (filtersActive ? t('notifications.filteredCount', { shown:visibleRows.length, total:rows.length }) : t('notifications.count', { n: rows.length })) : '';
+  if (count) {
+    count.textContent = rows.length ? (filtersActive ? t('notifications.filteredCount', { shown:visibleRows.length, total:rows.length }) : t('notifications.count', { n: rows.length })) : '';
+    count.classList.toggle('hidden', !rows.length);
+  }
   if (clear) clear.classList.toggle('hidden', !rows.length);
   list.textContent = '';
   if (!rows.length) { list.appendChild(el('div', { class:'muted sm', text:t('notifications.empty') })); return; }
@@ -6570,8 +6583,7 @@ function renderNotifications() {
 let notificationsReadInFlight = false;
 let notificationsReadSeq = 0;
 function notificationsMenuIsOpen() {
-  const d = $('notifications-dropdown');
-  return !!(d && !d.classList.contains('hidden'));
+  return notificationsPageOpen();
 }
 function visibleNotificationReadIds() {
   const visible = accountNotifications.filter(notificationMatchesFilters);
@@ -6660,10 +6672,11 @@ async function refreshNotifications(silent) {
     notificationsRequestInFlight = false;
   }
 }
+// Compatibility helper retained for callers that used to dismiss the dropdown.
+// Notifications now live on a full page, so this only collapses the optional
+// preferences panel; page navigation is handled by closeNotificationsPage().
 function closeNotificationsMenu() {
-  const d=$('notifications-dropdown'), b=$('notifications-btn'), prefs=$('notifications-prefs'), prefsBtn=$('notifications-prefs-btn');
-  if(d)d.classList.add('hidden');
-  if(b)b.setAttribute('aria-expanded','false');
+  const prefs=$('notifications-prefs'), prefsBtn=$('notifications-prefs-btn');
   if(prefs)prefs.classList.add('hidden');
   if(prefsBtn)prefsBtn.setAttribute('aria-expanded','false');
 }
@@ -6683,7 +6696,7 @@ function stopNotificationsPolling() {
   notificationsReadSeq += 1;
   notificationsReadInFlight = false;
   // Re-prime arrival detection so the next account's backlog does not toast, and
-  // collapse the panel back to its first page.
+  // collapse the notification list back to its first batch.
   notificationsSeenIds = null;
   notificationsShown = NOTIFICATIONS_PAGE_SIZE;
 }
@@ -6698,11 +6711,66 @@ function startNotificationsPolling() {
     refreshNotifications(true);
   }
 }
+// --- Notifications page — independent full admin sub-page -------------------
+const NOTIFICATIONS_PATH = '/notifications';
+function notificationsPageOpen() {
+  const page = $('notifications-page');
+  return !!page && !page.classList.contains('hidden');
+}
+function showNotificationsView() {
+  closeUserMenu();
+  stopDashboardAutoRefresh();
+  ['images-page','dashboards-page','system-health-page','activity-page','config-page'].forEach((id) => {
+    const page = $(id); if (page) page.classList.add('hidden');
+  });
+  $('app-view').classList.add('hidden');
+  placeUserMenu('notifications');
+  $('notifications-page').classList.remove('hidden');
+  notificationsShown = NOTIFICATIONS_PAGE_SIZE;
+  renderNotifications();
+  updateNotificationsSoundBtn();
+  void markVisibleNotificationsRead();
+  void refreshNotifications(true);
+  document.title = t('app.name') + ' — ' + t('notifications.title');
+  window.scrollTo(0, 0);
+  return true;
+}
+function hideNotificationsView(showHome = true) {
+  const page = $('notifications-page'); if (!page) return;
+  closeNotificationsMenu();
+  closeUserMenu();
+  page.classList.add('hidden');
+  if (showHome) {
+    placeUserMenu('admin');
+    $('app-view').classList.remove('hidden');
+    document.title = t('app.docTitle');
+  }
+}
+function openNotificationsPage() {
+  if (notificationsPageOpen()) {
+    renderNotifications();
+    void markVisibleNotificationsRead();
+    void refreshNotifications(true);
+    return;
+  }
+  showNotificationsView();
+  try { if (location.pathname !== NOTIFICATIONS_PATH) history.pushState({ dxView:'notifications' }, '', NOTIFICATIONS_PATH); } catch (_) {}
+}
+function closeNotificationsPage() {
+  if (!notificationsPageOpen()) return;
+  if (history.state && history.state.dxView === 'notifications') history.back();
+  else {
+    hideNotificationsView();
+    if (location.pathname === NOTIFICATIONS_PATH) { try { history.replaceState({ dxView:'home' }, '', '/'); } catch (_) {} }
+  }
+}
+if ($('notifications-back')) $('notifications-back').addEventListener('click', closeNotificationsPage);
+
 // A filter/search change restarts paging so the first matches are always shown.
 function onNotificationFilterChanged() { notificationsShown = NOTIFICATIONS_PAGE_SIZE; renderNotifications(); if (notificationsMenuIsOpen()) void markVisibleNotificationsRead(); }
 ['notifications-category-filter','notifications-severity-filter'].forEach((id)=>{ const node=$(id); if(node) node.addEventListener('change', onNotificationFilterChanged); });
 if ($('notifications-search')) $('notifications-search').addEventListener('input', onNotificationFilterChanged);
-if ($('notifications-btn')) $('notifications-btn').addEventListener('click', (e)=>{ e.stopPropagation(); closeUserMenu(); closeDashMenu(); const d=$('notifications-dropdown'); if(!d)return; const opening=d.classList.contains('hidden'); d.classList.toggle('hidden'); $('notifications-btn').setAttribute('aria-expanded', opening?'true':'false'); if(opening){ notificationsShown = NOTIFICATIONS_PAGE_SIZE; renderNotifications(); void markVisibleNotificationsRead(); refreshNotifications(true); } });
+if ($('notifications-btn')) $('notifications-btn').addEventListener('click', (e)=>{ e.stopPropagation(); closeUserMenu(); closeDashMenu(); openNotificationsPage(); });
 if ($('notifications-clear')) $('notifications-clear').addEventListener('click', async (e)=>{ e.stopPropagation(); if(!accountNotifications.length || !confirm(t('notifications.clearConfirm')))return; await api('DELETE','/api/notifications'); notificationsRequestSeq += 1; accountNotifications=[]; renderNotifications(); if(!notificationsRequestInFlight) await refreshNotifications(true); });
 
 // Optional arrival sound, remembered locally (default off).
@@ -6892,8 +6960,7 @@ if ($('notifications-prefs-btn')) {
     if (opening && !notificationPrefsLoaded) loadNotificationPrefs();
   });
 }
-document.addEventListener('click',(e)=>{ if(e.target.closest&&e.target.closest('.notifications-menu'))return; closeNotificationsMenu(); });
-document.addEventListener('keydown',(e)=>{ if(e.key==='Escape')closeNotificationsMenu(); });
+document.addEventListener('keydown',(e)=>{ if(e.key==='Escape' && notificationsPageOpen() && !document.querySelector('.overlay:not(.hidden)')) closeNotificationsPage(); });
 
 // --- User menu (account icon) ---
 // Reuse the exact same menu on all full-page views. Moving the existing node
@@ -6910,9 +6977,10 @@ function placeUserMenu(view) {
     systemHealth: '#system-health-page .topbar-menus',
     activity: '#activity-page .topbar-menus',
     config: '#config-page .topbar-menus',
+    notifications: '#notifications-page .topbar-menus',
   };
   const target = document.querySelector(targets[view] || targets.admin);
-  if (notifications && target && notifications.parentElement !== target) target.appendChild(notifications);
+  if (notifications && target && view !== 'notifications' && notifications.parentElement !== target) target.appendChild(notifications);
   if (menu && target && menu.parentElement !== target) target.appendChild(menu);
   applySessionIdentity();
 }
@@ -6945,6 +7013,7 @@ function activityPageOpen() {
 function showActivityView() {
   if (!['owner','admin','auditor',''].includes(state.role || '')) return false;
   closeUserMenu();
+  const notificationsPage = $('notifications-page'); if (notificationsPage) notificationsPage.classList.add('hidden');
   stopDashboardAutoRefresh();
   const imagesPage = $('images-page'); if (imagesPage) imagesPage.classList.add('hidden');
   const dashboardsPage = $('dashboards-page'); if (dashboardsPage) dashboardsPage.classList.add('hidden');
@@ -7063,6 +7132,7 @@ function setDashboardTab(tab, updateUrl = true) {
 
 function showDashboardsView(tab = state.dashboardTab) {
   closeUserMenu();
+  const notificationsPage = $('notifications-page'); if (notificationsPage) notificationsPage.classList.add('hidden');
   const imagesPage = $('images-page');
   if (imagesPage) imagesPage.classList.add('hidden');
   const activityPage = $('activity-page');
@@ -7137,6 +7207,7 @@ function systemHealthPageOpen() {
 function showSystemHealthView() {
   if (!['owner','admin',''].includes(state.role || '')) return false;
   closeUserMenu();
+  const notificationsPage = $('notifications-page'); if (notificationsPage) notificationsPage.classList.add('hidden');
   stopDashboardAutoRefresh();
   const imagesPage = $('images-page'); if (imagesPage) imagesPage.classList.add('hidden');
   const dashboardsPage = $('dashboards-page'); if (dashboardsPage) dashboardsPage.classList.add('hidden');
@@ -7214,6 +7285,7 @@ function syncImageSettingsFields() {
 function showImagesView() {
   syncImageSettingsFields();
   closeUserMenu();
+  const notificationsPage = $('notifications-page'); if (notificationsPage) notificationsPage.classList.add('hidden');
   stopDashboardAutoRefresh();
   const dashboardsPage = $('dashboards-page');
   if (dashboardsPage) dashboardsPage.classList.add('hidden');
@@ -7273,6 +7345,10 @@ function closeImagesPage() {
 function syncAdminRouteFromUrl() {
   if (!isLoggedIn()) return;
 
+  if (location.pathname === NOTIFICATIONS_PATH) {
+    showNotificationsView();
+    return;
+  }
   if (location.pathname === ACTIVITY_PATH) {
     if (showActivityView()) return;
     try { history.replaceState({ dxView:'home' }, '', '/'); } catch (_) {}
@@ -7299,6 +7375,7 @@ function syncAdminRouteFromUrl() {
   hideSystemHealthView(false);
   hideImagesView(false);
   hideConfigView(false);
+  hideNotificationsView(false);
   placeUserMenu('admin');
   $('app-view').classList.remove('hidden');
   document.title = t('app.docTitle');
@@ -7324,7 +7401,7 @@ if ($('images-back')) $('images-back').addEventListener('click', closeImagesPage
 // shares admin page, regardless of how the current sub-page was reached.
 function goToSharesHome() {
   if (!isLoggedIn()) return;
-  if (activityPageOpen() || dashboardsPageOpen() || systemHealthPageOpen() || imagesPageOpen() || configPageOpen()) {
+  if (activityPageOpen() || dashboardsPageOpen() || systemHealthPageOpen() || imagesPageOpen() || configPageOpen() || notificationsPageOpen()) {
     try {
       if (location.pathname !== '/') history.pushState({ dxView: 'home' }, '', '/');
     } catch (_) {}
@@ -10751,6 +10828,7 @@ function configPageOpen() {
 function showConfigView() {
   if (!['owner','admin',''].includes(state.role || '')) return false;
   closeUserMenu();
+  const notificationsPage = $('notifications-page'); if (notificationsPage) notificationsPage.classList.add('hidden');
   stopDashboardAutoRefresh();
   ['images-page','dashboards-page','system-health-page','activity-page'].forEach((id) => {
     const page = $(id); if (page) page.classList.add('hidden');

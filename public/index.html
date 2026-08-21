@@ -16,7 +16,7 @@
       })();
     </script>
     <link rel="manifest" href="/admin-pwa-detect.webmanifest" />
-    <link rel="stylesheet" href="/style.css?v=311" />
+    <link rel="stylesheet" href="/style.css?v=313" />
     <link rel="stylesheet" href="/server-health-dashboard.css?v=3" />
   </head>
   <body>
@@ -137,44 +137,10 @@
             </button>
           </div>
           <div class="notifications-menu">
-            <button id="notifications-btn" class="icon-btn user-btn notifications-btn" aria-label="Notifications" data-i18n-aria="notifications.title" data-i18n-title="notifications.title" title="Notifications" aria-haspopup="true" aria-expanded="false">
+            <button id="notifications-btn" class="icon-btn user-btn notifications-btn" aria-label="Notifications" data-i18n-aria="notifications.title" data-i18n-title="notifications.title" title="Notifications" aria-controls="notifications-page">
               <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
               <span id="notifications-badge" class="notification-badge hidden">0</span>
             </button>
-            <div id="notifications-dropdown" class="dropdown notification-dropdown hidden" role="menu">
-              <div class="notification-head"><strong data-i18n="notifications.title">Notifications</strong><span id="notifications-count" class="muted sm"></span><span class="notification-head-actions"><button id="notifications-sound" class="btn ghost sm notification-head-btn notification-sound-off" type="button" aria-pressed="false"><span class="notification-head-glyph notification-sound-glyph" aria-hidden="true"></span></button><button id="notifications-prefs-btn" class="btn ghost sm notification-head-btn" type="button" aria-expanded="false" title="Préférences" data-i18n-title="notifications.prefs"><span class="notification-head-glyph notification-settings-glyph" aria-hidden="true"></span></button></span></div>
-              <div id="notifications-prefs" class="notification-prefs hidden"></div>
-              <div class="notification-filters" aria-label="Filtres de notifications" data-i18n-aria="notifications.filters">
-                <select id="notifications-category-filter" class="notification-filter-select" aria-label="Filtrer par catégorie" data-i18n-aria="notifications.categoryFilter">
-                  <option value="" data-i18n="notifications.allCategories">Toutes les catégories</option>
-                  <option value="visitors" data-i18n="notifications.category.visitors">Visiteurs</option>
-                  <option value="thresholds" data-i18n="notifications.category.thresholds">Seuils</option>
-                  <option value="traffic" data-i18n="notifications.category.traffic">Trafic</option>
-                  <option value="images" data-i18n="notifications.category.images">Images</option>
-                  <option value="pwa" data-i18n="notifications.category.pwa">PWA</option>
-                  <option value="receptions" data-i18n="notifications.category.receptions">Réceptions</option>
-                  <option value="search" data-i18n="notifications.category.search">Recherche / OCR</option>
-                  <option value="security" data-i18n="notifications.category.security">Sécurité</option>
-                  <option value="shares" data-i18n="notifications.category.shares">Partages</option>
-                  <option value="maintenance" data-i18n="notifications.category.maintenance">Maintenance</option>
-                  <option value="network" data-i18n="notifications.category.network">Réseau</option>
-                  <option value="restarts" data-i18n="notifications.category.restarts">Redémarrages</option>
-                  <option value="updates" data-i18n="notifications.category.updates">Mises à jour</option>
-                  <option value="system_health" data-i18n="notifications.category.system_health">Santé système</option>
-                  <option value="transfers" data-i18n="notifications.category.transfers">Transferts</option>
-                </select>
-                <select id="notifications-severity-filter" class="notification-filter-select" aria-label="Filtrer par gravité" data-i18n-aria="notifications.severityFilter">
-                  <option value="" data-i18n="notifications.allSeverities">Toutes les gravités</option>
-                  <option value="info" data-i18n="notifications.severity.info">Information</option>
-                  <option value="success" data-i18n="notifications.severity.success">Succès</option>
-                  <option value="warning" data-i18n="notifications.severity.warning">Avertissement</option>
-                  <option value="critical" data-i18n="notifications.severity.critical">Critique</option>
-                </select>
-                <input id="notifications-search" class="notification-search" type="search" autocomplete="off" spellcheck="false" placeholder="Rechercher…" data-i18n-ph="notifications.search" aria-label="Rechercher dans les notifications" data-i18n-aria="notifications.searchAria">
-              </div>
-              <div id="notifications-list" class="notification-list"><div class="muted sm" data-i18n="notifications.loading">Chargement…</div></div>
-              <button id="notifications-clear" class="btn ghost sm notification-clear hidden" type="button" data-i18n="notifications.clearAll">Tout supprimer</button>
-            </div>
           </div>
           <div class="user-menu">
             <button id="user-btn" class="icon-btn user-btn" aria-label="Account" aria-haspopup="true">
@@ -2355,6 +2321,66 @@
       </div>
     </div>
 
+    <!-- ===================== Notifications (full page) ===================== -->
+    <main id="notifications-page" class="app-view notifications-page hidden">
+      <header class="topbar">
+        <div class="brand">
+          <button id="notifications-back" class="icon-btn" data-i18n-title="notifications.back" title="Retour" aria-label="Retour" data-i18n-aria="notifications.back">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M15.5 4.5 8 12l7.5 7.5 1.4-1.4L10.8 12l6.1-6.1z"/></svg>
+          </button>
+          <img class="brand-logo brand-home" src="/logo.svg" alt="" role="link" tabindex="0" data-i18n-title="menu.backToShares" title="Back to shares" />
+          <span class="brand-home" role="link" tabindex="0" data-i18n-title="menu.backToShares" title="Back to shares" data-i18n="notifications.title">Notifications</span>
+        </div>
+        <div class="topbar-menus"></div>
+      </header>
+
+      <section class="card notifications-page-card" aria-labelledby="notifications-page-title">
+        <div class="card-head notifications-page-head">
+          <div>
+            <h2 id="notifications-page-title"><span data-i18n="notifications.title">Notifications</span> <span id="notifications-count" class="count"></span></h2>
+            <p class="muted sm notifications-page-hint" data-i18n="notifications.pageHint">Consultez, filtrez et gérez toutes les notifications de ce compte.</p>
+          </div>
+          <div class="card-head-actions notification-page-actions">
+            <button id="notifications-sound" class="btn ghost sm notification-head-btn notification-sound-off" type="button" aria-pressed="false"><span class="notification-head-glyph notification-sound-glyph" aria-hidden="true"></span></button>
+            <button id="notifications-prefs-btn" class="btn ghost sm notification-head-btn" type="button" aria-expanded="false" aria-controls="notifications-prefs" title="Préférences" data-i18n-title="notifications.prefs"><span class="notification-head-glyph notification-settings-glyph" aria-hidden="true"></span></button>
+            <button id="notifications-clear" class="btn danger sm notification-clear hidden" type="button" data-i18n="notifications.clearAll">Tout supprimer</button>
+          </div>
+        </div>
+        <div id="notifications-prefs" class="notification-prefs hidden"></div>
+        <div class="notification-filters" aria-label="Filtres de notifications" data-i18n-aria="notifications.filters">
+          <select id="notifications-category-filter" class="notification-filter-select" aria-label="Filtrer par catégorie" data-i18n-aria="notifications.categoryFilter">
+            <option value="" data-i18n="notifications.allCategories">Toutes les catégories</option>
+            <option value="visitors" data-i18n="notifications.category.visitors">Visiteurs</option>
+            <option value="thresholds" data-i18n="notifications.category.thresholds">Seuils</option>
+            <option value="traffic" data-i18n="notifications.category.traffic">Trafic</option>
+            <option value="images" data-i18n="notifications.category.images">Images</option>
+            <option value="pwa" data-i18n="notifications.category.pwa">PWA</option>
+            <option value="receptions" data-i18n="notifications.category.receptions">Réceptions</option>
+            <option value="search" data-i18n="notifications.category.search">Recherche / OCR</option>
+            <option value="security" data-i18n="notifications.category.security">Sécurité</option>
+            <option value="shares" data-i18n="notifications.category.shares">Partages</option>
+            <option value="maintenance" data-i18n="notifications.category.maintenance">Maintenance</option>
+            <option value="network" data-i18n="notifications.category.network">Réseau</option>
+            <option value="restarts" data-i18n="notifications.category.restarts">Redémarrages</option>
+            <option value="updates" data-i18n="notifications.category.updates">Mises à jour</option>
+            <option value="system_health" data-i18n="notifications.category.system_health">Santé système</option>
+            <option value="transfers" data-i18n="notifications.category.transfers">Transferts</option>
+          </select>
+          <select id="notifications-severity-filter" class="notification-filter-select" aria-label="Filtrer par gravité" data-i18n-aria="notifications.severityFilter">
+            <option value="" data-i18n="notifications.allSeverities">Toutes les gravités</option>
+            <option value="info" data-i18n="notifications.severity.info">Information</option>
+            <option value="success" data-i18n="notifications.severity.success">Succès</option>
+            <option value="warning" data-i18n="notifications.severity.warning">Avertissement</option>
+            <option value="critical" data-i18n="notifications.severity.critical">Critique</option>
+          </select>
+          <input id="notifications-search" class="notification-search" type="search" autocomplete="off" spellcheck="false" placeholder="Rechercher…" data-i18n-ph="notifications.search" aria-label="Rechercher dans les notifications" data-i18n-aria="notifications.searchAria">
+        </div>
+        <div id="notifications-list" class="notification-list"><div class="muted sm" data-i18n="notifications.loading">Chargement…</div></div>
+      </section>
+
+      <footer class="app-footer">Direct-Xfer <span class="app-year"></span> · <span class="app-version"></span></footer>
+    </main>
+
     <!-- ===================== Configuration (full page) ===================== -->
     <main id="config-page" class="app-view hidden">
       <header class="topbar">
@@ -3372,7 +3398,7 @@
     <div id="toast" class="toast hidden"></div>
     <script src="/login-vault.js"></script>
     <script src="/dxcrypto.js"></script>
-    <script src="/app.js?v=341"></script>
+    <script src="/app.js?v=343"></script>
     <script src="/standard-productivity.js?v=4"></script>
     <script src="/server-health-dashboard.js?v=4"></script>
   </body>

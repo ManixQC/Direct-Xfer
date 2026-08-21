@@ -779,6 +779,13 @@ code {
   width: 88px;
   height: 88px;
 }
+#notifications-page .brand {
+  font-size: 2.4rem;
+}
+#notifications-page .brand-logo {
+  width: 88px;
+  height: 88px;
+}
 
 .card {
   background: linear-gradient(180deg, var(--card-2) 0%, var(--card) 100%);
@@ -3564,19 +3571,16 @@ body[data-role="auditor"] .album-url .clone-btn {
   display: inline-grid; place-items: center; border-radius: 999px; background: var(--danger); color: #fff;
   font-size: .58rem; font-weight: 900; line-height: 1; box-shadow: 0 0 0 2px var(--card-2);
 }
-.notification-dropdown {
-  width:min(390px, calc(100vw - 24px));
-  max-height:min(540px, calc(100vh - 82px));
-  max-height:min(540px, calc(100dvh - 82px));
-  overflow:hidden;
-  min-height:0;
-}
-.notification-head { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 9px 9px; border-bottom:1px solid var(--border-soft); }
-.notification-filters { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:6px; padding:8px 4px 5px; }
-.notification-filter-select, .notification-search { width:100%; min-width:0; height:34px; padding:0 9px; border:1px solid var(--border); border-radius:8px; background:var(--card); color:var(--text); font:inherit; font-size:.76rem; }
-.notification-search { grid-column:1 / -1; }
+.notifications-page-card { min-height: 440px; }
+.notifications-page-head { align-items:flex-start; }
+.notifications-page-head > div:first-child { min-width:0; }
+.notifications-page-hint { margin:6px 0 0; }
+.notification-page-actions { flex-wrap:wrap; justify-content:flex-end; }
+.notification-filters { display:grid; grid-template-columns:minmax(180px,220px) minmax(180px,220px) minmax(240px,1fr); gap:8px; padding:0 0 16px; }
+.notification-filter-select, .notification-search { width:100%; min-width:0; height:38px; padding:0 10px; border:1px solid var(--border); border-radius:9px; background:var(--card); color:var(--text); font:inherit; font-size:.82rem; }
+.notification-search { grid-column:auto; }
 .notification-filter-select:focus, .notification-search:focus { outline:2px solid color-mix(in srgb,var(--accent) 55%,transparent); outline-offset:1px; }
-.notification-list { display:flex; flex:1 1 180px; flex-direction:column; gap:4px; overflow:auto; min-height:44px; max-height:330px; padding:4px 0; overscroll-behavior:contain; }
+.notification-list { display:flex; flex-direction:column; gap:8px; min-height:72px; padding:0; }
 .notification-item { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; align-items:start; padding:9px; border-radius:9px; background:color-mix(in srgb,var(--card) 74%,transparent); }
 .notification-item-main { min-width:0; display:grid; gap:3px; }
 .notification-item-title { font-size:.88rem; font-weight:750; overflow-wrap:anywhere; }
@@ -3660,6 +3664,33 @@ body[data-role="auditor"] .album-url .clone-btn {
 .notification-prefs-hint { margin-bottom:3px; }
 .notification-pref-row { display:flex; align-items:center; gap:8px; font-size:.8rem; cursor:pointer; }
 .notification-pref-row input { width:16px; height:16px; accent-color:var(--accent); }
+#notifications-page .notification-prefs {
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  max-height:none;
+  overflow:visible;
+  flex:none;
+  padding:12px;
+  margin:0 0 16px;
+  border:1px solid var(--border);
+  border-radius:10px;
+  background:color-mix(in srgb,var(--card) 72%,transparent);
+}
+#notifications-page .notification-prefs-hint { grid-column:1 / -1; }
+#notifications-page .notification-item { padding:14px 16px; gap:12px; border:1px solid color-mix(in srgb,var(--border) 75%,transparent); }
+#notifications-page .notification-item-title { font-size:.98rem; }
+#notifications-page .notification-item-meta { font-size:.8rem; }
+#notifications-page .notification-loadmore { width:100%; margin:4px 0 0; min-height:40px; }
+#notifications-page .notification-clear { margin:0; }
+@media (max-width: 760px) {
+  #notifications-page .brand { font-size:1.35rem; }
+  #notifications-page .brand-logo { width:52px; height:52px; }
+  #notifications-page .notification-filters { grid-template-columns:1fr; }
+  #notifications-page .notification-search { grid-column:1; }
+  #notifications-page .notification-prefs { grid-template-columns:1fr; }
+  #notifications-page .notification-prefs-hint { grid-column:1; }
+  #notifications-page .notifications-page-head { align-items:stretch; }
+  #notifications-page .notification-page-actions { width:100%; justify-content:flex-start; }
+}
 
 /* Notification-center preferences exposed in Configuration. */
 .notification-settings-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin:8px 0 4px; }

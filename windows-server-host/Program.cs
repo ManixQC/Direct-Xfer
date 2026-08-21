@@ -21,9 +21,9 @@ namespace DirectXfer.WindowsServerHost
 {
     internal static class Program
     {
-        internal const string AppVersion = "1.68.3";
-        internal const string RuntimeAppBuild = "1.68.3-launcher125-csharp";
-        internal const string HostVersion = "1.68.3-serverhost98-csharp";
+        internal const string AppVersion = "1.69.0";
+        internal const string RuntimeAppBuild = "1.69.0-launcher125-csharp";
+        internal const string HostVersion = "1.69.0-serverhost98-csharp";
         internal const int DefaultPort = 55750;
         internal const int MaxFallbackPort = 55769;
         internal const int StartupReadyTimeoutMs = 60000;
@@ -113,9 +113,9 @@ namespace DirectXfer.WindowsServerHost
         private static readonly IDictionary<string, string> CriticalRuntimeSha256 =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                { "package.json", "a4fd123b283453af7fbf7bde51f35a3c7bff7033cf36b8d4fa19ad6f770f5d5f" },
-                { "package-lock.json", "f67961b47d2cfb221f07d005b12014a4a9ba205d8477c20287d167ea123b7895" },
-                { "server.js", "832d2de2ae6ef20ea909ec7ab18c43f40d4c469a798a5cf72b112900a48ef173" },
+                { "package.json", "9a9d3567f815593b3d5564292f74308793451927f2c0a176268849f4c20b8a01" },
+                { "package-lock.json", "67911a86e77db73a1eabacdb1d113830c93e6dc509025b1fd7ec3ba0b3c342e6" },
+                { "server.js", "8452e5cafc4fbf44f735ff6d918d921939b4a8b6dff81751665c4b7e08c47ff9" },
                 { "lib/server/public-pages.js", "de434eac7cef447abbda40604621a354ff6c23320a42823cdcb8969dcc16c533" },
                 { "lib/server/tls-manager.js", "b82a1b195b6cb36d47d8d431b890e0479aaf9ca8d47f98e8ef9e046390610f7f" },
                 { "lib/server/network-services.js", "fd4a119ca1a75127b82c758c3d3555c12384c01b487bee3b3150a398217e4bdf" },
@@ -128,20 +128,20 @@ namespace DirectXfer.WindowsServerHost
                 { "lib/google-oauth-profile.js", "6a3cac0ad7c419442f57ee28e53c5f8f15bd3dd6f3bb1a1242a415f941ceaa78" },
                 { "lib/google-oauth-broker-client.js", "b64d80e6ce5229b858769e55b2a7420aeaeaa0d8d4b68d4debfc34e991f90f89" },
                 { "lib/server/notification-service.js", "a55beb8d5fdb09754eeb7f7d01974896efaad20dde3b9cf00e83bf4f7a7b9baa" },
-                { "public/app.js", "4414185087daaf14a99a8d9ac1938e741b5b48b9a0abf33a8e2b214311639307" },
-                { "pwa/app.js", "e24b4b8e27b490984acf55d28be3ce25160140c9082d17bbafac91a303e6af1a" },
+                { "public/app.js", "f30cb9734a312cee2e067817e4560aea928aa3e98e233dd63dbe82f97f86db02" },
+                { "pwa/app.js", "2170ebbb7448b102cd161e3b902dfc8c1384217a9518e0ce469944134c2d4f7e" },
                 { "lib/dlp-utils.js", "0d8f768c3457ec713199ce9e82f9483be21df2ea01dce6ead26675d240fde768" },
                 { "lib/fd-utils.js", "322abf15ce7a15310d6d27ac1b0ca40892658d5f21198510f7e84b78b0070b13" },
                 { "pwa/dlp-local.js", "246267542621fc92f759438b2295b87f777ba6d6aa88b3c4d23dea25aebe7390" },
                 { "lib/storage-connectors.js", "90cc270a3e713b11460d950d013eee737b5aaaf8cb01d53db75ef3e8f4184e91" },
                 { "lib/web-storage-share.js", "7a575bd6ed1e98eedd748bc96510e8e85a08eeb3c7dff64608a3fc97b3c8bbdf" },
                 { "lib/web-storage-writable.js", "d4a076866d4c09228e261e09405e8a7e3da1a04604c9bbf4c55e2edfac80070f" },
-                { "public/index.html", "0f64cea73b3fed307f51e3f1689ffc702e93e46e7bf3b21fe26c087c8b18931f" },
+                { "public/index.html", "7d378d9228806536aad7f0590b40056acedd6c74a1254cd5bc1db018d2445639" },
                 { "public/oauth-bridge.html", "7c08c6d54d523b0ed3976293e99fe7e4f43c01ff359fd4be170dfd0f0ab344c3" },
                 { "public/oauth-bridge.css", "32a468581ae0ae93c818fe00217a55cdec62dc5cb4796c748003ad4f71bbbbbb" },
                 { "public/oauth-bridge.js", "853b1582d7367eb4a68cd891d568923a3e399abfad442f36d38c06812cb27f3e" },
                 { "public/google-oauth-complete.js", "da9a4028d6c3e4e5f3bae22921a18eceb105b89aecd0fc42b21a9bdde86520cc" },
-                { "public/style.css", "2fd95d94438e9680cebcc7051abc853bafec9f268fe320a4dc28c409cb59937e" },
+                { "public/style.css", "17f5b1bd8bec7ff4e888e5e4753cde20effe5aef0acb2857b902ac96605b1ea3" },
                 { "node_modules/express/package.json", "c7db3b72582355c80cdcef1ad7b2c9a8f53557550724c6bef8502e9818c2ebe7" }
             };
 

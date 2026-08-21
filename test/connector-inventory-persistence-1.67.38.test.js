@@ -8,7 +8,7 @@ const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8').replace(/\r\
 const app = read('public/app.js');
 const server = read('server.js');
 
-test('1.68.3 POST/PATCH connector writes return an authoritative no-store inventory', () => {
+test('1.69.0 POST/PATCH connector writes return an authoritative no-store inventory', () => {
   const postStart = server.indexOf("adminRouter.post('/storage/connectors'");
   const patchStart = server.indexOf("adminRouter.patch('/storage/connectors/:id'", postStart);
   const deleteStart = server.indexOf("adminRouter.delete('/storage/connectors/:id'", patchStart);
@@ -23,7 +23,7 @@ test('1.68.3 POST/PATCH connector writes return an authoritative no-store invent
   }
 });
 
-test('1.68.3 connector reads and generic API GETs bypass caches', () => {
+test('1.69.0 connector reads and generic API GETs bypass caches', () => {
   const summary = server.slice(
     server.indexOf("adminRouter.get('/storage/connectors/summary'"),
     server.indexOf("adminRouter.get('/storage/connectors'", server.indexOf("adminRouter.get('/storage/connectors/summary'") + 1)
@@ -35,7 +35,7 @@ test('1.68.3 connector reads and generic API GETs bypass caches', () => {
   assert.match(api, /if \(\['GET', 'HEAD'\]\.includes\(method\)\) opts\.cache = 'no-store'/);
 });
 
-test('1.68.3 successful connector save renders the server-confirmed connector before background refresh', () => {
+test('1.69.0 successful connector save renders the server-confirmed connector before background refresh', () => {
   const start = app.indexOf("if ($('connector-add')) $('connector-add').addEventListener('click'");
   const end = app.indexOf('async function startConnectorTransfer', start);
   const block = app.slice(start, end);
@@ -46,7 +46,7 @@ test('1.68.3 successful connector save renders the server-confirmed connector be
   assert.doesNotMatch(block, /await refreshStorageConnectors\(/);
 });
 
-test('1.68.3 stale connector refreshes cannot overwrite a newer inventory', () => {
+test('1.69.0 stale connector refreshes cannot overwrite a newer inventory', () => {
   assert.match(app, /let connectorRefreshSerial = 0/);
   const start = app.indexOf('async function refreshStorageConnectors(forceProbe)');
   const end = app.indexOf("if ($('connector-add'))", start);

@@ -6,7 +6,7 @@ const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const read = rel => fs.readFileSync(path.join(root, rel), 'utf8');
 
-test('1.69.3 installer makes startup and outbound privacy choices explicit', () => {
+test('1.69.4 installer makes startup and outbound privacy choices explicit', () => {
   const iss = read('installer/Direct-Xfer.iss');
   assert.match(iss, /InfoBeforeFile=\.\.\\PRIVACY\.md/);
   assert.match(iss, /Name: "autostart"; Description: "Start Direct-Xfer automatically with Windows"/);
@@ -20,7 +20,7 @@ test('1.69.3 installer makes startup and outbound privacy choices explicit', () 
   assert.match(iss, /AppUpdatesURL=https:\/\/github\.com\/ManixQC\/Direct-Xfer\/releases/);
 });
 
-test('1.69.3 one-shot Windows install choices are persisted then remain editable', () => {
+test('1.69.4 one-shot Windows install choices are persisted then remain editable', () => {
   const host = read('windows-server-host/Program.cs');
   const server = read('server.js');
   const prefs = read('lib/server/windows-install-preferences.js');
@@ -32,7 +32,7 @@ test('1.69.3 one-shot Windows install choices are persisted then remain editable
   assert.match(prefs, /fs\.unlinkSync\(marker\)/);
 });
 
-test('1.69.3 public-IP discovery can be disabled before any public-IP fetch', async () => {
+test('1.69.4 public-IP discovery can be disabled before any public-IP fetch', async () => {
   const { createNetworkServices } = require('../lib/server/network-services');
   const oldFetch = global.fetch;
   let fetches = 0;
@@ -40,7 +40,7 @@ test('1.69.3 public-IP discovery can be disabled before any public-IP fetch', as
   try {
     const state = { meta:{}, settings:{ publicIpDiscovery:false } };
     const services = createNetworkServices({
-      net: require('node:net'), os: require('node:os'), LOCAL_IP:'', APP_VERSION:'1.69.3', UPDATE_REPO:'owner/repo', UPDATE_TAG:'latest',
+      net: require('node:net'), os: require('node:os'), LOCAL_IP:'', APP_VERSION:'1.69.4', UPDATE_REPO:'owner/repo', UPDATE_TAG:'latest',
       compareSemver:()=>0, updateCheckEnabled:()=>false, publicIpDiscoveryEnabled:()=>false, addAdminCenterNotification:()=>{},
       getState:()=>state, persist:()=>{}, maskToPrefix:()=>24, ipToInt:()=>null, intToIp:()=>'', isPrivateIp:()=>false,
       getSettings:()=>state.settings, flagFromCode:()=>'', noteCenterServiceState:()=>{},
@@ -51,7 +51,7 @@ test('1.69.3 public-IP discovery can be disabled before any public-IP fetch', as
   } finally { global.fetch = oldFetch; }
 });
 
-test('1.69.3 release template and repository policy meet SignPath page requirements', () => {
+test('1.69.4 release template and repository policy meet SignPath page requirements', () => {
   const readme = read('README.md');
   const release = read('signpath/RELEASE_NOTES_TEMPLATE.md');
   const privacy = read('PRIVACY.md');

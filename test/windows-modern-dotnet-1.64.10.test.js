@@ -200,9 +200,9 @@ test('SDK-generated assembly metadata replaces manual assembly attributes', () =
   const hostSource = read('windows-server-host/Program.cs');
   for (const project of [launcherProject, hostProject]) {
     assert.doesNotMatch(project, /<GenerateAssemblyInfo>\s*false\s*<\/GenerateAssemblyInfo>/);
-    assert.match(project, /<AssemblyVersion>1\.69\.3\.0<\/AssemblyVersion>/);
-    assert.match(project, /<FileVersion>1\.69\.3\.0<\/FileVersion>/);
-    assert.match(project, /<InformationalVersion>1\.69\.3<\/InformationalVersion>/);
+    assert.match(project, /<AssemblyVersion>1\.69\.4\.0<\/AssemblyVersion>/);
+    assert.match(project, /<FileVersion>1\.69\.4\.0<\/FileVersion>/);
+    assert.match(project, /<InformationalVersion>1\.69\.4<\/InformationalVersion>/);
     assert.match(project, /<IncludeSourceRevisionInInformationalVersion>false<\/IncludeSourceRevisionInInformationalVersion>/);
   }
   assert.doesNotMatch(launcherSource, /\[assembly:\s*Assembly(?:Title|Description|Company|Product|Copyright|Version|FileVersion|InformationalVersion)/);

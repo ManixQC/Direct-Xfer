@@ -14,7 +14,7 @@ test('system health is a dedicated topbar page and no longer a dashboards sub-ta
   assert.match(html,/id="system-health-page"/);
   assert.match(html,/server-health-dashboard\.css\?v=3/);
   assert.match(html,/server-health-dashboard\.js\?v=4/);
-  assert.match(html,/app\.js\?v=347/);
+  assert.match(html,/app\.js\?v=348/);
   assert.match(app,/const SYSTEM_HEALTH_PATH = '\/system-health'/);
   assert.match(app,/DirectXferServerHealth/);
   assert.match(server,/app\.get\('\/system-health'/);

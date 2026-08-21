@@ -91,8 +91,8 @@ test('auditor tag controls are omitted from the DOM rather than only hidden with
 
 
 test('standard UI audit bumps asset cache keys for corrected resources', () => {
-  assert.match(html, /style\.css\?v=316/);
-  assert.match(html, /app\.js\?v=347/);
+  assert.match(html, /style\.css\?v=317/);
+  assert.match(html, /app\.js\?v=348/);
 });
 
 

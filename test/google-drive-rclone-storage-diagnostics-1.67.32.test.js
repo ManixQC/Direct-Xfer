@@ -21,7 +21,7 @@ function writeWrapper(root,source){
   return file;
 }
 
-test('1.69.3 creates the rclone config directory before the first Google remote is saved',async()=>{
+test('1.69.4 creates the rclone config directory before the first Google remote is saved',async()=>{
   const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'dx-rclone-dir-'));
   const configPath=path.join(tmp,'not-created','rclone','rclone.conf');
   const wrapper=writeWrapper(tmp,`'use strict';\nconst fs=require('fs'),path=require('path');\nconst a=process.argv.slice(2);\nif(a[0]==='listremotes')process.exit(0);\nif(a[0]==='config'&&a[1]==='create'){const f=process.env.RCLONE_CONFIG;if(!fs.existsSync(path.dirname(f))){console.error('Failed to save config: no such file or directory');process.exit(9);}fs.writeFileSync(f,'[gdrive]\\ntype = drive\\n');process.exit(0);}\nif(a[0]==='lsf')process.exit(0);\nprocess.exit(0);\n`);
@@ -32,7 +32,7 @@ test('1.69.3 creates the rclone config directory before the first Google remote 
   assert.equal(fs.existsSync(configPath),true);
 });
 
-test('1.69.3 identifies rclone config-storage failures instead of connector-failed',async()=>{
+test('1.69.4 identifies rclone config-storage failures instead of connector-failed',async()=>{
   const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'dx-rclone-storage-error-'));
   const configPath=path.join(tmp,'rclone','rclone.conf');
   const wrapper=writeWrapper(tmp,`'use strict';\nconst a=process.argv.slice(2);\nif(a[0]==='listremotes')process.exit(0);\nif(a[0]==='config'&&a[1]==='create'){console.error('Failed to save config after 10 tries: open rclone.conf: permission denied');process.exit(7);}\nprocess.exit(0);\n`);
@@ -48,7 +48,7 @@ test('1.69.3 identifies rclone config-storage failures instead of connector-fail
   });
 });
 
-test('1.69.3 distinguishes Google Drive verification failures and redacts broker credentials',async()=>{
+test('1.69.4 distinguishes Google Drive verification failures and redacts broker credentials',async()=>{
   const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'dx-rclone-probe-error-'));
   const service=new StorageConnectorService({bin:'rclone',configPath:path.join(tmp,'rclone','rclone.conf')});
   service.configuredRemotes=async()=>[];
@@ -72,7 +72,7 @@ test('1.69.3 distinguishes Google Drive verification failures and redacts broker
   });
 });
 
-test('1.69.3 Google OAuth session API preserves a sanitized rclone diagnostic for the admin UI',()=>{
+test('1.69.4 Google OAuth session API preserves a sanitized rclone diagnostic for the admin UI',()=>{
   const source=fs.readFileSync(path.join(__dirname,'..','lib','server','storage-connector-config.js'),'utf8');
   const ui=fs.readFileSync(path.join(__dirname,'..','public','app.js'),'utf8');
   assert.match(source,/item\.diagnostic=typeof safeRcloneErrorDetail === 'function'/);

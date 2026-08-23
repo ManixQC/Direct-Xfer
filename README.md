@@ -36,7 +36,7 @@ network by default.
 
 1. In `docker-compose.yml`, replace `/PATH/TO/CONFIGURE` with the host folder where received files should be written.
 2. `docker compose up -d --build`
-3. Admin password: `cat ./data/admin-password.txt`
+3. Admin password: shown in the startup logs (`docker compose logs`).
 4. Open `http://YOUR-SERVER-IP:55750/` (from the local network).
 
 ### How it works
@@ -167,7 +167,7 @@ de passe et limitée au réseau local par défaut.
 
 1. Dans `docker-compose.yml`, remplacez `/PATH/TO/CONFIGURE` par le dossier hôte où écrire les fichiers reçus.
 2. `docker compose up -d --build`
-3. Mot de passe admin : `cat ./data/admin-password.txt`
+3. Mot de passe admin : affiché dans les logs de démarrage (`docker compose logs`).
 4. Ouvrez `http://IP-DU-SERVEUR:55750/` (depuis le réseau local).
 
 ### Fonctionnement
@@ -299,7 +299,7 @@ contraseña restringida a la red local por defecto.
 
 1. En `docker-compose.yml`, reemplaza `/PATH/TO/CONFIGURE` por la carpeta del host donde se escribirán los archivos recibidos.
 2. `docker compose up -d --build`
-3. Contraseña de administrador: `cat ./data/admin-password.txt`
+3. Contraseña de administrador: se muestra en los registros de inicio (`docker compose logs`).
 4. Abre `http://IP-DE-TU-SERVIDOR:55750/` (desde la red local).
 
 ### Cómo funciona

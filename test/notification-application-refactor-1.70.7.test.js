@@ -34,7 +34,7 @@ function makeHarness(options = {}) {
     pwaRegistry,
     platform:{ nodemailer:null, webpush:options.webpush || null },
     config:{
-      APP_NAME:'Direct-Xfer', APP_VERSION:'1.70.20', DATA_DIR:tmp,
+      APP_NAME:'Direct-Xfer', APP_VERSION:'1.70.21', DATA_DIR:tmp,
       PUBLIC_URL:'', TRUST_PROXY:false, STORAGE_SETUP:null,
       WEBHOOK_URL:'', WEBHOOK_FORMAT:'', SMTP_URL:'', EMAIL_FROM:'', EMAIL_TO:'',
     },

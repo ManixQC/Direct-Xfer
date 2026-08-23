@@ -22,23 +22,23 @@ function sliceBetween(source, startMarker, endMarker) {
   return source.slice(start, end);
 }
 
-test('1.70.20 version, Windows builds and PWA generation are synchronized', () => {
-  assert.equal(pkg.version, '1.70.20');
-  assert.equal(lock.version, '1.70.20');
-  assert.equal(lock.packages[''].version, '1.70.20');
-  assert.match(workflow, /^run-name: v1\.70\.20$/m);
+test('1.70.21 version, Windows builds and PWA generation are synchronized', () => {
+  assert.equal(pkg.version, '1.70.21');
+  assert.equal(lock.version, '1.70.21');
+  assert.equal(lock.packages[''].version, '1.70.21');
+  assert.match(workflow, /^run-name: v1\.70\.21$/m);
   assert.match(workflow, /DX_RUNTIME_BUILD: 'runtime166'/);
   assert.match(workflow, /DX_LAUNCHER_COMPONENT_VERSION: '1\.70\.1'/);
-  assert.match(workflow, /DX_SERVER_HOST_COMPONENT_VERSION: '1\.70\.20'/);
+  assert.match(workflow, /DX_SERVER_HOST_COMPONENT_VERSION: '1\.70\.21'/);
   assert.doesNotMatch(workflow, /DX_SERVER_HOST_BUILD:/);
   assert.match(launcher, /LauncherVersion = "1\.70\.1"/);
   assert.match(launcher, /AppVersion[\s\S]{0,700}?package\.json/);
-  assert.match(host, /ServerHostVersion = "1\.70\.20"/);
+  assert.match(host, /ServerHostVersion = "1\.70\.21"/);
   assert.match(host, /ReadApplicationVersion\(appDir\)/);
   assert.match(read('windows-launcher/app.manifest'), /assemblyIdentity version="1\.70\.1\.0"/);
-  assert.match(read('windows-server-host/app.manifest'), /assemblyIdentity version="1\.70\.20\.0"/);
+  assert.match(read('windows-server-host/app.manifest'), /assemblyIdentity version="1\.70\.21\.0"/);
   for (const rel of ['pwa/theme-init.js','pwa/mobile-intelligence.js','pwa/index.html','pwa/admin-advanced.js','pwa/app.js','pwa/sw.js']) {
-    assert.match(read(rel), /1\.70\.20|pwa451/);
+    assert.match(read(rel), /1\.70\.21|pwa452/);
   }
   for (const rel of ['pwa/login.html','pwa/theme-init.js','pwa/index.html','pwa/login.js','pwa/admin-advanced.js','pwa/app.js','pwa/sw.js']) {
     assert.doesNotMatch(read(rel), /v=356/);

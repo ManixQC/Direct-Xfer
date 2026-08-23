@@ -4,7 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { createBootstrapReferenceRegistry } = require('../lib/server/bootstrap-reference-registry');
 
-test('1.70.20 lazy references follow the live provider surface without reviving stale methods', () => {
+test('1.70.21 lazy references follow the live provider surface without reviving stale methods', () => {
   const registry = createBootstrapReferenceRegistry({ share:['getById'] });
   const source = {
     prefix:'old',
@@ -30,7 +30,7 @@ test('1.70.20 lazy references follow the live provider surface without reviving 
   assert.throws(() => getById('d'), /share\.getById must be an own function/);
 });
 
-test('1.70.20 conflicting bind batches are rejected before candidate provider introspection', () => {
+test('1.70.21 conflicting bind batches are rejected before candidate provider introspection', () => {
   const registry = createBootstrapReferenceRegistry({ alpha:['run'], beta:['run'] });
   const boundBeta = { run() { return 'bound'; } };
   registry.bind('beta', boundBeta);
@@ -57,7 +57,7 @@ test('1.70.20 conflicting bind batches are rejected before candidate provider in
   assert.strictEqual(registry.current('beta'), boundBeta);
 });
 
-test('1.70.20 same-source rebinding revalidates the current provider contract', () => {
+test('1.70.21 same-source rebinding revalidates the current provider contract', () => {
   const registry = createBootstrapReferenceRegistry({ runtime:['ready', 'reset'] });
   const source = { ready() { return true; }, reset() { return true; } };
   registry.bind('runtime', source);

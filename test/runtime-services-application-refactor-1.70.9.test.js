@@ -67,7 +67,7 @@ function makeOptions(context = makeContext()) {
       readFd:async () => ({ bytesRead:0 }),
     },
     config:{
-      APP_NAME:'Direct-Xfer', APP_VERSION:'1.70.20', DATA_KEY:null,
+      APP_NAME:'Direct-Xfer', APP_VERSION:'1.70.21', DATA_KEY:null,
       DATA_DIR:'/tmp/dx-runtime-app', SECRETS_DIR:'/tmp/dx-runtime-app/secrets',
       FULL_IMAGES_DIR:'/tmp/dx-runtime-app/images/full', INBOX_DIR:'/tmp/dx-runtime-app/inbox',
       MAX_CONCURRENT_UPLOADS:2, QUARANTINE_DIR:'/tmp/dx-runtime-app/quarantine',
@@ -105,7 +105,7 @@ function makeOptions(context = makeContext()) {
   };
 }
 
-test('1.70.20 point 3 moves upload, backup and maintenance composition out of server.js', () => {
+test('1.70.21 point 3 moves upload, backup and maintenance composition out of server.js', () => {
   const server = read('server.js');
   const composition = read('lib/server/runtime-services-application.js');
   assert.match(server, /require\('\.\/lib\/server\/runtime-services-application'\)/);

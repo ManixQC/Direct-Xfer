@@ -51,8 +51,8 @@ test('Windows metadata is component-scoped for SignPath Foundation restrictions'
   }
   assert.match(launcher, /<Version>1\.70\.1<\/Version>/);
   assert.match(launcher, /<FileVersion>1\.70\.1\.0<\/FileVersion>/);
-  assert.match(host, /<Version>1\.70\.20<\/Version>/);
-  assert.match(host, /<FileVersion>1\.70\.20\.0<\/FileVersion>/);
+  assert.match(host, /<Version>1\.70\.21<\/Version>/);
+  assert.match(host, /<FileVersion>1\.70\.21\.0<\/FileVersion>/);
   const installer = read('installer/Direct-Xfer.iss');
   assert.match(installer, /VersionInfoProductName=\{#AppName\}/);
   assert.match(installer, /VersionInfoProductVersion=\{#AppVersion\}/);
@@ -68,7 +68,7 @@ test('GitHub Actions signs own executables before rebuilding and signing install
   assert.match(workflow, /SIGNPATH_EXECUTABLES_ARTIFACT_CONFIGURATION_SLUG/);
   assert.match(workflow, /SIGNPATH_INSTALLER_ARTIFACT_CONFIGURATION_SLUG/);
   assert.match(workflow, /DX_LAUNCHER_COMPONENT_VERSION: '1\.70\.1'/);
-  assert.match(workflow, /DX_SERVER_HOST_COMPONENT_VERSION: '1\.70\.20'/);
+  assert.match(workflow, /DX_SERVER_HOST_COMPONENT_VERSION: '1\.70\.21'/);
   assert.match(workflow, /launcherVersion: "\$\{\{ env\.DX_LAUNCHER_COMPONENT_VERSION \}\}"/);
   assert.match(workflow, /serverHostVersion: "\$\{\{ env\.DX_SERVER_HOST_COMPONENT_VERSION \}\}"/);
   assert.equal((workflow.match(/signpath\/github-action-submit-signing-request@v2/g) || []).length, 2);

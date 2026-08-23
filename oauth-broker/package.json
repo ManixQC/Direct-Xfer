@@ -1,6 +1,6 @@
 {
   "name": "direct-xfer-oauth-broker",
-  "version": "1.70.20",
+  "version": "1.70.21",
   "private": true,
   "description": "Central OAuth broker for Direct-Xfer cloud connectors",
   "main": "server.js",

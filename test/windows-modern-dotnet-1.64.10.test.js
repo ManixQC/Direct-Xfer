@@ -205,9 +205,9 @@ test('SDK-generated assembly metadata replaces manual assembly attributes', () =
   assert.match(launcherProject, /<AssemblyVersion>1\.70\.1\.0<\/AssemblyVersion>/);
   assert.match(launcherProject, /<FileVersion>1\.70\.1\.0<\/FileVersion>/);
   assert.match(launcherProject, /<InformationalVersion>1\.70\.1<\/InformationalVersion>/);
-  assert.match(hostProject, /<AssemblyVersion>1\.70\.20\.0<\/AssemblyVersion>/);
-  assert.match(hostProject, /<FileVersion>1\.70\.20\.0<\/FileVersion>/);
-  assert.match(hostProject, /<InformationalVersion>1\.70\.20<\/InformationalVersion>/);
+  assert.match(hostProject, /<AssemblyVersion>1\.70\.21\.0<\/AssemblyVersion>/);
+  assert.match(hostProject, /<FileVersion>1\.70\.21\.0<\/FileVersion>/);
+  assert.match(hostProject, /<InformationalVersion>1\.70\.21<\/InformationalVersion>/);
   assert.doesNotMatch(launcherSource, /\[assembly:\s*Assembly(?:Title|Description|Company|Product|Copyright|Version|FileVersion|InformationalVersion)/);
   assert.doesNotMatch(hostSource, /\[assembly:\s*Assembly(?:Title|Description|Company|Product|Copyright|Version|FileVersion|InformationalVersion)/);
 });

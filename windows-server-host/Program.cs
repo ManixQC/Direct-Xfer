@@ -24,7 +24,7 @@ namespace DirectXfer.WindowsServerHost
         // ServerHost has its own component/build identity. The application version is
         // discovered from the validated runtime package, while the runtime build marker
         // remains compiled into ServerHost as a commit boundary for that exact payload.
-        internal const string ServerHostVersion = "1.70.20";
+        internal const string ServerHostVersion = "1.70.21";
         internal const string ServerHostBuild = "serverhost139-csharp";
         internal const string ExpectedRuntimeBuild = "runtime166";
         internal const string RuntimeProtocol = "1";
@@ -121,9 +121,9 @@ namespace DirectXfer.WindowsServerHost
         private static readonly IDictionary<string, string> CriticalRuntimeSha256 =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                { "package.json", "a712430f2a8f8f295fc203bd4e5814a9edc67859bcf2465c2f200c9027f17783" },
-                { "package-lock.json", "5f9f0660d35aa0899e92248f7c276c52a77161dba08e424402801f200f96c1ea" },
-                { "server.js", "536684f554bb8792239b75fe9443f8bf7c81e52c2c64f6aedb8bb011e7f43214" },
+                { "package.json", "ad63f7b135513d2c287880c35c6ee6f022c78b50dea7d6785302f08220804262" },
+                { "package-lock.json", "7f6463cdfe597c5a0aac5a83727431ed500b15db85406d93fa35f7c7d3dd15cf" },
+                { "server.js", "ae21358099979b93a52384a06744fc9b523169772cab07146d316abf23167897" },
                 { "lib/core-utils.js", "850ca4c2f187a170035c73ad6301c64a746f7d7cf7ef6d15aadc767f26144f0c" },
                 { "lib/server/config.js", "6bfbc7759b343231be4a39a17ddb8943e900742c86dbe4ac93a691e7b4f9f270" },
                 { "lib/server/platform-dependencies.js", "c6e28668bc6a3bbc1f8b5ba40f3130228a780acf6060ac1e66fc484a1c5624c5" },
@@ -209,7 +209,7 @@ namespace DirectXfer.WindowsServerHost
                 { "lib/server/notification-center-service.js", "3559e4b8bde5913f81556ad8290bd3dedda03851aef0631af7e3f9c9a11c6298" },
                 { "lib/server/pwa-notification-service.js", "408ff37bc00c481be61cfa85960bc0170bb4845b87105cf4dbf36e08f97a54b5" },
                 { "public/app.js", "38796d8199de3a959bbd93d792524984c900e51f27ca5542998da190523d5b2f" },
-                { "pwa/app.js", "abf19c303c897ced2cd9c5e0b22bf223bf83bab262672d57ac5500e0c8ef261f" },
+                { "pwa/app.js", "3072537f80ede7eb5c722fae8f809d1b15eba49e370a69794731feeb6ccde0b8" },
                 { "lib/dlp-utils.js", "0d8f768c3457ec713199ce9e82f9483be21df2ea01dce6ead26675d240fde768" },
                 { "lib/fd-utils.js", "947deee8d45440f49c4497621b8479f1a92ff4703789099b24aae4a81dd29bb5" },
                 { "pwa/dlp-local.js", "246267542621fc92f759438b2295b87f777ba6d6aa88b3c4d23dea25aebe7390" },

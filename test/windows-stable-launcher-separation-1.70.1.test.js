@@ -49,8 +49,8 @@ test('ServerHost publishes runtime-discovered identity with independent componen
 test('GitHub Actions enforces deterministic launcher output and release-independent runtime marker naming', () => {
   assert.match(workflow, /DX_RUNTIME_BUILD: 'runtime166'/);
   assert.match(workflow, /DX_LAUNCHER_COMPONENT_VERSION: '1\.70\.1'/);
-  assert.match(workflow, /DX_SERVER_HOST_COMPONENT_VERSION: '1\.70\.20'/);
-  assert.doesNotMatch(workflow, /DX_RUNTIME_BUILD: '1\.70\.20-/);
+  assert.match(workflow, /DX_SERVER_HOST_COMPONENT_VERSION: '1\.70\.21'/);
+  assert.doesNotMatch(workflow, /DX_RUNTIME_BUILD: '1\.70\.21-/);
   assert.match(workflow, /launcher-repeat/);
   assert.match(workflow, /Remove-Item 'windows-launcher\\bin','windows-launcher\\obj' -Recurse -Force/);
   assert.match(workflow, /Get-FileHash -Algorithm SHA256 \$launcherPrimary/);

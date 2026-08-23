@@ -10,28 +10,31 @@ const { spawn } = require('child_process');
 
 const root = path.resolve(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n?/g, '\n');
-const server = read('server.js');
+const server = read('server.js') + '\n' + read('lib/server/pwa-application.js');
+const connectorJobs = read('lib/server/storage-connector-job-service.js');
+const adminSecurity = read('lib/server/admin-security-routes.js');
+const adminStorage = read('lib/server/admin-storage-routes.js');
 const storageSource = read('lib/storage-connectors.js');
 const pwa = read('pwa/admin-audit-connectors.js');
 const theme = read('pwa/theme-init.js');
 const sw = read('pwa/sw.js');
 const { StorageConnectorService, safeLocalTarget } = require('../lib/storage-connectors');
 
-test('PWA build pwa411 loads and precaches audit/connectors administration module', () => {
+test('PWA build pwa432 loads and precaches audit/connectors administration module', () => {
   for (const file of ['pwa/admin-advanced.js','pwa/app.js','pwa/index.html','pwa/sw.js','pwa/theme-init.js']) {
-    assert.match(read(file), /pwa411|v=401/);
+    assert.match(read(file), /pwa432|v=418/);
   }
-  assert.match(theme, /admin-audit-connectors\.js\?v=401/);
-  assert.match(sw, /admin-audit-connectors\.js\?v=401/);
+  assert.match(theme, /admin-audit-connectors\.js\?v=418/);
+  assert.match(sw, /admin-audit-connectors\.js\?v=418/);
   assert.match(server, /'\/admin-audit-connectors\.js'/);
   assert.doesNotMatch(theme + sw, /pwa321|v=321/);
 });
 
 test('signed audit viewer uses chain verification, Ed25519 self-verification and signed export', () => {
-  assert.match(server, /adminRouter\.get\('\/audit\/signed-verify', requireAuditAccess/);
-  assert.match(server, /buildAuditProof\(entries, integrity\)/);
-  assert.match(server, /verifyAuditProofBundle\(proof\)/);
-  assert.match(server, /timingSafeEqualStr\(String\(checked\.keyId\), String\(expectedKeyId\)\)/);
+  assert.match(adminSecurity, /adminRouter\.get\('\/audit\/signed-verify', requireAuditAccess/);
+  assert.match(adminSecurity, /buildAuditProof\(entries, integrity\)/);
+  assert.match(adminSecurity, /verifyAuditProofBundle\(proof\)/);
+  assert.match(adminSecurity, /timingSafeEqualStr\(String\(checked\.keyId\), String\(expectedKeyId\)\)/);
   assert.match(pwa, /\/api\/audit\?limit=200/);
   assert.match(pwa, /\/api\/audit\/signed-verify/);
   assert.match(pwa, /\/api\/audit\/export\?format=proof/);
@@ -52,16 +55,16 @@ test('storage PWA covers connector CRUD/test, remote browser, imports, job polli
 });
 
 test('connector jobs register their controller before orphan pruning', () => {
-  const setAt = server.indexOf('activeConnectorJobs.set(job.id, controller);');
-  const unshiftAt = server.indexOf('jobs.unshift(job); pruneConnectorJobs();', setAt);
+  const setAt = connectorJobs.indexOf('activeJobs.set(job.id, entry);');
+  const unshiftAt = connectorJobs.indexOf('jobStore().unshift(job);', setAt);
   assert.ok(setAt >= 0 && unshiftAt > setAt);
-  assert.match(server, /activeConnectorJobs\.delete\(job\.id\);\n\s*throw Object\.assign\(new Error\('write-error'\)/);
+  assert.match(connectorJobs, /if \(!safePersistNow\(\)\) \{[\s\S]*?activeJobs\.delete\(job\.id\);[\s\S]*?restoreJobJournal\(previousJournal\);[\s\S]*?new Error\('write-error'\)/);
 });
 
 test('connector capability response hides rclone config path and exposes supported types', () => {
-  assert.match(server, /const publicCapabilities = \{/);
-  assert.match(server, /types:Array\.from\(CONNECTOR_TYPES\)/);
-  const block = server.slice(server.indexOf("adminRouter.get('/storage/connectors'"), server.indexOf("adminRouter.post('/storage/connectors'"));
+  assert.match(adminStorage, /const publicCapabilities = \{/);
+  assert.match(adminStorage, /types:\s*Array\.from\(connectorTypes\)/);
+  const block = adminStorage.slice(adminStorage.indexOf("adminRouter.get('/storage/connectors'"), adminStorage.indexOf("adminRouter.post('/storage/connectors'"));
   assert.doesNotMatch(block, /configPath/);
 });
 
@@ -94,10 +97,11 @@ test('remote browser returns connector-root-relative paths inside nested folders
 
 
 test('deep audit hardening freezes queued connector routing and clears privileged PWA state', () => {
-  assert.match(server, /const jobConnector = Object\.freeze\(\{ \.\.\.connector \}\);/);
-  assert.match(server, /storageConnectorService\.importFile\(jobConnector/);
-  assert.match(server, /storageConnectorService\.exportFile\(jobConnector/);
-  assert.match(server, /if \(controller\.signal\.aborted\) \{\s*job\.status = 'cancelled'/);
+  assert.match(connectorJobs, /const jobConnector = Object\.freeze\(\{ \.\.\.connector \}\);/);
+  assert.match(connectorJobs, /runJob\(job, jobConnector, direction/);
+  assert.match(connectorJobs, /storageConnectorService\.importFile\(connector/);
+  assert.match(connectorJobs, /storageConnectorService\.exportFile\(connector/);
+  assert.match(connectorJobs, /job\.status = controller\.signal\.aborted \? 'cancelled' : 'failed'/);
   assert.match(pwa, /function clearPrivilegedData\(\)/);
   assert.match(pwa, /if\(r\.status===401\|\|r\.status===403\)\{clearSession\(\);clearPrivilegedData\(\);\}/);
   assert.match(pwa, /if\(hasActive&&active\(\)\)jobsTimer=setTimeout/);
@@ -189,7 +193,7 @@ test('real server verifies signed audit and imports a nested remote file server-
   child.stderr.on('data', (d) => logs.push(d.toString()));
   try {
     await waitFor(base + '/healthz', child, logs);
-    const asset = await fetch(base + '/app/admin-audit-connectors.js?v=401');
+    const asset = await fetch(base + '/app/admin-audit-connectors.js?v=418');
     assert.equal(asset.status, 200);
     assert.match(await asset.text(), /server-to-server import/);
 

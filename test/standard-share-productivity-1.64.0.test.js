@@ -7,7 +7,7 @@ const root = path.join(__dirname, '..');
 const app = fs.readFileSync(path.join(root, 'public', 'app.js'), 'utf8');
 const css = fs.readFileSync(path.join(root, 'public', 'style.css'), 'utf8');
 const html = fs.readFileSync(path.join(root, 'public', 'index.html'), 'utf8');
-const server = fs.readFileSync(path.join(root, 'server.js'), 'utf8');
+const server = fs.readFileSync(path.join(root, 'server.js'), 'utf8') + '\n' + fs.readFileSync(path.join(root, 'lib', 'server', 'admin-share-routes.js'), 'utf8') + '\n' + fs.readFileSync(path.join(root, 'lib', 'server', 'share-presentation-service.js'), 'utf8');
 
 test('standard share density supports comfortable, compact and very compact modes', () => {
   assert.match(app, /\['comfortable','compact','ultra'\]/);
@@ -53,7 +53,7 @@ test('pinning remains persistent, sortable and available as a dedicated card con
   assert.match(app, /pin-toggle/);
   assert.match(app, /toggleShareFlag\(s, 'pinned'\)/);
   assert.match(app, /!!b\.pinned - !!a\.pinned/);
-  assert.match(server, /pinned: !!s\.pinned/);
+  assert.match(server, /pinned: !!shareRecord\.pinned/);
   assert.match(server, /typeof body\.pinned === 'boolean'/);
   assert.match(server, /\['pin','unpin','archive','unarchive'\]/);
 });
@@ -91,8 +91,8 @@ test('auditor tag controls are omitted from the DOM rather than only hidden with
 
 
 test('standard UI audit bumps asset cache keys for corrected resources', () => {
-  assert.match(html, /style\.css\?v=317/);
-  assert.match(html, /app\.js\?v=348/);
+  assert.match(html, /style\.css\?v=319/);
+  assert.match(html, /app\.js\?v=350/);
 });
 
 

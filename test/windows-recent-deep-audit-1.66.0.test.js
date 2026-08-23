@@ -10,6 +10,7 @@ const workflow = read('.github/workflows/build-windows-csharp.yml');
 const launcher = read('windows-launcher/Program.cs');
 const host = read('windows-server-host/Program.cs');
 const server = read('server.js');
+const ocrService = read('lib/server/ocr-service.js');
 const portable = read('windows-launcher/README-WINDOWS-PORTABLE.md');
 
 test('Windows ServerHost preserves explicit rclone and Tesseract environment overrides', () => {
@@ -22,10 +23,10 @@ test('Windows ServerHost preserves explicit rclone and Tesseract environment ove
 });
 
 test('direct portable Node launch retains legacy Tesseract fallback without making it installer payload', () => {
-  assert.match(server, /function resolveSearchOcrTesseractBinary\(\)/);
-  assert.match(server, /path\.resolve\(__dirname, '\.\.', 'tesseract'\)/);
-  assert.match(server, /spawnSync\(bundled, \['--list-langs', '--tessdata-dir', bundledTessdataDir\]/);
-  assert.match(server, /process\.env\.DX_WINDOWS_TESSDATA_DIR \|\| process\.env\.DX_WINDOWS_BUNDLED_TESSDATA_DIR/);
+  assert.match(ocrService, /function resolveTesseractBinary\(\)/);
+  assert.match(ocrService, /path\.resolve\(__dirname, '\.\.', '\.\.', 'tesseract'\)/);
+  assert.match(ocrService, /spawnSync\(bundled, \['--list-langs', '--tessdata-dir', bundledTessdata\]/);
+  assert.match(ocrService, /process\.env\.DX_WINDOWS_TESSDATA_DIR \|\| process\.env\.DX_WINDOWS_BUNDLED_TESSDATA_DIR/);
 });
 
 test('ServerHost validates optional and legacy helper executables before selecting them', () => {

@@ -68,9 +68,10 @@ services:
       # refuses to start (it never overwrites encrypted data with an empty store).
       # DATA_KEY: "a-long-random-secret"
       # Strongly recommended for the tamper-evident audit journal. On an existing
-      # install that still has /data/audit-chain.key, simply setting this once
-      # triggers a verified transactional migration; the local key is deleted only
-      # after the old chain and the re-signed chain both verify successfully.
+      # install, setting this verifies and transactionally migrates the key that
+      # previously protected the journal (DATA_KEY, or /data/audit-chain.key when
+      # no data key was configured). A stale local key is removed only after both
+      # the old chain and the re-signed chain verify successfully.
       # Keep this secret stable after migration.
       # AUDIT_HMAC_KEY: "a-different-long-random-secret"
       # Optional stable Ed25519 private key for independently verifiable audit

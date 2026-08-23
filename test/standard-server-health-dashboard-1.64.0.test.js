@@ -5,7 +5,7 @@ const fs=require('fs');
 const path=require('path');
 const root=path.resolve(__dirname,'..');
 const read=(p)=>fs.readFileSync(path.join(root,p),'utf8');
-const server=read('server.js'), app=read('public/app.js'), html=read('public/index.html'), mod=read('public/server-health-dashboard.js'), css=read('public/server-health-dashboard.css'), health=read('lib/pwa-admin-health-route.js'), packageJson=JSON.parse(read('package.json'));
+const server=read('server.js')+'\n'+read('lib/server/http-application.js')+'\n'+read('lib/server/admin-dashboard-routes.js')+'\n'+read('lib/server/system-health-service.js')+'\n'+read('lib/server/diagnostics-service.js'), app=read('public/app.js'), html=read('public/index.html'), mod=read('public/server-health-dashboard.js'), css=read('public/server-health-dashboard.css'), health=read('lib/pwa-admin-health-route.js'), packageJson=JSON.parse(read('package.json'));
 
 test('system health is a dedicated topbar page and no longer a dashboards sub-tab',()=>{
   assert.doesNotMatch(html,/id="dashboard-health-tab"/);
@@ -14,20 +14,22 @@ test('system health is a dedicated topbar page and no longer a dashboards sub-ta
   assert.match(html,/id="system-health-page"/);
   assert.match(html,/server-health-dashboard\.css\?v=3/);
   assert.match(html,/server-health-dashboard\.js\?v=4/);
-  assert.match(html,/app\.js\?v=348/);
+  assert.match(html,/app\.js\?v=350/);
   assert.match(app,/const SYSTEM_HEALTH_PATH = '\/system-health'/);
   assert.match(app,/DirectXferServerHealth/);
-  assert.match(server,/app\.get\('\/system-health'/);
+  assert.match(server,/'\/system-health'/);
+  assert.match(server,/app\.get\(route, adminGuard/);
 });
 
 test('health endpoint is full-admin only and uses cached deep probes',()=>{
   assert.match(server,/adminRouter\.get\('\/server-health-dashboard', requireFullAdmin/);
-  assert.match(server,/SERVER_HEALTH_DEEP_CACHE_MS = 30000/);
+  assert.match(server,/deepCacheMs = 30000/);
   assert.match(server,/serverHealthDeepSnapshot/);
-  assert.match(server,/connectorProbeSnapshot\(\)/);
+  assert.match(server,/connectorJobService:storageConnectorJobService/);
+  assert.match(server,/connectorJobService\.probeSnapshot/);
   assert.match(server,/serverHealthAuditSnapshot\(\)/);
   assert.match(server,/tlsCertificateDiagnostics\(\)/);
-  assert.match(server,/universalSearchStatus\(\)/);
+  assert.match(server,/safeCall\(universalSearchStatus/);
 });
 
 test('server health payload covers system, storage, security and workload',()=>{

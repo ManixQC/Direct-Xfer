@@ -9,6 +9,7 @@ const ROOT = path.resolve(__dirname, '..');
 const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8').replace(/\r\n?/g, '\n');
 const app = read('public/app.js');
 const server = read('server.js');
+const adminStorage = read('lib/server/admin-storage-routes.js');
 
 test('1.67.26 web-storage creation checks connector metadata before rclone probe', () => {
   const start = app.indexOf("async function openWebStorageModal(mode='share')");
@@ -24,13 +25,13 @@ test('1.67.26 web-storage creation checks connector metadata before rclone probe
 });
 
 test('1.67.26 connector summary endpoint never probes rclone', () => {
-  const start = server.indexOf("adminRouter.get('/storage/connectors/summary'");
-  const end = server.indexOf("adminRouter.get('/storage/connectors',", start);
+  const start = adminStorage.indexOf("adminRouter.get('/storage/connectors/summary'");
+  const end = adminStorage.indexOf("adminRouter.get('/storage/connectors',", start);
   assert.ok(start >= 0 && end > start);
-  const block = server.slice(start, end);
+  const block = adminStorage.slice(start, end);
   assert.match(block, /connectorStore\(\)\.map\(publicConnector\)\.filter\(Boolean\)/);
-  assert.match(block, /configured:connectors\.length/);
-  assert.match(block, /writable:connectors\.filter/);
+  assert.match(block, /configured:\s*connectors\.length/);
+  assert.match(block, /writable:\s*connectors\.filter/);
   assert.doesNotMatch(block, /connectorProbeSnapshot|storageConnectorService/);
 });
 

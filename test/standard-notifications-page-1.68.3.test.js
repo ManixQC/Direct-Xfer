@@ -8,6 +8,7 @@ const html = fs.readFileSync(path.join(root, 'public', 'index.html'), 'utf8');
 const app = fs.readFileSync(path.join(root, 'public', 'app.js'), 'utf8');
 const css = fs.readFileSync(path.join(root, 'public', 'style.css'), 'utf8');
 const server = fs.readFileSync(path.join(root, 'server.js'), 'utf8');
+const httpApplication = fs.readFileSync(path.join(root, 'lib', 'server', 'http-application.js'), 'utf8');
 
 test('standard notification center is an independent full page', () => {
   assert.match(html, /<main id="notifications-page" class="app-view notifications-page hidden">/);
@@ -21,7 +22,8 @@ test('standard notification center is an independent full page', () => {
   assert.match(app, /function syncAdminRouteFromUrl\(\)[\s\S]*location\.pathname === NOTIFICATIONS_PATH[\s\S]*showNotificationsView\(\)/);
   assert.match(app, /function closeActivityPage\(\)[\s\S]*location\.pathname === ACTIVITY_PATH/);
   assert.match(app, /function openNotificationTarget\(n\)[\s\S]*notificationsPageOpen\(\)[\s\S]*dxView:'home'/);
-  assert.match(server, /app\.get\('\/notifications', adminGuard/);
+  assert.match(httpApplication, /'\/notifications'/);
+  assert.match(httpApplication, /app\.get\(route, adminGuard/);
   assert.match(css, /#notifications-page \.brand/);
   assert.match(css, /\.notifications-page-card/);
   assert.match(css, /\.notification-list \{ display:flex; flex-direction:column/);

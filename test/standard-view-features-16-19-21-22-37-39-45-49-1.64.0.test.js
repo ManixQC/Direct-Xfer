@@ -8,10 +8,10 @@ const net=require('net');
 const {spawn}=require('child_process');
 const root=path.resolve(__dirname,'..');
 const read=(f)=>fs.readFileSync(path.join(root,f),'utf8');
-const app=read('public/app.js'), mod=read('public/standard-productivity.js'), html=read('public/index.html'), css=read('public/style.css'), server=read('server.js');
+const app=read('public/app.js'), mod=read('public/standard-productivity.js'), html=read('public/index.html'), css=read('public/style.css'), server=read('server.js') + '\n' + read('lib/server/admin-share-routes.js') + '\n' + read('lib/server/admin-dashboard-routes.js') + '\n' + read('lib/server/admin-diagnostics-routes.js') + '\n' + read('lib/server/share-presentation-service.js') + '\n' + read('lib/server/share-service.js');
 
 test('standard view loads the isolated productivity module with bumped cache keys',()=>{
-  assert.match(html,/style\.css\?v=317/); assert.match(html,/app\.js\?v=348/); assert.match(html,/standard-productivity\.js\?v=4/);
+  assert.match(html,/style\.css\?v=319/); assert.match(html,/app\.js\?v=350/); assert.match(html,/standard-productivity\.js\?v=4/);
   assert.match(app,/window\.DXStandard = Object\.freeze/); assert.match(mod,/window\.DXStandard/);
 });
 
@@ -28,7 +28,7 @@ test('daily dashboard summary covers transfers, volume, failures, visitors and n
 });
 
 test('backing-source health is asynchronous, cached and generation guarded',()=>{
-  assert.match(server,/SHARE_BACKING_HEALTH_CACHE_MS/); assert.match(server,/queueShareBackingHealthRefresh/); assert.match(server,/shareBackingHealthGeneration/); assert.match(server,/backing: shareBackingHealthSnapshot\(s\)/); assert.match(server,/mapLimit\(backingCandidates, 4/); assert.match(mod,/share-source-health/); assert.match(css,/share-source-missing/);
+  assert.match(server,/SHARE_BACKING_HEALTH_CACHE_MS/); assert.match(server,/queueShareBackingHealthRefresh/); assert.match(server,/shareBackingHealthGeneration/); assert.match(server,/backing: shareService\.shareBackingHealthSnapshot\(shareRecord\)/); assert.match(server,/mapLimit\(backingCandidates, 4/); assert.match(mod,/share-source-health/); assert.match(css,/share-source-missing/);
 });
 
 test('visitor test is a server-side logical probe independent of admin browser cookies',()=>{

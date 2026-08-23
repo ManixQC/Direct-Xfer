@@ -9,6 +9,7 @@ const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
 const launcher = read('windows-launcher/Program.cs');
 const host = read('windows-server-host/Program.cs');
 const server = read('server.js');
+const ocrService = read('lib/server/ocr-service.js');
 
 test('launcher installs on-demand OCR models into the optional Tesseract tessdata directory', () => {
   assert.match(launcher, /OptionalTessdataPath/);
@@ -26,9 +27,9 @@ test('ServerHost validates and launches selected optional Tesseract with the exa
 });
 
 test('server OCR uses --tessdata-dir for selected Windows probes and OCR calls', () => {
-  assert.match(server, /process\.env\.DX_WINDOWS_TESSDATA_DIR \|\| process\.env\.DX_WINDOWS_BUNDLED_TESSDATA_DIR/);
-  assert.match(server, /spawnSync\(bundled, \['--list-langs', '--tessdata-dir', bundledTessdataDir\]/);
-  assert.match(server, /function searchOcrTesseractArgs\(args\)/);
-  assert.match(server, /args\.concat\(\['--tessdata-dir', dataDir\]\)/);
-  assert.match(server, /searchOcrTesseractArgs\(\['--list-langs'\]\)/);
+  assert.match(ocrService, /process\.env\.DX_WINDOWS_TESSDATA_DIR \|\| process\.env\.DX_WINDOWS_BUNDLED_TESSDATA_DIR/);
+  assert.match(ocrService, /spawnSync\(bundled, \['--list-langs', '--tessdata-dir', bundledTessdata\]/);
+  assert.match(ocrService, /function searchOcrTesseractArgs\(args\)/);
+  assert.match(ocrService, /args\.concat\(\['--tessdata-dir', dataDir\]\)/);
+  assert.match(ocrService, /searchOcrTesseractArgs\(\['--list-langs'\]\)/);
 });

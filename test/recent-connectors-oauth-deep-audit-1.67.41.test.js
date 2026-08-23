@@ -5,12 +5,15 @@ const fs = require('node:fs');
 const path = require('node:path');
 const ROOT = path.join(__dirname, '..');
 const server = fs.readFileSync(path.join(ROOT, 'server.js'), 'utf8');
+const connectorJobs = fs.readFileSync(path.join(ROOT, 'lib', 'server', 'storage-connector-job-service.js'), 'utf8');
+const receptionRoutes = fs.readFileSync(path.join(ROOT, 'lib', 'server', 'reception-collaboration-routes.js'), 'utf8');
+const publicShareRoutes = fs.readFileSync(path.join(ROOT, 'lib', 'server', 'public-share-routes.js'), 'utf8');
 const app = fs.readFileSync(path.join(ROOT, 'public', 'app.js'), 'utf8');
 const pwa = fs.readFileSync(path.join(ROOT, 'pwa', 'admin-audit-connectors.js'), 'utf8');
 const storage = require('../lib/storage-connectors');
 const writable = require('../lib/web-storage-writable');
 
-test('1.69.4 preserves precise recent connector errors and HTTP semantics', () => {
+test('1.69.6 preserves precise recent connector errors and HTTP semantics', () => {
   for (const code of ['connector-tls-ca-untrusted','connector-api-disabled','connector-token-invalid','connector-config-storage','connector-not-found']) {
     assert.equal(storage.connectorErrorCode({ code }), code);
   }
@@ -20,7 +23,7 @@ test('1.69.4 preserves precise recent connector errors and HTTP semantics', () =
   assert.equal(writable.connectorStatus({ code:'connector-not-found' }), 404);
 });
 
-test('1.69.4 rclone diagnostics redact plain and JSON OAuth secrets', () => {
+test('1.69.6 rclone diagnostics redact plain and JSON OAuth secrets', () => {
   const detail = storage.safeRcloneErrorDetail({
     code:'connector-failed', rcloneStage:'probe',
     message:'client_secret = superSecret refresh_token: refreshSecret {"access_token":"accessSecret"} Authorization: Bearer bearerSecret',
@@ -30,22 +33,22 @@ test('1.69.4 rclone diagnostics redact plain and JSON OAuth secrets', () => {
   assert.match(detail.diagnostic, /\[redacted\]|oauth-token-redacted/);
 });
 
-test('1.69.4 connector probe cache rejects pre-mutation stale snapshots', () => {
-  assert.match(server, /let connectorProbeEpoch = 0/);
-  assert.match(server, /connectorProbeEpoch \+= 1/);
-  assert.match(server, /const epoch = connectorProbeEpoch/);
-  assert.match(server, /epoch === connectorProbeEpoch \? value : null/);
-  assert.match(server, /if \(value\) return value;[\s\S]{0,220}return connectorProbeSnapshot\(\)/);
+test('1.69.6 connector probe cache rejects pre-mutation stale snapshots', () => {
+  assert.match(connectorJobs, /let probeEpoch = 0/);
+  assert.match(connectorJobs, /probeEpoch \+= 1/);
+  assert.match(connectorJobs, /const epoch = probeEpoch/);
+  assert.match(connectorJobs, /epoch === probeEpoch \? value : null/);
+  assert.match(connectorJobs, /if \(value\) return value;[\s\S]{0,220}return probeSnapshot\(\)/);
 });
 
-test('1.69.4 web-storage modal accepts a confirmed connector while the bounded rclone probe is pending', () => {
+test('1.69.6 web-storage modal accepts a confirmed connector while the bounded rclone probe is pending', () => {
   assert.match(app, /const available=!!capabilities\.available, pending=!!capabilities\.pending/);
   assert.match(app, /if\(!available && !pending\)/);
   assert.doesNotMatch(app, /if\(!available\) \{ webStorageToast\(t\('webStorage\.rcloneMissing'\)/);
   assert.equal((app.match(/web-storage-collab-delete-row'\)\) \$\('web-storage-collab-delete-row'\)\.classList\.toggle/g) || []).length, 1);
 });
 
-test('1.69.4 PWA preserves authoritative connector inventory and clears stale error styling', () => {
+test('1.69.6 PWA preserves authoritative connector inventory and clears stale error styling', () => {
   assert.match(pwa, /connectorInventoryConfirmed/);
   assert.match(pwa, /Array\.isArray\(result&&result\.connectors\)/);
   assert.match(pwa, /if\(!connectorInventoryConfirmed&&!?\(connectorState\.connectors\|\|\[\]\)\.length\)/);
@@ -53,12 +56,12 @@ test('1.69.4 PWA preserves authoritative connector inventory and clears stale er
   assert.match(pwa, /connectorChecking/);
 });
 
-test('1.69.4 public web-storage missing connector consistently maps to not-found', () => {
-  assert.match(server, /code === 'remote-not-found' \|\| code === 'connector-not-found'/);
-  assert.match(server, /code==='remote-not-found'\|\|code==='connector-not-found'/);
+test('1.69.6 public web-storage missing connector consistently maps to not-found', () => {
+  assert.match(publicShareRoutes, /code === 'remote-not-found' \|\| code === 'connector-not-found'/);
+  assert.match(receptionRoutes, /code==='remote-not-found'\|\|code==='connector-not-found'/);
 });
 
-test('1.69.4 server remains under the enforced modularization ceiling', () => {
+test('1.69.6 server remains under the enforced modularization ceiling', () => {
   const lines = server.split(/\r?\n/).length;
   assert.ok(lines < 23000, `server.js should stay below 23000 lines, got ${lines}`);
 });

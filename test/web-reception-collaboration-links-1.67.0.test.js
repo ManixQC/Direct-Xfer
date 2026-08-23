@@ -12,7 +12,13 @@ const { StorageConnectorService } = require('../lib/storage-connectors');
 
 const ROOT = path.resolve(__dirname, '..');
 const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8').replace(/\r\n?/g, '\n');
-const server = read('server.js');
+const server = read('server.js') + '\n' + read('lib/server/admin-share-routes.js');
+const receptionRoutes = read('lib/server/reception-collaboration-routes.js');
+const uploadService = read('lib/server/upload-reception-service.js');
+const searchService = read('lib/server/search-service.js');
+const adminStorage = read('lib/server/admin-storage-routes.js');
+const connectorJobService = read('lib/server/storage-connector-job-service.js');
+const pwaRoutes = read('lib/server/pwa-routes.js');
 const app = read('public/app.js');
 const html = read('public/index.html');
 const pages = read('lib/server/public-pages.js');
@@ -118,11 +124,11 @@ test('rclone export uses immutable mode so another link/external writer cannot b
 });
 
 test('cloud collaboration has list, file, folder and delete branches with ZIP/checksum disabled', () => {
-  assert.match(server, /if\(s\.webStorage\).*webStorageList\(s/);
-  assert.match(server, /serveWebStorageFile\(req,res,s/);
-  assert.match(server, /webStorageWritable\.mkdir\(s/);
-  assert.match(server, /webStorageWritable\.remove\(s/);
-  assert.match(server, /if\(s\.webStorage\).*return sendError\(req,res,404/);
+  assert.match(receptionRoutes, /if\(s\.webStorage\).*webStorageList\(s/);
+  assert.match(receptionRoutes, /serveWebStorageFile\(req,res,s/);
+  assert.match(receptionRoutes, /webStorageWritable\.mkdir\(s/);
+  assert.match(receptionRoutes, /webStorageWritable\.remove\(s/);
+  assert.match(receptionRoutes, /if\(s\.webStorage\).*return sendError\(req,res,404/);
   assert.match(pages, /allowZip: !share\.webStorage && share\.allowZip !== false/);
   assert.match(pages, /const sumsBtn = share\.webStorage \? ''/);
   assert.match(app, /\$\('edit-allowzip'\)\.disabled = !!s\.webStorage/);
@@ -131,7 +137,7 @@ test('cloud collaboration has list, file, folder and delete branches with ZIP/ch
 });
 
 test('cloud reception/collaboration upload handler stages locally then publishes and removes the part', () => {
-  assert.match(server, /if\(s\.webStorage\)return webStorageUploadHandler\(req,res,s\)/);
+  assert.match(receptionRoutes, /if\(s\.webStorage\)return webStorageUploadHandler\(req,res,s\)/);
   assert.match(writableSource, /fs\.createWriteStream\(part/);
   assert.match(writableSource, /await tools\.publishFile\(s,\s*part,\s*remoteRel\)/);
   assert.match(writableSource, /await fs\.promises\.unlink\(part\)/);
@@ -149,20 +155,20 @@ test('provider failures preserve resumable staging but return an upstream status
 });
 
 test('global local reception disk accounting excludes persistent cloud-backed bytes', () => {
-  const block=server.slice(server.indexOf('function currentReceptionBytes'), server.indexOf('function receptionDiskQuota'));
+  const block=uploadService.slice(uploadService.indexOf('function currentReceptionBytes'), uploadService.indexOf('function receptionSharesIncludingTrash'));
   assert.match(block, /!s\.webStorage/);
-  const reject=server.slice(server.indexOf('function inboxRejectReason'), server.indexOf('function inboxRejectStatus'));
+  const reject=uploadService.slice(uploadService.indexOf('function inboxRejectReason'), uploadService.indexOf('function inboxRejectStatus'));
   assert.match(reject, /!s\.webStorage/);
 });
 
 test('universal search does not try to index a cloud reception/collaboration tree as local files', () => {
-  assert.match(server, /\(s\.type === 'inbox' \|\| s\.type === 'collab'\) && !s\.webStorage/);
+  assert.match(searchService, /\(s\.type === 'inbox' \|\| s\.type === 'collab'\) && !s\.webStorage/);
 });
 
 test('connector cannot be made read-only while a web reception/collaboration link references it', () => {
-  assert.match(server, /writable:share\.type==='inbox'\|\|share\.type==='collab'/);
-  assert.match(server, /connector-used-by-web-share/);
-  assert.match(server, /refs\.some\(\(r\)=>r\.writable\)/);
+  assert.match(connectorJobService, /writable:share\.type\s*===\s*'inbox'\s*\|\|\s*share\.type\s*===\s*'collab'/);
+  assert.match(adminStorage, /connector-used-by-web-share/);
+  assert.match(adminStorage, /references\.some\(\(reference\) => reference\.writable\)/);
 });
 
 test('clone/import and admin/PWA file browsers keep cloud-backed writable links remote', () => {
@@ -171,7 +177,7 @@ test('clone/import and admin/PWA file browsers keep cloud-backed writable links 
   assert.match(server, /\['file', 'folder', 'inbox', 'collab', 'web-storage'\]/);
   assert.match(server, /rec\.webStorage && \['web-storage','inbox','collab'\]\.includes\(rec\.type\)/);
   assert.match(server, /adminRouter\.get\('\/shares\/:id\/received', async/);
-  assert.match(server, /app\.get\('\/app\/inbox\/:token\/files'.*async/s);
+  assert.match(pwaRoutes, /app\.get\('\/app\/inbox\/:token\/files'.*async/s);
   assert.match(server, /countStats:false/);
 });
 

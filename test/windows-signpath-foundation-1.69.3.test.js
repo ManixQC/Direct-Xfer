@@ -45,9 +45,9 @@ test('Windows metadata is uniform for SignPath Foundation restrictions', () => {
   for (const project of [launcher, host]) {
     assert.match(project, /<Product>Direct-Xfer<\/Product>/);
     assert.match(project, /<Company>Direct-Xfer<\/Company>/);
-    assert.match(project, /<Version>1\.69\.4<\/Version>/);
-    assert.match(project, /<FileVersion>1\.69\.4\.0<\/FileVersion>/);
-    assert.match(project, /<InformationalVersion>1\.69\.4<\/InformationalVersion>/);
+    assert.match(project, /<Version>1\.70\.0<\/Version>/);
+    assert.match(project, /<FileVersion>1\.70\.0\.0<\/FileVersion>/);
+    assert.match(project, /<InformationalVersion>1\.70\.0<\/InformationalVersion>/);
     assert.match(project, /<IncludeSourceRevisionInInformationalVersion>false<\/IncludeSourceRevisionInInformationalVersion>/);
   }
   const installer = read('installer/Direct-Xfer.iss');

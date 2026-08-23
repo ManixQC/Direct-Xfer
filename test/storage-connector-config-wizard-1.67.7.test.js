@@ -65,6 +65,7 @@ test('1.67.26 standard Configuration exposes an in-app rclone connection wizard 
   const html = fs.readFileSync(path.join(ROOT, 'public/index.html'), 'utf8');
   const app = fs.readFileSync(path.join(ROOT, 'public/app.js'), 'utf8');
   const server = fs.readFileSync(path.join(ROOT, 'server.js'), 'utf8');
+  const adminStorage = fs.readFileSync(path.join(ROOT, 'lib/server/admin-storage-routes.js'), 'utf8');
   const configModule = fs.readFileSync(path.join(ROOT, 'lib/server/storage-connector-config.js'), 'utf8');
   assert.match(html, /id="connector-configure-remote"/);
   assert.match(html, /id="connector-config-oauth-local"/);
@@ -84,7 +85,7 @@ test('1.67.26 standard Configuration exposes an in-app rclone connection wizard 
   assert.match(app, /Application Web/);
   assert.match(app, /Test user|utilisateur.*test/i);
   assert.match(app, /rclone authorize "\$\{data\.backend\}"/);
-  assert.match(server, /createStorageConnectorConfigRoutes/);
+  assert.match(adminStorage, /createStorageConnectorConfigRoutes/);
   assert.match(configModule, /\/storage\/remotes\/config\/:id\/oauth/);
   assert.match(configModule, /oauth\/callback/);
   assert.match(app, /submitConnectorOAuthCallback/);

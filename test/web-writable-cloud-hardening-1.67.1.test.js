@@ -11,8 +11,10 @@ const { createWebStorageWritableTools, createWebStorageUploadHandler } = require
 
 const ROOT = path.resolve(__dirname, '..');
 const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8').replace(/\r\n?/g, '\n');
-const server = read('server.js');
+const server = read('server.js') + '\n' + read('lib/server/admin-share-routes.js');
+const receptionRoutes = read('lib/server/reception-collaboration-routes.js');
 const writableSource = read('lib/web-storage-writable.js');
+const pwaRoutes = read('lib/server/pwa-routes.js');
 const shareSource = read('lib/web-storage-share.js');
 
 function fakeShare(type='inbox') {
@@ -121,9 +123,9 @@ test('cloud received-file traversal is bounded by directories/depth and resists 
 });
 
 test('cloud folder create/delete are serialized with upload finalization and delete frees only tracked bytes', () => {
-  const deleteBlock=server.slice(server.indexOf("downloadRouter.post('/c/:token/delete'"),server.indexOf('// Share types that accept uploads'));
+  const deleteBlock=receptionRoutes.slice(receptionRoutes.indexOf("downloadRouter.post('/c/:token/delete'"),receptionRoutes.indexOf('// Creates one visitor-requested folder'));
   assert.match(deleteBlock,/withShareUploadLock\(s\.id/); assert.match(deleteBlock,/releaseTracked\(s,rel\)/); assert.doesNotMatch(deleteBlock,/bytesReceived[^\n]*metrics\.bytes/);
-  const folderBlock=server.slice(server.indexOf('async function handleCreateUploadFolder'),server.indexOf("downloadRouter.post('/u/:token/folder'"));
+  const folderBlock=receptionRoutes.slice(receptionRoutes.indexOf('async function handleCreateUploadFolder'),receptionRoutes.indexOf("downloadRouter.post('/u/:token/folder'"));
   assert.match(folderBlock,/withShareUploadLock\(s\.id/);
 });
 
@@ -134,12 +136,12 @@ test('configuration import cannot enable destructive collaboration without a pas
 
 test('admin and PWA cloud received-file browsers use bounded walker instead of unbounded directory-only BFS', () => {
   assert.match(server,/webStorageWalkFiles\(s,\{maxFiles:5000,maxDirs:1000,maxDepth:24\}\)/);
-  assert.equal((server.match(/webStorageWalkFiles\(s,\{maxFiles:5000,maxDirs:1000,maxDepth:24\}\)/g)||[]).length,2);
+  assert.equal(((server + '\n' + pwaRoutes).match(/webStorageWalkFiles\(s,\{maxFiles:5000,maxDirs:1000,maxDepth:24\}\)/g)||[]).length,2);
   assert.match(shareSource,/seen = new Set\(\[''\]\)/); assert.match(shareSource,/dirsVisited > maxDirs/);
 });
 
 test('local resumable protocol also rejects an in-progress upload id reused for different metadata', () => {
-  const block=server.slice(server.indexOf('// One transfer per upload id, reused across every chunk request.'),server.indexOf('// --- Legacy single-shot path'));
+  const block=receptionRoutes.slice(receptionRoutes.indexOf('// One transfer per upload id, reused across every chunk request.'),receptionRoutes.indexOf('// --- Legacy single-shot path'));
   assert.match(block,/upload-id-conflict/); assert.match(block,/transfer\.expectedBytes/); assert.match(block,/transfer\.name/);
 });
 
@@ -190,6 +192,6 @@ test('imported cloud quota ledger is normalized, bounded by bytesReceived, and e
 });
 
 test('local resumable uploads also require a strict safe-integer declared total size', () => {
-  const block=server.slice(server.indexOf('async function handleUpload(req, res)'),server.indexOf('// --- Legacy single-shot path'));
+  const block=receptionRoutes.slice(receptionRoutes.indexOf('async function handleUpload(req, res)'),receptionRoutes.indexOf('// --- Legacy single-shot path'));
   assert.match(block,/safeUploadByteCount\(req\.query\.size\)/); assert.match(block,/id && declared === null/); assert.match(block,/error:'invalid-size'/);
 });

@@ -11,6 +11,7 @@ const ROOT = path.resolve(__dirname, '..');
 const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8').replace(/\r\n?/g, '\n');
 const app = read('public/app.js');
 const server = read('server.js');
+const adminStorage = read('lib/server/admin-storage-routes.js');
 const connectorLib = read('lib/storage-connectors.js');
 
 test('1.67.26 reports no configured cloud connector before optional-rclone state', () => {
@@ -75,7 +76,7 @@ test('1.67.26 connector list API preserves diagnostic codes and meaningful HTTP 
   assert.match(connectorLib, /code === 'connector-timeout'\) return options\.public \? 503 : 504/);
   assert.match(connectorLib, /connector-rate-limited[^\n]+return 503/);
   const browserRoutes = read('lib/server/storage-connector-browser.js');
-  assert.match(server, /createStorageConnectorBrowserRoutes/);
+  assert.match(adminStorage, /createStorageConnectorBrowserRoutes/);
   assert.match(browserRoutes, /adminRouter\.get\('\/storage\/connectors\/:id\/list'/);
   assert.match(browserRoutes, /connectorErrorCode\(error\), status = connectorHttpStatus\(code\)/);
 });

@@ -10,7 +10,12 @@ const { StorageConnectorService } = require('../lib/storage-connectors');
 
 const ROOT = path.resolve(__dirname, '..');
 const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8').replace(/\r\n?/g, '\n');
-const server = read('server.js');
+const server = read('server.js') + '\n' + read('lib/server/public-share-routes.js') + '\n' + read('lib/server/share-service.js') + '\n' + read('lib/server/admin-share-routes.js');
+const sharePresentation = read('lib/server/share-presentation-service.js');
+const downloadService = read('lib/server/download-service.js');
+const adminStorage = read('lib/server/admin-storage-routes.js');
+const connectorJobService = read('lib/server/storage-connector-job-service.js');
+const pwaRoutes = read('lib/server/pwa-routes.js');
 const storage = read('lib/storage-connectors.js');
 const webTools = read('lib/web-storage-share.js');
 const pages = read('lib/server/public-pages.js');
@@ -50,9 +55,9 @@ test('web-storage creation freezes connector routing and requires an explicit re
 });
 
 test('connector edits/deletion cannot silently redirect an existing cloud share', () => {
-  assert.match(server, /function webStorageShareReferencesConnector\(connectorId\)/);
-  assert.match(server, /connector-used-by-web-share/);
-  assert.match(server, /next\.remote !== current\.remote \|\| next\.root !== current\.root \|\| next\.type !== current\.type/);
+  assert.match(connectorJobService, /function webStorageShareReferencesConnector\(connectorId\)/);
+  assert.match(adminStorage, /connector-used-by-web-share/);
+  assert.match(adminStorage, /next\.remote !== current\.remote[\s\S]*?next\.root !== current\.root[\s\S]*?next\.type !== current\.type/);
   assert.match(server, /trashItems\(\)/);
 });
 
@@ -86,29 +91,29 @@ test('remote stream supports byte ranges through rclone cat offset/count', () =>
   assert.match(storage, /const args = \['cat', remoteSpec\(connector, rel\)\]/);
   assert.match(storage, /args\.push\('--offset', String\(offset\)\)/);
   assert.match(storage, /args\.push\('--count', String\(count\)\)/);
-  assert.match(server, /Accept-Ranges', 'bytes'/);
-  assert.match(server, /Content-Range/);
+  assert.match(downloadService, /Accept-Ranges', 'bytes'/);
+  assert.match(downloadService, /Content-Range/);
   assert.match(webTools, /status:206/);
   assert.match(webTools, /multi-range/);
 });
 
 test('streaming waits for rclone exit status before ending HTTP success', () => {
-  const block = server.slice(server.indexOf('function serveWebStorageFile'), server.indexOf("downloadRouter.get('/s/:token'"));
+  const block = downloadService.slice(downloadService.indexOf('function serveWebStorageFile'), downloadService.indexOf('function clearRuntimeState'));
   assert.match(block, /output\.pipe\(res, \{ end:false \}\)/);
   assert.match(block, /const maybeEndResponse = \(\) =>/);
   assert.match(block, /if \(childOk\) res\.end\(\)/);
   assert.match(block, /sendWebStorageStreamError/);
-  assert.match(server, /for \(const name of \['Content-Length','Content-Range','Content-Disposition'/);
-  assert.match(server, /res\.removeHeader\(name\)/);
+  assert.match(downloadService, /for \(const name of \['Content-Length','Content-Range','Content-Disposition'/);
+  assert.match(downloadService, /res\.removeHeader\(name\)/);
 });
 
 test('remote validators include modification time before enabling If-Range ETags', () => {
   assert.doesNotMatch(storage.slice(storage.indexOf('async stat('), storage.indexOf('// Starts an rclone command')), /--no-modtime/);
   assert.match(storage, /modTime:row\.ModTime/);
   assert.match(webTools, /if \(!identity \|\| !modTime\) return null/);
-  assert.match(server, /Last-Modified/);
+  assert.match(downloadService, /Last-Modified/);
   assert.match(webTools, /ifRange && \(!etagValue \|\| ifRange !== etagValue\) \? null/);
-  assert.match(server, /webStorageStat\(s, relative, \{ fresh:!!req\.headers\['if-range'\] \}\)/);
+  assert.match(downloadService, /webStorageStat\(s, relative, \{ fresh:!!req\.headers\['if-range'\] \}\)/);
 });
 
 test('remote folder root can be deliberately shared but omission is rejected', () => {
@@ -165,7 +170,9 @@ test('admin cards and editor recognize web-storage instead of mislabelling it as
 });
 
 test('web-storage public/admin metadata omits frozen rclone remote/root from decorated browser data', () => {
-  const block = server.slice(server.indexOf('webStorage: s.webStorage ?'), server.indexOf("album: s.type", server.indexOf('webStorage: s.webStorage ?')));
+  const start = sharePresentation.indexOf('webStorage: shareRecord.webStorage ?');
+  assert.ok(start >= 0, 'web-storage projection lives in share-presentation-service');
+  const block = sharePresentation.slice(start, sharePresentation.indexOf('album: shareRecord.type', start));
   assert.match(block, /connectorId/);
   assert.match(block, /sourceName/);
   assert.doesNotMatch(block, /remote:/);
@@ -183,13 +190,13 @@ test('cloud share creation rejects a connector route that changed while remote s
 });
 
 test('successful cloud byte ranges count toward the per-link bytes-served cap', () => {
-  const block = server.slice(server.indexOf('function serveWebStorageFile'), server.indexOf("downloadRouter.get('/s/:token'"));
-  assert.match(block, /if \(completed && !inline && countStats\) noteBytesServed\(s\.id, expected\)/);
+  const block = downloadService.slice(downloadService.indexOf('function serveWebStorageFile'), downloadService.indexOf('function clearRuntimeState'));
+  assert.match(block, /completed && !inline && countStats[\s\S]*?noteBytesServed\(s\.id, expected\)/);
   assert.doesNotMatch(block, /noteBytesServed\(s\.id, total\)/);
 });
 
 test('stderr chatter cannot keep a stalled cloud payload stream alive forever', () => {
-  const block = server.slice(server.indexOf('function serveWebStorageFile'), server.indexOf("downloadRouter.get('/s/:token'"));
+  const block = downloadService.slice(downloadService.indexOf('function serveWebStorageFile'), downloadService.indexOf('function clearRuntimeState'));
   const stderrLine = block.split('\n').find((line) => line.includes("child.stderr.on('data'")) || '';
   assert.ok(stderrLine);
   assert.doesNotMatch(stderrLine, /touchIdle/);
@@ -249,7 +256,7 @@ test('PWA host-share library renders web-storage links as cloud shares with norm
   assert.match(pwaApp, /s\.type === 'file' \|\| s\.type === 'folder' \|\| s\.type === 'web-storage'/);
   assert.match(pwaApp, /'web-storage':'shareStatsWebStorage'/);
   assert.match(pwaApp, /shareStatsWebStorage:'Stockage web'/);
-  assert.match(pwaApp, /2026\.08\.21-pwa411/);
+  assert.match(pwaApp, /2026\.08\.23-pwa432/);
 });
 
 test('share config import accepts web-storage only when the frozen route still matches a configured connector', () => {
@@ -290,10 +297,13 @@ test('cloud reactivation and visitor-test verify that the remote object still ex
 });
 
 test('PWA host-share API actually returns and manages web-storage links, not only their client-side card type', () => {
-  const listBlock = server.slice(server.indexOf("app.get('/app/host/shares'"), server.indexOf('// 1.51.0', server.indexOf("app.get('/app/host/shares'")));
+  const listStart = pwaRoutes.indexOf("app.get('/app/host/shares'");
+  const listBlock = pwaRoutes.slice(listStart, pwaRoutes.indexOf("app.get('/app/host/shares/:token/stats-detail'", listStart));
   assert.match(listBlock, /s\.type === 'web-storage'/);
-  const manageBlock = server.slice(server.indexOf('function pwaCanManageHostShare'), server.indexOf("app.get('/app/host/shares/:token/stats-detail'"));
+  const pwaPhotoService = read('lib/server/pwa-photo-service.js');
+  const manageBlock = pwaPhotoService.slice(pwaPhotoService.indexOf('function pwaCanManageHostShare'), pwaPhotoService.indexOf('function pwaDlpPolicyPayload'));
   assert.match(manageBlock, /'web-storage'/);
-  const rateBlock = server.slice(server.indexOf("app.post('/app/host/shares/:token/rate'"), server.indexOf("app.get('/app/host/shares'"));
+  const rateStart = pwaRoutes.indexOf("app.post('/app/host/shares/:token/rate'");
+  const rateBlock = pwaRoutes.slice(rateStart, pwaRoutes.indexOf("app.get('/app/host/shares'", rateStart));
   assert.match(rateBlock, /\['file','folder','web-storage'\]/);
 });

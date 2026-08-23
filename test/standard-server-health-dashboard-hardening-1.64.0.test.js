@@ -5,7 +5,7 @@ const fs=require('fs');
 const path=require('path');
 const root=path.resolve(__dirname,'..');
 const read=(p)=>fs.readFileSync(path.join(root,p),'utf8');
-const server=read('server.js'), ui=read('public/server-health-dashboard.js'), html=read('public/index.html'), health=read('lib/pwa-admin-health-route.js');
+const server=read('server.js')+'\n'+read('lib/server/admin-dashboard-routes.js')+'\n'+read('lib/server/system-health-service.js')+'\n'+read('lib/server/diagnostics-service.js'), ui=read('public/server-health-dashboard.js'), html=read('public/index.html'), health=read('lib/pwa-admin-health-route.js');
 
 test('event-loop telemetry keeps a stable observation window across rapid readers', async()=>{
   const h=require('../lib/pwa-admin-health-route');
@@ -40,7 +40,7 @@ test('filesystem health probes are asynchronous and bounded',()=>{
   assert.match(server,/async function serverHealthVolume/);
   assert.match(server,/fs\.promises\.lstat/);
   assert.match(server,/fs\.promises\.statfs/);
-  assert.match(server,/SERVER_HEALTH_FS_TIMEOUT_MS = 2500/);
+  assert.match(server,/fsTimeoutMs = 2500/);
   assert.doesNotMatch(server,/function serverHealthVolume[\s\S]{0,1400}lstatSync/);
 });
 
@@ -59,7 +59,7 @@ test('connector failures only alert on the recent 24-hour window',()=>{
 
 test('source-health cache is actively warmed by the health dashboard',()=>{
   assert.match(server,/backingChecking:0/);
-  assert.match(server,/queueShareBackingHealthRefresh\(sh\)/);
+  assert.match(server,/queueShareBackingHealthRefresh\(share\)/);
 });
 
 test('untrusted forwarding headers are not called a trusted proxy',()=>{
@@ -96,15 +96,15 @@ test('slow volume probes are single-flight so a dead mount cannot accumulate thr
 });
 
 test('share source warming is bounded per health poll',()=>{
-  assert.match(server,/SERVER_HEALTH_BACKING_REFRESH_LIMIT = 16/);
-  assert.match(server,/let refreshBudget = SERVER_HEALTH_BACKING_REFRESH_LIMIT/);
+  assert.match(server,/backingRefreshLimit = 16/);
+  assert.match(server,/let refreshBudget = backingRefreshBudget/);
   assert.match(server,/refreshBudget > 0/);
 });
 
 test('automatic health export does not carry raw connector or notification transport errors',()=>{
-  assert.match(server,/error:connectorProbe\.capabilities&&connectorProbe\.capabilities\.error\?'unavailable':null/);
-  assert.match(server,/getLastEmail\(\)\.error\?'failed':null/);
-  assert.match(server,/getLastWebhook\(\)\.error\?'failed':null/);
+  assert.match(server,/error:connectorProbe\.capabilities && connectorProbe\.capabilities\.error \? 'unavailable' : null/);
+  assert.match(server,/error:lastEmail\.error \? 'failed' : null/);
+  assert.match(server,/error:lastWebhook\.error \? 'failed' : null/);
 });
 test('server health chrome is localized in all three languages and assets are cache-busted',()=>{
   assert.match(html,/server-health-dashboard\.js\?v=4/);

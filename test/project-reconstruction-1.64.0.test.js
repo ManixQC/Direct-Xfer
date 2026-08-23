@@ -27,14 +27,14 @@ test('source tree does not keep a redundant prebuilt Windows runtime', () => {
   assert.ok(workflow.includes("Copy-Item @('lib','public','pwa','scripts','security') $app -Recurse"));
   assert.match(workflow, /npm ci --omit=dev --ignore-scripts --no-audit --no-fund/);
 });
-test('Windows metadata targets 1.69.4 and current runtime hashes', () => {
+test('Windows metadata targets 1.70.0 and current runtime hashes', () => {
   const launcher = read('windows-launcher/Program.cs');
   const host = read('windows-server-host/Program.cs');
-  assert.match(launcher, /AppVersion = "1\.69\.4"/);
-  assert.match(launcher, /RuntimeAppBuild = "1\.69\.4-launcher127-csharp"/);
-  assert.match(host, /RuntimeAppBuild = "1\.69\.4-launcher127-csharp"/);
-  assert.match(host, /HostVersion = "1\.69\.4-serverhost100-csharp"/);
-  for (const rel of ['package.json','package-lock.json','server.js','lib/server/public-pages.js','lib/server/tls-manager.js','lib/server/network-services.js','lib/server/windows-install-preferences.js','lib/server/notification-service.js','lib/server/backup-service.js','lib/server/storage-connector-config.js','public/app.js','pwa/app.js']) {
+  assert.match(launcher, /AppVersion = "1\.70\.0"/);
+  assert.match(launcher, /RuntimeAppBuild = "1\.70\.0-launcher148-csharp"/);
+  assert.match(host, /RuntimeAppBuild = "1\.70\.0-launcher148-csharp"/);
+  assert.match(host, /HostVersion = "1\.70\.0-serverhost121-csharp"/);
+  for (const rel of ['package.json','package-lock.json','server.js','lib/server/config.js','lib/server/bootstrap.js','lib/server/lifecycle-service.js','lib/server/application-context.js','lib/server/host-path-service.js','lib/server/request-utils.js','lib/server/windows-launcher-routes.js','lib/server/root-routes.js','lib/server/http-application.js','lib/server/share-presentation-service.js','lib/auth-utils.js','lib/server/account-service.js','lib/server/auth-service.js','lib/server/session-service.js','lib/server/settings-service.js','lib/server/system-health-service.js','lib/server/diagnostics-service.js','lib/server/admin-router.js','lib/server/admin-account-routes.js','lib/server/admin-security-routes.js','lib/server/admin-storage-routes.js','lib/server/admin-share-routes.js','lib/server/admin-photo-routes.js','lib/server/admin-settings-routes.js','lib/server/admin-dashboard-routes.js','lib/server/admin-diagnostics-routes.js','lib/server/pwa-routes.js','lib/server/pwa-application.js','lib/server/pwa-device-service.js','lib/server/pwa-photo-service.js','lib/server/webauthn-service.js','lib/server/pwa-event-service.js','lib/server/upload-reception-service.js','lib/server/transfer-service.js','lib/server/download-service.js','lib/server/ocr-service.js','lib/server/search-service.js','lib/server/dlp-service.js','lib/server/photo-service.js','lib/server/share-service.js','lib/server/audit-service.js','lib/server/reception-collaboration-routes.js','lib/server/public-access-service.js','lib/server/public-abuse-service.js','lib/server/state-store.js','lib/server/state-bootstrap-service.js','lib/server/public-pages.js','lib/server/tls-manager.js','lib/server/network-services.js','lib/server/windows-install-preferences.js','lib/server/notification-service.js','lib/server/notification-center-service.js','lib/server/pwa-notification-service.js','lib/server/backup-service.js','lib/server/restore-service.js','lib/server/maintenance-service.js','lib/server/storage-connector-job-service.js','lib/server/storage-connector-config.js','public/app.js','pwa/app.js']) {
     assert.ok(host.includes(normalizedSha(rel)), rel + ' hash');
   }
 });
@@ -45,14 +45,14 @@ test('forbidden generated project files are absent', () => {
       if (entry.name === 'node_modules' || entry.name === '.git' || entry.name === 'data') continue;
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) walk(full);
-      else if (/^(AUDIT|README-PATCH|UNSIGNED-WINDOWS-)/i.test(entry.name) || entry.name === 'reconstruire_git_local_propre_v2.ps1') forbidden.push(path.relative(ROOT, full));
+      else if ((/^(AUDIT|README-PATCH|UNSIGNED-WINDOWS-)/i.test(entry.name) && !/\.(?:js|mjs|cjs|ts|tsx|jsx)$/i.test(entry.name)) || entry.name === 'reconstruire_git_local_propre_v2.ps1') forbidden.push(path.relative(ROOT, full));
     }
   }
   walk(ROOT);
   assert.deepEqual(forbidden, []);
 });
 
-test('Windows GitHub Actions run name follows Direct-Xfer 1.69.4', () => {
+test('Windows GitHub Actions run name follows Direct-Xfer 1.70.0', () => {
   const workflow = read('.github/workflows/build-windows-csharp.yml');
-  assert.match(workflow, /^run-name: v1\.69\.4$/m);
+  assert.match(workflow, /^run-name: v1\.70\.0$/m);
 });

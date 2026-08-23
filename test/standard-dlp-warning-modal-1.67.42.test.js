@@ -7,6 +7,7 @@ const root = path.resolve(__dirname, '..');
 const read = rel => fs.readFileSync(path.join(root, rel), 'utf8');
 const app = read('public/app.js');
 const server = read('server.js');
+const dlpService = read('lib/server/dlp-service.js');
 const dlp = require('../lib/dlp-utils');
 
 test('standard DLP warning uses an in-app modal instead of native confirm', () => {
@@ -35,7 +36,7 @@ test('DLP warning reports both findings and incomplete analysis when both apply'
 });
 
 test('server gives generic DLP warnings an explicit reason and keeps the scan payload', () => {
-  assert.match(server, /reason:scan\.count \? \(incomplete \? 'findings-and-incomplete' : 'findings'\) : 'incomplete-scan', dlp:scan/);
+  assert.match(dlpService, /reason:scan\.count \? \(incomplete \? 'findings-and-incomplete' : 'findings'\) : 'incomplete-scan', dlp:scan/);
 });
 
 test('DLP summaries expose the configured per-file scan limit for a useful warning', () => {

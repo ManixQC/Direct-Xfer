@@ -200,9 +200,9 @@ test('SDK-generated assembly metadata replaces manual assembly attributes', () =
   const hostSource = read('windows-server-host/Program.cs');
   for (const project of [launcherProject, hostProject]) {
     assert.doesNotMatch(project, /<GenerateAssemblyInfo>\s*false\s*<\/GenerateAssemblyInfo>/);
-    assert.match(project, /<AssemblyVersion>1\.69\.4\.0<\/AssemblyVersion>/);
-    assert.match(project, /<FileVersion>1\.69\.4\.0<\/FileVersion>/);
-    assert.match(project, /<InformationalVersion>1\.69\.4<\/InformationalVersion>/);
+    assert.match(project, /<AssemblyVersion>1\.70\.0\.0<\/AssemblyVersion>/);
+    assert.match(project, /<FileVersion>1\.70\.0\.0<\/FileVersion>/);
+    assert.match(project, /<InformationalVersion>1\.70\.0<\/InformationalVersion>/);
     assert.match(project, /<IncludeSourceRevisionInInformationalVersion>false<\/IncludeSourceRevisionInInformationalVersion>/);
   }
   assert.doesNotMatch(launcherSource, /\[assembly:\s*Assembly(?:Title|Description|Company|Product|Copyright|Version|FileVersion|InformationalVersion)/);
@@ -319,7 +319,7 @@ test('Windows rclone is an on-demand per-user component instead of installer pay
   const workflow = read('.github/workflows/build-windows-csharp.yml');
   const launcher = read('windows-launcher/Program.cs');
   const host = read('windows-server-host/Program.cs');
-  const server = read('server.js');
+  const bootstrap = read('lib/server/bootstrap.js');
   const installer = read('installer/Direct-Xfer.iss');
   const portable = read('windows-launcher/README-WINDOWS-PORTABLE.md');
 
@@ -338,7 +338,7 @@ test('Windows rclone is an on-demand per-user component instead of installer pay
   assert.match(host, /EnvironmentVariables\["RCLONE_BIN"\] = OptionalRclonePath/);
   assert.match(host, /!HasNonEmptyEnvironmentVariable\(start, "RCLONE_CONFIG"\)[\s\S]*?Path\.Combine\(config\.dataDir, "rclone", "rclone\.conf"\)/);
 
-  assert.match(server, /function resolveRcloneBinary\(\)/);
+  assert.match(bootstrap, /function resolveRcloneBinary\(\)/);
   assert.match(installer, /\{app\}\\runtime\\rclone/); // upgrade cleanup only
   assert.match(portable, /rclone is optional on Windows/i);
   assert.match(portable, /%LOCALAPPDATA%\\Direct-Xfer\\tools\\rclone\\1\.75\.0/);

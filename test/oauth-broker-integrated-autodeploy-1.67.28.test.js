@@ -33,26 +33,27 @@ function harness() {
   return { call, audits };
 }
 
-test('1.69.4 installed UI offers broker deployment without source files or Wrangler', () => {
+test('1.69.6 installed UI offers broker deployment without source files or Wrangler', () => {
   const html = read('public/index.html');
   const app = read('public/app.js');
   const server = read('server.js');
+  const adminStorage = read('lib/server/admin-storage-routes.js');
   assert.match(html, /connector-config-google-broker-auto/);
   assert.match(html, /connector-config-google-cf-deploy/);
   assert.match(html, /connector-config-google-cf-finish/);
   assert.match(app, /deployGoogleBrokerAutomatically/);
   assert.match(app, /\/api\/storage\/oauth\/broker-auto\/prepare/);
   assert.match(app, /\/api\/storage\/oauth\/broker-auto\/google/);
-  assert.match(server, /createOAuthBrokerDeploymentRoutes/);
+  assert.match(adminStorage, /createOAuthBrokerDeploymentRoutes/);
   assert.match(read('Dockerfile'), /COPY lib \.\/lib/);
 });
 
-test('1.69.4 embedded Cloudflare assets stay byte-identical to the standalone broker', () => {
+test('1.69.6 embedded Cloudflare assets stay byte-identical to the standalone broker', () => {
   assert.equal(read('lib/assets/oauth-broker-worker.mjs'), read('oauth-broker/cloudflare-worker/src/index.js'));
   assert.equal(read('lib/assets/oauth-broker-schema.sql'), read('oauth-broker/cloudflare-worker/migrations/0001_init.sql'));
 });
 
-test('1.69.4 automatic deployment uses Cloudflare APIs directly and never shells out to Wrangler', () => {
+test('1.69.6 automatic deployment uses Cloudflare APIs directly and never shells out to Wrangler', () => {
   const src = read('lib/server/oauth-broker-deployment.js');
   assert.match(src, /api\.cloudflare\.com\/client\/v4/);
   assert.match(src, /\/d1\/database/);
@@ -62,7 +63,7 @@ test('1.69.4 automatic deployment uses Cloudflare APIs directly and never shells
   assert.doesNotMatch(src, /child_process|execFile|spawn|wrangler|npm ci/);
 });
 
-test('1.69.4 Cloudflare token is kept server-side during the wizard and never returned to the browser', async () => {
+test('1.69.6 Cloudflare token is kept server-side during the wizard and never returned to the browser', async () => {
   const accountId = 'a'.repeat(32);
   const databaseId = '11111111-2222-3333-4444-555555555555';
   const brokerUrl = 'https://direct-xfer-oauth-broker.example-subdomain.workers.dev';
@@ -119,7 +120,7 @@ test('1.69.4 Cloudflare token is kept server-side during the wizard and never re
 });
 
 
-test('1.69.4 reports the exact Cloudflare deployment stage instead of a generic failure', async () => {
+test('1.69.6 reports the exact Cloudflare deployment stage instead of a generic failure', async () => {
   const accountId = 'c'.repeat(32);
   const originalFetch = global.fetch;
   global.fetch = async (url) => {
@@ -141,7 +142,7 @@ test('1.69.4 reports the exact Cloudflare deployment stage instead of a generic 
   } finally { global.fetch = originalFetch; }
 });
 
-test('1.69.4 validates Cloudflare token status before changing account resources', async () => {
+test('1.69.6 validates Cloudflare token status before changing account resources', async () => {
   const originalFetch = global.fetch;
   let calls = 0;
   global.fetch = async (url) => {

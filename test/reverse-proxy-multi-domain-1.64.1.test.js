@@ -14,13 +14,13 @@ async function waitFor(url,child,logs){const until=Date.now()+15000;while(Date.n
 function cookieHeader(r){return (r.headers.get('set-cookie')||'').split(';',1)[0];}
 
 test('proxy diagnostic treats configured Images domain as a distinct public base',()=>{
-  const server=read('server.js'), app=read('public/app.js'), html=read('public/index.html');
+  const server=read('server.js')+'\n'+read('lib/server/admin-diagnostics-routes.js'), app=read('public/app.js'), html=read('public/index.html');
   assert.match(server,/alternatePublicBase/);
   assert.match(server,/alternate-public-base/);
   assert.match(server,/configuredImageBase/);
   assert.match(server,/getSettings\(\)\.linkBase \|\| PUBLIC_URL/);
   assert.match(app,/proxy\.msg\.alternate-public-base/);
-  assert.match(html,/app\.js\?v=348/);
+  assert.match(html,/app\.js\?v=350/);
 });
 
 test('real proxy check does not flag main admin host against configured Images host',{timeout:30000},async()=>{

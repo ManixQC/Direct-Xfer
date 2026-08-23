@@ -6,7 +6,7 @@ const path=require('path');
 const root=path.resolve(__dirname,'..');
 const html=fs.readFileSync(path.join(root,'public/index.html'),'utf8');
 const app=fs.readFileSync(path.join(root,'public/app.js'),'utf8');
-const server=fs.readFileSync(path.join(root,'server.js'),'utf8');
+const server=fs.readFileSync(path.join(root,'server.js'),'utf8')+'\n'+fs.readFileSync(path.join(root,'lib/server/http-application.js'),'utf8');
 
 test('System Health launcher sits between Dashboards and Activity in the admin topbar',()=>{
   const dash=html.indexOf('id=\"dash-btn\"');
@@ -29,7 +29,8 @@ test('System Health has independent routing, access gating and polling lifecycle
   assert.match(app,/DirectXferServerHealth\.start/);
   assert.match(app,/DirectXferServerHealth\.stop/);
   assert.match(app,/!systemHealthPageOpen\(\)/);
-  assert.match(server,/app\.get\('\/system-health', adminGuard/);
+  assert.match(server,/'\/system-health'/);
+  assert.match(server,/app\.get\(route, adminGuard/);
 });
 
 const css=fs.readFileSync(path.join(root,'public/style.css'),'utf8');
@@ -59,7 +60,7 @@ test('System Health launcher keeps its dedicated button shape despite user-btn b
 });
 
 test('corrected standard assets use fresh cache busters',()=>{
-  assert.match(html,/style\.css\?v=317/);
-  assert.match(html,/app\.js\?v=348/);
+  assert.match(html,/style\.css\?v=319/);
+  assert.match(html,/app\.js\?v=350/);
   assert.match(html,/server-health-dashboard\.js\?v=4/);
 });

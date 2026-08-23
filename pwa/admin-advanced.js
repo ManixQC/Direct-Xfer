@@ -1,7 +1,7 @@
 'use strict';
 (function () {
-  var RELEASE = (window.__DX_PWA_RELEASE && window.__DX_PWA_RELEASE.version) || '1.69.4';
-  var BUILD = (window.__DX_PWA_RELEASE && window.__DX_PWA_RELEASE.build) || '2026.08.21-pwa411';
+  var RELEASE = (window.__DX_PWA_RELEASE && window.__DX_PWA_RELEASE.version) || '1.70.0';
+  var BUILD = (window.__DX_PWA_RELEASE && window.__DX_PWA_RELEASE.build) || '2026.08.23-pwa432';
   var adminAccess = false;
   var accessAnnounced = false;
   var refreshTimer = 0;
@@ -78,7 +78,7 @@
 
   function addStyles(){
     if(!document.getElementById('dx-server-health-standard-css')){
-      var link=document.createElement('link');link.id='dx-server-health-standard-css';link.rel='stylesheet';link.href='/server-health-dashboard.css?v=401';document.head.appendChild(link);
+      var link=document.createElement('link');link.id='dx-server-health-standard-css';link.rel='stylesheet';link.href='/server-health-dashboard.css?v=418';document.head.appendChild(link);
     }
     if(document.getElementById('dx-admin-advanced-style'))return;
     var s=document.createElement('style');s.id='dx-admin-advanced-style';s.textContent=`
@@ -99,7 +99,7 @@ body[data-pwa-active-panel="system-health"] .wrap{max-width:1440px}body[data-pwa
     standardHealthAssetsPromise=new Promise(function(resolve,reject){
       var existing=document.getElementById('dx-server-health-standard-js');
       if(existing){existing.addEventListener('load',function(){resolve(window.DirectXferServerHealth||null);},{once:true});existing.addEventListener('error',reject,{once:true});return;}
-      var script=document.createElement('script');script.id='dx-server-health-standard-js';script.src='/server-health-dashboard.js?v=401';script.defer=false;script.onload=function(){resolve(window.DirectXferServerHealth||null);};script.onerror=function(){standardHealthAssetsPromise=null;reject(new Error('server-health-assets'));};document.head.appendChild(script);
+      var script=document.createElement('script');script.id='dx-server-health-standard-js';script.src='/server-health-dashboard.js?v=418';script.defer=false;script.onload=function(){resolve(window.DirectXferServerHealth||null);};script.onerror=function(){standardHealthAssetsPromise=null;reject(new Error('server-health-assets'));};document.head.appendChild(script);
     });
     return standardHealthAssetsPromise;
   }

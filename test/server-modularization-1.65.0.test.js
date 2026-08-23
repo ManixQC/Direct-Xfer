@@ -12,13 +12,22 @@ test('server entry point delegates large cohesive subsystems to dedicated module
   assert.match(server, /require\('\.\/lib\/server\/public-pages'\)/);
   assert.match(server, /require\('\.\/lib\/server\/tls-manager'\)/);
   assert.match(server, /require\('\.\/lib\/server\/network-services'\)/);
+  assert.match(server, /require\('\.\/lib\/server\/config'\)/);
+  assert.match(server, /require\('\.\/lib\/server\/bootstrap'\)/);
+  assert.match(server, /require\('\.\/lib\/server\/lifecycle-service'\)/);
   assert.match(server, /require\('\.\/lib\/server\/notification-service'\)/);
   assert.match(server, /require\('\.\/lib\/server\/backup-service'\)/);
+  assert.match(server, /require\('\.\/lib\/server\/restore-service'\)/);
+  assert.match(server, /require\('\.\/lib\/server\/maintenance-service'\)/);
+  assert.match(server, /require\('\.\/lib\/server\/admin-router'\)/);
+  assert.match(server, /require\('\.\/lib\/server\/admin-account-routes'\)/);
+  assert.match(server, /require\('\.\/lib\/server\/admin-security-routes'\)/);
+  assert.match(server, /require\('\.\/lib\/server\/admin-storage-routes'\)/);
   assert.doesNotMatch(server, /const PAGE_STYLE = `/);
   assert.doesNotMatch(server, /function ensureLocalCa\(/);
   assert.doesNotMatch(server, /async function checkPort\(/);
   assert.match(server, /Architecture map/);
-  assert.ok(server.split('\n').length < 23000, 'server.js should stay below 23k lines after readability refactor');
+  assert.ok(server.split('\n').length < 22100, 'admin route extraction should keep server.js below 22.1k lines');
 });
 
 test('extracted server modules remain CommonJS factories with explicit dependencies', () => {
@@ -27,25 +36,49 @@ test('extracted server modules remain CommonJS factories with explicit dependenc
   const network = read('lib/server/network-services.js');
   const notifications = read('lib/server/notification-service.js');
   const backup = read('lib/server/backup-service.js');
+  const restore = read('lib/server/restore-service.js');
+  const maintenance = read('lib/server/maintenance-service.js');
+  const config = read('lib/server/config.js');
+  const bootstrap = read('lib/server/bootstrap.js');
+  const lifecycle = read('lib/server/lifecycle-service.js');
+  const adminRouter = read('lib/server/admin-router.js');
+  const adminAccounts = read('lib/server/admin-account-routes.js');
+  const adminSecurity = read('lib/server/admin-security-routes.js');
+  const adminStorage = read('lib/server/admin-storage-routes.js');
   assert.match(pages, /function createPublicPages\(deps\)/);
   assert.match(tls, /function createTlsManager\(deps\)/);
   assert.match(network, /function createNetworkServices\(deps\)/);
   assert.match(notifications, /function createNotificationService\(deps\)/);
   assert.match(backup, /function createBackupService\(deps\)/);
+  assert.match(restore, /function createRestoreService\(deps = \{\}\)/);
+  assert.match(maintenance, /function createMaintenanceService\(deps = \{\}\)/);
+  assert.match(config, /function createServerConfig\(options = \{\}\)/);
+  assert.match(bootstrap, /function createRuntimeBootstrap\(options = \{\}\)/);
+  assert.match(lifecycle, /function createLifecycleService\(options = \{\}\)/);
   assert.match(pages, /module\.exports = \{ createPublicPages \}/);
   assert.match(tls, /module\.exports = \{ createTlsManager \}/);
   assert.match(network, /module\.exports = \{ createNetworkServices \}/);
   assert.match(notifications, /module\.exports = \{ createNotificationService \}/);
   assert.match(backup, /module\.exports = \{ createBackupService \}/);
+  assert.match(restore, /module\.exports = \{ createRestoreService \}/);
+  assert.match(maintenance, /module\.exports = \{ createMaintenanceService \}/);
+  assert.match(config, /module\.exports = \{ createServerConfig \}/);
+  assert.match(bootstrap, /module\.exports = \{ createRuntimeBootstrap \}/);
+  assert.match(lifecycle, /module\.exports = \{ createLifecycleService \}/);
+  assert.match(adminRouter, /function createAdminRouter\(deps = \{\}\)/);
+  assert.match(adminAccounts, /function attachAdminAccountRoutes\(deps = \{\}\)/);
+  assert.match(adminSecurity, /function attachAdminSecurityRoutes\(deps = \{\}\)/);
+  assert.match(adminStorage, /function attachAdminStorageRoutes\(deps = \{\}\)/);
 });
 
 test('collaborative album uploads do not reference an orphan mimeExt symbol', () => {
   const server = read('server.js');
-  assert.doesNotMatch(server, /\bmimeExt\b/);
-  assert.match(server, /const nameExt = \/\\\.\(\[A-Za-z0-9\]\+\)\$\//);
-  assert.match(server, /type\.slice\('image\/'.length\)/);
-  assert.match(server, /if \(ext === 'jpeg'\) ext = 'jpg'/);
-  assert.match(server, /const rawName = requestedName \|\| \('image\.' \+ ext\)/);
+  const publicShareRoutes = read('lib/server/public-share-routes.js');
+  assert.doesNotMatch(server + '\n' + publicShareRoutes, /\bmimeExt\b/);
+  assert.match(publicShareRoutes, /const nameExt = \/\\\.\(\[A-Za-z0-9\]\+\)\$\//);
+  assert.match(publicShareRoutes, /type\.slice\('image\/'.length\)/);
+  assert.match(publicShareRoutes, /if \(ext === 'jpeg'\) ext = 'jpg'/);
+  assert.match(publicShareRoutes, /const rawName = requestedName \|\| \('image\.' \+ ext\)/);
 });
 
 test('network module keeps exported update state live across checks', async () => {
@@ -56,7 +89,7 @@ test('network module keeps exported update state live across checks', async () =
       ok: true,
       text: async () => JSON.stringify({ results: [
         { name:'latest', digest:'sha256:new' },
-        { name:'1.69.4', digest:'sha256:new' },
+        { name:'1.69.6', digest:'sha256:new' },
         { name:'1.67.26', digest:'sha256:current' },
         { name:'1.65.0', digest:'sha256:old' },
       ] }),
@@ -71,7 +104,7 @@ test('network module keeps exported update state live across checks', async () =
     const live = svc.updateState;
     await svc.checkForUpdate();
     assert.strictEqual(svc.updateState, live);
-    assert.equal(live.latest, '1.69.4');
+    assert.equal(live.latest, '1.69.6');
     assert.equal(live.available, true);
   } finally { global.fetch = oldFetch; }
 });
@@ -110,13 +143,23 @@ test('notification service follows replaced root state and keeps runtime state p
   svc.clearRuntimeState();
 });
 
-test('backup service exposes creation helpers while restore stays in server.js', () => {
+test('backup and transactional restore remain separate explicit services', () => {
   const server = read('server.js');
   const backup = read('lib/server/backup-service.js');
+  const restore = read('lib/server/restore-service.js');
+  const adminRouter = read('lib/server/admin-router.js');
+  const adminAccounts = read('lib/server/admin-account-routes.js');
+  const adminSecurity = read('lib/server/admin-security-routes.js');
+  const adminStorage = read('lib/server/admin-storage-routes.js');
   assert.match(backup, /async function performBackup/);
   assert.match(backup, /async function putBackupS3/);
-  assert.match(server, /function restoredAuditEntries/);
-  assert.match(server, /function clearRuntimeAfterRestore/);
+  assert.match(restore, /function restoredAuditEntries/);
+  assert.match(restore, /function clearRuntimeAfterRestore/);
+  assert.match(restore, /function recoverInterruptedTlsRestore/);
+  assert.match(restore, /function applyRestore/);
+  assert.doesNotMatch(server, /function restoredAuditEntries/);
+  assert.doesNotMatch(server, /function clearRuntimeAfterRestore/);
+  assert.doesNotMatch(server, /function applyRestore/);
   assert.doesNotMatch(server, /async function runBackup\(/);
 });
 

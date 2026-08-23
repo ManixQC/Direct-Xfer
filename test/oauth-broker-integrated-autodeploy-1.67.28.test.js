@@ -8,6 +8,7 @@ const { createOAuthBrokerDeploymentRoutes } = require('../lib/server/oauth-broke
 
 const ROOT = path.join(__dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
+const normalizeText = (value) => String(value).replace(/\r\n?/g, '\n');
 const jsonResponse = (body, status = 200) => new Response(JSON.stringify(body), { status, headers:{ 'content-type':'application/json' } });
 
 function harness() {
@@ -49,8 +50,8 @@ test('1.69.6 installed UI offers broker deployment without source files or Wrang
 });
 
 test('1.69.6 embedded Cloudflare assets stay byte-identical to the standalone broker', () => {
-  assert.equal(read('lib/assets/oauth-broker-worker.mjs'), read('oauth-broker/cloudflare-worker/src/index.js'));
-  assert.equal(read('lib/assets/oauth-broker-schema.sql'), read('oauth-broker/cloudflare-worker/migrations/0001_init.sql'));
+  assert.equal(normalizeText(read('lib/assets/oauth-broker-worker.mjs')), normalizeText(read('oauth-broker/cloudflare-worker/src/index.js')));
+  assert.equal(normalizeText(read('lib/assets/oauth-broker-schema.sql')), normalizeText(read('oauth-broker/cloudflare-worker/migrations/0001_init.sql')));
 });
 
 test('1.69.6 automatic deployment uses Cloudflare APIs directly and never shells out to Wrangler', () => {

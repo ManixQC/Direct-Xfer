@@ -89,10 +89,14 @@ test('server delegates common Express security, public assets, SPA routes and HT
   const root = path.join(__dirname, '..');
   const server = fs.readFileSync(path.join(root, 'server.js'), 'utf8');
   const mod = fs.readFileSync(path.join(root, 'lib/server/http-application.js'), 'utf8');
-  assert.match(server, /require\('\.\/lib\/server\/http-application'\)/);
-  assert.match(server, /createHttpApplication\(\{/);
-  assert.match(server, /attachPublicAssetRoutes\(\)/);
-  assert.match(server, /attachAdminSpaAndFallbacks\(\)/);
+  const finalHttp = fs.readFileSync(path.join(root, 'lib/server/final-http-application.js'), 'utf8');
+  const composition = fs.readFileSync(path.join(root, 'lib/server/http-pwa-lifecycle-application.js'), 'utf8');
+  assert.match(server, /require\('\.\/lib\/server\/final-http-application'\)/);
+  assert.match(finalHttp, /require\('\.\/http-pwa-lifecycle-application'\)/);
+  assert.match(composition, /require\('\.\/http-application'\)/);
+  assert.match(composition, /createHttpApplication\(\{/);
+  assert.match(composition, /attachPublicAssetRoutes\(\)/);
+  assert.match(composition, /attachAdminSpaAndFallbacks\(\)/);
   assert.doesNotMatch(server, /app\.get\('\/logo\.svg'/);
   assert.doesNotMatch(server, /app\.get\('\/configuration'/);
   assert.doesNotMatch(server, /express\.static\(path\.join\(__dirname, 'public'\)/);

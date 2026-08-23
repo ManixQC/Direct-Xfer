@@ -15,11 +15,16 @@ const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8').replace(/\r\
 
 test('priority 1 utilities no longer live in server.js', () => {
   const server = read('server.js');
+  const core = read('lib/server/core-state-application.js');
+  const notificationApplication = read('lib/server/notification-application.js');
   for (const name of ['withinRoot', 'resolveWithin', 'assertRealWithin', 'containerToHost', 'hostToContainer', 'mapLimit', 'readLogTail', 'readLogTailAsync']) {
     assert.doesNotMatch(server, new RegExp(`function\\s+${name}\\s*\\(`), `${name} should not be implemented in server.js`);
   }
-  assert.match(server, /createHostPathService\(\{ fs, path, hostRoot:HOST_ROOT \}\)/);
-  assert.match(server, /readLogTail:\s*\(\.\.\.args\)\s*=>\s*transferService\.readLogTail\(\.\.\.args\)/);
+  assert.match(server, /createCoreStateApplication\(\{/);
+  assert.match(core, /createHostPathService\(\{ fs, path, hostRoot:config\.HOST_ROOT \}\)/);
+  assert.doesNotMatch(server, /readLogTail:\s*\(\.\.\.args\)/);
+  assert.match(notificationApplication, /readLogTail:\s*\(\.\.\.args\)\s*=>/);
+  assert.match(notificationApplication, /service\.readLogTail\(\.\.\.args\)/);
   assert.ok(server.split('\n').length < 1650, `server.js should stay focused on composition (${server.split('\n').length} lines)`);
   for (const stale of [
     'Export the currently filtered Images dashboard as CSV',

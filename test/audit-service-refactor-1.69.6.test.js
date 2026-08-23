@@ -32,8 +32,10 @@ function cleanup(h) { fs.rmSync(h.dir, { recursive:true, force:true }); }
 
 test('audit HMAC/proof/migration implementation is extracted from server.js', () => {
   const server = read('server.js');
+  const core = read('lib/server/core-state-application.js');
   const audit = read('lib/server/audit-service.js');
-  assert.match(server, /createAuditService/);
+  assert.match(server, /createCoreStateApplication/);
+  assert.match(core, /createAuditService/);
   for (const name of ['ensureAuditProofKeys','verifyAuditProofBundle','migrateLocalAuditKeyToExternalIfNeeded','appendAuditChainEntry','durableAuditWriteSync']) {
     assert.doesNotMatch(server, new RegExp(`function\\s+${name}\\b`), `${name} should not live in server.js`);
     assert.match(audit, new RegExp(`function\\s+${name}\\b`));

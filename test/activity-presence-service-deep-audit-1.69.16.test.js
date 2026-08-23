@@ -271,11 +271,13 @@ test('closing the last presence stream cancels a pending broadcast and all heart
 });
 
 test('restore integration resets both activity and presence SSE state, not activity alone', () => {
-  const server = read('server.js');
-  const restore = read('lib/server/restore-service.js');
+  const stateLifecycle = read('lib/server/state-lifecycle-application.js');
+  const coordinator = read('lib/server/state-replacement-coordinator.js');
+  const httpComposition = read('lib/server/http-pwa-lifecycle-application.js');
   const pwa = read('lib/server/pwa-routes.js');
-  assert.match(server, /closeActivityPresenceStreams,/);
-  assert.match(restore, /reset\('activity-presence', closeActivityPresenceStreams \|\| closeLiveActivityClients\)/);
+  assert.match(httpComposition, /closeActivityPresenceStreams,/);
+  assert.match(stateLifecycle, /\['activity-presence', \(\) => activityPresenceService\.closeActivityPresenceStreams\(\)\]/);
+  assert.match(coordinator, /function clearRuntimeAfterRestore\(\)/);
   assert.match(pwa, /const safeVisible = sanitizeActivityLog\(visible\)/);
   assert.match(pwa, /activityEventsForClient\(safeVisible\.slice\(0, limit\)\)/);
 });

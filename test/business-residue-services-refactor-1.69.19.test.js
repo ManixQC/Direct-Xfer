@@ -33,7 +33,8 @@ test('point 6 removes small business-policy implementations from server.js', () 
   assert.match(read('lib/server/settings-service.js'), /function effMaxUpload\(/);
   assert.match(read('lib/server/share-service.js'), /function parseLinkRateKBps\(/);
   assert.match(read('lib/server/upload-reception-service.js'), /function appendReceptionThreadMessage\(/);
-  assert.match(server, /function receptionThreadEnabled\(\.\.\.args\) \{ return uploadReceptionService\.receptionThreadEnabled\(\.\.\.args\); \}/, 'the pre-construction bridge must remain a pure delegation');
+  assert.match(server, /receptionThreadEnabled,[\s\S]*bootstrapReferences\.refs/, 'the pre-construction bridge must come from the validated bootstrap-reference registry');
+  assert.match(read('lib/server/bootstrap-reference-registry.js'), /runtime:Object\.freeze\(\[[\s\S]*'receptionThreadEnabled'/);
   assert.match(read('lib/server/transfer-service.js'), /function dashboardQueryOptions\(/);
   assert.match(read('lib/server/photo-service.js'), /function photoDashboardQueryOptions\(/);
   assert.match(read('lib/server/storage-connector-job-service.js'), /function connectorStore\(/);

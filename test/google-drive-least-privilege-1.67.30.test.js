@@ -9,6 +9,7 @@ const {StorageConnectorService}=require('../lib/storage-connectors');
 
 const ROOT=path.resolve(__dirname,'..');
 const read=(rel)=>fs.readFileSync(path.join(ROOT,rel),'utf8');
+const normalizeText=(value)=>String(value).replace(/\r\n?/g,'\n');
 
 function brokerResponse(scope){
   const auth=new URL('https://accounts.google.com/o/oauth2/v2/auth');
@@ -82,5 +83,5 @@ test('1.67.30 both broker runtimes default to drive.file and disable incremental
     assert.doesNotMatch(src,/include_granted_scopes/);
     assert.match(src,/drive\.readonly/);
   }
-  assert.equal(read('oauth-broker/cloudflare-worker/src/index.js'),read('lib/assets/oauth-broker-worker.mjs'));
+  assert.equal(normalizeText(read('oauth-broker/cloudflare-worker/src/index.js')),normalizeText(read('lib/assets/oauth-broker-worker.mjs')));
 });

@@ -51,11 +51,15 @@ function deviceFixture() {
 test('PWA domains are composed by the dedicated PWA application bootstrap without server forwarding wrappers', () => {
   const server = read('server.js');
   const application = read('lib/server/pwa-application.js');
+  const finalHttp = read('lib/server/final-http-application.js');
+  const composition = read('lib/server/http-pwa-lifecycle-application.js');
   for (const rel of ['pwa-device-service.js','pwa-photo-service.js','webauthn-service.js','pwa-event-service.js','pwa-composition-service.js','pwa-application.js']) {
     assert.ok(fs.existsSync(path.join(ROOT, 'lib', 'server', rel)), rel);
   }
   assert.match(server, /const pwaServices = createPwaServiceRegistry\(\)/);
-  assert.match(server, /createPwaApplication\(\{/);
+  assert.match(server, /createFinalHttpApplication\(\{/);
+  assert.match(finalHttp, /createHttpPwaLifecycleApplication\(\{/);
+  assert.match(composition, /createPwaApplication\(\{/);
   assert.doesNotMatch(server, /createPwaDeviceService\(|createPwaPhotoService\(|createWebauthnService\(|createPwaEventService\(/);
   assert.match(application, /createPwaDeviceService\(/);
   assert.match(application, /createPwaPhotoService\(/);

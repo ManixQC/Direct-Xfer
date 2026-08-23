@@ -90,9 +90,15 @@ test('refactor exports every helper still consumed by server.js', () => {
   assert.equal(typeof out.sendSha256Manifest, 'function');
   assert.equal(out.RENDER_MAX_BYTES, 2 * 1024 * 1024);
   const server = read('server.js');
-  assert.match(server, /applicationContext\.register\('public-share', publicShareRoutes\)/);
-  assert.match(server, /attachReceptionCollaborationRoutes\(applicationContext\.route\('receptionCollaboration'/);
-  assert.match(server, /attachAdminDiagnosticsRoutes\(applicationContext\.route\('adminDiagnostics'/);
+  const adminApplication = read('lib/server/admin-application.js');
+  const publicHttp = read('lib/server/public-http-application.js');
+  const publication = read('lib/server/application-publication.js');
+  assert.match(server, /publishApplicationGraph\(\{/);
+  assert.match(publication, /publicHttpApplication/);
+  assert.match(publicHttp, /\['public-share', publicShareRoutes\]/);
+  assert.match(publication, /attachReceptionCollaborationRoutes\(receptionFacade\)/);
+  assert.match(adminApplication, /diagnostics:context\.route\('adminDiagnostics', ROUTE_DOMAINS\.diagnostics/);
+  assert.match(adminApplication, /attachAdminDiagnosticsRoutes\(lateRouteDeps\.diagnostics\)/);
   const { ROUTE_DEPENDENCIES } = require('../lib/server/application-context');
   assert.ok(ROUTE_DEPENDENCIES.receptionCollaboration.includes('selParser'));
   assert.ok(ROUTE_DEPENDENCIES.receptionCollaboration.includes('sendSha256Manifest'));

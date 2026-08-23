@@ -200,11 +200,14 @@ test('SDK-generated assembly metadata replaces manual assembly attributes', () =
   const hostSource = read('windows-server-host/Program.cs');
   for (const project of [launcherProject, hostProject]) {
     assert.doesNotMatch(project, /<GenerateAssemblyInfo>\s*false\s*<\/GenerateAssemblyInfo>/);
-    assert.match(project, /<AssemblyVersion>1\.70\.1\.0<\/AssemblyVersion>/);
-    assert.match(project, /<FileVersion>1\.70\.1\.0<\/FileVersion>/);
-    assert.match(project, /<InformationalVersion>1\.70\.1<\/InformationalVersion>/);
     assert.match(project, /<IncludeSourceRevisionInInformationalVersion>false<\/IncludeSourceRevisionInInformationalVersion>/);
   }
+  assert.match(launcherProject, /<AssemblyVersion>1\.70\.1\.0<\/AssemblyVersion>/);
+  assert.match(launcherProject, /<FileVersion>1\.70\.1\.0<\/FileVersion>/);
+  assert.match(launcherProject, /<InformationalVersion>1\.70\.1<\/InformationalVersion>/);
+  assert.match(hostProject, /<AssemblyVersion>1\.70\.20\.0<\/AssemblyVersion>/);
+  assert.match(hostProject, /<FileVersion>1\.70\.20\.0<\/FileVersion>/);
+  assert.match(hostProject, /<InformationalVersion>1\.70\.20<\/InformationalVersion>/);
   assert.doesNotMatch(launcherSource, /\[assembly:\s*Assembly(?:Title|Description|Company|Product|Copyright|Version|FileVersion|InformationalVersion)/);
   assert.doesNotMatch(hostSource, /\[assembly:\s*Assembly(?:Title|Description|Company|Product|Copyright|Version|FileVersion|InformationalVersion)/);
 });
@@ -248,7 +251,7 @@ test('Windows C# source eliminates the remaining nullable and unused-field warni
 test('single-file ServerHost attachment trusts authenticated runtime identity instead of brittle Win32 metadata', () => {
   const launcher = read('windows-launcher/Program.cs');
   assert.match(launcher, /StartupReadyTimeoutMs = 60000/);
-  assert.match(launcher, /ServerHostFileMatchesSession[\s\S]*?string\.Equals\(session\.hostBuild, Program\.ServerHostBuild/);
+  assert.match(launcher, /ServerHostFileMatchesSession[\s\S]*?string\.Equals\(session\.hostProtocol, Program\.ServerHostProtocol/);
   assert.match(launcher, /ServerHostFileMatchesSession[\s\S]*?IsAmd64Pe\(expected\)[\s\S]*?return true;/);
   assert.doesNotMatch(launcher, /FileVersionInfo\.GetVersionInfo\(expected\)/);
   assert.match(launcher, /\/__dx_launcher\/ready", token, scheme, 2000/);

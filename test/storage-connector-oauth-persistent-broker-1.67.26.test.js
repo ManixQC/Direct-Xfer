@@ -67,7 +67,7 @@ test('1.67.26 a remote browser with no broker gets a precise setup-required erro
 test('1.67.26 standard UI exposes persistent broker configuration and preserves detailed broker errors',()=>{
   const html=fs.readFileSync(path.resolve(__dirname,'../public/index.html'),'utf8');
   const app=fs.readFileSync(path.resolve(__dirname,'../public/app.js'),'utf8');
-  const server=fs.readFileSync(path.resolve(__dirname,'../server.js'),'utf8')+'\n'+fs.readFileSync(path.resolve(__dirname,'../lib/server/settings-service.js'),'utf8');
+  const server=fs.readFileSync(path.resolve(__dirname,'../server.js'),'utf8')+'\n'+fs.readFileSync(path.resolve(__dirname,'../lib/server/admin-application.js'),'utf8')+'\n'+fs.readFileSync(path.resolve(__dirname,'../lib/server/settings-service.js'),'utf8');
   assert.match(html,/connector-config-google-broker-url/);
   assert.match(html,/connector-config-google-broker-save/);
   assert.match(app,/saveGoogleOAuthBrokerUrl/);
@@ -75,5 +75,5 @@ test('1.67.26 standard UI exposes persistent broker configuration and preserves 
   assert.match(app,/error&&error\.data/);
   assert.match(server,/googleOAuthBrokerUrl:\s*''/);
   assert.match(server,/cleanBrokerUrl\(raw\)/);
-  assert.match(server,/GOOGLE_OAUTH_BROKER_URL_ENV \|\| String\(getSettings\(\)\.googleOAuthBrokerUrl/);
+  assert.match(server,/(?:GOOGLE_OAUTH_BROKER_URL_ENV|config\.GOOGLE_OAUTH_BROKER_URL_ENV) \|\| String\((?:getSettings\(\)|settings\.getSettings\(\))\.googleOAuthBrokerUrl/);
 });

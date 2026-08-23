@@ -26,9 +26,9 @@ for (const name of ['json','urlencoded','raw','text','static']) express[name] = 
 express.application = {}; express.request = {}; express.response = {};
 Module._load = function(request, parent, isMain){
   if (request === 'express') return express;
-  if (request === 'qrcode') return { toDataURL: async () => 'data:image/png;base64,' };
+  if (request === 'qrcode') return { toDataURL: async () => 'data:image/png;base64,', toString: async () => '<svg></svg>' };
   if (request === 'archiver') return function(){ return { on(){return this;}, pipe(){return this;}, file(){return this;}, append(){return this;}, finalize(){return Promise.resolve();} }; };
-  if (request.endsWith('/lifecycle-service') || request === './lib/server/lifecycle-service') return { createLifecycleService(){ return { start(){}, shutdown:async()=>{} }; } };
+  if (request.endsWith('/lifecycle-service') || request === './lib/server/lifecycle-service') return { createLifecycleService(){ return { start(){}, shutdown:async()=>{}, getServer(){ return null; }, getServerScheme(){ return 'http'; } }; } };
   return originalLoad.apply(this, arguments);
 };
 require('./server.js');

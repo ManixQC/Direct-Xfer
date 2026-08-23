@@ -19,16 +19,19 @@ namespace DirectXfer.WindowsLauncher
 {
     internal static class Program
     {
-        internal const string AppVersion = "1.70.1";
-        internal const string RuntimeAppBuild = "1.70.1-launcher148-csharp";
+        // Windows component identity is deliberately decoupled from the Direct-Xfer
+        // application release. Keep these values stable across app-only releases so an
+        // unchanged launcher can rebuild to the same binary identity/hash.
+        internal const string LauncherVersion = "1.70.1";
+        internal const string LauncherBuild = "launcher149-csharp";
+        internal const string RuntimeProtocol = "1";
+        internal const string ServerHostProtocol = "1";
         internal const string ServerHostFileName = "Direct-Xfer.ServerHost.exe";
-        internal const string ServerHostVersion = "1.70.1.0";
         internal const int DefaultPort = 55750;
         internal const int MaxFallbackPort = 55769;
         internal const int StartupReadyTimeoutMs = 60000;
         internal const string MutexName = @"Local\DirectXferLauncherInstance";
         internal const string OpenEventName = @"Local\DirectXferLauncherOpen";
-        internal const string ServerHostBuild = "1.70.1-serverhost121-csharp";
         internal const string ServerHostReloadEventName = @"Local\DirectXferServerHostReload";
         internal const string RcloneVersion = "1.75.0";
         internal const string RcloneZipSha256 = "203581f0a7baeae873f2347483a798c79e2eaf5c384a4e9d866aa374f1c89ac0";
@@ -40,6 +43,73 @@ namespace DirectXfer.WindowsLauncher
         internal const string TessdataFraGitBlobSha1 = "d9e2b2160be0d1ca3b8f1bf2730fae476ef3b4a6";
         internal const string TessdataSpaGitBlobSha1 = "72e901f13ca52cfe34cf239a368b9ed3c0ddaf26";
         internal const string OptionalActivationMarkerFileName = ".direct-xfer-enabled";
+
+        private static readonly JsonCompat RuntimeJson = new();
+
+        internal static string PortableRoot
+        {
+            get
+            {
+                var overridden = Environment.GetEnvironmentVariable("DX_WINDOWS_PORTABLE_ROOT");
+                if (!string.IsNullOrWhiteSpace(overridden))
+                {
+                    try { return Path.GetFullPath(overridden.Trim()); }
+                    catch { /* Invalid optional override: fall back to the packaged executable directory. */ }
+                }
+                return ExecutableDirectory;
+            }
+        }
+
+        internal static string RuntimeAppDirectory { get { return Path.Combine(PortableRoot, "runtime", "app"); } }
+
+        internal static string AppVersion
+        {
+            get
+            {
+                try
+                {
+                    var packagePath = Path.Combine(RuntimeAppDirectory, "package.json");
+                    if (!File.Exists(packagePath)) return LauncherVersion;
+                    var package = RuntimeJson.Deserialize<Dictionary<string, object?>>(File.ReadAllText(packagePath, Encoding.UTF8));
+                    object? value;
+                    var version = package != null && package.TryGetValue("version", out value)
+                        ? Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty
+                        : string.Empty;
+                    return IsSafeIdentity(version) ? version : LauncherVersion;
+                }
+                catch { return LauncherVersion; }
+            }
+        }
+
+        internal static string RuntimeBuild
+        {
+            get
+            {
+                foreach (var name in new[] { "runtime-build.txt", ".dx-runtime-build" })
+                {
+                    try
+                    {
+                        var path = Path.Combine(RuntimeAppDirectory, name);
+                        if (!File.Exists(path)) continue;
+                        var value = File.ReadAllText(path, Encoding.ASCII).Trim();
+                        if (IsSafeIdentity(value)) return value;
+                    }
+                    catch { }
+                }
+                return string.Empty;
+            }
+        }
+
+        private static bool IsSafeIdentity(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value) || value.Length > 128) return false;
+            foreach (var c in value)
+            {
+                var alphaNumeric = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');
+                if (!alphaNumeric && c != '.' && c != '-' && c != '_' && c != '+') return false;
+            }
+            return true;
+        }
 
         internal static string ExecutablePath
         {
@@ -123,7 +193,10 @@ namespace DirectXfer.WindowsLauncher
         public int port { get; set; }
         public string scheme { get; set; } = string.Empty;
         public string token { get; set; } = string.Empty;
+        public string appVersion { get; set; } = string.Empty;
+        public string runtimeProtocol { get; set; } = string.Empty;
         public string runtimeBuild { get; set; } = string.Empty;
+        public string hostProtocol { get; set; } = string.Empty;
         public string hostBuild { get; set; } = string.Empty;
     }
 
@@ -328,19 +401,7 @@ namespace DirectXfer.WindowsLauncher
             return NativeUi.PickFolder(_tray.WindowHandle, title, Directory.Exists(initial) ? initial : string.Empty);
         }
 
-        private static string PortableRoot
-        {
-            get
-            {
-                var overridden = Environment.GetEnvironmentVariable("DX_WINDOWS_PORTABLE_ROOT");
-                if (!string.IsNullOrWhiteSpace(overridden))
-                {
-                    try { return Path.GetFullPath(overridden.Trim()); }
-                    catch { /* Invalid optional override: fall back to the packaged executable directory. */ }
-                }
-                return Program.ExecutableDirectory;
-            }
-        }
+        private static string PortableRoot { get { return Program.PortableRoot; } }
 
         private string? LocalCaCertificatePath
         {
@@ -355,7 +416,7 @@ namespace DirectXfer.WindowsLauncher
         private static bool ServerHostFileMatchesSession(LauncherSession? session)
         {
             if (session == null || string.IsNullOrWhiteSpace(session.hostPath) ||
-                !string.Equals(session.hostBuild, Program.ServerHostBuild, StringComparison.Ordinal)) return false;
+                !string.Equals(session.hostProtocol, Program.ServerHostProtocol, StringComparison.Ordinal)) return false;
             try
             {
                 var expected = Path.GetFullPath(ExpectedServerHostPath);
@@ -365,7 +426,7 @@ namespace DirectXfer.WindowsLauncher
                 // The SDK-generated Win32 version resource of a published single-file
                 // apphost is not a stable runtime identity boundary across
                 // .NET SDK servicing releases. The session is already authenticated by
-                // the exact expected path/build plus the per-process token and PID in
+                // the exact expected path/protocol plus the per-process token and PID in
                 // /__dx_launcher/ready, so do not reject a healthy ServerHost only because
                 // FileVersionInfo metadata is missing or formatted differently.
                 return true;
@@ -449,14 +510,26 @@ namespace DirectXfer.WindowsLauncher
                 _lastAttachFailure = "No usable launcher-session.json has been published by ServerHost yet.";
                 return false;
             }
-            if (!string.Equals(session.runtimeBuild, Program.RuntimeAppBuild, StringComparison.Ordinal))
+            if (!string.Equals(session.runtimeProtocol, Program.RuntimeProtocol, StringComparison.Ordinal))
             {
-                _lastAttachFailure = "Runtime build mismatch: session=" + session.runtimeBuild + ", expected=" + Program.RuntimeAppBuild + ".";
+                _lastAttachFailure = "Runtime protocol mismatch: session=" + session.runtimeProtocol + ", expected=" + Program.RuntimeProtocol + ".";
+                return false;
+            }
+            var expectedRuntimeBuild = Program.RuntimeBuild;
+            if (string.IsNullOrWhiteSpace(expectedRuntimeBuild) || !string.Equals(session.runtimeBuild, expectedRuntimeBuild, StringComparison.Ordinal))
+            {
+                _lastAttachFailure = "Runtime build mismatch: session=" + session.runtimeBuild + ", expected=" + expectedRuntimeBuild + ".";
+                return false;
+            }
+            var expectedAppVersion = Program.AppVersion;
+            if (!string.Equals(session.appVersion, expectedAppVersion, StringComparison.Ordinal))
+            {
+                _lastAttachFailure = "Application version mismatch: session=" + session.appVersion + ", expected=" + expectedAppVersion + ".";
                 return false;
             }
             if (!ServerHostFileMatchesSession(session))
             {
-                _lastAttachFailure = "ServerHost path/build validation failed for the published session.";
+                _lastAttachFailure = "ServerHost path/protocol validation failed for the published session.";
                 return false;
             }
             string usedScheme;
@@ -907,6 +980,7 @@ namespace DirectXfer.WindowsLauncher
                 File.WriteAllText(temp,
                     "Direct-Xfer optional component activation" + Environment.NewLine +
                     "app=" + Program.AppVersion + Environment.NewLine +
+                    "launcher=" + Program.LauncherVersion + " (" + Program.LauncherBuild + ")" + Environment.NewLine +
                     "source=" + source + Environment.NewLine,
                     new UTF8Encoding(false));
                 File.Move(temp, marker, true);
@@ -1561,7 +1635,9 @@ namespace DirectXfer.WindowsLauncher
                 if (session == null || session.hostPid <= 0 || session.serverPid <= 0 ||
                     session.serverStartedUtcTicks <= 0 || session.port < Program.DefaultPort || session.port > Program.MaxFallbackPort) return null;
                 if (string.IsNullOrWhiteSpace(session.token) || session.token.Length != 48 ||
-                    !session.token.All(IsHexDigit) || string.IsNullOrWhiteSpace(session.hostBuild)) return null;
+                    !session.token.All(IsHexDigit) || string.IsNullOrWhiteSpace(session.appVersion) ||
+                    string.IsNullOrWhiteSpace(session.runtimeProtocol) || string.IsNullOrWhiteSpace(session.runtimeBuild) ||
+                    string.IsNullOrWhiteSpace(session.hostProtocol) || string.IsNullOrWhiteSpace(session.hostBuild)) return null;
                 if (string.IsNullOrWhiteSpace(session.hostPath) || !Path.IsPathRooted(session.hostPath) ||
                     string.IsNullOrWhiteSpace(session.nodePath) || !Path.IsPathRooted(session.nodePath)) return null;
                 return session;

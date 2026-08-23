@@ -193,11 +193,18 @@ test('public abuse service owns proof-of-work signing, pass cookies and challeng
 
 test('server.js composes public access/abuse services instead of retaining their implementation', () => {
   const server = read('server.js');
+  const securityAuth = read('lib/server/security-auth-application.js');
+  const publicHttp = read('lib/server/public-http-application.js');
   const access = read('lib/server/public-access-service.js');
   const abuse = read('lib/server/public-abuse-service.js');
 
-  assert.match(server, /createPublicAccessService\(\{/);
-  assert.match(server, /createPublicAbuseService\(\{/);
+  assert.match(server, /createSecurityAuthApplication\(\{/);
+  assert.match(server, /createPublicHttpApplication\(\{/);
+  assert.match(publicHttp, /securityAuthApplication\.initializePublicSecurity/);
+  assert.doesNotMatch(server, /createPublicAccessService\(\{/);
+  assert.doesNotMatch(server, /createPublicAbuseService\(\{/);
+  assert.match(securityAuth, /createPublicAccessService\(\{/);
+  assert.match(securityAuth, /createPublicAbuseService\(\{/);
   assert.doesNotMatch(server, /^function hasAccessRules\(/m);
   assert.doesNotMatch(server, /^async function linkAccessReason\(/m);
   assert.doesNotMatch(server, /^async function checkSharePassword\(/m);

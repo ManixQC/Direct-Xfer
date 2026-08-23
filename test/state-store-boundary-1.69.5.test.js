@@ -105,11 +105,13 @@ test('a stale async state write cannot overwrite a newer critical persistNow com
 test('server delegates state file encryption and atomic write scheduling to state-store', () => {
   const root = path.resolve(__dirname, '..');
   const server = fs.readFileSync(path.join(root, 'server.js'), 'utf8').replace(/\r\n/g, '\n');
+  const core = fs.readFileSync(path.join(root, 'lib/server/core-state-application.js'), 'utf8').replace(/\r\n/g, '\n');
   const moduleText = fs.readFileSync(path.join(root, 'lib/server/state-store.js'), 'utf8').replace(/\r\n/g, '\n');
   const bootstrapText = fs.readFileSync(path.join(root, 'lib/server/state-bootstrap-service.js'), 'utf8').replace(/\r\n/g, '\n');
 
-  assert.match(server, /require\('\.\/lib\/server\/state-store'\)/);
-  assert.match(server, /createStateStore\(\{/);
+  assert.match(server, /require\('\.\/lib\/server\/core-state-application'\)/);
+  assert.match(core, /require\('\.\/state-store'\)/);
+  assert.match(core, /createStateStore\(\{/);
   assert.match(bootstrapText, /stateStore\.load\(\)/);
   assert.doesNotMatch(server, /let writeChain = Promise\.resolve\(\)/);
   assert.doesNotMatch(server, /function deriveDataKey\(/);
@@ -204,8 +206,10 @@ test('state-store exposes explicit retry scheduling for rollback recovery paths'
 
     const root = path.resolve(__dirname, '..');
     const serverText = fs.readFileSync(path.join(root, 'server.js'), 'utf8');
+    const registrarText = fs.readFileSync(path.join(root, 'lib/server/register-application-domains.js'), 'utf8');
     const { ROUTE_DEPENDENCIES } = require('../lib/server/application-context');
-    assert.match(serverText, /applicationContext\.register\('state-store', stateStore\)/);
+    assert.match(serverText, /publishApplicationGraph\(\{/);
+    assert.match(registrarText, /\['state-store', requiredValue\(services, 'stateStore', 'services'\)\]/);
     assert.ok(ROUTE_DEPENDENCIES.adminSecurity.includes('schedulePersistRetry'));
   } finally {
     store.close();

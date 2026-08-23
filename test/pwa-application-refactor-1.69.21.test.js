@@ -135,7 +135,11 @@ test('every PWA route dependency is provided by a service, context facade or liv
 test('server delegates PWA bootstrap and no longer owns route facade/parser/template construction', () => {
   const server = fs.readFileSync(path.join(ROOT, 'server.js'), 'utf8');
   const application = fs.readFileSync(path.join(ROOT, 'lib', 'server', 'pwa-application.js'), 'utf8');
-  assert.match(server, /const pwaApplication = createPwaApplication\(\{/);
+  const finalHttp = fs.readFileSync(path.join(ROOT, 'lib', 'server', 'final-http-application.js'), 'utf8');
+  const composition = fs.readFileSync(path.join(ROOT, 'lib', 'server', 'http-pwa-lifecycle-application.js'), 'utf8');
+  assert.match(server, /createFinalHttpApplication\(\{/);
+  assert.match(finalHttp, /createHttpPwaLifecycleApplication\(\{/);
+  assert.match(composition, /pwaApplication = createPwaApplication\(\{/);
   assert.doesNotMatch(server, /const pwaIndexTemplate =|const pwaRouteFacades =|const pwaNetworkTestPayload =/);
   assert.doesNotMatch(server, /createPwaDeviceService\(|createPwaPhotoService\(|createPwaEventService\(|createWebauthnService\(/);
   assert.ok(application.indexOf("attachPwaRoutes({") < application.indexOf("context.register('pwa-device'"),

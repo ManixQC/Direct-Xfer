@@ -71,18 +71,22 @@ function fixture(options = {}) {
 
 test('the Settings domain is owned by settings-service and server.js only composes it', () => {
   const server = read('server.js');
+  const core = read('lib/server/core-state-application.js');
   const source = read('lib/server/settings-service.js');
+  const adminApplication = read('lib/server/admin-application.js');
   const adminRoutes = read('lib/server/admin-settings-routes.js');
   const pwaRoutes = read('lib/server/pwa-routes.js');
   const shareService = read('lib/server/share-service.js');
-  assert.match(server, /createSettingsService\(\{/);
-  assert.match(server, /require\('\.\/lib\/server\/settings-service'\)/);
+  assert.match(server, /createCoreStateApplication\(\{/);
+  assert.match(core, /createSettingsService\(\{/);
+  assert.match(core, /require\('\.\/settings-service'\)/);
   assert.doesNotMatch(server, /const DEFAULT_SETTINGS\s*=\s*\{/);
   for (const name of ['getSettings', 'setSettings', 'setSettingsDurable', 'settingsForClient', 'computeSettingsPatch']) {
     assert.doesNotMatch(server, new RegExp(`function ${name}\\(`));
     assert.match(source, new RegExp(`function ${name}\\(`));
   }
-  assert.match(server, /attachAdminSettingsRoutes\(applicationContext\.route\('adminSettings'/);
+  assert.match(adminApplication, /settings:context\.route\('adminSettings', ROUTE_DOMAINS\.settings/);
+  assert.match(adminApplication, /attachAdminSettingsRoutes\(lateRouteDeps\.settings\)/);
   const { ROUTE_DEPENDENCIES } = require('../lib/server/application-context');
   for (const name of ['computeSettingsPatch', 'setSettingsDurable', 'settingsForClient']) {
     assert.ok(ROUTE_DEPENDENCIES.adminSettings.includes(name), name);

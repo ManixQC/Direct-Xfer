@@ -100,11 +100,14 @@ test('bind rejects scalar binding-name inputs instead of interpreting strings ch
 
 test('server explicitly disambiguates known cross-domain aliases from point 7', () => {
   const server = read('server.js');
-  assert.match(server, /attachReceptionCollaborationRoutes\(applicationContext\.route\('receptionCollaboration',[\s\S]*?\{\s*PENDING_DIR,\s*live:/);
-  assert.match(server, /attachAdminShareRoutes\(applicationContext\.route\('adminShare',[\s\S]*?\{\s*PENDING_DIR,\s*live:/);
-  assert.match(server, /attachAdminStorageRoutes\(applicationContext\.route\('adminStorage',[\s\S]*?\{\s*storageConnectorService,\s*cleanConnectorPath,\s*connectorErrorCode,\s*connectorHttpStatus\s*\}/);
+  const admin = read('lib/server/admin-application.js');
+  const publication = read('lib/server/application-publication.js');
+  assert.match(server, /publishApplicationGraph\(\{[\s\S]*?reception:\{ PENDING_DIR:configPaths\.PENDING_DIR, live:liveState \}/);
+  assert.match(publication, /route\(\s*'receptionCollaboration',[\s\S]*?receptionOverrides/);
+  assert.match(admin, /attachAdminShareRoutes\(context\.route\('adminShare', ROUTE_DOMAINS\.share,[\s\S]*?PENDING_DIR:config\.PENDING_DIR,[\s\S]*?live:adminShareRouteLiveBindings/);
+  assert.match(admin, /attachAdminStorageRoutes\(context\.route\('adminStorage', ROUTE_DOMAINS\.storage,[\s\S]*?storageConnectorService,[\s\S]*?connectorHttpStatus:early\.connectorHttpStatus/);
 
-  const lateAdapters = server.match(/applicationContext\.register\('late-adapters',\s*\{([\s\S]*?)\}\);/);
+  const lateAdapters = admin.match(/context\.register\('late-adapters',\s*\{([\s\S]*?)\}\);/);
   assert.ok(lateAdapters, 'late-adapters registration should exist');
   assert.doesNotMatch(lateAdapters[1], /\brootDir\b/);
   assert.doesNotMatch(lateAdapters[1], /\bnormalizeLinkBase\b/);

@@ -60,10 +60,12 @@ function fixture(options = {}) {
 
 test('account bootstrap and lookup helpers are isolated behind account-service', () => {
   const server = read('server.js');
+  const core = read('lib/server/core-state-application.js');
   const source = read('lib/server/account-service.js');
-  assert.match(server, /createAccountService\(\{/);
-  assert.match(server, /require\('\.\/lib\/server\/account-service'\)/);
-  assert.match(server, /initialize:initAccounts/);
+  assert.match(server, /createCoreStateApplication\(\{/);
+  assert.match(core, /createAccountService\(\{/);
+  assert.match(core, /require\('\.\/account-service'\)/);
+  assert.match(core, /initAccounts:accountService\.initialize/);
   assert.match(server, /accountPasswordRecord:accountPwRec/);
   assert.match(server, /accountNeedsPasswordChange:accountNeedsPwChange/);
   for (const name of [

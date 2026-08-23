@@ -104,7 +104,11 @@ test('route composition rejects inherited, malformed and accessor dependencies a
 test('PWA application owns grouped route facades and server only supplies live composition callbacks', () => {
   const server = fs.readFileSync(path.join(ROOT, 'server.js'), 'utf8');
   const application = fs.readFileSync(path.join(ROOT, 'lib', 'server', 'pwa-application.js'), 'utf8');
-  assert.match(server, /createPwaApplication\(\{/);
+  const finalHttp = fs.readFileSync(path.join(ROOT, 'lib', 'server', 'final-http-application.js'), 'utf8');
+  const composition = fs.readFileSync(path.join(ROOT, 'lib', 'server', 'http-pwa-lifecycle-application.js'), 'utf8');
+  assert.match(server, /createFinalHttpApplication\(\{/);
+  assert.match(finalHttp, /createHttpPwaLifecycleApplication\(\{/);
+  assert.match(composition, /createPwaApplication\(\{/);
   assert.doesNotMatch(server, /const pwaRouteFacades = Object\.freeze\(\{/);
   assert.match(application, /const PWA_ROUTE_FACADE_CONTEXT = Object\.freeze\(\{/);
   for (const group of ['runtime','identity','state','shares','activity','policyAndSearch']) {
@@ -119,3 +123,118 @@ test('PWA application owns grouped route facades and server only supplies live c
   assert.ok(server.split('\n').length < 2400, 'PWA bootstrap extraction should keep server.js compact');
 });
 
+
+
+test('share/media PWA hook facade is lazy, stable and validated by deferred service binding', () => {
+  const registry = createPwaServiceRegistry();
+  // Generic registry users pay no share/media contract cost until this projection is requested.
+  assert.equal(registry.current('device'), null);
+  const hooks = registry.shareMediaHooks;
+  assert.strictEqual(registry.shareMediaHooks, hooks);
+  assert.equal(Object.isFrozen(hooks), true);
+  assert.deepEqual(Object.keys(hooks).sort(), [
+    'activityPrincipal', 'canManagePwaImage', 'cleanDeviceLabel', 'getPwaPublicDevice',
+    'pwaDeviceCreatorAccount', 'pwaDeviceOwnerAccount', 'pwaDeviceResolvedAccount',
+    'requestClientDeviceName', 'shareOwnerAccount',
+  ].sort());
+
+  assert.throws(
+    () => registry.bind('device', { pwaDeviceResolvedAccount() {} }),
+    /pwa-service-contract-mismatch:device\./,
+  );
+  const device = {
+    marker:'device',
+    pwaDeviceResolvedAccount() { return this.marker; },
+    getPwaPublicDevice() { return this.marker; },
+    pwaDeviceCreatorAccount() { return this.marker; },
+    pwaDeviceOwnerAccount() { return this.marker; },
+    requestClientDeviceName() { return this.marker; },
+    cleanDeviceLabel(value) { return `${this.marker}:${value}`; },
+  };
+  const event = {
+    marker:'event',
+    activityPrincipal() { return this.marker; },
+    shareOwnerAccount() { return this.marker; },
+  };
+  const photo = {
+    marker:'photo',
+    canManagePwaImage() { return this.marker; },
+  };
+  registry.bind('device', device);
+  registry.bind('event', event);
+  registry.bind('photo', photo);
+  assert.equal(hooks.cleanDeviceLabel('x'), 'device:x');
+  assert.equal(hooks.activityPrincipal(), 'event');
+  assert.equal(hooks.canManagePwaImage(), 'photo');
+});
+
+test('share/media PWA hooks keep live receiver semantics even when the facade is first requested after bind', () => {
+  const registry = createPwaServiceRegistry();
+  const device = {
+    marker:'first',
+    pwaDeviceResolvedAccount() { return this.marker; },
+    getPwaPublicDevice() { return this.marker; },
+    pwaDeviceCreatorAccount() { return this.marker; },
+    pwaDeviceOwnerAccount() { return this.marker; },
+    requestClientDeviceName() { return this.marker; },
+    cleanDeviceLabel(value) { return `${this.marker}:${value}`; },
+  };
+  const event = {
+    marker:'event',
+    activityPrincipal() { return this.marker; },
+    shareOwnerAccount() { return this.marker; },
+  };
+  const photo = { marker:'photo', canManagePwaImage() { return this.marker; } };
+  registry.bind('device', device);
+  registry.bind('event', event);
+  registry.bind('photo', photo);
+
+  const hooks = registry.shareMediaHooks;
+  const hook = hooks.cleanDeviceLabel;
+  assert.equal(hook('x'), 'first:x');
+  device.marker = 'second';
+  device.cleanDeviceLabel = function replacement(value) { return `${this.marker.toUpperCase()}:${value}`; };
+  assert.equal(hook('y'), 'SECOND:y', 'late facade construction must not capture the first bound method');
+});
+
+test('share/media PWA hooks fail closed when a bound service loses its own callable contract', () => {
+  const registry = createPwaServiceRegistry();
+  const hooks = registry.shareMediaHooks;
+  const device = {
+    pwaDeviceResolvedAccount() {}, getPwaPublicDevice() {}, pwaDeviceCreatorAccount() {},
+    pwaDeviceOwnerAccount() {}, requestClientDeviceName() {}, cleanDeviceLabel(value) { return value; },
+  };
+  const event = { activityPrincipal() {}, shareOwnerAccount() {} };
+  const photo = { canManagePwaImage() {} };
+  registry.bind('device', device);
+  registry.bind('event', event);
+  registry.bind('photo', photo);
+
+  delete device.cleanDeviceLabel;
+  Object.setPrototypeOf(device, { cleanDeviceLabel() { return 'prototype-bypass'; } });
+  assert.throws(() => hooks.cleanDeviceLabel('x'), /pwa-service-contract-mismatch:device\.cleanDeviceLabel/);
+  Object.defineProperty(device, 'cleanDeviceLabel', { configurable:true, get() { return () => 'accessor-bypass'; } });
+  assert.throws(() => hooks.cleanDeviceLabel('x'), /pwa-service-contract-mismatch:device\.cleanDeviceLabel/);
+});
+
+test('failed share/media PWA facade preflight does not leak deferred requirements into later binds', () => {
+  const registry = createPwaServiceRegistry();
+  registry.bind('photo', {}); // Valid before the share/media projection asks for canManagePwaImage.
+  assert.throws(() => registry.shareMediaHooks, /PWA share\/media hooks require photo\.canManagePwaImage/);
+
+  // A failed projection was never published, so unrelated deferred services must
+  // still be bindable with their pre-existing (empty) contracts.
+  assert.doesNotThrow(() => registry.bind('device', {}));
+  assert.doesNotThrow(() => registry.bind('event', {}));
+});
+
+test('generic deferred PWA callbacks cannot fall through to prototype methods after bind', () => {
+  const registry = createPwaServiceRegistry();
+  const deferred = registry.device.someOperation;
+  const service = { marker:'own', someOperation() { return this.marker; } };
+  registry.bind('device', service);
+  assert.equal(deferred(), 'own');
+  delete service.someOperation;
+  Object.setPrototypeOf(service, { someOperation() { return 'prototype-bypass'; } });
+  assert.throws(() => deferred(), /pwa-service-contract-mismatch:device\.someOperation/);
+});

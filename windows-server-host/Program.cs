@@ -21,9 +21,14 @@ namespace DirectXfer.WindowsServerHost
 {
     internal static class Program
     {
-        internal const string AppVersion = "1.70.1";
-        internal const string RuntimeAppBuild = "1.70.1-launcher148-csharp";
-        internal const string HostVersion = "1.70.1-serverhost121-csharp";
+        // ServerHost has its own component/build identity. The application version is
+        // discovered from the validated runtime package, while the runtime build marker
+        // remains compiled into ServerHost as a commit boundary for that exact payload.
+        internal const string ServerHostVersion = "1.70.20";
+        internal const string ServerHostBuild = "serverhost139-csharp";
+        internal const string ExpectedRuntimeBuild = "runtime166";
+        internal const string RuntimeProtocol = "1";
+        internal const string ServerHostProtocol = "1";
         internal const int DefaultPort = 55750;
         internal const int MaxFallbackPort = 55769;
         internal const int StartupReadyTimeoutMs = 60000;
@@ -103,7 +108,10 @@ namespace DirectXfer.WindowsServerHost
         public int port;
         public string scheme = string.Empty;
         public string token = string.Empty;
+        public string appVersion = string.Empty;
+        public string runtimeProtocol = string.Empty;
         public string runtimeBuild = string.Empty;
+        public string hostProtocol = string.Empty;
         public string hostBuild = string.Empty;
     }
 
@@ -113,44 +121,60 @@ namespace DirectXfer.WindowsServerHost
         private static readonly IDictionary<string, string> CriticalRuntimeSha256 =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                { "package.json", "efe777f3c848e7047ad1c09dba9487fc3e4546fb59c96ba3e7ec1b4dcc7c551a" },
-                { "package-lock.json", "1b22fe800186c4249ef3d1b6ffe6ea6b73823372e9f53fd6c0f32adeed9da4d3" },
-                { "server.js", "fee8647ed95b2c9f6f71a943d634b55bfe70adc2cd55607fef2489df1da54a8e" },
+                { "package.json", "a712430f2a8f8f295fc203bd4e5814a9edc67859bcf2465c2f200c9027f17783" },
+                { "package-lock.json", "5f9f0660d35aa0899e92248f7c276c52a77161dba08e424402801f200f96c1ea" },
+                { "server.js", "536684f554bb8792239b75fe9443f8bf7c81e52c2c64f6aedb8bb011e7f43214" },
                 { "lib/core-utils.js", "850ca4c2f187a170035c73ad6301c64a746f7d7cf7ef6d15aadc767f26144f0c" },
-                { "lib/server/config.js", "4d7b3f5fed8ec4749fc8768dfdcc6ec246ca1b0f51519ecc0d91b42fdc51d89c" },
+                { "lib/server/config.js", "6bfbc7759b343231be4a39a17ddb8943e900742c86dbe4ac93a691e7b4f9f270" },
+                { "lib/server/platform-dependencies.js", "c6e28668bc6a3bbc1f8b5ba40f3130228a780acf6060ac1e66fc484a1c5624c5" },
                 { "lib/server/bootstrap.js", "cb8ab7efada6b7be1d9983bd1ae4d1c8817bf401cfdd60e70537fa39df1aabb9" },
                 { "lib/server/lifecycle-service.js", "018c1a1485c5bdec89d52814f9cc52f8b93582ac2fb9370bf8ff8c9650da487f" },
-                { "lib/server/application-context.js", "a5f17345980221cfe97687b9e5fcb4267ffdb4ce5c9b6f0ea5c9fdac7f1d08ce" },
+                { "lib/server/application-context.js", "8175a94876193bf64ebdb60e8841af0f1f40fd1072e77200617c9c7c598ce681" },
+                { "lib/server/bootstrap-reference-registry.js", "bfca56a7cdd45cfa9281ae11052dae458f7ae2115e1844aa488cbcb1e2f1d069" },
+                { "lib/server/core-state-bridges.js", "1286c7d57984c26b4565854704faef9f2a86a8286c1974ada3b4224858bdf9a6" },
+                { "lib/server/register-application-domains.js", "f9ea6b7ca0fcd6ba06b0a364e25a49031844ee72389d5b1219a2c31029579852" },
+                { "lib/server/application-publication.js", "c08f3e0218bd5957d5a2f30f49a610d2375a67f0d98a3f56164676f0ff948a6e" },
+                { "lib/server/state-replacement-coordinator.js", "413ef44ed33176964a57acf3ef8d7cd5371df0cbb8654cc96857f714fd0ea674" },
+                { "lib/server/state-lifecycle-application.js", "de33219d520f7d74a255232847c702267051576f59b3c959eaf99656d1655bb5" },
+                { "lib/server/core-state-application.js", "19ad0b9cdf0366af2c660ae814c047265de4b7cfcfc3e896d9919d099aeb10fb" },
+                { "lib/server/notification-application.js", "bb1766e84b0687e08f85641646828d0a239a313d1555073b589b2190f9053f7f" },
+                { "lib/server/security-auth-application.js", "b101c26ec18e581253917749d60945e9188ba5fb71a3a288cc9eead32e4d9036" },
+                { "lib/server/share-media-transfer-application.js", "cecc2271551f25748185c3854715aee4ec81bcfcf88e7bdce394ce9d74a38adf" },
+                { "lib/server/public-http-application.js", "3a4c21a6f807f2651f4e43e9c499c4425a7da379ab3b566d8f597e01b1e4a91d" },
+                { "lib/server/runtime-services-application.js", "2ed1f84dab3de017a3c6367709b871cedfcc33033ccd678cfdbca8ed8e2db685" },
+                { "lib/server/admin-application.js", "01d3a52c5e6dd5d32b189d07ae6629d78ef07292ce2f6d8cfe21e4188e3eb6a0" },
                 { "lib/server/host-path-service.js", "b1b2b32d1eb6be2b08c42ff9f77c37d61e41d319f0f9bb56fd10c5feeb828a72" },
                 { "lib/server/request-utils.js", "0ab190eb36ac1df2bc0a683c78ef2efcfe8b84be0e690acf98f747e3cf35ad59" },
                 { "lib/server/windows-launcher-routes.js", "f0432186d7555e7b7767a3c37da1a10de16adb6c9d30fefa027614e49d9f0223" },
                 { "lib/server/root-routes.js", "be1d2928e21402d66aebe1616f5338f04e44d4f63ed9ed3a1f4f6699ba36618e" },
                 { "lib/server/http-application.js", "ba9d43be7fd3173e6bd4c980b216963561276f65e73f5337ea24d32a98fa96eb" },
+                { "lib/server/http-pwa-lifecycle-application.js", "82c90d09885ec1525a57f4167f043fa29455d985a1687bc839edb6c4efdb4952" },
+                { "lib/server/final-http-application.js", "4f8bc833b6df65a28052f3eaddffeb9699203596351841427cb86e9eaf3ae196" },
                 { "lib/server/activity-presence-service.js", "3de3f0f22b2bd323f077b7b82be9cc04ae2d91c075eb18942512f4c12f2c6ade" },
                 { "lib/server/share-presentation-service.js", "9ce1280efbd8f4dbc0ae398716a2988c99de5f87a8d7edfa40ad96dab4bf2247" },
                 { "lib/server/pwa-routes.js", "bfd2056a3e6669d65e99d5d514891435e5f819b0f47386bcc6f13322727c1b27" },
-                { "lib/server/pwa-composition-service.js", "e238dedf67254539dd76c08c52f82cd38de92fe06d1e4b4ec51868fd4db05921" },
+                { "lib/server/pwa-composition-service.js", "e5cf2caa9da85b469d7db18dff0519b9f2c1b074861b9dda162d03d9d48a9787" },
                 { "lib/server/pwa-application.js", "1f8fafaebeafa796ebc510f1b3fba9b9de79499c66f563674f40a6bde06bc348" },
                 { "lib/server/pwa-device-service.js", "a0022c3826ff97dc27aa8d19a4aff740c59eb2c1f1f772a2fee801fe34b1e8d1" },
                 { "lib/server/pwa-photo-service.js", "9a917a263d7a9c2b80184615804e733ae2471e851eeb2edd704ff12cf182af4a" },
                 { "lib/server/webauthn-service.js", "12aa485e6148279ae0b57595f87fdb740d628f372153b1ae21b831b006e3942a" },
                 { "lib/server/pwa-event-service.js", "55723909814dcd4d4bfce47b8fdaac9e4830286550d56c78635bc90e1bcc2d38" },
-                { "lib/server/upload-reception-service.js", "3de2f6971e7ca7592485fb4467d1cc5452761e1ab6fb83cf712b1299bb6ec24c" },
+                { "lib/server/upload-reception-service.js", "e111eb73a9480e8e1ebd57413899ab997c726d73542f22f58403c35e6ff5562d" },
                 { "lib/server/transfer-service.js", "04e152552f619b1c67bca8b79a359dd258f306627499ce7b304d2eb9e4d2ed80" },
                 { "lib/server/download-service.js", "41aa5b68d7c1976751ca0259d0ab099d0ceaa48228b6295d7945fd5ce7ec5079" },
                 { "lib/server/search-service.js", "eda5a1e1f286824a4eba320858a12c50434fb594b7a5f816396a421863c5f5b0" },
                 { "lib/server/ocr-service.js", "1eb8561a98c7885c540762b25149df5dbc9b11756eb8f4a4e983348a04c9bf7f" },
                 { "lib/server/dlp-service.js", "f5710ddf2a7bef2f4eca3eb35a6358e469f2c48ea7af4865e917ebce69a6bbc2" },
-                { "lib/server/photo-service.js", "d449780b24e3dfb752bec0890489f5c89ab262dc5782d4bd7abf177ba7f6de9c" },
+                { "lib/server/photo-service.js", "4dbb84331a2edf6655690d1c3a54898b16154a2cbdaf315a76ac1150cde2eab1" },
                 { "lib/server/share-service.js", "8a6043646a4dc2dd9e9c7394774ebf3bd0f41686b718c274e95ae6fe58e86cb0" },
                 { "lib/server/audit-service.js", "1bd707cc8cdf7b3b3d8b6aa77846f4dc6493143efeccb01c0789a2da6c53d816" },
                 { "lib/server/reception-collaboration-routes.js", "d9cb9b5ef697575aa2be40851f3038058eb485e4c16aaebad6ddf877c9475493" },
                 { "lib/server/public-share-routes.js", "2ccac17e5de95edeccf892e59bb1a74c594a0653d1257ae1b375c5c1ac60d2b5" },
-                { "lib/server/public-access-service.js", "288512f7a7c6ab49801396e7ff55b1e5df2bfe138ca9ea1ae75feec2751d3317" },
-                { "lib/server/public-abuse-service.js", "3ce94dafcc421b5aaddc809a3340a1e731d606366fcaa21992a7d61af828054d" },
+                { "lib/server/public-access-service.js", "dfe481e3bc8aded43ed99fa7b9c47a0c369a3a9379d2f695b91f3d6065de58c9" },
+                { "lib/server/public-abuse-service.js", "daf4afa36310c8d1d7de711ca3706b30257cc91c1a7606eb64cefa875cb00e71" },
                 { "lib/auth-utils.js", "37e00f036bf56798182b88d393173647f65bfa712d3a26fc3be02552e9dabc04" },
                 { "lib/server/account-service.js", "0bbb27b416af36aeea2afdb7814a879feb5ebc5d8bff61c11c001d1776d593b7" },
-                { "lib/server/auth-service.js", "d83f98376f3b831e8fd395380be90da04c2a9484a48c47a7de952a53005eb571" },
+                { "lib/server/auth-service.js", "c3d72f8191db6fa81ff14107f2927e6a205b42dc18932125f2c97d5f229217a9" },
                 { "lib/server/session-service.js", "ede07178a7a6a5e619892020f51b50208b5e4036e7e3f24cd0e1a755833b270b" },
                 { "lib/server/state-store.js", "7bb01d633a28ab24f60951e1ae2ad1f55c5b49869434fd6a422d6209246a742d" },
                 { "lib/server/state-bootstrap-service.js", "3353f57cb139f2e1e6e2d736dff9fc9c97777d4c80bdb48b2ffd14c7e6064528" },
@@ -171,7 +195,7 @@ namespace DirectXfer.WindowsServerHost
                 { "lib/server/network-services.js", "0cfd820c0d1a73bc417dfc572419c92a323b271e3b6f8e49b98c56c592168e82" },
                 { "lib/server/windows-install-preferences.js", "2ea81b6c40e0e96aaab8ecff8cee6003db8fd943e43d2b2019c12676671b5494" },
                 { "lib/server/backup-service.js", "f49d6c2e89044f961680a808e6768f4a6656be73adac0e64f16ece9d4c23d6c7" },
-                { "lib/server/restore-service.js", "bf57ba6eb2e57b187df5123f09645b953fe52d2b70a9bda6db96ad63ac5f6ace" },
+                { "lib/server/restore-service.js", "d49bbd364ba3dba877715ade363b9b216b67b22b8a6990512a9a070b247ab645" },
                 { "lib/server/maintenance-service.js", "55e249a41a1a79b7aa61b7993a62389e3a67bf576a68a021454155a918dd9f7b" },
                 { "lib/server/storage-connector-job-service.js", "b1ba700f964a10f5e4344482a51c83e1e3d6d325ddb96d18a742547764e6656d" },
                 { "lib/server/storage-connector-config.js", "04830567b2b2393510dd69dd8c610765252ef7312218068fceba09ec68125437" },
@@ -181,17 +205,17 @@ namespace DirectXfer.WindowsServerHost
                 { "lib/assets/oauth-broker-schema.sql", "ff745a72b9599399b02f0e81a9c376d7daf2934f86dedec05cce4c1268b5642f" },
                 { "lib/google-oauth-profile.js", "6a3cac0ad7c419442f57ee28e53c5f8f15bd3dd6f3bb1a1242a415f941ceaa78" },
                 { "lib/google-oauth-broker-client.js", "b64d80e6ce5229b858769e55b2a7420aeaeaa0d8d4b68d4debfc34e991f90f89" },
-                { "lib/server/notification-service.js", "e897fe713d6980fdf35a37e4256e1e4632515d29ad0ac90d14a30d6a60d8af54" },
+                { "lib/server/notification-service.js", "beb6303a6a41e20be2ba72fe55c0115a3f5ad81f5eb542db77c0063af3a0b379" },
                 { "lib/server/notification-center-service.js", "3559e4b8bde5913f81556ad8290bd3dedda03851aef0631af7e3f9c9a11c6298" },
-                { "lib/server/pwa-notification-service.js", "4c4e12a775fdd536541496852e1286a1242ca42690ce6a4bb701cfe61bdf5d20" },
+                { "lib/server/pwa-notification-service.js", "408ff37bc00c481be61cfa85960bc0170bb4845b87105cf4dbf36e08f97a54b5" },
                 { "public/app.js", "38796d8199de3a959bbd93d792524984c900e51f27ca5542998da190523d5b2f" },
-                { "pwa/app.js", "607ea4fc021658fe9d1cf6dfbf5aa6dccc831dd61a99788f8ee6f11a9f588871" },
+                { "pwa/app.js", "abf19c303c897ced2cd9c5e0b22bf223bf83bab262672d57ac5500e0c8ef261f" },
                 { "lib/dlp-utils.js", "0d8f768c3457ec713199ce9e82f9483be21df2ea01dce6ead26675d240fde768" },
                 { "lib/fd-utils.js", "947deee8d45440f49c4497621b8479f1a92ff4703789099b24aae4a81dd29bb5" },
                 { "pwa/dlp-local.js", "246267542621fc92f759438b2295b87f777ba6d6aa88b3c4d23dea25aebe7390" },
                 { "lib/storage-connectors.js", "90cc270a3e713b11460d950d013eee737b5aaaf8cb01d53db75ef3e8f4184e91" },
-                { "lib/web-storage-share.js", "7a575bd6ed1e98eedd748bc96510e8e85a08eeb3c7dff64608a3fc97b3c8bbdf" },
-                { "lib/web-storage-writable.js", "d4a076866d4c09228e261e09405e8a7e3da1a04604c9bbf4c55e2edfac80070f" },
+                { "lib/web-storage-share.js", "16f747b2632a7eca5a17c80bb34ce7b97a3f066779afa523f730bedda4c1295f" },
+                { "lib/web-storage-writable.js", "f5730f4dda53a30f0c27e19ef346b01bd5ce17da1f5ff0f78d9a1aa0f04b4391" },
                 { "public/index.html", "6f732fa4db094e94e00d12accb492d60418cb810b75c890f70ca7398983c866b" },
                 { "public/oauth-bridge.html", "7c08c6d54d523b0ed3976293e99fe7e4f43c01ff359fd4be170dfd0f0ab344c3" },
                 { "public/oauth-bridge.css", "32a468581ae0ae93c818fe00217a55cdec62dc5cb4796c748003ad4f71bbbbbb" },
@@ -211,6 +235,8 @@ namespace DirectXfer.WindowsServerHost
         private string? _shutdownMarkerPath;
         private string? _token;
         private string _scheme = "http";
+        private string _appVersion = string.Empty;
+        private string _runtimeBuild = string.Empty;
         private int _port;
         private bool _expectedStop;
         private bool _reloadRequested;
@@ -385,9 +411,11 @@ namespace DirectXfer.WindowsServerHost
             var nodeValidation = Task.Run(EnsureNode);
             var appDir = appValidation.GetAwaiter().GetResult();
             var node = nodeValidation.GetAwaiter().GetResult();
+            _appVersion = ReadApplicationVersion(appDir);
+            _runtimeBuild = ReadRuntimeBuild(appDir);
 
             OpenRuntimeLog();
-            AppendLog("[server-host] Direct-Xfer " + Program.AppVersion + " " + Program.HostVersion + " starting runtime cycle; validation=" +
+            AppendLog("[server-host] Direct-Xfer " + _appVersion + " " + Program.ServerHostBuild + " starting runtime cycle; validation=" +
                 validationWatch.ElapsedMilliseconds.ToString(CultureInfo.InvariantCulture) + " ms.");
 
             _port = ChooseRuntimePort();
@@ -638,9 +666,8 @@ namespace DirectXfer.WindowsServerHost
                     else { reason = "missing runtime marker (runtime-build.txt)"; return false; }
                 }
                 var markerValue = File.ReadAllText(marker, Encoding.ASCII).Trim();
-                if (!string.Equals(markerValue, Program.RuntimeAppBuild, StringComparison.Ordinal))
+                if (!IsSafeIdentity(markerValue) || !string.Equals(markerValue, Program.ExpectedRuntimeBuild, StringComparison.Ordinal))
                 { reason = "runtime build mismatch"; return false; }
-
 
                 foreach (var required in new[] { "package.json", "server.js", Path.Combine("public", "app.js"), Path.Combine("node_modules", "express", "package.json") })
                 {
@@ -652,7 +679,7 @@ namespace DirectXfer.WindowsServerHost
                 var version = package != null && package.TryGetValue("version", out value)
                     ? Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty
                     : string.Empty;
-                if (!string.Equals(version, Program.AppVersion, StringComparison.Ordinal)) { reason = "package version mismatch"; return false; }
+                if (!IsSafeIdentity(version)) { reason = "invalid package version"; return false; }
 
                 foreach (var pair in CriticalRuntimeSha256)
                 {
@@ -666,6 +693,40 @@ namespace DirectXfer.WindowsServerHost
                 return true;
             }
             catch (Exception ex) { reason = ex.GetType().Name + ": " + ex.Message; return false; }
+        }
+
+        private static string ReadApplicationVersion(string root)
+        {
+            var package = Json.Deserialize<Dictionary<string, object?>>(File.ReadAllText(Path.Combine(root, "package.json"), Encoding.UTF8));
+            object? value;
+            var version = package != null && package.TryGetValue("version", out value)
+                ? Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty
+                : string.Empty;
+            if (!IsSafeIdentity(version)) throw new InvalidDataException("Direct-Xfer package version is invalid.");
+            return version;
+        }
+
+        private static string ReadRuntimeBuild(string root)
+        {
+            foreach (var name in new[] { "runtime-build.txt", ".dx-runtime-build" })
+            {
+                var path = Path.Combine(root, name);
+                if (!File.Exists(path)) continue;
+                var value = File.ReadAllText(path, Encoding.ASCII).Trim();
+                if (IsSafeIdentity(value) && string.Equals(value, Program.ExpectedRuntimeBuild, StringComparison.Ordinal)) return value;
+            }
+            throw new InvalidDataException("Direct-Xfer runtime build marker is invalid.");
+        }
+
+        private static bool IsSafeIdentity(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value) || value.Length > 128) return false;
+            foreach (var c in value)
+            {
+                var alphaNumeric = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');
+                if (!alphaNumeric && c != '.' && c != '-' && c != '_' && c != '+') return false;
+            }
+            return true;
         }
 
         private static string TextFileSha256Normalized(string path)
@@ -1195,8 +1256,11 @@ namespace DirectXfer.WindowsServerHost
                 port = _port,
                 scheme = _scheme,
                 token = token,
-                runtimeBuild = Program.RuntimeAppBuild,
-                hostBuild = Program.HostVersion
+                appVersion = _appVersion,
+                runtimeProtocol = Program.RuntimeProtocol,
+                runtimeBuild = _runtimeBuild,
+                hostProtocol = Program.ServerHostProtocol,
+                hostBuild = Program.ServerHostBuild
             });
         }
 

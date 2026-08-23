@@ -9,10 +9,14 @@ const ROOT = path.resolve(__dirname, '..');
 const server = fs.readFileSync(path.join(ROOT, 'server.js'), 'utf8');
 const routes = fs.readFileSync(path.join(ROOT, 'lib', 'server', 'pwa-routes.js'), 'utf8');
 const pwaApplication = fs.readFileSync(path.join(ROOT, 'lib', 'server', 'pwa-application.js'), 'utf8');
+const finalHttp = fs.readFileSync(path.join(ROOT, 'lib', 'server', 'final-http-application.js'), 'utf8');
+const httpComposition = fs.readFileSync(path.join(ROOT, 'lib', 'server', 'http-pwa-lifecycle-application.js'), 'utf8');
 
 test('PWA route composition lives behind an explicit application bootstrap boundary', () => {
-  assert.match(server, /require\('\.\/lib\/server\/pwa-application'\)/);
-  assert.match(server, /createPwaApplication\(\{/);
+  assert.match(server, /require\('\.\/lib\/server\/final-http-application'\)/);
+  assert.match(finalHttp, /require\('\.\/http-pwa-lifecycle-application'\)/);
+  assert.match(httpComposition, /require\('\.\/pwa-application'\)/);
+  assert.match(httpComposition, /createPwaApplication\(\{/);
   assert.match(pwaApplication, /require\('\.\/pwa-routes'\)/);
   assert.match(pwaApplication, /attachPwaRoutes\(\{/);
   assert.match(routes, /function attachPwaRoutes\(composition = \{\}\)/);
@@ -44,11 +48,10 @@ test('PWA refactor preserves all 106 route registrations', () => {
 });
 
 test('mutable server bindings stay live across the PWA application boundary', () => {
-  assert.match(server, /getState:\(\) => state/);
-  assert.match(server, /setState:\(value\) => \{ state = value; \}/);
-  assert.match(server, /getSearchIndexBuilding:\(\) => searchIndexBuilding/);
-  assert.match(server, /getUniversalSearchIndex:\(\) => universalSearchIndex/);
-  assert.match(server, /getWebpush:\(\) => webpush/);
+  assert.match(server, /live:\{ getState, setState:replaceState, getWebpush:\(\) => platformDependencies\.webpush \}/);
+  assert.match(finalHttp, /getSearchIndexBuilding = ownFunction\([\s\S]*?'getSearchIndexBuilding'/);
+  assert.match(finalHttp, /getUniversalSearchIndex = ownFunction\([\s\S]*?'getUniversalSearchIndex'/);
+  assert.match(finalHttp, /live:\{ getState, setState, getSearchIndexBuilding, getUniversalSearchIndex, getWebpush \}/);
 
   assert.match(pwaApplication, /get state\(\) \{ return live\.getState\(\); \}/);
   assert.match(pwaApplication, /set state\(value\) \{ live\.setState\(value\); \}/);

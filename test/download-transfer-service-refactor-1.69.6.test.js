@@ -17,11 +17,13 @@ test('download and transfer concerns are extracted from the composition root', (
   const server = read('server.js');
   const downloads = read('lib/server/download-service.js');
   const transfers = read('lib/server/transfer-service.js');
+  const composition = read('lib/server/share-media-transfer-application.js');
 
-  assert.match(server, /require\('\.\/lib\/server\/download-service'\)/);
-  assert.match(server, /require\('\.\/lib\/server\/transfer-service'\)/);
-  assert.match(server, /createDownloadService\(\{/);
-  assert.match(server, /createTransferService\(\{/);
+  assert.match(server, /createShareMediaTransferApplication\(\{/);
+  assert.match(composition, /require\('\.\/download-service'\)/);
+  assert.match(composition, /require\('\.\/transfer-service'\)/);
+  assert.match(composition, /createDownloadService\(\{/);
+  assert.match(composition, /createTransferService\(\{/);
   assert.match(server, /validDownloadResumeId, pruneDownloadResumeSessions/);
 
   assert.doesNotMatch(server, /class Throttle extends Transform/);

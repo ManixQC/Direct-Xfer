@@ -8,11 +8,14 @@ const path = require('node:path');
 const ROOT = path.resolve(__dirname, '..');
 const server = fs.readFileSync(path.join(ROOT, 'server.js'), 'utf8');
 const shareRoutes = fs.readFileSync(path.join(ROOT, 'lib', 'server', 'admin-share-routes.js'), 'utf8');
+const adminComposition = fs.readFileSync(path.join(ROOT, 'lib', 'server', 'admin-application.js'), 'utf8');
+const finalHttp = fs.readFileSync(path.join(ROOT, 'lib', 'server', 'final-http-application.js'), 'utf8');
 const { attachAdminShareCoreRoutes, attachAdminShareRoutes } = require('../lib/server/admin-share-routes');
 
 test('1.69.6 share administration is composed through a dedicated route boundary', () => {
-  assert.match(server, /attachAdminShareCoreRoutes\(applicationContext\.route\('adminShareCore'/);
-  assert.match(server, /attachAdminShareRoutes\(applicationContext\.route\('adminShare'/);
+  assert.match(finalHttp, /createAdminApplication/);
+  assert.match(adminComposition, /attachAdminShareCoreRoutes\(context\.route\('adminShareCore', ROUTE_DOMAINS\.shareCore/);
+  assert.match(adminComposition, /attachAdminShareRoutes\(context\.route\('adminShare', ROUTE_DOMAINS\.share/);
   assert.doesNotMatch(server, /adminRouter\.post\('\/shares\/pause-all'/);
   assert.doesNotMatch(server, /adminRouter\.post\('\/shares\/web-storage'/);
   assert.match(shareRoutes, /adminRouter\.post\('\/shares\/pause-all', requireFullAdmin/);
@@ -20,8 +23,8 @@ test('1.69.6 share administration is composed through a dedicated route boundary
 });
 
 test('share route extraction keeps mutable store and search bindings live', () => {
-  assert.match(server, /const adminShareRouteLiveBindings = \{/);
-  assert.match(server, /set state\(value\) \{ state = value; \}/);
+  assert.match(adminComposition, /const adminShareRouteLiveBindings = \{/);
+  assert.match(adminComposition, /set state\(value\) \{ setState\(value\); \}/);
   assert.match(shareRoutes, /live\.state = beforeState/);
   assert.match(shareRoutes, /live\.searchIndexBuilding/);
   assert.match(shareRoutes, /live\.universalSearchIndex/);
@@ -114,12 +117,14 @@ test('share core returns cross-boundary helpers and detailed stats keep live bin
 });
 
 test('share extraction does not depend on the Express app before app construction', () => {
-  const start = server.indexOf("attachAdminShareCoreRoutes(applicationContext.route('adminShareCore'");
-  const end = server.indexOf("applicationContext.register('share-core-output'", start);
+  const start = adminComposition.indexOf("attachAdminShareCoreRoutes(context.route('adminShareCore'");
+  const end = adminComposition.indexOf("context.register('share-core-output'", start);
   assert.ok(start >= 0 && end > start);
-  const call = server.slice(start, end);
+  const call = adminComposition.slice(start, end);
   assert.doesNotMatch(call, /['"]http-application['"]/);
   assert.doesNotMatch(call, /^\s*app,\s*$/m);
-  assert.match(server, /const \{ detailedShareStatsPayload, reqPathList, resolveHostItem, safeReceivedFilePath \} = attachAdminShareCoreRoutes\(applicationContext\.route\('adminShareCore'/);
-  assert.match(server, /normalizeTags \} = require\('\.\/lib\/server\/admin-share-routes'\)/);
+  assert.match(adminComposition, /const shareCoreOutput = requireObject\([\s\S]*?attachAdminShareCoreRoutes\(context\.route\('adminShareCore', ROUTE_DOMAINS\.shareCore/);
+  assert.match(adminComposition, /Object\.freeze\(shareCoreOutput\);/);
+  assert.match(adminComposition, /context\.register\('share-core-output', shareCoreOutput\);/);
+  assert.match(adminComposition, /attachAdminShareCoreRoutes, attachAdminShareRoutes, normalizeTags \} = require\('\.\/admin-share-routes'\)/);
 });

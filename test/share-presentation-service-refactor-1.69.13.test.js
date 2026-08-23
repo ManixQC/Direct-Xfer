@@ -172,9 +172,14 @@ test('decorateShare reads replaced state and current settings after construction
 
 test('server.js composes presentation without retaining its implementation', () => {
   const server = fs.readFileSync(path.join(ROOT, 'server.js'), 'utf8');
-  assert.match(server, /createSharePresentationService\(\{/);
-  assert.match(server, /getState: \(\) => state/);
-  assert.match(server, /getShareService: \(\) => shareService/);
+  const core = fs.readFileSync(path.join(ROOT, 'lib/server/core-state-application.js'), 'utf8');
+  assert.match(server, /createCoreStateApplication\(\{/);
+  assert.match(core, /createSharePresentationService\(\{/);
+  assert.match(core, /getState,/);
+  const bridges = fs.readFileSync(path.join(ROOT, 'lib/server/core-state-bridges.js'), 'utf8');
+  assert.match(server, /bridges:coreStateBridges/);
+  assert.match(bridges, /function getShareService\(\)/);
+  assert.match(bridges, /currentService\('share', 'share service'\)/);
   assert.doesNotMatch(server, /^function decorateShare\(/m);
   assert.doesNotMatch(server, /^function primaryBase\(/m);
   assert.doesNotMatch(server, /^function externalTarget\(/m);

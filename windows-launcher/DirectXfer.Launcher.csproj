@@ -9,6 +9,7 @@
     <Company>Direct-Xfer</Company>
     <Product>Direct-Xfer</Product>
     <Copyright>Copyright © Direct-Xfer 2026</Copyright>
+    <!-- Component version: do not bump for app-only Direct-Xfer releases. -->
     <Version>1.70.1</Version>
     <AssemblyVersion>1.70.1.0</AssemblyVersion>
     <FileVersion>1.70.1.0</FileVersion>
@@ -28,6 +29,7 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <DebugType Condition="'$(Configuration)' == 'Release'">none</DebugType>
     <DebugSymbols Condition="'$(Configuration)' == 'Release'">false</DebugSymbols>

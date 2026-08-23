@@ -54,13 +54,15 @@ test('search, OCR and DLP concerns are extracted from server.js into explicit se
   const search = read('lib/server/search-service.js');
   const ocr = read('lib/server/ocr-service.js');
   const dlp = read('lib/server/dlp-service.js');
+  const composition = read('lib/server/share-media-transfer-application.js');
 
-  assert.match(server, /require\('\.\/lib\/server\/search-service'\)/);
-  assert.match(server, /require\('\.\/lib\/server\/ocr-service'\)/);
-  assert.match(server, /require\('\.\/lib\/server\/dlp-service'\)/);
-  assert.match(server, /createSearchService\(\{/);
-  assert.match(server, /createOcrService\(\{/);
-  assert.match(server, /createDlpService\(\{/);
+  assert.match(server, /createShareMediaTransferApplication\(\{/);
+  assert.match(composition, /require\('\.\/search-service'\)/);
+  assert.match(composition, /require\('\.\/ocr-service'\)/);
+  assert.match(composition, /require\('\.\/dlp-service'\)/);
+  assert.match(composition, /createSearchService\(\{/);
+  assert.match(composition, /createOcrService\(\{/);
+  assert.match(composition, /createDlpService\(\{/);
 
   assert.doesNotMatch(server, /function extractPdfSearchText\(/);
   assert.doesNotMatch(server, /function extractZipTextContent\(/);

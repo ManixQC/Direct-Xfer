@@ -5,7 +5,7 @@ const fs=require('fs');
 const path=require('path');
 const root=path.resolve(__dirname,'..');
 const read=(p)=>fs.readFileSync(path.join(root,p),'utf8');
-const server=read('server.js')+'\n'+read('lib/server/http-application.js')+'\n'+read('lib/server/admin-dashboard-routes.js')+'\n'+read('lib/server/system-health-service.js')+'\n'+read('lib/server/diagnostics-service.js'), app=read('public/app.js'), html=read('public/index.html'), mod=read('public/server-health-dashboard.js'), css=read('public/server-health-dashboard.css'), health=read('lib/pwa-admin-health-route.js'), packageJson=JSON.parse(read('package.json'));
+const server=read('server.js')+'\n'+read('lib/server/admin-application.js')+'\n'+read('lib/server/http-application.js')+'\n'+read('lib/server/admin-dashboard-routes.js')+'\n'+read('lib/server/system-health-service.js')+'\n'+read('lib/server/diagnostics-service.js'), app=read('public/app.js'), html=read('public/index.html'), mod=read('public/server-health-dashboard.js'), css=read('public/server-health-dashboard.css'), health=read('lib/pwa-admin-health-route.js'), packageJson=JSON.parse(read('package.json'));
 
 test('system health is a dedicated topbar page and no longer a dashboards sub-tab',()=>{
   assert.doesNotMatch(html,/id="dashboard-health-tab"/);

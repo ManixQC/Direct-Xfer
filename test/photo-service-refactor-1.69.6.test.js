@@ -69,8 +69,9 @@ function sha256(buf) { return crypto.createHash('sha256').update(buf).digest('he
 test('1.69.6 photo domain is extracted behind photo-service', () => {
   const server = read('server.js');
   const service = read('lib/server/photo-service.js');
-  assert.match(server, /createPhotoService/);
-  assert.match(server, /photoService = createPhotoService/);
+  const composition = read('lib/server/share-media-transfer-application.js');
+  assert.match(server, /createShareMediaTransferApplication/);
+  assert.match(composition, /photoService = createPhotoService/);
   for (const name of ['uniquePhotoPaths','photoStatsOf','analyzePhotoDuplicates','archiveCurrentPhotoVersion','pwaPhotoPayload']) {
     assert.doesNotMatch(server, new RegExp(`function\\s+${name}\\b`), `${name} should not live in server.js`);
     assert.match(service, new RegExp(`function\\s+${name}\\b`));

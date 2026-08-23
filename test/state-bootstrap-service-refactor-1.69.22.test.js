@@ -182,8 +182,12 @@ test('deferred legacy photo migration failures are contained and logged', async 
 test('server delegates startup state coordination to state-bootstrap-service', () => {
   const server = fs.readFileSync(path.join(ROOT, 'server.js'), 'utf8').replace(/\r\n/g, '\n');
   const moduleText = fs.readFileSync(path.join(ROOT, 'lib/server/state-bootstrap-service.js'), 'utf8').replace(/\r\n/g, '\n');
-  assert.match(server, /createStateBootstrapService\(\{/);
-  assert.match(server, /stateBootstrapService\.initialize\(\)/);
+  const core = fs.readFileSync(path.join(ROOT, 'lib/server/core-state-application.js'), 'utf8').replace(/\r\n/g, '\n');
+  const lifecycle = fs.readFileSync(path.join(ROOT, 'lib/server/state-lifecycle-application.js'), 'utf8').replace(/\r\n/g, '\n');
+  assert.match(server, /createStateLifecycleApplication\(\{/);
+  assert.match(lifecycle, /coreStateApplication\.initializeStateLifecycle\(\{/);
+  assert.match(core, /createStateBootstrapService\(\{/);
+  assert.match(core, /stateBootstrapService\.initialize\(\)/);
   assert.doesNotMatch(server, /function storeLoad\(/);
   assert.doesNotMatch(server, /const parsed = stateStore\.load\(\)/);
   assert.doesNotMatch(server, /applyWindowsInstallPreferences\(state, process\.env\)/);

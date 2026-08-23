@@ -52,7 +52,9 @@ function route(rows, method, signature) {
 test('point 1 public share HTTP surface is outside server.js', () => {
   const server = read('server.js');
   const routes = read('lib/server/public-share-routes.js');
-  assert.match(server, /createPublicShareRoutes/);
+  const publicHttp = read('lib/server/public-http-application.js');
+  assert.match(server, /createPublicHttpApplication/);
+  assert.match(publicHttp, /createPublicShareRoutes/);
   assert.match(routes, /function createPublicShareRoutes\(deps = \{\}\)/);
   assert.doesNotMatch(server, /downloadRouter\.(?:get|post|put|delete|patch|use)\(/);
   for (const signature of [

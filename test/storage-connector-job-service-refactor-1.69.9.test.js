@@ -119,12 +119,15 @@ function fixture(overrides = {}) {
 
 test('connector job implementation is isolated behind one composition contract', () => {
   const server = read('server.js');
+  const adminApplication = read('lib/server/admin-application.js');
   const routes = read('lib/server/admin-storage-routes.js');
   const health = read('lib/server/system-health-service.js');
   const restore = read('lib/server/restore-service.js');
+  const coordinator = read('lib/server/state-replacement-coordinator.js');
+  const stateLifecycle = read('lib/server/state-lifecycle-application.js');
   const lifecycle = read('lib/server/lifecycle-service.js');
-  assert.match(server, /createStorageConnectorJobService\(\{/);
-  assert.match(server, /connectorJobService:storageConnectorJobService/g);
+  assert.match(adminApplication, /createStorageConnectorJobService\(\{/);
+  assert.match(adminApplication, /connectorJobService:storageConnectorJobService/g);
   assert.match(lifecycle, /storageConnectorJobService\.abortAll\(\)/);
   assert.match(lifecycle, /connectorResult\.value === true/);
   assert.match(lifecycle, /persistenceOk && connectorsStopped/);
@@ -139,8 +142,10 @@ test('connector job implementation is isolated behind one composition contract',
   }
   assert.match(routes, /connectorJobService/);
   assert.match(health, /connectorJobService\.probeSnapshot/);
-  assert.match(restore, /isConnectorJobStateReplacementBusy/);
-  assert.match(restore, /reset\('connector-jobs', clearConnectorJobRuntimeState\)/);
+  assert.match(stateLifecycle, /\['connector-jobs',[\s\S]*storageConnectorJobService[\s\S]*isBusyForStateReplacement/);
+  assert.match(stateLifecycle, /\['connector-jobs',[\s\S]*storageConnectorJobService[\s\S]*clearRuntimeAfterRestore/);
+  assert.match(restore, /stateReplacementCoordinator/);
+  assert.match(coordinator, /function clearRuntimeAfterRestore\(\)/);
 });
 
 test('probe invalidation rejects an older in-flight generation and preserves single-flight results', async () => {

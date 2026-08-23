@@ -129,8 +129,11 @@ function systemFixture(root, overrides = {}) {
 
 test('composition root delegates storage, health and diagnostics to domain services', () => {
   const server = read('server.js');
-  assert.match(server, /createDiagnosticsService\(\{/);
-  assert.match(server, /createSystemHealthService\(\{/);
+  const admin = read('lib/server/admin-application.js');
+  const finalHttp = read('lib/server/final-http-application.js');
+  assert.match(finalHttp, /createAdminApplication\(\{/);
+  assert.match(admin, /createDiagnosticsService\(\{/);
+  assert.match(admin, /createSystemHealthService\(\{/);
   for (const name of [
     'buildGlobalStorageReport',
     'scanReceptionStorage',
@@ -141,12 +144,14 @@ test('composition root delegates storage, health and diagnostics to domain servi
     'tlsCertificateDiagnostics',
     'safeDiagnosticFixFor',
   ]) {
-    assert.doesNotMatch(server, new RegExp(`(?:async\\s+)?function\\s+${name}\\s*\\(`), name);
+    assert.doesNotMatch(server + '\n' + admin, new RegExp(`(?:async\\s+)?function\\s+${name}\\s*\\(`), name);
   }
-  assert.doesNotMatch(server, /\bFILE_CATEGORY_EXTS\b/);
-  assert.match(server, /attachAdminDashboardRoutes\(applicationContext\.route\('adminDashboard'/);
-  assert.match(server, /attachAdminDiagnosticsRoutes\(applicationContext\.route\('adminDiagnostics'/);
-  assert.match(server, /applicationContext\.register\('late-service-refs', \{ auditService, diagnosticsService, systemHealthService \}\)/);
+  assert.doesNotMatch(server + '\n' + admin, /\bFILE_CATEGORY_EXTS\b/);
+  assert.match(admin, /dashboard:context\.route\('adminDashboard', ROUTE_DOMAINS\.dashboard/);
+  assert.match(admin, /attachAdminDashboardRoutes\(lateRouteDeps\.dashboard\)/);
+  assert.match(admin, /diagnostics:context\.route\('adminDiagnostics', ROUTE_DOMAINS\.diagnostics/);
+  assert.match(admin, /attachAdminDiagnosticsRoutes\(lateRouteDeps\.diagnostics\)/);
+  assert.match(admin, /context\.register\('late-service-refs', \{[\s\S]*?auditService:audit,[\s\S]*?diagnosticsService,[\s\S]*?systemHealthService/);
   const { ROUTE_DEPENDENCIES } = require('../lib/server/application-context');
   assert.ok(ROUTE_DEPENDENCIES.adminDashboard.includes('systemHealthService'));
   assert.ok(ROUTE_DEPENDENCIES.adminDiagnostics.includes('diagnosticsService'));
@@ -312,8 +317,8 @@ test('runtime reset invalidates cached pre-restore state and stale in-flight gen
     fixture.service.clearRuntimeState();
     const refreshed = await fixture.service.serverHealthDeepSnapshot();
     assert.equal(refreshed.backup.last.id, 'restored');
-    assert.match(read('server.js'), /clearSystemHealthRuntimeState: \(\) => systemHealthService\.clearRuntimeState\(\)/);
-    assert.match(read('lib/server/restore-service.js'), /reset\('system-health', clearSystemHealthRuntimeState\)/);
+    assert.match(read('lib/server/state-lifecycle-application.js'), /\['system-health',[\s\S]*systemHealthService[\s\S]*clearRuntimeState/);
+    assert.match(read('lib/server/state-replacement-coordinator.js'), /function clearRuntimeAfterRestore\(\)/);
   } finally {
     fs.rmSync(root, { recursive:true, force:true });
   }

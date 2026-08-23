@@ -15,6 +15,9 @@ const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8').replace(/\r\
 
 test('server composition root no longer carries helpers now owned by services', () => {
   const server = read('server.js');
+  const shareMediaTransfer = read('lib/server/share-media-transfer-application.js');
+  const publicHttp = read('lib/server/public-http-application.js');
+  const registrar = read('lib/server/register-application-domains.js');
   for (const name of [
     'geoSync', 'dataWritable', 'recordRecipientView', 'canSeePhotoHistory',
     'visiblePhotoHistory', 'photoHistoryMeta', 'sendPasswordWorkError',
@@ -22,18 +25,23 @@ test('server composition root no longer carries helpers now owned by services', 
     assert.doesNotMatch(server, new RegExp(`function\\s+${name}\\s*\\(`), name);
   }
   assert.match(read('lib/server/request-utils.js'), /const out = Object\.create\(null\);/, 'cookie parser should not expose Object.prototype magic keys');
-  assert.match(server, /applicationContext\.register\('network', networkServices\)/);
-  assert.match(server, /applicationContext\.register\('photo', photoService\)/);
-  assert.match(server, /applicationContext\.register\('public-access', publicAccessService\)/);
+  const publication = read('lib/server/application-publication.js');
+  assert.match(server, /publishApplicationGraph\(\{/);
+  assert.match(publication, /createApplicationDomainEntries\(direct\)/);
+  assert.match(registrar, /\['network', requiredValue\(services, 'networkServices', 'services'\)\]/);
+  assert.match(shareMediaTransfer, /\['photo', photoService\]/);
+  assert.match(publication, /publicHttpApplication/);
+  assert.match(publicHttp, /\['public-access', publicAccessService\]/);
   assert.ok(server.split('\n').length < 1900, `server.js should remain a compact composition root (${server.split('\n').length} lines)`);
 });
 
 test('PWA password-work errors come from public-access instead of an obsolete admin adapter', () => {
   const pwa = read('lib/server/pwa-application.js');
   const server = read('server.js');
+  const adminApplication = read('lib/server/admin-application.js');
   assert.match(pwa, /sendPasswordWorkError:\['public-access', 'sendPasswordWorkError'\]/);
   assert.doesNotMatch(pwa, /sendPasswordWorkError:\['admin-adapters'/);
-  const adapterBlock = server.match(/applicationContext\.register\('admin-adapters', \{([\s\S]*?)\n\}\);/);
+  const adapterBlock = adminApplication.match(/context\.register\('admin-adapters', \{([\s\S]*?)\n  \}\);/);
   assert.ok(adapterBlock);
   assert.doesNotMatch(adapterBlock[1], /sendPasswordWorkError/);
 });

@@ -16,24 +16,30 @@ const read = (file) => fs.readFileSync(path.join(ROOT, file), 'utf8').replace(/\
 test('point 7 centralizes route composition and removes forwarding/dependency-list noise from server.js', () => {
   const server = read('server.js');
   const context = read('lib/server/application-context.js');
+  const registrar = read('lib/server/register-application-domains.js');
+  const publication = read('lib/server/application-publication.js');
+  const admin = read('lib/server/admin-application.js');
+  const finalHttp = read('lib/server/final-http-application.js');
+  const shareMediaTransfer = read('lib/server/share-media-transfer-application.js');
   assert.match(server, /createApplicationContext/);
-  assert.match(server, /applicationContext\.route\('receptionCollaboration'/);
-  assert.match(server, /applicationContext\.route\('adminShareCore'/);
-  assert.match(server, /applicationContext\.route\('adminDiagnostics'/);
-  assert.match(server, /applicationContext\.bind\(shareService/);
-  assert.match(server, /applicationContext\.bind\(stateStore/);
+  assert.match(server, /publishApplicationGraph\(\{/);
+  assert.match(publication, /route\(\s*'receptionCollaboration'/);
+  assert.match(finalHttp, /createAdminApplication/);
+  assert.match(admin, /context\.route\('adminShareCore', ROUTE_DOMAINS\.shareCore/);
+  assert.match(admin, /context\.route\('adminDiagnostics', ROUTE_DOMAINS\.diagnostics/);
+  assert.match(shareMediaTransfer, /applicationContext\.bind\(shareService/);
+  assert.match(server, /coreStateApplication\.initializePersistence\(\)/);
+  assert.match(server, /publishApplicationGraph\(\{[\s\S]*?direct:\{/);
+  assert.match(registrar, /\['state-store', requiredValue\(services, 'stateStore', 'services'\)\]/);
+  assert.match(context, /function registerMany\(entries\)/);
   assert.match(context, /const ROUTE_DEPENDENCIES = Object\.freeze/);
   assert.match(context, /ambiguous application dependency/);
   assert.ok(server.split('\n').length < 2800, 'composition-root noise should remain below 2800 lines after point 7');
 
-  const bootstrapBridges = new Set([
-    'persist', 'persistNow', 'scheduleFlush', 'getById', 'getByToken', 'isActive', 'listShares',
-    'normalizeShareColor', 'normalizeDescriptionMd', 'shareFirstUseDeadline', 'shareInactiveDeadline',
-    'shareEffectiveExpiry', 'parseMaxVisitors', 'centerPublicVisitorDeviceLabel',
-    'scheduleSearchReindex', 'receptionThreadEnabled',
-  ]);
   const wrappers = [...server.matchAll(/^function\s+([A-Za-z_$][\w$]*)\(\.\.\.args\)/gm)].map((match) => match[1]);
-  assert.deepEqual([...new Set(wrappers)].sort(), [...bootstrapBridges].sort(), 'only documented hoisted bootstrap bridges should remain');
+  assert.deepEqual(wrappers, [], 'point 6 should leave no generic hoisted forwarding bridges in server.js');
+  assert.match(server, /createServerBootstrapReferences\(\)/);
+  assert.match(server, /bootstrapReferences\.bindShareMediaTransfer\(shareMediaTransferApplication\)/);
   assert.doesNotMatch(server, /function\s+buildUniversalSearchIndex\s*\(\.\.\.args\)/);
   assert.doesNotMatch(server, /function\s+runExpiredLinkLifecycle\s*\(\.\.\.args\)/);
 });
@@ -133,20 +139,24 @@ test('route profiles stay synchronized with route-module dependency contracts', 
 });
 
 test('reception context includes the network domain required for geolocation', () => {
-  const server = read('server.js');
-  const call = server.match(/attachReceptionCollaborationRoutes\(applicationContext\.route\('receptionCollaboration',[\s\S]*?\]\s*,\s*\{[\s\S]*?live:/);
-  assert.ok(call, 'reception context call should be present');
-  assert.match(call[0], /'network'/);
+  const publication = read('lib/server/application-publication.js');
+  const domains = publication.match(/RECEPTION_COLLABORATION_DOMAINS = Object\.freeze\(\[([\s\S]*?)\]\);/);
+  assert.ok(domains, 'reception context domain declaration should be present');
+  assert.match(domains[0], /'network'/);
 });
 
 
 test('runtime constants are explicitly composed for photo and dashboard routes', () => {
   const server = read('server.js');
-  assert.match(server, /applicationContext\.register\('runtime-constants', Object\.freeze\(\{ DAY_MS, ACTIVITY_HISTORY_MAX, UNDO_LOG_MAX \}\)\)/);
-  const photoCall = server.match(/attachAdminPhotoRoutes\(applicationContext\.route\('adminPhoto',[\s\S]*?\]\s*,\s*\{\s*getState:/);
-  assert.ok(photoCall, 'adminPhoto composition should be present');
-  assert.match(photoCall[0], /'runtime-constants'/);
-  const dashboardCall = server.match(/attachAdminDashboardRoutes\(applicationContext\.route\('adminDashboard',[\s\S]*?\]\s*,\s*\{\s*getState:/);
-  assert.ok(dashboardCall, 'adminDashboard composition should be present');
-  assert.match(dashboardCall[0], /'runtime-constants'/);
+  const admin = read('lib/server/admin-application.js');
+  const finalHttp = read('lib/server/final-http-application.js');
+  const registrar = read('lib/server/register-application-domains.js');
+  assert.match(server, /runtimeConstants:Object\.freeze\(\{ DAY_MS, ACTIVITY_HISTORY_MAX, UNDO_LOG_MAX \}\)/);
+  assert.match(registrar, /\['runtime-constants', runtimeConstants\]/);
+  assert.match(admin, /photo:Object\.freeze\(\[[\s\S]*?'runtime-constants'/);
+  assert.match(admin, /dashboard:Object\.freeze\(\[[\s\S]*?'runtime-constants'/);
+  assert.match(admin, /photo:context\.route\('adminPhoto', ROUTE_DOMAINS\.photo/);
+  assert.match(admin, /attachAdminPhotoRoutes\(lateRouteDeps\.photo\)/);
+  assert.match(admin, /dashboard:context\.route\('adminDashboard', ROUTE_DOMAINS\.dashboard/);
+  assert.match(admin, /attachAdminDashboardRoutes\(lateRouteDeps\.dashboard\)/);
 });

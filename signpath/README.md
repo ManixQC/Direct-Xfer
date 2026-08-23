@@ -21,7 +21,7 @@ After the OSS subscription is approved, create or use one project and one releas
 - `signpath/artifact-configuration-executables.xml`
 - `signpath/artifact-configuration-installer.xml`
 
-Both configurations require a `version` signing-request parameter. The first signs only Direct-Xfer's own launcher and ServerHost. The second signs the Inno Setup EXE after it has been rebuilt with those signed executables inside.
+The executable configuration requires separate `launcherVersion` and `serverHostVersion` signing-request parameters because the stable launcher and ServerHost now have component-scoped PE versions. The installer configuration keeps the application release `version` parameter. The first configuration signs only Direct-Xfer's own launcher and ServerHost. The second signs the Inno Setup EXE after it has been rebuilt with those signed executables inside.
 
 ## 3. Configure GitHub repository settings
 

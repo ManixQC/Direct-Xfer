@@ -59,10 +59,14 @@ function makeCenterHarness() {
 
 test('notification center and PWA push domains are extracted from server.js', () => {
   const server = read('server.js');
+  const app = read('lib/server/notification-application.js');
   const center = read('lib/server/notification-center-service.js');
   const pwa = read('lib/server/pwa-notification-service.js');
-  assert.match(server, /createNotificationCenterService/);
-  assert.match(server, /createPwaNotificationService/);
+  assert.match(server, /createNotificationApplication/);
+  assert.doesNotMatch(server, /createNotificationCenterService/);
+  assert.doesNotMatch(server, /createPwaNotificationService/);
+  assert.match(app, /createNotificationCenterService/);
+  assert.match(app, /createPwaNotificationService/);
   for (const name of ['addCenterNotification','notificationDedupeStore','evaluateCustomNotificationRulesForShare','checkCenterSystemHealth']) {
     assert.doesNotMatch(server, new RegExp(`function\\s+${name}\\b`), `${name} should not live in server.js`);
     assert.match(center, new RegExp(`function\\s+${name}\\b`));
@@ -339,4 +343,80 @@ test('digest aggregation normalizes restored journal numbers instead of concaten
   assert.equal(agg.down, 100);
   assert.equal(agg.up, 200);
   assert.equal(agg.perLink.get('s1').bytes, 300);
+});
+
+test('notification transport exposes in-flight Web Push work to state replacement coordination', async () => {
+  let resolveDelivery;
+  const state = { meta:{ pushSubs:[{ endpoint:'https://push.invalid/in-flight', keys:{} }] } };
+  const transport = createNotificationService({
+    APP_NAME:'Direct-Xfer', WEBHOOK_URL:'', WEBHOOK_FORMAT:'', SMTP_URL:'', EMAIL_FROM:'', EMAIL_TO:'',
+    nodemailer:null,
+    webpush:{
+      generateVAPIDKeys:() => ({ publicKey:'pub', privateKey:'priv' }),
+      sendNotification:() => new Promise((resolve) => { resolveDelivery = resolve; }),
+    },
+    getSettings:() => ({}), formatBytes:String, persist:() => true, persistNow:() => true,
+    getById:() => null, getByToken:() => null, notificationAccountIdForShare:() => null,
+    notificationAdminAccountIds:() => [], pushSubscriptionsForAccountIds:() => [], noteCenterServiceState:() => {}, noteExpiredPushSub:() => {},
+    shareFirstUseDeadline:() => 0, shareInactiveDeadline:() => 0, isActive:() => true, listShares:() => [],
+    addShareCenterNotification:() => null, logAudit:() => {}, readLogTail:() => [], getState:() => state,
+  });
+
+  assert.equal(transport.isBusyForStateReplacement(), false);
+  assert.equal(transport.sendWebPush('test', 'title', 'body', {}, state.meta.pushSubs), 1);
+  assert.equal(transport.isBusyForStateReplacement(), true);
+  resolveDelivery({ statusCode:201 });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(transport.isBusyForStateReplacement(), false);
+});
+
+test('PWA first-view delivery remains busy until its complete state mutation window closes', async () => {
+  let resolvePush;
+  const share = {
+    id:'photo-1', token:'photo-token', type:'photo', notifyFirstView:true,
+    firstViewPushPending:{ at:Date.now(), attempts:0, variant:'full' },
+  };
+  const state = { shares:[share] };
+  const service = createPwaNotificationService({
+    APP_NAME:'Direct-Xfer', getState:() => state, getPwaDevice:() => null,
+    pwaDeviceCreatorAccount:() => null, pwaDeviceOwnerAccount:() => null, pwaDevices:() => [],
+    pushSubs:() => [{ endpoint:'https://push.invalid/photo', keys:{}, ownerKeys:['acc:owner-1'], lang:'fr' }],
+    ownerKeysForShare:() => ['acc:owner-1'], sendWebPush:() => 1,
+    sendWebPushAwaited:() => new Promise((resolve) => { resolvePush = resolve; }), webPushAvailable:() => true,
+    effectiveWebhook:() => ({ url:'' }), sendWebhook:() => {}, emailConfigured:() => false, sendMail:() => {},
+    addFirstViewCenterNotification:() => {}, emitPwaOwnerEvent:() => 0, persist:() => true,
+    scheduleFlush:() => {}, logAudit:() => {}, clientIp:() => '127.0.0.1',
+  });
+
+  const job = service.deliverPendingFirstViewPush(share);
+  assert.equal(service.isBusyForStateReplacement(), true);
+  resolvePush({ ok:true, statusCode:201 });
+  assert.equal(await job, 1);
+  assert.equal(service.isBusyForStateReplacement(), false);
+  assert.equal(share.firstViewPushPending, undefined);
+});
+
+test('awaited stale Push pruning remains inside the state-replacement barrier', async () => {
+  const state = { meta:{ pushSubs:[{ endpoint:'https://push.invalid/stale', keys:{} }] } };
+  let transport = null;
+  let busyDuringPrune = false;
+  transport = createNotificationService({
+    APP_NAME:'Direct-Xfer', WEBHOOK_URL:'', WEBHOOK_FORMAT:'', SMTP_URL:'', EMAIL_FROM:'', EMAIL_TO:'', nodemailer:null,
+    webpush:{
+      generateVAPIDKeys:() => ({ publicKey:'pub', privateKey:'priv' }),
+      sendNotification:async () => { const error = new Error('gone'); error.statusCode = 410; throw error; },
+    },
+    getSettings:() => ({}), formatBytes:String, persist:() => true, persistNow:() => true,
+    getById:() => null, getByToken:() => null, notificationAccountIdForShare:() => null,
+    notificationAdminAccountIds:() => [], pushSubscriptionsForAccountIds:() => [], noteCenterServiceState:() => {},
+    noteExpiredPushSub:() => { busyDuringPrune = transport.isBusyForStateReplacement(); },
+    shareFirstUseDeadline:() => 0, shareInactiveDeadline:() => 0, isActive:() => true, listShares:() => [],
+    addShareCenterNotification:() => null, logAudit:() => {}, readLogTail:() => [], getState:() => state,
+  });
+  const result = await transport.sendWebPushAwaited('test', 'title', 'body', {}, state.meta.pushSubs[0]);
+  assert.equal(result.ok, false);
+  assert.equal(result.statusCode, 410);
+  assert.equal(busyDuringPrune, true);
+  assert.equal(transport.isBusyForStateReplacement(), false);
+  assert.equal(state.meta.pushSubs.length, 0);
 });

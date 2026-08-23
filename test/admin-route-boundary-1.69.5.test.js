@@ -8,6 +8,9 @@ const path = require('node:path');
 const ROOT = path.resolve(__dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8').replace(/\r\n?/g, '\n');
 const server = read('server.js');
+const adminApplication = read('lib/server/admin-application.js');
+const finalHttp = read('lib/server/final-http-application.js');
+const httpComposition = read('lib/server/http-pwa-lifecycle-application.js');
 const routerSource = read('lib/server/admin-router.js');
 const accountRoutes = read('lib/server/admin-account-routes.js');
 const securityRoutes = read('lib/server/admin-security-routes.js');
@@ -31,15 +34,22 @@ function fakeExpress() {
 }
 
 test('server composition root delegates cross-cutting admin policy and route groups', () => {
-  assert.match(server, /createAdminRouter\(\{/);
   assert.match(server, /createApplicationContext/);
-  assert.match(server, /attachAdminAccountRoutes\(applicationContext\.route\('adminAccount'/);
-  assert.match(server, /attachAdminSecurityRoutes\(applicationContext\.route\('adminSecurity'/);
-  assert.match(server, /attachAdminStorageRoutes\(applicationContext\.route\('adminStorage'/);
-  assert.match(server, /attachAdminPhotoRoutes\(applicationContext\.route\('adminPhoto'/);
-  assert.match(server, /attachAdminSettingsRoutes\(applicationContext\.route\('adminSettings'/);
-  assert.match(server, /attachAdminDashboardRoutes\(applicationContext\.route\('adminDashboard'/);
-  assert.match(server, /attachAdminDiagnosticsRoutes\(applicationContext\.route\('adminDiagnostics'/);
+  assert.match(finalHttp, /createAdminApplication\(\{/);
+  assert.match(httpComposition, /adminApplication\.attachLateRoutes\(\{/);
+  assert.doesNotMatch(server, /createAdminRouter\(\{/);
+  assert.match(adminApplication, /createAdminRouter\(\{/);
+  assert.match(adminApplication, /attachAdminAccountRoutes\(context\.route\('adminAccount'/);
+  assert.match(adminApplication, /attachAdminSecurityRoutes\(context\.route\('adminSecurity'/);
+  assert.match(adminApplication, /attachAdminStorageRoutes\(context\.route\('adminStorage'/);
+  assert.match(adminApplication, /photo:context\.route\('adminPhoto', ROUTE_DOMAINS\.photo/);
+  assert.match(adminApplication, /attachAdminPhotoRoutes\(lateRouteDeps\.photo\)/);
+  assert.match(adminApplication, /settings:context\.route\('adminSettings', ROUTE_DOMAINS\.settings/);
+  assert.match(adminApplication, /attachAdminSettingsRoutes\(lateRouteDeps\.settings\)/);
+  assert.match(adminApplication, /dashboard:context\.route\('adminDashboard', ROUTE_DOMAINS\.dashboard/);
+  assert.match(adminApplication, /attachAdminDashboardRoutes\(lateRouteDeps\.dashboard\)/);
+  assert.match(adminApplication, /diagnostics:context\.route\('adminDiagnostics', ROUTE_DOMAINS\.diagnostics/);
+  assert.match(adminApplication, /attachAdminDiagnosticsRoutes\(lateRouteDeps\.diagnostics\)/);
   assert.doesNotMatch(server, /adminRouter\.(?:get|post|put|delete|patch)\(/);
   assert.doesNotMatch(server, /adminRouter\.get\('\/session'/);
   assert.doesNotMatch(server, /adminRouter\.get\('\/audit\/signed-verify'/);

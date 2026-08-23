@@ -15,10 +15,14 @@ const read = (relative) => fs.readFileSync(path.join(ROOT, relative), 'utf8');
 
 test('server.js is a composition root for extracted config, bootstrap and lifecycle services', () => {
   const server = read('server.js');
+  const finalHttp = read('lib/server/final-http-application.js');
+  const httpComposition = read('lib/server/http-pwa-lifecycle-application.js');
   assert.match(server, /const serverConfig = createServerConfig\(\{ rootDir:__dirname \}\);/);
   assert.match(server, /const runtimeBootstrap = createRuntimeBootstrap\(\{ config:serverConfig \}\);/);
-  assert.match(server, /lifecycleService = createLifecycleService\(\{/);
-  assert.match(server, /lifecycleService\.start\(\);/);
+  assert.match(server, /createFinalHttpApplication\(\{/);
+  assert.match(finalHttp, /createHttpPwaLifecycleApplication\(\{/);
+  assert.match(httpComposition, /lifecycleService = createLifecycleService\(\{/);
+  assert.match(server, /finalHttpApplication\.lifecycleService\.start\(\);/);
   assert.doesNotMatch(server, /^const PORT =/m);
   assert.doesNotMatch(server, /function ensureWindowsPortableFirewallAccess\(/);
   assert.doesNotMatch(server, /function printStartupBanner\(/);
@@ -78,7 +82,7 @@ test('bootstrap contains synchronous rclone cleanup and Windows firewall failure
     }
     const config = createServerConfig({
       rootDir:ROOT,
-      packageJson:{ version:'1.70.1' },
+      packageJson:{ version:'1.70.3' },
       env:{
         DATA_DIR:path.join(temp, 'data'), INBOX_DIR:path.join(temp, 'inbox'),
         IMAGES_DIR:path.join(temp, 'images'), BIND:'0.0.0.0', PORT:'55777',
@@ -112,7 +116,7 @@ test('bootstrap preserves directory order and owns rclone construction', async (
     const inboxDir = path.join(temp, 'inbox');
     const config = createServerConfig({
       rootDir:ROOT,
-      packageJson:{ version:'1.70.1' },
+      packageJson:{ version:'1.70.3' },
       env:{ DATA_DIR:dataDir, INBOX_DIR:inboxDir, IMAGES_DIR:path.join(temp, 'images'), RCLONE_BIN:'custom-rclone' },
     });
     const bootstrap = createRuntimeBootstrap({ config, platform:'linux' });
@@ -134,7 +138,7 @@ test('lifecycle start is idempotent and graceful shutdown drains services once',
   try {
     const config = createServerConfig({
       rootDir:ROOT,
-      packageJson:{ version:'1.70.1' },
+      packageJson:{ version:'1.70.3' },
       env:{
         DATA_DIR:path.join(temp, 'data'), INBOX_DIR:path.join(temp, 'inbox'),
         IMAGES_DIR:path.join(temp, 'images'), HOST_ROOT:path.join(temp, 'host'),
@@ -232,7 +236,7 @@ function createLifecycleAuditFixture(overrides = {}) {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'direct-xfer-lifecycle-audit-'));
   const config = createServerConfig({
     rootDir:ROOT,
-    packageJson:{ version:'1.70.1' },
+    packageJson:{ version:'1.70.3' },
     env:{
       DATA_DIR:path.join(temp, 'data'), INBOX_DIR:path.join(temp, 'inbox'),
       IMAGES_DIR:path.join(temp, 'images'), HOST_ROOT:path.join(temp, 'host'),

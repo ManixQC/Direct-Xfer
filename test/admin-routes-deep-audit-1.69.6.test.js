@@ -225,10 +225,16 @@ test('push unsubscribe is account-scoped and no longer references an unbound hel
   const source = read('lib/server/admin-settings-routes.js');
   assert.match(source, /pushSubAccountIds,/);
   const server = read('server.js');
+  const admin = read('lib/server/admin-application.js');
   const center = read('lib/server/notification-center-service.js');
+  const notifications = read('lib/server/notification-application.js');
   assert.match(center, /function pushSubAccountIds\(/);
-  assert.match(server, /applicationContext\.register\('notification-center', notificationCenterService\)/);
-  assert.match(server, /attachAdminSettingsRoutes\(applicationContext\.route\('adminSettings'/);
+  const publication = read('lib/server/application-publication.js');
+  assert.match(server, /publishApplicationGraph\(\{/);
+  assert.match(publication, /notificationApplication/);
+  assert.match(notifications, /\['notification-center', notificationCenterService\]/);
+  assert.match(admin, /settings:context\.route\('adminSettings', ROUTE_DOMAINS\.settings/);
+  assert.match(admin, /attachAdminSettingsRoutes\(lateRouteDeps\.settings\)/);
   const { ROUTE_DEPENDENCIES } = require('../lib/server/application-context');
   assert.ok(ROUTE_DEPENDENCIES.adminSettings.includes('pushSubAccountIds'));
   assert.ok(ROUTE_DEPENDENCIES.adminSettings.includes('pushSubscriptionsForAccountIds'));
@@ -263,9 +269,10 @@ test('push unsubscribe is account-scoped and no longer references an unbound hel
 });
 
 test('admin route composition does not duplicate dashboard dependencies', () => {
-  const server = read('server.js');
+  const admin = read('lib/server/admin-application.js');
   const { ROUTE_DEPENDENCIES } = require('../lib/server/application-context');
-  assert.match(server, /attachAdminDashboardRoutes\(applicationContext\.route\('adminDashboard'/);
+  assert.match(admin, /dashboard:context\.route\('adminDashboard', ROUTE_DOMAINS\.dashboard/);
+  assert.match(admin, /attachAdminDashboardRoutes\(lateRouteDeps\.dashboard\)/);
   const deps = ROUTE_DEPENDENCIES.adminDashboard;
   assert.equal(deps.filter((name) => name === 'persistNow').length, 1);
   assert.equal(deps.filter((name) => name === 'pwaAdminHealth').length, 1);

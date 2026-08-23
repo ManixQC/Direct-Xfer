@@ -9,20 +9,32 @@ const read = rel => fs.readFileSync(path.join(ROOT, rel), 'utf8').replace(/\r\n/
 
 test('server entry point delegates large cohesive subsystems to dedicated modules', () => {
   const server = read('server.js');
-  assert.match(server, /require\('\.\/lib\/server\/public-pages'\)/);
-  assert.match(server, /require\('\.\/lib\/server\/tls-manager'\)/);
-  assert.match(server, /require\('\.\/lib\/server\/network-services'\)/);
+  const core = read('lib/server/core-state-application.js');
+  const finalHttp = read('lib/server/final-http-application.js');
+  const httpComposition = read('lib/server/http-pwa-lifecycle-application.js');
+  const publicHttp = read('lib/server/public-http-application.js');
+  const runtimeServices = read('lib/server/runtime-services-application.js');
+  assert.match(server, /require\('\.\/lib\/server\/public-http-application'\)/);
+  assert.match(publicHttp, /require\('\.\/public-pages'\)/);
+  assert.match(server, /require\('\.\/lib\/server\/core-state-application'\)/);
+  assert.match(core, /require\('\.\/tls-manager'\)/);
+  assert.match(core, /require\('\.\/network-services'\)/);
   assert.match(server, /require\('\.\/lib\/server\/config'\)/);
   assert.match(server, /require\('\.\/lib\/server\/bootstrap'\)/);
-  assert.match(server, /require\('\.\/lib\/server\/lifecycle-service'\)/);
-  assert.match(server, /require\('\.\/lib\/server\/notification-service'\)/);
-  assert.match(server, /require\('\.\/lib\/server\/backup-service'\)/);
-  assert.match(server, /require\('\.\/lib\/server\/restore-service'\)/);
-  assert.match(server, /require\('\.\/lib\/server\/maintenance-service'\)/);
-  assert.match(server, /require\('\.\/lib\/server\/admin-router'\)/);
-  assert.match(server, /require\('\.\/lib\/server\/admin-account-routes'\)/);
-  assert.match(server, /require\('\.\/lib\/server\/admin-security-routes'\)/);
-  assert.match(server, /require\('\.\/lib\/server\/admin-storage-routes'\)/);
+  assert.match(server, /require\('\.\/lib\/server\/final-http-application'\)/);
+  assert.match(finalHttp, /require\('\.\/http-pwa-lifecycle-application'\)/);
+  assert.match(httpComposition, /require\('\.\/lifecycle-service'\)/);
+  assert.match(server, /require\('\.\/lib\/server\/notification-application'\)/);
+  const notificationApplication = read('lib/server/notification-application.js');
+  assert.match(notificationApplication, /require\('\.\/notification-service'\)/);
+  assert.match(notificationApplication, /require\('\.\/notification-center-service'\)/);
+  assert.match(notificationApplication, /require\('\.\/pwa-notification-service'\)/);
+  assert.match(server, /require\('\.\/lib\/server\/runtime-services-application'\)/);
+  assert.match(runtimeServices, /require\('\.\/backup-service'\)/);
+  assert.match(core, /require\('\.\/restore-service'\)/);
+  assert.match(runtimeServices, /require\('\.\/maintenance-service'\)/);
+  assert.match(runtimeServices, /require\('\.\/upload-reception-service'\)/);
+  assert.match(finalHttp, /require\('\.\/admin-application'\)/);
   assert.doesNotMatch(server, /const PAGE_STYLE = `/);
   assert.doesNotMatch(server, /function ensureLocalCa\(/);
   assert.doesNotMatch(server, /async function checkPort\(/);
@@ -41,6 +53,7 @@ test('extracted server modules remain CommonJS factories with explicit dependenc
   const config = read('lib/server/config.js');
   const bootstrap = read('lib/server/bootstrap.js');
   const lifecycle = read('lib/server/lifecycle-service.js');
+  const adminApplication = read('lib/server/admin-application.js');
   const adminRouter = read('lib/server/admin-router.js');
   const adminAccounts = read('lib/server/admin-account-routes.js');
   const adminSecurity = read('lib/server/admin-security-routes.js');
@@ -55,6 +68,10 @@ test('extracted server modules remain CommonJS factories with explicit dependenc
   assert.match(config, /function createServerConfig\(options = \{\}\)/);
   assert.match(bootstrap, /function createRuntimeBootstrap\(options = \{\}\)/);
   assert.match(lifecycle, /function createLifecycleService\(options = \{\}\)/);
+  assert.match(adminApplication, /function createAdminApplication\(options = \{\}\)/);
+  for (const rel of ['admin-router', 'admin-account-routes', 'admin-security-routes', 'admin-storage-routes']) {
+    assert.match(adminApplication, new RegExp(`require\\('\\./${rel}'\\)`));
+  }
   assert.match(pages, /module\.exports = \{ createPublicPages \}/);
   assert.match(tls, /module\.exports = \{ createTlsManager \}/);
   assert.match(network, /module\.exports = \{ createNetworkServices \}/);
@@ -65,6 +82,7 @@ test('extracted server modules remain CommonJS factories with explicit dependenc
   assert.match(config, /module\.exports = \{ createServerConfig \}/);
   assert.match(bootstrap, /module\.exports = \{ createRuntimeBootstrap \}/);
   assert.match(lifecycle, /module\.exports = \{ createLifecycleService \}/);
+  assert.match(adminApplication, /module\.exports = \{ ROUTE_DOMAINS, createAdminApplication \}/);
   assert.match(adminRouter, /function createAdminRouter\(deps = \{\}\)/);
   assert.match(adminAccounts, /function attachAdminAccountRoutes\(deps = \{\}\)/);
   assert.match(adminSecurity, /function attachAdminSecurityRoutes\(deps = \{\}\)/);
@@ -147,6 +165,7 @@ test('backup and transactional restore remain separate explicit services', () =>
   const server = read('server.js');
   const backup = read('lib/server/backup-service.js');
   const restore = read('lib/server/restore-service.js');
+  const adminApplication = read('lib/server/admin-application.js');
   const adminRouter = read('lib/server/admin-router.js');
   const adminAccounts = read('lib/server/admin-account-routes.js');
   const adminSecurity = read('lib/server/admin-security-routes.js');
@@ -189,7 +208,9 @@ test('backup service serializes the current restored state instead of the empty 
 test('SMTP cache is owned by notification service and refreshes when credentials change', async () => {
   const server = read('server.js');
   assert.doesNotMatch(server, /\bmailerCache\b/);
-  assert.match(server, /resetMailerCache\(\)/);
+  assert.match(read('lib/server/core-state-application.js'), /resetMailerCache\(\)/);
+  assert.match(read('lib/server/core-state-bridges.js'), /resetMailerCache:ref\('resetMailerCache'\)/);
+  assert.match(read('lib/server/bootstrap-reference-registry.js'), /notification:Object\.freeze\(\['resetMailerCache'/);
   const { createNotificationService } = require('../lib/server/notification-service');
   let settings = { emailEnabled:true, smtpHost:'mail.test', smtpPort:587, smtpSecure:false, smtpUser:'user', smtpPass:'one', smtpTo:'to@test', smtpFrom:'from@test' };
   let created = 0, closed = 0;

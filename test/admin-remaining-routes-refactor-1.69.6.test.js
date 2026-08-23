@@ -8,6 +8,9 @@ const path = require('node:path');
 const ROOT = path.resolve(__dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8').replace(/\r\n?/g, '\n');
 const server = read('server.js');
+const adminApplication = read('lib/server/admin-application.js');
+const finalHttp = read('lib/server/final-http-application.js');
+const httpComposition = read('lib/server/http-pwa-lifecycle-application.js');
 const photoSource = read('lib/server/admin-photo-routes.js');
 const settingsSource = read('lib/server/admin-settings-routes.js');
 const dashboardSource = read('lib/server/admin-dashboard-routes.js');
@@ -89,9 +92,11 @@ function attachWithProxy(attach, overrides = {}) {
 
 test('remaining administrator routes are fully extracted from server.js', () => {
   for (const fn of ['attachAdminPhotoRoutes', 'attachAdminSettingsRoutes', 'attachAdminDashboardRoutes', 'attachAdminDiagnosticsRoutes']) {
-    assert.match(server, new RegExp(`${fn}\\(applicationContext\\.route\\(`), fn);
+    assert.match(adminApplication, new RegExp(`${fn}\\(lateRouteDeps\\.`), fn);
   }
   assert.doesNotMatch(server, /adminRouter\.(?:get|post|put|delete|patch)\(/);
+  assert.match(finalHttp, /createAdminApplication\(\{/);
+  assert.match(httpComposition, /adminApplication\.attachLateRoutes\(\{/);
   assert.ok(Buffer.byteLength(server, 'utf8') < 550 * 1024, `server.js is ${Buffer.byteLength(server, 'utf8')} bytes`);
 });
 

@@ -13,6 +13,7 @@ const AUTH_SERVICE_PATH = path.join(ROOT, 'lib', 'server', 'auth-service.js');
 const SESSION_SERVICE_PATH = path.join(ROOT, 'lib', 'server', 'session-service.js');
 const PUBLIC_SHARE_ROUTES_PATH = path.join(ROOT, 'lib', 'server', 'public-share-routes.js');
 const PUBLIC_ACCESS_SERVICE_PATH = path.join(ROOT, 'lib', 'server', 'public-access-service.js');
+const SECURITY_AUTH_APPLICATION_PATH = path.join(ROOT, 'lib', 'server', 'security-auth-application.js');
 const ROOT_ROUTES_PATH = path.join(ROOT, 'lib', 'server', 'root-routes.js');
 
 function freshAuthModule() {
@@ -109,7 +110,9 @@ test('request auth is isolated behind async auth/session services and synchronou
   const authServiceSource = fs.readFileSync(AUTH_SERVICE_PATH, 'utf8');
   const sessionServiceSource = fs.readFileSync(SESSION_SERVICE_PATH, 'utf8');
   const serverSource = fs.readFileSync(SERVER_PATH, 'utf8');
+  const securityAuthSource = fs.readFileSync(SECURITY_AUTH_APPLICATION_PATH, 'utf8');
   const stateBootstrapSource = fs.readFileSync(path.join(path.dirname(SERVER_PATH), 'lib/server/state-bootstrap-service.js'), 'utf8');
+  const coreStateSource = fs.readFileSync(path.join(path.dirname(SERVER_PATH), 'lib/server/core-state-application.js'), 'utf8');
   const publicShareSource = fs.readFileSync(PUBLIC_SHARE_ROUTES_PATH, 'utf8');
   const publicAccessSource = fs.readFileSync(PUBLIC_ACCESS_SERVICE_PATH, 'utf8');
   const rootRoutesSource = fs.readFileSync(ROOT_ROUTES_PATH, 'utf8');
@@ -125,11 +128,15 @@ test('request auth is isolated behind async auth/session services and synchronou
   assert.match(sessionServiceSource, /x-csrf-token/);
   assert.match(sessionServiceSource, /timingSafeEqualStr\(token, session\.csrf\)/);
 
-  assert.match(serverSource, /createAuthService\(\{/);
-  assert.match(serverSource, /createSessionService\(\{/);
+  assert.match(serverSource, /createSecurityAuthApplication\(\{/);
+  assert.match(securityAuthSource, /createAuthService\(\{/);
+  assert.match(securityAuthSource, /createSessionService\(\{/);
+  assert.doesNotMatch(serverSource, /createAuthService\(\{/);
+  assert.doesNotMatch(serverSource, /createSessionService\(\{/);
   assert.match(authServiceSource, /const loginInFlight = new Set\(\)/);
   assert.match(authServiceSource, /passwordRecordsEqual\(verifiedRecord, currentRecord\)/);
-  assert.match(serverSource, /createPublicAccessService\(\{/);
+  assert.match(securityAuthSource, /createPublicAccessService\(\{/);
+  assert.doesNotMatch(serverSource, /createPublicAccessService\(\{/);
   assert.match(publicAccessSource, /const unlockAuthInFlight = new Set\(\)/);
   assert.doesNotMatch(serverSource, /const sessions = new Map\(/);
   assert.doesNotMatch(serverSource, /const loginAttempts = new Map\(/);
@@ -139,7 +146,7 @@ test('request auth is isolated behind async auth/session services and synchronou
   // entry-point route module; server.js only registers the route.
   assert.match(rootRoutesSource, /if \(result\.busy\)[\s\S]{0,180}status\(503\)/);
 
-  assert.match(serverSource, /stateBootstrapService\.initialize\(\)/);
+  assert.match(coreStateSource, /stateBootstrapService\.initialize\(\)/);
   const bootstrapEnd = stateBootstrapSource.indexOf('initAccounts();');
   assert.ok(bootstrapEnd > 0);
   const afterBootstrap = stateBootstrapSource.slice(bootstrapEnd + 'initAccounts();'.length);

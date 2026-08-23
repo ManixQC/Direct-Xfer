@@ -188,11 +188,13 @@ test('service closes stored client objects correctly during restore/shutdown cle
 
 test('server and route modules compose activity-presence-service instead of retaining the implementation', () => {
   const server = read('server.js');
+  const core = read('lib/server/core-state-application.js');
   const service = read('lib/server/activity-presence-service.js');
   const dashboard = read('lib/server/admin-dashboard-routes.js');
   const pwa = read('lib/server/pwa-routes.js');
 
-  assert.match(server, /createActivityPresenceService\(\{/);
+  assert.match(server, /createCoreStateApplication\(\{/);
+  assert.match(core, /createActivityPresenceService\(\{/);
   assert.doesNotMatch(server, /^function maskIp\(/m);
   assert.doesNotMatch(server, /^function emitLiveActivity\(/m);
   assert.doesNotMatch(server, /^function activeDownloadCounts\(/m);

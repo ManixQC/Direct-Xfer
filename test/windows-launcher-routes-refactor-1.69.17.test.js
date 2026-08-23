@@ -28,7 +28,7 @@ function routeHarness(overrides = {}) {
   const express = { urlencoded:() => (_req, _res, next) => { state.parserRuns += 1; next(); } };
   const deps = {
     APP_NAME:'Direct-Xfer',
-    APP_VERSION:'1.70.1',
+    APP_VERSION:'1.70.3',
     ADMIN_USERNAME:'admin',
     DX_WINDOWS_LAUNCHER_TOKEN:'launcher-secret',
     accountService:{
@@ -99,8 +99,12 @@ test('server composition delegates every private Windows launcher route to the e
   const root = path.join(__dirname, '..');
   const server = fs.readFileSync(path.join(root, 'server.js'), 'utf8');
   const moduleSource = fs.readFileSync(path.join(root, 'lib/server/windows-launcher-routes.js'), 'utf8');
-  assert.match(server, /attachWindowsLauncherRoutes\(\{/);
-  assert.match(server, /require\('\.\/lib\/server\/windows-launcher-routes'\)/);
+  const finalHttp = fs.readFileSync(path.join(root, 'lib/server/final-http-application.js'), 'utf8');
+  const composition = fs.readFileSync(path.join(root, 'lib/server/http-pwa-lifecycle-application.js'), 'utf8');
+  assert.match(server, /require\('\.\/lib\/server\/final-http-application'\)/);
+  assert.match(finalHttp, /require\('\.\/http-pwa-lifecycle-application'\)/);
+  assert.match(composition, /attachWindowsLauncherRoutes\(\{/);
+  assert.match(composition, /require\('\.\/windows-launcher-routes'\)/);
   for (const route of [
     'initial-admin-password', 'reset-admin-password-ticket',
     'reset-admin-password', 'ready', 'shutdown',
@@ -187,7 +191,7 @@ test('readiness is process-specific and shutdown acknowledges before scheduling 
   assert.equal(ready.statusCode, 200);
   assert.equal(ready.body.ok, true);
   assert.equal(ready.body.app, 'Direct-Xfer');
-  assert.equal(ready.body.version, '1.70.1');
+  assert.equal(ready.body.version, '1.70.3');
   assert.equal(ready.body.pid, process.pid);
 
   const stopping = res();

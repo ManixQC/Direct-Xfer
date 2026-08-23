@@ -94,10 +94,12 @@ function fixture(overrides = {}) {
 test('point 9 share domain is owned by a dedicated service', () => {
   const server = read('server.js');
   const service = read('lib/server/share-service.js');
-  assert.match(server, /createShareService/);
-  assert.match(server, /applicationContext\.bind\(shareService, \[/);
-  assert.match(server, /applicationContext\.register\('share', shareService\)/);
-  assert.match(server, /applicationContext\.bind\(shareService, \[[\s\S]*?['"]runExpiredLinkLifecycle['"]/);
+  const composition = read('lib/server/share-media-transfer-application.js');
+  assert.match(server, /createShareMediaTransferApplication/);
+  assert.match(composition, /createShareService/);
+  assert.match(composition, /applicationContext\.bind\(shareService, SHARE_FACADE_METHODS\)/);
+  assert.match(composition, /\['share', shareService\]/);
+  assert.match(composition, /SHARE_FACADE_METHODS[\s\S]*?['"]runExpiredLinkLifecycle['"]/);
   assert.doesNotMatch(server, /function runExpiredLinkLifecycle\(\.\.\.args\)/);
   for (const token of ['const byToken = new Map()', 'function destroyShareManagedData', 'function recordRecipientView', 'function ipDownloadQuotaBlocked', 'function performUndo']) {
     assert.match(service, new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
@@ -364,8 +366,8 @@ test('state restore is reported busy while managed-data destruction is in flight
   assert.equal(f.service.isBusyForStateReplacement(), true);
   await deletion;
   assert.equal(f.service.isBusyForStateReplacement(), false);
-  assert.match(read('server.js'), /isShareStateReplacementBusy:\s*\(\)\s*=>\s*shareService\.isBusyForStateReplacement\(\)/);
-  assert.match(read('lib/server/restore-service.js'), /function restoreIsBusy\(\)[\s\S]*isShareStateReplacementBusy\(\)/);
+  assert.match(read('lib/server/state-lifecycle-application.js'), /\['share-http', \(\) => shareMediaTransferApplication\.isBusyForStateReplacement\(\)[\s\S]*callLate\(publicHttpProvider, 'publicHttpApplication', 'isBusyForStateReplacement'\)\]/);
+  assert.match(read('lib/server/restore-service.js'), /function restoreIsBusy\(\)[\s\S]*stateReplacementCoordinator\.isBusyForStateReplacement\(\)/);
 });
 
 test('numeric share counters recover from string-valued restored state', () => {

@@ -8,6 +8,7 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { EventEmitter } = require('node:events');
 const { createRestoreService } = require('../lib/server/restore-service');
+const { createStateReplacementCoordinator } = require('../lib/server/state-replacement-coordinator');
 const { createMaintenanceService } = require('../lib/server/maintenance-service');
 const { attachAdminDiagnosticsRoutes } = require('../lib/server/admin-diagnostics-routes');
 
@@ -37,6 +38,38 @@ function restoreFixture(persistResults = [true], overrides = {}) {
   let persistIndex = 0;
   const calls = [];
   const noop = () => {};
+  const callback = (name, fallback) => typeof overrides[name] === 'function' ? overrides[name] : fallback;
+  const stateReplacementCoordinator = overrides.stateReplacementCoordinator || createStateReplacementCoordinator({
+    busyChecks:[
+      ['backup', callback('isBackupInFlight', () => false)],
+      ['transfers', () => callback('getActiveTransferCount', () => 0)() > 0],
+      ['uploads', callback('hasActiveUploads', () => false)],
+      ['share-http', callback('isShareStateReplacementBusy', () => false)],
+      ['maintenance', callback('isMaintenanceStateReplacementBusy', () => false)],
+      ['connector-jobs', callback('isConnectorJobStateReplacementBusy', () => false)],
+      ['security', callback('isSecurityStateReplacementBusy', () => false)],
+      ['notifications', callback('isNotificationStateReplacementBusy', () => false)],
+    ],
+    resetSteps:[
+      ['security', callback('clearSecurityRuntimeState', callback('clearAllSessions', () => calls.push('sessions')))],
+      ['transfers', callback('clearTransferRuntimeState', () => calls.push('transfers'))],
+      ['downloads', callback('clearDownloadRuntimeState', () => calls.push('downloads'))],
+      ['media', callback('clearMediaRuntimeState', () => calls.push('media'))],
+      ['uploads', callback('clearUploadRuntimeAfterRestore', () => calls.push('uploads'))],
+      ['pwa-pair-tickets', callback('clearPwaPairTickets', noop)],
+      ['webauthn', callback('clearWebauthnRuntimeState', noop)],
+      ['notifications', callback('clearNotificationRuntimeState', noop)],
+      ['pwa-events', callback('clearPwaEventRuntimeState', noop)],
+      ['activity-presence', callback('closeActivityPresenceStreams', callback('closeLiveActivityClients', noop))],
+      ['notification-center', callback('clearNotificationCenterRuntimeState', noop)],
+      ['pwa-notifications', callback('clearPwaNotificationRuntimeState', noop)],
+      ['maintenance', callback('clearMaintenanceRuntimeState', noop)],
+      ['connector-jobs', callback('clearConnectorJobRuntimeState', () => calls.push('connector-jobs'))],
+      ['system-health', callback('clearSystemHealthRuntimeState', noop)],
+      ['account-bootstrap', callback('clearAccountBootstrapRuntime', () => calls.push('account-bootstrap'))],
+      ['search', () => callback('resetSearchAfterRestore', noop)(1000)],
+    ],
+  });
   const service = createRestoreService({
     fs, path, crypto, forge:null,
     DATA_DIR:data, SECRETS_DIR:secrets, LOG_FILE:log,
@@ -53,21 +86,7 @@ function restoreFixture(persistResults = [true], overrides = {}) {
     verifyAuditSnapshot:() => ({ ok:true }), verifyAuditChain:() => ({ ok:true }),
     parseAuditChainFile:() => ({ entries:[{ hash:'legacy' }] }),
     replaceChainForRestore:(entries) => entries,
-    isBackupInFlight:() => false, getActiveTransferCount:() => 0,
-    hasActiveUploads:() => false, isShareStateReplacementBusy:() => false,
-    isMaintenanceStateReplacementBusy:() => false,
-    isConnectorJobStateReplacementBusy:() => false,
-    clearAllSessions:() => calls.push('sessions'),
-    clearTransferRuntimeState:() => calls.push('transfers'),
-    clearDownloadRuntimeState:() => calls.push('downloads'),
-    clearUploadRuntimeAfterRestore:() => calls.push('uploads'),
-    clearPwaPairTickets:noop, clearWebauthnRuntimeState:noop,
-    clearNotificationRuntimeState:noop, clearPwaEventRuntimeState:noop,
-    closeLiveActivityClients:noop, clearNotificationCenterRuntimeState:noop,
-    clearPwaNotificationRuntimeState:noop, clearMaintenanceRuntimeState:noop,
-    clearConnectorJobRuntimeState:() => calls.push('connector-jobs'),
-    clearAccountBootstrapRuntime:() => calls.push('account-bootstrap'),
-    resetSearchAfterRestore:noop,
+    stateReplacementCoordinator,
     tlsDirPath:() => tls, validateLocalCaCertificate:noop, validateLeafCertificate:noop,
     markTlsRestartRequired:noop,
     normalizePhotoHistory:(value) => Array.isArray(value) ? value : [],
@@ -108,16 +127,26 @@ function backupBundle() {
 
 test('restore and maintenance implementations live behind explicit service boundaries', () => {
   const server = read('server.js');
+  const core = read('lib/server/core-state-application.js');
   const restore = read('lib/server/restore-service.js');
+  const replacementCoordinator = read('lib/server/state-replacement-coordinator.js');
+  const stateLifecycle = read('lib/server/state-lifecycle-application.js');
   const maintenance = read('lib/server/maintenance-service.js');
+  const runtimeServices = read('lib/server/runtime-services-application.js');
   const lifecycle = read('lib/server/lifecycle-service.js');
-  assert.match(server, /createRestoreService/);
-  assert.match(server, /createMaintenanceService/);
-  assert.match(server, /createLifecycleService/);
+  const finalHttp = read('lib/server/final-http-application.js');
+  const httpComposition = read('lib/server/http-pwa-lifecycle-application.js');
+  assert.match(server, /createStateLifecycleApplication\(\{/);
+  assert.match(stateLifecycle, /coreStateApplication\.initializeStateLifecycle\(\{/);
+  assert.match(core, /createRestoreService\(\{/);
+  assert.match(server, /createRuntimeServicesApplication/);
+  assert.match(runtimeServices, /createMaintenanceService/);
+  assert.match(httpComposition, /createLifecycleService/);
   assert.match(lifecycle, /maintenanceService\.start\(\)/);
   assert.match(lifecycle, /maintenanceService\.stop\(\)/);
-  assert.match(server, /isConnectorJobStateReplacementBusy:\s*\(\) => storageConnectorJobService\.isBusyForStateReplacement\(\)/);
-  assert.match(server, /clearConnectorJobRuntimeState:\s*\(\) => storageConnectorJobService\.clearRuntimeAfterRestore\(\)/);
+  assert.match(stateLifecycle, /\['connector-jobs',[\s\S]*storageConnectorJobService[\s\S]*isBusyForStateReplacement/);
+  assert.match(stateLifecycle, /\['connector-jobs',[\s\S]*storageConnectorJobService[\s\S]*clearRuntimeAfterRestore/);
+  assert.match(replacementCoordinator, /function createStateReplacementCoordinator\(options = \{\}\)/);
   for (const name of ['applyRestore', 'restoredAuditEntries', 'recoverInterruptedCoreRestore', 'recoverInterruptedSecretRestore', 'recoverInterruptedTlsRestore']) {
     assert.doesNotMatch(server, new RegExp(`function ${name}\\(`));
     assert.match(restore, new RegExp(`function ${name}\\(`));
@@ -133,13 +162,21 @@ test('restore and maintenance implementations live behind explicit service bound
 test('composition order keeps late notification, upload, transfer and PWA dependencies lazy', () => {
   const server = read('server.js');
   const config = read('lib/server/config.js');
-  assert.match(server, /addAdminCenterNotification:\s*\(\.\.\.args\)\s*=>\s*addAdminCenterNotification\(\.\.\.args\)/);
-  assert.match(server, /noteCenterServiceState:\s*\(\.\.\.args\)\s*=>\s*noteCenterServiceState\(\.\.\.args\)/);
+  const shareMediaTransfer = read('lib/server/share-media-transfer-application.js');
+  const notificationApplication = read('lib/server/notification-application.js');
+  const coreStateBridges = read('lib/server/core-state-bridges.js');
+  const finalHttp = read('lib/server/final-http-application.js');
+  const httpComposition = read('lib/server/http-pwa-lifecycle-application.js');
+  assert.match(coreStateBridges, /addAdminCenterNotification:ref\('addAdminCenterNotification'\)/);
+  assert.match(coreStateBridges, /noteCenterServiceState:ref\('noteCenterServiceState'\)/);
+  assert.match(server, /bootstrapReferences\.bindNotification\(notificationApplication\)/);
   assert.match(config, /const PENDING_DIR = path\.join\(INBOX_DIR, '\.dxpending'\)/);
-  assert.match(server, /pruneHistory:\s*\(\.\.\.args\)\s*=>\s*pruneHistory\(\.\.\.args\)/);
+  assert.match(shareMediaTransfer, /pruneHistory:lazyServiceMethod\(\(\) => transferService, 'transferService', 'pruneHistory'\)/);
   assert.match(config, /const PWA_IMG_EXT = \/\^\(jpg\|png\|gif\|webp\|bmp\|avif\)\$\//);
-  assert.match(server, /applicationContext\.register\('pwa-notification', pwaNotificationService\)/);
-  assert.match(server, /createPwaApplication\(\{[\s\S]*?rootDir:__dirname/);
+  assert.match(notificationApplication, /\['pwa-notification', pwaNotificationService\]/);
+  assert.match(server, /createFinalHttpApplication\(\{[\s\S]*?rootDir:__dirname/);
+  assert.match(finalHttp, /createHttpPwaLifecycleApplication\(\{[\s\S]*?rootDir,/);
+  assert.match(httpComposition, /createPwaApplication\(\{[\s\S]*?rootDir,/);
 });
 
 test('transactional restore replaces the live root and commits staged secrets and journal', () => {
@@ -389,6 +426,7 @@ test('restore busy state includes asynchronous maintenance and runtime reset att
     clearAllSessions:() => { calls.push('sessions'); throw new Error('session reset failed'); },
     clearTransferRuntimeState:() => calls.push('transfers'),
     clearDownloadRuntimeState:() => calls.push('downloads'),
+    clearMediaRuntimeState:() => calls.push('media'),
     clearUploadRuntimeAfterRestore:() => calls.push('uploads'),
     clearMaintenanceRuntimeState:() => calls.push('maintenance'),
     clearConnectorJobRuntimeState:() => calls.push('connector-jobs'),
@@ -399,9 +437,60 @@ test('restore busy state includes asynchronous maintenance and runtime reset att
     assert.equal(fixture.service.restoreIsBusy(), true);
     assert.throws(
       () => fixture.service.clearRuntimeAfterRestore(),
-      (error) => error && error.code === 'RESTORE_RUNTIME_RESET_FAILED' && /sessions/.test(error.message),
+      (error) => error && error.code === 'RESTORE_RUNTIME_RESET_FAILED' && /security/.test(error.message),
     );
-    assert.deepEqual(calls, ['sessions', 'transfers', 'downloads', 'uploads', 'maintenance', 'connector-jobs', 'account-bootstrap', 'search']);
+    assert.deepEqual(calls, ['sessions', 'transfers', 'downloads', 'media', 'uploads', 'maintenance', 'connector-jobs', 'account-bootstrap', 'search']);
+  } finally {
+    fixture.close();
+  }
+});
+
+test('restore readiness failures fail closed instead of escaping the streamed request boundary', () => {
+  const logs = [];
+  const expected = Object.assign(new Error('late coordinator dependency unavailable'), {
+    code:'STATE_REPLACEMENT_BUSY_CHECK_FAILED',
+    step:'late-service',
+  });
+  const fixture = restoreFixture([true], {
+    stateReplacementCoordinator:{
+      isBusyForStateReplacement:() => { throw expected; },
+      clearRuntimeAfterRestore:() => {},
+    },
+    logger:{ error:(...args) => logs.push(args), warn:() => {} },
+  });
+  try {
+    assert.equal(fixture.service.restoreIsBusy(), true);
+    assert.equal(logs.length, 1);
+    assert.match(String(logs[0][0]), /readiness check failed/);
+    assert.match(String(logs[0][1]), /late coordinator dependency unavailable/);
+  } finally {
+    fixture.close();
+  }
+});
+
+test('restore refuses state replacement while notification delivery can still mutate persisted state', () => {
+  let notificationBusy = false;
+  const fixture = restoreFixture([true], {
+    isNotificationStateReplacementBusy:() => notificationBusy,
+  });
+  try {
+    assert.equal(fixture.service.restoreIsBusy(), false);
+    notificationBusy = true;
+    assert.equal(fixture.service.restoreIsBusy(), true);
+  } finally {
+    fixture.close();
+  }
+});
+
+test('restore refuses state replacement while the security/auth boundary has asynchronous work in flight', () => {
+  let securityBusy = false;
+  const fixture = restoreFixture([true], {
+    isSecurityStateReplacementBusy:() => securityBusy,
+  });
+  try {
+    assert.equal(fixture.service.restoreIsBusy(), false);
+    securityBusy = true;
+    assert.equal(fixture.service.restoreIsBusy(), true);
   } finally {
     fixture.close();
   }

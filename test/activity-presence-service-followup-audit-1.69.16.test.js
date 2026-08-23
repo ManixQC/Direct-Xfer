@@ -113,11 +113,12 @@ test('routes and lifecycle preserve the privilege scope and delegate shutdown cl
   const pwaEvents = read('lib/server/pwa-event-service.js');
   const lifecycle = read('lib/server/lifecycle-service.js');
   const server = read('server.js');
+  const httpComposition = read('lib/server/http-pwa-lifecycle-application.js');
 
   assert.match(dashboard, /seeAll \? \['owner', 'admin', 'auditor'\] : \['owner', 'admin', 'operator', 'auditor'\]/);
   assert.match(dashboard, /presenceSessionValidator\(req\.session\.sid, streamRoles\)/);
   assert.match(pwaEvents, /scope && scope\.seeAll \? \['owner', 'admin', 'auditor'\]/);
   assert.match(pwaEvents, /presenceSessionValidator\(req\.pwaSession\.sid, streamRoles\)/);
   assert.match(lifecycle, /if \(hasActivityPresenceCloser\) \{[\s\S]*closeActivityPresenceStreams\(\);[\s\S]*ownerCleanupSucceeded = true/);
-  assert.match(server, /flushNow,\s*closeActivityPresenceStreams,\s*liveActivityClients,/);
+  assert.match(httpComposition, /flushNow,\s*closeActivityPresenceStreams,\s*liveActivityClients:/);
 });

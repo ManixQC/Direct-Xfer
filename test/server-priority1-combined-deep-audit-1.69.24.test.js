@@ -46,7 +46,11 @@ test('host path service preserves traversal containment and host mapping', async
     assert.equal(svc.hostToContainer('/folder/file.txt'), path.join(root, 'folder', 'file.txt'));
     assert.equal(svc.containerToHost(path.join(root, 'folder', 'file.txt')), '/folder/file.txt');
     assert.throws(() => svc.containerToHost(path.join(outside, 'outside.txt')), (error) => error && error.code === 'EPATH');
-    assert.equal(await svc.assertRealWithin(root, path.join(root, 'inside.txt')), path.join(root, 'inside.txt'));
+    const insidePath = path.join(root, 'inside.txt');
+    // fs.realpath() canonicalizes Windows 8.3 aliases (for example RUNNER~1)
+    // to their long-path form on GitHub-hosted runners. assertRealWithin() is
+    // specified to return that canonical real path, so compare like-for-like.
+    assert.equal(await svc.assertRealWithin(root, insidePath), await fs.promises.realpath(insidePath));
 
     const link = path.join(root, 'escape');
     try {

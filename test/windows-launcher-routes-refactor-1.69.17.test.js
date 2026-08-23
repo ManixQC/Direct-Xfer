@@ -28,7 +28,7 @@ function routeHarness(overrides = {}) {
   const express = { urlencoded:() => (_req, _res, next) => { state.parserRuns += 1; next(); } };
   const deps = {
     APP_NAME:'Direct-Xfer',
-    APP_VERSION:'1.70.0',
+    APP_VERSION:'1.70.1',
     ADMIN_USERNAME:'admin',
     DX_WINDOWS_LAUNCHER_TOKEN:'launcher-secret',
     accountService:{
@@ -187,7 +187,7 @@ test('readiness is process-specific and shutdown acknowledges before scheduling 
   assert.equal(ready.statusCode, 200);
   assert.equal(ready.body.ok, true);
   assert.equal(ready.body.app, 'Direct-Xfer');
-  assert.equal(ready.body.version, '1.70.0');
+  assert.equal(ready.body.version, '1.70.1');
   assert.equal(ready.body.pid, process.pid);
 
   const stopping = res();

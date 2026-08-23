@@ -111,7 +111,7 @@ test('PWA document headers remain private, non-cacheable and frame-protected', (
 });
 
 test('every PWA route dependency is provided by a service, context facade or live/bootstrap binding', () => {
-  const routes = fs.readFileSync(path.join(ROOT, 'lib', 'server', 'pwa-routes.js'), 'utf8');
+  const routes = fs.readFileSync(path.join(ROOT, 'lib', 'server', 'pwa-routes.js'), 'utf8').replace(/\r\n?/g, '\n');
   const match = routes.match(/const \{\n    ACTIVITY_HISTORY_MAX,([\s\S]*?)\n  \} = deps;/);
   assert.ok(match, 'route dependency destructuring should remain discoverable');
   const required = new Set(['ACTIVITY_HISTORY_MAX']);

@@ -53,9 +53,9 @@ test('1.69.6 search cache hydration is deferred while transfer-log trimming stay
   assert.match(stateBootstrap, /initAccounts\(\);\n    trimLogIfNeeded\(\);\n    pruneHistory\(\);/);
 });
 
-test('1.70.0 internal Windows build identifiers reflect priority 1 refactor revision', () => {
-  assert.match(launcher, /RuntimeAppBuild = "1\.70\.0-launcher148-csharp"/);
-  assert.match(launcher, /ServerHostBuild = "1\.70\.0-serverhost121-csharp"/);
-  assert.match(host, /RuntimeAppBuild = "1\.70\.0-launcher148-csharp"/);
-  assert.match(host, /HostVersion = "1\.70\.0-serverhost121-csharp"/);
+test('1.70.1 internal Windows build identifiers reflect priority 1 refactor revision', () => {
+  assert.match(launcher, /RuntimeAppBuild = "1\.70\.1-launcher148-csharp"/);
+  assert.match(launcher, /ServerHostBuild = "1\.70\.1-serverhost121-csharp"/);
+  assert.match(host, /RuntimeAppBuild = "1\.70\.1-launcher148-csharp"/);
+  assert.match(host, /HostVersion = "1\.70\.1-serverhost121-csharp"/);
 });

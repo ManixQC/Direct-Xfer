@@ -25,15 +25,15 @@ test('PWA System Health reuses the standard dashboard markup and renderer', () =
     assert.match(standardHtml, new RegExp(`id=["']${id}["']`), `standard has ${id}`);
     assert.match(pwa, new RegExp(`id="${id}"`), `PWA clone has ${id}`);
   }
-  assert.match(pwa, /server-health-dashboard\.css\?v=418/);
-  assert.match(pwa, /server-health-dashboard\.js\?v=418/);
+  assert.match(pwa, /server-health-dashboard\.css\?v=419/);
+  assert.match(pwa, /server-health-dashboard\.js\?v=419/);
   assert.match(pwa, /window\.DirectXferServerHealth/);
   assert.match(pwa, /server-health-grid/);
   assert.match(pwa, /server-health-table-wrap/);
   assert.match(pwa, /data-health-text="storageSection"/);
   assert.match(pwa, /data-health-text="integritySection"/);
-  assert.match(sw, /server-health-dashboard\.css\?v=418/);
-  assert.match(sw, /server-health-dashboard\.js\?v=418/);
+  assert.match(sw, /server-health-dashboard\.css\?v=419/);
+  assert.match(sw, /server-health-dashboard\.js\?v=419/);
 });
 
 test('System Health tab independently revalidates the current admin session', () => {

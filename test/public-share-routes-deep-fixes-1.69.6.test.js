@@ -268,7 +268,10 @@ test('Windows ServerHost manifest matches every runtime source present in the so
     const actual = crypto.createHash('sha256').update(normalized).digest('hex');
     assert.equal(actual, row.hash, row.rel);
   }
-  assert.deepEqual(missing, ['node_modules/express/package.json']);
+  // node_modules is intentionally not tracked in the source tree, but GitHub Actions
+  // runs npm ci before this test. The Express package metadata may therefore be
+  // present (and was hash-checked above) or absent in a source-only archive.
+  assert.deepEqual(missing.filter((rel) => rel !== 'node_modules/express/package.json'), []);
 });
 
 test('album collaborator upload contains asynchronous finalization exceptions and rolls back the file', () => {

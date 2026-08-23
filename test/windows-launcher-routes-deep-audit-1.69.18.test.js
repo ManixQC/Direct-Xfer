@@ -27,7 +27,7 @@ function makeHarness(overrides = {}) {
   };
   const deps = {
     APP_NAME:'Direct-Xfer',
-    APP_VERSION:'1.70.0',
+    APP_VERSION:'1.70.1',
     ADMIN_USERNAME:'admin',
     DX_WINDOWS_LAUNCHER_TOKEN:'launcher-secret',
     accountService:{

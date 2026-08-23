@@ -78,7 +78,7 @@ test('bootstrap contains synchronous rclone cleanup and Windows firewall failure
     }
     const config = createServerConfig({
       rootDir:ROOT,
-      packageJson:{ version:'1.70.0' },
+      packageJson:{ version:'1.70.1' },
       env:{
         DATA_DIR:path.join(temp, 'data'), INBOX_DIR:path.join(temp, 'inbox'),
         IMAGES_DIR:path.join(temp, 'images'), BIND:'0.0.0.0', PORT:'55777',
@@ -112,7 +112,7 @@ test('bootstrap preserves directory order and owns rclone construction', async (
     const inboxDir = path.join(temp, 'inbox');
     const config = createServerConfig({
       rootDir:ROOT,
-      packageJson:{ version:'1.70.0' },
+      packageJson:{ version:'1.70.1' },
       env:{ DATA_DIR:dataDir, INBOX_DIR:inboxDir, IMAGES_DIR:path.join(temp, 'images'), RCLONE_BIN:'custom-rclone' },
     });
     const bootstrap = createRuntimeBootstrap({ config, platform:'linux' });
@@ -134,7 +134,7 @@ test('lifecycle start is idempotent and graceful shutdown drains services once',
   try {
     const config = createServerConfig({
       rootDir:ROOT,
-      packageJson:{ version:'1.70.0' },
+      packageJson:{ version:'1.70.1' },
       env:{
         DATA_DIR:path.join(temp, 'data'), INBOX_DIR:path.join(temp, 'inbox'),
         IMAGES_DIR:path.join(temp, 'images'), HOST_ROOT:path.join(temp, 'host'),
@@ -232,7 +232,7 @@ function createLifecycleAuditFixture(overrides = {}) {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'direct-xfer-lifecycle-audit-'));
   const config = createServerConfig({
     rootDir:ROOT,
-    packageJson:{ version:'1.70.0' },
+    packageJson:{ version:'1.70.1' },
     env:{
       DATA_DIR:path.join(temp, 'data'), INBOX_DIR:path.join(temp, 'inbox'),
       IMAGES_DIR:path.join(temp, 'images'), HOST_ROOT:path.join(temp, 'host'),

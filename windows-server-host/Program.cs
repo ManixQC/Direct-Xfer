@@ -21,9 +21,9 @@ namespace DirectXfer.WindowsServerHost
 {
     internal static class Program
     {
-        internal const string AppVersion = "1.70.0";
-        internal const string RuntimeAppBuild = "1.70.0-launcher148-csharp";
-        internal const string HostVersion = "1.70.0-serverhost121-csharp";
+        internal const string AppVersion = "1.70.1";
+        internal const string RuntimeAppBuild = "1.70.1-launcher148-csharp";
+        internal const string HostVersion = "1.70.1-serverhost121-csharp";
         internal const int DefaultPort = 55750;
         internal const int MaxFallbackPort = 55769;
         internal const int StartupReadyTimeoutMs = 60000;
@@ -113,8 +113,8 @@ namespace DirectXfer.WindowsServerHost
         private static readonly IDictionary<string, string> CriticalRuntimeSha256 =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                { "package.json", "7868a76397971fe81cd89ccc7254178c5fce23458590b39fd5c2943193a2359e" },
-                { "package-lock.json", "9300351af26425d3d24a785e6651712cce8c015e7bbe428ca2f0b1c517bc0647" },
+                { "package.json", "efe777f3c848e7047ad1c09dba9487fc3e4546fb59c96ba3e7ec1b4dcc7c551a" },
+                { "package-lock.json", "1b22fe800186c4249ef3d1b6ffe6ea6b73823372e9f53fd6c0f32adeed9da4d3" },
                 { "server.js", "fee8647ed95b2c9f6f71a943d634b55bfe70adc2cd55607fef2489df1da54a8e" },
                 { "lib/core-utils.js", "850ca4c2f187a170035c73ad6301c64a746f7d7cf7ef6d15aadc767f26144f0c" },
                 { "lib/server/config.js", "4d7b3f5fed8ec4749fc8768dfdcc6ec246ca1b0f51519ecc0d91b42fdc51d89c" },
@@ -155,7 +155,7 @@ namespace DirectXfer.WindowsServerHost
                 { "lib/server/state-store.js", "7bb01d633a28ab24f60951e1ae2ad1f55c5b49869434fd6a422d6209246a742d" },
                 { "lib/server/state-bootstrap-service.js", "3353f57cb139f2e1e6e2d736dff9fc9c97777d4c80bdb48b2ffd14c7e6064528" },
                 { "lib/server/settings-service.js", "1900ee74a259816baee1f2338dbc5863ca39244eb15faf042ede75c0063df956" },
-                { "lib/server/system-health-service.js", "20244f73991e4f63202282cf208181f25ba0ebcde7339cfab1617d219cfe7d5c" },
+                { "lib/server/system-health-service.js", "61b5f4748a7f5db9631df5790829795534e97843e9658a90cb1e840bc215a56d" },
                 { "lib/server/diagnostics-service.js", "6e73944b548bf45ebc4c97c6da303ad3d3ae090e66982e7efe6af23c561ee274" },
                 { "lib/server/admin-router.js", "db0b201673dfa56e7f2d56916a4feb2463229cb73141744c123c7acc3300c017" },
                 { "lib/server/admin-account-routes.js", "bb4873e1fbf49e9f466ae2d04402cde8b3c7c8db5c8afac93933fe2934c9fe75" },
@@ -185,7 +185,7 @@ namespace DirectXfer.WindowsServerHost
                 { "lib/server/notification-center-service.js", "3559e4b8bde5913f81556ad8290bd3dedda03851aef0631af7e3f9c9a11c6298" },
                 { "lib/server/pwa-notification-service.js", "4c4e12a775fdd536541496852e1286a1242ca42690ce6a4bb701cfe61bdf5d20" },
                 { "public/app.js", "38796d8199de3a959bbd93d792524984c900e51f27ca5542998da190523d5b2f" },
-                { "pwa/app.js", "c42bbe2d9a2b657ff356f0678e6d675cf0849dcb11aaf82114f29bbde6fe654e" },
+                { "pwa/app.js", "607ea4fc021658fe9d1cf6dfbf5aa6dccc831dd61a99788f8ee6f11a9f588871" },
                 { "lib/dlp-utils.js", "0d8f768c3457ec713199ce9e82f9483be21df2ea01dce6ead26675d240fde768" },
                 { "lib/fd-utils.js", "947deee8d45440f49c4497621b8479f1a92ff4703789099b24aae4a81dd29bb5" },
                 { "pwa/dlp-local.js", "246267542621fc92f759438b2295b87f777ba6d6aa88b3c4d23dea25aebe7390" },

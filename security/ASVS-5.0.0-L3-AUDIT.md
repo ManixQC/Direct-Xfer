@@ -3,7 +3,8 @@
 Audit baseline date: 2026-08-24  
 Target: OWASP Application Security Verification Standard 5.0.0, Level 3  
 Repository: `ManixQC/Direct-Xfer`  
-Baseline commit reviewed: `3d2c0b5c668c9136a05490b25b76f4166a5940e8`
+Initial baseline commit: `3d2c0b5c668c9136a05490b25b76f4166a5940e8`  
+Remediation tracking head: `d3a843712f10cd02465fa16c623be75cebfaf831`
 
 ## Scope and interpretation
 
@@ -22,18 +23,18 @@ No public claim of “ASVS Level 3 compliant” should be made until every appli
 
 ## Chapter matrix
 
-| Chapter | Area | Baseline | Primary evidence / gap |
+| Chapter | Area | Current status | Primary evidence / gap |
 |---|---|---:|---|
 | V1 | Encoding and Sanitization | PARTIAL | Context encoding/XSS work is extensive; SSRF/path controls exist. CSV formula injection, parser-consistency and ReDoS need complete path review. |
 | V2 | Validation and Business Logic | PARTIAL | Server-side validation, quotas, locking and transaction-style rollback are common. Documentation of business invariants is incomplete. |
 | V3 | Web Frontend Security | PARTIAL | Per-response CSP nonce, COOP, nosniff, no-referrer and frame denial exist. HSTS subdomain/preload behavior, CSP reporting, authenticated-resource isolation and cookie hardening remain. |
 | V4 | API and Web Service | PARTIAL | Express/API boundaries and stable error handling exist. Unsupported HTTP methods and proxy/message-boundary deployment behavior require hardening/evidence. GraphQL/WebSocket are N/A unless introduced. |
 | V5 | File Handling | PARTIAL | Bounded streaming, storage quotas, safe paths, executable sniffing, optional ClamAV/quarantine and moderation exist. Pixel-flood, archive/symlink and all-file type-content validation need closure. |
-| V6 | Authentication | PARTIAL | scrypt password hashing, brute-force lockout, TOTP, recovery codes, passkeys/WebAuthn and unusual-login notifications exist. Mandatory phishing-resistant hardware MFA is not enforced. TOTP replay/lifetime hardening is a priority finding. Common/breached-password screening needs closure. |
-| V7 | Session Management | PARTIAL | 256-bit random session identifiers, login rotation, CSRF, role refresh and backend invalidation exist. Inactivity timeout is not currently enforced independently of absolute expiry. HTTPS cookie prefix/secure policy is not yet L3-strict across all deployment modes. |
+| V6 | Authentication | PARTIAL | scrypt password hashing, brute-force lockout, one-time 30-second TOTP, recovery codes, passkeys/WebAuthn and unusual-login notifications exist. Mandatory phishing-resistant hardware MFA is not enforced. Common/breached-password screening needs closure. |
+| V7 | Session Management | PARTIAL | 256-bit random session identifiers, login rotation, CSRF, role refresh, backend invalidation, absolute expiry and independent inactivity expiry now exist. HTTPS cookie prefix/secure policy is not yet L3-strict across all deployment modes. |
 | V8 | Authorization | PARTIAL | Roles, owner/operator scoping, current-account role refresh and LAN/admin network controls exist. L3 contextual/adaptive authorization is not systematically defined/enforced for all privileged operations. |
 | V9 | Self-contained Tokens | REVIEW/N/A | Direct-Xfer primarily uses reference/session tokens. Any capability or connector token that is self-contained must be individually mapped before marking this chapter N/A. |
-| V10 | OAuth and OIDC | PARTIAL | Google OAuth broker uses state/PKCE-style transaction material and constrained broker flows. L3 sender-constrained/PAR requirements are not generally satisfiable for the third-party Google authorization server and must be scoped to Direct-Xfer’s role (client/broker), with N/A decisions documented for authorization-server-only requirements. |
+| V10 | OAuth and OIDC | PARTIAL | Google OAuth broker uses state/PKCE-style transaction material and constrained broker flows. L3 sender-constrained/PAR requirements must be scoped to Direct-Xfer’s role (client/broker), with N/A decisions documented for authorization-server-only requirements. |
 | V11 | Cryptography | PARTIAL | Node crypto, WebAuthn public-key verification, scrypt and protected broker secrets exist. A formal crypto inventory, key lifecycle and post-quantum migration plan are missing. |
 | V12 | Secure Communication | PARTIAL/MANUAL | HTTPS/local-CA support exists. TLS versions/ciphers, reverse proxy and certificate lifecycle require deployment evidence. |
 | V13 | Configuration | PARTIAL | Production defaults and Docker hardening are significant; security configuration inventory and hardened-profile enforcement need completion. |
@@ -59,15 +60,19 @@ No public claim of “ASVS Level 3 compliant” should be made until every appli
 | v5.0.0-6.2.3 | Non-forced password changes require the current password. |
 | v5.0.0-6.3.1 | Login failures are tracked by source IP with configurable thresholds and lockout. |
 | v5.0.0-6.3.5 | New/unrecognized administrator login devices generate security-center notifications and audits. |
+| v5.0.0-6.5.1 | Accepted TOTP counters are durably persisted before authentication is granted; the same counter is rejected on replay. The enrollment verification counter is also consumed atomically before enabling TOTP. Regression coverage: `test/asvs-l3-totp-1.70.22.test.js`. |
 | v5.0.0-6.5.2 | Recovery codes are stored with the approved password hashing implementation rather than plaintext. |
 | v5.0.0-6.5.3 | TOTP seeds and recovery codes are generated with `crypto.randomBytes`. |
 | v5.0.0-6.5.4 | Recovery codes contain 40 random bits, exceeding the 20-bit minimum. |
+| v5.0.0-6.5.5 | Authentication accepts only the current 30-second TOTP step; the previous ±1-step default was removed. |
 | v5.0.0-6.5.8 | TOTP verification uses server `Date.now()` and never client-provided time. |
 | v5.0.0-6.7.2 | WebAuthn challenges are generated server-side using cryptographic randomness and have bounded lifetime. |
 | v5.0.0-7.2.1 | Session validation is performed by the backend session service. |
 | v5.0.0-7.2.2 | Administrator sessions are dynamically generated reference tokens. |
 | v5.0.0-7.2.3 | Session IDs are 32 random bytes (256 bits) encoded as hex. |
 | v5.0.0-7.2.4 | Authentication rotates and invalidates a previously presented administrator session. |
+| v5.0.0-7.3.1 | Administrator sessions now enforce an independent inactivity timeout (30 minutes by default, configurable and capped by absolute lifetime). Regression coverage: `test/asvs-l3-session-idle-1.70.22.test.js`. |
+| v5.0.0-7.3.2 | Absolute session lifetime remains enforced independently of sliding activity and is covered by the ASVS session regression test. |
 | v5.0.0-7.4.1 | Logout/expiry invalidates backend session state and attached session streams. |
 | v5.0.0-7.4.2 | Deleted-account checks invalidate sessions; account-scoped invalidation helpers exist. |
 | v5.0.0-8.3.2 | Session role/username are refreshed from the current account record on every session validation; invalid role metadata fails closed. |
@@ -78,9 +83,6 @@ No public claim of “ASVS Level 3 compliant” should be made until every appli
 
 | Priority | Requirement | Status | Gap |
 |---:|---|---|---|
-| P0 | v5.0.0-6.5.1 | FAIL | A valid TOTP can currently be accepted again during the same time step because the last accepted counter is not persisted. |
-| P0 | v5.0.0-6.5.5 | FAIL | TOTP verification currently accepts a ±1 step window by default, allowing a token lifetime longer than the ASVS 30-second maximum. |
-| P0 | v5.0.0-7.3.1 | FAIL | `lastSeenAt` is recorded, but there is no independent inactivity-expiry check; only absolute session expiry is enforced. |
 | P0 | v5.0.0-6.3.3 (L3 clause) | FAIL | Password/TOTP can authenticate privileged users; a hardware-backed, phishing-resistant factor is available through WebAuthn but is not mandatory for all privileged access paths. |
 | P1 | v5.0.0-6.2.4 | FAIL | No repository evidence of rejecting at least the top 3000 common passwords during account creation/password change. |
 | P1 | v5.0.0-6.2.12 | FAIL | No breached-password screening is currently enforced during account creation/password change. |
@@ -95,14 +97,20 @@ No public claim of “ASVS Level 3 compliant” should be made until every appli
 | P2 | v5.0.0-15.1.x | FAIL | Formal threat model, risky-component inventory and dangerous-functionality inventory are incomplete. |
 | P2 | v5.0.0-16.1.1 | FAIL | Formal logging inventory/retention/access-control document is missing. |
 
+## Remediation log
+
+| Date | Requirement(s) | Change | Commit(s) |
+|---|---|---|---|
+| 2026-08-24 | v6.5.1, v6.5.5 | One-time durable TOTP counters, exact 30-second acceptance window, enrollment-code consumption and replay regression tests. | `0a2ff20b`, `97a145fb`, `20175cd2`, `d3a84371` |
+| 2026-08-24 | v7.3.1, v7.3.2 | Independent administrator inactivity timeout plus absolute-lifetime regression coverage. | `3b38f214`, `63dcc36f` |
+
 ## Priority remediation plan
 
-### P0 — authentication/session correctness
+### P0 — privileged authentication
 
-1. Make accepted TOTP counters one-time and durably persist the last accepted counter.
-2. Reduce accepted TOTP lifetime to one 30-second step.
-3. Add a real inactivity timeout independent of absolute session lifetime.
-4. Define and implement an ASVS-L3 privileged authentication profile requiring phishing-resistant WebAuthn/FIDO2 for `owner`, `admin` and `operator` access.
+1. Define and implement an ASVS-L3 privileged authentication profile requiring a phishing-resistant WebAuthn/FIDO2 factor for `owner`, `admin` and `operator` access.
+2. Ensure recovery/administrative reset paths cannot downgrade or bypass the L3 authentication strength.
+3. Add regression tests covering standard password/TOTP rejection when the L3 profile is enabled and WebAuthn user-verification requirements.
 
 ### P1 — edge and file security
 

@@ -101,6 +101,13 @@ jobs:
             ]);
           });
 
+          // This older PWA regression test pins the application version through a regex
+          // rather than assert.equal(), so update both its title and escaped regex form.
+          replaceAllExisting('test/pwa-system-health-bottom-nav-1.64.4.test.js', [
+            ['application version stays 1.70.22', 'application version stays 1.70.23'],
+            ['1\\.70\\.22', '1\\.70\\.23']
+          ]);
+
           // App-release assertions move to 1.70.23. In windows-latest, update only
           // release-level expectations: the ServerHost component intentionally stays
           // at 1.70.22 and its PE/manifest assertions must not be rewritten.

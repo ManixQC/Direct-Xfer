@@ -41,6 +41,11 @@ jobs:
             text = text.split(from).join(to);
             fs.writeFileSync(file, text);
           }
+          function replaceAllExisting(file, pairs) {
+            let text = fs.readFileSync(file, 'utf8');
+            for (const [from, to] of pairs) text = text.split(from).join(to);
+            fs.writeFileSync(file, text);
+          }
           function walk(dir, fn) {
             for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
               const full = path.join(dir, entry.name);
@@ -95,8 +100,10 @@ jobs:
             'test/pwa-mobile-deep-audit-1.64.0.test.js',
             'test/codeql-security-regressions-1.70.22.test.js'
           ]) {
-            replaceRequired(file, '1.70.22', '1.70.23');
-            replaceRequired(file, '1\\.70\\.22', '1\\.70\\.23');
+            replaceAllExisting(file, [
+              ['1.70.22', '1.70.23'],
+              ['1\\.70\\.22', '1\\.70\\.23']
+            ]);
           }
           NODE
 

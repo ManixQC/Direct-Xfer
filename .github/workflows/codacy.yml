@@ -54,6 +54,57 @@ jobs:
           # This will handover control about PR rejection to the GitHub side
           max-allowed-issues: 2147483647
 
+      # GitHub no longer accepts multiple SARIF runs in one delivery when they
+      # resolve to the same category. Codacy can emit several tool runs in one
+      # results.sarif, so assign each run a deterministic unique category before
+      # upload. Keep this workaround until Codacy resolves upstream issue #541.
+      - name: Normalize Codacy SARIF categories for GitHub
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s results.sarif
+          jq -e '.version and (.runs | type == "array") and (.runs | length > 0)' results.sarif >/dev/null
+
+          run_count="$(jq '.runs | length' results.sarif)"
+          if [ "$run_count" -gt 20 ]; then
+            echo "::error::Codacy produced $run_count SARIF runs; GitHub accepts at most 20 runs per SARIF file."
+            exit 1
+          fi
+
+          jq '
+            .runs |= (
+              to_entries
+              | map(
+                  . as $entry
+                  | $entry.value
+                  | .automationDetails = ((.automationDetails // {}) + {
+                      id: (
+                        "codacy/"
+                        + (
+                            (.tool.driver.name // "tool")
+                            | ascii_downcase
+                            | gsub("[^a-z0-9._-]+"; "-")
+                            | gsub("^-+|-+$"; "")
+                          )
+                        + "-"
+                        + ($entry.key | tostring)
+                        + "/"
+                      )
+                    })
+                )
+            )
+          ' results.sarif > results.normalized.sarif
+          mv results.normalized.sarif results.sarif
+
+          unique_count="$(jq '[.runs[].automationDetails.id] | unique | length' results.sarif)"
+          if [ "$run_count" -ne "$unique_count" ]; then
+            echo "::error::Codacy SARIF categories are not unique after normalization."
+            exit 1
+          fi
+
+          echo "Codacy SARIF run categories:"
+          jq -r '.runs[].automationDetails.id' results.sarif
+
       # Upload the SARIF file generated in the previous step
       - name: Upload SARIF results file
         uses: github/codeql-action/upload-sarif@v4

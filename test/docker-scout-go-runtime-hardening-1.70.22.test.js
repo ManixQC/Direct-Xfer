@@ -23,7 +23,8 @@ test('1.70.22 rebuilds rclone 1.75.0 with a patched pinned Go stdlib', () => {
   assert.match(dockerfile, /GOTOOLCHAIN=local/);
   assert.match(dockerfile, /test "\$\(go env GOVERSION\)" = "go\$\{DX_RCLONE_GO_BUILD_VERSION\}"/);
   assert.match(dockerfile, /go mod download "github\.com\/rclone\/rclone@\$\{DX_RCLONE_BUILD_VERSION\}"/);
-  assert.match(dockerfile, /go mod edit -require="golang\.org\/x\/image@\$\{DX_RCLONE_X_IMAGE_VERSION\}"/);
+  assert.match(dockerfile, /go get "golang\.org\/x\/image@\$\{DX_RCLONE_X_IMAGE_VERSION\}"/);
+  assert.doesNotMatch(dockerfile, /go mod edit -require=.*golang\.org\/x\/image/);
   assert.match(dockerfile, /CGO_ENABLED=0 go build -trimpath/);
   assert.match(dockerfile, /-o \/out\/rclone \./);
   assert.match(dockerfile, /github\.com\/rclone\/rclone\/fs\.Version=\$\{DX_RCLONE_BUILD_VERSION\}/);

@@ -33,13 +33,20 @@ RUN go mod download "github.com/rclone/rclone@${DX_RCLONE_BUILD_VERSION}" \
   && rclone_src="$(go env GOMODCACHE)/github.com/rclone/rclone@${DX_RCLONE_BUILD_VERSION}" \
   && test -f "${rclone_src}/go.mod" \
   && cp -a "${rclone_src}" /src/rclone \
-  && chmod -R u+w /src/rclone \
-  && cd /src/rclone \
-  && go mod edit -require="golang.org/x/image@${DX_RCLONE_X_IMAGE_VERSION}" \
-  && go mod download "golang.org/x/image@${DX_RCLONE_X_IMAGE_VERSION}" \
+  && chmod -R u+w /src/rclone
+
+WORKDIR /src/rclone
+
+# Let the Go module resolver perform the security upgrade so transitive
+# requirements (notably x/text v0.41.0 required by x/image v0.45.0) remain
+# internally consistent. Editing only the x/image require line can leave the
+# copied release module in a graph that needs further go.mod updates at build time.
+RUN go get "golang.org/x/image@${DX_RCLONE_X_IMAGE_VERSION}" \
   && test "$(go list -m -f '{{.Version}}' golang.org/x/image)" = "${DX_RCLONE_X_IMAGE_VERSION}" \
-  && go mod verify \
-  && CGO_ENABLED=0 go build -trimpath \
+  && go mod download all \
+  && go mod verify
+
+RUN CGO_ENABLED=0 go build -trimpath \
       -ldflags "-s -X github.com/rclone/rclone/fs.Version=${DX_RCLONE_BUILD_VERSION}" \
       -o /out/rclone . \
   && test -x /out/rclone

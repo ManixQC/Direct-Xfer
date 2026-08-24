@@ -115,7 +115,8 @@ test('1.70.22 treats rclone source, toolchain, module metadata and licence as on
   assert.match(dockerfile, /ENV GOTOOLCHAIN=local \\\n    GOSUMDB=sum\.golang\.org/);
   assert.match(dockerfile, /test "\$\{DX_RCLONE_BUILD_VERSION\}" = "v1\.75\.0"/);
   assert.match(dockerfile, /test "\$\{DX_RCLONE_X_IMAGE_VERSION\}" = "v0\.45\.0"/);
-  assert.match(dockerfile, /go mod edit -require="golang\.org\/x\/image@\$\{DX_RCLONE_X_IMAGE_VERSION\}"/);
+  assert.match(dockerfile, /go get "golang\.org\/x\/image@\$\{DX_RCLONE_X_IMAGE_VERSION\}"/);
+  assert.doesNotMatch(dockerfile, /go mod edit -require=.*golang\.org\/x\/image/);
   assert.match(dockerfile, /go list -m -f '\{\{\.Version\}\}' golang\.org\/x\/image/);
   assert.match(dockerfile, /go version \/out\/rclone \| tee \/out\/rclone-go-version\.txt/);
   assert.match(dockerfile, /go version -m \/out\/rclone > \/out\/rclone-buildinfo\.txt/);

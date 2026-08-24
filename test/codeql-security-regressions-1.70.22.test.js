@@ -31,6 +31,17 @@ test('CodeQL password-hash hardening removes request-time legacy SHA-256 verific
   assert.match(src, /return \{ ok: true, match: false \};/);
 });
 
+test('CodeQL HIBP range lookup documents its protocol-only SHA-1 exception', () => {
+  const src = read('lib/auth-utils.js');
+  const sha1Uses = src.match(/createHash\(['"]sha1['"]\)/g) || [];
+  assert.equal(sha1Uses.length, 1, 'HIBP range lookup must be the only SHA-1 use in auth-utils');
+  assert.match(src, /SHA-1 is required by the HIBP Pwned Passwords range protocol/);
+  assert.match(src, /never persisted and is never accepted as[\s\S]{0,120}credential verifier/);
+  assert.match(src, /createHash\('sha1'\)[^\n]*lgtm\[js\/insufficient-password-hash\]/);
+  assert.match(src, /const prefix = digest\.slice\(0, 5\)/);
+  assert.match(src, /path: '\/range\/' \+ prefix/);
+});
+
 test('CodeQL OAuth URL boundaries validate protocols before browser URL sinks', () => {
   const app = read('public/app.js');
   const bridge = read('public/oauth-bridge.js');

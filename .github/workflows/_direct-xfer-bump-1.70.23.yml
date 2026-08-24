@@ -70,34 +70,45 @@ jobs:
           replaceRequired(workflow, 'Direct-Xfer-1.70.22-Windows-CSharp', 'Direct-Xfer-1.70.23-Windows-CSharp');
           replaceRequired(workflow, 'Direct-Xfer-Setup-1.70.22', 'Direct-Xfer-Setup-1.70.23');
 
-          // This patch changes the delivered PWA release identity, so advance the
-          // shell generation and app.js cache key together. Native Windows component
-          // identities remain independently versioned.
+          // This release changes the delivered PWA identity. Advance the service-worker
+          // generation and app.js cache key while leaving native component identities
+          // independently versioned (Launcher 1.70.1, ServerHost 1.70.22).
           walk('pwa', (file) => {
             if (!/\.(?:js|html|json|webmanifest)$/i.test(file)) return;
-            let text = fs.readFileSync(file, 'utf8');
-            text = text.split('1.70.22').join('1.70.23');
-            text = text.split('2026.08.23-pwa455').join('2026.08.24-pwa456');
-            text = text.split('pwa455').join('pwa456');
-            text = text.split('app.js?v=441').join('app.js?v=442');
-            fs.writeFileSync(file, text);
+            replaceAllExisting(file, [
+              ['1.70.22', '1.70.23'],
+              ['2026.08.23-pwa455', '2026.08.24-pwa456'],
+              ['pwa455', 'pwa456'],
+              ['app.js?v=441', 'app.js?v=442']
+            ]);
           });
 
-          // Tests that track the current PWA shell use the generation marker rather
-          // than historical feature versions, so advancing that marker is safe.
+          // Tests tracking the current PWA shell follow the generation/cache marker.
           walk('test', (file) => {
             if (!file.endsWith('.test.js')) return;
-            let text = fs.readFileSync(file, 'utf8');
-            text = text.split('2026.08.23-pwa455').join('2026.08.24-pwa456');
-            text = text.split('pwa455').join('pwa456');
-            text = text.split('app.js\\?v=441').join('app.js\\?v=442');
-            text = text.split('app.js?v=441').join('app.js?v=442');
-            fs.writeFileSync(file, text);
+            replaceAllExisting(file, [
+              ['2026.08.23-pwa455', '2026.08.24-pwa456'],
+              ['pwa455', 'pwa456'],
+              ['app.js\\?v=441', 'app.js\\?v=442'],
+              ['app.js?v=441', 'app.js?v=442']
+            ]);
           });
 
+          // App-release assertions move to 1.70.23. In windows-latest, update only
+          // release-level expectations: the ServerHost component intentionally stays
+          // at 1.70.22 and its PE/manifest assertions must not be rewritten.
+          replaceAllExisting('test/windows-latest-deep-audit-1.66.6.test.js', [
+            ["test('1.70.22 version, Windows builds and PWA generation are synchronized'", "test('1.70.23 version, Windows builds and PWA generation are synchronized'"],
+            ["assert.equal(pkg.version, '1.70.22')", "assert.equal(pkg.version, '1.70.23')"],
+            ["assert.equal(lock.version, '1.70.22')", "assert.equal(lock.version, '1.70.23')"],
+            ["assert.equal(lock.packages[''].version, '1.70.22')", "assert.equal(lock.packages[''].version, '1.70.23')"],
+            ["/^run-name: v1\\.70\\.22$/m", "/^run-name: v1\\.70\\.23$/m"],
+            ["/1\\.70\\.22|pwa456/", "/1\\.70\\.23|pwa456/"]
+          ]);
+
           for (const file of [
-            'test/windows-latest-deep-audit-1.66.6.test.js',
             'test/pwa-mobile-deep-audit-1.64.0.test.js',
+            'test/windows-recent-deep-audit-1.66.4.test.js',
             'test/codeql-security-regressions-1.70.22.test.js'
           ]) {
             replaceAllExisting(file, [

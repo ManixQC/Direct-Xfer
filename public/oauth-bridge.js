@@ -16,39 +16,45 @@
       title: `Connexion à ${provider}`,
       preparing: 'Direct-Xfer prépare la page d’autorisation…',
       redirecting: `Ouverture de ${provider}…`,
-      help: 'Cet onglet se redirigera automatiquement dès que le fournisseur sera prêt.',
+      help: 'Cet onglet ouvrira le fournisseur lorsque vous aurez confirmé la sortie de Direct-Xfer.',
       failed: 'La connexion OAuth n’a pas pu démarrer.',
       completed: 'La connexion OAuth est terminée.',
       completedHelp: 'Vous pouvez fermer cet onglet et revenir à Direct-Xfer.',
       expired: 'La session Direct-Xfer a expiré. Revenez à Direct-Xfer, reconnectez-vous puis réessayez.',
       retry: 'Revenez à l’onglet Direct-Xfer et cliquez sur « Réessayer ».',
       invalid: 'La page de connexion reçue n’est pas valide.',
+      cancelled: 'Ouverture du fournisseur annulée.',
+      externalConfirm: 'Vous quittez Direct-Xfer pour continuer la connexion sur {host}. Continuer ?',
       close: 'Fermer cet onglet'
     },
     en: {
       title: `Connect to ${provider}`,
       preparing: 'Direct-Xfer is preparing the authorization page…',
       redirecting: `Opening ${provider}…`,
-      help: 'This tab will redirect automatically as soon as the provider is ready.',
+      help: 'This tab will open the provider after you confirm leaving Direct-Xfer.',
       failed: 'OAuth sign-in could not be started.',
       completed: 'OAuth sign-in is complete.',
       completedHelp: 'You can close this tab and return to Direct-Xfer.',
       expired: 'Your Direct-Xfer session expired. Return to Direct-Xfer, sign in again, then retry.',
       retry: 'Return to the Direct-Xfer tab and click “Retry”.',
       invalid: 'The received sign-in URL is invalid.',
+      cancelled: 'Opening the provider was cancelled.',
+      externalConfirm: 'You are leaving Direct-Xfer to continue sign-in on {host}. Continue?',
       close: 'Close this tab'
     },
     es: {
       title: `Conectar con ${provider}`,
       preparing: 'Direct-Xfer está preparando la página de autorización…',
       redirecting: `Abriendo ${provider}…`,
-      help: 'Esta pestaña se redirigirá automáticamente cuando el proveedor esté listo.',
+      help: 'Esta pestaña abrirá el proveedor después de que confirmes que sales de Direct-Xfer.',
       failed: 'No se pudo iniciar la conexión OAuth.',
       completed: 'La conexión OAuth ha terminado.',
       completedHelp: 'Puedes cerrar esta pestaña y volver a Direct-Xfer.',
       expired: 'La sesión de Direct-Xfer caducó. Vuelve a Direct-Xfer, inicia sesión y reintenta.',
       retry: 'Vuelve a la pestaña Direct-Xfer y pulsa «Reintentar».',
       invalid: 'La URL de inicio de sesión recibida no es válida.',
+      cancelled: 'Se canceló la apertura del proveedor.',
+      externalConfirm: 'Vas a salir de Direct-Xfer para continuar la conexión en {host}. ¿Continuar?',
       close: 'Cerrar esta pestaña'
     }
   }[lang];
@@ -143,6 +149,13 @@
     let parsed;
     try { parsed = new URL(value); } catch (_) { fail(copy.invalid); return; }
     if (parsed.protocol !== 'https:' || parsed.username || parsed.password) { fail(copy.invalid); return; }
+    // ASVS requires an explicit user decision before leaving the application for
+    // an externally supplied navigation target. The backend still validates the
+    // OAuth provider URL; this confirmation protects the browser/user boundary.
+    if (parsed.origin !== location.origin) {
+      const prompt = copy.externalConfirm.replace('{host}', parsed.hostname);
+      if (!window.confirm(prompt)) { fail(copy.cancelled, copy.retry); return; }
+    }
     stopped = true;
     if (timer) clearTimeout(timer);
     status.textContent = copy.redirecting;

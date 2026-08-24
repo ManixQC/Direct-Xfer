@@ -4,23 +4,23 @@ Audit date: 2026-08-24
 Standard: OWASP ASVS 5.0.0 Level 3 (L3 includes applicable L1 and L2 requirements)  
 Repository: `ManixQC/Direct-Xfer`  
 Initial baseline: `3d2c0b5c668c9136a05490b25b76f4166a5940e8`  
-Source snapshot reviewed for this tranche: `df0a5450671195de2c0bf8b46b3f8540989d5ef9`
+Source snapshot reviewed through: `8bf1d413e81618a474ff87fc71779473f34b918a`
 
 ## Coverage
 
-This is the requirement-by-requirement working matrix. V1 through V8 are individually triaged in this tranche: **182 / 345 requirements**. V9 through V17 remain to be individually triaged. This file is audit evidence, not a certification claim.
+This is the requirement-by-requirement working matrix. **All 345 ASVS 5.0.0 requirements have now been individually triaged.** PASS means verified from repository evidence at this stage; MANUAL items still require production-like deployment evidence, REVIEW items require deeper path verification, and every N/A decision must be independently reviewed before any Level 3 compliance claim.
 
 | Status | Count |
 |---|---:|
-| PASS | 62 |
-| PARTIAL | 37 |
-| FAIL | 33 |
-| N/A | 30 |
-| REVIEW | 15 |
-| MANUAL | 5 |
-| **Total V1–V8** | **182** |
+| PASS | 88 |
+| PARTIAL | 85 |
+| FAIL | 57 |
+| N/A | 86 |
+| REVIEW | 18 |
+| MANUAL | 11 |
+| **Total** | **345** |
 
-Status meanings are defined in `security/ASVS-5.0.0-L3-AUDIT.md`. `N/A` decisions remain subject to reviewer confirmation before any L3 claim.
+Status meanings and remediation priorities are defined in `security/ASVS-5.0.0-L3-AUDIT.md`.
 
 ## V1 — Encoding and Sanitization
 
@@ -243,3 +243,211 @@ Status meanings are defined in `security/ASVS-5.0.0-L3-AUDIT.md`. `N/A` decision
 | V8.3.3 | **REVIEW** | Delegated storage/proxy operations require explicit review to prove downstream access is always constrained to the originating subject's permissions. |
 | V8.4.1 | **N/A** | Direct-Xfer has multiple accounts but no separate tenant isolation domain in the audited architecture. |
 | V8.4.2 | **FAIL** | Administrative access combines network controls and authenticated sessions, but lacks continuous identity verification, device-posture assessment and contextual risk analysis. |
+
+## V9 — Self-contained Tokens
+
+| Requirement | Status | Evidence / gap |
+|---|---|---|
+| V9.1.1 | **N/A** | Direct-Xfer does not issue or consume application self-contained authorization/session tokens such as JWTs; its sessions and capabilities are opaque server-side reference/bearer handles. |
+| V9.1.2 | **N/A** | No application self-contained token algorithm negotiation exists. |
+| V9.1.3 | **N/A** | No application self-contained token permits client-selected key sources such as `jku`, `x5u` or `jwk`. |
+| V9.2.1 | **N/A** | No application self-contained token validity claims (`nbf`/`exp`) are consumed. |
+| V9.2.2 | **N/A** | No application self-contained token types are accepted for authentication/authorization decisions. |
+| V9.2.3 | **N/A** | No application self-contained token audience claim is consumed. |
+| V9.2.4 | **N/A** | Direct-Xfer does not issue signed self-contained tokens to multiple audiences. |
+
+## V10 — OAuth and OIDC
+
+| Requirement | Status | Evidence / gap |
+|---|---|---|
+| V10.1.1 | **PASS** | Google access/refresh tokens and Direct-Xfer broker credentials are handled by the backend/rclone path; the browser receives only transaction/authentication-navigation data, not provider bearer tokens. |
+| V10.1.2 | **PARTIAL** | Broker transactions use unpredictable state, PKCE verifier/challenge and backend-held polling credentials, but a formal same-user-agent/session binding proof across the remote-browser broker flow is not yet documented. |
+| V10.2.1 | **PASS** | Google authorization uses both an unpredictable `state` value and PKCE with `S256`; callback state is validated before token exchange. |
+| V10.2.2 | **N/A** | The built-in Google broker interacts with one preconfigured Google authorization server, so multi-authorization-server mix-up handling is not applicable to that flow. |
+| V10.2.3 | **PASS** | Google Drive scopes are positively allowlisted and default to the least-privilege `drive.file` scope; readonly/full scopes require explicit selection. |
+| V10.3.1 | **N/A** | Direct-Xfer is not an OAuth resource server accepting third-party access tokens as authorization credentials. |
+| V10.3.2 | **N/A** | Direct-Xfer does not authorize application operations from third-party OAuth access-token claims. |
+| V10.3.3 | **N/A** | Application users are not identified from OAuth access-token claims. |
+| V10.3.4 | **N/A** | Direct-Xfer does not consume OAuth token authentication-strength claims for application sessions. |
+| V10.3.5 | **N/A** | Direct-Xfer is not an OAuth resource server accepting bearer access tokens for application access. |
+| V10.4.1 | **N/A** | Google is the authorization server; Direct-Xfer's broker is an OAuth client/relay and does not register arbitrary client redirect URIs. |
+| V10.4.2 | **N/A** | Direct-Xfer does not operate the Google authorization server that issues authorization codes. |
+| V10.4.3 | **N/A** | Authorization-code lifetime is controlled by Google, not by Direct-Xfer. |
+| V10.4.4 | **N/A** | Direct-Xfer does not operate a general OAuth authorization server exposing client-selectable grant types. |
+| V10.4.5 | **N/A** | Refresh-token replay semantics for Google-issued refresh tokens are controlled by Google; Direct-Xfer is the client. |
+| V10.4.6 | **N/A** | PKCE enforcement by the authorization server is Google's responsibility; Direct-Xfer nevertheless sends `S256` PKCE as a client. |
+| V10.4.7 | **N/A** | Direct-Xfer does not offer OAuth dynamic client registration. |
+| V10.4.8 | **N/A** | Direct-Xfer does not issue OAuth refresh tokens as an authorization server. |
+| V10.4.9 | **N/A** | Direct-Xfer does not operate the authorization-server consent/token-management UI. |
+| V10.4.10 | **N/A** | Direct-Xfer does not expose authorization-server backchannel endpoints to arbitrary confidential OAuth clients. |
+| V10.4.11 | **N/A** | Authorization-server scope assignment is managed by Google; Direct-Xfer constrains requested client scopes separately under V10.2.3. |
+| V10.4.12 | **N/A** | Direct-Xfer does not operate a general authorization server with client-selected `response_mode`. |
+| V10.4.13 | **N/A** | Pushed Authorization Requests are an authorization-server capability controlled by Google; Direct-Xfer is not that server. |
+| V10.4.14 | **N/A** | Sender-constrained access-token issuance is controlled by Google, not Direct-Xfer. |
+| V10.4.15 | **N/A** | Direct-Xfer does not operate an authorization server accepting Rich Authorization Requests from third-party clients. |
+| V10.4.16 | **N/A** | Direct-Xfer does not operate the Google authorization server or its confidential-client authentication policy. |
+| V10.5.1 | **N/A** | Direct-Xfer does not use OIDC ID Tokens for application login. |
+| V10.5.2 | **N/A** | Direct-Xfer does not identify application users from OIDC ID Token claims. |
+| V10.5.3 | **N/A** | No OIDC authorization-server metadata discovery is used for application login. |
+| V10.5.4 | **N/A** | No OIDC ID Token audience is consumed. |
+| V10.5.5 | **N/A** | OIDC back-channel logout is not implemented. |
+| V10.6.1 | **N/A** | Direct-Xfer is not an OpenID Provider. |
+| V10.6.2 | **N/A** | Direct-Xfer is not an OpenID Provider. |
+| V10.7.1 | **N/A** | End-user OAuth consent is provided by Google; Direct-Xfer does not operate the authorization server. |
+| V10.7.2 | **N/A** | Consent-prompt content is controlled by Google; Direct-Xfer requests an allowlisted scope and explicitly uses `prompt=consent`. |
+| V10.7.3 | **N/A** | OAuth consent review/revocation is provided by Google rather than a Direct-Xfer authorization server. |
+
+## V11 — Cryptography
+
+| Requirement | Status | Evidence / gap |
+|---|---|---|
+| V11.1.1 | **FAIL** | There is no formal cryptographic key-management/lifecycle policy aligned to a standard such as NIST SP 800-57. |
+| V11.1.2 | **FAIL** | There is no maintained application-wide inventory of keys, algorithms, certificates, allowed usages and protected data. |
+| V11.1.3 | **FAIL** | Cryptographic discovery is performed ad hoc during review/testing rather than through a documented recurring discovery mechanism. |
+| V11.1.4 | **FAIL** | No documented post-quantum cryptography migration plan is maintained. |
+| V11.2.1 | **PASS** | Cryptographic operations rely on Node.js/OpenSSL Web Crypto primitives and established libraries rather than custom cipher implementations. |
+| V11.2.2 | **PARTIAL** | Crypto boundaries are modular enough to migrate, but several algorithms/formats are hard-coded and there is no documented crypto-agility migration mechanism. |
+| V11.2.3 | **FAIL** | Some RSA uses remain at 2048 bits (including WebAuthn RS256 acceptance and managed TLS leaf keys), below the approximately 128-bit security target represented by RSA-3072. |
+| V11.2.4 | **PARTIAL** | Secret comparisons commonly use timing-safe operations and library cryptography, but a complete constant-time review of all cryptographic decisions is not yet complete. |
+| V11.2.5 | **PARTIAL** | Encryption/signature failures generally fail closed, but a complete cryptographic error-path/oracle review has not yet been performed. |
+| V11.3.1 | **PASS** | Application data encryption uses AES-GCM; no ECB or PKCS#1 v1.5 public-key encryption path was identified. |
+| V11.3.2 | **PASS** | Application-managed symmetric encryption uses AES-256-GCM. |
+| V11.3.3 | **PASS** | Encrypted application/state/broker-secret data uses authenticated encryption (AES-GCM) with integrity tags. |
+| V11.3.4 | **PASS** | AES-GCM encryption paths generate a fresh 96-bit random IV for each encryption operation. |
+| V11.3.5 | **N/A** | Direct-Xfer does not combine separate encryption and MAC primitives for the same encrypted payload; it uses AEAD. |
+| V11.4.1 | **REVIEW** | General cryptographic hashes are SHA-256 or stronger, while standards-based TOTP uses HMAC-SHA1; the approved-algorithm policy must explicitly document this protocol-specific use. |
+| V11.4.2 | **PASS** | Passwords and recovery codes are stored using salted scrypt with bounded asynchronous work. |
+| V11.4.3 | **PASS** | Audit integrity/signature support uses SHA-256 digests/HMAC chaining and Ed25519 proof signatures. |
+| V11.4.4 | **PARTIAL** | State encryption derives a 256-bit key with scrypt, but password-derived-key parameter policy/benchmarking is not formally documented across every derivation path. |
+| V11.5.1 | **PARTIAL** | Security tokens such as sessions, CSRF, WebAuthn/OAuth challenges and PWA secrets use >=128 bits of CSPRNG entropy; a few random identifiers are shorter and require classification to prove they are not relied on as secrets. |
+| V11.5.2 | **PASS** | Randomness uses operating-system backed Node/Web Crypto CSPRNG primitives designed for concurrent demand. |
+| V11.6.1 | **PARTIAL** | Ed25519 and P-256 are used appropriately, and RSA generation uses exponent 65537; however 2048-bit RSA remains below the L3 strength target in some paths. |
+| V11.6.2 | **MANUAL** | TLS key exchange is delegated to Node/OpenSSL or a reverse proxy; production cipher/key-exchange configuration requires runtime verification. |
+| V11.7.1 | **FAIL** | Direct-Xfer does not provide full-memory encryption protecting sensitive data from other authorized host processes while data is in use. |
+| V11.7.2 | **PARTIAL** | Secrets are scoped to backend services and encrypted at rest, but plaintext necessarily exists during use and no comprehensive immediate re-encryption/zeroization policy is implemented. |
+
+## V12 — Secure Communication
+
+| Requirement | Status | Evidence / gap |
+|---|---|---|
+| V12.1.1 | **PARTIAL** | Node 22 defaults provide modern TLS and native HTTPS support, but Direct-Xfer does not explicitly pin/verify TLS 1.2/1.3 only in every deployment mode. |
+| V12.1.2 | **MANUAL** | Forward-secret cipher-suite enforcement depends on Node/OpenSSL or the terminating reverse proxy and requires production-like verification. |
+| V12.1.3 | **N/A** | Direct-Xfer does not use mTLS client-certificate identities for application authentication/authorization. |
+| V12.1.4 | **MANUAL** | OCSP stapling/revocation behavior is controlled by the externally provided certificate/terminating proxy; Local-CA deployments have no public OCSP service. |
+| V12.1.5 | **MANUAL** | Encrypted Client Hello is a deployment/DNS/TLS-termination capability and is not configured by the application repository. |
+| V12.2.1 | **PARTIAL** | Public deployments support HTTPS and broker traffic requires HTTPS, but Direct-Xfer intentionally supports plain HTTP on trusted LAN/local deployments. |
+| V12.2.2 | **MANUAL** | Publicly trusted certificate use depends on deployment; Local-CA mode intentionally uses a private CA. |
+| V12.3.1 | **PARTIAL** | Internet OAuth/update services use TLS and connector transports can be encrypted, but the application also supports administrator-selected SMB/SFTP/WebDAV configurations whose transport assurance varies. |
+| V12.3.2 | **PASS** | Node HTTPS/fetch/rclone use normal certificate verification; insecure certificate bypass was not identified in built-in OAuth/update flows. |
+| V12.3.3 | **N/A** | Direct-Xfer is primarily a monolithic application without internal HTTP microservices requiring a separate service-to-service TLS channel. |
+| V12.3.4 | **N/A** | No internal HTTP service mesh or separate internal TLS service trust domain is present. |
+| V12.3.5 | **N/A** | No microservice-to-microservice authentication channel is part of the core architecture. |
+
+## V13 — Configuration
+
+| Requirement | Status | Evidence / gap |
+|---|---|---|
+| V13.1.1 | **PARTIAL** | README/configuration document major external services and user-configurable connectors, but there is no complete communication/egress inventory. |
+| V13.1.2 | **FAIL** | Maximum concurrent connections and saturation behavior are not documented for every external service. |
+| V13.1.3 | **PARTIAL** | Timeouts, output caps, retries and cleanup exist in many integrations, but there is no complete resource-management policy covering every external dependency. |
+| V13.1.4 | **FAIL** | Critical backend secrets and their required rotation schedules are not comprehensively documented. |
+| V13.2.1 | **PARTIAL** | Backend broker/connectors authenticate, but some credentials are intentionally long-lived rather than uniformly short-term or certificate-based. |
+| V13.2.2 | **PARTIAL** | The container drops privileges and connector operations are constrained, but least-privilege identities for every external backend/service are not formally verified. |
+| V13.2.3 | **PASS** | No default privileged service credential such as `root/root` or `admin/admin` is embedded for backend authentication. |
+| V13.2.4 | **PARTIAL** | Built-in OAuth/provider destinations are allowlisted, while user-configurable storage/notification integrations intentionally permit administrator-selected destinations. |
+| V13.2.5 | **FAIL** | There is no deployment-wide egress allowlist restricting every destination the application server can contact. |
+| V13.2.6 | **PARTIAL** | Many backend clients implement timeouts/concurrency/error behavior, but conformance to a complete documented connection policy is not established. |
+| V13.3.1 | **FAIL** | Secrets are protected by environment variables, encrypted files and restrictive permissions, but L3 requires a hardware-backed secrets solution such as an HSM. |
+| V13.3.2 | **PARTIAL** | Secret files use restrictive modes and the runtime process drops privileges, but centralized least-privilege secret-asset access controls are not present. |
+| V13.3.3 | **FAIL** | Cryptographic operations are performed in the application process/OpenSSL rather than an isolated HSM/vault security module. |
+| V13.3.4 | **FAIL** | A comprehensive secret expiration/rotation policy is not implemented; some broker credentials expire but other application keys do not rotate automatically. |
+| V13.4.1 | **PARTIAL** | The Docker image copies only selected application directories and not `.git`, but every distribution target still requires packaging verification. |
+| V13.4.2 | **PASS** | Production images set `NODE_ENV=production`; developer/debug middleware is not exposed in the normal server path. |
+| V13.4.3 | **PASS** | Express static serving does not enable directory indexes and only serves selected public/PWA trees. |
+| V13.4.4 | **FAIL** | TRACE and other unused HTTP methods are not explicitly rejected by a global method policy. |
+| V13.4.5 | **PASS** | Diagnostics/security endpoints are authenticated; the unauthenticated health/meta endpoints intentionally expose only limited operational metadata. |
+| V13.4.6 | **PARTIAL** | `x-powered-by` is disabled and backend stack versions are not broadly exposed, but application/version metadata is intentionally public and all error/tool diagnostics need final review. |
+| V13.4.7 | **PASS** | The web tier serves explicit public/PWA assets/directories with dotfiles ignored rather than exposing the repository/source tree. |
+
+## V14 — Data Protection
+
+| Requirement | Status | Evidence / gap |
+|---|---|---|
+| V14.1.1 | **FAIL** | There is no complete data-classification inventory assigning all processed sensitive data to protection levels. |
+| V14.1.2 | **FAIL** | Protection requirements for each sensitive-data class (encryption, retention, logging, access, privacy) are not formally documented. |
+| V14.2.1 | **FAIL** | Opaque public share/access capability tokens are intentionally embedded in Direct-Xfer URLs, so sensitive bearer-style link material can appear in URL paths. |
+| V14.2.2 | **PARTIAL** | Sensitive API responses commonly use `Cache-Control: no-store` and server caches are bounded, but a complete intermediary-cache/purge review is pending. |
+| V14.2.3 | **PASS** | No analytics/user-tracking service was identified; sensitive data is sent externally only to explicitly configured functional integrations. |
+| V14.2.4 | **PARTIAL** | Encryption, DLP, masking and retention controls exist, but there is no data-classification policy against which full implementation can be verified. |
+| V14.2.5 | **PASS** | The API namespace terminates missing routes before static fallback, sensitive responses use restrictive caching, and content types are explicitly controlled. |
+| V14.2.6 | **PARTIAL** | Decorators/public projections remove many internal fields, but every response has not yet been mapped against a formal sensitive-field minimum. |
+| V14.2.7 | **PARTIAL** | Shares, notifications, histories and capability records have expiry/pruning in several domains, but retention is not comprehensively driven by sensitive-data classification. |
+| V14.2.8 | **PARTIAL** | Direct-Xfer supports EXIF/GPS metadata removal, but repository evidence does not yet prove sensitive metadata is removed by default for every user-submitted file unless explicitly consented. |
+| V14.3.1 | **PARTIAL** | Server sessions are invalidated on logout, but authenticated browser/PWA state and the optional remembered-credential vault are not comprehensively cleared with session termination. |
+| V14.3.2 | **PARTIAL** | Many authenticated/security responses explicitly use `no-store`; full authenticated-response cache-control coverage remains to be verified. |
+| V14.3.3 | **FAIL** | The optional login vault deliberately stores an encrypted username/password credential in IndexedDB; ASVS permits browser storage only for session tokens, not reusable passwords. |
+
+## V15 — Secure Coding and Architecture
+
+| Requirement | Status | Evidence / gap |
+|---|---|---|
+| V15.1.1 | **FAIL** | No documented risk-based remediation SLA exists for vulnerable third-party components and routine library updates. |
+| V15.1.2 | **PARTIAL** | `package-lock.json`, pinned container/tool versions and OpenVEX improve inventory/provenance, but a maintained complete SBOM is not currently part of the repository evidence. |
+| V15.1.3 | **PARTIAL** | OCR, ZIP, hashing, connector and upload work have explicit caps/queues/timeouts, but resource-intensive functionality is not comprehensively documented. |
+| V15.1.4 | **FAIL** | Third-party libraries considered risky are not formally identified/documented. |
+| V15.1.5 | **FAIL** | Dangerous functionality such as child-process/native-tool, filesystem and outbound-network boundaries is not maintained as a formal inventory. |
+| V15.2.1 | **REVIEW** | Dependency/container security hardening and scanning exist, but compliance cannot be proven without a documented remediation SLA plus current scanner results. |
+| V15.2.2 | **PARTIAL** | Resource-heavy paths use queues, caps and timeouts, but there is no complete documented availability strategy to verify against. |
+| V15.2.3 | **PARTIAL** | The production Docker image omits tests/build tools and removes unused binaries, but some operational scripts/tooling remain and each distribution target needs minimality review. |
+| V15.2.4 | **PARTIAL** | npm uses a lockfile and rclone/Go/container inputs are pinned/verified; a formal trusted-repository/dependency-confusion policy is still missing. |
+| V15.2.5 | **PARTIAL** | Docker privilege dropping/no-new-privs plus constrained native-tool invocations provide isolation, but risky-component/dangerous-function controls are not formally mapped. |
+| V15.3.1 | **PARTIAL** | Public/decorated projections return selected fields in many APIs, but every object response has not been exhaustively checked for over-posting/over-return. |
+| V15.3.2 | **PARTIAL** | The Google OAuth broker client explicitly rejects redirects, but every backend outbound HTTP client has not yet been verified against the no-follow policy. |
+| V15.3.3 | **PARTIAL** | Controllers normalize/allowlist many accepted properties rather than blindly persisting request bodies, but an exhaustive mass-assignment review is pending. |
+| V15.3.4 | **PASS** | Client-IP resolution delegates to Express only under configured trusted-proxy policy and otherwise uses the socket peer, avoiding raw spoofable X-Forwarded-For use. |
+| V15.3.5 | **PARTIAL** | Security boundaries perform explicit type/range checks and strict comparisons broadly, but JavaScript's dynamic type surface has not been exhaustively reviewed. |
+| V15.3.6 | **PARTIAL** | Sensitive maps often use `Map`, `Set` or null-prototype objects and state is shape-validated, but a repository-wide prototype-pollution review remains pending. |
+| V15.3.7 | **REVIEW** | Query/body/cookie/header parsing is separated in most handlers, but HTTP parameter-pollution behavior requires explicit duplicate-parameter testing. |
+| V15.4.1 | **PARTIAL** | Node's main state is single-threaded and asynchronous race-sensitive operations increasingly use dedicated locks/generations, but all shared mutable objects are not yet mapped. |
+| V15.4.2 | **PARTIAL** | Realpath/lstat checks and transactional file operations reduce filesystem TOCTOU exposure, but a complete open-by-handle/atomicity review is still required. |
+| V15.4.3 | **PARTIAL** | Domain-owned lock sets/maps and deterministic lock ordering exist in high-risk paths, but consistency/deadlock behavior is not yet proven globally. |
+| V15.4.4 | **PARTIAL** | Bounded password/OCR/ZIP/upload work limits starvation risk, but fairness/resource-allocation guarantees are not formally defined. |
+
+## V16 — Security Logging and Error Handling
+
+| Requirement | Status | Evidence / gap |
+|---|---|---|
+| V16.1.1 | **FAIL** | There is no formal logging inventory documenting each layer, event set, format, storage, use, access control and retention. |
+| V16.2.1 | **PASS** | Security audit entries include sequence/time, action, actor/account, role, IP and detail metadata suitable for timeline reconstruction. |
+| V16.2.2 | **MANUAL** | Audit timestamps are server epoch/UTC-compatible, but synchronization of the host/container clock requires deployment evidence. |
+| V16.2.3 | **FAIL** | Without the required logging inventory, it cannot be verified that logs are written/broadcast only to documented sinks. |
+| V16.2.4 | **PASS** | The security audit chain uses structured JSON records and stable fields suitable for machine correlation/export. |
+| V16.2.5 | **PARTIAL** | Known credential/token diagnostics are redacted and audit details are bounded, but every console/audit path has not yet been classified against sensitive-data logging rules. |
+| V16.3.1 | **PARTIAL** | Password/TOTP/passkey successes and failures are audited, but factor/method metadata is not yet normalized for every authentication operation. |
+| V16.3.2 | **FAIL** | Failed authorization is not comprehensively logged, and L3 requires logging all authorization decisions including sensitive-data access. |
+| V16.3.3 | **PARTIAL** | Many security-control events (DLP, ransomware, auth, rate-limit related activity) are logged, but every validation/business/anti-automation bypass attempt is not covered. |
+| V16.3.4 | **PARTIAL** | Unexpected HTTP/service errors and several TLS/persistence failures are logged, but security-control failure logging is not centrally exhaustive. |
+| V16.4.1 | **PASS** | The tamper-evident journal serializes entries as JSON/canonical fields, so attacker-controlled text cannot break the record structure through raw line injection. |
+| V16.4.2 | **PARTIAL** | Audit files use restrictive permissions and HMAC chaining with signed Ed25519 export proofs, but the live log remains on the same host and is not immutable against a fully privileged compromise. |
+| V16.4.3 | **FAIL** | Security logs are not securely transmitted by default to a logically separate analysis/detection system. |
+| V16.5.1 | **PASS** | The final HTTP error boundary returns generic client errors and avoids stack traces/secrets. |
+| V16.5.2 | **PARTIAL** | External-service failures use timeouts, bounded output and graceful error mappings in many integrations, but complete circuit-breaker/degradation behavior is not established. |
+| V16.5.3 | **PASS** | Security-sensitive persistence/authentication/authorization paths generally fail closed and transactional mutations commonly roll back on error. |
+| V16.5.4 | **PASS** | Express has a final error boundary and the lifecycle service installs last-resort `uncaughtException`/`unhandledRejection` handling with controlled shutdown behavior. |
+
+## V17 — WebRTC
+
+| Requirement | Status | Evidence / gap |
+|---|---|---|
+| V17.1.1 | **N/A** | No WebRTC/TURN/DTLS-SRTP media or signaling stack is present in Direct-Xfer. |
+| V17.1.2 | **N/A** | No WebRTC/TURN/DTLS-SRTP media or signaling stack is present in Direct-Xfer. |
+| V17.2.1 | **N/A** | No WebRTC/TURN/DTLS-SRTP media or signaling stack is present in Direct-Xfer. |
+| V17.2.2 | **N/A** | No WebRTC/TURN/DTLS-SRTP media or signaling stack is present in Direct-Xfer. |
+| V17.2.3 | **N/A** | No WebRTC/TURN/DTLS-SRTP media or signaling stack is present in Direct-Xfer. |
+| V17.2.4 | **N/A** | No WebRTC/TURN/DTLS-SRTP media or signaling stack is present in Direct-Xfer. |
+| V17.2.5 | **N/A** | No WebRTC/TURN/DTLS-SRTP media or signaling stack is present in Direct-Xfer. |
+| V17.2.6 | **N/A** | No WebRTC/TURN/DTLS-SRTP media or signaling stack is present in Direct-Xfer. |
+| V17.2.7 | **N/A** | No WebRTC/TURN/DTLS-SRTP media or signaling stack is present in Direct-Xfer. |
+| V17.2.8 | **N/A** | No WebRTC/TURN/DTLS-SRTP media or signaling stack is present in Direct-Xfer. |
+| V17.3.1 | **N/A** | No WebRTC/TURN/DTLS-SRTP media or signaling stack is present in Direct-Xfer. |
+| V17.3.2 | **N/A** | No WebRTC/TURN/DTLS-SRTP media or signaling stack is present in Direct-Xfer. |

@@ -1,0 +1,121 @@
+name: Temporary Direct-Xfer v1.70.23 metadata sync
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/_direct-xfer-bump-1.70.23.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  synchronize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24.19.0'
+          package-manager-cache: false
+
+      - name: Synchronize Direct-Xfer 1.70.23 release metadata
+        shell: bash
+        run: |
+          node <<'NODE'
+          'use strict';
+          const fs = require('fs');
+          const path = require('path');
+          const VERSION = '1.70.23';
+
+          function writeJson(file, mutator) {
+            const value = JSON.parse(fs.readFileSync(file, 'utf8'));
+            mutator(value);
+            fs.writeFileSync(file, JSON.stringify(value, null, 2) + '\n');
+          }
+          function replaceRequired(file, from, to) {
+            let text = fs.readFileSync(file, 'utf8');
+            if (!text.includes(from) && !text.includes(to)) {
+              throw new Error(`${file}: expected release marker not found: ${from}`);
+            }
+            text = text.split(from).join(to);
+            fs.writeFileSync(file, text);
+          }
+          function walk(dir, fn) {
+            for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+              const full = path.join(dir, entry.name);
+              if (entry.isDirectory()) walk(full, fn);
+              else fn(full);
+            }
+          }
+
+          writeJson('package.json', (pkg) => { pkg.version = VERSION; });
+          writeJson('package-lock.json', (lock) => {
+            lock.version = VERSION;
+            if (!lock.packages || !lock.packages['']) throw new Error('package-lock root package is missing');
+            lock.packages[''].version = VERSION;
+          });
+
+          replaceRequired('installer/Direct-Xfer.iss', '#define AppVersion "1.70.22"', '#define AppVersion "1.70.23"');
+          replaceRequired('installer/Direct-Xfer.iss', '..\\dist\\Direct-Xfer-1.70.22-Windows-CSharp', '..\\dist\\Direct-Xfer-1.70.23-Windows-CSharp');
+
+          const workflow = '.github/workflows/build-windows-csharp.yml';
+          replaceRequired(workflow, 'run-name: v1.70.22', 'run-name: v1.70.23');
+          replaceRequired(workflow, "DX_VERSION: '1.70.22'", "DX_VERSION: '1.70.23'");
+          replaceRequired(workflow, 'Direct-Xfer-1.70.22-Windows-CSharp', 'Direct-Xfer-1.70.23-Windows-CSharp');
+          replaceRequired(workflow, 'Direct-Xfer-Setup-1.70.22', 'Direct-Xfer-Setup-1.70.23');
+
+          // This patch changes the delivered PWA release identity, so advance the
+          // shell generation and app.js cache key together. Native Windows component
+          // identities remain independently versioned.
+          walk('pwa', (file) => {
+            if (!/\.(?:js|html|json|webmanifest)$/i.test(file)) return;
+            let text = fs.readFileSync(file, 'utf8');
+            text = text.split('1.70.22').join('1.70.23');
+            text = text.split('2026.08.23-pwa455').join('2026.08.24-pwa456');
+            text = text.split('pwa455').join('pwa456');
+            text = text.split('app.js?v=441').join('app.js?v=442');
+            fs.writeFileSync(file, text);
+          });
+
+          // Tests that track the current PWA shell use the generation marker rather
+          // than historical feature versions, so advancing that marker is safe.
+          walk('test', (file) => {
+            if (!file.endsWith('.test.js')) return;
+            let text = fs.readFileSync(file, 'utf8');
+            text = text.split('2026.08.23-pwa455').join('2026.08.24-pwa456');
+            text = text.split('pwa455').join('pwa456');
+            text = text.split('app.js\\?v=441').join('app.js\\?v=442');
+            text = text.split('app.js?v=441').join('app.js?v=442');
+            fs.writeFileSync(file, text);
+          });
+
+          for (const file of [
+            'test/windows-latest-deep-audit-1.66.6.test.js',
+            'test/pwa-mobile-deep-audit-1.64.0.test.js',
+            'test/codeql-security-regressions-1.70.22.test.js'
+          ]) {
+            replaceRequired(file, '1.70.22', '1.70.23');
+            replaceRequired(file, '1\\.70\\.22', '1\\.70\\.23');
+          }
+          NODE
+
+      - name: Validate synchronized source
+        shell: bash
+        run: |
+          npm ci --ignore-scripts
+          node --check lib/auth-utils.js
+          node --test test/*.test.js
+
+      - name: Commit synchronized v1.70.23 metadata
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add package.json package-lock.json installer/Direct-Xfer.iss .github/workflows/build-windows-csharp.yml pwa test
+          if git diff --cached --quiet; then
+            echo 'No metadata changes required.'
+            exit 0
+          fi
+          git commit -m 'v1.70.23'
+          git push origin HEAD:main

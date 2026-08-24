@@ -60,6 +60,7 @@ jobs:
             if (!lock.packages || !lock.packages['']) throw new Error('package-lock root package is missing');
             lock.packages[''].version = VERSION;
           });
+          writeJson('oauth-broker/cloudflare-worker/package.json', (pkg) => { pkg.version = VERSION; });
 
           replaceRequired('installer/Direct-Xfer.iss', '#define AppVersion "1.70.22"', '#define AppVersion "1.70.23"');
           replaceRequired('installer/Direct-Xfer.iss', '..\\dist\\Direct-Xfer-1.70.22-Windows-CSharp', '..\\dist\\Direct-Xfer-1.70.23-Windows-CSharp');
@@ -155,7 +156,7 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add package.json package-lock.json installer/Direct-Xfer.iss .github/workflows/build-windows-csharp.yml pwa test
+          git add package.json package-lock.json oauth-broker/cloudflare-worker/package.json installer/Direct-Xfer.iss .github/workflows/build-windows-csharp.yml pwa test
           if git diff --cached --quiet; then
             echo 'No metadata changes required.'
             exit 0

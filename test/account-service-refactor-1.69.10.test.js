@@ -26,6 +26,7 @@ function fixture(options = {}) {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'dx-accounts-'));
   let state = options.state || { settings:{ pwChanged:false }, meta:{} };
   let persistCalls = 0;
+  let currentTime = Number.isFinite(Number(options.now)) ? Number(options.now) : 123456;
   const logs = [];
   const service = createAccountService({
     fs,
@@ -41,7 +42,7 @@ function fixture(options = {}) {
     env:options.env || {},
     passwordHasher:fakeHash,
     passwordParser:fakeParse,
-    now:() => 123456,
+    now:() => currentTime,
     logger:{
       log:(...args) => logs.push(args.join(' ')),
       warn:(...args) => logs.push(args.join(' ')),
@@ -53,6 +54,8 @@ function fixture(options = {}) {
     logs,
     get state() { return state; },
     replaceState(next) { state = next; },
+    setNow(value) { currentTime = Number(value); },
+    advance(ms) { currentTime += Number(ms) || 0; },
     get persistCalls() { return persistCalls; },
     close() { fs.rmSync(dataDir, { recursive:true, force:true }); },
   };
@@ -111,12 +114,14 @@ test('first startup creates one durable owner with a randomized non-default iden
     assert.equal(first.initialized, true);
     assert.equal(first.environmentManaged, false);
     assert.equal(first.initialPasswordFresh, true);
+    assert.equal(first.initialPasswordExpiresAt, 123456 + 15 * 60 * 1000);
     assert.equal(first.ownerAvailable, true);
     assert.equal(f.persistCalls, 1);
     assert.match(owner.username, /^owner-[a-f0-9]{12}$/);
     assert.notEqual(owner.username.toLowerCase(), 'admin');
     assert.equal(owner.role, 'owner');
     assert.equal(owner.createdAt, 123456);
+    assert.equal(owner.bootstrapPasswordExpiresAt, first.initialPasswordExpiresAt);
     assert.equal(owner.ah, fakeHash(password));
     assert.equal(f.service.findAccountByName(` ${owner.username.toUpperCase()} `), owner);
     assert.equal(f.service.findAccountByName('admin'), null);
@@ -130,6 +135,47 @@ test('first startup creates one durable owner with a randomized non-default iden
     f.service.clearInitialPassword();
     assert.equal(f.service.hasFreshInitialPassword(), false);
     assert.equal(f.service.initialPassword(), null);
+  } finally {
+    f.close();
+  }
+});
+
+test('bootstrap owner password expires after the bounded enrollment window', () => {
+  const f = fixture();
+  try {
+    f.service.initialize();
+    const owner = f.service.ownerAccount();
+    const plaintext = f.service.initialPassword();
+    assert.equal(f.service.accountPasswordRecord(owner).hash.toString(), plaintext);
+
+    f.advance(15 * 60 * 1000 - 1);
+    assert.equal(f.service.hasFreshInitialPassword(), true);
+    assert.equal(f.service.accountPasswordRecord(owner).hash.toString(), plaintext);
+
+    f.advance(2);
+    assert.equal(f.service.hasFreshInitialPassword(), false);
+    assert.equal(f.service.initialPassword(), null);
+    assert.notEqual(f.service.accountPasswordRecord(owner).hash.toString(), plaintext);
+    assert.equal(owner.ah, fakeHash(plaintext));
+
+    // The expiry guard applies only while the credential remains temporary.
+    owner.pwChanged = true;
+    assert.equal(f.service.accountPasswordRecord(owner).hash.toString(), plaintext);
+  } finally {
+    f.close();
+  }
+});
+
+test('legacy forced-change owner receives one bounded upgrade grace window', () => {
+  const owner = { id:'owner', username:'legacy-owner', role:'owner', ah:fakeHash('stored'), pwChanged:false, createdBy:'system' };
+  const f = fixture({ state:{ settings:{}, meta:{ accounts:[owner] } } });
+  try {
+    const status = f.service.initialize();
+    assert.equal(status.initialPasswordFresh, false);
+    assert.equal(owner.bootstrapPasswordExpiresAt, 123456 + 15 * 60 * 1000);
+    assert.equal(f.persistCalls, 1);
+    f.advance(15 * 60 * 1000 + 1);
+    assert.notEqual(f.service.accountPasswordRecord(owner).hash.toString(), 'stored');
   } finally {
     f.close();
   }

@@ -109,6 +109,14 @@ test('account, security and storage endpoints live in their domain route modules
   for (const route of ['/storage/connectors/summary', '/storage/connectors', '/storage/jobs/:id/cancel']) assert.ok(storageRoutes.includes(`'${route}'`), route);
 });
 
+test('account password creation is routed through the common ASVS password policy', () => {
+  assert.match(accountRoutes, /const passwordPolicy = await validateNewPassword\(username, password\)/);
+  assert.match(accountRoutes, /password-common/);
+  assert.match(accountRoutes, /password-contextual/);
+  assert.match(accountRoutes, /password-breached/);
+  assert.match(accountRoutes, /password-breach-check-unavailable/);
+});
+
 test('account and security route factories attach without touching late runtime state', () => {
   const { attachAdminAccountRoutes } = require('../lib/server/admin-account-routes');
   const { attachAdminSecurityRoutes } = require('../lib/server/admin-security-routes');
@@ -121,8 +129,10 @@ test('account and security route factories attach without touching late runtime 
     requireOwner:noop,
     authService:{
       verifyCurrentPassword:async()=>({ok:true,match:true}),
+      validateNewPassword:async()=>({ok:true}),
       setAccountPassword:async()=>({ok:true}),
       base32encode:()=> 'ABC',
+      enableTotpFor:()=>({ok:true}),
       verifyTotp:()=>true,
       twoFactorEnabledFor:()=>false,
     },
@@ -211,7 +221,6 @@ test('account and security route factories attach without touching late runtime 
   assert.ok(s.routes.some(([method, route]) => method === 'POST' && route === '/security/anomalies/unblock'));
 });
 
-
 function routeResponse() {
   return {
     statusCode:200,
@@ -243,8 +252,10 @@ test('concurrent owner account creation re-checks username uniqueness after asyn
     requireOwner:noop,
     authService:{
       verifyCurrentPassword:async()=>({ok:true,match:true,credentialHash:'owner-hash'}),
+      validateNewPassword:async()=>({ok:true}),
       setAccountPassword:async()=>({ok:true}),
       base32encode:()=> 'ABC',
+      enableTotpFor:()=>({ok:true}),
       verifyTotp:()=>true,
       twoFactorEnabledFor:()=>false,
     },

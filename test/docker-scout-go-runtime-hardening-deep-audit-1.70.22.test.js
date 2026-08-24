@@ -7,6 +7,12 @@ const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
+function canRunPosixEntrypoint(platform = process.platform, getuid = process.getuid) {
+  return platform !== 'win32' && typeof getuid === 'function';
+}
+
+const CAN_RUN_POSIX_ENTRYPOINT = canRunPosixEntrypoint();
+
 const ROOT = path.join(__dirname, '..');
 const dockerfile = fs.readFileSync(path.join(ROOT, 'Dockerfile'), 'utf8').replace(/\r\n?/g, '\n');
 
@@ -46,6 +52,12 @@ function runEntrypoint({ puid='99', pgid='100', code='process.stdout.write(Strin
 }
 
 
+test('1.70.22 never tries to execute the POSIX entrypoint in Windows CI', () => {
+  assert.equal(canRunPosixEntrypoint('win32', undefined), false);
+  assert.equal(canRunPosixEntrypoint('win32', () => 0), false);
+  assert.equal(canRunPosixEntrypoint('linux', () => 0), true);
+});
+
 test('1.70.22 entrypoint extraction is stable with Windows CRLF checkouts', () => {
   const crlfDockerfile = dockerfile.replace(/\n/g, '\r\n');
   const entrypoint = extractEntrypoint(crlfDockerfile);
@@ -53,7 +65,19 @@ test('1.70.22 entrypoint extraction is stable with Windows CRLF checkouts', () =
   assert.match(entrypoint, /exec "\$@"\n$/);
 });
 
-test('1.70.22 rejects uid/gid spellings that setpriv can otherwise wrap or reinterpret as root', () => {
+
+
+test('1.70.22 keeps the PUID/PGID fail-closed guards visible to Windows/static CI', () => {
+  const entrypoint = extractEntrypoint();
+  assert.match(entrypoint, /\$label must be a canonical decimal id between 1 and 4294967294/);
+  assert.match(entrypoint, /validate_id PUID "\$PUID"/);
+  assert.match(entrypoint, /validate_id PGID "\$PGID"/);
+  assert.match(entrypoint, /case "\$value" in/);
+  assert.match(entrypoint, /""\|0\|0\*\|\*\[!0-9\]\*/);
+  assert.match(entrypoint, /--reuid="\$PUID"/);
+  assert.match(entrypoint, /--regid="\$PGID"/);
+});
+test('1.70.22 rejects uid/gid spellings that setpriv can otherwise wrap or reinterpret as root', { skip: !CAN_RUN_POSIX_ENTRYPOINT }, () => {
   const dangerous = ['0', '00', '000000', '+0', '-0', '-1', '4294967295', '4294967296', '99999999999', 'root', '99:100'];
   for (const value of dangerous) {
     const result = runEntrypoint({ puid:value, pgid:'100' });
@@ -67,14 +91,14 @@ test('1.70.22 rejects uid/gid spellings that setpriv can otherwise wrap or reint
   }
 });
 
-test('1.70.22 accepts normal PUID/PGID values and actually drops root when the test runner is root', () => {
+test('1.70.22 accepts normal PUID/PGID values and actually drops root when the test runner is root', { skip: !CAN_RUN_POSIX_ENTRYPOINT }, () => {
   const result = runEntrypoint();
   assert.equal(result.status, 0, result.stderr);
   const expected = typeof process.getuid === 'function' && process.getuid() === 0 ? '99' : String(process.getuid?.() ?? -1);
   assert.equal(result.stdout, expected);
 });
 
-test('1.70.22 enables no-new-privs and removes the capability bounding set before Node starts', { skip: typeof process.getuid !== 'function' || process.getuid() !== 0 }, () => {
+test('1.70.22 enables no-new-privs and removes the capability bounding set before Node starts', { skip: !CAN_RUN_POSIX_ENTRYPOINT || process.getuid() !== 0 }, () => {
   const code = `const fs=require('fs');const s=fs.readFileSync('/proc/self/status','utf8');for(const k of ['NoNewPrivs','CapEff','CapBnd']){const m=s.match(new RegExp('^'+k+':\\\\s*(.+)$','m'));process.stdout.write(k+'='+m[1].trim()+'\\n')}`;
   const result = runEntrypoint({ code });
   assert.equal(result.status, 0, result.stderr);

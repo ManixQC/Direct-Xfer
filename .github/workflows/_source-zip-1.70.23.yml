@@ -1,0 +1,47 @@
+name: Temporary Direct-Xfer 1.70.23 source archive
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/_source-zip-1.70.23.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Verify project version
+        shell: bash
+        run: |
+          node -e "const p=require('./package.json'); if(p.version!=='1.70.23') { console.error('Expected 1.70.23, got '+p.version); process.exit(1); }"
+
+      - name: Build clean source ZIP
+        shell: bash
+        run: |
+          rm -rf /tmp/Direct-Xfer
+          mkdir -p /tmp/Direct-Xfer
+          rsync -a ./ /tmp/Direct-Xfer/ \
+            --exclude='.git/' \
+            --exclude='.github/workflows/_source-zip-1.70.23.yml' \
+            --exclude='AUDIT*' \
+            --exclude='README-PATCH*' \
+            --exclude='UNSIGNED-WINDOWS-*'
+          cd /tmp
+          zip -q -r "$GITHUB_WORKSPACE/Direct-Xfer-1.70.23.zip" Direct-Xfer
+          cd "$GITHUB_WORKSPACE"
+          sha256sum Direct-Xfer-1.70.23.zip > Direct-Xfer-1.70.23.zip.sha256
+
+      - name: Upload source ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: Direct-Xfer-1.70.23-source
+          path: |
+            Direct-Xfer-1.70.23.zip
+            Direct-Xfer-1.70.23.zip.sha256
+          if-no-files-found: error
+          retention-days: 1

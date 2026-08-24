@@ -32,6 +32,8 @@ function buildHttpApplication() {
     sendError:(_req, res, status) => res.status(status).end(),
   });
   httpApplication.app.get('/probe', (_req, res) => res.status(200).json({ ok:true }));
+  httpApplication.app.post('/probe', express.json(), (_req, res) => res.status(200).json({ ok:true }));
+  httpApplication.app.get('/api/probe', (_req, res) => res.status(200).json({ ok:true }));
   return httpApplication.app;
 }
 
@@ -116,6 +118,45 @@ test('ASVS V3.4.7 CSP report endpoint is bounded and returns no content', async 
     assert.equal(response.status, 204);
     assert.equal(response.body, '');
     assert.equal(response.headers['cache-control'], 'no-store');
+  });
+});
+
+test('ASVS V3.5.8 blocks cross-site state changes using Fetch Metadata', async () => {
+  await withServer(async (port) => {
+    const response = await request(port, {
+      method:'POST',
+      path:'/probe',
+      headers:{
+        'sec-fetch-site':'cross-site',
+        'sec-fetch-mode':'cors',
+        'content-type':'application/json',
+      },
+    }, '{}');
+    assert.equal(response.status, 403);
+    assert.equal(JSON.parse(response.body).error, 'cross-site-request-blocked');
+    assert.equal(response.headers['cache-control'], 'no-store');
+  });
+});
+
+test('ASVS V3.5.8 protects authenticated API resources from cross-site subresource reads', async () => {
+  await withServer(async (port) => {
+    const blocked = await request(port, {
+      method:'GET',
+      path:'/api/probe',
+      headers:{
+        'sec-fetch-site':'cross-site',
+        'sec-fetch-mode':'cors',
+        'sec-fetch-dest':'empty',
+      },
+    });
+    assert.equal(blocked.status, 403);
+    assert.equal(JSON.parse(blocked.body).error, 'cross-site-request-blocked');
+    assert.equal(blocked.headers['cross-origin-resource-policy'], 'same-origin');
+
+    // Legacy/non-browser clients without Fetch Metadata remain compatible.
+    const sameOriginCompatible = await request(port, { method:'GET', path:'/api/probe' });
+    assert.equal(sameOriginCompatible.status, 200);
+    assert.equal(sameOriginCompatible.headers['cross-origin-resource-policy'], 'same-origin');
   });
 });
 

@@ -166,3 +166,30 @@ test('TOTP counter is rolled back when durable persistence fails', async () => {
     Date.now = realNow;
   }
 });
+
+test('TOTP enrollment consumes the verification counter before first login', async () => {
+  const fx = fixture();
+  const realNow = Date.now;
+  const now = 1770000000000;
+  Date.now = () => now;
+  try {
+    fx.account.totp.enabled = false;
+    delete fx.account.totp.lastCounter;
+    const code = totpAt(fx.key, now);
+
+    const enabled = fx.service.enableTotpFor(fx.account, code);
+    assert.equal(enabled.ok, true);
+    assert.equal(fx.account.totp.enabled, true);
+    assert.equal(Number.isSafeInteger(fx.account.totp.lastCounter), true);
+    assert.equal(fx.persisted(), 1);
+
+    const replay = await fx.service.attemptLogin(
+      request('10.0.0.5'), response(), 'owner', 'correct-password', code,
+    );
+    assert.equal(replay.ok, false);
+    assert.equal(replay.totpInvalid, true);
+    assert.equal(fx.sessions.length, 0);
+  } finally {
+    Date.now = realNow;
+  }
+});

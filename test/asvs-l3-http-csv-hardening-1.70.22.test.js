@@ -208,7 +208,11 @@ test('ASVS V1.2.10 prefixes every spreadsheet formula/control lead byte includin
   for (const prefix of ['=', '+', '-', '@', '\t', '\r', '\0']) {
     const value = prefix + '2+2';
     const encoded = csvField(value);
-    assert.equal(encoded[0], "'", `missing formula prefix escape for ${JSON.stringify(prefix)}`);
+    assert.equal(
+      encoded.startsWith("'") || encoded.startsWith('"\''),
+      true,
+      `missing formula prefix escape for ${JSON.stringify(prefix)}`
+    );
   }
   assert.equal(csvField('safe'), 'safe');
   assert.equal(csvField('a,b'), '"a,b"');

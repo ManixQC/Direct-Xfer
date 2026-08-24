@@ -12,10 +12,11 @@ function expressHarness() {
   const apps = [];
   function express() {
     const app = {
-      disabled:[], settings:[], gets:[], uses:[],
+      disabled:[], settings:[], gets:[], posts:[], uses:[],
       disable(name) { this.disabled.push(name); },
       set(name, value) { this.settings.push([name, value]); },
       get(route, ...handlers) { this.gets.push([route, handlers]); },
+      post(route, ...handlers) { this.posts.push([route, handlers]); },
       use(...args) { this.uses.push(args); },
     };
     apps.push(app);
@@ -27,6 +28,7 @@ function expressHarness() {
     fn.options = options;
     return fn;
   };
+  express.json = () => function jsonMiddleware(_req, _res, next) { if (next) next(); };
   return { express, apps };
 }
 
@@ -183,7 +185,7 @@ test('security middleware shares a request-local nonce with rendering and preser
   security({ secure:true }, res, () => { store = h.requestContext.getStore(); });
   assert.ok(store && /^[A-Za-z0-9+/]+=*$/.test(store.cspNonce));
   assert.match(res.headers['content-security-policy'], new RegExp(`nonce-${store.cspNonce.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
-  assert.equal(res.headers['strict-transport-security'], 'max-age=31536000');
+  assert.equal(res.headers['strict-transport-security'], 'max-age=31536000; includeSubDomains');
   assert.equal(res.headers['x-content-type-options'], 'nosniff');
   assert.equal(res.headers['x-frame-options'], 'DENY');
 

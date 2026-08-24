@@ -262,22 +262,23 @@ test('access-request duplicate fingerprint includes email so distinct requests a
   assert.equal(share.accessRequests.length, 1);
 });
 
-test('Windows ServerHost manifest matches every runtime source present in the source package', () => {
+test('Windows ServerHost manifest generator covers every runtime source before compilation', () => {
   const host = read('windows-server-host/Program.cs');
-  const rows = [...host.matchAll(/\{ "([^"]+)", "([0-9a-f]{64})" \}/g)].map((m) => ({ rel:m[1], hash:m[2] }));
-  assert.ok(rows.length >= 60);
-  const missing = [];
-  for (const row of rows) {
-    const file = path.join(ROOT, row.rel);
-    if (!fs.existsSync(file)) { missing.push(row.rel); continue; }
-    const normalized = fs.readFileSync(file, 'utf8').replace(/\r\n?/g, '\n');
-    const actual = crypto.createHash('sha256').update(normalized).digest('hex');
-    assert.equal(actual, row.hash, row.rel);
+  const { previewProgram } = require('../scripts/sync-windows-runtime-manifest');
+  const preview = previewProgram(host, {
+    root:ROOT,
+    allowMissing:new Set(['node_modules/express/package.json']),
+  });
+  assert.ok(preview.entries.length >= 60);
+  assert.deepEqual(preview.unresolved, []);
+  for (const entry of preview.entries) {
+    if (!entry.exists) continue;
+    assert.match(entry.hash, /^[0-9a-f]{64}$/, entry.rel);
   }
-  // node_modules is intentionally not tracked in the source tree, but GitHub Actions
-  // runs npm ci before this test. The Express package metadata may therefore be
-  // present (and was hash-checked above) or absent in a source-only archive.
-  assert.deepEqual(missing.filter((rel) => rel !== 'node_modules/express/package.json'), []);
+  const project = read('windows-server-host/DirectXfer.ServerHost.csproj');
+  assert.match(project, /SynchronizeRuntimeIntegrityManifest/);
+  assert.match(project, /sync-windows-runtime-manifest\.js/);
+  assert.match(project, /--write/);
 });
 
 test('album collaborator upload contains asynchronous finalization exceptions and rolls back the file', () => {

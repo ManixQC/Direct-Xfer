@@ -38,4 +38,12 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Win32.SystemEvents" Version="10.0.10" />
   </ItemGroup>
+  <!-- Keep the compiled integrity manifest synchronized with the exact runtime
+       sources that will be packaged. This runs after npm ci in CI, so the pinned
+       Express metadata entry is covered as well and stale hashes cannot ship. -->
+  <Target Name="SynchronizeRuntimeIntegrityManifest" BeforeTargets="CoreCompile">
+    <Exec
+      Command="node &quot;$(MSBuildProjectDirectory)/../scripts/sync-windows-runtime-manifest.js&quot; --write"
+      WorkingDirectory="$(MSBuildProjectDirectory)/.." />
+  </Target>
 </Project>

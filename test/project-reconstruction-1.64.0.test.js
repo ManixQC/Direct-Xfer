@@ -3,13 +3,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
 const ROOT = path.join(__dirname, '..');
 const read = p => fs.readFileSync(path.join(ROOT, p), 'utf8');
-function normalizedSha(rel) {
-  const txt = read(rel).replace(/\r\n/g,'\n').replace(/\r/g,'\n');
-  return crypto.createHash('sha256').update(txt).digest('hex');
-}
 test('complete project infrastructure is present', () => {
   for (const rel of [
     '.github/workflows/build-windows-csharp.yml','installer/Direct-Xfer.iss','README.md',
@@ -30,6 +25,8 @@ test('source tree does not keep a redundant prebuilt Windows runtime', () => {
 test('Windows metadata keeps app 1.70.22 separate from stable Windows component identities', () => {
   const launcher = read('windows-launcher/Program.cs');
   const host = read('windows-server-host/Program.cs');
+  const hostProject = read('windows-server-host/DirectXfer.ServerHost.csproj');
+  const manifestSync = read('scripts/sync-windows-runtime-manifest.js');
   assert.match(launcher, /LauncherVersion = "1\.70\.1"/);
   assert.match(launcher, /LauncherBuild = "launcher149-csharp"/);
   assert.match(launcher, /RuntimeProtocol = "1"/);
@@ -39,9 +36,16 @@ test('Windows metadata keeps app 1.70.22 separate from stable Windows component 
   assert.match(host, /ServerHostProtocol = "1"/);
   assert.doesNotMatch(launcher, /RuntimeAppBuild\s*=/);
   assert.doesNotMatch(host, /RuntimeAppBuild\s*=/);
+
+  const manifestPaths = new Set([...host.matchAll(/\{ "([^"]+)", "[0-9a-f]{64}" \}/g)].map((m) => m[1]));
   for (const rel of ['package.json','package-lock.json','server.js','lib/server/config.js','lib/server/platform-dependencies.js','lib/server/bootstrap.js','lib/server/lifecycle-service.js','lib/server/application-context.js','lib/server/bootstrap-reference-registry.js','lib/server/register-application-domains.js','lib/server/application-publication.js','lib/server/state-replacement-coordinator.js','lib/server/state-lifecycle-application.js','lib/server/core-state-application.js','lib/server/notification-application.js','lib/server/security-auth-application.js','lib/server/share-media-transfer-application.js','lib/server/public-http-application.js','lib/server/runtime-services-application.js','lib/server/admin-application.js','lib/server/host-path-service.js','lib/server/request-utils.js','lib/server/windows-launcher-routes.js','lib/server/root-routes.js','lib/server/http-application.js','lib/server/http-pwa-lifecycle-application.js','lib/server/final-http-application.js','lib/server/share-presentation-service.js','lib/auth-utils.js','lib/server/account-service.js','lib/server/auth-service.js','lib/server/session-service.js','lib/server/settings-service.js','lib/server/system-health-service.js','lib/server/diagnostics-service.js','lib/server/admin-router.js','lib/server/admin-account-routes.js','lib/server/admin-security-routes.js','lib/server/admin-storage-routes.js','lib/server/admin-share-routes.js','lib/server/admin-photo-routes.js','lib/server/admin-settings-routes.js','lib/server/admin-dashboard-routes.js','lib/server/admin-diagnostics-routes.js','lib/server/pwa-routes.js','lib/server/pwa-application.js','lib/server/pwa-device-service.js','lib/server/pwa-photo-service.js','lib/server/webauthn-service.js','lib/server/pwa-event-service.js','lib/server/upload-reception-service.js','lib/server/transfer-service.js','lib/server/download-service.js','lib/server/ocr-service.js','lib/server/search-service.js','lib/server/dlp-service.js','lib/server/photo-service.js','lib/server/share-service.js','lib/server/audit-service.js','lib/server/reception-collaboration-routes.js','lib/server/public-access-service.js','lib/server/public-abuse-service.js','lib/server/state-store.js','lib/server/state-bootstrap-service.js','lib/server/public-pages.js','lib/server/tls-manager.js','lib/server/network-services.js','lib/server/windows-install-preferences.js','lib/server/notification-service.js','lib/server/notification-center-service.js','lib/server/pwa-notification-service.js','lib/server/backup-service.js','lib/server/restore-service.js','lib/server/maintenance-service.js','lib/server/storage-connector-job-service.js','lib/server/storage-connector-config.js','public/app.js','pwa/app.js']) {
-    assert.ok(host.includes(normalizedSha(rel)), rel + ' hash');
+    assert.ok(manifestPaths.has(rel), rel + ' manifest entry');
   }
+  assert.match(hostProject, /SynchronizeRuntimeIntegrityManifest/);
+  assert.match(hostProject, /sync-windows-runtime-manifest\.js/);
+  assert.match(hostProject, /--write/);
+  assert.match(manifestSync, /createHash\('sha256'\)/);
+  assert.match(manifestSync, /replace\(\/\\r\\n\?\/g, '\\n'\)/);
 });
 test('forbidden generated project files are absent', () => {
   const forbidden = [];

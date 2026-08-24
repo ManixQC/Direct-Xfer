@@ -18,14 +18,19 @@ function runtimeAptInstallBlock() {
 test('1.70.22 rebuilds rclone 1.75.0 with a patched pinned Go stdlib', () => {
   assert.match(dockerfile, /ARG DX_RCLONE_BUILD_VERSION=v1\.75\.0/);
   assert.match(dockerfile, /ARG DX_RCLONE_GO_BUILD_VERSION=1\.25\.14/);
+  assert.match(dockerfile, /ARG DX_RCLONE_X_IMAGE_VERSION=v0\.45\.0/);
   assert.match(dockerfile, /FROM golang:\$\{DX_RCLONE_GO_BUILD_VERSION\}-bookworm@sha256:[0-9a-f]{64} AS rclone-builder/);
   assert.match(dockerfile, /GOTOOLCHAIN=local/);
   assert.match(dockerfile, /test "\$\(go env GOVERSION\)" = "go\$\{DX_RCLONE_GO_BUILD_VERSION\}"/);
-  assert.match(dockerfile, /CGO_ENABLED=0 GOBIN=\/out go install -trimpath/);
-  assert.match(dockerfile, /github\.com\/rclone\/rclone@\$\{DX_RCLONE_BUILD_VERSION\}/);
+  assert.match(dockerfile, /go mod download "github\.com\/rclone\/rclone@\$\{DX_RCLONE_BUILD_VERSION\}"/);
+  assert.match(dockerfile, /go mod edit -require="golang\.org\/x\/image@\$\{DX_RCLONE_X_IMAGE_VERSION\}"/);
+  assert.match(dockerfile, /CGO_ENABLED=0 go build -trimpath/);
+  assert.match(dockerfile, /-o \/out\/rclone \./);
   assert.match(dockerfile, /github\.com\/rclone\/rclone\/fs\.Version=\$\{DX_RCLONE_BUILD_VERSION\}/);
   assert.match(dockerfile, /go version \/out\/rclone \| tee \/out\/rclone-go-version\.txt/);
   assert.match(dockerfile, /go version -m \/out\/rclone > \/out\/rclone-buildinfo\.txt/);
+  assert.match(dockerfile, /golang\.org\/x\/image/);
+  assert.match(dockerfile, /x-image=\$\{DX_RCLONE_X_IMAGE_VERSION\}/);
   assert.match(dockerfile, /env -u RCLONE_VERSION -u RCLONE_GO_VERSION \/out\/rclone version > \/out\/rclone-version\.txt/);
   assert.doesNotMatch(dockerfile, /^ARG RCLONE_VERSION(?:=|$)/m);
   assert.doesNotMatch(dockerfile, /^ARG RCLONE_GO_VERSION(?:=|$)/m);

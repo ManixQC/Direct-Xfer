@@ -110,16 +110,20 @@ test('1.70.22 enables no-new-privs and removes the capability bounding set befor
 test('1.70.22 treats rclone source, toolchain, module metadata and licence as one verified build unit', () => {
   assert.match(dockerfile, /ARG DX_RCLONE_BUILD_VERSION=v1\.75\.0/);
   assert.match(dockerfile, /ARG DX_RCLONE_GO_BUILD_VERSION=1\.25\.14/);
+  assert.match(dockerfile, /ARG DX_RCLONE_X_IMAGE_VERSION=v0\.45\.0/);
   assert.match(dockerfile, /@sha256:3b4a11519ad929d1e1d261a12cff056f0c85b735253d7d861346b9c6f8b36437/);
   assert.match(dockerfile, /ENV GOTOOLCHAIN=local \\\n    GOSUMDB=sum\.golang\.org/);
   assert.match(dockerfile, /test "\$\{DX_RCLONE_BUILD_VERSION\}" = "v1\.75\.0"/);
+  assert.match(dockerfile, /test "\$\{DX_RCLONE_X_IMAGE_VERSION\}" = "v0\.45\.0"/);
+  assert.match(dockerfile, /go mod edit -require="golang\.org\/x\/image@\$\{DX_RCLONE_X_IMAGE_VERSION\}"/);
+  assert.match(dockerfile, /go list -m -f '\{\{\.Version\}\}' golang\.org\/x\/image/);
   assert.match(dockerfile, /go version \/out\/rclone \| tee \/out\/rclone-go-version\.txt/);
   assert.match(dockerfile, /go version -m \/out\/rclone > \/out\/rclone-buildinfo\.txt/);
   assert.match(dockerfile, /env -u RCLONE_VERSION -u RCLONE_GO_VERSION \/out\/rclone version > \/out\/rclone-version\.txt/);
   assert.match(dockerfile, /env -u RCLONE_VERSION -u RCLONE_GO_VERSION rclone version > \/usr\/share\/doc\/direct-xfer\/rclone-version\.txt/);
   assert.doesNotMatch(dockerfile, /^ARG RCLONE_VERSION(?:=|$)/m);
   assert.doesNotMatch(dockerfile, /^ARG RCLONE_GO_VERSION(?:=|$)/m);
-  assert.match(dockerfile, /printf 'rclone=%s\\ngo=%s\\n'/);
+  assert.match(dockerfile, /printf 'rclone=%s\\ngo=%s\\nx-image=%s\\n'/);
   assert.match(dockerfile, /COPY third_party\/rclone\/COPYING \/usr\/share\/doc\/direct-xfer\/rclone-COPYING/);
   assert.match(dockerfile, /COPY --from=rclone-builder \/out\/rclone-buildinfo\.txt \/usr\/share\/doc\/direct-xfer\/rclone-buildinfo\.txt/);
   assert.match(dockerfile, /COPY --from=rclone-builder \/out\/rclone-build-manifest\.txt \/usr\/share\/doc\/direct-xfer\/rclone-build-manifest\.txt/);
@@ -128,9 +132,10 @@ test('1.70.22 treats rclone source, toolchain, module metadata and licence as on
 
 test('1.70.22 keeps build-arg verification coherent across builder and final stages', () => {
   const finalStage = dockerfile.slice(dockerfile.lastIndexOf('FROM node:22-trixie-slim'));
-  assert.match(finalStage, /^FROM node:22-trixie-slim\nARG DX_RCLONE_BUILD_VERSION\nARG DX_RCLONE_GO_BUILD_VERSION/m);
+  assert.match(finalStage, /^FROM node:22-trixie-slim\nARG DX_RCLONE_BUILD_VERSION\nARG DX_RCLONE_GO_BUILD_VERSION\nARG DX_RCLONE_X_IMAGE_VERSION/m);
   assert.match(finalStage, /rclone=\$\{DX_RCLONE_BUILD_VERSION\}/);
   assert.match(finalStage, /go=go\$\{DX_RCLONE_GO_BUILD_VERSION\}/);
+  assert.match(finalStage, /x-image=\$\{DX_RCLONE_X_IMAGE_VERSION\}/);
   assert.doesNotMatch(finalStage, /rclone-version\.txt.*go\/version:/);
   assert.doesNotMatch(finalStage, /grep -F "rclone v1\.75\.0"/);
 });

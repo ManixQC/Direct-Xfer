@@ -5,9 +5,11 @@
 # into the final binary and therefore becomes part of the runtime attack surface.
 ARG DX_RCLONE_BUILD_VERSION=v1.75.0
 ARG DX_RCLONE_GO_BUILD_VERSION=1.25.14
+ARG DX_RCLONE_X_IMAGE_VERSION=v0.45.0
 FROM golang:${DX_RCLONE_GO_BUILD_VERSION}-bookworm@sha256:3b4a11519ad929d1e1d261a12cff056f0c85b735253d7d861346b9c6f8b36437 AS rclone-builder
 ARG DX_RCLONE_BUILD_VERSION
 ARG DX_RCLONE_GO_BUILD_VERSION
+ARG DX_RCLONE_X_IMAGE_VERSION
 
 # Debian Trixie still ships an old rclone built with a vulnerable Go stdlib.
 # Build the pinned rclone release with a patched Go toolchain. Verification uses
@@ -19,18 +21,34 @@ ARG DX_RCLONE_GO_BUILD_VERSION
 # GOTOOLCHAIN=local forbids an implicit toolchain download.
 ENV GOTOOLCHAIN=local \
     GOSUMDB=sum.golang.org
-RUN mkdir -p /out \
+RUN mkdir -p /out /src \
   && test "${DX_RCLONE_BUILD_VERSION}" = "v1.75.0" \
+  && test "${DX_RCLONE_X_IMAGE_VERSION}" = "v0.45.0" \
   && test "$(go env GOVERSION)" = "go${DX_RCLONE_GO_BUILD_VERSION}"
-RUN CGO_ENABLED=0 GOBIN=/out go install -trimpath \
-    -ldflags "-s -X github.com/rclone/rclone/fs.Version=${DX_RCLONE_BUILD_VERSION}" \
-    "github.com/rclone/rclone@${DX_RCLONE_BUILD_VERSION}" \
+# rclone v1.75.0 still resolves golang.org/x/image v0.44.0, which is affected by
+# CVE-2026-46603. Build the exact tagged rclone source but raise only x/image to
+# the fixed v0.45.0 release before compiling. This keeps the rclone release pinned
+# while preventing the vulnerable image decoder from being embedded in the binary.
+RUN go mod download "github.com/rclone/rclone@${DX_RCLONE_BUILD_VERSION}" \
+  && rclone_src="$(go env GOMODCACHE)/github.com/rclone/rclone@${DX_RCLONE_BUILD_VERSION}" \
+  && test -f "${rclone_src}/go.mod" \
+  && cp -a "${rclone_src}" /src/rclone \
+  && chmod -R u+w /src/rclone \
+  && cd /src/rclone \
+  && go mod edit -require="golang.org/x/image@${DX_RCLONE_X_IMAGE_VERSION}" \
+  && go mod download "golang.org/x/image@${DX_RCLONE_X_IMAGE_VERSION}" \
+  && test "$(go list -m -f '{{.Version}}' golang.org/x/image)" = "${DX_RCLONE_X_IMAGE_VERSION}" \
+  && go mod verify \
+  && CGO_ENABLED=0 go build -trimpath \
+      -ldflags "-s -X github.com/rclone/rclone/fs.Version=${DX_RCLONE_BUILD_VERSION}" \
+      -o /out/rclone . \
   && test -x /out/rclone
 RUN go version /out/rclone | tee /out/rclone-go-version.txt \
   && grep -F " go${DX_RCLONE_GO_BUILD_VERSION}" /out/rclone-go-version.txt >/dev/null \
   && go version -m /out/rclone > /out/rclone-buildinfo.txt \
+  && grep -F "$(printf '\tdep\tgolang.org/x/image\t%s' "${DX_RCLONE_X_IMAGE_VERSION}")" /out/rclone-buildinfo.txt >/dev/null \
   && env -u RCLONE_VERSION -u RCLONE_GO_VERSION /out/rclone version > /out/rclone-version.txt \
-  && printf 'rclone=%s\ngo=%s\n' "${DX_RCLONE_BUILD_VERSION}" "go${DX_RCLONE_GO_BUILD_VERSION}" > /out/rclone-build-manifest.txt \
+  && printf 'rclone=%s\ngo=%s\nx-image=%s\n' "${DX_RCLONE_BUILD_VERSION}" "go${DX_RCLONE_GO_BUILD_VERSION}" "${DX_RCLONE_X_IMAGE_VERSION}" > /out/rclone-build-manifest.txt \
   && test -s /out/rclone-buildinfo.txt \
   && test -s /out/rclone-version.txt \
   && test -s /out/rclone-build-manifest.txt
@@ -47,6 +65,7 @@ RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
 FROM node:22-trixie-slim
 ARG DX_RCLONE_BUILD_VERSION
 ARG DX_RCLONE_GO_BUILD_VERSION
+ARG DX_RCLONE_X_IMAGE_VERSION
 
 WORKDIR /app
 
@@ -91,6 +110,7 @@ RUN apt-get update \
   && test -s /usr/share/doc/direct-xfer/rclone-version.txt \
   && grep -Fx "rclone=${DX_RCLONE_BUILD_VERSION}" /usr/share/doc/direct-xfer/rclone-build-manifest.txt >/dev/null \
   && grep -Fx "go=go${DX_RCLONE_GO_BUILD_VERSION}" /usr/share/doc/direct-xfer/rclone-build-manifest.txt >/dev/null \
+  && grep -Fx "x-image=${DX_RCLONE_X_IMAGE_VERSION}" /usr/share/doc/direct-xfer/rclone-build-manifest.txt >/dev/null \
   && test -s /usr/share/doc/direct-xfer/rclone-COPYING \
   && test -s /usr/share/doc/direct-xfer/rclone-buildinfo.txt \
   && rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \

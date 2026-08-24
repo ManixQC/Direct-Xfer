@@ -84,9 +84,15 @@ SECRETS="$(secret_names)"
 HAS_DATA_KEY=0
 HAS_GOOGLE_ID=0
 HAS_GOOGLE_SECRET=0
-grep -qx 'BROKER_DATA_KEY' <<<"$SECRETS" && HAS_DATA_KEY=1 || true
-grep -qx 'GOOGLE_CLIENT_ID' <<<"$SECRETS" && HAS_GOOGLE_ID=1 || true
-grep -qx 'GOOGLE_CLIENT_SECRET' <<<"$SECRETS" && HAS_GOOGLE_SECRET=1 || true
+if grep -qx 'BROKER_DATA_KEY' <<<"$SECRETS"; then
+  HAS_DATA_KEY=1
+fi
+if grep -qx 'GOOGLE_CLIENT_ID' <<<"$SECRETS"; then
+  HAS_GOOGLE_ID=1
+fi
+if grep -qx 'GOOGLE_CLIENT_SECRET' <<<"$SECRETS"; then
+  HAS_GOOGLE_SECRET=1
+fi
 
 if [ "$HAS_DATA_KEY" -eq 0 ]; then
   echo 'Premier déploiement : création de la clé de chiffrement persistante...'
@@ -115,7 +121,9 @@ echo "Callback Google : $CALLBACK"
 INFO="$(curl -fsS "$BROKER_URL/v1/info" 2>/dev/null || true)"
 GOOGLE_READY=0
 if [ -n "$INFO" ]; then
-  printf '%s' "$INFO" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{const x=JSON.parse(s);process.exit(x.google&&x.storage!==false?0:1)}catch{process.exit(1)}})" && GOOGLE_READY=1 || true
+  if printf '%s' "$INFO" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{const x=JSON.parse(s);process.exit(x.google&&x.storage!==false?0:1)}catch{process.exit(1)}})"; then
+    GOOGLE_READY=1
+  fi
 fi
 
 if [ "$GOOGLE_READY" -eq 1 ]; then

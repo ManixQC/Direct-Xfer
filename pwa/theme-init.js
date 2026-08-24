@@ -17,7 +17,7 @@
 
   // 1.64.2: keep release metadata available before the large PWA bundle starts,
   // and layer the administrator-only health surface in an isolated module.
-  var release = { version: '1.70.22', build: '2026.08.23-pwa455' };
+  var release = { version: '1.70.23', build: '2026.08.24-pwa456' };
   window.__DX_PWA_RELEASE = release;
   if (typeof window.fetch === 'function' && !window.__dxPwaReleaseFetchWrapped) {
     window.__dxPwaReleaseFetchWrapped = true;

@@ -18,9 +18,9 @@ const server = read('server.js') + '\n' + read('lib/server/pwa-application.js');
 
 function manifest(file) { return JSON.parse(read(file)); }
 
-test('pwa455 loads and precaches the mobile intelligence module as a public shell asset', () => {
+test('pwa456 loads and precaches the mobile intelligence module as a public shell asset', () => {
   for (const file of ['pwa/app.js','pwa/index.html','pwa/sw.js','pwa/theme-init.js','pwa/admin-advanced.js']) {
-    assert.match(read(file), /pwa455|v=441/);
+    assert.match(read(file), /pwa456|v=441/);
   }
   assert.match(index, /mobile-intelligence\.js\?v=441/);
   assert.match(sw, /\/app\/mobile-intelligence\.js\?v=441/);

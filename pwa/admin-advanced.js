@@ -1,7 +1,7 @@
 'use strict';
 (function () {
-  var RELEASE = (window.__DX_PWA_RELEASE && window.__DX_PWA_RELEASE.version) || '1.70.22';
-  var BUILD = (window.__DX_PWA_RELEASE && window.__DX_PWA_RELEASE.build) || '2026.08.23-pwa455';
+  var RELEASE = (window.__DX_PWA_RELEASE && window.__DX_PWA_RELEASE.version) || '1.70.23';
+  var BUILD = (window.__DX_PWA_RELEASE && window.__DX_PWA_RELEASE.build) || '2026.08.24-pwa456';
   var adminAccess = false;
   var accessAnnounced = false;
   var refreshTimer = 0;

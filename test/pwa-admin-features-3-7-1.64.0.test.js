@@ -35,14 +35,14 @@ test.after(() => {
   fs.rmSync(dataDir, { recursive:true, force:true });
 });
 
-test('PWA cache build is synchronized to pwa455', () => {
-  assert.match(theme, /2026\.08\.23-pwa455/);
+test('PWA cache build is synchronized to pwa456', () => {
+  assert.match(theme, /2026\.08\.24-pwa456/);
   assert.match(theme, /admin-advanced\.js\?v=441/);
-  assert.match(sw, /2026\.08\.23-pwa455/);
+  assert.match(sw, /2026\.08\.24-pwa456/);
   assert.match(sw, /admin-advanced\.js\?v=441/);
-  assert.match(read('pwa/app.js'), /2026\.08\.23-pwa455/);
+  assert.match(read('pwa/app.js'), /2026\.08\.24-pwa456/);
   assert.match(read('pwa/login.js'), /v=441/);
-  assert.match(read('pwa/index.html'), /pwa455/);
+  assert.match(read('pwa/index.html'), /pwa456/);
   for (const file of ['pwa/admin-advanced.js','pwa/app.js','pwa/index.html','pwa/login.js','pwa/sw.js','pwa/theme-init.js']) {
     assert.doesNotMatch(read(file), /pwa320|v=320/);
   }
@@ -217,7 +217,7 @@ test('real server keeps new endpoints protected, serves PWA asset pre-login, and
 
     const publicAsset = await fetch(base + '/app/admin-advanced.js?v=441');
     assert.equal(publicAsset.status, 200);
-    assert.match(await publicAsset.text(), /pwa455/);
+    assert.match(await publicAsset.text(), /pwa456/);
 
     const anonHealth = await fetch(base + '/api/pwa-admin-health');
     assert.equal(anonHealth.status, 401);

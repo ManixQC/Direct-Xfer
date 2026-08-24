@@ -8,14 +8,15 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
 const ROOT = path.join(__dirname, '..');
-const dockerfile = fs.readFileSync(path.join(ROOT, 'Dockerfile'), 'utf8');
+const dockerfile = fs.readFileSync(path.join(ROOT, 'Dockerfile'), 'utf8').replace(/\r\n?/g, '\n');
 
-function extractEntrypoint() {
-  const start = dockerfile.indexOf("RUN printf '%s\\n'");
-  const end = dockerfile.indexOf('\n\n# Probes the public /healthz', start);
+function extractEntrypoint(source = dockerfile) {
+  const normalized = String(source).replace(/\r\n?/g, '\n');
+  const start = normalized.indexOf("RUN printf '%s\\n'");
+  const end = normalized.indexOf('\n\n# Probes the public /healthz', start);
   assert.notEqual(start, -1, 'entrypoint generator must exist');
   assert.notEqual(end, -1, 'entrypoint generator must have a stable end marker');
-  const block = dockerfile.slice(start, end);
+  const block = normalized.slice(start, end);
   const lines = [];
   for (const line of block.split(/\r?\n/)) {
     const match = line.match(/^\s*'(.*)' \\$/);
@@ -43,6 +44,14 @@ function runEntrypoint({ puid='99', pgid='100', code='process.stdout.write(Strin
     fs.rmSync(tmp, { recursive:true, force:true });
   }
 }
+
+
+test('1.70.22 entrypoint extraction is stable with Windows CRLF checkouts', () => {
+  const crlfDockerfile = dockerfile.replace(/\n/g, '\r\n');
+  const entrypoint = extractEntrypoint(crlfDockerfile);
+  assert.match(entrypoint, /^#!\/bin\/sh\n/);
+  assert.match(entrypoint, /exec "\$@"\n$/);
+});
 
 test('1.70.22 rejects uid/gid spellings that setpriv can otherwise wrap or reinterpret as root', () => {
   const dangerous = ['0', '00', '000000', '+0', '-0', '-1', '4294967295', '4294967296', '99999999999', 'root', '99:100'];

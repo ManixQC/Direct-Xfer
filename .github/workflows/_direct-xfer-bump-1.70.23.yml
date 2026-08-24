@@ -71,6 +71,9 @@ jobs:
           replaceRequired(workflow, 'Direct-Xfer-1.70.22-Windows-CSharp', 'Direct-Xfer-1.70.23-Windows-CSharp');
           replaceRequired(workflow, 'Direct-Xfer-Setup-1.70.22', 'Direct-Xfer-Setup-1.70.23');
 
+          // This release changes the delivered PWA identity. Advance the service-worker
+          // generation and app.js cache key while leaving native component identities
+          // independently versioned (Launcher 1.70.1, ServerHost 1.70.22).
           walk('pwa', (file) => {
             if (!/\.(?:js|html|json|webmanifest)$/i.test(file)) return;
             replaceAllExisting(file, [
@@ -81,6 +84,8 @@ jobs:
             ]);
           });
 
+          // Tests tracking the current release or PWA shell follow the release/cache marker.
+          // Keep native component versions separate; only release-level assertion forms move.
           walk('test', (file) => {
             if (!file.endsWith('.test.js')) return;
             replaceAllExisting(file, [
@@ -98,11 +103,16 @@ jobs:
             ]);
           });
 
+          // This older PWA regression test pins the application version through a regex
+          // rather than assert.equal(), so update both its title and escaped regex form.
           replaceAllExisting('test/pwa-system-health-bottom-nav-1.64.4.test.js', [
             ['application version stays 1.70.22', 'application version stays 1.70.23'],
             ['1\\.70\\.22', '1\\.70\\.23']
           ]);
 
+          // App-release assertions move to 1.70.23. In windows-latest, update only
+          // release-level expectations: the ServerHost component intentionally stays
+          // at 1.70.22 and its PE/manifest assertions must not be rewritten.
           replaceAllExisting('test/windows-latest-deep-audit-1.66.6.test.js', [
             ["test('1.70.22 version, Windows builds and PWA generation are synchronized'", "test('1.70.23 version, Windows builds and PWA generation are synchronized'"],
             ["assert.equal(lock.version, '1.70.22')", "assert.equal(lock.version, '1.70.23')"],
@@ -126,6 +136,9 @@ jobs:
             ]);
           }
 
+          // The historical archive was explicitly removed from the source tree. Keep
+          // its integrity test useful when an archive is present without making the
+          // normal current-version suite fail merely because the optional archive is absent.
           replaceAllExisting('test/historical-test-manifest-1.64.0.test.js', [
             ["const manifest = JSON.parse(fs.readFileSync(path.join(root, 'test-historical', 'MANIFEST.json'), 'utf8'));", "const manifestPath = path.join(root, 'test-historical', 'MANIFEST.json');\nconst manifest = fs.existsSync(manifestPath) ? JSON.parse(fs.readFileSync(manifestPath, 'utf8')) : null;"],
             ["test('historical test manifest preserves the complete reference test tree', () => {", "test('historical test manifest preserves the complete reference test tree', { skip: !manifest ? 'optional historical archive is not present' : false }, () => {"]
@@ -144,7 +157,7 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add package.json package-lock.json oauth-broker/cloudflare-worker/package.json installer/Direct-Xfer.iss .github/workflows/build-windows-csharp.yml pwa test
+          git add package.json package-lock.json oauth-broker/cloudflare-worker/package.json installer/Direct-Xfer.iss pwa test
           if git diff --cached --quiet; then
             echo 'No metadata changes required.'
             exit 0

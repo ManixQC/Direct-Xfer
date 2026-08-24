@@ -102,7 +102,7 @@ test('service construction fails closed when account persistence dependencies ar
   assert.throws(() => createAccountService({}), /requires getState\(\)/);
 });
 
-test('first startup creates one durable owner and exposes its plaintext only until consumed', () => {
+test('first startup creates one durable owner with a randomized non-default identity', () => {
   const f = fixture();
   try {
     const first = f.service.initialize();
@@ -113,11 +113,13 @@ test('first startup creates one durable owner and exposes its plaintext only unt
     assert.equal(first.initialPasswordFresh, true);
     assert.equal(first.ownerAvailable, true);
     assert.equal(f.persistCalls, 1);
-    assert.equal(owner.username, 'admin');
+    assert.match(owner.username, /^owner-[a-f0-9]{12}$/);
+    assert.notEqual(owner.username.toLowerCase(), 'admin');
     assert.equal(owner.role, 'owner');
     assert.equal(owner.createdAt, 123456);
     assert.equal(owner.ah, fakeHash(password));
-    assert.equal(f.service.findAccountByName(' ADMIN '), owner);
+    assert.equal(f.service.findAccountByName(` ${owner.username.toUpperCase()} `), owner);
+    assert.equal(f.service.findAccountByName('admin'), null);
     assert.equal(f.service.getAccountById(owner.id), owner);
 
     // Process-local idempotency must not generate or persist a second secret.
@@ -189,6 +191,22 @@ test('ADMIN_PASSWORD stays session-only and overrides only the live owner creden
     assert.equal(f.service.accountPasswordRecord(admin).hash.toString(), 'helper');
     assert.equal(owner.ah, fakeHash('stored'));
     assert.equal(f.service.hasFreshInitialPassword(), false);
+  } finally {
+    f.close();
+  }
+});
+
+test('ADMIN_PASSWORD without ADMIN_USERNAME reuses a persisted owner identity', () => {
+  const owner = { id:'owner', username:'owner-abcdef123456', role:'owner', ah:fakeHash('stored'), pwChanged:true };
+  const f = fixture({
+    state:{ settings:{}, meta:{ accounts:[owner] } },
+    env:{ ADMIN_PASSWORD:'env-secret' },
+  });
+  try {
+    f.service.initialize();
+    assert.equal(f.service.ownerLoginUsername(), owner.username);
+    assert.equal(f.service.findAccountByName(owner.username), owner);
+    assert.equal(f.service.findAccountByName('admin'), null);
   } finally {
     f.close();
   }

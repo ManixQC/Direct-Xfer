@@ -68,10 +68,36 @@
   var lang = 'fr';
   var LOGIN_KEYS = { rememberUsername: 'dx-login-remember-username', rememberPassword: 'dx-login-remember-password', username: 'dx-login-username' };
 
+  var POST_LOGIN_QUERY_KEY = 'dx-pwa-post-login-query';
   function safeNext() {
-    var value = new URLSearchParams(location.search).get('next') || '/app/';
-    if (!/^\/app(?:\/|\?|$)/.test(value) || value.indexOf('//') === 0 || /[\r\n]/.test(value)) return '/app/';
-    return value === '/app' ? '/app/' : value;
+    var raw = new URLSearchParams(location.search).get('next') || '/app/';
+    var target;
+    try { target = new URL(raw, location.origin); } catch (_) { return '/app/'; }
+    if (target.origin !== location.origin || (target.pathname !== '/app/' && target.pathname !== '/app')) return '/app/';
+    var clean = new URLSearchParams();
+    var shared = target.searchParams.get('shared');
+    if (shared && /^[A-Za-z0-9_-]{1,160}$/.test(shared)) clean.set('shared', shared);
+    var action = target.searchParams.get('action');
+    if (action && ['shares','activity','voice-search','widget','system-health','images','settings'].indexOf(action) !== -1) clean.set('action', action);
+    var focus = target.searchParams.get('focus');
+    if (focus && /^[A-Za-z0-9_-]{1,240}$/.test(focus)) clean.set('focus', focus);
+    var dest = target.searchParams.get('dest');
+    if (dest && dest.length <= 2048) clean.set('dest', dest);
+    var panel = target.searchParams.get('panel');
+    if (panel && /^[A-Za-z0-9_-]{1,80}$/.test(panel)) clean.set('panel', panel);
+    if (target.searchParams.get('opencenter') === '1') clean.set('opencenter', '1');
+    if (target.searchParams.get('paired') === '1') clean.set('paired', '1');
+    var query = clean.toString();
+    return '/app/' + (query ? '?' + query : '');
+  }
+  function continueToApp() {
+    var next = safeNext();
+    try {
+      var queryAt = next.indexOf('?');
+      if (queryAt >= 0) sessionStorage.setItem(POST_LOGIN_QUERY_KEY, next.slice(queryAt));
+      else sessionStorage.removeItem(POST_LOGIN_QUERY_KEY);
+    } catch (_) {}
+    location.replace('/app/');
   }
   function message(key, vars) {
     var text = (STRINGS[lang] && STRINGS[lang][key]) || STRINGS.fr[key] || key;
@@ -284,7 +310,7 @@
         if (data.mustChangePassword) {
           location.replace('/?next=' + encodeURIComponent(safeNext()));
         } else {
-          location.replace(safeNext());
+          continueToApp();
         }
         return;
       }
@@ -390,7 +416,8 @@
       var data = await verifyResp.json().catch(function () { return {}; });
       if (verifyResp.ok && data.ok) {
         if (user.value.trim() && rememberUsername.checked) { storageSet(LOGIN_KEYS.username, user.value.trim()); storageSet('dxuser', user.value.trim()); }
-        location.replace(data.mustChangePassword ? ('/?next=' + encodeURIComponent(safeNext())) : safeNext());
+        if (data.mustChangePassword) location.replace('/?next=' + encodeURIComponent(safeNext()));
+        else continueToApp();
         return;
       }
       showError(message('passkeyFailed'));
@@ -498,7 +525,7 @@
   // from creating a simple home-screen shortcut with no WebAPK/share-target
   // integration when the user installs before signing in.
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/direct-xfer-pwa-sw.js?v=438', { scope: '/app/' }).catch(function () {});
+    navigator.serviceWorker.register('/direct-xfer-pwa-sw.js?v=441', { scope: '/app/' }).catch(function () {});
   }
   hydrateRememberedLogin().finally(function () { ((rememberPassword.checked && password.value) ? password : user).focus(); });
 })();

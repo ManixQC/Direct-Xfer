@@ -9,7 +9,7 @@ const { createStateReplacementCoordinator } = require('../lib/server/state-repla
 const ROOT = path.resolve(__dirname, '..');
 const read = (relative) => fs.readFileSync(path.join(ROOT, relative), 'utf8').replace(/\r\n?/g, '\n');
 
-test('1.70.21 busy-probe failures identify the failing boundary and async probes cannot masquerade as ordinary busy state', () => {
+test('1.70.22 busy-probe failures identify the failing boundary and async probes cannot masquerade as ordinary busy state', () => {
   const expected = new Error('late service unavailable');
   const throwing = createStateReplacementCoordinator({
     busyChecks:[['late-service', () => { throw expected; }]],
@@ -38,7 +38,7 @@ test('1.70.21 busy-probe failures identify the failing boundary and async probes
   );
 });
 
-test('1.70.21 runtime reset rejects async and reentrant steps instead of exposing a partially cleared runtime', () => {
+test('1.70.22 runtime reset rejects async and reentrant steps instead of exposing a partially cleared runtime', () => {
   const calls = [];
   const asyncReset = createStateReplacementCoordinator({
     busyChecks:[['idle', () => false]],
@@ -75,7 +75,7 @@ test('1.70.21 runtime reset rejects async and reentrant steps instead of exposin
   assert.ok(calls.includes('after-nested'));
 });
 
-test('1.70.21 restore readiness fails closed around the coordinator contract', () => {
+test('1.70.22 restore readiness fails closed around the coordinator contract', () => {
   const restore = read('lib/server/restore-service.js');
   const coordinator = read('lib/server/state-replacement-coordinator.js');
   assert.match(restore, /state replacement readiness check failed; refusing restore/);

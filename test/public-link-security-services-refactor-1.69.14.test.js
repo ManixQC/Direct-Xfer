@@ -80,6 +80,8 @@ test('public access service owns password verification, unlock cookies and reque
   const share = { token:'abc', type:'file', pwHash:'scrypt:secret', accessRequests:[{ id:'req1', status:'approved' }] };
   assert.deepEqual(await service.checkSharePassword(share, 'secret'), { ok:true, match:true });
   assert.deepEqual(await service.checkSharePassword(share, 'wrong'), { ok:true, match:false });
+  // Obsolete pre-scrypt hashes fail closed instead of exposing a fast public password verifier.
+  assert.deepEqual(await service.checkSharePassword({ token:'legacy', type:'file', pwHash:'deadbeef', pwSalt:'salt' }, 'secret'), { ok:true, match:false });
 
   const unlockRes = response();
   service.setUnlockCookie({ protocol:'https', headers:{} }, unlockRes, share);

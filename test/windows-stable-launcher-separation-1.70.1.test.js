@@ -32,8 +32,8 @@ test('launcher attachment negotiates stable protocols and payload identity rathe
 });
 
 test('ServerHost publishes runtime-discovered identity with independent component build', () => {
-  assert.match(host, /ServerHostBuild = "serverhost139-csharp"/);
-  assert.match(host, /ExpectedRuntimeBuild = "runtime166"/);
+  assert.match(host, /ServerHostBuild = "serverhost142-csharp"/);
+  assert.match(host, /ExpectedRuntimeBuild = "runtime169"/);
   assert.match(host, /markerValue, Program\.ExpectedRuntimeBuild/);
   assert.match(host, /value, Program\.ExpectedRuntimeBuild/);
   assert.match(host, /_appVersion = ReadApplicationVersion\(appDir\)/);
@@ -47,10 +47,10 @@ test('ServerHost publishes runtime-discovered identity with independent componen
 });
 
 test('GitHub Actions enforces deterministic launcher output and release-independent runtime marker naming', () => {
-  assert.match(workflow, /DX_RUNTIME_BUILD: 'runtime166'/);
+  assert.match(workflow, /DX_RUNTIME_BUILD: 'runtime169'/);
   assert.match(workflow, /DX_LAUNCHER_COMPONENT_VERSION: '1\.70\.1'/);
-  assert.match(workflow, /DX_SERVER_HOST_COMPONENT_VERSION: '1\.70\.21'/);
-  assert.doesNotMatch(workflow, /DX_RUNTIME_BUILD: '1\.70\.21-/);
+  assert.match(workflow, /DX_SERVER_HOST_COMPONENT_VERSION: '1\.70\.22'/);
+  assert.doesNotMatch(workflow, /DX_RUNTIME_BUILD: '1\.70\.22-/);
   assert.match(workflow, /launcher-repeat/);
   assert.match(workflow, /Remove-Item 'windows-launcher\\bin','windows-launcher\\obj' -Recurse -Force/);
   assert.match(workflow, /Get-FileHash -Algorithm SHA256 \$launcherPrimary/);

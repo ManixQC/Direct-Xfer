@@ -138,9 +138,11 @@
 
   function go(url) {
     if (stopped || !url) return;
+    const value = String(url).trim();
+    if (!value.startsWith('https://')) { fail(copy.invalid); return; }
     let parsed;
-    try { parsed = new URL(String(url)); } catch (_) { fail(copy.invalid); return; }
-    if (parsed.protocol !== 'https:') { fail(copy.invalid); return; }
+    try { parsed = new URL(value); } catch (_) { fail(copy.invalid); return; }
+    if (parsed.protocol !== 'https:' || parsed.username || parsed.password) { fail(copy.invalid); return; }
     stopped = true;
     if (timer) clearTimeout(timer);
     status.textContent = copy.redirecting;

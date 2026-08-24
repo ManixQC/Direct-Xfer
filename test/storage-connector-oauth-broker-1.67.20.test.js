@@ -72,8 +72,15 @@ test('rclone broker remote uses central token_url and opaque per-remote credenti
   const create=calls.find((x)=>x[0]==='config'&&x[1]==='create');
   assert.ok(create);
   assert.deepEqual(create.slice(0,4),['config','create','gdrive','drive']);
-  assert.ok(create.includes('token_url'));
-  assert.ok(create.includes('https://oauth.example.test/v1/google/token'));
+  const tokenUrlIndex=create.indexOf('token_url');
+  assert.ok(tokenUrlIndex >= 0);
+  const configuredTokenUrl=new URL(create[tokenUrlIndex + 1]);
+  assert.equal(configuredTokenUrl.protocol,'https:');
+  assert.equal(configuredTokenUrl.hostname,'oauth.example.test');
+  assert.equal(configuredTokenUrl.port,'');
+  assert.equal(configuredTokenUrl.pathname,'/v1/google/token');
+  assert.equal(configuredTokenUrl.search,'');
+  assert.equal(configuredTokenUrl.hash,'');
   assert.ok(create.includes('dxc_abcdefghijk'));
   assert.ok(create.includes('s'.repeat(32)));
   assert.doesNotMatch(create.join(' '),/googleusercontent\.com|oauth2\.googleapis\.com/);

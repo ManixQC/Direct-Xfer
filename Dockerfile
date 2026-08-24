@@ -1,6 +1,40 @@
 # Debian 13 (Trixie) carries the vendor security backports for giflib that are
 # still missing from Alpine 3.23. Keep the Node major stable for this release,
 # but pin the distribution so package provenance does not change silently.
+# The rclone toolchain is pinned more strictly because its Go stdlib is copied
+# into the final binary and therefore becomes part of the runtime attack surface.
+ARG DX_RCLONE_BUILD_VERSION=v1.75.0
+ARG DX_RCLONE_GO_BUILD_VERSION=1.25.14
+FROM golang:${DX_RCLONE_GO_BUILD_VERSION}-bookworm@sha256:3b4a11519ad929d1e1d261a12cff056f0c85b735253d7d861346b9c6f8b36437 AS rclone-builder
+ARG DX_RCLONE_BUILD_VERSION
+ARG DX_RCLONE_GO_BUILD_VERSION
+
+# Debian Trixie still ships an old rclone built with a vulnerable Go stdlib.
+# Build the pinned rclone release with a patched Go toolchain. Verification uses
+# Go's machine-readable binary metadata instead of parsing rclone's human-facing
+# version report, whose formatting is not an API and must never break the image.
+# IMPORTANT: do not name Docker build args RCLONE_VERSION/RCLONE_*: rclone imports
+# RCLONE_* environment variables as CLI flags, and RCLONE_VERSION=v1.75.0 is
+# interpreted as the boolean --version flag, which makes every rclone invocation fail.
+# GOTOOLCHAIN=local forbids an implicit toolchain download.
+ENV GOTOOLCHAIN=local \
+    GOSUMDB=sum.golang.org
+RUN mkdir -p /out \
+  && test "${DX_RCLONE_BUILD_VERSION}" = "v1.75.0" \
+  && test "$(go env GOVERSION)" = "go${DX_RCLONE_GO_BUILD_VERSION}"
+RUN CGO_ENABLED=0 GOBIN=/out go install -trimpath \
+    -ldflags "-s -X github.com/rclone/rclone/fs.Version=${DX_RCLONE_BUILD_VERSION}" \
+    "github.com/rclone/rclone@${DX_RCLONE_BUILD_VERSION}" \
+  && test -x /out/rclone
+RUN go version /out/rclone | tee /out/rclone-go-version.txt \
+  && grep -F " go${DX_RCLONE_GO_BUILD_VERSION}" /out/rclone-go-version.txt >/dev/null \
+  && go version -m /out/rclone > /out/rclone-buildinfo.txt \
+  && env -u RCLONE_VERSION -u RCLONE_GO_VERSION /out/rclone version > /out/rclone-version.txt \
+  && printf 'rclone=%s\ngo=%s\n' "${DX_RCLONE_BUILD_VERSION}" "go${DX_RCLONE_GO_BUILD_VERSION}" > /out/rclone-build-manifest.txt \
+  && test -s /out/rclone-buildinfo.txt \
+  && test -s /out/rclone-version.txt \
+  && test -s /out/rclone-build-manifest.txt
+
 FROM node:22-trixie-slim AS dependencies
 
 WORKDIR /app
@@ -11,8 +45,15 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
 
 FROM node:22-trixie-slim
+ARG DX_RCLONE_BUILD_VERSION
+ARG DX_RCLONE_GO_BUILD_VERSION
 
 WORKDIR /app
+
+COPY --from=rclone-builder /out/rclone /usr/local/bin/rclone
+COPY third_party/rclone/COPYING /usr/share/doc/direct-xfer/rclone-COPYING
+COPY --from=rclone-builder /out/rclone-buildinfo.txt /usr/share/doc/direct-xfer/rclone-buildinfo.txt
+COPY --from=rclone-builder /out/rclone-build-manifest.txt /usr/share/doc/direct-xfer/rclone-build-manifest.txt
 
 # Pull all Debian security updates before installing the OCR/PDF runtime. The
 # installed giflib package must include Debian's CVE-2026-23868/26740 backport.
@@ -25,9 +66,8 @@ RUN apt-get update \
   && DEBIAN_FRONTEND=noninteractive apt-get dist-upgrade -y \
   && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     ca-certificates \
-    gosu \
     poppler-utils \
-    rclone \
+    util-linux \
     tesseract-ocr \
     tesseract-ocr-eng \
     tesseract-ocr-fra \
@@ -38,7 +78,7 @@ RUN apt-get update \
   && dpkg --compare-versions "$giflib_version" ge '5.2.2-1+deb13u1' \
   && mkdir -p /usr/share/doc/direct-xfer \
   && dpkg-query -W -f='${Package}\t${Version}\n' \
-    ca-certificates libcairo2 libgif7 libnss3 poppler-utils rclone tesseract-ocr \
+    ca-certificates libcairo2 libgif7 libnss3 poppler-utils tesseract-ocr util-linux \
     > /usr/share/doc/direct-xfer/os-packages.tsv \
   && rm -f /usr/bin/pdftocairo /usr/bin/text2image \
   && test ! -e /usr/bin/pdftocairo \
@@ -46,7 +86,13 @@ RUN apt-get update \
   && tesseract --version >/dev/null \
   && pdftotext -v >/dev/null 2>&1 \
   && pdftoppm -v >/dev/null 2>&1 \
-  && rclone version >/dev/null \
+  && setpriv --version >/dev/null \
+  && env -u RCLONE_VERSION -u RCLONE_GO_VERSION rclone version > /usr/share/doc/direct-xfer/rclone-version.txt \
+  && test -s /usr/share/doc/direct-xfer/rclone-version.txt \
+  && grep -Fx "rclone=${DX_RCLONE_BUILD_VERSION}" /usr/share/doc/direct-xfer/rclone-build-manifest.txt >/dev/null \
+  && grep -Fx "go=go${DX_RCLONE_GO_BUILD_VERSION}" /usr/share/doc/direct-xfer/rclone-build-manifest.txt >/dev/null \
+  && test -s /usr/share/doc/direct-xfer/rclone-COPYING \
+  && test -s /usr/share/doc/direct-xfer/rclone-buildinfo.txt \
   && rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
   && rm -f /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack \
     /usr/local/bin/pnpm /usr/local/bin/yarn \
@@ -87,20 +133,32 @@ RUN printf '%s\n' \
   'set -e' \
   'PUID="${PUID:-1000}"' \
   'PGID="${PGID:-1000}"' \
-  'if [ "$PUID" = "0" ] || [ "$PGID" = "0" ]; then' \
-  '  echo "ERROR: PUID/PGID must not be 0 (root). Use a non-root uid/gid." >&2' \
-  '  exit 1' \
-  'fi' \
+  'validate_id() {' \
+  '  label="$1"' \
+  '  value="$2"' \
+  '  case "$value" in' \
+  '    ""|0|0*|*[!0-9]*)' \
+  '      echo "ERROR: $label must be a canonical decimal id between 1 and 4294967294." >&2' \
+  '      exit 1' \
+  '      ;;' \
+  '  esac' \
+  '  if [ "${#value}" -gt 10 ] || { [ "${#value}" -eq 10 ] && [ "$value" -gt 4294967294 ]; }; then' \
+  '    echo "ERROR: $label must be a canonical decimal id between 1 and 4294967294." >&2' \
+  '    exit 1' \
+  '  fi' \
+  '}' \
+  'validate_id PUID "$PUID"' \
+  'validate_id PGID "$PGID"' \
   'if [ "$(id -u)" = "0" ]; then' \
-  '  mkdir -p "$DATA_DIR" "$IMAGES_DIR" "$INBOX_DIR" 2>/dev/null || true' \
-  '  chown -R "$PUID:$PGID" "$DATA_DIR" 2>/dev/null || true' \
-  '  chown -R "$PUID:$PGID" "$IMAGES_DIR" 2>/dev/null || true' \
-  '  chown "$PUID:$PGID" "$INBOX_DIR" 2>/dev/null || true' \
-  '  exec gosu "$PUID:$PGID" "$@"' \
+  '  mkdir -p -- "$DATA_DIR" "$IMAGES_DIR" "$INBOX_DIR" 2>/dev/null || true' \
+  '  chown -R -- "$PUID:$PGID" "$DATA_DIR" 2>/dev/null || true' \
+  '  chown -R -- "$PUID:$PGID" "$IMAGES_DIR" 2>/dev/null || true' \
+  '  chown -- "$PUID:$PGID" "$INBOX_DIR" 2>/dev/null || true' \
+  '  exec setpriv --reuid="$PUID" --regid="$PGID" --clear-groups --no-new-privs --bounding-set=-all -- "$@"' \
   'fi' \
   'exec "$@"' \
   > /usr/local/bin/docker-entrypoint.sh \
-  && chmod +x /usr/local/bin/docker-entrypoint.sh
+  && chmod 0755 /usr/local/bin/docker-entrypoint.sh
 
 # Probes the public /healthz liveness endpoint (always 200 when the server is
 # healthy) and requires a real 200 — so an internal error / misroute fails the check.
@@ -110,9 +168,9 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
 # NOTE for scanners: no static `USER` here on purpose. The container must start
 # as root ONLY to chown the bind-mounted /data, /Images and /Direct-Xfer volumes (see the
 # entrypoint script above), then immediately re-execs the actual process as the
-# unprivileged 'node' user via gosu. `docker-entrypoint.sh` never runs
-# untrusted code as root and `node server.js` itself always ends up running as
-# 'node', not root — a static USER directive would break the chown step on
+# unprivileged runtime UID/GID via setpriv. IDs are validated before any root-owned
+# filesystem operation, supplementary groups/capabilities are cleared, and no-new-privs
+# is set before `node server.js` starts — a static USER directive would break the chown step on
 # fresh/host-owned bind mounts. Verified at runtime: `docker exec <container> id`
 # reports uid=1000(node).
 # nosemgrep: dockerfile.security.missing-user-entrypoint.missing-user-entrypoint

@@ -9,8 +9,8 @@
 (function () {
   // Build tag, shown in the footer so a user can confirm at a glance which version
   // is actually running after an update. Keep it in lock-step with sw.js VERSION.
-  var APP_VERSION = '1.70.21';
-  var APP_BUILD = '2026.08.23-pwa452';
+  var APP_VERSION = '1.70.22';
+  var APP_BUILD = '2026.08.23-pwa455';
   // Upload blocks are deliberately small on mobile. A number of reverse proxies
   // still default to a 1 MiB request-body limit; an 8 MiB first block can therefore
   // be rejected before the browser emits any useful progress event, which looks like
@@ -59,7 +59,15 @@
   var MAX_HISTORY = 50;
   var OPFS_QUEUE_DIR = 'durable-transfers-v1';
   var OPFS_COPY_CHUNK = 4 * 1024 * 1024;
-  var launchParams = new URLSearchParams(location.search);
+  var launchSearch = location.search;
+  if (!launchSearch) {
+    try {
+      var pendingLaunchSearch = sessionStorage.getItem('dx-pwa-post-login-query') || '';
+      sessionStorage.removeItem('dx-pwa-post-login-query');
+      if (/^\?[A-Za-z0-9_.~%=&+\-]*$/.test(pendingLaunchSearch) && pendingLaunchSearch.length <= 4096) launchSearch = pendingLaunchSearch;
+    } catch (_) {}
+  }
+  var launchParams = new URLSearchParams(launchSearch);
   var launchAction = launchParams.get('action') || '';
   var launchFocusToken = launchParams.get('focus') || '';
   var launchDestinationUrl = launchParams.get('dest') || '';
@@ -615,7 +623,14 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
       });
     });
     var manifest = document.getElementById('app-manifest');
-    if (manifest) manifest.href = (lang === 'fr' ? '/direct-xfer-pwa.webmanifest' : '/direct-xfer-pwa-' + lang + '.webmanifest') + '?v=438';
+    if (manifest) {
+      // Keep the URL sink independent from the DOM/select value. Only literal,
+      // same-origin manifest paths can reach href.
+      var manifestHref = '/direct-xfer-pwa.webmanifest?v=441';
+      if (lang === 'en') manifestHref = '/direct-xfer-pwa-en.webmanifest?v=441';
+      else if (lang === 'es') manifestHref = '/direct-xfer-pwa-es.webmanifest?v=441';
+      manifest.href = manifestHref;
+    }
     $('lang-select').value = lang;
     $('dest-save-btn').textContent = editingToken ? t('updateDestination') : t('saveDestination');
     renderDests(); renderQueue(); renderHistory(); renderDeviceStatus();
@@ -2599,10 +2614,11 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
         var grip = document.createElement('button'); grip.type = 'button'; grip.className = 'drag-handle'; grip.textContent = '↕'; grip.title = t('dragHandle'); grip.setAttribute('aria-label', t('dragHandle'));
         top.appendChild(grip); attachTouchReorderHandle(grip, row, it, list);
       }
-      if (/^image\//.test(it.type) && it.file) {
+      var queuePreviewMedia = it.file ? safePreviewMedia(it.type, extOf(it.name)) : null;
+      if (queuePreviewMedia && queuePreviewMedia.kind === 'image') {
         var img = document.createElement('img'); img.className = 'thumb'; img.alt = ''; img.title = t('lightboxAlt');
         try {
-          var url = URL.createObjectURL(it.file); img.src = url; img.onload = img.onerror = function () { URL.revokeObjectURL(url); };
+          var url = safePreviewObjectUrl(it.file, queuePreviewMedia.mime); img.src = url; img.onload = img.onerror = function () { URL.revokeObjectURL(url); };
         } catch (_) {}
         (function (item) { img.addEventListener('click', function () { openPreview(item); }); })(it);
         top.appendChild(img);
@@ -2750,7 +2766,7 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
   // Image preparation + E2E --------------------------------------------------
   function loadImageEl(file) {
     return new Promise(function (resolve, reject) {
-      var img = new Image(), url = URL.createObjectURL(file);
+      var img = new Image(), url = encodeURI(URL.createObjectURL(file));
       img.onload = function () { URL.revokeObjectURL(url); resolve(img); };
       img.onerror = function (e) { URL.revokeObjectURL(url); reject(e); };
       img.src = url;
@@ -3690,18 +3706,23 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
   function imageVariantUrl(photo, kind) {
     return kind === 'auto' ? (photo.autoUrl || photo.imgUrl) : kind === 'thumb' ? photo.thumbUrl : kind === 'micro' ? photo.microUrl : photo.imgUrl;
   }
+  function managedImagePreviewUrl(photo, kind) {
+    var token = photo && photo.token ? encodeURIComponent(String(photo.token)) : '';
+    if (!token) return '';
+    var variant = kind === 'auto' || kind === 'full' || kind === 'thumb' || kind === 'micro' ? kind : 'full';
+    var revision = photo && photo.cacheRevision != null ? String(photo.cacheRevision) : '';
+    return '/app/image/' + token + '/preview/' + variant + (revision ? '?v=' + encodeURIComponent(revision) : '');
+  }
   function imagePreviewUrl(photo, kind) {
-    var previews = photo && photo.previewUrls || {};
-    var url = previews[kind] || imageVariantUrl(photo, kind);
-    if (kind === 'auto' && previews.auto && url) {
+    var url = managedImagePreviewUrl(photo, kind);
+    if (kind === 'auto' && url) {
       var width = Math.max(1, Math.ceil((window.innerWidth || 0) * (window.devicePixelRatio || 1)));
       url += (url.indexOf('?') === -1 ? '?' : '&') + 'w=' + encodeURIComponent(width);
     }
     return url;
   }
   function imageCardPreviewUrl(photo) {
-    var previews = photo && photo.previewUrls || {};
-    return previews.micro || previews.thumb || previews.full || photo.microUrl || photo.thumbUrl || photo.imgUrl;
+    return managedImagePreviewUrl(photo, 'micro');
   }
   function persistImagePreferences() {
     var ids = ['img-sort', 'img-filter', 'img-expiry', 'img-max-views', 'img-hotlink-hosts', 'img-smart-blur', 'img-tags', 'img-note', 'img-rename-template', 'img-copy-template', 'img-action-1', 'img-action-2', 'img-action-3'];
@@ -4342,7 +4363,7 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
     var png = await blobToPng(await resp.blob());
     await navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]);
   }
-  function imgLinkRow(name, previewUrl, previewIsObjectUrl) {
+  function imgLinkRow(name) {
     var row = document.createElement('div'); row.className = 'imglink-row';
     row.innerHTML =
       '<div class="imglink-card-head">' +
@@ -4370,10 +4391,6 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
       '<button class="btn ghost sm il-photo-edit" type="button">🎨</button>' +
       '<button class="btn ghost sm il-replace" type="button">' + ICONS.refresh + '</button><button class="btn ghost sm il-versions" type="button">' + ICONS.clock + '</button><button class="btn ghost sm il-resize-mini" type="button">' + ICONS.maximize + '</button><button class="btn ghost sm il-more" type="button" aria-label="Plus d’actions">' + ICONS.more + '</button></div></div></div>';
     row.querySelector('.imglink-name').textContent = name;
-    if (previewUrl) {
-      var im = row.querySelector('.imglink-thumb'); im.src = previewUrl;
-      if (previewIsObjectUrl) im.onload = im.onerror = function () { URL.revokeObjectURL(previewUrl); };
-    }
     var list = $('imglink-list'); list.insertBefore(row, list.firstChild);
     return row;
   }
@@ -4728,7 +4745,8 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
           imageLinkUrls.push({ token: photo.token, imgUrl: photo.imgUrl, thumbUrl: photo.thumbUrl, microUrl: photo.microUrl, name: photo.name });
         }
         if (!imageRowsByToken.has(photo.token)) {
-          var row = imgLinkRow(photo.name || 'image', imageCardPreviewUrl(photo), false);
+          var row = imgLinkRow(photo.name || 'image');
+          var restoredPreview = imageCardPreviewUrl(photo); if (restoredPreview) row.querySelector('.imglink-thumb').src = restoredPreview;
           activateImageLinkRow(row, photo, photo.name || 'image', false, false);
         }
       } catch (e) { try { console.error('[dx] image card restore failed for ' + (photo && photo.token), e); } catch (_) {} }
@@ -5107,7 +5125,8 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
         if (existingLink) Object.assign(existingLink, photo); else imageLinkUrls.push({ token: photo.token, imgUrl: photo.imgUrl, thumbUrl: photo.thumbUrl, microUrl: photo.microUrl, name: photo.name });
         var row = imageRowsByToken.get(photo.token);
         if (!row) {
-          row = imgLinkRow(photo.name || 'image', imageCardPreviewUrl(photo), false);
+          row = imgLinkRow(photo.name || 'image');
+          var serverPreview = imageCardPreviewUrl(photo); if (serverPreview) row.querySelector('.imglink-thumb').src = serverPreview;
           activateImageLinkRow(row, photo, photo.name || 'image', false, false);
         } else if (row) {
           row.querySelector('.imglink-name').textContent = photo.name || 'image';
@@ -5184,11 +5203,40 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
     var base = name.replace(/\.[^.\/]+$/, '') || ('image-' + Date.now());
     return { blob: blob, name: base + outExt, type: actualType, metadataStripped: true };
   }
+  async function safeImageLinkPreviewDataUrl(file) {
+    // File/input bytes are never assigned directly to an image URL sink. Decode the
+    // image and re-encode pixels through canvas first, which also strips active or
+    // metadata-bearing container content from the temporary thumbnail.
+    if (!file || typeof createImageBitmap !== 'function') return '';
+    var media = safePreviewMedia(file.type, extOf(file.name));
+    if (!media || media.kind !== 'image') return '';
+    var bitmap = null;
+    try {
+      bitmap = await createImageBitmap(file);
+      var width = Math.max(1, Number(bitmap.width) || 1);
+      var height = Math.max(1, Number(bitmap.height) || 1);
+      var scale = Math.min(1, 512 / Math.max(width, height));
+      var canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(width * scale));
+      canvas.height = Math.max(1, Math.round(height * scale));
+      var ctx = canvas.getContext('2d', { alpha: false });
+      if (!ctx) return '';
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      return canvas.toDataURL('image/jpeg', 0.82);
+    } catch (_) {
+      return '';
+    } finally {
+      if (bitmap && typeof bitmap.close === 'function') bitmap.close();
+    }
+  }
   async function createOneImageLink(file, stripMetadata, desiredName, options) {
     options = options || imageOptionsFromUi();
     var name = desiredName || file.name || ('image-' + Date.now() + '.jpg');
-    var preview = ''; try { preview = URL.createObjectURL(file); } catch (_) {}
-    var row = imgLinkRow(name, preview, true);
+    var preview = ''; try { preview = await safeImageLinkPreviewDataUrl(file); } catch (_) {}
+    var row = imgLinkRow(name);
+    if (preview) row.querySelector('.imglink-thumb').src = preview;
     var st = row.querySelector('.imglink-st');
     st.textContent = stripMetadata ? t('imgStrippingMetadata') : t('imgUploading');
     try {
@@ -6978,7 +7026,7 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
 
   // Service worker share target ---------------------------------------------
   async function loadSharedBatch() {
-    var params = new URLSearchParams(location.search);
+    var params = launchParams;
     var batchId = params.get('shared');
     if (!batchId) { try { batchId = localStorage.getItem('dx-pwa-pending-shared-batch') || ''; } catch (_) {} }
     if (!batchId || typeof caches === 'undefined') return;
@@ -9535,7 +9583,7 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
   function registerServiceWorker() {
     if (!navigator.serviceWorker || typeof navigator.serviceWorker.register !== 'function') return;
     navigator.serviceWorker.addEventListener('controllerchange', refreshToNewVersion);
-    var registrationPromise = navigator.serviceWorker.register('/direct-xfer-pwa-sw.js?v=438', { scope: '/app/' }).then(function (reg) {
+    var registrationPromise = navigator.serviceWorker.register('/direct-xfer-pwa-sw.js?v=441', { scope: '/app/' }).then(function (reg) {
       swReg = reg;
       navigator.serviceWorker.ready.then(function () {
         swReadyForInstall = true;
@@ -10307,6 +10355,33 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
       else el.textContent = '';
     });
   }
+  function safePreviewMedia(type, ext) {
+    type = String(type || '').toLowerCase().split(';', 1)[0].trim();
+    ext = String(ext || '').toLowerCase();
+    var image = {
+      'image/png':'image/png', 'image/jpeg':'image/jpeg', 'image/gif':'image/gif', 'image/webp':'image/webp',
+      'image/avif':'image/avif', 'image/bmp':'image/bmp'
+    };
+    var video = {
+      'video/mp4':'video/mp4', 'video/webm':'video/webm', 'video/ogg':'video/ogg', 'video/quicktime':'video/quicktime'
+    };
+    var audio = {
+      'audio/mpeg':'audio/mpeg', 'audio/mp4':'audio/mp4', 'audio/ogg':'audio/ogg', 'audio/wav':'audio/wav',
+      'audio/x-wav':'audio/wav', 'audio/webm':'audio/webm', 'audio/flac':'audio/flac'
+    };
+    if (image[type]) return { kind:'image', mime:image[type] };
+    if (video[type]) return { kind:'video', mime:video[type] };
+    if (audio[type]) return { kind:'audio', mime:audio[type] };
+    if (type === 'application/pdf' && ext === 'pdf') return { kind:'pdf', mime:'application/pdf' };
+    return null;
+  }
+  function safePreviewObjectUrl(file, mime) {
+    // Re-wrap the bytes with a hard-coded, allow-listed media MIME. encodeURI is
+    // intentionally retained on the browser-generated blob URL: it is a URL
+    // sanitizer and leaves ordinary blob: URLs byte-for-byte equivalent.
+    var mediaBlob = new Blob([file], { type: mime });
+    return encodeURI(URL.createObjectURL(mediaBlob));
+  }
   async function openPreview(it) {
     var file = it && it.file;
     if (!file) return;
@@ -10322,12 +10397,17 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
         $('preview-text').textContent = txt + (file.size > 1024 * 1024 ? '\n\n…' : '');
         $('preview-text').classList.remove('hidden');
       } else {
-        lightboxUrl = URL.createObjectURL(file);
-        if (/^image\//.test(type)) { $('lightbox-img').src = lightboxUrl; $('lightbox-img').classList.remove('hidden'); }
-        else if (/^video\//.test(type)) { $('preview-video').src = lightboxUrl; $('preview-video').classList.remove('hidden'); bindPwaPreviewResume($('preview-video'), it); }
-        else if (/^audio\//.test(type)) { $('preview-audio').src = lightboxUrl; $('preview-audio').classList.remove('hidden'); bindPwaPreviewResume($('preview-audio'), it); }
-        else if (type === 'application/pdf' || ext === 'pdf') { $('preview-frame').src = lightboxUrl; $('preview-frame').classList.remove('hidden'); }
-        else { $('preview-generic').textContent = fileIcon(it.name, it.type) + '  ' + fmtBytes(file.size); $('preview-generic').classList.remove('hidden'); }
+        var media = safePreviewMedia(type, ext);
+        if (!media) {
+          $('preview-generic').textContent = fileIcon(it.name, it.type) + '  ' + fmtBytes(file.size);
+          $('preview-generic').classList.remove('hidden');
+        } else {
+          lightboxUrl = safePreviewObjectUrl(file, media.mime);
+          if (media.kind === 'image') { $('lightbox-img').src = lightboxUrl; $('lightbox-img').classList.remove('hidden'); }
+          else if (media.kind === 'video') { $('preview-video').src = lightboxUrl; $('preview-video').classList.remove('hidden'); bindPwaPreviewResume($('preview-video'), it); }
+          else if (media.kind === 'audio') { $('preview-audio').src = lightboxUrl; $('preview-audio').classList.remove('hidden'); bindPwaPreviewResume($('preview-audio'), it); }
+          else if (media.kind === 'pdf') { $('preview-frame').src = lightboxUrl; $('preview-frame').classList.remove('hidden'); }
+        }
       }
     } catch (_) {
       $('preview-generic').textContent = fileIcon(it.name, it.type) + '  ' + fmtBytes(file.size);

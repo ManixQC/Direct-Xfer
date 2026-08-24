@@ -556,7 +556,7 @@ const I18N = {
     'cfg.logo': 'Logo personnalisé',
     'cfg.logoPick': 'Choisir une image…',
     'cfg.logoClear': 'Retirer',
-    'cfg.logoHint': 'Affiché dans la barre du haut des pages publiques. PNG/JPG/GIF/WebP/SVG, jusqu’à ~200 Ko.',
+    'cfg.logoHint': 'Affiché dans la barre du haut des pages publiques. PNG/JPG/GIF/WebP, jusqu’à ~200 Ko.',
     'cfg.logoTooLarge': 'Image invalide ou trop lourde (max ~200 Ko).',
     'cfg.legal': 'Mention de confidentialité',
     'cfg.legalPh': 'ex. Confidentiel — ne pas rediffuser',
@@ -2245,7 +2245,7 @@ const I18N = {
     'cfg.logo': 'Custom logo',
     'cfg.logoPick': 'Choose image…',
     'cfg.logoClear': 'Remove',
-    'cfg.logoHint': 'Shown in the top bar of public pages. PNG/JPG/GIF/WebP/SVG, up to ~200 KB.',
+    'cfg.logoHint': 'Shown in the top bar of public pages. PNG/JPG/GIF/WebP, up to ~200 KB.',
     'cfg.logoTooLarge': 'Invalid or oversized image (max ~200 KB).',
     'cfg.legal': 'Confidentiality notice',
     'cfg.legalPh': 'e.g. Confidential — do not redistribute',
@@ -3932,7 +3932,7 @@ const I18N = {
     'cfg.logo': 'Logotipo personalizado',
     'cfg.logoPick': 'Elegir imagen…',
     'cfg.logoClear': 'Quitar',
-    'cfg.logoHint': 'Se muestra en la barra superior de las páginas públicas. PNG/JPG/GIF/WebP/SVG, hasta ~200 KB.',
+    'cfg.logoHint': 'Se muestra en la barra superior de las páginas públicas. PNG/JPG/GIF/WebP, hasta ~200 KB.',
     'cfg.logoTooLarge': 'Imagen no válida o demasiado grande (máx. ~200 KB).',
     'cfg.legal': 'Aviso de confidencialidad',
     'cfg.legalPh': 'p. ej. Confidencial — no redistribuir',
@@ -6203,12 +6203,28 @@ function showApp() {
 function maybeRedirectNext() {
   try {
     const next = new URLSearchParams(location.search).get('next');
-    if (!next || !/^\/app(\/|$)/.test(next) || next.includes('\\')) return;
+    if (!next) return;
     const target = new URL(next, location.origin);
-    if (target.origin !== location.origin || !/^\/app(\/|$)/.test(target.pathname)) return;
-    const safeNext = target.pathname + target.search + target.hash;
-    // Both the normalized origin and normalized pathname are constrained above.
-    location.replace(safeNext); // nosemgrep: javascript.browser.security.open-redirect.js-open-redirect
+    if (target.origin !== location.origin || (target.pathname !== '/app/' && target.pathname !== '/app')) return;
+    const clean = new URLSearchParams();
+    const shared = target.searchParams.get('shared');
+    if (shared && /^[A-Za-z0-9_-]{1,160}$/.test(shared)) clean.set('shared', shared);
+    const action = target.searchParams.get('action');
+    if (action && ['shares','activity','voice-search','widget','system-health','images','settings'].includes(action)) clean.set('action', action);
+    const focus = target.searchParams.get('focus');
+    if (focus && /^[A-Za-z0-9_-]{1,240}$/.test(focus)) clean.set('focus', focus);
+    const dest = target.searchParams.get('dest');
+    if (dest && dest.length <= 2048) clean.set('dest', dest);
+    const panel = target.searchParams.get('panel');
+    if (panel && /^[A-Za-z0-9_-]{1,80}$/.test(panel)) clean.set('panel', panel);
+    if (target.searchParams.get('opencenter') === '1') clean.set('opencenter', '1');
+    if (target.searchParams.get('paired') === '1') clean.set('paired', '1');
+    const query = clean.toString();
+    try {
+      if (query) sessionStorage.setItem('dx-pwa-post-login-query', '?' + query);
+      else sessionStorage.removeItem('dx-pwa-post-login-query');
+    } catch (_) {}
+    location.replace('/app/');
   } catch (_) {}
 }
 
@@ -7998,7 +8014,7 @@ function renderDashboard() {
   $('dash-volume-trend').innerHTML = svgVolumeTrend(d.daily || []);
   $('dash-success-trend').innerHTML = svgSuccessTrend(d.daily || []);
 
-  $('dash-direction').innerHTML = donutHtml(
+  renderDonut($('dash-direction'),
     [
       { value: tot.down || 0, color: 'var(--accent)', label: t('dash.downloads') },
       { value: tot.up || 0, color: 'var(--ok)', label: t('dash.uploads') },
@@ -8008,7 +8024,7 @@ function renderDashboard() {
   );
 
   const okRate = tot.transfers ? Math.round((tot.completed / tot.transfers) * 100) : 0;
-  $('dash-status').innerHTML = donutHtml(
+  renderDonut($('dash-status'),
     [
       { value: tot.completed || 0, color: 'var(--ok)', label: t('dash.completed') },
       { value: tot.interrupted || 0, color: 'var(--danger)', label: t('dash.interrupted') },
@@ -8050,9 +8066,9 @@ function renderDashboard() {
   );
 
   // ---- Speed & performance ----
-  $('dash-heatmap').innerHTML = heatmapHtml(d.heatmap || [], d.heatMax || 0);
+  renderHeatmap($('dash-heatmap'), d.heatmap || [], d.heatMax || 0);
   const sd = d.sizeDist || { small: 0, medium: 0, large: 0 };
-  $('dash-sizes').innerHTML = donutHtml(
+  renderDonut($('dash-sizes'),
     [
       { value: sd.small || 0, color: 'var(--ok)', label: t('dash.sizeSmall') },
       { value: sd.medium || 0, color: 'var(--accent)', label: t('dash.sizeMedium') },
@@ -8068,14 +8084,14 @@ function renderDashboard() {
 
   // ---- Links & shares ----
   const sh = d.shares || {};
-  $('dash-protection').innerHTML = donutHtml(
+  renderDonut($('dash-protection'),
     [
       { value: sh.protected || 0, color: 'var(--accent)', label: t('dash.protected') },
       { value: sh.open || 0, color: 'var(--faint)', label: t('dash.open') },
     ],
     String(sh.total || 0), t('dash.kpiShares')
   );
-  $('dash-encryption').innerHTML = donutHtml(
+  renderDonut($('dash-encryption'),
     [
       { value: sh.encrypted || 0, color: 'var(--ok)', label: t('dash.encrypted') },
       { value: sh.plain || 0, color: 'var(--faint)', label: t('dash.plain') },
@@ -8087,7 +8103,7 @@ function renderDashboard() {
   // ---- Security ----
   const sec = d.security || {};
   const tf = sec.twoFA || { total: 0, enabled: 0 };
-  $('dash-twofa').innerHTML = donutHtml(
+  renderDonut($('dash-twofa'),
     [
       { value: tf.enabled || 0, color: 'var(--ok)', label: t('dash.twofaOn') },
       { value: Math.max(0, (tf.total || 0) - (tf.enabled || 0)), color: 'var(--danger)', label: t('dash.twofaOff') },
@@ -8232,28 +8248,46 @@ function renderDashboardProxy(r, id) {
 }
 
 // 7×24 usage grid (day-of-week × hour), intensity by count. heat: 168 numbers.
-function heatmapHtml(heat, max) {
-  if (!heat.length || max <= 0) return `<div class="empty sm">${dashEsc(t('dash.empty'))}</div>`;
+function renderHeatmap(target, heat, max) {
+  if (!target) return;
+  target.textContent = '';
+  const values = Array.isArray(heat) ? heat : [];
+  const peak = Number(max) || 0;
+  if (!values.length || peak <= 0) {
+    target.appendChild(el('div', { class: 'empty sm', text: t('dash.empty') }));
+    return;
+  }
   const dayNames = [];
   for (let dd = 0; dd < 7; dd++) {
     const ref = new Date(2024, 0, 7 + dd); // 2024-01-07 is a Sunday → 0=Sun … 6=Sat
     dayNames.push(ref.toLocaleDateString(state.lang, { weekday: 'short' }));
   }
-  let hours = '<span class="hm-day"></span><div class="hm-cells">';
-  for (let h = 0; h < 24; h++) hours += `<span class="hm-hlabel">${h % 6 === 0 ? h : ''}</span>`;
-  hours += '</div>';
-  let rows = '';
+  const heatmap = el('div', { class: 'heatmap' });
+  const axis = el('div', { class: 'hm-row hm-axis' });
+  axis.appendChild(el('span', { class: 'hm-day' }));
+  const hourCells = el('div', { class: 'hm-cells' });
+  for (let h = 0; h < 24; h++) hourCells.appendChild(el('span', { class: 'hm-hlabel', text: h % 6 === 0 ? String(h) : '' }));
+  axis.appendChild(hourCells);
+  heatmap.appendChild(axis);
   for (let dd = 0; dd < 7; dd++) {
-    let cells = '';
+    const row = el('div', { class: 'hm-row' });
+    row.appendChild(el('span', { class: 'hm-day', text: dayNames[dd] }));
+    const cells = el('div', { class: 'hm-cells' });
     for (let h = 0; h < 24; h++) {
-      const v = heat[dd * 24 + h] || 0;
-      const op = v ? (0.12 + 0.88 * (v / max)) : 0;
-      const bg = v ? ` style="background:rgba(59,130,246,${op.toFixed(2)})"` : '';
-      cells += `<span class="hm-cell"${bg} title="${dashEsc(dayNames[dd])} ${h}h — ${v}"></span>`;
+      const raw = Number(values[dd * 24 + h]);
+      const value = Number.isFinite(raw) && raw > 0 ? raw : 0;
+      const cell = el('span', { class: 'hm-cell' });
+      if (value) {
+        const opacity = Math.min(1, Math.max(0.12, 0.12 + 0.88 * (value / peak)));
+        cell.style.background = 'rgba(59,130,246,' + opacity.toFixed(2) + ')';
+      }
+      cell.title = dayNames[dd] + ' ' + h + 'h — ' + value;
+      cells.appendChild(cell);
     }
-    rows += `<div class="hm-row"><span class="hm-day">${dashEsc(dayNames[dd])}</span><div class="hm-cells">${cells}</div></div>`;
+    row.appendChild(cells);
+    heatmap.appendChild(row);
   }
-  return `<div class="heatmap"><div class="hm-row hm-axis">${hours}</div>${rows}</div>`;
+  target.appendChild(heatmap);
 }
 
 function renderExpiring(list) {
@@ -8275,25 +8309,53 @@ function renderExpiring(list) {
 function renderSecurity(sec) {
   const box = $('dash-security');
   if (!box) return;
-  const failed = sec.failedLogins || 0;
-  const locked = sec.lockedIps || [];
-  const recent = sec.recentLogins || [];
-  let html = '<div class="sec-stats">' +
-    `<div class="sec-stat"><span class="sec-num${failed ? ' warn' : ''}">${failed}</span><span class="sec-lbl">${dashEsc(t('dash.failedLogins'))}</span></div>` +
-    `<div class="sec-stat"><span class="sec-num${locked.length ? ' bad' : ''}">${locked.length}</span><span class="sec-lbl">${dashEsc(t('dash.lockedIps'))}</span></div>` +
-    '</div>';
+  box.textContent = '';
+  const failed = Math.max(0, Number(sec && sec.failedLogins) || 0);
+  const locked = Array.isArray(sec && sec.lockedIps) ? sec.lockedIps : [];
+  const recent = Array.isArray(sec && sec.recentLogins) ? sec.recentLogins : [];
+
+  const stats = el('div', { class: 'sec-stats' });
+  const addStat = (value, label, stateClass) => {
+    const stat = el('div', { class: 'sec-stat' });
+    stat.appendChild(el('span', { class: 'sec-num' + (stateClass ? ' ' + stateClass : ''), text: String(value) }));
+    stat.appendChild(el('span', { class: 'sec-lbl', text: label }));
+    stats.appendChild(stat);
+  };
+  addStat(failed, t('dash.failedLogins'), failed ? 'warn' : '');
+  addStat(locked.length, t('dash.lockedIps'), locked.length ? 'bad' : '');
+  box.appendChild(stats);
+
+  const addSubheading = (text) => box.appendChild(el('div', { class: 'sec-sub', text }));
   if (locked.length) {
-    html += `<div class="sec-sub">${dashEsc(t('dash.lockedNow'))}</div><div class="sec-list">` +
-      locked.map((l) => `<div class="sec-item"><span class="sec-ip">${dashEsc(l.ip)}</span>` +
-        `<span class="sec-tag ${l.kind}">${dashEsc(t(l.kind === 'admin' ? 'dash.lockAdmin' : 'dash.lockLink'))}</span></div>`).join('') +
-      '</div>';
+    addSubheading(t('dash.lockedNow'));
+    const list = el('div', { class: 'sec-list' });
+    locked.forEach((entry) => {
+      const row = el('div', { class: 'sec-item' });
+      row.appendChild(el('span', { class: 'sec-ip', text: String((entry && entry.ip) || '') }));
+      const isAdmin = entry && entry.kind === 'admin';
+      row.appendChild(el('span', {
+        class: 'sec-tag ' + (isAdmin ? 'admin' : 'link'),
+        text: t(isAdmin ? 'dash.lockAdmin' : 'dash.lockLink'),
+      }));
+      list.appendChild(row);
+    });
+    box.appendChild(list);
   }
-  html += `<div class="sec-sub">${dashEsc(t('dash.recentLogins'))}</div>`;
-  if (!recent.length) html += `<div class="empty sm">${dashEsc(t('dash.expNone'))}</div>`;
-  else html += '<div class="sec-list">' + recent.map((r) =>
-    `<div class="sec-item"><span class="sec-actor">${dashEsc(r.actor || '—')}</span>` +
-    `<span class="sec-ip">${dashEsc(r.ip || '')}</span><span class="sec-when">${dashEsc(timeAgo(r.at))}</span></div>`).join('') + '</div>';
-  box.innerHTML = html;
+
+  addSubheading(t('dash.recentLogins'));
+  if (!recent.length) {
+    box.appendChild(el('div', { class: 'empty sm', text: t('dash.expNone') }));
+    return;
+  }
+  const recentList = el('div', { class: 'sec-list' });
+  recent.forEach((entry) => {
+    const row = el('div', { class: 'sec-item' });
+    row.appendChild(el('span', { class: 'sec-actor', text: String((entry && entry.actor) || '—') }));
+    row.appendChild(el('span', { class: 'sec-ip', text: String((entry && entry.ip) || '') }));
+    row.appendChild(el('span', { class: 'sec-when', text: timeAgo(entry && entry.at) }));
+    recentList.appendChild(row);
+  });
+  box.appendChild(recentList);
 }
 
 function renderStorage(st) {
@@ -8525,30 +8587,86 @@ function svgSuccessTrend(daily) {
   return `<svg viewBox="0 0 ${W} ${H}" class="barchart dashboard-line-chart" preserveAspectRatio="xMidYMid meet"><line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT + ih}" class="axis"/><line x1="${padL}" y1="${padT + ih}" x2="${W - padR}" y2="${padT + ih}" class="axis"/><text x="2" y="${padT + 4}" class="ax">100%</text><text x="10" y="${padT + ih}" class="ax">0%</text><polyline points="${poly}" fill="none" stroke="var(--ok)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>${dots}</svg>`;
 }
 
-// Two-segment donut with a centred figure and a small legend below.
-function donutHtml(parts, centerText, centerSub) {
-  const total = parts.reduce((s, p) => s + p.value, 0);
+// Donut chart rendered with DOM/SVG nodes only. No dashboard value is ever
+// reinterpreted as markup, which keeps labels safe even when the active locale or
+// future API fields originate from user-controlled DOM state.
+function renderDonut(target, parts, centerText, centerSub) {
+  if (!target) return;
+  target.textContent = '';
+  const safeParts = Array.isArray(parts) ? parts : [];
+  const total = safeParts.reduce((sum, part) => {
+    const value = Number(part && part.value);
+    return sum + (Number.isFinite(value) && value > 0 ? value : 0);
+  }, 0);
+  const NS = 'http://www.w3.org/2000/svg';
   const R = 52, C = 2 * Math.PI * R, cx = 70, cy = 70, sw = 22;
-  let off = 0, segs = '';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 140 140');
+  svg.setAttribute('class', 'donut');
+  const safeColor = (value) => {
+    const color = String(value || '');
+    return /^(?:var\(--[a-z0-9-]+\)|#[0-9a-f]{3,8})$/i.test(color) ? color : 'currentColor';
+  };
+  let offset = 0;
   if (total > 0) {
-    parts.forEach((p) => {
-      if (p.value <= 0) return;
-      const len = (p.value / total) * C;
-      segs += `<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="${p.color}" stroke-width="${sw}" ` +
-        `stroke-dasharray="${len.toFixed(2)} ${(C - len).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}" ` +
-        `transform="rotate(-90 ${cx} ${cy})"><title>${dashEsc(p.label)}: ${p.value}</title></circle>`;
-      off += len;
+    safeParts.forEach((part) => {
+      const value = Number(part && part.value);
+      if (!Number.isFinite(value) || value <= 0) return;
+      const len = (value / total) * C;
+      const circle = document.createElementNS(NS, 'circle');
+      circle.setAttribute('cx', String(cx));
+      circle.setAttribute('cy', String(cy));
+      circle.setAttribute('r', String(R));
+      circle.setAttribute('fill', 'none');
+      circle.setAttribute('stroke', safeColor(part.color));
+      circle.setAttribute('stroke-width', String(sw));
+      circle.setAttribute('stroke-dasharray', len.toFixed(2) + ' ' + (C - len).toFixed(2));
+      circle.setAttribute('stroke-dashoffset', (-offset).toFixed(2));
+      circle.setAttribute('transform', 'rotate(-90 ' + cx + ' ' + cy + ')');
+      const title = document.createElementNS(NS, 'title');
+      title.textContent = String((part && part.label) || '') + ': ' + value;
+      circle.appendChild(title);
+      svg.appendChild(circle);
+      offset += len;
     });
   } else {
-    segs = `<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="var(--border)" stroke-width="${sw}"/>`;
+    const circle = document.createElementNS(NS, 'circle');
+    circle.setAttribute('cx', String(cx));
+    circle.setAttribute('cy', String(cy));
+    circle.setAttribute('r', String(R));
+    circle.setAttribute('fill', 'none');
+    circle.setAttribute('stroke', 'var(--border)');
+    circle.setAttribute('stroke-width', String(sw));
+    svg.appendChild(circle);
   }
-  const legend = parts
-    .map((p) => `<li><span class="lg" style="background:${p.color}"></span>${dashEsc(p.label)} <b>${p.value}</b></li>`)
-    .join('');
-  return `<svg viewBox="0 0 140 140" class="donut">${segs}` +
-    `<text x="${cx}" y="${cy - 2}" text-anchor="middle" class="donut-num">${dashEsc(centerText)}</text>` +
-    `<text x="${cx}" y="${cy + 16}" text-anchor="middle" class="donut-sub">${dashEsc(centerSub || '')}</text></svg>` +
-    `<ul class="donut-legend">${legend}</ul>`;
+  const addText = (y, cls, value) => {
+    const text = document.createElementNS(NS, 'text');
+    text.setAttribute('x', String(cx));
+    text.setAttribute('y', String(y));
+    text.setAttribute('text-anchor', 'middle');
+    text.setAttribute('class', cls);
+    text.textContent = String(value == null ? '' : value);
+    svg.appendChild(text);
+  };
+  addText(cy - 2, 'donut-num', centerText);
+  addText(cy + 16, 'donut-sub', centerSub || '');
+  target.appendChild(svg);
+  const legend = document.createElement('ul');
+  legend.className = 'donut-legend';
+  safeParts.forEach((part) => {
+    const li = document.createElement('li');
+    const swatch = document.createElement('span');
+    swatch.className = 'lg';
+    swatch.style.background = safeColor(part && part.color);
+    li.appendChild(swatch);
+    li.appendChild(document.createTextNode(String((part && part.label) || '') + ' '));
+    const strong = document.createElement('b');
+    const numeric = Number(part && part.value);
+    strong.textContent = String(Number.isFinite(numeric) ? numeric : 0);
+    li.appendChild(strong);
+    legend.appendChild(li);
+  });
+  target.appendChild(legend);
 }
 
 // Horizontal bar list (top links / countries / files / clients). Rows carrying an
@@ -8685,7 +8803,7 @@ function renderImagesDashboard() {
   renderOptimization(d.optimization);
 
   const ls = d.linkStatus || { active: 0, expired: 0, inactive: 0 };
-  $('idash-link-status').innerHTML = donutHtml(
+  renderDonut($('idash-link-status'),
     [
       { value: ls.active || 0, color: 'var(--ok)', label: t('idash.active') },
       { value: ls.expired || 0, color: 'var(--warn)', label: t('idash.expired') },
@@ -8701,7 +8819,7 @@ function renderImagesDashboard() {
   $('idash-storage-growth').innerHTML = svgImageStorageGrowth(d.created || []);
 
   const vv = d.variantViews || { full: 0, thumb: 0, micro: 0 };
-  $('idash-variant-views').innerHTML = donutHtml(
+  renderDonut($('idash-variant-views'),
     [
       { value: vv.full || 0, color: 'var(--accent)', label: t('photo.full') },
       { value: vv.thumb || 0, color: 'var(--ok)', label: t('photo.thumb') },
@@ -8711,7 +8829,7 @@ function renderImagesDashboard() {
   );
 
   const ar = d.activeVsRevoked || { active: 0, revoked: 0 };
-  $('idash-active').innerHTML = donutHtml(
+  renderDonut($('idash-active'),
     [
       { value: ar.active || 0, color: 'var(--ok)', label: t('idash.active') },
       { value: ar.revoked || 0, color: 'var(--faint)', label: t('idash.revokedLbl') },
@@ -9341,7 +9459,7 @@ async function populateConfigPage() {
   $('cfg-banner').value = s.receptionBanner || '';
   if ($('cfg-expiry-presets')) $('cfg-expiry-presets').value = s.expiryPresets || '1h,1d,7d,30d';
   // Branding / watermark
-  cfgLogoData = (typeof s.publicLogo === 'string') ? s.publicLogo : '';
+  cfgLogoData = safeLogoDataUrl(typeof s.publicLogo === 'string' ? s.publicLogo : '');
   renderLogoPreview();
   $('cfg-logo-result').textContent = '';
   $('cfg-legal').value = s.legalNotice || '';
@@ -9388,7 +9506,7 @@ async function populateConfigPage() {
       const full = await api('GET', '/api/settings');
       if (full) {
         state.settings = { ...state.settings, ...full };
-        cfgLogoData = (typeof full.publicLogo === 'string') ? full.publicLogo : '';
+        cfgLogoData = safeLogoDataUrl(typeof full.publicLogo === 'string' ? full.publicLogo : '');
         renderLogoPreview();
       }
     } catch (_) { /* leave the placeholder; the field is refetched on the next open */ }
@@ -9693,14 +9811,29 @@ function connectorConfigCloseAuthWindow() {
   try{if(connectorConfigAuthWindow&&!connectorConfigAuthWindow.closed)connectorConfigAuthWindow.close();}catch(_){}
   connectorConfigAuthWindow=null; connectorConfigOpenedAuthUrl='';
 }
+function connectorConfigSafeAuthUrl(raw) {
+  const value=String(raw||'').trim();
+  const explicitHttps=value.startsWith('https://');
+  const explicitLoopback=value.startsWith('http://localhost')||value.startsWith('http://127.0.0.1')||value.startsWith('http://[::1]');
+  if(!explicitHttps&&!explicitLoopback)return '';
+  try {
+    const parsed=new URL(value);
+    const host=String(parsed.hostname||'').toLowerCase();
+    const loopback=parsed.protocol==='http:'&&['localhost','127.0.0.1','::1','[::1]'].includes(host);
+    if((parsed.protocol!=='https:'&&!loopback)||parsed.username||parsed.password)return '';
+    return parsed.href;
+  } catch (_) { return ''; }
+}
 function connectorConfigOpenAuthUrl(url) {
-  if (!url || connectorConfigOpenedAuthUrl===url) return;
-  connectorConfigOpenedAuthUrl=url;
+  const safeUrl=connectorConfigSafeAuthUrl(url);
+  if (!safeUrl || connectorConfigOpenedAuthUrl===safeUrl) return '';
+  connectorConfigOpenedAuthUrl=safeUrl;
   try {
     if (connectorConfigAuthWindow && !connectorConfigAuthWindow.closed) {
-      connectorConfigAuthWindow.postMessage({type:'dx-oauth-url',url:String(url)},window.location.origin);
+      connectorConfigAuthWindow.postMessage({type:'dx-oauth-url',url:safeUrl},window.location.origin);
     }
   } catch (_) {}
+  return safeUrl;
 }
 function connectorConfigRender(data) {
   connectorConfigSession=data||null; stopConnectorConfigPoll();
@@ -9772,10 +9905,11 @@ function connectorConfigRender(data) {
     return;
   }
   if(data.status==='oauth-starting'||data.status==='oauth-waiting'){
-    connectorConfigSetStatus(data.authUrl?t('connector.oauthWaiting'):t('connector.oauthOpening'));
-    if(data.authUrl){
-      connectorConfigOpenAuthUrl(data.authUrl);
-      if(authLink){authLink.href=data.authUrl;authLink.classList.remove('hidden');}
+    const safeAuthUrl=connectorConfigSafeAuthUrl(data.authUrl);
+    connectorConfigSetStatus(safeAuthUrl?t('connector.oauthWaiting'):t('connector.oauthOpening'));
+    if(safeAuthUrl){
+      connectorConfigOpenAuthUrl(safeAuthUrl);
+      if(authLink){authLink.href=safeAuthUrl;authLink.classList.remove('hidden');}
       if(data.oauthCallbackRequired&&callback)callback.classList.remove('hidden');
     }
     connectorConfigPollTimer=setTimeout(()=>void connectorConfigPoll(),700);
@@ -11042,32 +11176,62 @@ if ($('cfg-bk-restore-file')) $('cfg-bk-restore-file').addEventListener('change'
     } else { out.textContent = t('cfg.bkRestoreFail') + (j && j.error ? ' (' + j.error + ')' : ''); out.className = 'sm cfg-bad'; }
   } catch (e) { out.textContent = t('cfg.bkRestoreFail'); out.className = 'sm cfg-bad'; }
 });
-// Custom logo (kept in memory as a data: URL until the form is saved).
+// Custom logo. User-selected image bytes are decoded and re-encoded through a
+// canvas before the resulting data URL is ever assigned to the DOM. This strips
+// active SVG/HTML payloads and prevents a File input from flowing directly into
+// an executable URL sink.
 let cfgLogoData = '';
+function safeLogoDataUrl(value) {
+  const data = String(value || '').trim();
+  return /^data:image\/(?:png|jpeg|gif|webp);base64,[A-Za-z0-9+/=]+$/.test(data) && data.length <= 262144 ? data : '';
+}
+async function sanitizeLogoFile(file) {
+  const type = String(file && file.type || '').toLowerCase();
+  if (!file || file.size > 200 * 1024 || !['image/png', 'image/jpeg', 'image/gif', 'image/webp'].includes(type)) throw new Error('invalid-logo');
+  if (typeof createImageBitmap !== 'function') throw new Error('image-decoder-unavailable');
+  const bitmap = await createImageBitmap(file);
+  try {
+    if (!bitmap.width || !bitmap.height) throw new Error('invalid-logo');
+    const scale = Math.min(1, 1024 / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('canvas-unavailable');
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const preferred = type === 'image/jpeg' ? 'image/jpeg' : (type === 'image/webp' ? 'image/webp' : 'image/png');
+    let data = canvas.toDataURL(preferred, 0.92);
+    if (!safeLogoDataUrl(data)) data = canvas.toDataURL('image/webp', 0.84);
+    if (!safeLogoDataUrl(data)) data = canvas.toDataURL('image/webp', 0.72);
+    data = safeLogoDataUrl(data);
+    if (!data) throw new Error('logo-too-large');
+    return data;
+  } finally {
+    if (bitmap && typeof bitmap.close === 'function') bitmap.close();
+  }
+}
 function renderLogoPreview() {
   const img = $('cfg-logo-preview'), clr = $('cfg-logo-clear');
   if (!img) return;
-  if (cfgLogoData) { img.src = cfgLogoData; img.classList.remove('hidden'); if (clr) clr.classList.remove('hidden'); }
+  const safe = safeLogoDataUrl(cfgLogoData);
+  if (safe) { img.src = safe; img.classList.remove('hidden'); if (clr) clr.classList.remove('hidden'); }
   else { img.removeAttribute('src'); img.classList.add('hidden'); if (clr) clr.classList.add('hidden'); }
 }
 if ($('cfg-logo-pick')) $('cfg-logo-pick').addEventListener('click', () => $('cfg-logo-file').click());
 if ($('cfg-logo-clear')) $('cfg-logo-clear').addEventListener('click', () => {
   cfgLogoData = ''; renderLogoPreview(); $('cfg-logo-result').textContent = '';
 });
-if ($('cfg-logo-file')) $('cfg-logo-file').addEventListener('change', (ev) => {
+if ($('cfg-logo-file')) $('cfg-logo-file').addEventListener('change', async (ev) => {
   const out = $('cfg-logo-result');
   const file = ev.target.files && ev.target.files[0];
   ev.target.value = '';
   if (!file) return;
-  if (file.size > 200 * 1024) { out.textContent = t('cfg.logoTooLarge'); out.className = 'sm cfg-bad'; return; }
-  const reader = new FileReader();
-  reader.onload = () => {
-    const data = String(reader.result || '');
-    if (data.length > 262144) { out.textContent = t('cfg.logoTooLarge'); out.className = 'sm cfg-bad'; return; }
-    cfgLogoData = data; renderLogoPreview(); out.textContent = '';
-  };
-  reader.onerror = () => { out.textContent = t('cfg.saveFail'); out.className = 'sm cfg-bad'; };
-  reader.readAsDataURL(file);
+  try {
+    cfgLogoData = await sanitizeLogoFile(file);
+    renderLogoPreview(); out.textContent = ''; out.className = 'sm';
+  } catch (_) {
+    out.textContent = t('cfg.logoTooLarge'); out.className = 'sm cfg-bad';
+  }
 });
 // Clear every stored visitor nickname.
 if ($('cfg-clear-names')) $('cfg-clear-names').addEventListener('click', async () => {
@@ -13547,10 +13711,18 @@ function imageBlobToPng(blob) {
 function clipboardImageSupported() {
   return !!(navigator.clipboard && window.ClipboardItem);
 }
+
+function localPhotoMediaUrl(token, ext, variant) {
+  const mediaToken = encodeURIComponent(String(token || ''));
+  if (variant === 'thumb' || variant === 'micro') return '/i/' + mediaToken + '/' + variant;
+  const rawExt = String(ext || 'jpg').toLowerCase();
+  const mediaExt = /^[a-z0-9]{1,10}$/.test(rawExt) ? rawExt : 'jpg';
+  return '/i/' + mediaToken + '.' + encodeURIComponent(mediaExt);
+}
 async function copyPhotoImage(s, btn) {
   if (!clipboardImageSupported()) { toast(t('photo.copyImageFail'), 'err'); return; }
   const p = s.photo || {};
-  const url = '/i/' + s.token + '.' + (p.ext || 'jpg'); // same-origin: the CDN/imageBase host may be unreachable
+  const url = localPhotoMediaUrl(s.token, p.ext); // same-origin: the CDN/imageBase host may be unreachable
   if (btn) btn.disabled = true;
   try {
     const resp = await fetch(url, { credentials: 'same-origin', cache: 'no-store' });
@@ -13727,7 +13899,7 @@ function openPhotoEditor(s) {
   ed.img = new Image();
   ed.img.onload = () => { setRatio('free'); rebake(); };
   ed.img.onerror = () => { toast(t('photo.editLoadFail'), 'err'); close(); };
-  ed.img.src = '/i/' + s.token + '.' + (p.ext || 'jpg');
+  ed.img.src = localPhotoMediaUrl(s.token, p.ext);
 }
 
 function pendingShareDeletionFor(id) {
@@ -14680,7 +14852,7 @@ function showLightboxAt(i) {
   if (i < 0 || i >= lightbox.list.length) return;
   lightbox.idx = i;
   const it = lightbox.list[i];
-  const full = '/i/' + it.token + '.' + it.ext; // same-origin: admin browser can always reach it
+  const full = localPhotoMediaUrl(it.token, it.ext); // same-origin: admin browser can always reach it
   $('lightbox-img').src = full;
   $('lightbox-img').alt = it.name;
   $('lightbox-name').textContent = it.name;
@@ -15454,7 +15626,7 @@ async function generatePhotoVariants(photo) {
   if (!variants.length) return;
   photoVariantJobs.add(photo.id);
   try {
-    const src = '/i/' + photo.token + '.' + (photo.photo.ext || 'jpg');
+    const src = localPhotoMediaUrl(photo.token, photo.photo.ext);
     const img = await new Promise((resolve, reject) => {
       const loaded = new Image();
       loaded.onload = () => resolve(loaded);
@@ -15512,7 +15684,7 @@ async function resizePhotoMini(s) {
   const num = Number(raw.replace(/%/g, '').trim());
   if (!isFinite(num) || num <= 0 || (isPercent ? num > 100 : (num < 16 || num > 4096))) { toast(t('photo.resizeMiniInvalid'), 'err'); return; }
   try {
-    const src = '/i/' + s.token + '.' + (p.ext || 'jpg');
+    const src = localPhotoMediaUrl(s.token, p.ext);
     const img = await new Promise((resolve, reject) => {
       const loaded = new Image();
       loaded.onload = () => resolve(loaded);
@@ -16056,9 +16228,10 @@ function buildPhotoCard(s) {
     // The gallery preview must load SAME-ORIGIN: the configured image domain
     // (imageBase) may be an external/CDN host that the admin browser can't reach.
     // The imageBase URLs are used only for the copy / embed buttons below.
-    const localFull = '/i/' + s.token + '.' + (p.ext || 'jpg');
-    const localThumb = '/i/' + s.token + '/thumb';
-    const localMicro = '/i/' + s.token + '/micro';
+    // Treat server-provided media identifiers as URL components, never as markup.
+    const localFull = localPhotoMediaUrl(s.token, p.ext);
+    const localThumb = localPhotoMediaUrl(s.token, p.ext, 'thumb');
+    const localMicro = localPhotoMediaUrl(s.token, p.ext, 'micro');
     const link = el('a', { class: 'photo-thumb', attrs: { href: localFull, target: '_blank', rel: 'noopener', title: s.name } });
     const img = el('img', { attrs: { loading: 'lazy', alt: s.name } });
     // LQIP blur-up: show the tiny micro instantly (blurred), then
@@ -16525,7 +16698,7 @@ function namedPhotoBlob(blob, name, type, lastModified) {
 function loadPhotoImageElement(file) {
   return new Promise((resolve, reject) => {
     const image = new Image();
-    const url = URL.createObjectURL(file);
+    const url = encodeURI(URL.createObjectURL(file));
     image.onload = () => { URL.revokeObjectURL(url); resolve(image); };
     image.onerror = (error) => { URL.revokeObjectURL(url); reject(error); };
     image.src = url;

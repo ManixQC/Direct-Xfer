@@ -32,7 +32,7 @@ function publicHttpPreflightOptions(onSecurityInit) {
   return {
     applicationContext:{ current:() => null, registerMany:noop },
     config:{
-      APP_NAME:'Direct-Xfer', APP_VERSION:'1.70.21', APP_YEAR:2026,
+      APP_NAME:'Direct-Xfer', APP_VERSION:'1.70.22', APP_YEAR:2026,
       WEB_STORAGE_STAT_CACHE_MS:15000, ACCESS_REQUESTS_MAX:100,
       FULL_IMAGES_DIR:'/images/full', HOST_ROOT:'/host', IMAGE_MAX_BYTES:1024,
       PWA_IMG_EXT:'.jpg', SECRETS_DIR:'/data/secrets',

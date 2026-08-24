@@ -10,7 +10,7 @@ const { createStorageConnectorConfigRoutes } = require('../lib/server/storage-co
 
 const ROOT = path.resolve(__dirname, '..');
 function tempDir(){ return fs.mkdtempSync(path.join(os.tmpdir(),'dx-google-direct-')); }
-const TEST_PRIVATE_KEY = crypto.generateKeyPairSync('rsa', { modulusLength:1024 }).privateKey.export({ type:'pkcs8', format:'pem' });
+const TEST_PRIVATE_KEY = crypto.generateKeyPairSync('rsa', { modulusLength:2048 }).privateKey.export({ type:'pkcs8', format:'pem' });
 function credentials(){
   return {
     type:'service_account', project_id:'direct-xfer-test', private_key_id:'abc123',

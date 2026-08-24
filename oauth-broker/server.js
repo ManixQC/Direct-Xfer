@@ -278,9 +278,9 @@ function start() {
   const server = http.createServer(handle);
   server.headersTimeout = 15000; server.requestTimeout = 30000; server.keepAliveTimeout = 5000;
   server.listen(PORT, HOST, () => {
-    console.log(`[Direct-Xfer OAuth Broker] listening on ${HOST}:${PORT}`);
-    console.log(`[Direct-Xfer OAuth Broker] public URL: ${PUBLIC_URL || '(not configured)'}`);
-    console.log(`[Direct-Xfer OAuth Broker] Google: ${GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET ? 'configured' : 'missing client credentials'}`);
+    // Do not echo environment-derived host, port, public URL or credential state.
+    // Container/orchestrator metadata already exposes the bound port when needed.
+    console.log('[Direct-Xfer OAuth Broker] ready');
   });
   return server;
 }

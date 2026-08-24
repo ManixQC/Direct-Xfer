@@ -7,7 +7,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { StorageConnectorService } = require('../lib/storage-connectors');
 
-const PRIVATE_KEY = crypto.generateKeyPairSync('rsa', { modulusLength:1024 }).privateKey.export({ type:'pkcs8', format:'pem' });
+const PRIVATE_KEY = crypto.generateKeyPairSync('rsa', { modulusLength:2048 }).privateKey.export({ type:'pkcs8', format:'pem' });
 function creds(overrides={}) {
   return {
     type:'service_account', project_id:'direct-xfer-test', private_key_id:'abc123',

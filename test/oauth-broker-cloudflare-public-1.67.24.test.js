@@ -8,7 +8,9 @@ const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
 
 test('public Cloudflare broker implements the Direct-Xfer broker API without localhost callbacks', () => {
   const src = read('oauth-broker/cloudflare-worker/src/index.js');
-  for (const route of ['/healthz','/v1/info','/v1/google/sessions','/v1/google/callback','/v1/google/token']) assert.match(src, new RegExp(route.replace(/\//g,'\\/')));
+  for (const route of ['/healthz','/v1/info','/v1/google/sessions','/v1/google/callback','/v1/google/token']) {
+    assert.ok(src.includes(route), `missing broker route: ${route}`);
+  }
   assert.match(src, /runtime:'cloudflare-workers'/);
   assert.match(src, /callbackUrl:`\$\{origin\}\/v1\/google\/callback`/);
   assert.doesNotMatch(src, /127\.0\.0\.1:53682|localhost:53682/);

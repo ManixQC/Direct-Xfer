@@ -20,7 +20,7 @@ test('proxy diagnostic treats configured Images domain as a distinct public base
   assert.match(server,/configuredImageBase/);
   assert.match(server,/(?:getSettings\(\)|settings\.getSettings\(\))\.linkBase \|\| (?:PUBLIC_URL|config\.PUBLIC_URL)/);
   assert.match(app,/proxy\.msg\.alternate-public-base/);
-  assert.match(html,/app\.js\?v=350/);
+  assert.match(html,/app\.js\?v=352/);
 });
 
 test('real proxy check does not flag main admin host against configured Images host',{timeout:30000},async()=>{

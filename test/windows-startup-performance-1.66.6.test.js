@@ -54,12 +54,12 @@ test('1.69.6 search cache hydration is deferred while transfer-log trimming stay
   assert.match(stateBootstrap, /initAccounts\(\);\n    trimLogIfNeeded\(\);\n    pruneHistory\(\);/);
 });
 
-test('1.70.21 Windows identities are component-scoped instead of release-coupled', () => {
+test('1.70.22 Windows identities are component-scoped instead of release-coupled', () => {
   assert.match(launcher, /LauncherBuild = "launcher149-csharp"/);
   assert.match(launcher, /RuntimeBuild[\s\S]{0,700}?runtime-build\.txt/);
   assert.match(launcher, /RuntimeProtocol = "1"/);
   assert.match(launcher, /ServerHostProtocol = "1"/);
-  assert.match(host, /ServerHostBuild = "serverhost139-csharp"/);
+  assert.match(host, /ServerHostBuild = "serverhost142-csharp"/);
   assert.match(host, /ReadRuntimeBuild\(appDir\)/);
   assert.doesNotMatch(launcher, /1\.70\.1-launcher148-csharp/);
   assert.doesNotMatch(host, /1\.70\.1-launcher148-csharp|1\.70\.1-serverhost121-csharp/);

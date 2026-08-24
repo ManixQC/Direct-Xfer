@@ -1,0 +1,47 @@
+---
+# Direct-Xfer Codacy configuration
+#
+# Keep security-capable analyzers active while removing known low-signal noise
+# from deprecated or incompatible quality linters.
+#
+# JSHint is deprecated by Codacy and produces thousands of false positives for
+# this modern Node/CommonJS codebase (for example require/__dirname globals).
+# ESLint/CodeQL/Opengrep/Semgrep-style security analyzers remain unaffected.
+#
+# TSQLLint targets Microsoft Transact-SQL, while Direct-Xfer SQL files are
+# SQLite / Cloudflare D1 schemas and migrations. Excluding SQL only from
+# TSQLLint avoids invalid SET/foreign-key diagnostics without hiding the files
+# from other analyzers.
+
+engines:
+  jshint:
+    exclude_paths:
+      - "**/*.js"
+
+  tsqllint:
+    exclude_paths:
+      - "**/*.sql"
+
+  duplication:
+    exclude_paths:
+      - "test/**"
+      - "test-historical/**"
+
+  metric:
+    exclude_paths:
+      - "test/**"
+      - "test-historical/**"
+
+# Globally ignore only generated, vendored, dependency, or historical material.
+# Runtime/application source (lib, public, pwa, oauth-broker, Windows sources,
+# Dockerfiles and workflows) stays in scope for security and quality analysis.
+exclude_paths:
+  - "node_modules/**"
+  - "third_party/**"
+  - "test-historical/**"
+  - "coverage/**"
+  - "dist/**"
+  - "build/**"
+  - "releases/**"
+  - "**/*.min.js"
+  - "**/*.min.css"

@@ -11,6 +11,10 @@ const express = require('express');
 const { createHttpApplication } = require('../lib/server/http-application');
 const { csvField } = require('../lib/core-utils');
 
+const TEST_PWA_ID = '0123456789abcdef01234567';
+const TEST_PWA_SECRET = 'abcdefghijklmnopqrstuvwxyzABCDEFGH12345678';
+const TEST_PWA_CREDENTIAL = `${TEST_PWA_ID}.${TEST_PWA_SECRET}`;
+
 function buildHttpApplication() {
   const requestContext = new AsyncLocalStorage();
   const httpApplication = createHttpApplication({
@@ -34,6 +38,13 @@ function buildHttpApplication() {
   httpApplication.app.get('/probe', (_req, res) => res.status(200).json({ ok:true }));
   httpApplication.app.post('/probe', express.json(), (_req, res) => res.status(200).json({ ok:true }));
   httpApplication.app.get('/api/probe', (_req, res) => res.status(200).json({ ok:true }));
+  httpApplication.app.get('/app/cookie-probe', (req, res) => {
+    res.setHeader('Set-Cookie', `dxpwa=${TEST_PWA_CREDENTIAL}; HttpOnly; SameSite=Lax; Path=/app; Max-Age=31536000; Secure`);
+    res.status(200).json({ cookie:String(req.headers.cookie || '') });
+  });
+  httpApplication.app.get('/app/cookie-read', (req, res) => {
+    res.status(200).json({ cookie:String(req.headers.cookie || '') });
+  });
   return httpApplication.app;
 }
 
@@ -157,6 +168,39 @@ test('ASVS V3.5.8 protects authenticated API resources from cross-site subresour
     const sameOriginCompatible = await request(port, { method:'GET', path:'/api/probe' });
     assert.equal(sameOriginCompatible.status, 200);
     assert.equal(sameOriginCompatible.headers['cross-origin-resource-policy'], 'same-origin');
+  });
+});
+
+test('ASVS V3.3.3 rewrites newly issued HTTPS PWA bearer cookies to __Host-', async () => {
+  await withServer(async (port) => {
+    const response = await request(port, {
+      path:'/app/cookie-probe',
+      headers:{ 'x-forwarded-proto':'https' },
+    });
+    assert.equal(response.status, 200);
+    const cookies = response.headers['set-cookie'] || [];
+    const hostCookie = cookies.find((value) => String(value).startsWith('__Host-dxpwa='));
+    assert.ok(hostCookie);
+    assert.match(hostCookie, /; Path=\//);
+    assert.match(hostCookie, /; Secure(?:;|$)/);
+    assert.doesNotMatch(hostCookie, /; Domain=/i);
+    assert.equal(cookies.some((value) => String(value).startsWith('dxpwa=')), false);
+  });
+});
+
+test('ASVS V3.3.3 aliases __Host PWA bearer inbound without trusting a shadow cookie', async () => {
+  await withServer(async (port) => {
+    const response = await request(port, {
+      path:'/app/cookie-read',
+      headers:{
+        'x-forwarded-proto':'https',
+        cookie:`dxpwa=${TEST_PWA_ID}.AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA; __Host-dxpwa=${TEST_PWA_CREDENTIAL}`,
+      },
+    });
+    assert.equal(response.status, 200);
+    const received = JSON.parse(response.body).cookie;
+    assert.match(received, new RegExp(`(?:^|; )dxpwa=${TEST_PWA_CREDENTIAL.replace('.', '\\.')}(?:;|$)`));
+    assert.doesNotMatch(received, /dxpwa=0123456789abcdef01234567\.A{32}(?:;|$)/);
   });
 });
 

@@ -2,11 +2,11 @@
 # Direct-Xfer Codacy configuration
 #
 # Keep security-capable analyzers active while removing known low-signal noise
-# from deprecated or incompatible quality linters.
+# from deprecated, incompatible or operational-only quality linters.
 #
 # JSHint is deprecated by Codacy and produces thousands of false positives for
 # this modern Node/CommonJS codebase (for example require/__dirname globals).
-# ESLint/CodeQL/Opengrep/Semgrep-style security analyzers remain unaffected.
+# ESLint/CodeQL/Opengrep-style security analyzers remain unaffected.
 #
 # TSQLLint targets Microsoft Transact-SQL, while Direct-Xfer SQL files are
 # SQLite / Cloudflare D1 schemas and migrations. Excluding SQL only from
@@ -20,7 +20,25 @@ engines:
 
   tsqllint:
     exclude_paths:
+      - "oauth-broker/cloudflare-worker/migrations/**"
+      - "lib/assets/*.sql"
       - "**/*.sql"
+
+  # SignPath documentation intentionally contains literal public URLs required
+  # for release/signing instructions. Those URL-style notes do not represent
+  # code-quality or security defects.
+  remark-lint:
+    exclude_paths:
+      - "signpath/**"
+      - "CODE_SIGNING_POLICY.md"
+
+  # These are interactive/operator PowerShell helpers. PSScriptAnalyzer mainly
+  # reports Write-Host/ShouldProcess presentation notes here, while security
+  # analyzers still inspect the files normally.
+  psscriptanalyzer:
+    exclude_paths:
+      - ".github/scripts/prune-windows-node-modules.ps1"
+      - "oauth-broker/cloudflare-worker/scripts/deploy.ps1"
 
   duplication:
     exclude_paths:

@@ -180,9 +180,22 @@ jobs:
               updated = text
               for old in OLD_VERSIONS:
                   updated = updated.replace(old, NEW)
+                  escaped_old = old.replace('.', '\\.')
+                  escaped_new = NEW.replace('.', '\\.')
+                  updated = updated.replace(escaped_old, escaped_new)
               updated = updated.replace(OLD_BUILD, NEW_BUILD).replace(OLD_CACHE, NEW_CACHE)
               if updated != text:
                   path.write_text(updated, encoding='utf-8', newline='\n')
+
+          stale_assertions = []
+          for path in Path('test').rglob('*.js'):
+              text = path.read_text(encoding='utf-8')
+              for old in OLD_VERSIONS:
+                  escaped_old = old.replace('.', '\\.')
+                  if escaped_old in text:
+                      stale_assertions.append(f'{path}: {escaped_old}')
+          if stale_assertions:
+              raise RuntimeError('Stale escaped release assertions remain: ' + ', '.join(stale_assertions))
 
           for rel in ('package.json', 'package-lock.json', 'oauth-broker/package.json', 'oauth-broker/cloudflare-worker/package.json'):
               json.loads(Path(rel).read_text(encoding='utf-8'))

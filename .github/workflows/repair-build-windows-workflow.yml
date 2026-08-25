@@ -21,25 +21,44 @@ jobs:
           from pathlib import Path
 
           path = Path('.github/workflows/build-windows-csharp.yml')
-          text = path.read_text(encoding='utf-8')
+          lines = path.read_text(encoding='utf-8').splitlines(keepends=True)
+          output = []
+          conflicts = 0
+          i = 0
 
-          replacements = {
-              "<<<<<<< HEAD\nrun-name: v1.71.3\n=======\nrun-name: v1.71.4\n>>>>>>> eb50626 (v1.71.4)": "run-name: v1.71.4",
-              "<<<<<<< HEAD\n      DX_VERSION: '1.71.3'\n=======\n      DX_VERSION: '1.71.4'\n>>>>>>> eb50626 (v1.71.4)": "      DX_VERSION: '1.71.4'",
-              "<<<<<<< HEAD\n          name: Direct-Xfer-1.71.3-Windows-CSharp\n          path: dist/Direct-Xfer-1.71.3-Windows-CSharp/**\n=======\n          name: Direct-Xfer-${{ env.DX_VERSION }}-Windows-CSharp\n          path: dist/Direct-Xfer-${{ env.DX_VERSION }}-Windows-CSharp/**\n>>>>>>> eb50626 (v1.71.4)": "          name: Direct-Xfer-${{ env.DX_VERSION }}-Windows-CSharp\n          path: dist/Direct-Xfer-${{ env.DX_VERSION }}-Windows-CSharp/**",
-              "<<<<<<< HEAD\n          name: Direct-Xfer-Setup-1.71.3\n          path: dist/installer/Direct-Xfer-Setup-1.71.3.exe\n=======\n          name: Direct-Xfer-Setup-${{ env.DX_VERSION }}\n          path: dist/installer/Direct-Xfer-Setup-${{ env.DX_VERSION }}.exe\n>>>>>>> eb50626 (v1.71.4)": "          name: Direct-Xfer-Setup-${{ env.DX_VERSION }}\n          path: dist/installer/Direct-Xfer-Setup-${{ env.DX_VERSION }}.exe",
-          }
+          while i < len(lines):
+              if lines[i].startswith('<<<<<<< '):
+                  conflicts += 1
+                  i += 1
+                  while i < len(lines) and not lines[i].startswith('======='):
+                      i += 1
+                  if i >= len(lines):
+                      raise SystemExit('Malformed merge conflict: missing separator')
+                  i += 1
+                  chosen = []
+                  while i < len(lines) and not lines[i].startswith('>>>>>>> '):
+                      chosen.append(lines[i])
+                      i += 1
+                  if i >= len(lines):
+                      raise SystemExit('Malformed merge conflict: missing end marker')
+                  output.extend(chosen)
+                  i += 1
+                  continue
+              output.append(lines[i])
+              i += 1
 
-          for old, new in replacements.items():
-              if old not in text:
-                  raise SystemExit(f'Expected conflict block not found:\n{old}')
-              text = text.replace(old, new, 1)
+          if conflicts != 4:
+              raise SystemExit(f'Expected 4 merge conflicts, found {conflicts}')
 
+          repaired = ''.join(output)
           for marker in ('<<<<<<<', '=======', '>>>>>>>'):
-              if marker in text:
+              if marker in repaired:
                   raise SystemExit(f'Unresolved merge marker remains: {marker}')
 
-          path.write_text(text, encoding='utf-8', newline='\n')
+          if "run-name: v1.71.4" not in repaired or "DX_VERSION: '1.71.4'" not in repaired:
+              raise SystemExit('The repaired workflow does not identify release 1.71.4')
+
+          path.write_text(repaired, encoding='utf-8', newline='\n')
       - name: Commit repaired workflow
         shell: bash
         run: |

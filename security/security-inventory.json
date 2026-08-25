@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-08-25T21:11:40.013Z",
-  "version": "1.71.6",
+  "generatedAt": "2026-08-25T22:46:37.718Z",
+  "version": "1.71.7",
   "categories": {
     "crypto": [
       {
@@ -1150,7 +1150,7 @@
       },
       {
         "file": "lib/server/webauthn-service.js",
-        "line": 164,
+        "line": 181,
         "text": "const key = crypto.createPublicKey({ key: jwk, format: 'jwk' });"
       },
       {
@@ -3325,7 +3325,7 @@
       {
         "file": "test/pwa-admin-features-15-19-21-1.64.0.test.js",
         "line": 196,
-        "text": "const asset = await fetch(base + '/app/admin-audit-connectors.js?v=450');"
+        "text": "const asset = await fetch(base + '/app/admin-audit-connectors.js?v=451');"
       },
       {
         "file": "test/pwa-admin-features-15-19-21-1.64.0.test.js",
@@ -3375,7 +3375,7 @@
       {
         "file": "test/pwa-admin-features-3-7-1.64.0.test.js",
         "line": 218,
-        "text": "const publicAsset = await fetch(base + '/app/admin-advanced.js?v=450');"
+        "text": "const publicAsset = await fetch(base + '/app/admin-advanced.js?v=451');"
       },
       {
         "file": "test/pwa-admin-features-3-7-1.64.0.test.js",
@@ -3465,12 +3465,12 @@
       {
         "file": "test/pwa-mobile-features-24-25-27-29-31-42-45-46-47-1.64.0.test.js",
         "line": 150,
-        "text": "const mod = await fetch(base + '/app/mobile-intelligence.js?v=450');"
+        "text": "const mod = await fetch(base + '/app/mobile-intelligence.js?v=451');"
       },
       {
         "file": "test/pwa-mobile-features-24-25-27-29-31-42-45-46-47-1.64.0.test.js",
         "line": 154,
-        "text": "const r = await fetch(base + '/app/' + name + '?v=450');"
+        "text": "const r = await fetch(base + '/app/' + name + '?v=451');"
       },
       {
         "file": "test/pwa-routes-refactor.test.js",

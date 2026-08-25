@@ -793,7 +793,13 @@ namespace DirectXfer.WindowsLauncher
                 var payload = Json.Deserialize<Dictionary<string, object?>>(response.Body);
                 var ticket = GetString(payload, "ticket");
                 if (!GetBool(payload, "ok") || string.IsNullOrEmpty(ticket)) throw new InvalidDataException();
-                var url = scheme + "://127.0.0.1:" + _runtimePort.ToString(CultureInfo.InvariantCulture) +
+                // Browser-facing loopback URLs use localhost rather than a numeric
+                // loopback address. WebAuthn treats http://localhost as its explicit
+                // local-development secure-origin exception, whereas 127.0.0.1 is not
+                // a portable RP-ID/origin across browsers (notably Firefox on Windows).
+                // Keep backend supervision probes on 127.0.0.1; only human-facing
+                // browser navigation is canonicalized.
+                var url = scheme + "://localhost:" + _runtimePort.ToString(CultureInfo.InvariantCulture) +
                     "/__dx_launcher/reset-admin-password?ticket=" + Uri.EscapeDataString(ticket) +
                     "&lang=" + Uri.EscapeDataString(_config.language);
                 OpenUrl(url);
@@ -839,7 +845,11 @@ namespace DirectXfer.WindowsLauncher
         private void OpenRuntimeUrl()
         {
             if (_runtimePort <= 0) return;
-            OpenUrl(_runtimeScheme + "://127.0.0.1:" + _runtimePort.ToString(CultureInfo.InvariantCulture) + "/");
+            // Use the standards-defined localhost WebAuthn origin for the browser.
+            // The supervised Node process still binds/probes 127.0.0.1 internally,
+            // but opening the UI on a numeric loopback can make passkey ceremonies
+            // fail immediately before Windows Hello/security-key UI is displayed.
+            OpenUrl(_runtimeScheme + "://localhost:" + _runtimePort.ToString(CultureInfo.InvariantCulture) + "/");
         }
 
         private void OpenLogs()

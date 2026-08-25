@@ -111,7 +111,7 @@ test('launcher session parsing is bounded and stale optional download work is cl
 });
 
 test('default Windows payload still excludes rclone and Tesseract in 1.69.6', () => {
-  assert.match(workflow, /DX_VERSION: '1\.71\.6'/);
+  assert.match(workflow, /DX_VERSION: '1\.71\.7'/);
   assert.doesNotMatch(workflow, /downloads\.rclone\.org|tesseract-ocr-w64-setup/);
   assert.match(workflow, /Optional Windows component leaked into the default payload/);
 });

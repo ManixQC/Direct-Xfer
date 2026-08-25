@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - '.github/workflows/repair-release-1.71.5.yml'
+      - '.github/workflows/build-windows-csharp.yml'
 
 permissions:
   contents: write
@@ -148,6 +149,18 @@ jobs:
           NEW_BUILD = 'pwa468'
           OLD_CACHE = 'v=448'
           NEW_CACHE = 'v=449'
+
+          windows_workflow_path = Path('.github/workflows/build-windows-csharp.yml')
+          windows_workflow = windows_workflow_path.read_text(encoding='utf-8')
+          expected_windows_markers = (
+              f'run-name: v{NEW}',
+              f"DX_VERSION: '{NEW}'",
+          )
+          missing_windows_markers = [marker for marker in expected_windows_markers if marker not in windows_workflow]
+          if missing_windows_markers:
+              raise RuntimeError(
+                  'Windows release workflow is not synchronized with ' + NEW + ': ' + ', '.join(missing_windows_markers)
+              )
 
           for rel in ('package.json', 'oauth-broker/package.json', 'oauth-broker/cloudflare-worker/package.json'):
               path = Path(rel)

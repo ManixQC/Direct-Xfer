@@ -1,136 +1,153 @@
 # Direct-Xfer — OWASP ASVS 5.0.0 Level 3 audit
 
-Audit baseline date: 2026-08-24  
+Audit date: 2026-08-24  
 Target: OWASP Application Security Verification Standard 5.0.0, Level 3  
 Repository: `ManixQC/Direct-Xfer`  
-Initial baseline commit: `3d2c0b5c668c9136a05490b25b76f4166a5940e8`  
-Requirement matrix completion head: `e97405717a2cdfc1e806354e3786b477c983b12f`
+Release candidate: Direct-Xfer `1.70.24`  
+Baseline input: Direct-Xfer `1.70.23` ASVS-updated archive  
+Detailed matrix: `security/ASVS-5.0.0-L3-MATRIX.md`
+
+## Release verification result
+
+The 1.70.24 source release candidate is green on the repository-verifiable ASVS gates performed for this release:
+
+- ASVS regression suite: `node --test test/asvs-l3-*.test.js` — **64 passed, 0 failed, 0 skipped**.
+- Full regression suite: `npm test` — **1081 passed, 0 failed, 0 skipped**.
+- Static ASVS audit: **PASS** — 124 production JavaScript source files scanned, 10 reviewed decoding sites, dynamic `eval`/`Function`/`RegExp` and legacy parser boundaries rejected by policy.
+- Security inventory regenerated for 1.70.24 — **897 inventory entries** across crypto, process launch, outbound communication and filesystem-sensitive operations.
+- Windows ServerHost critical runtime manifest: **102 entries, 0 stale hashes** after final synchronization.
+- CycloneDX SBOM refreshed to the 1.70.24 root component.
+
+The local `npm audit` registry call could not be completed in the release workspace because DNS resolution for `registry.npmjs.org` returned `EAI_AGAIN`. Dependency vulnerability scanning therefore remains release/deployment evidence under V15.2.1 and must be re-run in connected CI before a formal L3 verification claim. The source release is not represented as having passed a scanner that did not execute.
 
 ## Scope and interpretation
 
-Level 3 includes all applicable Level 1 and Level 2 requirements. The repository/static review can verify implementation properties, but deployment controls such as reverse-proxy behavior, TLS cipher negotiation, HSTS preload, OCSP/ECH, host time synchronization, HSM-backed key custody and remote log collection require operational evidence.
+ASVS Level 3 includes all applicable Level 1 and Level 2 requirements. This repository audit distinguishes:
 
-The detailed working matrix is `security/ASVS-5.0.0-L3-MATRIX.md`.
+- controls that can be verified from source, tests, generated inventories and release artifacts; and
+- controls whose truth depends on the deployed environment, such as reverse-proxy request normalization, negotiated TLS ciphers, certificate trust/revocation, ECH, host clock synchronization, actual Vault/KMS/HSM isolation, hardware authenticator provenance, remote SIEM separation and host memory protections.
 
-**All 345 ASVS 5.0.0 requirements have now been individually triaged.** This is not a certification claim. `PASS` is repository evidence at the current review depth; `REVIEW` and `MANUAL` remain open verification work, and every `N/A` decision must be independently reviewed before claiming Level 3.
+This document is **not a certification claim**. Direct-Xfer 1.70.24 provides an enforceable `ASVS_L3_MODE` and a deployment preflight, but an installation must also satisfy the manual evidence in `security/ASVS-L3-DEPLOYMENT.md` before it can be described as verified against ASVS L3.
 
 ## Requirement status
 
+All **345** ASVS 5.0.0 requirements are individually triaged.
+
 | Status | Count |
 |---|---:|
-| PASS | 88 |
-| PARTIAL | 85 |
-| FAIL | 57 |
-| N/A | 86 |
-| REVIEW | 18 |
-| MANUAL | 11 |
+| PASS | 191 |
+| PARTIAL | 43 |
+| FAIL | 0 |
+| N/A | 89 |
+| REVIEW | 0 |
+| MANUAL | 22 |
 | **Total** | **345** |
 
 Status vocabulary:
 
-- **PASS** — verified from repository evidence at the current review depth.
-- **PARTIAL** — a relevant control exists but does not satisfy the complete requirement or every path.
-- **FAIL** — an applicable confirmed gap exists.
-- **N/A** — the relevant technology/functionality is not used in the audited scope.
-- **MANUAL** — production/deployment evidence is required.
-- **REVIEW** — deeper source/path verification is still required.
+- **PASS** — repository evidence demonstrates the requirement at the current review depth.
+- **PARTIAL** — relevant controls exist, but complete path-by-path assurance or a remaining design condition is not yet proven.
+- **FAIL** — a confirmed applicable gap. There are none in this release candidate.
+- **N/A** — the relevant technology/functionality is not present in the audited scope.
+- **MANUAL** — production/deployment evidence is necessary.
+- **REVIEW** — unresolved source review. There are none in this release candidate.
 
-## Chapter summary
+A formal ASVS L3 verification still requires every applicable `PARTIAL` to be closed and every `MANUAL` item to have retained production-like evidence. The zero-FAIL result means no known applicable requirement is deliberately left completely unimplemented in the L3 source profile; it does not convert incomplete assurance into PASS.
 
-| Chapter | Area | Current status | Main remaining blockers |
-|---|---|---|---|
-| V1 | Encoding and Sanitization | PARTIAL | CSV leading-NUL formula injection, remaining sink/canonicalization/ReDoS/SMTP reviews. |
-| V2 | Validation and Business Logic | PARTIAL | Missing formal validation/business-limit documentation and incomplete transaction/anti-automation mapping. |
-| V3 | Web Frontend Security | PARTIAL | Cookie prefixes/Secure profile, HSTS subdomains/preload, CSP reporting, authenticated-resource isolation and external redirect confirmation. |
-| V4 | API and Web Service | PARTIAL/MANUAL | No global HTTP method allowlist; proxy/request-smuggling and HTTP/2/3 behavior need deployment evidence. |
-| V5 | File Handling | PARTIAL | Universal content/type validation, per-user storage quotas and decoded-image pixel caps; ClamAV remains optional. |
-| V6 | Authentication | PARTIAL | L3 hardware-backed phishing-resistant MFA not mandatory; common/breached-password screening, enumeration and recovery/reset lifecycle gaps remain. |
-| V7 | Session Management | PARTIAL | Idle/absolute expiry are fixed; factor-change session invalidation, self-service session control and step-up re-authentication remain. |
-| V8 | Authorization | PARTIAL | Missing formal function/data/field/context policy and adaptive/continuous authorization controls. |
-| V9 | Self-contained Tokens | N/A | No application JWT/self-contained session/token format is used; N/A rationale still needs independent review. |
-| V10 | OAuth and OIDC | PARTIAL/N/A | Google client flow has state+PKCE and least-privilege scopes; same-session transaction-binding assurance needs stronger documentation/evidence. Authorization-server/OIDC requirements are N/A to Direct-Xfer's role. |
-| V11 | Cryptography | PARTIAL | Formal crypto inventory/lifecycle/PQC plan absent; RSA-2048 remains in some paths; HSM/in-use protections absent. |
-| V12 | Secure Communication | PARTIAL/MANUAL | TLS version/cipher/OCSP/ECH/public-cert properties depend on deployment; plain LAN HTTP remains intentionally supported. |
-| V13 | Configuration | PARTIAL | No complete egress/resource/secrets policy; L3 HSM/isolated crypto module absent; unused HTTP methods not explicitly blocked. |
-| V14 | Data Protection | PARTIAL | No formal data classification; capability tokens appear in share URLs; optional login vault stores reusable encrypted passwords in IndexedDB. |
-| V15 | Secure Coding and Architecture | PARTIAL | Missing remediation SLA, complete SBOM/risky/dangerous component inventories and deeper concurrency/TOCTOU reviews. |
-| V16 | Security Logging and Error Handling | PARTIAL | Missing log inventory, L3 all-authorization-decision logging and logically separate remote security-log sink. |
-| V17 | WebRTC | N/A | No WebRTC/TURN/DTLS-SRTP stack is present. |
+## 1.70.24 L3 security profile
 
-## High-confidence implemented controls
+`ASVS_L3_MODE=true` changes Direct-Xfer from compatibility behavior to a fail-closed security profile. The profile now includes:
 
-- Per-response cryptographic CSP nonce, `object-src 'none'`, `base-uri 'none'`, COOP, nosniff, no-referrer and frame denial.
-- Timing-safe CSRF enforcement for administrator mutations and per-device CSRF controls for PWA mutations.
-- Bounded upload/download/ZIP/OCR/native-tool processing and controlled filesystem paths.
-- Parameterized D1 SQL queries and shell-free `spawn`/`execFile` argument arrays.
-- Salted scrypt password/recovery-code hashing with bounded asynchronous work.
-- One-time TOTP counters with exact current 30-second-step acceptance.
-- 256-bit stateful administrator session identifiers with rotation, backend revocation, absolute expiry and independent inactivity expiry.
-- WebAuthn challenges are server-generated with cryptographic randomness, origin/RP checks, user presence and user verification.
-- Google OAuth broker uses random state, PKCE `S256`, constrained provider URLs and allowlisted Drive scopes with `drive.file` default.
-- AES-256-GCM for application-managed state/secret encryption and Ed25519 signed audit proof exports.
-- Tamper-evident security audit journal with HMAC chaining and structured records.
-- Docker production runtime drops root privileges, clears supplementary groups/capabilities and enables `no-new-privs`.
+- HTTPS-only application traffic, with only the explicit loopback liveness exception.
+- HSTS with `includeSubDomains` and `preload` on the strict HTTPS profile.
+- Administrator API access restricted to phishing-resistant passkey-authenticated sessions; password/TOTP sessions are bootstrap/recovery transition sessions only.
+- Recent strong-authentication step-up for sensitive administrator mutations.
+- Session rotation, absolute/inactivity expiry, per-account concurrency caps, sibling-session invalidation after factor changes, and L3 IP/User-Agent context binding.
+- Self-service session listing/revocation with immediate reauthentication requirements and owner/admin controls for other accounts.
+- Fresh owner identities that are non-predictable; predictable owner names are rejected when enabling L3.
+- WebAuthn username anti-enumeration using normalized phantom work/response shape, UV requirements, origin/RP/challenge binding, and RSA-3072 minimum for RS256 credentials.
+- Generated account-reset credentials rather than administrator-selected replacement passwords.
+- Public-share independent authentication in L3, so the URL token alone is not sufficient authorization.
+- Public upload extension/content correspondence checks, executable/script masquerading rejection, passive-only SVG validation, decoded-image pixel limits, L3 per-sender quota requirements and ClamAV fail-closed behavior.
+- Centralized egress allowlisting for security-sensitive HTTP(S), OAuth/broker, storage/backup, SMTP/webhook and remote-audit boundaries; wildcard allowlists are not accepted by the L3 startup gate.
+- Redirect refusal on security-sensitive outbound clients, reducing allowlist-to-redirect SSRF bypasses.
+- SMTP CR/LF/NUL header rejection and bounded header values.
+- Canonical request handling with rejection of duplicated/malformed query encodings before Express in L3.
+- Central `Cache-Control: no-store` on authenticated/API responses and cross-site API read/mutation rejection through Fetch Metadata protections.
+- Browser private-state purge on explicit L3 logout and prohibition on persistence of E2E destination keys in L3.
+- Explicit scrypt parameters for password and DATA_KEY derivation (`N=16384`, `r=8`, `p=1`, 64 MiB maximum memory) and a 128-bit minimum entropy floor for non-guessable capability/recovery secrets.
+- TLS managed leaf and Local-CA key generation at RSA-3072, with L3 rejection of weaker managed material rather than compatibility fallback.
+- Structured security logging with HMAC-chain audit integrity, Ed25519 proof support, normalized authentication method/result metadata, and centralized logging of both denied and successful L3 administrator authorization decisions.
+- Mandatory HTTPS remote audit sink declaration plus deployment evidence that the sink is logically separate.
+- L3 startup declarations for isolated secrets/crypto provider, clock synchronization and host memory protection.
 
-## Confirmed priority gaps
+## Security documentation and generated evidence
 
-### P0 — Level 3 authentication assurance
+The release contains the following normative/supporting evidence:
 
-| Requirement | Gap |
-|---|---|
-| V6.3.3 | Password/TOTP still permits privileged access without a mandatory hardware-backed phishing-resistant factor. Current WebAuthn registration uses no attestation proof sufficient to establish approved hardware provenance. |
-| V7.5.3 | Highly sensitive operations do not consistently require a fresh step-up factor. |
-| V13.3.1 / V13.3.3 | L3 hardware-backed secret custody / isolated crypto module is not present. |
+- `security/ASVS-L3-SECURITY-SPEC.md` — validation/business rules, browser baseline, authentication assurance, session/authorization policy, public-link model, cryptographic inventory, data classification, egress policy, dependency policy and logging inventory.
+- `security/ASVS-L3-DEPLOYMENT.md` — production checklist and deployment-only verification evidence.
+- `security/ASVS-5.0.0-L3-MATRIX.md` — requirement-by-requirement status and evidence.
+- `security/asvs-static-audit.json` — generated static policy audit.
+- `security/security-inventory.json` — generated sensitive-boundary inventory.
+- `security/sbom.cdx.json` — CycloneDX component inventory.
+- `security/ASVS-L3-RELEASE-EVIDENCE.md` — release-candidate gate results and outstanding manual checks.
 
-### P1 — security correctness and abuse resistance
+## Remaining PARTIAL themes
 
-| Requirement | Gap |
-|---|---|
-| V1.2.10 | `csvField()` does not currently prefix a leading NUL before spreadsheet export. |
-| V3.3.1 / V3.3.3 | L3 HTTPS cookie prefixes and unconditional Secure semantics are not available across all modes. |
-| V3.4.7 | CSP violation reporting is missing. |
-| V3.7.3 | OAuth bridge external redirects do not provide a cancel/confirmation step. |
-| V4.1.4 / V13.4.4 | Unused HTTP methods such as TRACE are not globally rejected. |
-| V5.2.2 | Extension/content correspondence is not universally verified for all accepted files. |
-| V5.2.4 | No general per-user stored-byte and file-count quota exists. |
-| V5.2.6 | No uniform decoded-pixel limit protects image processing from pixel floods. |
-| V6.2.4 / V6.2.11 / V6.2.12 | Common/context-specific/breached-password screening is absent. |
-| V6.3.8 | Username-scoped WebAuthn options can reveal passkey/account availability. |
-| V6.4.1 | Bootstrap password has forced change but no short issuance/first-use expiration. |
-| V6.4.6 | Owner can choose another account's replacement password instead of initiating a user-controlled reset. |
-| V7.4.3 / V7.5.1 / V7.5.2 | MFA/passkey changes and session management do not yet meet the full fresh-authentication/session-revocation requirements. |
-| V11.2.3 | Managed TLS leaf and accepted RS256 WebAuthn RSA keys can be 2048-bit; L3's ~128-bit target requires RSA-3072-equivalent strength. |
-| V14.3.3 | Remember-password vault stores a reusable encrypted password in IndexedDB, which ASVS disallows for browser storage. |
-| V16.3.2 | L3 requires logging all authorization decisions/sensitive-data access; current audit coverage is not exhaustive. |
-| V16.4.3 | No logically separate remote security-log sink is enabled by default. |
+The 43 remaining `PARTIAL` requirements are not hidden failures. They are intentionally retained where the source has controls but the audit does not yet claim complete assurance across every relevant path. The main themes are:
 
-### P2 — assurance and documentation
+1. **Complete sink/source tracing** — contextual encoding, DOM sinks, response media types, field-level minimization, object/mass-assignment boundaries and constant-time cryptographic decisions.
+2. **Application-wide invariants and concurrency assurance** — numeric ranges, resource lifecycles, deserialization shapes, multi-step business ordering, rollback/transactionality, limited-resource anti-automation and filesystem/shared-state TOCTOU/deadlock/fairness review.
+3. **Authorization completeness** — object and field-level authorization maps are documented and strongly implemented in high-risk domains, but every endpoint/DTO has not been independently traced to closure.
+4. **Integration assurance** — same-user-agent binding of remote-browser OAuth broker transactions and security properties of administrator-selected external storage transports remain partly environment/provider dependent.
+5. **Cryptographic lifecycle depth** — constant-time/oracle review and in-use plaintext lifetime/zeroization guarantees remain broader than what JavaScript/Node can prove from source alone.
+6. **Data lifecycle completeness** — metadata stripping, retention classification and minimum-field response review are not yet proven for every user-submitted file/record type.
+7. **Logging/error coverage** — the central audit surface is materially stronger, but exhaustive logging of every validation/business/anti-automation bypass and every security-control failure has not been independently traced.
+8. **External service degradation** — timeouts, bounded queues and retries are present widely, but application-wide circuit-breaker/failure-mode assurance is not complete.
 
-- Application validation/business-rule specification.
-- Browser support/security-feature policy.
-- Authorization matrix including function/data/field/context rules.
-- Cryptographic inventory, key lifecycle and PQC migration plan.
-- External communication/egress/resource-management inventory.
-- Sensitive-data classification and retention policy.
-- Vulnerability remediation SLA, SBOM and risky/dangerous component inventory.
-- Logging inventory, retention and access policy.
-- Production verification checklist for TLS/proxy/HSTS/OCSP/ECH/time/log transport.
+## Deployment-only MANUAL evidence
 
-## Remediation log
+The 22 `MANUAL` rows principally cover:
 
-| Date | Requirement(s) | Change | Commit(s) |
-|---|---|---|---|
-| 2026-08-24 | V6.5.1, V6.5.5 | One-time durable TOTP counters, exact 30-second acceptance window, enrollment-code consumption and replay regression tests. | `0a2ff20b`, `97a145fb`, `20175cd2`, `d3a84371` |
-| 2026-08-24 | V7.3.1, V7.3.2 | Independent administrator inactivity timeout plus absolute-lifetime regression coverage. | `3b38f214`, `63dcc36f` |
-| 2026-08-24 | V1–V17 | Requirement-by-requirement triage completed for all 345 ASVS 5.0.0 requirements. | `8bf1d413`, `e9740571` |
+- HSTS preload registration on a stable public domain.
+- Reverse-proxy canonical HTTP→HTTPS behavior, trusted proxy headers, request-smuggling defenses and HTTP/2/3 validation.
+- Hardware-backed WebAuthn authenticator evidence and lost-factor identity-proofing procedures.
+- Forward-secret TLS key exchange/cipher suites, OCSP/revocation, public certificate trust and ECH where applicable.
+- Host/firewall enforcement of the egress allowlist.
+- Actual Vault/KMS/HSM/isolated-vault custody and isolation boundaries.
+- Host memory protections, core-dump/swap policy and synchronized time.
+- Release dependency/container scanner evidence.
+- Immutability/retention and logical separation of the remote security-log platform.
 
-## Verification gates before any Level 3 claim
+The application startup preflight validates declarations that can be checked locally, but it deliberately cannot fabricate evidence about these external systems.
 
-- All applicable requirements are `PASS`, with no unresolved `PARTIAL`, `FAIL`, `REVIEW` or `MANUAL`.
-- Every `N/A` decision is independently reviewed and justified.
-- CI/unit/integration/security scanning is green on the exact candidate commit.
-- A production-like deployment is verified for TLS/proxy/time/logging/HSM controls.
-- A focused independent penetration test covers authentication, authorization, public shares/capabilities, file upload/download, OAuth broker, PWA, recovery and administrative operations.
-- Evidence is retained for deployment-only requirements.
+## Dependency review note
 
-Reference requirement source: official OWASP ASVS 5.0.0 CSV/JSON in the `OWASP/ASVS` repository.
+The 1.70.24 direct runtime dependencies are pinned by `package-lock.json`. Current direct versions include Express 4.22.2, node-forge 1.4.0, Nodemailer 9.0.3, Archiver 8.0.0, QRCode 1.5.4 and web-push 3.6.7. The release keeps node-forge at 1.4.0, which is the patched line for several high-severity 2026 forge advisories affecting earlier versions, and Nodemailer at 9.0.3, after the 2026 fixes for multiple 8.x/9.0.0 issues. This spot review is not a substitute for a complete dependency scanner over the transitive graph; V15.2.1 remains `MANUAL` until connected CI scan evidence is retained.
+
+## Final release gates
+
+Source/repository gates completed for 1.70.24:
+
+- [x] package and lockfile version are 1.70.24.
+- [x] ASVS regression suite green (64/64).
+- [x] Full suite green (1081/1081).
+- [x] Static ASVS audit green.
+- [x] Security inventory regenerated.
+- [x] Windows runtime integrity manifest synchronized and rechecked.
+- [x] Matrix has 0 FAIL and 0 REVIEW.
+- [x] ASVS audit/matrix updated for the exact release candidate.
+- [x] SBOM root component synchronized to 1.70.24.
+- [x] Release archive and SHA-256 generated as companion artifacts.
+
+Deployment/verification gates still required before claiming a specific installation is **verified ASVS L3**:
+
+- [ ] Resolve the remaining 43 source-assurance `PARTIAL` rows or obtain sufficient independent verification evidence to promote them.
+- [ ] Review and retain evidence for all 22 `MANUAL` rows.
+- [ ] Independently review all 89 `N/A` decisions.
+- [ ] Re-run dependency/container security scanning in connected CI and retain the report.
+- [ ] Complete a production-like TLS/proxy/time/secrets/logging preflight.
+- [ ] Perform a focused independent penetration test of authentication, authorization, public links/capabilities, upload/download, OAuth broker, PWA, recovery and administrator operations.
+
+Reference requirement source: OWASP ASVS 5.0.0 stable release (`v5.0.0_release`).

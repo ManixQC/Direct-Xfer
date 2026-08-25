@@ -14,7 +14,7 @@
     }
   };
   function lang(){const sel=$('lang-select');const v=String((sel&&sel.value)||document.documentElement.lang||navigator.language||'fr').slice(0,2).toLowerCase();return TXT[v]?v:'fr';}
-  function tr(k,v){let x=(TXT[lang()]&&TXT[lang()][k])||TXT.fr[k]||k;Object.keys(v||{}).forEach(n=>{x=x.replace(new RegExp('\\{'+n+'\\}','g'),String(v[n]));});return x;}
+  function tr(k,v){let x=(TXT[lang()]&&TXT[lang()][k])||TXT.fr[k]||k;Object.keys(v||{}).forEach(n=>{x=x.split('{'+n+'}').join(String(v[n]));});return x;}
   function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
   function num(v){if(v===null||v===undefined||v==='')return null;const n=Number(v);return Number.isFinite(n)?n:null;}
   function fmtBytes(v){if(v===null||v===undefined||v==='')return '—';let n=Math.max(0,Number(v)||0),i=0,u=['B','KB','MB','GB','TB','PB'];while(n>=1024&&i<u.length-1){n/=1024;i++;}return (i?(n>=10?n.toFixed(1):n.toFixed(2)):Math.round(n))+' '+u[i];}

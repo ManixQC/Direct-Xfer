@@ -1,0 +1,70 @@
+{
+  "schema": 1,
+  "generatedAt": "2026-08-25T02:33:50.896Z",
+  "scope": [
+    "server.js",
+    "lib",
+    "public",
+    "pwa",
+    "oauth-broker/server.js",
+    "oauth-broker/cloudflare-worker/src"
+  ],
+  "filesScanned": 124,
+  "regexLiteralEstimate": 4456,
+  "decoderInventory": [
+    {
+      "file": "lib/assets/oauth-broker-worker.mjs",
+      "line": 162,
+      "hash": "d96214f5e694a8dc"
+    },
+    {
+      "file": "lib/server/request-utils.js",
+      "line": 38,
+      "hash": "69838433118549b5"
+    },
+    {
+      "file": "oauth-broker/cloudflare-worker/src/index.js",
+      "line": 162,
+      "hash": "d96214f5e694a8dc"
+    },
+    {
+      "file": "oauth-broker/server.js",
+      "line": 81,
+      "hash": "39b8f86520446775"
+    },
+    {
+      "file": "public/app.js",
+      "line": 50,
+      "hash": "95fc18051ff85317"
+    },
+    {
+      "file": "public/app.js",
+      "line": 16934,
+      "hash": "87e695899b09f310"
+    },
+    {
+      "file": "public/download-resume.js",
+      "line": 172,
+      "hash": "bd0d2f3a36ef819e"
+    },
+    {
+      "file": "pwa/admin-audit-connectors.js",
+      "line": 111,
+      "hash": "dc2c1374ff111cd4"
+    },
+    {
+      "file": "pwa/app.js",
+      "line": 4706,
+      "hash": "edb843f758a6dc16"
+    },
+    {
+      "file": "pwa/app.js",
+      "line": 9774,
+      "hash": "27e13ee9203bd221"
+    }
+  ],
+  "potentialRedos": [],
+  "regexPolicy": "fixed-literals-only; dynamic RegExp/eval constructors forbidden",
+  "findings": [],
+  "passed": true
+}

@@ -323,6 +323,10 @@ const I18N = {
     'pwa.installApp': '📲 Installer l’application mobile',
     'login.password': 'Mot de passe',
     'login.submit': 'Se connecter',
+    'login.passkey': '🔐 Se connecter avec une clé d’accès',
+    'login.passkeyRequired': 'Le profil ASVS L3 exige maintenant votre clé d’accès.',
+    'login.passkeyFailed': 'Échec de la connexion par clé d’accès.',
+    'login.passkeyUnsupported': 'Ce navigateur ne prend pas en charge les clés d’accès requises.',
     'login.invalid': 'Identifiant ou mot de passe invalide.',
     'login.hint.env-owner': 'Le mot de passe owner est défini via ADMIN_PASSWORD : connectez-vous avec l’identifiant admin configuré (par défaut « admin ») et cette valeur exacte, sans guillemets ni espaces autour.',
     'login.hint.no-persist': 'Le dossier /data n’est pas inscriptible : les comptes et les changements de mot de passe ne survivent pas à un redémarrage. Seule la connexion owner via ADMIN_PASSWORD fonctionne.',
@@ -707,8 +711,9 @@ const I18N = {
     'acc.delete': 'Supprimer',
     'acc.confirmDelete': 'Supprimer le compte « {u} » ? Ses sessions seront déconnectées.',
     'acc.deleted': 'Compte supprimé',
-    'acc.resetPrompt': 'Nouveau mot de passe pour « {u} » (8 car. min.). L’utilisateur devra le changer à la prochaine connexion.',
-    'acc.resetDone': 'Mot de passe réinitialisé',
+    'acc.resetPrompt': 'Générer un mot de passe temporaire pour « {u} » ? L’utilisateur devra choisir son propre mot de passe à la prochaine connexion.',
+    'acc.resetGenerated': 'Mot de passe temporaire généré — copiez-le et transmettez-le de façon sûre :',
+    'acc.resetDone': 'Réinitialisation initiée',
     'acc.created': 'Compte créé',
     'acc.taken': 'Ce nom d’utilisateur est déjà pris.',
     'acc.badUsername': 'Nom invalide (3–40 car. : a–z, 0–9, . _ -).',
@@ -2012,6 +2017,10 @@ const I18N = {
     'pwa.installApp': '📲 Install mobile app',
     'login.password': 'Password',
     'login.submit': 'Log in',
+    'login.passkey': '🔐 Sign in with a passkey',
+    'login.passkeyRequired': 'The ASVS L3 profile now requires your passkey.',
+    'login.passkeyFailed': 'Passkey sign-in failed.',
+    'login.passkeyUnsupported': 'This browser does not support the required passkeys.',
     'login.invalid': 'Invalid username or password.',
     'login.hint.env-owner': 'The owner password is set via ADMIN_PASSWORD: log in with the configured admin username (default “admin”) and that exact value, with no surrounding quotes or spaces.',
     'login.hint.no-persist': '/data is not writable: accounts and password changes don’t survive a restart. Only the ADMIN_PASSWORD owner login works.',
@@ -2396,8 +2405,9 @@ const I18N = {
     'acc.delete': 'Delete',
     'acc.confirmDelete': 'Delete account “{u}”? Its sessions will be logged out.',
     'acc.deleted': 'Account deleted',
-    'acc.resetPrompt': 'New password for “{u}” (8 chars min.). The user must change it at next login.',
-    'acc.resetDone': 'Password reset',
+    'acc.resetPrompt': 'Generate a temporary password for “{u}”? The user must choose their own password at next login.',
+    'acc.resetGenerated': 'Generated temporary password — copy it and deliver it securely:',
+    'acc.resetDone': 'Password reset initiated',
     'acc.created': 'Account created',
     'acc.taken': 'That username is already taken.',
     'acc.badUsername': 'Invalid name (3–40 chars: a–z, 0–9, . _ -).',
@@ -3699,6 +3709,10 @@ const I18N = {
     'pwa.installApp': '📲 Instalar la aplicación móvil',
     'login.password': 'Contraseña',
     'login.submit': 'Iniciar sesión',
+    'login.passkey': '🔐 Iniciar sesión con una clave de acceso',
+    'login.passkeyRequired': 'El perfil ASVS L3 ahora requiere tu clave de acceso.',
+    'login.passkeyFailed': 'Falló el inicio de sesión con clave de acceso.',
+    'login.passkeyUnsupported': 'Este navegador no admite las claves de acceso requeridas.',
     'login.invalid': 'Usuario o contraseña no válidos.',
     'login.hint.env-owner': 'La contraseña del propietario se define mediante ADMIN_PASSWORD: inicia sesión con el usuario admin configurado (por defecto «admin») y ese valor exacto, sin comillas ni espacios alrededor.',
     'login.hint.no-persist': '/data no admite escritura: las cuentas y los cambios de contraseña no sobreviven a un reinicio. Solo funciona el inicio de sesión del propietario mediante ADMIN_PASSWORD.',
@@ -4083,8 +4097,9 @@ const I18N = {
     'acc.delete': 'Eliminar',
     'acc.confirmDelete': '¿Eliminar la cuenta «{u}»? Se cerrarán sus sesiones.',
     'acc.deleted': 'Cuenta eliminada',
-    'acc.resetPrompt': 'Nueva contraseña para «{u}» (8 car. mín.). El usuario deberá cambiarla en el próximo acceso.',
-    'acc.resetDone': 'Contraseña restablecida',
+    'acc.resetPrompt': '¿Generar una contraseña temporal para «{u}»? El usuario deberá elegir su propia contraseña en el próximo acceso.',
+    'acc.resetGenerated': 'Contraseña temporal generada — cópiala y entrégala de forma segura:',
+    'acc.resetDone': 'Restablecimiento iniciado',
     'acc.created': 'Cuenta creada',
     'acc.taken': 'Ese nombre de usuario ya está en uso.',
     'acc.badUsername': 'Nombre no válido (3–40 car.: a–z, 0–9, . _ -).',
@@ -5846,6 +5861,7 @@ function fetchWithTimeout(url, options = {}, timeoutMs = 20000) {
     if (upstreamSignal && onAbort) upstreamSignal.removeEventListener('abort', onAbort);
   });
 }
+let apiStrongRetryDepth = 0;
 async function api(method, url, body, timeoutMs) {
   const requestAuthEpoch = state.authEpoch;
   method = String(method || 'GET').toUpperCase();
@@ -5864,14 +5880,22 @@ async function api(method, url, body, timeoutMs) {
   const defaultTimeout = ['GET', 'HEAD'].includes(method) ? 20000 : 120000;
   const res = await fetchWithTimeout(url, opts, timeoutMs === undefined ? defaultTimeout : timeoutMs);
   if (requestAuthEpoch !== state.authEpoch) throw new Error('stale-auth');
-  if (res.status === 401) {
-    if (requestAuthEpoch === state.authEpoch) showLogin();
-    throw new Error('not-authenticated');
-  }
   let data = null;
   try {
     data = await res.json();
   } catch (_) {}
+  if (res.status === 401) {
+    if (requestAuthEpoch === state.authEpoch) showLogin();
+    throw new Error('not-authenticated');
+  }
+  if (res.status === 403 && data && data.error === 'reauth-required' && apiStrongRetryDepth === 0) {
+    const renewed = await reauthenticateWithPasskey();
+    if (renewed) {
+      apiStrongRetryDepth += 1;
+      try { return await api(method, url, body, timeoutMs); }
+      finally { apiStrongRetryDepth -= 1; }
+    }
+  }
   if (!res.ok) {
     const err = new Error((data && data.error) || 'error');
     err.status = res.status;
@@ -6246,6 +6270,127 @@ function showTotpRow(show) {
   if (!show) $('login-totp').value = '';
 }
 
+function passkeyB64uToBytes(value) {
+  const text = String(value || '').replace(/-/g, '+').replace(/_/g, '/');
+  const padded = text + '='.repeat((4 - (text.length % 4)) % 4);
+  const raw = atob(padded);
+  return Uint8Array.from(raw, (ch) => ch.charCodeAt(0));
+}
+function passkeyBytesToB64u(value) {
+  const bytes = new Uint8Array(value || new ArrayBuffer(0));
+  let raw = '';
+  for (const byte of bytes) raw += String.fromCharCode(byte);
+  return btoa(raw).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+function passkeyRequestOptions(publicKey) {
+  const options = { ...(publicKey || {}) };
+  options.challenge = passkeyB64uToBytes(options.challenge);
+  options.allowCredentials = (options.allowCredentials || []).map((row) => ({ ...row, id:passkeyB64uToBytes(row.id) }));
+  return options;
+}
+async function reauthenticateWithPasskey() {
+  if (!window.isSecureContext || !window.PublicKeyCredential || !navigator.credentials) return false;
+  try {
+    const username = String(state.username || (($('username') && $('username').value) || '')).trim();
+    const optionRes = await fetchWithTimeout('/app/webauthn/login/options', {
+      method:'POST', headers:{ 'Content-Type':'application/json' }, credentials:'same-origin',
+      body:JSON.stringify({ username }),
+    }, 15000);
+    const optionData = await optionRes.json().catch(() => ({}));
+    if (!optionRes.ok || !optionData.publicKey || !optionData.token) return false;
+    const credential = await navigator.credentials.get({ publicKey:passkeyRequestOptions(optionData.publicKey) });
+    if (!credential) return false;
+    const response = credential.response || {};
+    const verifyRes = await fetchWithTimeout('/app/webauthn/login/verify', {
+      method:'POST', headers:{ 'Content-Type':'application/json' }, credentials:'same-origin',
+      body:JSON.stringify({
+        token:optionData.token,
+        deviceName:'Direct-Xfer web',
+        credential:{
+          id:credential.id,
+          rawId:passkeyBytesToB64u(credential.rawId),
+          type:credential.type,
+          response:{
+            clientDataJSON:passkeyBytesToB64u(response.clientDataJSON),
+            authenticatorData:passkeyBytesToB64u(response.authenticatorData),
+            signature:passkeyBytesToB64u(response.signature),
+            userHandle:response.userHandle ? passkeyBytesToB64u(response.userHandle) : null,
+          },
+        },
+      }),
+    }, 20000);
+    const data = await verifyRes.json().catch(() => ({}));
+    if (!verifyRes.ok || !data.csrf) return false;
+    state.authEpoch += 1;
+    state.csrf = data.csrf;
+    state.username = data.username || state.username;
+    state.role = data.role || state.role;
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+async function loginWithPasskey() {
+  const errEl = $('login-error');
+  errEl.classList.add('hidden');
+  if (!window.isSecureContext || !window.PublicKeyCredential || !navigator.credentials) {
+    errEl.textContent = t('login.passkeyUnsupported');
+    errEl.classList.remove('hidden');
+    return;
+  }
+  const button = $('passkey-login-btn');
+  if (button) button.disabled = true;
+  try {
+    const username = $('username').value.trim();
+    const optionRes = await fetchWithTimeout('/app/webauthn/login/options', {
+      method:'POST', headers:{ 'Content-Type':'application/json' }, credentials:'same-origin',
+      body:JSON.stringify({ username }),
+    }, 15000);
+    const optionData = await optionRes.json().catch(() => ({}));
+    if (!optionRes.ok || !optionData.publicKey || !optionData.token) throw new Error('options');
+    const credential = await navigator.credentials.get({ publicKey:passkeyRequestOptions(optionData.publicKey) });
+    if (!credential) throw new Error('credential');
+    const response = credential.response || {};
+    const verifyRes = await fetchWithTimeout('/app/webauthn/login/verify', {
+      method:'POST', headers:{ 'Content-Type':'application/json' }, credentials:'same-origin',
+      body:JSON.stringify({
+        token:optionData.token,
+        deviceName:'Direct-Xfer web',
+        credential:{
+          id:credential.id,
+          rawId:passkeyBytesToB64u(credential.rawId),
+          type:credential.type,
+          response:{
+            clientDataJSON:passkeyBytesToB64u(response.clientDataJSON),
+            authenticatorData:passkeyBytesToB64u(response.authenticatorData),
+            signature:passkeyBytesToB64u(response.signature),
+            userHandle:response.userHandle ? passkeyBytesToB64u(response.userHandle) : null,
+          },
+        },
+      }),
+    }, 20000);
+    const data = await verifyRes.json().catch(() => ({}));
+    if (!verifyRes.ok || !data.csrf) throw new Error(data.error || 'verify');
+    state.authEpoch += 1;
+    state.csrf = data.csrf;
+    state.username = data.username;
+    state.role = data.role;
+    $('password').value = '';
+    showTotpRow(false);
+    await settleWithin(persistRememberedAdminLogin(data.username || username, '', false), 1200);
+    enterApp(data.mustChangePassword);
+  } catch (error) {
+    if (error && error.name === 'NotAllowedError') errEl.textContent = t('login.passkeyFailed');
+    else errEl.textContent = t('login.passkeyFailed');
+    errEl.classList.remove('hidden');
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+if ($('passkey-login-btn')) $('passkey-login-btn').addEventListener('click', loginWithPasskey);
+
 $('remember-password').addEventListener('change', async () => {
   const checked = $('remember-password').checked;
   loginStorageSet(LOGIN_MEMORY_KEYS.rememberPassword, checked ? '1' : '0');
@@ -6304,6 +6449,11 @@ $('login-form').addEventListener('submit', async (e) => {
     } else if (res.status === 429) {
       errEl.textContent = t('login.tooMany', { s: data.retryAfter || 60 });
       errEl.classList.remove('hidden');
+    } else if (data.error === 'passkey-required') {
+      showTotpRow(false);
+      errEl.textContent = t('login.passkeyRequired');
+      errEl.classList.remove('hidden');
+      if ($('passkey-login-btn')) $('passkey-login-btn').focus();
     } else if (data.error === 'totp-required') {
       // Password is correct; ask for the 2FA code and keep it entered.
       showTotpRow(true);
@@ -17971,13 +18121,12 @@ setTimeout(loadMeta, 12000); // re-check so a freshly-started server surfaces an
   }
 
   async function resetAccount(a) {
-    const pw = prompt(t('acc.resetPrompt', { u: a.username }));
-    if (pw == null) return;
-    if (String(pw).length < 8) { accErr(t('acc.pwShort')); return; }
+    if (!confirm(t('acc.resetPrompt', { u: a.username }))) return;
     try {
-      await api('POST', '/api/accounts/' + encodeURIComponent(a.id) + '/password', { password: pw });
+      const result = await api('POST', '/api/accounts/' + encodeURIComponent(a.id) + '/password', {});
       toast(t('acc.resetDone'), 'ok');
       accErr('');
+      if (result && result.temporaryPassword) prompt(t('acc.resetGenerated'), result.temporaryPassword);
       refreshAccounts();
     } catch (e) {
       if (e.message !== 'not-authenticated') accErr(t('acc.actionFail'));
@@ -18016,7 +18165,7 @@ setTimeout(loadMeta, 12000); // re-check so a freshly-started server surfaces an
   function renderSecurityOverview(data){
     const sessionsBox=$('security-sessions'),historyBox=$('security-history'),summary=$('security-summary');
     if(summary)summary.textContent=t('security.sessionCount',{n:(data.sessions||[]).length});
-    if(sessionsBox){sessionsBox.textContent='';const rows=data.sessions||[];if(!rows.length)sessionsBox.appendChild(el('div',{class:'empty',text:t('security.none')}));else rows.forEach((sess)=>{const row=el('div',{class:'security-session-row'+(sess.current?' current':'')});const main=el('div',{class:'security-session-main'});const title=el('div',{class:'security-session-title'});title.append(el('strong',{text:sess.username||'—'}));if(sess.current)title.append(el('span',{class:'badge',text:t('security.current')}));main.append(title,el('span',{class:'muted sm',text:[sess.device||'—',sess.ip||'—'].join(' · ')}),el('span',{class:'muted sm',text:`${t('security.signedIn')}: ${sess.authenticatedAt?formatDate(sess.authenticatedAt):'—'} · ${t('security.lastSeen')}: ${sess.lastSeenAt?timeAgo(sess.lastSeenAt):'—'} · ${t('security.expires')}: ${sess.expires?formatDate(sess.expires):'—'}`}));row.appendChild(main);if(data.canRevoke){const b=el('button',{class:'btn ghost sm',text:t('security.revoke'),attrs:{type:'button'}});b.addEventListener('click',async()=>{if(!confirm(t('security.revokeConfirm')))return;b.disabled=true;try{const r=await api('DELETE','/api/security/sessions/'+encodeURIComponent(sess.id));if(r.current){location.reload();return;}await loadSecurityOverview();}catch(_){toast(t('security.revokeFail'),'err');b.disabled=false;}});row.appendChild(b);}sessionsBox.appendChild(row);});}
+    if(sessionsBox){sessionsBox.textContent='';const rows=data.sessions||[];if(!rows.length)sessionsBox.appendChild(el('div',{class:'empty',text:t('security.none')}));else rows.forEach((sess)=>{const row=el('div',{class:'security-session-row'+(sess.current?' current':'')});const main=el('div',{class:'security-session-main'});const title=el('div',{class:'security-session-title'});title.append(el('strong',{text:sess.username||'—'}));if(sess.current)title.append(el('span',{class:'badge',text:t('security.current')}));main.append(title,el('span',{class:'muted sm',text:[sess.device||'—',sess.ip||'—'].join(' · ')}),el('span',{class:'muted sm',text:`${t('security.signedIn')}: ${sess.authenticatedAt?formatDate(sess.authenticatedAt):'—'} · ${t('security.lastSeen')}: ${sess.lastSeenAt?timeAgo(sess.lastSeenAt):'—'} · ${t('security.expires')}: ${sess.expires?formatDate(sess.expires):'—'}`}));row.appendChild(main);if(sess.canRevoke){const b=el('button',{class:'btn ghost sm',text:t('security.revoke'),attrs:{type:'button'}});b.addEventListener('click',async()=>{if(!confirm(t('security.revokeConfirm')))return;const password=prompt(t('security.reauthPassword'));if(password==null)return;b.disabled=true;try{const r=await api('DELETE','/api/security/sessions/'+encodeURIComponent(sess.id),{password});if(r.current){location.reload();return;}await loadSecurityOverview();}catch(e3){toast((e3.data&&e3.data.error)==='reauth-failed'?t('security.reauthFailed'):t('security.revokeFail'),'err');b.disabled=false;}});row.appendChild(b);}sessionsBox.appendChild(row);});}
     if(historyBox){historyBox.textContent='';const rows=data.history||[];if(!rows.length)historyBox.appendChild(el('div',{class:'empty',text:t('security.noHistory')}));else rows.forEach((e2)=>{const row=el('div',{class:'audit-row'});row.appendChild(el('span',{class:'audit-act',text:localizedAuditAction(e2.action)}));const mid=el('div',{class:'audit-mid'}),who=el('div',{class:'audit-who'});who.appendChild(el('span',{class:'audit-actor',text:e2.actor||'—'}));if(e2.detail)who.appendChild(el('span',{class:'audit-detail',text:localizedLogText(e2.detail)}));mid.append(who,el('div',{class:'audit-meta',text:(e2.ip?e2.ip+' · ':'')+formatDate(e2.at)}));row.appendChild(mid);historyBox.appendChild(row);});}
   }
   async function loadSecurityOverview(){try{renderSecurityOverview(await api('GET','/api/security/overview'));}catch(e){if(e.message!=='not-authenticated')toast(t('audit.loadFail'),'err');}}

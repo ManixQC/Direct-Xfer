@@ -33,7 +33,9 @@ test('health endpoint is full-admin only and uses cached deep probes',()=>{
 });
 
 test('server health payload covers system, storage, security and workload',()=>{
-  for(const token of ['storage:{ volumes','backup:{ enabled','security:{ audit','connectors:{ capabilities','notifications:{ webPushAvailable','runtime:{ node:process.version','workload = {','alerts = []']) assert.match(server,new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));
+  for(const token of ['storage:{ volumes','backup:{ enabled','security:{ audit','connectors:{ capabilities','notifications:{ webPushAvailable','runtime:ASVS_L3_MODE','workload = {','alerts = []']) assert.match(server,new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));
+  assert.match(server, /runtime:ASVS_L3_MODE[\s\S]*node:null[\s\S]*node:process\.version/);
+  assert.match(server, /connectors:\{ capabilities:[\s\S]*version:ASVS_L3_MODE \? null/);
   assert.match(health,/processCpuPercent/);
   assert.match(health,/eventLoopSnapshot/);
   assert.match(health,/processHeapTotal/);

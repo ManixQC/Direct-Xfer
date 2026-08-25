@@ -1,7 +1,7 @@
 'use strict';
 (function () {
-  var RELEASE = (window.__DX_PWA_RELEASE && window.__DX_PWA_RELEASE.version) || '1.70.23';
-  var BUILD = (window.__DX_PWA_RELEASE && window.__DX_PWA_RELEASE.build) || '2026.08.24-pwa456';
+  var RELEASE = (window.__DX_PWA_RELEASE && window.__DX_PWA_RELEASE.version) || '1.70.24';
+  var BUILD = (window.__DX_PWA_RELEASE && window.__DX_PWA_RELEASE.build) || '2026.08.24-pwa457';
   var adminAccess = false;
   var accessAnnounced = false;
   var refreshTimer = 0;
@@ -64,7 +64,7 @@
   };
 
   function lang(){var s=document.getElementById('lang-select'),v=s&&s.value;if(!v){try{v=localStorage.getItem('dx-lang')||localStorage.getItem('dx-pwa-lang');}catch(_){}}v=String(v||document.documentElement.lang||navigator.language||'fr').slice(0,2).toLowerCase();return TEXT[v]?v:'fr';}
-  function tr(key,vars){var value=(TEXT[lang()]&&TEXT[lang()][key])||TEXT.fr[key]||key;Object.keys(vars||{}).forEach(function(name){value=value.replace(new RegExp('\\{'+name+'\\}','g'),String(vars[name]));});return value;}
+  function tr(key,vars){var value=(TEXT[lang()]&&TEXT[lang()][key])||TEXT.fr[key]||key;Object.keys(vars||{}).forEach(function(name){value=value.split('{'+name+'}').join(String(vars[name]));});return value;}
   function esc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
   function finite(v){var n=Number(v);return Number.isFinite(n)?n:null;}
   function fmtBytes(bytes){var n=Math.max(0,Number(bytes)||0),u=['B','KB','MB','GB','TB'],i=0;while(n>=1024&&i<u.length-1){n/=1024;i++;}return(i?n.toFixed(n>=10?1:2):Math.round(n))+' '+u[i];}
@@ -78,7 +78,7 @@
 
   function addStyles(){
     if(!document.getElementById('dx-server-health-standard-css')){
-      var link=document.createElement('link');link.id='dx-server-health-standard-css';link.rel='stylesheet';link.href='/server-health-dashboard.css?v=441';document.head.appendChild(link);
+      var link=document.createElement('link');link.id='dx-server-health-standard-css';link.rel='stylesheet';link.href='/server-health-dashboard.css?v=442';document.head.appendChild(link);
     }
     if(document.getElementById('dx-admin-advanced-style'))return;
     var s=document.createElement('style');s.id='dx-admin-advanced-style';s.textContent=`
@@ -99,7 +99,7 @@ body[data-pwa-active-panel="system-health"] .wrap{max-width:1440px}body[data-pwa
     standardHealthAssetsPromise=new Promise(function(resolve,reject){
       var existing=document.getElementById('dx-server-health-standard-js');
       if(existing){existing.addEventListener('load',function(){resolve(window.DirectXferServerHealth||null);},{once:true});existing.addEventListener('error',reject,{once:true});return;}
-      var script=document.createElement('script');script.id='dx-server-health-standard-js';script.src='/server-health-dashboard.js?v=441';script.defer=false;script.onload=function(){resolve(window.DirectXferServerHealth||null);};script.onerror=function(){standardHealthAssetsPromise=null;reject(new Error('server-health-assets'));};document.head.appendChild(script);
+      var script=document.createElement('script');script.id='dx-server-health-standard-js';script.src='/server-health-dashboard.js?v=442';script.defer=false;script.onload=function(){resolve(window.DirectXferServerHealth||null);};script.onerror=function(){standardHealthAssetsPromise=null;reject(new Error('server-health-assets'));};document.head.appendChild(script);
     });
     return standardHealthAssetsPromise;
   }

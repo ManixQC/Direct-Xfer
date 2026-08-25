@@ -1,0 +1,4499 @@
+{
+  "generatedAt": "2026-08-25T02:30:30.127Z",
+  "version": "1.70.24",
+  "categories": {
+    "crypto": [
+      {
+        "file": "lib/assets/oauth-broker-worker.mjs",
+        "line": 53,
+        "text": "const nonce = b64url(randomBytes(18));"
+      },
+      {
+        "file": "lib/assets/oauth-broker-worker.mjs",
+        "line": 70,
+        "text": "function randomBytes(length) {"
+      },
+      {
+        "file": "lib/assets/oauth-broker-worker.mjs",
+        "line": 118,
+        "text": "const iv = randomBytes(12);"
+      },
+      {
+        "file": "lib/assets/oauth-broker-worker.mjs",
+        "line": 256,
+        "text": "const id = `dxc_${b64url(randomBytes(18))}`;"
+      },
+      {
+        "file": "lib/assets/oauth-broker-worker.mjs",
+        "line": 257,
+        "text": "const secret = b64url(randomBytes(32));"
+      },
+      {
+        "file": "lib/assets/oauth-broker-worker.mjs",
+        "line": 258,
+        "text": "const refreshHandle = `dxr_${b64url(randomBytes(24))}`;"
+      },
+      {
+        "file": "lib/assets/oauth-broker-worker.mjs",
+        "line": 281,
+        "text": "const id = b64url(randomBytes(18));"
+      },
+      {
+        "file": "lib/assets/oauth-broker-worker.mjs",
+        "line": 282,
+        "text": "const pollToken = b64url(randomBytes(32));"
+      },
+      {
+        "file": "lib/assets/oauth-broker-worker.mjs",
+        "line": 283,
+        "text": "const state = b64url(randomBytes(32));"
+      },
+      {
+        "file": "lib/assets/oauth-broker-worker.mjs",
+        "line": 284,
+        "text": "const verifier = b64url(randomBytes(48));"
+      },
+      {
+        "file": "lib/assets/oauth-broker-worker.mjs",
+        "line": 355,
+        "text": "const id = `dxc_${b64url(randomBytes(18))}`;"
+      },
+      {
+        "file": "lib/assets/oauth-broker-worker.mjs",
+        "line": 356,
+        "text": "const secret = b64url(randomBytes(32));"
+      },
+      {
+        "file": "lib/assets/oauth-broker-worker.mjs",
+        "line": 357,
+        "text": "const refreshHandle = `dxr_${b64url(randomBytes(24))}`;"
+      },
+      {
+        "file": "lib/auth-utils.js",
+        "line": 8,
+        "text": "// crypto.scrypt API (libuv worker pool) behind a bounded queue so a burst of login"
+      },
+      {
+        "file": "lib/auth-utils.js",
+        "line": 13,
+        "text": "// leaves safe headroom above scrypt's memory requirement for these parameters."
+      },
+      {
+        "file": "lib/auth-utils.js",
+        "line": 49,
+        "text": "if (error) return resolve({ ok: false, error: 'scrypt-failed' });"
+      },
+      {
+        "file": "lib/auth-utils.js",
+        "line": 52,
+        "text": "// Node's real crypto.scrypt exposes the options overload. A few historical"
+      },
+      {
+        "file": "lib/auth-utils.js",
+        "line": 56,
+        "text": "if (crypto.scrypt.length >= 5) crypto.scrypt(String(plain), salt, keyLength, SCRYPT_OPTIONS, callback);"
+      },
+      {
+        "file": "lib/auth-utils.js",
+        "line": 57,
+        "text": "else crypto.scrypt(String(plain), salt, keyLength, callback);"
+      },
+      {
+        "file": "lib/auth-utils.js",
+        "line": 68,
+        "text": "const salt = crypto.randomBytes(16);"
+      },
+      {
+        "file": "lib/auth-utils.js",
+        "line": 73,
+        "text": "hash: 'scrypt$' + salt.toString('base64') + '$' + result.value.toString('base64'),"
+      },
+      {
+        "file": "lib/auth-utils.js",
+        "line": 84,
+        "text": "const salt = crypto.randomBytes(16);"
+      },
+      {
+        "file": "lib/auth-utils.js",
+        "line": 86,
+        "text": "return 'scrypt$' + salt.toString('base64') + '$' + hash.toString('base64');"
+      },
+      {
+        "file": "lib/auth-utils.js",
+        "line": 90,
+        "text": "const m = /^scrypt\\$([^$]+)\\$([^$]+)$/.exec(String(stored || '').trim());"
+      },
+      {
+        "file": "lib/auth-utils.js",
+        "line": 95,
+        "text": "// Reject malformed records before they can reach scrypt. Existing Direct-Xfer"
+      },
+      {
+        "file": "lib/auth-utils.js",
+        "line": 148,
+        "text": "* a Direct-Xfer credential verifier. Account credentials remain scrypt-derived."
+      },
+      {
+        "file": "lib/auth-utils.js",
+        "line": 151,
+        "text": "const digest = crypto.createHash('sha1').update(Buffer.from(String(plain), 'utf8')).digest('hex').toUpperCase(); // lgtm[js/insufficient-password-hash]"
+      },
+      {
+        "file": "lib/google-oauth-profile.js",
+        "line": 45,
+        "text": "if (this.dataKey) return crypto.createHash('sha256').update('Direct-Xfer\\0google-oauth-profile\\0').update(this.dataKey).digest();"
+      },
+      {
+        "file": "lib/google-oauth-profile.js",
+        "line": 52,
+        "text": "const key = crypto.randomBytes(32);"
+      },
+      {
+        "file": "lib/google-oauth-profile.js",
+        "line": 78,
+        "text": "const decipher = crypto.createDecipheriv('aes-256-gcm', this._key(), iv);"
+      },
+      {
+        "file": "lib/google-oauth-profile.js",
+        "line": 115,
+        "text": "const iv = crypto.randomBytes(12);"
+      },
+      {
+        "file": "lib/google-oauth-profile.js",
+        "line": 116,
+        "text": "const cipher = crypto.createCipheriv('aes-256-gcm', this._key(), iv);"
+      },
+      {
+        "file": "lib/google-oauth-profile.js",
+        "line": 119,
+        "text": "const tmp = `${this.file}.tmp-${process.pid}-${crypto.randomBytes(4).toString('hex')}`;"
+      },
+      {
+        "file": "lib/server/account-service.js",
+        "line": 56,
+        "text": "if (!crypto || typeof crypto.randomBytes !== 'function') throw new TypeError('account-service requires crypto');"
+      },
+      {
+        "file": "lib/server/account-service.js",
+        "line": 86,
+        "text": "|| `owner-${crypto.randomBytes(6).toString('hex')}`"
+      },
+      {
+        "file": "lib/server/account-service.js",
+        "line": 97,
+        "text": "const dummyPasswordRecord = passwordParser(passwordHasher(crypto.randomBytes(8).toString('hex')));"
+      },
+      {
+        "file": "lib/server/account-service.js",
+        "line": 177,
+        "text": "return crypto.randomBytes(8).toString('hex');"
+      },
+      {
+        "file": "lib/server/account-service.js",
+        "line": 298,
+        "text": "return createPasswordHash(crypto.randomBytes(12).toString('base64url'));"
+      },
+      {
+        "file": "lib/server/account-service.js",
+        "line": 423,
+        "text": "initialPasswordPlaintext = crypto.randomBytes(asvsL3Mode ? 18 : 12).toString('base64url');"
+      },
+      {
+        "file": "lib/server/activity-presence-service.js",
+        "line": 45,
+        "text": "if (!crypto || typeof crypto.randomBytes !== 'function' || typeof crypto.createHash !== 'function') {"
+      },
+      {
+        "file": "lib/server/activity-presence-service.js",
+        "line": 165,
+        "text": "return 'anon-' + crypto.createHash('sha256').update(String(value || '')).digest('hex').slice(0, 12);"
+      },
+      {
+        "file": "lib/server/activity-presence-service.js",
+        "line": 245,
+        "text": ": crypto.randomBytes(6).toString('hex'),"
+      },
+      {
+        "file": "lib/server/activity-presence-service.js",
+        "line": 377,
+        "text": "id: 'legacy-a-' + String(entry.seq || crypto.createHash('sha1').update(JSON.stringify([entry.at, entry.action, entry.actor, entry.detail])).digest('hex').slice(0, 16)),"
+      },
+      {
+        "file": "lib/server/activity-presence-service.js",
+        "line": 392,
+        "text": "id: 'legacy-t-' + String(transfer.id || crypto.createHash('sha1').update(JSON.stringify([transfer.shareId, transfer.endedAt, transfer.name, transfer.bytes])).digest('hex').slice(0, 16)),"
+      },
+      {
+        "file": "lib/server/activity-presence-service.js",
+        "line": 515,
+        "text": "id: crypto.randomBytes(6).toString('hex'),"
+      },
+      {
+        "file": "lib/server/admin-account-routes.js",
+        "line": 89,
+        "text": "if (!crypto || typeof crypto.randomBytes !== 'function') throw new TypeError('admin-account-routes requires crypto');"
+      },
+      {
+        "file": "lib/server/admin-account-routes.js",
+        "line": 412,
+        "text": "const secret = base32encode(crypto.randomBytes(20));"
+      },
+      {
+        "file": "lib/server/admin-account-routes.js",
+        "line": 414,
+        "text": "for (let i = 0; i < 8; i += 1) recoveryPlain.push(crypto.randomBytes(16).toString('hex')); // 128-bit recovery secrets"
+      },
+      {
+        "file": "lib/server/admin-account-routes.js",
+        "line": 490,
+        "text": "// the raw scrypt helper directly. Check the breached/common/contextual policy"
+      },
+      {
+        "file": "lib/server/admin-account-routes.js",
+        "line": 535,
+        "text": "const password = crypto.randomBytes(24).toString('base64url');"
+      },
+      {
+        "file": "lib/server/admin-dashboard-routes.js",
+        "line": 697,
+        "text": "const backup = `${LOG_FILE}.clear-${process.pid}-${crypto.randomBytes(4).toString('hex')}`;"
+      },
+      {
+        "file": "lib/server/admin-photo-routes.js",
+        "line": 589,
+        "text": "const fname = crypto.randomBytes(12).toString('hex') + '.' + ext;"
+      },
+      {
+        "file": "lib/server/admin-photo-routes.js",
+        "line": 667,
+        "text": "const fname = crypto.randomBytes(12).toString('hex') + '.' + ext;"
+      },
+      {
+        "file": "lib/server/admin-security-routes.js",
+        "line": 49,
+        "text": "if (!crypto || typeof crypto.createHash !== 'function') throw new TypeError('admin-security-routes requires crypto');"
+      },
+      {
+        "file": "lib/server/admin-security-routes.js",
+        "line": 82,
+        "text": "return crypto.createHash('sha256').update(`dx-session:${String(sid || '')}`).digest('hex').slice(0, 24);"
+      },
+      {
+        "file": "lib/server/admin-security-routes.js",
+        "line": 171,
+        "text": "else staged = original + '.delete-' + crypto.randomBytes(5).toString('hex');"
+      },
+      {
+        "file": "lib/server/admin-settings-routes.js",
+        "line": 162,
+        "text": "const preset = { id: crypto.randomBytes(8).toString('hex'), accountId: acc, name, type, config, createdAt: Date.now() };"
+      },
+      {
+        "file": "lib/server/admin-share-routes.js",
+        "line": 641,
+        "text": "id: crypto.randomBytes(8).toString('hex'), deletedAt: now,"
+      },
+      {
+        "file": "lib/server/admin-share-routes.js",
+        "line": 660,
+        "text": "rec.id = crypto.randomBytes(8).toString('hex');"
+      },
+      {
+        "file": "lib/server/admin-share-routes.js",
+        "line": 852,
+        "text": "if(optionError&&['auth-busy','password-too-long','scrypt-failed'].includes(optionError))return sendPasswordWorkError(res,optionError);"
+      },
+      {
+        "file": "lib/server/admin-share-routes.js",
+        "line": 907,
+        "text": "// makeSharePassword() returns a fixed-shape { pwHash } object (a scrypt hash"
+      },
+      {
+        "file": "lib/server/admin-share-routes.js",
+        "line": 1206,
+        "text": "clone.relDir = base + '-' + crypto.randomBytes(3).toString('hex');"
+      },
+      {
+        "file": "lib/server/admin-share-routes.js",
+        "line": 1225,
+        "text": "do { clone.id = crypto.randomBytes(8).toString('hex'); } while (getById(clone.id));"
+      },
+      {
+        "file": "lib/server/admin-share-routes.js",
+        "line": 1347,
+        "text": "const comment = { id: crypto.randomBytes(8).toString('hex'), at: Date.now(), actor: (acc && acc.username) || req.session.username || 'admin', text };"
+      },
+      {
+        "file": "lib/server/admin-share-routes.js",
+        "line": 1384,
+        "text": "appendReceptionThreadMessage(sh, { id: crypto.randomBytes(8).toString('hex'), at: Date.now(), from: 'owner', name: null, text });"
+      },
+      {
+        "file": "lib/server/admin-share-routes.js",
+        "line": 2207,
+        "text": "const relDir = base + '-' + crypto.randomBytes(3).toString('hex'); // unique per link"
+      },
+      {
+        "file": "lib/server/admin-share-routes.js",
+        "line": 2256,
+        "text": "const id = crypto.randomBytes(12).toString('hex');"
+      },
+      {
+        "file": "lib/server/admin-share-routes.js",
+        "line": 2303,
+        "text": "const token = crypto.randomBytes(18).toString('base64url');"
+      },
+      {
+        "file": "lib/server/admin-storage-routes.js",
+        "line": 171,
+        "text": "connector.id = crypto.randomBytes(12).toString('hex');"
+      },
+      {
+        "file": "lib/server/audit-service.js",
+        "line": 158,
+        "text": "return crypto.createHash('sha256').update('direct-xfer:audit-chain:v1\\0' + String(secret || '')).digest();"
+      },
+      {
+        "file": "lib/server/audit-service.js",
+        "line": 161,
+        "text": "return crypto.createHash('sha256').update(key).digest('hex').slice(0, 12);"
+      },
+      {
+        "file": "lib/server/audit-service.js",
+        "line": 191,
+        "text": "const candidate = crypto.randomBytes(32);"
+      },
+      {
+        "file": "lib/server/audit-service.js",
+        "line": 232,
+        "text": "if (privatePem) auditProofPrivateKey = crypto.createPrivateKey(privatePem);"
+      },
+      {
+        "file": "lib/server/audit-service.js",
+        "line": 255,
+        "text": "auditProofPrivateKey = crypto.createPrivateKey(fs.readFileSync(AUDIT_SIGNING_PRIVATE_FILE, 'utf8'));"
+      },
+      {
+        "file": "lib/server/audit-service.js",
+        "line": 269,
+        "text": "auditProofPublicKey = crypto.createPublicKey(auditProofPrivateKey);"
+      },
+      {
+        "file": "lib/server/audit-service.js",
+        "line": 279,
+        "text": "return crypto.createHash('sha256').update(der).digest('hex');"
+      },
+      {
+        "file": "lib/server/audit-service.js",
+        "line": 282,
+        "text": "const hash = crypto.createHash('sha256');"
+      },
+      {
+        "file": "lib/server/audit-service.js",
+        "line": 311,
+        "text": "const publicKey = crypto.createPublicKey(String(proof.publicKey || ''));"
+      },
+      {
+        "file": "lib/server/audit-service.js",
+        "line": 415,
+        "text": "return crypto.createHmac('sha256', key).update(auditChainPayload(entry)).digest('hex');"
+      },
+      {
+        "file": "lib/server/audit-service.js",
+        "line": 421,
+        "text": "return crypto.createHmac('sha256', key).update('head|' + String(seq) + '|' + String(hash || '')).digest('hex');"
+      },
+      {
+        "file": "lib/server/audit-service.js",
+        "line": 428,
+        "text": "const tmp = AUDIT_HEAD_FILE + '.tmp-' + process.pid + '-' + crypto.randomBytes(5).toString('hex');"
+      },
+      {
+        "file": "lib/server/auth-service.js",
+        "line": 135,
+        "text": "return crypto.createHash('sha256').update(ua + '|' + String(ip || '')).digest('hex').slice(0, 24);"
+      },
+      {
+        "file": "lib/server/auth-service.js",
+        "line": 184,
+        "text": "const digest = crypto.createHmac('sha1', key).update(buffer).digest();"
+      },
+      {
+        "file": "lib/server/auth-service.js",
+        "line": 280,
+        "text": "// A wrong TOTP must not trigger the expensive recovery-code scrypt loop."
+      },
+      {
+        "file": "lib/server/auth-service.js",
+        "line": 285,
+        "text": "// scrypt comparison is pending because a different IP can consume another"
+      },
+      {
+        "file": "lib/server/auth-service.js",
+        "line": 297,
+        "text": "// code while scrypt was running. A concurrent 2FA reset may also have"
+      },
+      {
+        "file": "lib/server/auth-service.js",
+        "line": 348,
+        "text": "// scrypt runs off-thread, so account state may change while verification is"
+      },
+      {
+        "file": "lib/server/auth-service.js",
+        "line": 395,
+        "text": "// login already waiting on second-factor scrypt just as it invalidates"
+      },
+      {
+        "file": "lib/server/auth-service.js",
+        "line": 532,
+        "text": "// before spending scrypt resources if the account changed while it was pending."
+      },
+      {
+        "file": "lib/server/auth-service.js",
+        "line": 548,
+        "text": "// new scrypt value was being derived."
+      },
+      {
+        "file": "lib/server/backup-service.js",
+        "line": 187,
+        "text": "const payloadHash = crypto.createHash('sha256').update(buf).digest('hex');"
+      },
+      {
+        "file": "lib/server/backup-service.js",
+        "line": 192,
+        "text": "const stringToSign = `AWS4-HMAC-SHA256\\n${amzDate}\\n${scope}\\n${crypto.createHash('sha256').update(canonicalRequest).digest('hex')}`;"
+      },
+      {
+        "file": "lib/server/backup-service.js",
+        "line": 193,
+        "text": "const hmac = (k, d) => crypto.createHmac('sha256', k).update(d).digest();"
+      },
+      {
+        "file": "lib/server/backup-service.js",
+        "line": 195,
+        "text": "const signature = crypto.createHmac('sha256', signingKey).update(stringToSign).digest('hex');"
+      },
+      {
+        "file": "lib/server/diagnostics-service.js",
+        "line": 75,
+        "text": "probe = path.join(dir, `.dx-diagnostic-${process.pid}-${crypto.randomBytes(8).toString('hex')}.tmp`);"
+      },
+      {
+        "file": "lib/server/dlp-service.js",
+        "line": 219,
+        "text": "const id = Date.now().toString(36) + '-' + crypto.randomBytes(6).toString('hex');"
+      },
+      {
+        "file": "lib/server/download-service.js",
+        "line": 200,
+        "text": "return crypto.createHash('sha256').update(["
+      },
+      {
+        "file": "lib/server/download-service.js",
+        "line": 207,
+        "text": "return `\"dx-${crypto.createHash('sha256').update(raw).digest('base64url').slice(0, 24)}\"`;"
+      },
+      {
+        "file": "lib/server/http-application.js",
+        "line": 67,
+        "text": "if (!crypto || typeof crypto.randomBytes !== 'function') {"
+      },
+      {
+        "file": "lib/server/http-application.js",
+        "line": 68,
+        "text": "throw new TypeError('createHttpApplication requires crypto.randomBytes');"
+      },
+      {
+        "file": "lib/server/http-application.js",
+        "line": 311,
+        "text": "const cspNonce = crypto.randomBytes(18).toString('base64');"
+      },
+      {
+        "file": "lib/server/maintenance-service.js",
+        "line": 173,
+        "text": "dedupeKey:`retention-delete:inbox:${crypto.createHash('sha1').update(file).digest('hex').slice(0, 12)}:${Math.floor(stat.mtimeMs)}`,"
+      },
+      {
+        "file": "lib/server/maintenance-service.js",
+        "line": 339,
+        "text": "dedupeKey:`retention-delete:${share.id}:${crypto.createHash('sha1').update(managedPath).digest('hex').slice(0, 12)}:${expiry}`,"
+      },
+      {
+        "file": "lib/server/maintenance-service.js",
+        "line": 346,
+        "text": "dedupeKey:`retention-delete:${crypto.createHash('sha1').update(managedPath).digest('hex').slice(0, 12)}:${expiry}`,"
+      },
+      {
+        "file": "lib/server/notification-center-service.js",
+        "line": 57,
+        "text": "const id = crypto.createHash('sha256').update(accountId + '\\0' + dedupeKey).digest('hex');"
+      },
+      {
+        "file": "lib/server/notification-center-service.js",
+        "line": 87,
+        "text": "return crypto.createHash('sha256').update(String(accountId) + '\\0' + String(dedupeKey)).digest('hex');"
+      },
+      {
+        "file": "lib/server/notification-center-service.js",
+        "line": 207,
+        "text": "return ip ? crypto.createHash('sha256').update(ip).digest('hex').slice(0, 32) : '';"
+      },
+      {
+        "file": "lib/server/notification-center-service.js",
+        "line": 377,
+        "text": "const id = raw.id ? String(raw.id).replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64) : crypto.randomBytes(9).toString('hex');"
+      },
+      {
+        "file": "lib/server/notification-center-service.js",
+        "line": 571,
+        "text": "id:crypto.randomBytes(12).toString('hex'), accountId, type:String(type).slice(0,80), at:now,"
+      },
+      {
+        "file": "lib/server/notification-center-service.js",
+        "line": 836,
+        "text": "const key = crypto.createHash('sha256').update(ua).digest('hex').slice(0,16);"
+      },
+      {
+        "file": "lib/server/notification-center-service.js",
+        "line": 890,
+        "text": "const h = crypto.createHash('sha256'); h.update(String(size) + '\\0');"
+      },
+      {
+        "file": "lib/server/notification-center-service.js",
+        "line": 957,
+        "text": "addAdminCenterNotification('push-subscription-expired',{device:sub&&sub.ua||'navigateur',detail:`Endpoint Push expiré (${statusCode||410})`,dedupeKey:`push-expired:${crypto.createHash('sha256').update(String(sub&&sub.endpoint||'')).digest('"
+      },
+      {
+        "file": "lib/server/oauth-broker-deployment.js",
+        "line": 161,
+        "text": "const suffix = crypto.randomBytes(4).toString('hex');"
+      },
+      {
+        "file": "lib/server/oauth-broker-deployment.js",
+        "line": 242,
+        "text": "dataKey:crypto.randomBytes(48).toString('base64'),"
+      },
+      {
+        "file": "lib/server/oauth-broker-deployment.js",
+        "line": 258,
+        "text": "await putSecret(token, accountId, 'BROKER_DATA_KEY', crypto.randomBytes(48).toString('base64'));"
+      },
+      {
+        "file": "lib/server/oauth-broker-deployment.js",
+        "line": 340,
+        "text": "const deploymentId = crypto.randomBytes(24).toString('hex');"
+      },
+      {
+        "file": "lib/server/ocr-service.js",
+        "line": 175,
+        "text": "const id = crypto.createHash('sha256').update(String(abs)).digest('hex').slice(0, 32);"
+      },
+      {
+        "file": "lib/server/photo-service.js",
+        "line": 236,
+        "text": "const tmp = destination + '.' + crypto.randomBytes(6).toString('hex') + '.tmp';"
+      },
+      {
+        "file": "lib/server/photo-service.js",
+        "line": 260,
+        "text": "return crypto.randomBytes(12).toString('hex') + '.' + photoExt({ name });"
+      },
+      {
+        "file": "lib/server/photo-service.js",
+        "line": 294,
+        "text": "const staged = previewPath + '.delete-' + crypto.randomBytes(6).toString('hex');"
+      },
+      {
+        "file": "lib/server/photo-service.js",
+        "line": 315,
+        "text": "id: crypto.randomBytes(8).toString('hex'),"
+      },
+      {
+        "file": "lib/server/photo-service.js",
+        "line": 513,
+        "text": "const hash = crypto.createHash('sha256');"
+      },
+      {
+        "file": "lib/server/photo-service.js",
+        "line": 702,
+        "text": "const contentHash = crypto.createHash('sha256');"
+      },
+      {
+        "file": "lib/server/photo-service.js",
+        "line": 771,
+        "text": "const id = Date.now().toString(36) + '-' + crypto.randomBytes(4).toString('hex');"
+      },
+      {
+        "file": "lib/server/photo-service.js",
+        "line": 836,
+        "text": "const newName = crypto.randomBytes(12).toString('hex') + '.' + ext;"
+      },
+      {
+        "file": "lib/server/photo-service.js",
+        "line": 894,
+        "text": "const tmp = dest + '.upload-' + crypto.randomBytes(6).toString('hex');"
+      },
+      {
+        "file": "lib/server/photo-service.js",
+        "line": 917,
+        "text": "backup = dest + '.backup-' + crypto.randomBytes(6).toString('hex');"
+      },
+      {
+        "file": "lib/server/photo-service.js",
+        "line": 973,
+        "text": "const tmp = dest + '.upload-' + crypto.randomBytes(6).toString('hex');"
+      },
+      {
+        "file": "lib/server/photo-service.js",
+        "line": 980,
+        "text": "backup = dest + '.backup-' + crypto.randomBytes(6).toString('hex');"
+      },
+      {
+        "file": "lib/server/platform-dependencies.js",
+        "line": 78,
+        "text": "return objectLike(value) && ownFunction(value, 'createHash') && ownFunction(value, 'randomBytes') && ownFunction(value, 'timingSafeEqual');"
+      },
+      {
+        "file": "lib/server/public-abuse-service.js",
+        "line": 36,
+        "text": "if (!crypto || typeof crypto.randomBytes !== 'function' || typeof crypto.createHmac !== 'function' || typeof crypto.createHash !== 'function') {"
+      },
+      {
+        "file": "lib/server/public-abuse-service.js",
+        "line": 50,
+        "text": "let powSecret = crypto.randomBytes(32);"
+      },
+      {
+        "file": "lib/server/public-abuse-service.js",
+        "line": 87,
+        "text": "const hash = crypto.createHash('sha256').update(`${text}\\n${file || ''}`).digest('hex');"
+      },
+      {
+        "file": "lib/server/public-abuse-service.js",
+        "line": 146,
+        "text": "return crypto.createHmac('sha256', powSecret).update(parts.join('.')).digest('hex');"
+      },
+      {
+        "file": "lib/server/public-abuse-service.js",
+        "line": 161,
+        "text": "const digest = crypto.createHash('sha256').update(String(nonce) + String(solution)).digest();"
+      },
+      {
+        "file": "lib/server/public-abuse-service.js",
+        "line": 175,
+        "text": "const nonce = crypto.randomBytes(16).toString('hex');"
+      },
+      {
+        "file": "lib/server/public-abuse-service.js",
+        "line": 257,
+        "text": "powSecret = crypto.randomBytes(32);"
+      },
+      {
+        "file": "lib/server/public-access-service.js",
+        "line": 42,
+        "text": "if (!crypto || typeof crypto.randomBytes !== 'function' || typeof crypto.createHmac !== 'function') {"
+      },
+      {
+        "file": "lib/server/public-access-service.js",
+        "line": 53,
+        "text": "let unlockSecret = crypto.randomBytes(32);"
+      },
+      {
+        "file": "lib/server/public-access-service.js",
+        "line": 175,
+        "text": "// closed instead; an administrator can set a fresh password, which stores scrypt."
+      },
+      {
+        "file": "lib/server/public-access-service.js",
+        "line": 217,
+        "text": "return crypto.createHmac('sha256', unlockSecret).update(share.token + ':' + share.pwHash).digest('hex');"
+      },
+      {
+        "file": "lib/server/public-access-service.js",
+        "line": 330,
+        "text": "unlockSecret = crypto.randomBytes(32);"
+      },
+      {
+        "file": "lib/server/public-share-routes.js",
+        "line": 694,
+        "text": "return crypto.createHash('sha256').update(String(secret || '')).digest('hex');"
+      },
+      {
+        "file": "lib/server/public-share-routes.js",
+        "line": 766,
+        "text": "const fname = crypto.randomBytes(12).toString('hex') + '.' + ext;"
+      },
+      {
+        "file": "lib/server/public-share-routes.js",
+        "line": 989,
+        "text": "const h = crypto.createHash('sha256');"
+      },
+      {
+        "file": "lib/server/public-share-routes.js",
+        "line": 1350,
+        "text": "// Compatibility facade; modern scrypt hashes need no in-place upgrade."
+      },
+      {
+        "file": "lib/server/public-share-routes.js",
+        "line": 1359,
+        "text": "if (!res.headersSent) return sendPasswordWorkHtml(req, res, 'scrypt-failed');"
+      },
+      {
+        "file": "lib/server/public-share-routes.js",
+        "line": 1409,
+        "text": "const id = crypto.randomBytes(12).toString('hex');"
+      },
+      {
+        "file": "lib/server/public-share-routes.js",
+        "line": 1451,
+        "text": "s.visitorFeedback.unshift({ id: crypto.randomBytes(8).toString('hex'), at: Date.now(), ip, country: geo.country || null, flag: geo.flag || '🌐', name: name || null, body, read: false });"
+      },
+      {
+        "file": "lib/server/pwa-application.js",
+        "line": 294,
+        "text": "const pwaNetworkTestPayload = crypto.randomBytes(1024 * 1024);"
+      },
+      {
+        "file": "lib/server/pwa-device-service.js",
+        "line": 18,
+        "text": "if (!crypto || typeof crypto.randomBytes !== 'function') throw new TypeError('pwa-device-service requires crypto');"
+      },
+      {
+        "file": "lib/server/pwa-device-service.js",
+        "line": 149,
+        "text": "d.csrf = crypto.randomBytes(32).toString('base64url');"
+      },
+      {
+        "file": "lib/server/pwa-device-service.js",
+        "line": 208,
+        "text": "function pwaSecretHash(secret) { return crypto.createHash('sha256').update(String(secret)).digest('hex'); }"
+      },
+      {
+        "file": "lib/server/pwa-device-service.js",
+        "line": 283,
+        "text": "const id = crypto.randomBytes(12).toString('hex');"
+      },
+      {
+        "file": "lib/server/pwa-device-service.js",
+        "line": 284,
+        "text": "const secret = crypto.randomBytes(32).toString('base64url');"
+      },
+      {
+        "file": "lib/server/pwa-device-service.js",
+        "line": 290,
+        "text": "csrf: crypto.randomBytes(32).toString('base64url'),"
+      },
+      {
+        "file": "lib/server/pwa-routes.js",
+        "line": 466,
+        "text": "const challenge = crypto.randomBytes(32);"
+      },
+      {
+        "file": "lib/server/pwa-routes.js",
+        "line": 467,
+        "text": "const token = crypto.randomBytes(18).toString('base64url');"
+      },
+      {
+        "file": "lib/server/pwa-routes.js",
+        "line": 531,
+        "text": "if (parsed.rpIdHash.toString('hex') !== crypto.createHash('sha256').update(rp.id).digest('hex')) throw new Error('rpid');"
+      },
+      {
+        "file": "lib/server/pwa-routes.js",
+        "line": 534,
+        "text": "const clientDataHash = crypto.createHash('sha256').update(fromB64u(resp.clientDataJSON)).digest();"
+      },
+      {
+        "file": "lib/server/pwa-routes.js",
+        "line": 578,
+        "text": "const challenge = crypto.randomBytes(32);"
+      },
+      {
+        "file": "lib/server/pwa-routes.js",
+        "line": 579,
+        "text": "const token = crypto.randomBytes(18).toString('base64url');"
+      },
+      {
+        "file": "lib/server/pwa-routes.js",
+        "line": 631,
+        "text": "if (parsed.rpIdHash.toString('hex') !== crypto.createHash('sha256').update(rp.id).digest('hex')) throw new Error('rpid');"
+      },
+      {
+        "file": "lib/server/pwa-routes.js",
+        "line": 962,
+        "text": "relDir: dirBase + '-' + crypto.randomBytes(3).toString('hex'), // unique folder (no collisions)"
+      },
+      {
+        "file": "lib/server/pwa-routes.js",
+        "line": 1286,
+        "text": "const secret = crypto.randomBytes(32).toString('base64url');"
+      },
+      {
+        "file": "lib/server/pwa-routes.js",
+        "line": 1288,
+        "text": "id: crypto.randomBytes(8).toString('hex'), tokenHash: albumInviteHash(secret), role,"
+      },
+      {
+        "file": "lib/server/pwa-routes.js",
+        "line": 1431,
+        "text": "const fname = crypto.randomBytes(12).toString('hex') + '.' + ext; const dest = path.join(FULL_IMAGES_DIR, fname);"
+      },
+      {
+        "file": "lib/server/pwa-routes.js",
+        "line": 1484,
+        "text": "const fname = crypto.randomBytes(12).toString('hex') + '.' + ext;"
+      },
+      {
+        "file": "lib/server/pwa-routes.js",
+        "line": 1766,
+        "text": "clone.relDir=base+'-'+crypto.randomBytes(3).toString('hex'); clone.bytesReceived=0;"
+      },
+      {
+        "file": "lib/server/pwa-routes.js",
+        "line": 1957,
+        "text": "appendReceptionThreadMessage(s, { id: crypto.randomBytes(8).toString('hex'), at: Date.now(), from: 'owner', name: null, text });"
+      },
+      {
+        "file": "lib/server/pwa-routes.js",
+        "line": 2136,
+        "text": "const ticket = crypto.randomBytes(36).toString('base64url');"
+      },
+      {
+        "file": "lib/server/reception-collaboration-routes.js",
+        "line": 549,
+        "text": "const nonce = crypto.randomBytes(24).toString('hex'), ranges = makeDedupeRanges(size, nonce);"
+      },
+      {
+        "file": "lib/server/reception-collaboration-routes.js",
+        "line": 798,
+        "text": "replacedBackup = target + '.dxreplace-' + crypto.randomBytes(5).toString('hex');"
+      },
+      {
+        "file": "lib/server/reception-collaboration-routes.js",
+        "line": 989,
+        "text": "target = path.join(pendingReal, 'tmp-' + crypto.randomBytes(8).toString('hex'));"
+      },
+      {
+        "file": "lib/server/reception-collaboration-routes.js",
+        "line": 1190,
+        "text": "appendReceptionThreadMessage(s, { id: crypto.randomBytes(8).toString('hex'), at: Date.now(), from: 'visitor', name: name || null, text, ip, country: geo.country || null, flag: geo.flag || '🌐', read: false });"
+      },
+      {
+        "file": "lib/server/restore-service.js",
+        "line": 132,
+        "text": "const tmp = file + '.rollback-' + process.pid + '-' + crypto.randomBytes(4).toString('hex');"
+      },
+      {
+        "file": "lib/server/restore-service.js",
+        "line": 197,
+        "text": "const id = crypto.randomBytes(12).toString('hex');"
+      },
+      {
+        "file": "lib/server/restore-service.js",
+        "line": 330,
+        "text": "const stage = SECRETS_DIR + '.restore-stage-' + process.pid + '-' + crypto.randomBytes(5).toString('hex');"
+      },
+      {
+        "file": "lib/server/restore-service.js",
+        "line": 352,
+        "text": "const old = SECRETS_DIR + '.restore-old-' + process.pid + '-' + crypto.randomBytes(5).toString('hex');"
+      },
+      {
+        "file": "lib/server/restore-service.js",
+        "line": 353,
+        "text": "const transactionId = crypto.randomBytes(12).toString('hex');"
+      },
+      {
+        "file": "lib/server/restore-service.js",
+        "line": 502,
+        "text": "const stage = tlsDirPath() + '.restore-stage-' + process.pid + '-' + crypto.randomBytes(5).toString('hex');"
+      },
+      {
+        "file": "lib/server/restore-service.js",
+        "line": 549,
+        "text": "const tmp = file + '.tmp-' + process.pid + '-' + crypto.randomBytes(4).toString('hex');"
+      },
+      {
+        "file": "lib/server/restore-service.js",
+        "line": 645,
+        "text": "const old = liveTls + '.restore-old-' + process.pid + '-' + crypto.randomBytes(5).toString('hex');"
+      },
+      {
+        "file": "lib/server/restore-service.js",
+        "line": 646,
+        "text": "const transactionId = crypto.randomBytes(12).toString('hex');"
+      },
+      {
+        "file": "lib/server/restore-service.js",
+        "line": 750,
+        "text": "journalStage = LOG_FILE + '.restore-stage-' + process.pid + '-' + crypto.randomBytes(5).toString('hex');"
+      },
+      {
+        "file": "lib/server/search-service.js",
+        "line": 368,
+        "text": "id:String(s.id) + ':' + crypto.createHash('sha1').update(rel).digest('hex').slice(0,16), shareId:s.id, shareName:s.name || '', type:s.type, token:s.token || '', file:rel,"
+      },
+      {
+        "file": "lib/server/session-service.js",
+        "line": 182,
+        "text": "const sid = crypto.randomBytes(32).toString('hex');"
+      },
+      {
+        "file": "lib/server/session-service.js",
+        "line": 183,
+        "text": "const csrf = crypto.randomBytes(32).toString('hex');"
+      },
+      {
+        "file": "lib/server/share-service.js",
+        "line": 353,
+        "text": "const token = crypto.randomBytes(bytes).toString('base64url');"
+      },
+      {
+        "file": "lib/server/share-service.js",
+        "line": 360,
+        "text": "const id = crypto.randomBytes(8).toString('hex');"
+      },
+      {
+        "file": "lib/server/share-service.js",
+        "line": 735,
+        "text": "const rec={id:crypto.randomBytes(8).toString('hex'),deletedAt:Date.now(),deletedBy,ownerId:sh.ownerId||null,ownerName:sh.ownerName||null,share:sh};"
+      },
+      {
+        "file": "lib/server/share-service.js",
+        "line": 912,
+        "text": "id: crypto.randomBytes(8).toString('hex'),"
+      },
+      {
+        "file": "lib/server/state-store.js",
+        "line": 6,
+        "text": "// the same approved scrypt parameters used by the authentication boundary."
+      },
+      {
+        "file": "lib/server/state-store.js",
+        "line": 33,
+        "text": "if (!crypto || typeof crypto.scryptSync !== 'function' || typeof crypto.createCipheriv !== 'function') {"
+      },
+      {
+        "file": "lib/server/state-store.js",
+        "line": 91,
+        "text": "const salt = (encKeyCache && encKeyCache.salt) || crypto.randomBytes(16);"
+      },
+      {
+        "file": "lib/server/state-store.js",
+        "line": 93,
+        "text": "const iv = crypto.randomBytes(12);"
+      },
+      {
+        "file": "lib/server/state-store.js",
+        "line": 94,
+        "text": "const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);"
+      },
+      {
+        "file": "lib/server/state-store.js",
+        "line": 107,
+        "text": "const decipher = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(envelope.iv, 'hex'));"
+      },
+      {
+        "file": "lib/server/storage-connector-config.js",
+        "line": 311,
+        "text": "const id = crypto.randomBytes(18).toString('hex');"
+      },
+      {
+        "file": "lib/server/storage-connector-config.js",
+        "line": 363,
+        "text": "const id = crypto.randomBytes(18).toString('hex'), state = crypto.randomBytes(32).toString('hex');"
+      },
+      {
+        "file": "lib/server/storage-connector-config.js",
+        "line": 364,
+        "text": "const verifier = base64url(crypto.randomBytes(48));"
+      },
+      {
+        "file": "lib/server/storage-connector-config.js",
+        "line": 365,
+        "text": "const challenge = base64url(crypto.createHash('sha256').update(verifier).digest());"
+      },
+      {
+        "file": "lib/server/storage-connector-config.js",
+        "line": 586,
+        "text": "id:crypto.randomBytes(18).toString('hex'), ownerId:owner(req), remote, type, backend, parameters,"
+      },
+      {
+        "file": "lib/server/storage-connector-job-service.js",
+        "line": 82,
+        "text": "if (!crypto || typeof crypto.randomBytes !== 'function') throw new TypeError('storage-connector-job-service requires crypto');"
+      },
+      {
+        "file": "lib/server/storage-connector-job-service.js",
+        "line": 487,
+        "text": "id:crypto.randomBytes(16).toString('hex'),"
+      },
+      {
+        "file": "lib/server/tls-manager.js",
+        "line": 72,
+        "text": "const tmp = file + '.tmp-' + process.pid + '-' + crypto.randomBytes(4).toString('hex');"
+      },
+      {
+        "file": "lib/server/tls-manager.js",
+        "line": 101,
+        "text": "const b = crypto.randomBytes(16); b[0] &= 0x7f; if (b.every((v) => v === 0)) b[15] = 1;"
+      },
+      {
+        "file": "lib/server/tls-manager.js",
+        "line": 109,
+        "text": "const h = crypto.createHash('sha256');"
+      },
+      {
+        "file": "lib/server/transfer-service.js",
+        "line": 105,
+        "text": "const claim = crypto.randomBytes(8).toString('hex');"
+      },
+      {
+        "file": "lib/server/transfer-service.js",
+        "line": 115,
+        "text": "const id = crypto.randomBytes(6).toString('hex');"
+      },
+      {
+        "file": "lib/server/upload-reception-service.js",
+        "line": 587,
+        "text": "? path.join(realDir, `${base}-${Date.now()}-${crypto.randomBytes(3).toString('hex')}${ext}`)"
+      },
+      {
+        "file": "lib/server/upload-reception-service.js",
+        "line": 673,
+        "text": "const staged = path.join(PENDING_DIR, `.staged-${String(purpose || 'remove').replace(/[^a-z0-9_-]/gi,'').slice(0,24)}-${String(id || '').replace(/[^a-z0-9]/gi,'').slice(0,24)}-${crypto.randomBytes(4).toString('hex')}`);"
+      },
+      {
+        "file": "lib/server/upload-reception-service.js",
+        "line": 724,
+        "text": "const id = crypto.randomBytes(9).toString('hex');"
+      },
+      {
+        "file": "lib/server/upload-reception-service.js",
+        "line": 923,
+        "text": "const dest = path.join(QUARANTINE_DIR, crypto.randomBytes(8).toString('hex') + '-' + safeUploadName(name));"
+      },
+      {
+        "file": "lib/server/upload-reception-service.js",
+        "line": 944,
+        "text": "const dest = path.join(QUARANTINE_DIR, crypto.randomBytes(8).toString('hex') + '-unscanned-' + safeUploadName(name));"
+      },
+      {
+        "file": "lib/server/upload-reception-service.js",
+        "line": 957,
+        "text": "return crypto.createHash('sha256').update(String(s.id)).update('\\0').update(id).digest('hex');"
+      },
+      {
+        "file": "lib/server/upload-reception-service.js",
+        "line": 1125,
+        "text": "const digest = crypto.createHash('sha256').update(nonce + ':' + i).digest('hex').slice(0, 16);"
+      },
+      {
+        "file": "lib/server/webauthn-service.js",
+        "line": 10,
+        "text": "if (!crypto || typeof crypto.createPublicKey !== 'function') throw new TypeError('webauthn-service requires crypto');"
+      },
+      {
+        "file": "lib/server/webauthn-service.js",
+        "line": 48,
+        "text": "if (!phantomCredentialSecret) phantomCredentialSecret = crypto.randomBytes(32);"
+      },
+      {
+        "file": "lib/server/webauthn-service.js",
+        "line": 54,
+        "text": "const id = crypto.createHmac('sha256', phantomCredentialSecret)"
+      },
+      {
+        "file": "lib/server/webauthn-service.js",
+        "line": 137,
+        "text": "const key = crypto.createPublicKey({ key: jwk, format: 'jwk' });"
+      },
+      {
+        "file": "lib/server/windows-launcher-routes.js",
+        "line": 31,
+        "text": "if (!crypto || typeof crypto.randomBytes !== 'function' || typeof crypto.timingSafeEqual !== 'function') {"
+      },
+      {
+        "file": "lib/server/windows-launcher-routes.js",
+        "line": 133,
+        "text": "const ticket = crypto.randomBytes(32).toString('base64url');"
+      },
+      {
+        "file": "lib/storage-connectors.js",
+        "line": 408,
+        "text": "const digest = crypto.createHash('sha256').update(normalized).digest('hex');"
+      },
+      {
+        "file": "lib/storage-connectors.js",
+        "line": 446,
+        "text": "const temporary = `${this.caBundlePath}.tmp-${process.pid}-${crypto.randomBytes(6).toString('hex')}`;"
+      },
+      {
+        "file": "lib/storage-connectors.js",
+        "line": 767,
+        "text": "const tmp = `${file}.restore-${process.pid}-${crypto.randomBytes(4).toString('hex')}`;"
+      },
+      {
+        "file": "lib/storage-connectors.js",
+        "line": 811,
+        "text": "const key = crypto.createPrivateKey({ key:privateKey, format:'pem' });"
+      },
+      {
+        "file": "lib/storage-connectors.js",
+        "line": 852,
+        "text": "const tmp = `${file}.tmp-${process.pid}-${crypto.randomBytes(4).toString('hex')}`;"
+      },
+      {
+        "file": "lib/storage-connectors.js",
+        "line": 931,
+        "text": "const suffix = `-dxcheck-${crypto.randomBytes(5).toString('hex')}`;"
+      },
+      {
+        "file": "lib/storage-connectors.js",
+        "line": 1403,
+        "text": "const staging = await fs.promises.mkdtemp(path.join(stagingRoot, `job-${crypto.randomBytes(8).toString('hex')}-`));"
+      },
+      {
+        "file": "lib/web-storage-share.js",
+        "line": 187,
+        "text": "return `\"dx-cloud-${crypto.createHash('sha256').update(raw).digest('base64url').slice(0,24)}\"`;"
+      },
+      {
+        "file": "lib/web-storage-writable.js",
+        "line": 45,
+        "text": "return [dir, `${base}-${Date.now()}-${crypto.randomBytes(3).toString('hex')}${ext}`].filter(Boolean).join('/');"
+      },
+      {
+        "file": "lib/web-storage-writable.js",
+        "line": 241,
+        "text": "const part = id ? d.partPath(s, id) : path.join(d.PARTS_DIR, `web-${s.id}-${crypto.randomBytes(10).toString('hex')}.part`);"
+      },
+      {
+        "file": "oauth-broker/cloudflare-worker/src/index.js",
+        "line": 53,
+        "text": "const nonce = b64url(randomBytes(18));"
+      },
+      {
+        "file": "oauth-broker/cloudflare-worker/src/index.js",
+        "line": 70,
+        "text": "function randomBytes(length) {"
+      },
+      {
+        "file": "oauth-broker/cloudflare-worker/src/index.js",
+        "line": 118,
+        "text": "const iv = randomBytes(12);"
+      },
+      {
+        "file": "oauth-broker/cloudflare-worker/src/index.js",
+        "line": 256,
+        "text": "const id = `dxc_${b64url(randomBytes(18))}`;"
+      },
+      {
+        "file": "oauth-broker/cloudflare-worker/src/index.js",
+        "line": 257,
+        "text": "const secret = b64url(randomBytes(32));"
+      },
+      {
+        "file": "oauth-broker/cloudflare-worker/src/index.js",
+        "line": 258,
+        "text": "const refreshHandle = `dxr_${b64url(randomBytes(24))}`;"
+      },
+      {
+        "file": "oauth-broker/cloudflare-worker/src/index.js",
+        "line": 281,
+        "text": "const id = b64url(randomBytes(18));"
+      },
+      {
+        "file": "oauth-broker/cloudflare-worker/src/index.js",
+        "line": 282,
+        "text": "const pollToken = b64url(randomBytes(32));"
+      },
+      {
+        "file": "oauth-broker/cloudflare-worker/src/index.js",
+        "line": 283,
+        "text": "const state = b64url(randomBytes(32));"
+      },
+      {
+        "file": "oauth-broker/cloudflare-worker/src/index.js",
+        "line": 284,
+        "text": "const verifier = b64url(randomBytes(48));"
+      },
+      {
+        "file": "oauth-broker/cloudflare-worker/src/index.js",
+        "line": 355,
+        "text": "const id = `dxc_${b64url(randomBytes(18))}`;"
+      },
+      {
+        "file": "oauth-broker/cloudflare-worker/src/index.js",
+        "line": 356,
+        "text": "const secret = b64url(randomBytes(32));"
+      },
+      {
+        "file": "oauth-broker/cloudflare-worker/src/index.js",
+        "line": 357,
+        "text": "const refreshHandle = `dxr_${b64url(randomBytes(24))}`;"
+      },
+      {
+        "file": "oauth-broker/server.js",
+        "line": 43,
+        "text": "function sha256(value) { return crypto.createHash('sha256').update(value).digest('hex'); }"
+      },
+      {
+        "file": "oauth-broker/server.js",
+        "line": 58,
+        "text": "const nonce = base64url(crypto.randomBytes(18));"
+      },
+      {
+        "file": "oauth-broker/server.js",
+        "line": 99,
+        "text": "if (provided) return crypto.createHash('sha256').update('Direct-Xfer\\0OAuthBroker\\0').update(provided).digest();"
+      },
+      {
+        "file": "oauth-broker/server.js",
+        "line": 104,
+        "text": "const key = crypto.randomBytes(32); fs.writeFileSync(KEY_FILE, key, { mode:0o600, flag:'wx' }); return key;"
+      },
+      {
+        "file": "oauth-broker/server.js",
+        "line": 109,
+        "text": "const iv = crypto.randomBytes(12); const cipher = crypto.createCipheriv('aes-256-gcm', MASTER_KEY, iv);"
+      },
+      {
+        "file": "oauth-broker/server.js",
+        "line": 115,
+        "text": "const decipher = crypto.createDecipheriv('aes-256-gcm', MASTER_KEY, Buffer.from(obj.iv,'base64'));"
+      },
+      {
+        "file": "oauth-broker/server.js",
+        "line": 127,
+        "text": "const tmp = `${STORE_FILE}.${process.pid}.${crypto.randomBytes(4).toString('hex')}.tmp`;"
+      },
+      {
+        "file": "oauth-broker/server.js",
+        "line": 132,
+        "text": "const id = `dxc_${base64url(crypto.randomBytes(18))}`;"
+      },
+      {
+        "file": "oauth-broker/server.js",
+        "line": 133,
+        "text": "const secret = base64url(crypto.randomBytes(32));"
+      },
+      {
+        "file": "oauth-broker/server.js",
+        "line": 134,
+        "text": "const refreshHandle = `dxr_${base64url(crypto.randomBytes(24))}`;"
+      },
+      {
+        "file": "oauth-broker/server.js",
+        "line": 190,
+        "text": "const id = base64url(crypto.randomBytes(18)), pollToken = base64url(crypto.randomBytes(32)), state = base64url(crypto.randomBytes(32));"
+      },
+      {
+        "file": "oauth-broker/server.js",
+        "line": 191,
+        "text": "const verifier = base64url(crypto.randomBytes(48)); const challenge = base64url(crypto.createHash('sha256').update(verifier).digest());"
+      },
+      {
+        "file": "scripts/asvs-static-audit.js",
+        "line": 68,
+        "text": "decoderInventory.push({ file, line:number, hash:crypto.createHash('sha256').update(line.trim()).digest('hex').slice(0, 16) });"
+      },
+      {
+        "file": "scripts/restore-historical-tests.js",
+        "line": 14,
+        "text": "return crypto.createHash('sha1').update(Buffer.from(`blob ${buf.length}\\0`)).update(buf).digest('hex');"
+      },
+      {
+        "file": "scripts/restore-historical-tests.js",
+        "line": 50,
+        "text": "const temp=`${file}.tmp-${process.pid}-${crypto.randomBytes(4).toString('hex')}`;"
+      },
+      {
+        "file": "scripts/security-inventory.js",
+        "line": 7,
+        "text": "crypto:/\\b(?:createCipheriv|createDecipheriv|createHmac|createHash|scrypt|randomBytes|generateKeyPair|createPrivateKey|createPublicKey)\\b/,"
+      },
+      {
+        "file": "scripts/sync-windows-runtime-manifest.js",
+        "line": 15,
+        "text": "return crypto.createHash('sha256').update(normalized).digest('hex');"
+      },
+      {
+        "file": "scripts/verify-audit-proof.js",
+        "line": 8,
+        "text": "return crypto.createHash('sha256').update(publicKey.export({ type:'spki', format:'der' })).digest('hex');"
+      },
+      {
+        "file": "scripts/verify-audit-proof.js",
+        "line": 11,
+        "text": "const hash = crypto.createHash('sha256');"
+      },
+      {
+        "file": "scripts/verify-audit-proof.js",
+        "line": 27,
+        "text": "const publicKey = crypto.createPublicKey(String(proof.publicKey || ''));"
+      },
+      {
+        "file": "scripts/verify-audit-proof.js",
+        "line": 33,
+        "text": "const trusted = crypto.createPublicKey(String(options.publicKey));"
+      },
+      {
+        "file": "test/asvs-l3-account-factor-hardening-1.70.22.test.js",
+        "line": 14,
+        "text": "assert.match(source, /owner-\\$\\{crypto\\.randomBytes\\(6\\)\\.toString\\('hex'\\)\\}/);"
+      },
+      {
+        "file": "test/asvs-l3-enforcement-1.70.24.test.js",
+        "line": 127,
+        "text": "assert.match(accountRoutes, /randomBytes\\(24\\)\\.toString\\('base64url'\\)/);"
+      },
+      {
+        "file": "test/asvs-l3-review-closure-1.70.24.test.js",
+        "line": 119,
+        "text": "test('ASVS V11 password and DATA_KEY scrypt parameters are explicit and pinned', () => {"
+      },
+      {
+        "file": "test/asvs-l3-review-closure-1.70.24.test.js",
+        "line": 128,
+        "text": "assert.match(auth, /crypto\\.scrypt\\(String\\(plain\\), salt, keyLength, SCRYPT_OPTIONS,/);"
+      },
+      {
+        "file": "test/asvs-l3-review-closure-1.70.24.test.js",
+        "line": 139,
+        "text": "assert.match(accounts, /crypto\\.randomBytes\\(16\\)\\.toString\\('hex'\\).*128-bit recovery secrets/);"
+      },
+      {
+        "file": "test/asvs-l3-totp-1.70.22.test.js",
+        "line": 29,
+        "text": "const digest = crypto.createHmac('sha1', key).update(buffer).digest();"
+      },
+      {
+        "file": "test/asvs-l3-webauthn-rsa-strength-1.70.22.test.js",
+        "line": 10,
+        "text": "createPublicKey() {"
+      },
+      {
+        "file": "test/auth-scrypt-nonblocking-1.69.4.test.js",
+        "line": 24,
+        "text": "test('request-time password hashing and verification use async scrypt, never scryptSync', async () => {"
+      },
+      {
+        "file": "test/auth-scrypt-nonblocking-1.69.4.test.js",
+        "line": 25,
+        "text": "const originalScrypt = crypto.scrypt;"
+      },
+      {
+        "file": "test/auth-scrypt-nonblocking-1.69.4.test.js",
+        "line": 29,
+        "text": "crypto.scrypt = (plain, salt, keyLength, callback) => {"
+      },
+      {
+        "file": "test/auth-scrypt-nonblocking-1.69.4.test.js",
+        "line": 44,
+        "text": "crypto.scrypt = originalScrypt;"
+      },
+      {
+        "file": "test/auth-scrypt-nonblocking-1.69.4.test.js",
+        "line": 50,
+        "text": "test('scrypt work queue is concurrency-bounded and rejects overload before unbounded queuing', async () => {"
+      },
+      {
+        "file": "test/auth-scrypt-nonblocking-1.69.4.test.js",
+        "line": 51,
+        "text": "const originalScrypt = crypto.scrypt;"
+      },
+      {
+        "file": "test/auth-scrypt-nonblocking-1.69.4.test.js",
+        "line": 58,
+        "text": "crypto.scrypt = (plain, salt, keyLength, callback) => {"
+      },
+      {
+        "file": "test/auth-scrypt-nonblocking-1.69.4.test.js",
+        "line": 81,
+        "text": "crypto.scrypt = originalScrypt;"
+      },
+      {
+        "file": "test/auth-scrypt-nonblocking-1.69.4.test.js",
+        "line": 90,
+        "text": "test('oversized passwords are rejected before expensive scrypt work', async () => {"
+      },
+      {
+        "file": "test/auth-scrypt-nonblocking-1.69.4.test.js",
+        "line": 91,
+        "text": "const originalScrypt = crypto.scrypt;"
+      },
+      {
+        "file": "test/auth-scrypt-nonblocking-1.69.4.test.js",
+        "line": 94,
+        "text": "crypto.scrypt = (...args) => { calls += 1; originalScrypt(...args); };"
+      },
+      {
+        "file": "test/auth-scrypt-nonblocking-1.69.4.test.js",
+        "line": 103,
+        "text": "crypto.scrypt = originalScrypt;"
+      },
+      {
+        "file": "test/auth-scrypt-nonblocking-1.69.4.test.js",
+        "line": 108,
+        "text": "test('request auth is isolated behind async auth/session services and synchronous scrypt stays bootstrap-only', () => {"
+      },
+      {
+        "file": "test/auth-scrypt-nonblocking-1.69.4.test.js",
+        "line": 120,
+        "text": "assert.match(authSource, /crypto\\.scrypt\\(/);"
+      },
+      {
+        "file": "test/auth-session-boundary-1.69.5.test.js",
+        "line": 251,
+        "text": "test('password reset or username change while scrypt is pending cannot grant a stale login', async () => {"
+      },
+      {
+        "file": "test/codeql-security-regressions-1.70.22.test.js",
+        "line": 29,
+        "text": "assert.doesNotMatch(src, /createHash\\(['\"]sha256['\"]\\)/);"
+      },
+      {
+        "file": "test/codeql-security-regressions-1.70.22.test.js",
+        "line": 36,
+        "text": "const sha1Uses = src.match(/createHash\\(['\"]sha1['\"]\\)/g) || [];"
+      },
+      {
+        "file": "test/codeql-security-regressions-1.70.22.test.js",
+        "line": 40,
+        "text": "assert.match(src, /createHash\\('sha1'\\)[^\\n]*lgtm\\[js\\/insufficient-password-hash\\]/);"
+      },
+      {
+        "file": "test/connector-status-idempotency-1.67.39.test.js",
+        "line": 37,
+        "text": "assert.ok(block.indexOf('const existing = list.find') < block.indexOf(\"connector.id = crypto.randomBytes\"));"
+      },
+      {
+        "file": "test/core-state-application-refactor-1.70.3.test.js",
+        "line": 132,
+        "text": "const hash = crypto.createHash('sha256').update(source).digest('hex');"
+      },
+      {
+        "file": "test/core-state-bridges-refactor-1.70.16.test.js",
+        "line": 175,
+        "text": "const hash = crypto.createHash('sha256').update(source).digest('hex');"
+      },
+      {
+        "file": "test/final-http-application-refactor-1.70.17.test.js",
+        "line": 57,
+        "text": "const hash = crypto.createHash('sha256').update(read(rel)).digest('hex');"
+      },
+      {
+        "file": "test/http-pwa-lifecycle-application-refactor-1.70.6.test.js",
+        "line": 137,
+        "text": "const hash = crypto.createHash('sha256').update(read(rel)).digest('hex');"
+      },
+      {
+        "file": "test/photo-service-refactor-1.69.6.test.js",
+        "line": 67,
+        "text": "function sha256(buf) { return crypto.createHash('sha256').update(buf).digest('hex'); }"
+      },
+      {
+        "file": "test/platform-config-factorization-1.70.19.test.js",
+        "line": 81,
+        "text": "const hash = crypto.createHash('sha256').update(read(rel)).digest('hex');"
+      },
+      {
+        "file": "test/project-reconstruction-1.64.0.test.js",
+        "line": 47,
+        "text": "assert.match(manifestSync, /createHash\\('sha256'\\)/);"
+      },
+      {
+        "file": "test/public-http-application-refactor-1.70.8.test.js",
+        "line": 63,
+        "text": "const hash = crypto.createHash('sha256').update(source).digest('hex');"
+      },
+      {
+        "file": "test/public-link-security-deep-audit-1.69.15.test.js",
+        "line": 46,
+        "text": "hashPassword:async(password) => ({ ok:true, hash:'scrypt:' + password }),"
+      },
+      {
+        "file": "test/public-link-security-deep-audit-1.69.15.test.js",
+        "line": 47,
+        "text": "parseHash:(value) => String(value || '').startsWith('scrypt:') ? { hash:value } : null,"
+      },
+      {
+        "file": "test/public-link-security-deep-audit-1.69.15.test.js",
+        "line": 48,
+        "text": "verifyPassword:async(password, record) => ({ ok:true, match:record.hash === 'scrypt:' + password }),"
+      },
+      {
+        "file": "test/public-link-security-deep-audit-1.69.15.test.js",
+        "line": 120,
+        "text": "const share = { token:'abc', type:'file', pwHash:'scrypt:secret', accessRequests:[] };"
+      },
+      {
+        "file": "test/public-link-security-deep-audit-1.69.15.test.js",
+        "line": 198,
+        "text": "assert.doesNotMatch(routes, /randomBytes\\(16\\).*toString\\('hex'\\)/);"
+      },
+      {
+        "file": "test/public-link-security-services-refactor-1.69.14.test.js",
+        "line": 34,
+        "text": "hashPassword:async(password) => ({ ok:true, hash:'scrypt:' + password }),"
+      },
+      {
+        "file": "test/public-link-security-services-refactor-1.69.14.test.js",
+        "line": 35,
+        "text": "parseHash:(value) => String(value || '').startsWith('scrypt:') ? { hash:value } : null,"
+      },
+      {
+        "file": "test/public-link-security-services-refactor-1.69.14.test.js",
+        "line": 36,
+        "text": "verifyPassword:async(password, record) => ({ ok:true, match:record.hash === 'scrypt:' + password }),"
+      },
+      {
+        "file": "test/public-link-security-services-refactor-1.69.14.test.js",
+        "line": 80,
+        "text": "const share = { token:'abc', type:'file', pwHash:'scrypt:secret', accessRequests:[{ id:'req1', status:'approved' }] };"
+      },
+      {
+        "file": "test/public-link-security-services-refactor-1.69.14.test.js",
+        "line": 83,
+        "text": "// Obsolete pre-scrypt hashes fail closed instead of exposing a fast public password verifier."
+      },
+      {
+        "file": "test/public-link-security-services-refactor-1.69.14.test.js",
+        "line": 95,
+        "text": "assert.equal(service.isUnlocked({ headers:{ cookie:unlockPair } }, { ...share, pwHash:'scrypt:changed' }), false);"
+      },
+      {
+        "file": "test/public-share-routes-deep-fixes-1.69.6.test.js",
+        "line": 185,
+        "text": "const invite = { id:'i1', role:'contributor', tokenHash:crypto.createHash('sha256').update('secret').digest('hex'), maxFiles:1, usedFiles:0 };"
+      },
+      {
+        "file": "test/public-share-routes-deep-fixes-1.69.6.test.js",
+        "line": 209,
+        "text": "const invite = { id:'i1', role:'manager', tokenHash:crypto.createHash('sha256').update('secret').digest('hex') };"
+      },
+      {
+        "file": "test/public-share-routes-deep-fixes-1.69.6.test.js",
+        "line": 287,
+        "text": "const invite = { id:'i1', role:'contributor', tokenHash:crypto.createHash('sha256').update('secret').digest('hex'), usedFiles:0 };"
+      },
+      {
+        "file": "test/public-share-routes-deep-fixes-1.69.6.test.js",
+        "line": 330,
+        "text": "assert.equal(res.body, 'scrypt-failed');"
+      },
+      {
+        "file": "test/pwa-application-refactor-1.69.21.test.js",
+        "line": 155,
+        "text": "const hash = crypto.createHash('sha256').update(text).digest('hex');"
+      },
+      {
+        "file": "test/runtime-services-application-refactor-1.70.9.test.js",
+        "line": 149,
+        "text": "const hash = crypto.createHash('sha256').update(source).digest('hex');"
+      },
+      {
+        "file": "test/security-auth-application-deep-audit-1.70.5.test.js",
+        "line": 146,
+        "text": "assert.match(access, /unlockSecret = null;[\\s\\S]*?crypto\\.randomBytes\\(32\\)/);"
+      },
+      {
+        "file": "test/security-auth-application-deep-audit-1.70.5.test.js",
+        "line": 149,
+        "text": "assert.match(abuse, /powSecret = null;[\\s\\S]*?crypto\\.randomBytes\\(32\\)/);"
+      },
+      {
+        "file": "test/security-auth-application-refactor-1.70.4.test.js",
+        "line": 120,
+        "text": "const hash = crypto.createHash('sha256').update(source).digest('hex');"
+      },
+      {
+        "file": "test/share-media-transfer-application-refactor-1.70.5.test.js",
+        "line": 233,
+        "text": "const hash = crypto.createHash('sha256').update(normalized).digest('hex');"
+      },
+      {
+        "file": "test/state-bootstrap-service-refactor-1.69.22.test.js",
+        "line": 204,
+        "text": "const hash = crypto.createHash('sha256').update(text).digest('hex');"
+      },
+      {
+        "file": "test/state-lifecycle-application-refactor-1.70.14.test.js",
+        "line": 243,
+        "text": "const hash = crypto.createHash('sha256').update(source).digest('hex');"
+      }
+    ],
+    "process": [
+      {
+        "file": "lib/server/ocr-service.js",
+        "line": 89,
+        "text": "execFile(bin, args, {"
+      },
+      {
+        "file": "lib/storage-connectors.js",
+        "line": 503,
+        "text": "const child = spawn(command, commandArgs, {"
+      },
+      {
+        "file": "lib/storage-connectors.js",
+        "line": 1069,
+        "text": "const child = spawn(command, childArgs, { env:this.commandEnv(), stdio:['ignore','pipe','pipe'], windowsHide:true });"
+      },
+      {
+        "file": "lib/storage-connectors.js",
+        "line": 1318,
+        "text": "const child = spawn(command, commandArgs, {"
+      },
+      {
+        "file": "test/bootstrap-lifecycle-deep-audit-1.69.13.test.js",
+        "line": 96,
+        "text": "execFile() { throw new Error('powershell-sync-failure'); },"
+      },
+      {
+        "file": "test/oauth-broker-service-1.67.20.test.js",
+        "line": 29,
+        "text": "const broker=spawn(process.execPath,['oauth-broker/server.js'],{"
+      },
+      {
+        "file": "test/pwa-admin-features-15-19-21-1.64.0.test.js",
+        "line": 183,
+        "text": "const child = spawn(process.execPath, ['server.js'], {"
+      },
+      {
+        "file": "test/pwa-admin-features-3-7-1.64.0.test.js",
+        "line": 197,
+        "text": "const child = spawn(process.execPath, ['server.js'], {"
+      },
+      {
+        "file": "test/pwa-mobile-features-24-25-27-29-31-42-45-46-47-1.64.0.test.js",
+        "line": 141,
+        "text": "const child = spawn(process.execPath, ['server.js'], {"
+      },
+      {
+        "file": "test/reverse-proxy-multi-domain-1.64.1.test.js",
+        "line": 30,
+        "text": "const child=spawn(process.execPath,['server.js'],{cwd:root,env:{...process.env,PORT:String(port),BIND:'127.0.0.1',HOST_ROOT:path.join(temp,'host'),DATA_DIR:path.join(temp,'data'),IMAGES_DIR:path.join(temp,'images'),INBOX_DIR:path.join(temp,"
+      },
+      {
+        "file": "test/standard-server-health-dashboard-1.64.0.test.js",
+        "line": 73,
+        "text": "const child=spawn(process.execPath,['server.js'],{cwd:root,env:{...process.env,PORT:String(port),HOST_ROOT:host,DATA_DIR:data,IMAGES_DIR:images,INBOX_DIR:inbox,ADMIN_USERNAME:'admin',ADMIN_PASSWORD:'HealthPass123!',UPDATE_CHECK:'false',PUBL"
+      },
+      {
+        "file": "test/standard-view-features-16-19-21-22-37-39-45-49-1.64.0.test.js",
+        "line": 54,
+        "text": "const child=spawn(process.execPath,['server.js'],{cwd:root,env:{...process.env,PORT:String(port),HOST_ROOT:host,DATA_DIR:data,IMAGES_DIR:images,INBOX_DIR:inbox,ADMIN_USERNAME:'admin',ADMIN_PASSWORD:'AuditPass123!',UPDATE_CHECK:'false',PUBLI"
+      }
+    ],
+    "outbound": [
+      {
+        "file": "lib/assets/oauth-broker-worker.mjs",
+        "line": 201,
+        "text": "const response = await fetch(GOOGLE_TOKEN_URL, {"
+      },
+      {
+        "file": "lib/assets/oauth-broker-worker.mjs",
+        "line": 468,
+        "text": "async fetch(request, env) {"
+      },
+      {
+        "file": "lib/auth-utils.js",
+        "line": 150,
+        "text": "function checkPwnedPassword(plain, requestFactory = https.request) {"
+      },
+      {
+        "file": "lib/google-oauth-broker-client.js",
+        "line": 39,
+        "text": "this.fetch = options.fetch || globalThis.fetch;"
+      },
+      {
+        "file": "lib/google-oauth-broker-client.js",
+        "line": 46,
+        "text": "return new GoogleOAuthBrokerClient({ baseUrl:value, fetch:this.fetch, version:this.version, timeoutMs:this.timeoutMs, asvsL3Mode:this.asvsL3Mode, asvsL3EgressAllowlist:this.asvsL3EgressAllowlist });"
+      },
+      {
+        "file": "lib/google-oauth-broker-client.js",
+        "line": 50,
+        "text": "if (typeof this.fetch !== 'function') throw Object.assign(new Error('fetch-unavailable'), { code:'oauth-broker-unreachable' });"
+      },
+      {
+        "file": "lib/google-oauth-broker-client.js",
+        "line": 55,
+        "text": "const response = await this.fetch(`${this.baseUrl}${pathname}`, {"
+      },
+      {
+        "file": "lib/server/admin-application.js",
+        "line": 155,
+        "text": "fs, path, crypto, express, webpush,"
+      },
+      {
+        "file": "lib/server/admin-application.js",
+        "line": 359,
+        "text": "getWebpush:() => webpush,"
+      },
+      {
+        "file": "lib/server/admin-diagnostics-routes.js",
+        "line": 83,
+        "text": "webpush,"
+      },
+      {
+        "file": "lib/server/admin-diagnostics-routes.js",
+        "line": 428,
+        "text": "add('web-push', 'notifications', webpush ? (subscriptions.length ? 'ok' : 'info') : 'warn', { module:!!webpush, subscriptions:subscriptions.length });"
+      },
+      {
+        "file": "lib/server/admin-settings-routes.js",
+        "line": 73,
+        "text": "nodemailer,"
+      },
+      {
+        "file": "lib/server/admin-settings-routes.js",
+        "line": 88,
+        "text": "webpush,"
+      },
+      {
+        "file": "lib/server/admin-settings-routes.js",
+        "line": 265,
+        "text": "if (!nodemailer) return res.status(400).json({ error: 'no-module' });"
+      },
+      {
+        "file": "lib/server/admin-settings-routes.js",
+        "line": 274,
+        "text": "if (!webpush) return res.status(400).json({ error: 'no-module' });"
+      },
+      {
+        "file": "lib/server/admin-settings-routes.js",
+        "line": 281,
+        "text": "if (!webpush) return res.status(400).json({ error: 'no-module' });"
+      },
+      {
+        "file": "lib/server/admin-settings-routes.js",
+        "line": 318,
+        "text": "if (!webpush) return res.status(400).json({ error: 'no-module' });"
+      },
+      {
+        "file": "lib/server/application-context.js",
+        "line": 79,
+        "text": "\"effectiveWebhook\", \"emailConfigured\", \"getSettings\", \"getVapidKeys\", \"maybeSendDigest\", \"nodemailer\", \"persistNow\", \"pruneHistory\","
+      },
+      {
+        "file": "lib/server/application-context.js",
+        "line": 81,
+        "text": "\"sendWebPush\", \"sendWebhook\", \"setSettingsDurable\", \"settingsForClient\", \"webpush\", \"getState\", \"bumpHistoryViewRevision\","
+      },
+      {
+        "file": "lib/server/application-context.js",
+        "line": 113,
+        "text": "\"shutdown\", \"streamFile\", \"systemHealthService\", \"universalSearchStatus\", \"verifyAuditChain\", \"webpush\", \"getState\", \"getServer\","
+      },
+      {
+        "file": "lib/server/audit-service.js",
+        "line": 95,
+        "text": "const req = https.request(remoteAuditEndpoint, {"
+      },
+      {
+        "file": "lib/server/backup-service.js",
+        "line": 173,
+        "text": "const res = await fetch(target, { method: 'PUT', headers, body: buf, signal: AbortSignal.timeout(120000), redirect:ASVS_L3_MODE === true ? 'error' : 'follow' });"
+      },
+      {
+        "file": "lib/server/backup-service.js",
+        "line": 199,
+        "text": "const res = await fetch(target, {"
+      },
+      {
+        "file": "lib/server/core-state-application.js",
+        "line": 63,
+        "text": "const { fs, path, crypto, os, net, tls, forge, nodemailer, webpush } = platform;"
+      },
+      {
+        "file": "lib/server/core-state-application.js",
+        "line": 133,
+        "text": "nodemailer,"
+      },
+      {
+        "file": "lib/server/core-state-application.js",
+        "line": 134,
+        "text": "webpush,"
+      },
+      {
+        "file": "lib/server/http-application.js",
+        "line": 400,
+        "text": "const site = String(req.headers['sec-fetch-site'] || '').toLowerCase();"
+      },
+      {
+        "file": "lib/server/http-application.js",
+        "line": 403,
+        "text": "const mode = String(req.headers['sec-fetch-mode'] || '').toLowerCase();"
+      },
+      {
+        "file": "lib/server/network-services.js",
+        "line": 42,
+        "text": "const res = await fetch(url, { ...opts, signal: ctrl.signal, redirect: ASVS_L3_MODE === true ? 'error' : 'follow' });"
+      },
+      {
+        "file": "lib/server/notification-application.js",
+        "line": 157,
+        "text": "const webpush = platform.webpush || null;"
+      },
+      {
+        "file": "lib/server/notification-application.js",
+        "line": 181,
+        "text": "nodemailer:platform.nodemailer || null,"
+      },
+      {
+        "file": "lib/server/notification-application.js",
+        "line": 182,
+        "text": "webpush,"
+      },
+      {
+        "file": "lib/server/notification-application.js",
+        "line": 275,
+        "text": "webPushAvailable:() => !!webpush,"
+      },
+      {
+        "file": "lib/server/notification-application.js",
+        "line": 296,
+        "text": "webPushAvailable:() => !!webpush,"
+      },
+      {
+        "file": "lib/server/notification-center-service.js",
+        "line": 1030,
+        "text": "if (pushSubs().length && !webPushAvailable()) warn('webpush-module', 'Abonnements Push présents mais module Web Push indisponible', 'critical');"
+      },
+      {
+        "file": "lib/server/notification-service.js",
+        "line": 15,
+        "text": "nodemailer, webpush, getSettings, formatBytes, persist, persistNow,"
+      },
+      {
+        "file": "lib/server/notification-service.js",
+        "line": 68,
+        "text": "return fetch(url, { method: 'POST', headers: { 'Content-Type': contentType }, body, signal: AbortSignal.timeout(5000), redirect:'error', cache:'no-store' })"
+      },
+      {
+        "file": "lib/server/notification-service.js",
+        "line": 225,
+        "text": "if (!nodemailer) return false;"
+      },
+      {
+        "file": "lib/server/notification-service.js",
+        "line": 231,
+        "text": "// Builds (and caches) a nodemailer transport for the current config."
+      },
+      {
+        "file": "lib/server/notification-service.js",
+        "line": 233,
+        "text": "if (!nodemailer) return null;"
+      },
+      {
+        "file": "lib/server/notification-service.js",
+        "line": 249,
+        "text": "? nodemailer.createTransport(e.url, ASVS_L3_MODE === true ? { requireTLS:true } : undefined)"
+      },
+      {
+        "file": "lib/server/notification-service.js",
+        "line": 250,
+        "text": ": nodemailer.createTransport({"
+      },
+      {
+        "file": "lib/server/notification-service.js",
+        "line": 268,
+        "text": "if (!nodemailer) return false;"
+      },
+      {
+        "file": "lib/server/notification-service.js",
+        "line": 367,
+        "text": "if (!webpush) return null;"
+      },
+      {
+        "file": "lib/server/notification-service.js",
+        "line": 372,
+        "text": "try { keys = webpush.generateVAPIDKeys(); }"
+      },
+      {
+        "file": "lib/server/notification-service.js",
+        "line": 374,
+        "text": "console.error('[webpush] VAPID key generation failed:', String(err && err.message || err).slice(0, 200));"
+      },
+      {
+        "file": "lib/server/notification-service.js",
+        "line": 384,
+        "text": "console.error('[webpush] VAPID key persistence failed:', String(err && err.message || err).slice(0, 200));"
+      },
+      {
+        "file": "lib/server/notification-service.js",
+        "line": 399,
+        "text": "return !!(webpush && root.meta && root.meta.vapid && pushSubs().length);"
+      },
+      {
+        "file": "lib/server/notification-service.js",
+        "line": 426,
+        "text": "if (!webpush) return 0;"
+      },
+      {
+        "file": "lib/server/notification-service.js",
+        "line": 449,
+        "text": "console.error('[webpush] send failed:', code || (err && err.message));"
+      },
+      {
+        "file": "lib/server/notification-service.js",
+        "line": 454,
+        "text": "const delivery = Promise.resolve(webpush.sendNotification({ endpoint: sub.endpoint, keys: sub.keys }, data, opts))"
+      },
+      {
+        "file": "lib/server/notification-service.js",
+        "line": 467,
+        "text": "if (!webpush || !sub) return { ok: false, error: 'no-module', statusCode: 0, sentAt: 0 };"
+      },
+      {
+        "file": "lib/server/notification-service.js",
+        "line": 491,
+        "text": "const result = await webpush.sendNotification({ endpoint: sub.endpoint, keys: sub.keys }, data, opts);"
+      },
+      {
+        "file": "lib/server/notification-service.js",
+        "line": 499,
+        "text": "console.error('[webpush] awaited send failed:', statusCode || (err && err.message));"
+      },
+      {
+        "file": "lib/server/oauth-broker-deployment.js",
+        "line": 88,
+        "text": "const response = await fetch(targetUrl, { method:options.method || 'GET', headers, body, signal:controller.signal, redirect:ASVS_L3_MODE ? 'error' : 'follow' });"
+      },
+      {
+        "file": "lib/server/oauth-broker-deployment.js",
+        "line": 107,
+        "text": "throw makeError('cloudflare-network-error', 502, String(error && error.message || error || 'fetch failed'));"
+      },
+      {
+        "file": "lib/server/oauth-broker-deployment.js",
+        "line": 277,
+        "text": "const response = await fetch(targetUrl, { headers:{ accept:'application/json', 'cache-control':'no-cache' }, signal:controller.signal, redirect:ASVS_L3_MODE ? 'error' : 'follow' });"
+      },
+      {
+        "file": "lib/server/platform-dependencies.js",
+        "line": 15,
+        "text": "coreState:Object.freeze(['fs', 'path', 'crypto', 'os', 'net', 'tls', 'forge', 'nodemailer', 'webpush']),"
+      },
+      {
+        "file": "lib/server/platform-dependencies.js",
+        "line": 16,
+        "text": "notification:Object.freeze(['nodemailer', 'webpush']),"
+      },
+      {
+        "file": "lib/server/platform-dependencies.js",
+        "line": 21,
+        "text": "directDomains:Object.freeze(['fs', 'path', 'crypto', 'express', 'QRCode', 'nodemailer', 'webpush', 'forge', 'pwaAdminHealth']),"
+      },
+      {
+        "file": "lib/server/platform-dependencies.js",
+        "line": 161,
+        "text": "nodemailer:optionalModule(load, 'nodemailer', validNodemailer),"
+      },
+      {
+        "file": "lib/server/platform-dependencies.js",
+        "line": 162,
+        "text": "webpush:optionalModule(load, 'web-push', validWebpush),"
+      },
+      {
+        "file": "lib/server/public-share-routes.js",
+        "line": 184,
+        "text": "// JSON for fetch/XHR endpoints (uploads, collab list/delete); an HTML page for"
+      },
+      {
+        "file": "lib/server/public-share-routes.js",
+        "line": 734,
+        "text": "const script = canUpload || canManage ? `<script>(function(){const root=document.querySelector('[data-collab-base]');const base=root?root.getAttribute('data-collab-base'):'';if(!base)return;const status=document.getElementById('collab-statu"
+      },
+      {
+        "file": "lib/server/pwa-application.js",
+        "line": 250,
+        "text": "get webpush() { return live.getWebpush(); },"
+      },
+      {
+        "file": "lib/server/pwa-composition-service.js",
+        "line": 122,
+        "text": "const PWA_LIVE_BINDING_NAMES = Object.freeze(['state', 'searchIndexBuilding', 'universalSearchIndex', 'webpush']);"
+      },
+      {
+        "file": "lib/server/pwa-routes.js",
+        "line": 860,
+        "text": "if (!live.webpush) return res.status(400).json({ error: 'no-module' });"
+      },
+      {
+        "file": "lib/server/pwa-routes.js",
+        "line": 866,
+        "text": "if (!live.webpush) return res.status(400).json({ error: 'no-module' });"
+      },
+      {
+        "file": "lib/server/pwa-routes.js",
+        "line": 938,
+        "text": "if (!live.webpush) return res.status(400).json({ error: 'no-module' });"
+      },
+      {
+        "file": "lib/server/root-routes.js",
+        "line": 32,
+        "text": "// remains in this composition root and must allow the pre-HTTPS loopback fetch."
+      },
+      {
+        "file": "lib/server/root-routes.js",
+        "line": 40,
+        "text": "// an on-path peer could replace it. Remote clients may fetch it without sending"
+      },
+      {
+        "file": "lib/server/settings-service.js",
+        "line": 25,
+        "text": "nodemailer = null,"
+      },
+      {
+        "file": "lib/server/settings-service.js",
+        "line": 26,
+        "text": "webpush = null,"
+      },
+      {
+        "file": "lib/server/settings-service.js",
+        "line": 387,
+        "text": "emailAvailable: !!nodemailer,"
+      },
+      {
+        "file": "lib/server/settings-service.js",
+        "line": 389,
+        "text": "webPushAvailable: !!webpush, // the web-push module is installed on the server"
+      },
+      {
+        "file": "lib/server/storage-connector-config.js",
+        "line": 465,
+        "text": "const tokenResponse = await fetch(googleTokenUrl, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded',Accept:'application/json'}, body, redirect:ASVS_L3_MODE ? 'error' : 'follow', signal:AbortSignal.timeout(15000) }"
+      },
+      {
+        "file": "lib/storage-connectors.js",
+        "line": 210,
+        "text": "text.includes('oauth2: cannot fetch token') ||"
+      },
+      {
+        "file": "lib/storage-connectors.js",
+        "line": 1094,
+        "text": "const req = http.get({ hostname:listenerHost, port:Number(listenerPort), path:parsed.pathname + parsed.search, headers:{ Accept:'text/html,*/*;q=0.8' } }, (res) => {"
+      },
+      {
+        "file": "lib/storage-connectors.js",
+        "line": 1167,
+        "text": "const req = http.get({ hostname:listenerHost, port:Number(listenerPort), path:callback.pathname + callback.search, headers:{ Accept:'text/html,*/*;q=0.8' } }, (res) => {"
+      },
+      {
+        "file": "oauth-broker/cloudflare-worker/src/index.js",
+        "line": 201,
+        "text": "const response = await fetch(GOOGLE_TOKEN_URL, {"
+      },
+      {
+        "file": "oauth-broker/cloudflare-worker/src/index.js",
+        "line": 468,
+        "text": "async fetch(request, env) {"
+      },
+      {
+        "file": "oauth-broker/server.js",
+        "line": 149,
+        "text": "const response = await fetch('https://oauth2.googleapis.com/token', {"
+      },
+      {
+        "file": "public/app.js",
+        "line": 74,
+        "text": "fetch('/pwa/install-state', { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } }),"
+      },
+      {
+        "file": "public/app.js",
+        "line": 367,
+        "text": "'cfg.webpush': 'Notifications navigateur (Web Push)',"
+      },
+      {
+        "file": "public/app.js",
+        "line": 641,
+        "text": "'cfg.emailUnavail': 'Le module nodemailer est indisponible ; l’e-mail est désactivé.',"
+      },
+      {
+        "file": "public/app.js",
+        "line": 2061,
+        "text": "'cfg.webpush': 'Browser notifications (Web Push)',"
+      },
+      {
+        "file": "public/app.js",
+        "line": 2335,
+        "text": "'cfg.emailUnavail': 'The nodemailer module is unavailable; e-mail is disabled.',"
+      },
+      {
+        "file": "public/app.js",
+        "line": 3753,
+        "text": "'cfg.webpush': 'Notificaciones del navegador (Web Push)',"
+      },
+      {
+        "file": "public/app.js",
+        "line": 4027,
+        "text": "'cfg.emailUnavail': 'El módulo nodemailer no está disponible; el correo está desactivado.',"
+      },
+      {
+        "file": "public/app.js",
+        "line": 5839,
+        "text": "fetch(url, options),"
+      },
+      {
+        "file": "public/app.js",
+        "line": 5840,
+        "text": "new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('fetch-timeout')), ms); }),"
+      },
+      {
+        "file": "public/app.js",
+        "line": 5854,
+        "text": "return fetch(url, next).catch((error) => {"
+      },
+      {
+        "file": "public/app.js",
+        "line": 5856,
+        "text": "const timeoutError = new Error('fetch-timeout'); timeoutError.cause = error; throw timeoutError;"
+      },
+      {
+        "file": "public/app.js",
+        "line": 7876,
+        "text": "// Begin enrollment: fetch a fresh secret + QR, show the verify step."
+      },
+      {
+        "file": "public/app.js",
+        "line": 9651,
+        "text": "// `publicLogoSet` flag. The modal is already visible, so fetch the full settings"
+      },
+      {
+        "file": "public/app.js",
+        "line": 10947,
+        "text": "if(code==='fetch-timeout') return t('webStorage.requestTimeout');"
+      },
+      {
+        "file": "public/app.js",
+        "line": 11317,
+        "text": "const r = await fetch('/api/restore', {"
+      },
+      {
+        "file": "public/app.js",
+        "line": 11463,
+        "text": "const toggle = $('cfg-webpush-toggle');"
+      },
+      {
+        "file": "public/app.js",
+        "line": 11464,
+        "text": "const testBtn = $('cfg-webpush-test');"
+      },
+      {
+        "file": "public/app.js",
+        "line": 11465,
+        "text": "const status = $('cfg-webpush-status');"
+      },
+      {
+        "file": "public/app.js",
+        "line": 11466,
+        "text": "const unavail = $('cfg-webpush-unavail');"
+      },
+      {
+        "file": "public/app.js",
+        "line": 11467,
+        "text": "const insecure = $('cfg-webpush-insecure');"
+      },
+      {
+        "file": "public/app.js",
+        "line": 11492,
+        "text": "const status = $('cfg-webpush-status');"
+      },
+      {
+        "file": "public/app.js",
+        "line": 11522,
+        "text": "if ($('cfg-webpush-toggle')) $('cfg-webpush-toggle').addEventListener('click', async () => {"
+      },
+      {
+        "file": "public/app.js",
+        "line": 11527,
+        "text": "if ($('cfg-webpush-test')) $('cfg-webpush-test').addEventListener('click', async () => {"
+      },
+      {
+        "file": "public/app.js",
+        "line": 11528,
+        "text": "const status = $('cfg-webpush-status');"
+      },
+      {
+        "file": "public/app.js",
+        "line": 13878,
+        "text": "const resp = await fetch(url, { credentials: 'same-origin', cache: 'no-store' });"
+      },
+      {
+        "file": "public/app.js",
+        "line": 13879,
+        "text": "if (!resp.ok) throw new Error('fetch');"
+      },
+      {
+        "file": "public/app.js",
+        "line": 13896,
+        "text": "return fetch(url, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/octet-stream', 'X-CSRF-Token': state.csrf || '' }, body: blob });"
+      },
+      {
+        "file": "public/app.js",
+        "line": 15289,
+        "text": "const res = await fetch('/api/transfers/export?format=' + encodeURIComponent(format), {"
+      },
+      {
+        "file": "public/app.js",
+        "line": 15437,
+        "text": "const r = await fetch(url, { credentials:'same-origin', cache:'no-store' });"
+      },
+      {
+        "file": "public/app.js",
+        "line": 15807,
+        "text": "const response = await fetch('/api/photos/' + encodeURIComponent(photo.id) + '/' + variant, {"
+      },
+      {
+        "file": "public/app.js",
+        "line": 15861,
+        "text": "const response = await fetch('/api/photos/' + encodeURIComponent(s.id) + '/' + variant, {"
+      },
+      {
+        "file": "public/app.js",
+        "line": 16339,
+        "text": "// doesn't fetch every thumbnail up front). A single shared observer unobserves"
+      },
+      {
+        "file": "public/app.js",
+        "line": 16389,
+        "text": "// every thumb eagerly here would fetch the whole library on render."
+      },
+      {
+        "file": "public/app.js",
+        "line": 16672,
+        "text": "// once when a variant is generated after the first fetch (so its figures appear)."
+      },
+      {
+        "file": "public/app.js",
+        "line": 16921,
+        "text": "const response = await fetch('/api/photos/source', {"
+      },
+      {
+        "file": "public/app.js",
+        "line": 16964,
+        "text": "const sendPhoto = (url) => fetch(url, {"
+      },
+      {
+        "file": "public/app.js",
+        "line": 17786,
+        "text": "return fetch('/api/enc-share' + qs, {"
+      },
+      {
+        "file": "public/app.js",
+        "line": 17852,
+        "text": "return fetch('/api/secret?mode=' + mode + '&expiresInSeconds=' + expiry, {"
+      },
+      {
+        "file": "public/app.js",
+        "line": 18522,
+        "text": "refreshShares(); // re-fetch: nicknames refresh across transfers + history"
+      },
+      {
+        "file": "public/download-resume.js",
+        "line": 7,
+        "text": "if (!('indexedDB' in window) || !('fetch' in window) || !('Blob' in window)) return;"
+      },
+      {
+        "file": "public/download-resume.js",
+        "line": 269,
+        "text": "const response = await fetch(task.url, { headers, credentials:'same-origin', cache:'no-store', signal:controller.signal });"
+      },
+      {
+        "file": "public/download-resume.js",
+        "line": 329,
+        "text": "try { head = await fetch(url.href, { method:'HEAD', credentials:'same-origin', cache:'no-store' }); }"
+      },
+      {
+        "file": "public/dxcollab.js",
+        "line": 122,
+        "text": "return fetch('/c/' + encodeURIComponent(token) + '/list?sub=' + encodeURIComponent(curSub), { credentials: 'same-origin' })"
+      },
+      {
+        "file": "public/dxcollab.js",
+        "line": 142,
+        "text": "fetch('/c/' + encodeURIComponent(token) + '/delete', {"
+      },
+      {
+        "file": "public/dxcollab.js",
+        "line": 168,
+        "text": "fetch('/c/' + encodeURIComponent(token) + '/folder', {"
+      },
+      {
+        "file": "public/dxcollab.js",
+        "line": 261,
+        "text": "return fetch('/c/' + encodeURIComponent(token) + '/upload-status?id=' + encodeURIComponent(id), { credentials: 'same-origin' })"
+      },
+      {
+        "file": "public/dxcrypto.js",
+        "line": 162,
+        "text": "// A large saltLen can push metaLen past the 64-byte peek; re-fetch just enough"
+      },
+      {
+        "file": "public/dxdecrypt.js",
+        "line": 45,
+        "text": "fetch('/s/' + encodeURIComponent(cfg.token) + '/enc', { credentials: 'same-origin' })"
+      },
+      {
+        "file": "public/dxdecrypt.js",
+        "line": 48,
+        "text": ".then(function (r) { if (!r.ok) throw new Error('fetch'); return r.blob(); })"
+      },
+      {
+        "file": "public/dxpow.js",
+        "line": 139,
+        "text": "fetch('/dx/pow/verify', {"
+      },
+      {
+        "file": "public/dxpow.js",
+        "line": 151,
+        "text": "fetch('/dx/pow', { headers: { 'Accept': 'application/json' } })"
+      },
+      {
+        "file": "public/dxsecret.js",
+        "line": 3,
+        "text": "// ciphertext exactly once (the server burns it on that fetch) and decrypts it"
+      },
+      {
+        "file": "public/dxsecret.js",
+        "line": 39,
+        "text": "fetch('/x/' + encodeURIComponent(token) + '/blob', { credentials: 'same-origin' })"
+      },
+      {
+        "file": "public/oauth-bridge.js",
+        "line": 173,
+        "text": "const response = await fetch(`/api/storage/remotes/config/${encodeURIComponent(sessionId)}`, {"
+      },
+      {
+        "file": "public/pushsw.js",
+        "line": 3,
+        "text": "* Push-only: it deliberately has NO `fetch` handler, so it never intercepts"
+      },
+      {
+        "file": "public/reception.js",
+        "line": 285,
+        "text": "fetch('/u/' + encodeURIComponent(token) + '/folder' + suffix, {"
+      },
+      {
+        "file": "public/reception.js",
+        "line": 325,
+        "text": "return fetch('/u/' + encodeURIComponent(token) + '/message', {"
+      },
+      {
+        "file": "public/reception.js",
+        "line": 343,
+        "text": "fetch('/u/' + encodeURIComponent(token) + '/message', {"
+      },
+      {
+        "file": "public/reception.js",
+        "line": 557,
+        "text": "return fetch('/u/' + encodeURIComponent(token) + '/upload-status?id=' + encodeURIComponent(id), {"
+      },
+      {
+        "file": "public/reception.js",
+        "line": 620,
+        "text": "return fetch('/u/' + encodeURIComponent(token) + '/duplicate-check?sha256=' + encodeURIComponent(it.sha256), { credentials:'same-origin', cache:'no-store' })"
+      },
+      {
+        "file": "public/reception.js",
+        "line": 955,
+        "text": "fetch('/u/' + encodeURIComponent(tk) + '/thread', { credentials: 'same-origin', cache: 'no-store' })"
+      },
+      {
+        "file": "public/reception.js",
+        "line": 968,
+        "text": "fetch('/u/' + encodeURIComponent(tk) + '/thread', {"
+      },
+      {
+        "file": "public/server-health-dashboard.js",
+        "line": 30,
+        "text": "async function getJson(url,opts,timeoutMs){const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),Math.max(1000,Number(timeoutMs)||12000));try{const extra=opts||{},options=Object.assign({},extra,{credentials:'same-origin',cache:"
+      },
+      {
+        "file": "pwa/admin-advanced.js",
+        "line": 137,
+        "text": "function fetchJson(url,timeout){var ctrl=typeof AbortController==='function'?new AbortController():null,t=ctrl?setTimeout(function(){ctrl.abort();},timeout||8000):0;return fetch(url,{credentials:'same-origin',cache:'no-store',headers:{Accep"
+      },
+      {
+        "file": "pwa/admin-advanced.js",
+        "line": 140,
+        "text": "async function postJson(url,body,retry,timeout){var sess=await ensureSession(false),ctrl=typeof AbortController==='function'?new AbortController():null,t=ctrl?setTimeout(function(){ctrl.abort();},timeout||10000):0,r;try{r=await fetch(url,{m"
+      },
+      {
+        "file": "pwa/admin-advanced.js",
+        "line": 194,
+        "text": "async function downloadLocalCa(){var b=document.getElementById('dx-admin-ca-download'),out=document.getElementById('dx-admin-ca-result'),seq=++caSeq,ctrl=typeof AbortController==='function'?new AbortController():null,t=ctrl?setTimeout(funct"
+      },
+      {
+        "file": "pwa/admin-audit-connectors.js",
+        "line": 76,
+        "text": "async function requestJson(url,opts){opts=opts||{};var method=String(opts.method||'GET').toUpperCase(),headers={Accept:'application/json'},body;if(!['GET','HEAD'].includes(method)){var sess=await getSession(false);if(!sess||!sess.authentica"
+      },
+      {
+        "file": "pwa/admin-audit-connectors.js",
+        "line": 112,
+        "text": "async function exportAuditProof(){var out=document.getElementById('dx-audit-result');text(out,tr('auditLoading'));try{var r=await fetch('/api/audit/export?format=proof',{credentials:'same-origin',cache:'no-store',headers:{Accept:'applicatio"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 289,
+        "text": "masterSelect: 'Select all', addFromUrl: 'From a URL', urlPrompt: 'Address of the image or file to add:', urlFetching: 'Fetching…', urlFailed: 'Could not fetch (blocked by CORS?)', urlAdded: 'File added ✓', urlInvalid: 'Invalid address.',"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 775,
+        "text": "var response = await fetch('/api/session', { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' }, signal: ctrl ? ctrl.signal : undefined });"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 1057,
+        "text": "fetch(url, options),"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 1058,
+        "text": "new Promise(function (_, reject) { fallbackTimer = setTimeout(function () { reject(new Error('fetch-timeout')); }, timeoutMs); })"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 1070,
+        "text": "return fetch(url, requestOptions).finally(function () {"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 1287,
+        "text": "var r=await fetch('/app/notifications',{credentials:'same-origin',cache:'no-store',signal:ctrl?ctrl.signal:undefined});"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 1383,
+        "text": "var r=await fetch('/app/notifications/prefs',{credentials:'same-origin',cache:'no-store'});"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 1415,
+        "text": "async function loadPwaNotificationRules(){var seq=++notificationRulesRequestSeq;try{var r=await fetch('/app/notification-rules',{credentials:'same-origin',cache:'no-store'});if(!r.ok)throw new Error('rules-'+r.status);var data=await r.json("
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 2733,
+        "text": "await fetch('/u/' + encodeURIComponent(snap.token) + '/upload-cancel?id=' + encodeURIComponent(it.uploadId), { method: 'POST', credentials: 'same-origin' });"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 2963,
+        "text": "var r = await fetch('/app/host/browse?path=' + encodeURIComponent(path || '/'), { credentials: 'same-origin', cache: 'no-store' });"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 3158,
+        "text": "var r = await fetch('/app/host/shares', { credentials: 'same-origin', cache: 'no-store' });"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 3395,
+        "text": "var response = await fetch('/app/host/shares/' + encodeURIComponent(share.token) + '/stats-detail?period=' + encodeURIComponent(pwaHostStatsPeriod), { credentials:'same-origin', cache:'no-store', headers:{ Accept:'application/json' } });"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 3436,
+        "text": "var r=await fetch('/app/trash',{credentials:'same-origin',cache:'no-store'});if(!r.ok)throw new Error('trash');var data=await r.json();var items=data.items||[],canPurge=!!data.canPurge;pwaTrashPurgeSummary=data.purgeSummary||null;box.textCo"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 3486,
+        "text": "var r=await fetch('/app/undo',{credentials:'same-origin',cache:'no-store'});if(!r.ok)throw new Error('undo-history');"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 3512,
+        "text": "async function appDeleteMutate(url){if(!deviceInfo)await fetchDeviceStatus();var r=await fetch(url,{method:'DELETE',credentials:'same-origin',cache:'no-store',headers:appMutationHeaders()});if(r.status===403){var e=await r.clone().json().ca"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 3520,
+        "text": "try{var r=await fetch('/app/search?q='+encodeURIComponent(q)+'&semantic=1',{credentials:'same-origin',cache:'no-store'});if(!r.ok)throw new Error('search');var data=await r.json();var results=data.results||[];if(!results.length){box.textCon"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 3578,
+        "text": "var r = await fetch('/app/receptions', { credentials: 'same-origin', cache: 'no-store' });"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 3677,
+        "text": "fetch('/app/receptions/' + encodeURIComponent(tk) + '/thread', { credentials: 'same-origin', cache: 'no-store' })"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 3843,
+        "text": "var r = await fetch('/app/images/retention', { credentials: 'same-origin', cache: 'no-store' });"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 3933,
+        "text": "var r = await fetch('/app/images/search?q=' + encodeURIComponent(q) + '&limit=500', { credentials:'same-origin', cache:'no-store' });"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 4070,
+        "text": "try { var r = await fetch('/app/image/duplicate?hash=' + encodeURIComponent(hash), { credentials: 'same-origin', cache: 'no-store' }); return r.ok ? (await r.json()).image : null; } catch (_) { return null; }"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 4074,
+        "text": "var r = await fetch('/app/qr?data=' + encodeURIComponent(url), { credentials: 'same-origin', cache: 'no-store' });"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 4243,
+        "text": "var r = await fetch('/app/album/' + encodeURIComponent(album.token) + '/invitations', { credentials: 'same-origin', cache: 'no-store' });"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 4269,
+        "text": "try { var r = await fetch('/app/albums', { credentials: 'same-origin', cache: 'no-store' }); if (!r.ok) throw new Error(); imageAlbums = (await r.json()).albums || []; } catch (_) { imageAlbums = []; }"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 4311,
+        "text": "var r = await fetch('/app/images/dashboard?days=' + encodeURIComponent(days), { credentials: 'same-origin', cache: 'no-store' }); if (!r.ok) throw new Error();"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 4368,
+        "text": "var resp = await fetch(url, { credentials: 'same-origin', cache: 'no-store' });"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 4369,
+        "text": "if (!resp.ok) throw new Error('fetch');"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 4583,
+        "text": "var response = await fetch('/app/image/' + encodeURIComponent(photo.token) + '/stats-detail', { credentials: 'same-origin', cache: 'no-store' });"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 4795,
+        "text": "// fetch() resolves even for HTTP 4xx/5xx. Mini + Micro are required; adaptive"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 4838,
+        "text": "var fresh = await fetch('/app/image/' + encodeURIComponent(photo.token) + '/stats', { credentials: 'same-origin', cache: 'no-store' });"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 4847,
+        "text": "var sourceResponse = await fetch(sourceUrl, { credentials: 'same-origin', cache: 'no-store' });"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 4894,
+        "text": "var r = await fetch('/app/image/' + encodeURIComponent(photo.token) + '/preview/full', { credentials: 'same-origin', cache: 'no-store' });"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 4914,
+        "text": "var fresh = await fetch('/app/image/' + encodeURIComponent(photo.token) + '/stats', { credentials: 'same-origin', cache: 'no-store' });"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 4927,
+        "text": "var r = await fetch('/app/image/' + encodeURIComponent(photo.token) + '/versions', { credentials: 'same-origin', cache: 'no-store' });"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 6932,
+        "text": "var r = await fetch('/app/activity/recent?limit=1000', { credentials:'same-origin', cache:'no-store' });"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 7173,
+        "text": "// the upload preflight fails closed until Direct-Xfer can fetch the policy."
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 7193,
+        "text": "return requestOptions.timeoutMs ? fetchWithTimeout(url, opts, requestOptions.timeoutMs) : fetch(url, opts);"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 7693,
+        "text": "var r = await fetch('/app/webauthn/passkeys', { credentials: 'same-origin', cache: 'no-store' });"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 7771,
+        "text": "var r = await fetch(url, { method: 'DELETE', credentials: 'same-origin', cache: 'no-store', headers: appMutationHeaders() });"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 7776,
+        "text": "r = await fetch(url, { method: 'DELETE', credentials: 'same-origin', cache: 'no-store', headers: appMutationHeaders() });"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 7852,
+        "text": "var response = await fetch('/app/device/status', { credentials: 'same-origin', cache: 'no-store' });"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 7857,
+        "text": "var r = await fetch('/app/device/register', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': status.csrf }, body: JSON.stringify({ name: name }) });"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 7873,
+        "text": "var status = await fetch('/app/device/status', { credentials: 'same-origin', cache: 'no-store' }).then(function (r) { return r.json(); });"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 7875,
+        "text": "var r = await fetch('/app/device/pairing', {"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 7965,
+        "text": "var pendingReq = fetch('/app/inbox/' + encodeURIComponent(token) + '/pending', { credentials: 'same-origin', cache: 'no-store' }).then(function(resp){ return resp.ok ? resp.json() : { pending: [] }; }).catch(function(){ return { pending: []"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 7966,
+        "text": "var r = await fetch('/app/inbox/' + encodeURIComponent(token) + '/files', { credentials: 'same-origin', cache: 'no-store' });"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 8026,
+        "text": "var r = await fetch('/app/qr?data=' + encodeURIComponent(url), { credentials: 'same-origin', cache: 'no-store' });"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 9497,
+        "text": "var response = await fetch('/app/install-info', { credentials: 'same-origin', cache: 'no-store' });"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 9679,
+        "text": "try{var r=await fetch('/pwa/install-state',{credentials:'same-origin',cache:'no-store'});if(r.ok){var d=await r.json();server=!!d.installed;}}catch(_){}"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 9771,
+        "text": "var r = await fetch(u.href, { mode: 'cors', credentials: 'omit', cache: 'no-store' });"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 10184,
+        "text": "var r = await fetch('/app/image/' + encodeURIComponent(photo.token) + '/preview/full', { credentials:'same-origin', cache:'no-store' });"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 10887,
+        "text": "fetch('/u/' + encodeURIComponent(currentDest.token) + '/unlock', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'password=' + encodeURIComponent($('unlock-pw').value) })"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 11571,
+        "text": "var st = await fetch('/app/device/status', { credentials: 'same-origin', cache: 'no-store' }).then(function (r) { return r.json(); });"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 11575,
+        "text": "var ir = await fetch('/app/images?limit=500&includeInactive=1', { credentials: 'same-origin', cache: 'no-store' });"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 11580,
+        "text": "var html = await fetch('/app/', { credentials: 'same-origin', cache: 'no-store' }).then(function (r) { return r.text(); });"
+      },
+      {
+        "file": "pwa/login.js",
+        "line": 153,
+        "text": "return Promise.race([fetch(url, options), new Promise(function (_, reject) { fallbackTimer = setTimeout(function () { reject(new Error('fetch-timeout')); }, timeoutMs); })])"
+      },
+      {
+        "file": "pwa/login.js",
+        "line": 158,
+        "text": "return fetch(url, Object.assign({}, options, { signal: controller.signal })).finally(function () { clearTimeout(timer); });"
+      },
+      {
+        "file": "pwa/login.js",
+        "line": 475,
+        "text": "var response = await fetch('/app/install-info', { credentials: 'same-origin', cache: 'no-store' });"
+      },
+      {
+        "file": "pwa/mobile-intelligence.js",
+        "line": 62,
+        "text": "return fetch(url, { credentials:'same-origin', cache:'no-store', headers:{Accept:'application/json'}, signal:ctrl ? ctrl.signal : undefined })"
+      },
+      {
+        "file": "pwa/sw.js",
+        "line": 232,
+        "text": "return fetch(url, options).finally(function () { if (timer) clearTimeout(timer); });"
+      },
+      {
+        "file": "pwa/sw.js",
+        "line": 542,
+        "text": "self.addEventListener('fetch', function (event) {"
+      },
+      {
+        "file": "pwa/sw.js",
+        "line": 554,
+        "text": "event.respondWith(fetch(request).catch(function () {"
+      },
+      {
+        "file": "pwa/sw.js",
+        "line": 570,
+        "text": "var refresh = fetch(request).then(function (response) {"
+      },
+      {
+        "file": "pwa/theme-init.js",
+        "line": 22,
+        "text": "if (typeof window.fetch === 'function' && !window.__dxPwaReleaseFetchWrapped) {"
+      },
+      {
+        "file": "pwa/theme-init.js",
+        "line": 24,
+        "text": "var nativeFetch = window.fetch;"
+      },
+      {
+        "file": "pwa/theme-init.js",
+        "line": 25,
+        "text": "window.fetch = function (input, init) {"
+      },
+      {
+        "file": "scripts/restore-historical-tests.js",
+        "line": 19,
+        "text": "const req = https.get(url, { headers: { 'User-Agent': 'Direct-Xfer-test-restorer/1.67.30', Accept: 'application/octet-stream' }, timeout: 20000 }, res => {"
+      },
+      {
+        "file": "scripts/security-inventory.js",
+        "line": 9,
+        "text": "outbound:/\\b(?:fetch|https?\\.request|https?\\.get|nodemailer|webpush)\\b/,"
+      },
+      {
+        "file": "server.js",
+        "line": 438,
+        "text": "live:{ getState, setState:replaceState, getWebpush:() => platformDependencies.webpush },"
+      },
+      {
+        "file": "test/admin-routes-deep-audit-1.69.6.test.js",
+        "line": 155,
+        "text": "webpush:null,"
+      },
+      {
+        "file": "test/asvs-l3-http-csv-hardening-1.70.22.test.js",
+        "line": 68,
+        "text": "const req = http.request({"
+      },
+      {
+        "file": "test/asvs-l3-http-csv-hardening-1.70.22.test.js",
+        "line": 141,
+        "text": "'sec-fetch-site':'cross-site',"
+      },
+      {
+        "file": "test/asvs-l3-http-csv-hardening-1.70.22.test.js",
+        "line": 142,
+        "text": "'sec-fetch-mode':'cors',"
+      },
+      {
+        "file": "test/asvs-l3-http-csv-hardening-1.70.22.test.js",
+        "line": 158,
+        "text": "'sec-fetch-site':'cross-site',"
+      },
+      {
+        "file": "test/asvs-l3-http-csv-hardening-1.70.22.test.js",
+        "line": 159,
+        "text": "'sec-fetch-mode':'cors',"
+      },
+      {
+        "file": "test/asvs-l3-http-csv-hardening-1.70.22.test.js",
+        "line": 160,
+        "text": "'sec-fetch-dest':'empty',"
+      },
+      {
+        "file": "test/core-state-application-deep-audit-1.70.4.test.js",
+        "line": 32,
+        "text": "platform:{ fs:platformFs, path, crypto, os, net, tls, forge:null, nodemailer:null, webpush:null },"
+      },
+      {
+        "file": "test/core-state-application-refactor-1.70.3.test.js",
+        "line": 52,
+        "text": "platform:{ fs, path, crypto, os, net, tls, forge:null, nodemailer:null, webpush:null },"
+      },
+      {
+        "file": "test/google-drive-least-privilege-1.67.30.test.js",
+        "line": 28,
+        "text": "const client=new GoogleOAuthBrokerClient({baseUrl:'https://oauth.example.test',version:'1.67.30',fetch:async(_url,options)=>{"
+      },
+      {
+        "file": "test/google-drive-least-privilege-1.67.30.test.js",
+        "line": 41,
+        "text": "const client=new GoogleOAuthBrokerClient({baseUrl:'https://oauth.example.test',version:'1.67.30',fetch:async()=>new Response(JSON.stringify(brokerResponse(GOOGLE_DRIVE_SCOPE_MAP.full)),{status:201,headers:{'content-type':'application/json'}"
+      },
+      {
+        "file": "test/notification-application-refactor-1.70.7.test.js",
+        "line": 35,
+        "text": "platform:{ nodemailer:null, webpush:options.webpush || null },"
+      },
+      {
+        "file": "test/notification-application-refactor-1.70.7.test.js",
+        "line": 144,
+        "text": "webpush:{"
+      },
+      {
+        "file": "test/notification-services-refactor-1.69.6.test.js",
+        "line": 149,
+        "text": "nodemailer:null, webpush:null, getSettings:() => ({ notifySecurity:true }), formatBytes:(n) => `${n} B`,"
+      },
+      {
+        "file": "test/notification-services-refactor-1.69.6.test.js",
+        "line": 221,
+        "text": "nodemailer:null,"
+      },
+      {
+        "file": "test/notification-services-refactor-1.69.6.test.js",
+        "line": 222,
+        "text": "webpush:{"
+      },
+      {
+        "file": "test/notification-services-refactor-1.69.6.test.js",
+        "line": 273,
+        "text": "nodemailer:{ createTransport:() => { throw new Error('bad smtp config'); } }, webpush:null,"
+      },
+      {
+        "file": "test/notification-services-refactor-1.69.6.test.js",
+        "line": 286,
+        "text": "APP_NAME:'Direct-Xfer', WEBHOOK_URL:'', WEBHOOK_FORMAT:'', SMTP_URL:'', EMAIL_FROM:'', EMAIL_TO:'', nodemailer:null,"
+      },
+      {
+        "file": "test/notification-services-refactor-1.69.6.test.js",
+        "line": 287,
+        "text": "webpush:{ generateVAPIDKeys:() => { throw new Error('vapid unavailable'); }, sendNotification:() => { throw new Error('should-not-run'); } },"
+      },
+      {
+        "file": "test/notification-services-refactor-1.69.6.test.js",
+        "line": 328,
+        "text": "APP_NAME:'Direct-Xfer', WEBHOOK_URL:'', WEBHOOK_FORMAT:'', SMTP_URL:'', EMAIL_FROM:'', EMAIL_TO:'', nodemailer:null, webpush:null,"
+      },
+      {
+        "file": "test/notification-services-refactor-1.69.6.test.js",
+        "line": 353,
+        "text": "nodemailer:null,"
+      },
+      {
+        "file": "test/notification-services-refactor-1.69.6.test.js",
+        "line": 354,
+        "text": "webpush:{"
+      },
+      {
+        "file": "test/notification-services-refactor-1.69.6.test.js",
+        "line": 404,
+        "text": "APP_NAME:'Direct-Xfer', WEBHOOK_URL:'', WEBHOOK_FORMAT:'', SMTP_URL:'', EMAIL_FROM:'', EMAIL_TO:'', nodemailer:null,"
+      },
+      {
+        "file": "test/notification-services-refactor-1.69.6.test.js",
+        "line": 405,
+        "text": "webpush:{"
+      },
+      {
+        "file": "test/oauth-broker-google-finalization-1.67.29.test.js",
+        "line": 38,
+        "text": "const originalFetch = global.fetch;"
+      },
+      {
+        "file": "test/oauth-broker-google-finalization-1.67.29.test.js",
+        "line": 39,
+        "text": "global.fetch = async (url, options = {}) => {"
+      },
+      {
+        "file": "test/oauth-broker-google-finalization-1.67.29.test.js",
+        "line": 63,
+        "text": "throw new Error(`unexpected fetch ${options.method || 'GET'} ${u}`);"
+      },
+      {
+        "file": "test/oauth-broker-google-finalization-1.67.29.test.js",
+        "line": 78,
+        "text": "global.fetch = originalFetch;"
+      },
+      {
+        "file": "test/oauth-broker-integrated-autodeploy-1.67.28.test.js",
+        "line": 74,
+        "text": "const originalFetch = global.fetch;"
+      },
+      {
+        "file": "test/oauth-broker-integrated-autodeploy-1.67.28.test.js",
+        "line": 75,
+        "text": "global.fetch = async (url, options = {}) => {"
+      },
+      {
+        "file": "test/oauth-broker-integrated-autodeploy-1.67.28.test.js",
+        "line": 99,
+        "text": "throw new Error(`unexpected fetch ${options.method || 'GET'} ${u}`);"
+      },
+      {
+        "file": "test/oauth-broker-integrated-autodeploy-1.67.28.test.js",
+        "line": 120,
+        "text": "} finally { global.fetch = originalFetch; }"
+      },
+      {
+        "file": "test/oauth-broker-integrated-autodeploy-1.67.28.test.js",
+        "line": 126,
+        "text": "const originalFetch = global.fetch;"
+      },
+      {
+        "file": "test/oauth-broker-integrated-autodeploy-1.67.28.test.js",
+        "line": 127,
+        "text": "global.fetch = async (url) => {"
+      },
+      {
+        "file": "test/oauth-broker-integrated-autodeploy-1.67.28.test.js",
+        "line": 130,
+        "text": "if (u.endsWith(`/accounts/${accountId}/workers/subdomain`)) throw new TypeError('fetch failed: ENOTFOUND api.cloudflare.com');"
+      },
+      {
+        "file": "test/oauth-broker-integrated-autodeploy-1.67.28.test.js",
+        "line": 131,
+        "text": "throw new Error(`unexpected fetch ${u}`);"
+      },
+      {
+        "file": "test/oauth-broker-integrated-autodeploy-1.67.28.test.js",
+        "line": 142,
+        "text": "assert.match(result.payload.detail, /ENOTFOUND|fetch failed/i);"
+      },
+      {
+        "file": "test/oauth-broker-integrated-autodeploy-1.67.28.test.js",
+        "line": 143,
+        "text": "} finally { global.fetch = originalFetch; }"
+      },
+      {
+        "file": "test/oauth-broker-integrated-autodeploy-1.67.28.test.js",
+        "line": 147,
+        "text": "const originalFetch = global.fetch;"
+      },
+      {
+        "file": "test/oauth-broker-integrated-autodeploy-1.67.28.test.js",
+        "line": 149,
+        "text": "global.fetch = async (url) => {"
+      },
+      {
+        "file": "test/oauth-broker-integrated-autodeploy-1.67.28.test.js",
+        "line": 162,
+        "text": "} finally { global.fetch = originalFetch; }"
+      },
+      {
+        "file": "test/oauth-broker-public-deep-audit-1.67.25.test.js",
+        "line": 19,
+        "text": "fetch:async (url, options) => {"
+      },
+      {
+        "file": "test/oauth-broker-public-deep-audit-1.67.25.test.js",
+        "line": 34,
+        "text": "fetch:async () => new Response(JSON.stringify({"
+      },
+      {
+        "file": "test/oauth-broker-service-1.67.20.test.js",
+        "line": 11,
+        "text": "async function waitFor(url,timeout=5000){const start=Date.now();while(Date.now()-start<timeout){try{const r=await fetch(url);if(r.ok)return await r.json();}catch(_){}await new Promise(r=>setTimeout(r,80));}throw new Error('broker did not st"
+      },
+      {
+        "file": "test/oauth-broker-service-1.67.20.test.js",
+        "line": 18,
+        "text": "const realFetch=global.fetch;"
+      },
+      {
+        "file": "test/oauth-broker-service-1.67.20.test.js",
+        "line": 19,
+        "text": "global.fetch=async function(url,options){"
+      },
+      {
+        "file": "test/oauth-broker-service-1.67.20.test.js",
+        "line": 36,
+        "text": "const createdRes=await fetch(`http://127.0.0.1:${port}/v1/google/sessions`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({version:'1.67.26'})});"
+      },
+      {
+        "file": "test/oauth-broker-service-1.67.20.test.js",
+        "line": 40,
+        "text": "const callback=await fetch(`http://127.0.0.1:${port}/v1/google/callback?state=${encodeURIComponent(state)}&code=code-123`);"
+      },
+      {
+        "file": "test/oauth-broker-service-1.67.20.test.js",
+        "line": 42,
+        "text": "const polledRes=await fetch(`http://127.0.0.1:${port}/v1/google/sessions/${created.id}`,{headers:{authorization:`Bearer ${created.pollToken}`}});"
+      },
+      {
+        "file": "test/oauth-broker-service-1.67.20.test.js",
+        "line": 51,
+        "text": "const refreshRes=await fetch(polled.credential.tokenUrl,{method:'POST',headers:{authorization:`Basic ${basic}`,'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({grant_type:'refresh_token',refresh_token:polled.cre"
+      },
+      {
+        "file": "test/platform-config-deep-audit-1.70.20.test.js",
+        "line": 26,
+        "text": "nodemailer:badMailer,"
+      },
+      {
+        "file": "test/platform-config-deep-audit-1.70.20.test.js",
+        "line": 32,
+        "text": "assert.equal(dependencies.nodemailer, null);"
+      },
+      {
+        "file": "test/platform-config-deep-audit-1.70.20.test.js",
+        "line": 33,
+        "text": "assert.equal(dependencies.webpush, null);"
+      },
+      {
+        "file": "test/platform-config-deep-audit-1.70.20.test.js",
+        "line": 36,
+        "text": "assert.equal(dependencies.views.notification.nodemailer, null);"
+      },
+      {
+        "file": "test/platform-config-deep-audit-1.70.20.test.js",
+        "line": 37,
+        "text": "assert.equal(dependencies.views.notification.webpush, null);"
+      },
+      {
+        "file": "test/platform-config-factorization-1.70.19.test.js",
+        "line": 19,
+        "text": "for (const request of ['fs', 'path', 'crypto', 'os', 'net', 'tls', 'events', 'async_hooks', 'express', 'qrcode', 'node-forge', 'nodemailer', 'web-push']) {"
+      },
+      {
+        "file": "test/platform-config-factorization-1.70.19.test.js",
+        "line": 27,
+        "text": "const optional = new Set(['node-forge', 'nodemailer', 'web-push']);"
+      },
+      {
+        "file": "test/platform-config-factorization-1.70.19.test.js",
+        "line": 39,
+        "text": "assert.equal(dependencies.nodemailer, null);"
+      },
+      {
+        "file": "test/platform-config-factorization-1.70.19.test.js",
+        "line": 40,
+        "text": "assert.equal(dependencies.webpush, null);"
+      },
+      {
+        "file": "test/pwa-admin-features-15-19-21-1.64.0.test.js",
+        "line": 144,
+        "text": "try { const r = await fetch(url); if (r.ok) return; } catch (_) {}"
+      },
+      {
+        "file": "test/pwa-admin-features-15-19-21-1.64.0.test.js",
+        "line": 160,
+        "text": "const r = await fetch(base + '/api/storage/connectors', { headers:{ Cookie:cookie } });"
+      },
+      {
+        "file": "test/pwa-admin-features-15-19-21-1.64.0.test.js",
+        "line": 196,
+        "text": "const asset = await fetch(base + '/app/admin-audit-connectors.js?v=442');"
+      },
+      {
+        "file": "test/pwa-admin-features-15-19-21-1.64.0.test.js",
+        "line": 200,
+        "text": "const anon = await fetch(base + '/api/audit/signed-verify');"
+      },
+      {
+        "file": "test/pwa-admin-features-15-19-21-1.64.0.test.js",
+        "line": 203,
+        "text": "const login = await fetch(base + '/api/login', {"
+      },
+      {
+        "file": "test/pwa-admin-features-15-19-21-1.64.0.test.js",
+        "line": 213,
+        "text": "const signed = await fetch(base + '/api/audit/signed-verify', { headers:auth });"
+      },
+      {
+        "file": "test/pwa-admin-features-15-19-21-1.64.0.test.js",
+        "line": 221,
+        "text": "let listing = await fetch(base + '/api/storage/connectors', { headers:auth });"
+      },
+      {
+        "file": "test/pwa-admin-features-15-19-21-1.64.0.test.js",
+        "line": 229,
+        "text": "const created = await fetch(base + '/api/storage/connectors', {"
+      },
+      {
+        "file": "test/pwa-admin-features-15-19-21-1.64.0.test.js",
+        "line": 237,
+        "text": "const rootList = await fetch(base + `/api/storage/connectors/${encodeURIComponent(id)}/list?path=`, { headers:auth }).then((r) => r.json());"
+      },
+      {
+        "file": "test/pwa-admin-features-15-19-21-1.64.0.test.js",
+        "line": 239,
+        "text": "const nestedList = await fetch(base + `/api/storage/connectors/${encodeURIComponent(id)}/list?path=docs`, { headers:auth }).then((r) => r.json());"
+      },
+      {
+        "file": "test/pwa-admin-features-15-19-21-1.64.0.test.js",
+        "line": 242,
+        "text": "const queued = await fetch(base + `/api/storage/connectors/${encodeURIComponent(id)}/import`, {"
+      },
+      {
+        "file": "test/pwa-admin-features-3-7-1.64.0.test.js",
+        "line": 171,
+        "text": "const r = await fetch(url);"
+      },
+      {
+        "file": "test/pwa-admin-features-3-7-1.64.0.test.js",
+        "line": 218,
+        "text": "const publicAsset = await fetch(base + '/app/admin-advanced.js?v=442');"
+      },
+      {
+        "file": "test/pwa-admin-features-3-7-1.64.0.test.js",
+        "line": 222,
+        "text": "const anonHealth = await fetch(base + '/api/pwa-admin-health');"
+      },
+      {
+        "file": "test/pwa-admin-features-3-7-1.64.0.test.js",
+        "line": 224,
+        "text": "const anonHistory = await fetch(base + '/api/pwa-admin-health/history?range=24h');"
+      },
+      {
+        "file": "test/pwa-admin-features-3-7-1.64.0.test.js",
+        "line": 227,
+        "text": "const login = await fetch(base + '/api/login', {"
+      },
+      {
+        "file": "test/pwa-admin-features-3-7-1.64.0.test.js",
+        "line": 240,
+        "text": "const r = await fetch(base + endpoint, { headers:{ Cookie:cookie } });"
+      },
+      {
+        "file": "test/pwa-admin-features-3-7-1.64.0.test.js",
+        "line": 245,
+        "text": "const diagnostics = await fetch(base + '/api/diagnostics/run', { method:'POST', headers, body:'{}' });"
+      },
+      {
+        "file": "test/pwa-admin-features-3-7-1.64.0.test.js",
+        "line": 251,
+        "text": "const liteSettings = await fetch(base + '/api/settings?lite=1', { headers:{ Cookie:cookie } });"
+      },
+      {
+        "file": "test/pwa-admin-features-3-7-1.64.0.test.js",
+        "line": 256,
+        "text": "const create = await fetch(base + '/api/shares', {"
+      },
+      {
+        "file": "test/pwa-admin-features-3-7-1.64.0.test.js",
+        "line": 267,
+        "text": "const paused = await fetch(base + '/api/shares/pause-all', { method:'POST', headers, body:'{}' });"
+      },
+      {
+        "file": "test/pwa-admin-features-3-7-1.64.0.test.js",
+        "line": 272,
+        "text": "let listing = await fetch(base + '/api/shares', { headers:{ Cookie:cookie } }).then((r) => r.json());"
+      },
+      {
+        "file": "test/pwa-admin-features-3-7-1.64.0.test.js",
+        "line": 278,
+        "text": "const resumed = await fetch(base + '/api/shares/resume-all', { method:'POST', headers, body:'{}' });"
+      },
+      {
+        "file": "test/pwa-admin-features-3-7-1.64.0.test.js",
+        "line": 283,
+        "text": "listing = await fetch(base + '/api/shares', { headers:{ Cookie:cookie } }).then((r) => r.json());"
+      },
+      {
+        "file": "test/pwa-application-refactor-1.69.21.test.js",
+        "line": 84,
+        "text": "let webpush = null;"
+      },
+      {
+        "file": "test/pwa-application-refactor-1.69.21.test.js",
+        "line": 90,
+        "text": "getWebpush:() => webpush,"
+      },
+      {
+        "file": "test/pwa-application-refactor-1.69.21.test.js",
+        "line": 97,
+        "text": "webpush = { enabled:true };"
+      },
+      {
+        "file": "test/pwa-application-refactor-1.69.21.test.js",
+        "line": 100,
+        "text": "assert.equal(live.webpush.enabled, true);"
+      },
+      {
+        "file": "test/pwa-mobile-features-24-25-27-29-31-42-45-46-47-1.64.0.test.js",
+        "line": 128,
+        "text": "try { const r = await fetch(url); if (r.ok) return; } catch (_) {}"
+      },
+      {
+        "file": "test/pwa-mobile-features-24-25-27-29-31-42-45-46-47-1.64.0.test.js",
+        "line": 134,
+        "text": "test('fresh unauthenticated PWA bootstrap can fetch the new module and manifests', { timeout:25000 }, async () => {"
+      },
+      {
+        "file": "test/pwa-mobile-features-24-25-27-29-31-42-45-46-47-1.64.0.test.js",
+        "line": 150,
+        "text": "const mod = await fetch(base + '/app/mobile-intelligence.js?v=442');"
+      },
+      {
+        "file": "test/pwa-mobile-features-24-25-27-29-31-42-45-46-47-1.64.0.test.js",
+        "line": 154,
+        "text": "const r = await fetch(base + '/app/' + name + '?v=442');"
+      },
+      {
+        "file": "test/pwa-routes-refactor.test.js",
+        "line": 51,
+        "text": "assert.match(server, /live:\\{ getState, setState:replaceState, getWebpush:\\(\\) => platformDependencies\\.webpush \\}/);"
+      },
+      {
+        "file": "test/pwa-routes-refactor.test.js",
+        "line": 60,
+        "text": "assert.match(pwaApplication, /get webpush\\(\\) \\{ return live\\.getWebpush\\(\\); \\}/);"
+      },
+      {
+        "file": "test/pwa-routes-refactor.test.js",
+        "line": 65,
+        "text": "assert.match(routes, /live\\.webpush/);"
+      },
+      {
+        "file": "test/pwa-routes-refactor.test.js",
+        "line": 85,
+        "text": "live: { state:{ shares:[], settings:{}, meta:{} }, searchIndexBuilding:false, universalSearchIndex:{ builtAt:0 }, webpush:null },"
+      },
+      {
+        "file": "test/pwa-routes-refactor.test.js",
+        "line": 138,
+        "text": "live: { state:{ shares:[], settings:{}, meta:{} }, searchIndexBuilding:false, universalSearchIndex:{ builtAt:0 }, webpush:null },"
+      },
+      {
+        "file": "test/pwa-system-health-standard-parity-1.64.10.test.js",
+        "line": 41,
+        "text": "assert.match(app, /fetch\\('\\/api\\/session'/);"
+      },
+      {
+        "file": "test/reverse-proxy-multi-domain-1.64.1.test.js",
+        "line": 13,
+        "text": "async function waitFor(url,child,logs){const until=Date.now()+15000;while(Date.now()<until){if(child.exitCode!=null)throw new Error('server exited '+child.exitCode+'\\n'+logs.join(''));try{const r=await fetch(url);if(r.ok)return;}catch(_){}a"
+      },
+      {
+        "file": "test/reverse-proxy-multi-domain-1.64.1.test.js",
+        "line": 34,
+        "text": "const login=await fetch(base+'/api/login',{method:'POST',headers:{'Content-Type':'application/json','Host':'xfer.example.test','X-Forwarded-Proto':'https','X-Forwarded-Host':'xfer.example.test','X-Forwarded-For':'192.168.50.1'},body:JSON.st"
+      },
+      {
+        "file": "test/reverse-proxy-multi-domain-1.64.1.test.js",
+        "line": 37,
+        "text": "const save=await fetch(base+'/api/settings',{method:'POST',headers:common,body:JSON.stringify({linkBase:'https://xfer.example.test',imageBase:'https://img.example.test'})});"
+      },
+      {
+        "file": "test/reverse-proxy-multi-domain-1.64.1.test.js",
+        "line": 39,
+        "text": "const r=await fetch(base+'/api/network/proxy-check?base='+encodeURIComponent('https://img.example.test'),{headers:{Cookie:cookie,'Host':'xfer.example.test','X-Forwarded-Proto':'https','X-Forwarded-Host':'xfer.example.test','X-Forwarded-For'"
+      },
+      {
+        "file": "test/server-modularization-1.65.0.test.js",
+        "line": 104,
+        "text": "const oldFetch = global.fetch;"
+      },
+      {
+        "file": "test/server-modularization-1.65.0.test.js",
+        "line": 106,
+        "text": "global.fetch = async () => ({"
+      },
+      {
+        "file": "test/server-modularization-1.65.0.test.js",
+        "line": 127,
+        "text": "} finally { global.fetch = oldFetch; }"
+      },
+      {
+        "file": "test/server-modularization-1.65.0.test.js",
+        "line": 150,
+        "text": "nodemailer:null, webpush:null, getSettings:()=>({}), formatBytes:n=>String(n), persist:noop, persistNow:()=>true,"
+      },
+      {
+        "file": "test/server-modularization-1.65.0.test.js",
+        "line": 217,
+        "text": "const nodemailer = { createTransport(opts) { created++; return { opts, sendMail:async()=>({}), close:()=>{closed++;} }; } };"
+      },
+      {
+        "file": "test/server-modularization-1.65.0.test.js",
+        "line": 220,
+        "text": "APP_NAME:'Direct-Xfer', WEBHOOK_URL:'', WEBHOOK_FORMAT:'', SMTP_URL:'', EMAIL_FROM:'', EMAIL_TO:'', nodemailer, webpush:null,"
+      },
+      {
+        "file": "test/server-modularization-1.65.0.test.js",
+        "line": 240,
+        "text": "const nodemailer={createTransport:()=>({sendMail:async()=>({})})};"
+      },
+      {
+        "file": "test/server-modularization-1.65.0.test.js",
+        "line": 242,
+        "text": "const svc=createNotificationService({APP_NAME:'Direct-Xfer',WEBHOOK_URL:'',WEBHOOK_FORMAT:'',SMTP_URL:'',EMAIL_FROM:'',EMAIL_TO:'',nodemailer,webpush:null,getSettings:()=>settings,formatBytes:n=>String(n),persist:noop,persistNow:()=>true,ge"
+      },
+      {
+        "file": "test/settings-service-refactor-1.69.7.test.js",
+        "line": 57,
+        "text": "nodemailer:{},"
+      },
+      {
+        "file": "test/settings-service-refactor-1.69.7.test.js",
+        "line": 58,
+        "text": "webpush:{},"
+      },
+      {
+        "file": "test/standard-server-health-dashboard-1.64.0.test.js",
+        "line": 66,
+        "text": "async function waitFor(url,child,logs,timeout=15000){const until=Date.now()+timeout;while(Date.now()<until){if(child.exitCode!=null)throw new Error('server exited '+child.exitCode+'\\n'+logs.join(''));try{const r=await fetch(url);if(r.ok)ret"
+      },
+      {
+        "file": "test/standard-server-health-dashboard-1.64.0.test.js",
+        "line": 76,
+        "text": "const anon=await fetch(base+'/api/server-health-dashboard');assert.ok([401,403].includes(anon.status));"
+      },
+      {
+        "file": "test/standard-server-health-dashboard-1.64.0.test.js",
+        "line": 77,
+        "text": "for(const asset of ['/server-health-dashboard.js?v=4','/server-health-dashboard.css?v=3']){const r=await fetch(base+asset);assert.equal(r.status,200);}"
+      },
+      {
+        "file": "test/standard-server-health-dashboard-1.64.0.test.js",
+        "line": 78,
+        "text": "const login=await fetch(base+'/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:'admin',password:'HealthPass123!'})});assert.equal(login.status,200);const cookie=cookieHeader(login);"
+      },
+      {
+        "file": "test/standard-server-health-dashboard-1.64.0.test.js",
+        "line": 79,
+        "text": "const r=await fetch(base+'/api/server-health-dashboard?range=24h',{headers:{Cookie:cookie}});assert.equal(r.status,200,await r.clone().text());const b=await r.json();"
+      },
+      {
+        "file": "test/standard-server-health-dashboard-1.64.0.test.js",
+        "line": 82,
+        "text": "const e1=await (await fetch(base+'/api/server-health-dashboard?range=24h',{headers:{Cookie:cookie}})).json();"
+      },
+      {
+        "file": "test/standard-server-health-dashboard-1.64.0.test.js",
+        "line": 83,
+        "text": "const e2=await (await fetch(base+'/api/server-health-dashboard?range=24h',{headers:{Cookie:cookie}})).json();"
+      },
+      {
+        "file": "test/standard-server-health-dashboard-1.64.0.test.js",
+        "line": 85,
+        "text": "const spoof=await (await fetch(base+'/api/server-health-dashboard',{headers:{Cookie:cookie,'X-Forwarded-Proto':'https','X-Forwarded-Host':'spoof.invalid'}})).json();"
+      },
+      {
+        "file": "test/standard-view-features-16-19-21-22-37-39-45-49-1.64.0.test.js",
+        "line": 47,
+        "text": "async function waitFor(url,child,logs,timeout=15000){const until=Date.now()+timeout;while(Date.now()<until){if(child.exitCode!=null)throw new Error('server exited '+child.exitCode+'\\n'+logs.join(''));try{const r=await fetch(url);if(r.ok)ret"
+      },
+      {
+        "file": "test/standard-view-features-16-19-21-22-37-39-45-49-1.64.0.test.js",
+        "line": 57,
+        "text": "const asset=await fetch(base+'/standard-productivity.js?v=4');assert.equal(asset.status,200);assert.match(await asset.text(),/Needs-attention center|Centre À traiter/);"
+      },
+      {
+        "file": "test/standard-view-features-16-19-21-22-37-39-45-49-1.64.0.test.js",
+        "line": 58,
+        "text": "const login=await fetch(base+'/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:'admin',password:'AuditPass123!'})});assert.equal(login.status,200);const body=await login.json(),cookie=cook"
+      },
+      {
+        "file": "test/standard-view-features-16-19-21-22-37-39-45-49-1.64.0.test.js",
+        "line": 59,
+        "text": "const create=await fetch(base+'/api/shares',{method:'POST',headers:mut,body:JSON.stringify({path:'/sample.txt'})});assert.equal(create.status,201,await create.clone().text());const created=await create.json();const id=created.share.id;"
+      },
+      {
+        "file": "test/standard-view-features-16-19-21-22-37-39-45-49-1.64.0.test.js",
+        "line": 60,
+        "text": "let probe=await fetch(base+'/api/shares/'+encodeURIComponent(id)+'/visitor-test',{headers:auth});let pb=await probe.json();assert.equal(probe.status,200);assert.equal(pb.verdict,'ready');assert.equal(pb.expectedStatus,200);"
+      },
+      {
+        "file": "test/standard-view-features-16-19-21-22-37-39-45-49-1.64.0.test.js",
+        "line": 62,
+        "text": "probe=await fetch(base+'/api/shares/'+encodeURIComponent(id)+'/visitor-test',{headers:auth});pb=await probe.json();assert.equal(pb.verdict,'missing-source');assert.equal(pb.expectedStatus,404);"
+      },
+      {
+        "file": "test/standard-view-features-16-19-21-22-37-39-45-49-1.64.0.test.js",
+        "line": 63,
+        "text": "const listing=await fetch(base+'/api/shares',{headers:auth}).then(r=>r.json());const share=listing.shares.find(x=>x.id===id);assert.equal(share.backing.status,'missing');"
+      },
+      {
+        "file": "test/standard-view-features-16-19-21-22-37-39-45-49-1.64.0.test.js",
+        "line": 64,
+        "text": "const dash=await fetch(base+'/api/dashboard?days=1',{headers:auth});assert.equal(dash.status,200);const db=await dash.json();assert.ok(Object.hasOwn(db.last24h,'uniqueVisitors'));assert.ok(Object.hasOwn(db.last24h,'sharesCreated'));assert.o"
+      },
+      {
+        "file": "test/storage-connector-google-web-oauth-1.67.18.test.js",
+        "line": 95,
+        "text": "const originalFetch=global.fetch;"
+      },
+      {
+        "file": "test/storage-connector-google-web-oauth-1.67.18.test.js",
+        "line": 97,
+        "text": "global.fetch=async (url, options) => {"
+      },
+      {
+        "file": "test/storage-connector-google-web-oauth-1.67.18.test.js",
+        "line": 122,
+        "text": "} finally { global.fetch=originalFetch; }"
+      },
+      {
+        "file": "test/storage-connector-oauth-persistent-broker-1.67.26.test.js",
+        "line": 37,
+        "text": "fetch:async(url,options)=>{"
+      },
+      {
+        "file": "test/windows-signpath-readiness-1.69.3.test.js",
+        "line": 35,
+        "text": "test('1.69.6 public-IP discovery can be disabled before any public-IP fetch', async () => {"
+      },
+      {
+        "file": "test/windows-signpath-readiness-1.69.3.test.js",
+        "line": 37,
+        "text": "const oldFetch = global.fetch;"
+      },
+      {
+        "file": "test/windows-signpath-readiness-1.69.3.test.js",
+        "line": 39,
+        "text": "global.fetch = async () => { fetches += 1; throw new Error('unexpected network'); };"
+      },
+      {
+        "file": "test/windows-signpath-readiness-1.69.3.test.js",
+        "line": 51,
+        "text": "} finally { global.fetch = oldFetch; }"
+      },
+      {
+        "file": "test-historical/action-history-ui-pwa-1.52.0.test.js",
+        "line": 33,
+        "text": "assert.match(pwaApp, /fetch\\('\\/app\\/undo'/);"
+      }
+    ],
+    "filesystem": [
+      {
+        "file": "lib/server/account-service.js",
+        "line": 69,
+        "text": "// must never silently rename an existing legacy `admin` account."
+      },
+      {
+        "file": "lib/server/account-service.js",
+        "line": 92,
+        "text": "const error = new Error('ASVS L3 refuses a predictable owner username; rename the owner in compatibility mode before enabling ASVS_L3_MODE');"
+      },
+      {
+        "file": "lib/server/admin-diagnostics-routes.js",
+        "line": 139,
+        "text": "await fs.promises.writeFile(p, buf, { mode: 0o600 });"
+      },
+      {
+        "file": "lib/server/admin-diagnostics-routes.js",
+        "line": 140,
+        "text": "await fs.promises.unlink(p).catch(() => {});"
+      },
+      {
+        "file": "lib/server/admin-photo-routes.js",
+        "line": 593,
+        "text": "const dxPix = imageDimensions(dest); if (dxPix && dxPix.w * dxPix.h > IMAGE_MAX_PIXELS) { fs.unlink(dest, () => {}); return res.status(413).json({ error:'image-too-many-pixels', maxPixels: IMAGE_MAX_PIXELS }); }"
+      },
+      {
+        "file": "lib/server/admin-photo-routes.js",
+        "line": 599,
+        "text": "if (dlpDecision(req, res, dlpBody, scan, 'photo-edit', { file:dest, name:s.name })) { fs.unlink(dest, () => {}); return; }"
+      },
+      {
+        "file": "lib/server/admin-photo-routes.js",
+        "line": 601,
+        "text": "const hashLock = await acquireManagedPhotoHashResponseLock(res, sha256); if (!hashLock) { fs.unlink(dest, () => {}); return; }"
+      },
+      {
+        "file": "lib/server/admin-photo-routes.js",
+        "line": 603,
+        "text": "if (duplicate && !/^(1|true|yes|on)$/i.test(String(req.query.duplicateOverride || ''))) { fs.unlink(dest, () => {}); return res.status(409).json({ error:'duplicate-content', duplicate:duplicatePhotoPayload(duplicate,req,false), sha256 }); }"
+      },
+      {
+        "file": "lib/server/admin-photo-routes.js",
+        "line": 608,
+        "text": "try { archivedVersion = archiveCurrentPhotoVersion(s, { reason:'edit', operations:editOperations }); } catch (e) { fs.unlink(dest, () => {}); return res.status(500).json({ error: 'archive-failed' }); }"
+      },
+      {
+        "file": "lib/server/admin-photo-routes.js",
+        "line": 628,
+        "text": "})().catch(() => { fs.unlink(dest, () => {}); if (!res.headersSent) res.status(500).json({ error: 'edit-failed' }); else res.destroy(); });"
+      },
+      {
+        "file": "lib/server/admin-photo-routes.js",
+        "line": 671,
+        "text": "const dxPix = imageDimensions(dest); if (dxPix && dxPix.w * dxPix.h > IMAGE_MAX_PIXELS) { fs.unlink(dest, () => {}); return res.status(413).json({ error:'image-too-many-pixels', maxPixels: IMAGE_MAX_PIXELS }); }"
+      },
+      {
+        "file": "lib/server/admin-photo-routes.js",
+        "line": 678,
+        "text": "if (dlpDecision(req, res, dlpBody, scan, 'photo-upload', { file:dest, name })) { fs.unlink(dest, () => {}); return; }"
+      },
+      {
+        "file": "lib/server/admin-photo-routes.js",
+        "line": 680,
+        "text": "const hashLock = await acquireManagedPhotoHashResponseLock(res, sha256); if (!hashLock) { fs.unlink(dest, () => {}); return; }"
+      },
+      {
+        "file": "lib/server/admin-photo-routes.js",
+        "line": 682,
+        "text": "if (duplicate && !/^(1|true|yes|on)$/i.test(String(req.query.duplicateOverride || ''))) { fs.unlink(dest, () => {}); return res.status(409).json({ error:'duplicate-content', duplicate:duplicatePhotoPayload(duplicate,req,false), sha256 }); }"
+      },
+      {
+        "file": "lib/server/admin-photo-routes.js",
+        "line": 692,
+        "text": "})().catch((e) => { fs.unlink(dest, () => {}); if (!res.headersSent) res.status(500).json({ error:'dlp-scan-failed' }); else res.destroy(); });"
+      },
+      {
+        "file": "lib/server/admin-share-routes.js",
+        "line": 669,
+        "text": "// make a later purge unlink an arbitrary host path. Imported links therefore"
+      },
+      {
+        "file": "lib/server/admin-share-routes.js",
+        "line": 1282,
+        "text": "try { await fs.promises.unlink(file); } catch (_) {}"
+      },
+      {
+        "file": "lib/server/admin-share-routes.js",
+        "line": 2258,
+        "text": "const ws = fs.createWriteStream(dest);"
+      },
+      {
+        "file": "lib/server/admin-share-routes.js",
+        "line": 2264,
+        "text": "fs.unlink(dest, () => {});"
+      },
+      {
+        "file": "lib/server/admin-share-routes.js",
+        "line": 2305,
+        "text": "const ws = fs.createWriteStream(dest, { mode: 0o600 });"
+      },
+      {
+        "file": "lib/server/admin-share-routes.js",
+        "line": 2310,
+        "text": "fs.unlink(dest, () => {});"
+      },
+      {
+        "file": "lib/server/audit-service.js",
+        "line": 430,
+        "text": "// fsync the temporary head before rename. Without this, a power loss could"
+      },
+      {
+        "file": "lib/server/auth-service.js",
+        "line": 351,
+        "text": "// account deletion, or username rename."
+      },
+      {
+        "file": "lib/server/backup-service.js",
+        "line": 153,
+        "text": "await fs.promises.writeFile(tmp, buf, { mode: 0o600 });"
+      },
+      {
+        "file": "lib/server/backup-service.js",
+        "line": 154,
+        "text": "await fs.promises.rename(tmp, path.join(dir, filename));"
+      },
+      {
+        "file": "lib/server/backup-service.js",
+        "line": 161,
+        "text": "try { await fs.promises.unlink(path.join(dir, old)); } catch (_) {}"
+      },
+      {
+        "file": "lib/server/diagnostics-service.js",
+        "line": 72,
+        "text": "? fs.promises.unlink(probe).catch(() => {})"
+      },
+      {
+        "file": "lib/server/diagnostics-service.js",
+        "line": 77,
+        "text": "writePromise = fs.promises.writeFile(probe, 'ok', { mode:0o600, flag:'wx' });"
+      },
+      {
+        "file": "lib/server/ocr-service.js",
+        "line": 220,
+        "text": "try { await fs.promises.rm(tmp, { recursive:true, force:true }); } catch (_) {}"
+      },
+      {
+        "file": "lib/server/photo-service.js",
+        "line": 231,
+        "text": "for (const candidate of uniquePhotoPaths(paths)) fs.unlink(candidate, () => {});"
+      },
+      {
+        "file": "lib/server/photo-service.js",
+        "line": 238,
+        "text": "await fs.promises.copyFile(source, tmp);"
+      },
+      {
+        "file": "lib/server/photo-service.js",
+        "line": 239,
+        "text": "await fs.promises.rename(tmp, destination);"
+      },
+      {
+        "file": "lib/server/photo-service.js",
+        "line": 241,
+        "text": "try { await fs.promises.unlink(tmp); } catch (_) {}"
+      },
+      {
+        "file": "lib/server/photo-service.js",
+        "line": 701,
+        "text": "const ws = fs.createWriteStream(dest, { flags:'wx' });"
+      },
+      {
+        "file": "lib/server/photo-service.js",
+        "line": 708,
+        "text": "fs.unlink(dest, () => {});"
+      },
+      {
+        "file": "lib/server/photo-service.js",
+        "line": 722,
+        "text": "fs.unlink(dest, () => {});"
+      },
+      {
+        "file": "lib/server/photo-service.js",
+        "line": 895,
+        "text": "const ws = fs.createWriteStream(tmp, { flags:'wx' });"
+      },
+      {
+        "file": "lib/server/public-share-routes.js",
+        "line": 1299,
+        "text": "// unreadable for a second request. A transient unlink failure is retryable."
+      },
+      {
+        "file": "lib/server/pwa-routes.js",
+        "line": 439,
+        "text": "// always sends a default deviceName, which used to clobber a custom rename on every"
+      },
+      {
+        "file": "lib/server/pwa-routes.js",
+        "line": 440,
+        "text": "// sign-in. The name is only set when the device is first issued, or via explicit rename."
+      },
+      {
+        "file": "lib/server/pwa-routes.js",
+        "line": 1434,
+        "text": "const dxPix = imageDimensions(dest); if (dxPix && dxPix.w * dxPix.h > IMAGE_MAX_PIXELS) { fs.unlink(dest, () => {}); return res.status(413).json({ error:'image-too-many-pixels', maxPixels: IMAGE_MAX_PIXELS }); }"
+      },
+      {
+        "file": "lib/server/pwa-routes.js",
+        "line": 1441,
+        "text": "if (dlpDecision(req, res, dlpBody, scan, 'pwa-photo-replace', { file:dest, name:nextName })) { fs.unlink(dest, () => {}); return; }"
+      },
+      {
+        "file": "lib/server/pwa-routes.js",
+        "line": 1443,
+        "text": "const hashLock = await acquireManagedPhotoHashResponseLock(res, sha256); if (!hashLock) { fs.unlink(dest, () => {}); return; }"
+      },
+      {
+        "file": "lib/server/pwa-routes.js",
+        "line": 1445,
+        "text": "if (duplicate && !/^(1|true|yes|on)$/i.test(String(req.query.duplicateOverride || ''))) { fs.unlink(dest, () => {}); return res.status(409).json({ error:'duplicate-content', duplicate:duplicatePhotoPayload(duplicate,req,true), sha256 }); }"
+      },
+      {
+        "file": "lib/server/pwa-routes.js",
+        "line": 1450,
+        "text": "try { archivedVersion = archiveCurrentPhotoVersion(photo, { reason:'edit', operations:editOperations }); } catch (e) { fs.unlink(dest, () => {}); return res.status(500).json({ error: 'archive-failed' }); }"
+      },
+      {
+        "file": "lib/server/pwa-routes.js",
+        "line": 1470,
+        "text": "})().catch(() => { fs.unlink(dest, () => {}); if (!res.headersSent) res.status(500).json({ error:'dlp-scan-failed' }); else res.destroy(); });"
+      },
+      {
+        "file": "lib/server/pwa-routes.js",
+        "line": 1488,
+        "text": "const dxPix = imageDimensions(dest); if (dxPix && dxPix.w * dxPix.h > IMAGE_MAX_PIXELS) { fs.unlink(dest, () => {}); return res.status(413).json({ error:'image-too-many-pixels', maxPixels: IMAGE_MAX_PIXELS }); }"
+      },
+      {
+        "file": "lib/server/pwa-routes.js",
+        "line": 1495,
+        "text": "if (dlpDecision(req, res, dlpBody, scan, 'pwa-photo-create', { file:dest, name })) { fs.unlink(dest, () => {}); return; }"
+      },
+      {
+        "file": "lib/server/pwa-routes.js",
+        "line": 1497,
+        "text": "const hashLock = await acquireManagedPhotoHashResponseLock(res, sha256); if (!hashLock) { fs.unlink(dest, () => {}); return; }"
+      },
+      {
+        "file": "lib/server/pwa-routes.js",
+        "line": 1499,
+        "text": "if (duplicate && !/^(1|true|yes|on)$/i.test(String(req.query.duplicateOverride || ''))) { fs.unlink(dest, () => {}); return res.status(409).json({ error:'duplicate-content', duplicate:duplicatePhotoPayload(duplicate,req,true), sha256 }); }"
+      },
+      {
+        "file": "lib/server/pwa-routes.js",
+        "line": 1517,
+        "text": "})().catch(() => { fs.unlink(dest, () => {}); if (!res.headersSent) res.status(500).json({ error:'dlp-scan-failed' }); else res.destroy(); });"
+      },
+      {
+        "file": "lib/server/pwa-routes.js",
+        "line": 2224,
+        "text": "app.post('/app/device/rename', pwaJsonParser, (req, res) => {"
+      },
+      {
+        "file": "lib/server/reception-collaboration-routes.js",
+        "line": 195,
+        "text": "try { await fs.promises.unlink(file); } catch (_) {}"
+      },
+      {
+        "file": "lib/server/reception-collaboration-routes.js",
+        "line": 350,
+        "text": "if (st.isDirectory()) { freed = await folderBytes(abs); await fs.promises.rm(abs, { recursive: true, force: true }); }"
+      },
+      {
+        "file": "lib/server/reception-collaboration-routes.js",
+        "line": 351,
+        "text": "else { freed = st.size; await fs.promises.unlink(abs); }"
+      },
+      {
+        "file": "lib/server/reception-collaboration-routes.js",
+        "line": 453,
+        "text": "await fs.promises.copyFile(source, target, fs.constants.COPYFILE_FICLONE || 0);"
+      },
+      {
+        "file": "lib/server/reception-collaboration-routes.js",
+        "line": 455,
+        "text": "try { await fs.promises.unlink(target); } catch (_) {}"
+      },
+      {
+        "file": "lib/server/reception-collaboration-routes.js",
+        "line": 472,
+        "text": "try { await fs.promises.unlink(outcome.target); } catch (_) {}"
+      },
+      {
+        "file": "lib/server/reception-collaboration-routes.js",
+        "line": 489,
+        "text": "try { await fs.promises.unlink(outcome.target); } catch (_) {}"
+      },
+      {
+        "file": "lib/server/reception-collaboration-routes.js",
+        "line": 498,
+        "text": "if (id) { try { await fs.promises.unlink(partPath(s, id)); } catch (_) {} }"
+      },
+      {
+        "file": "lib/server/reception-collaboration-routes.js",
+        "line": 632,
+        "text": "try { await fs.promises.unlink(partPath(s, id)); }"
+      },
+      {
+        "file": "lib/server/reception-collaboration-routes.js",
+        "line": 716,
+        "text": "try { await fs.promises.unlink(part); } catch (_) {}"
+      },
+      {
+        "file": "lib/server/reception-collaboration-routes.js",
+        "line": 740,
+        "text": "if (!pending.ok) { try { await fs.promises.unlink(part); } catch (_) {} }"
+      },
+      {
+        "file": "lib/server/reception-collaboration-routes.js",
+        "line": 758,
+        "text": "try { await fs.promises.unlink(part); } catch (_) {}"
+      },
+      {
+        "file": "lib/server/reception-collaboration-routes.js",
+        "line": 799,
+        "text": "try { await fs.promises.rename(target, replacedBackup); }"
+      },
+      {
+        "file": "lib/server/reception-collaboration-routes.js",
+        "line": 806,
+        "text": "await fs.promises.rename(part, target);"
+      },
+      {
+        "file": "lib/server/reception-collaboration-routes.js",
+        "line": 808,
+        "text": "try { await fs.promises.copyFile(part, target); await fs.promises.unlink(part); }"
+      },
+      {
+        "file": "lib/server/reception-collaboration-routes.js",
+        "line": 810,
+        "text": "try { await fs.promises.unlink(target); } catch (_) {}"
+      },
+      {
+        "file": "lib/server/reception-collaboration-routes.js",
+        "line": 811,
+        "text": "if (replacedBackup) { try { await fs.promises.rename(replacedBackup, target); } catch (_) {} }"
+      },
+      {
+        "file": "lib/server/reception-collaboration-routes.js",
+        "line": 820,
+        "text": "try { await fs.promises.unlink(target); } catch (_) {}"
+      },
+      {
+        "file": "lib/server/reception-collaboration-routes.js",
+        "line": 821,
+        "text": "if (replacedBackup) { try { await fs.promises.rename(replacedBackup, target); } catch (_) {} }"
+      },
+      {
+        "file": "lib/server/reception-collaboration-routes.js",
+        "line": 838,
+        "text": "try { await fs.promises.unlink(part); } catch (_) {}"
+      },
+      {
+        "file": "lib/server/reception-collaboration-routes.js",
+        "line": 865,
+        "text": "try { await fs.promises.unlink(target); } catch (_) {}"
+      },
+      {
+        "file": "lib/server/reception-collaboration-routes.js",
+        "line": 866,
+        "text": "try { await fs.promises.rename(outcome.replacedBackup, target); } catch (_) {}"
+      },
+      {
+        "file": "lib/server/reception-collaboration-routes.js",
+        "line": 873,
+        "text": "if (outcome.replacedBackup) { try { await fs.promises.unlink(outcome.replacedBackup); } catch (_) {} }"
+      },
+      {
+        "file": "lib/server/reception-collaboration-routes.js",
+        "line": 929,
+        "text": "const ws = fs.createWriteStream(part, { flags: 'a' }); // append from the current offset"
+      },
+      {
+        "file": "lib/server/reception-collaboration-routes.js",
+        "line": 937,
+        "text": "fs.unlink(part, () => {});"
+      },
+      {
+        "file": "lib/server/reception-collaboration-routes.js",
+        "line": 951,
+        "text": "try { fs.unlink(part, () => {}); } catch (_) {}"
+      },
+      {
+        "file": "lib/server/reception-collaboration-routes.js",
+        "line": 1003,
+        "text": "const ws = fs.createWriteStream(target, { flags: 'w' });"
+      },
+      {
+        "file": "lib/server/reception-collaboration-routes.js",
+        "line": 1010,
+        "text": "fs.unlink(target, () => {});"
+      },
+      {
+        "file": "lib/server/reception-collaboration-routes.js",
+        "line": 1037,
+        "text": "fs.unlink(target, () => {});"
+      },
+      {
+        "file": "lib/server/reception-collaboration-routes.js",
+        "line": 1058,
+        "text": "else { try { await fs.promises.unlink(target); } catch (_) {} }"
+      },
+      {
+        "file": "lib/server/reception-collaboration-routes.js",
+        "line": 1087,
+        "text": "fs.unlink(target, () => {});"
+      },
+      {
+        "file": "lib/server/restore-service.js",
+        "line": 121,
+        "text": "// Never unlink first: a crash between unlink and rename would lose the"
+      },
+      {
+        "file": "lib/server/share-service.js",
+        "line": 1198,
+        "text": "try { await fs.promises.unlink(candidate); }"
+      },
+      {
+        "file": "lib/server/share-service.js",
+        "line": 1221,
+        "text": "try { await fs.promises.unlink(managedPending.abs); }"
+      },
+      {
+        "file": "lib/server/share-service.js",
+        "line": 1230,
+        "text": "if(managedEnc){try{await fs.promises.unlink(managedEnc.abs);}catch(e){if(!e||e.code!=='ENOENT')throw e;}}"
+      },
+      {
+        "file": "lib/server/share-service.js",
+        "line": 1237,
+        "text": "assertCurrent(); const d=photoVersionDir(sh.token);if(d)await fs.promises.rm(d,{recursive:true,force:true});"
+      },
+      {
+        "file": "lib/server/share-service.js",
+        "line": 1246,
+        "text": "if(managedInbox) await fs.promises.rm(managedInbox.abs,{recursive:true,force:true});"
+      },
+      {
+        "file": "lib/server/state-store.js",
+        "line": 30,
+        "text": "if (!fs || typeof fs.readFileSync !== 'function' || typeof fs.writeFile !== 'function') {"
+      },
+      {
+        "file": "lib/server/state-store.js",
+        "line": 62,
+        "text": "fs.unlink(file, () => { if (done) done(); });"
+      },
+      {
+        "file": "lib/server/state-store.js",
+        "line": 160,
+        "text": "fs.writeFile(tempFile, snapshot, { mode: 0o600 }, (error) => {"
+      },
+      {
+        "file": "lib/server/state-store.js",
+        "line": 180,
+        "text": "logError('[store] rename failed:', renameError);"
+      },
+      {
+        "file": "lib/server/transfer-service.js",
+        "line": 176,
+        "text": "fs.appendFile(LOG_FILE, JSON.stringify(record) + '\\n', (err) => {"
+      },
+      {
+        "file": "lib/server/upload-reception-service.js",
+        "line": 579,
+        "text": "try { await fs.promises.unlink(candidate); } catch (_) {}"
+      },
+      {
+        "file": "lib/server/upload-reception-service.js",
+        "line": 729,
+        "text": "try { await fs.promises.rename(srcPart, dest); }"
+      },
+      {
+        "file": "lib/server/upload-reception-service.js",
+        "line": 731,
+        "text": "try { await fs.promises.copyFile(srcPart, dest); await fs.promises.unlink(srcPart); }"
+      },
+      {
+        "file": "lib/server/upload-reception-service.js",
+        "line": 749,
+        "text": "try { await fs.promises.unlink(dest); } catch (_) {}"
+      },
+      {
+        "file": "lib/server/upload-reception-service.js",
+        "line": 761,
+        "text": "// short rename→metadata insertion window."
+      },
+      {
+        "file": "lib/server/upload-reception-service.js",
+        "line": 773,
+        "text": "await fs.promises.unlink(file); removed += 1;"
+      },
+      {
+        "file": "lib/server/upload-reception-service.js",
+        "line": 822,
+        "text": "try { await fs.promises.rename(target, restorePath); return true; }"
+      },
+      {
+        "file": "lib/server/upload-reception-service.js",
+        "line": 824,
+        "text": "try { await fs.promises.copyFile(target, restorePath); await fs.promises.unlink(target); return true; }"
+      },
+      {
+        "file": "lib/server/upload-reception-service.js",
+        "line": 828,
+        "text": "await fs.promises.unlink(target); return true;"
+      },
+      {
+        "file": "lib/server/upload-reception-service.js",
+        "line": 860,
+        "text": "try { await fs.promises.rename(src, dest); }"
+      },
+      {
+        "file": "lib/server/upload-reception-service.js",
+        "line": 862,
+        "text": "try { await fs.promises.copyFile(src, dest); await fs.promises.unlink(src); }"
+      },
+      {
+        "file": "lib/server/upload-reception-service.js",
+        "line": 863,
+        "text": "catch (e) { try { await fs.promises.unlink(dest); } catch (_) {} return { error: 'write-error' }; }"
+      },
+      {
+        "file": "lib/server/upload-reception-service.js",
+        "line": 924,
+        "text": "try { await fs.promises.rename(src, dest); } catch (_) { try { await fs.promises.unlink(src); } catch (e) {} }"
+      },
+      {
+        "file": "lib/server/upload-reception-service.js",
+        "line": 945,
+        "text": "try { await fs.promises.rename(part, dest); } catch (_) { try { await fs.promises.unlink(part); } catch (_) {} }"
+      },
+      {
+        "file": "lib/server/upload-reception-service.js",
+        "line": 969,
+        "text": "fs.stat(p, (e, st) => { if (!e && st.mtimeMs < cutoff) fs.unlink(p, () => {}); });"
+      },
+      {
+        "file": "lib/storage-connectors.js",
+        "line": 327,
+        "text": "await fs.promises.unlink(temporary);"
+      },
+      {
+        "file": "lib/storage-connectors.js",
+        "line": 333,
+        "text": "await fs.promises.copyFile(temporary, target, fs.constants.COPYFILE_EXCL);"
+      },
+      {
+        "file": "lib/storage-connectors.js",
+        "line": 334,
+        "text": "await fs.promises.unlink(temporary);"
+      },
+      {
+        "file": "lib/storage-connectors.js",
+        "line": 447,
+        "text": "await fs.promises.writeFile(temporary, content, { mode:0o600, flag:'wx' });"
+      },
+      {
+        "file": "lib/storage-connectors.js",
+        "line": 448,
+        "text": "try { await fs.promises.rename(temporary, this.caBundlePath); }"
+      },
+      {
+        "file": "lib/storage-connectors.js",
+        "line": 450,
+        "text": "try { await fs.promises.unlink(this.caBundlePath); } catch (_) {}"
+      },
+      {
+        "file": "lib/storage-connectors.js",
+        "line": 451,
+        "text": "try { await fs.promises.rename(temporary, this.caBundlePath); }"
+      },
+      {
+        "file": "lib/storage-connectors.js",
+        "line": 452,
+        "text": "catch (renameError) { try { await fs.promises.unlink(temporary); } catch (_) {} throw renameError; }"
+      },
+      {
+        "file": "lib/storage-connectors.js",
+        "line": 763,
+        "text": "try { await fs.promises.unlink(file); } catch (error) { if (!error || error.code !== 'ENOENT') throw error; }"
+      },
+      {
+        "file": "lib/storage-connectors.js",
+        "line": 769,
+        "text": "await fs.promises.writeFile(tmp, snap.data, { mode:snap.mode || defaultMode || 0o600, flag:'wx' });"
+      },
+      {
+        "file": "lib/storage-connectors.js",
+        "line": 770,
+        "text": "await fs.promises.rename(tmp, file);"
+      },
+      {
+        "file": "lib/storage-connectors.js",
+        "line": 773,
+        "text": "try { await fs.promises.unlink(tmp); } catch (_) {}"
+      },
+      {
+        "file": "lib/storage-connectors.js",
+        "line": 854,
+        "text": "await fs.promises.writeFile(tmp, JSON.stringify(normalized.credentials), { mode:0o600, flag:'wx' });"
+      },
+      {
+        "file": "lib/storage-connectors.js",
+        "line": 856,
+        "text": "await fs.promises.rename(tmp, file);"
+      },
+      {
+        "file": "lib/storage-connectors.js",
+        "line": 860,
+        "text": "try { await fs.promises.unlink(tmp); } catch (_) {}"
+      },
+      {
+        "file": "lib/storage-connectors.js",
+        "line": 870,
+        "text": "try { await fs.promises.unlink(this._googleServiceAccountPath(remote)); } catch (error) { if (!error || error.code !== 'ENOENT') throw error; }"
+      },
+      {
+        "file": "lib/storage-connectors.js",
+        "line": 1388,
+        "text": "try { await fs.promises.rm(path.join(realStaging, entry.name), { recursive:true, force:true }); removed += 1; } catch (_) {}"
+      },
+      {
+        "file": "lib/storage-connectors.js",
+        "line": 1421,
+        "text": "finally { try { await fs.promises.rm(staging, { recursive:true, force:true }); } catch (_) {} }"
+      },
+      {
+        "file": "lib/web-storage-writable.js",
+        "line": 153,
+        "text": "if (removePart) { try { await fs.promises.unlink(part); } catch (_) {} }"
+      },
+      {
+        "file": "lib/web-storage-writable.js",
+        "line": 200,
+        "text": "try { await fs.promises.unlink(part); } catch (_) {}"
+      },
+      {
+        "file": "lib/web-storage-writable.js",
+        "line": 246,
+        "text": "if (offset > total) { try { await fs.promises.unlink(part); } catch (_) {} req.resume(); return res.status(409).json({ error:'upload-size-mismatch', offset:0 }); }"
+      },
+      {
+        "file": "lib/web-storage-writable.js",
+        "line": 268,
+        "text": "try { fs.unlink(part, () => {}); } catch (_) {}"
+      },
+      {
+        "file": "lib/web-storage-writable.js",
+        "line": 274,
+        "text": "const ws = fs.createWriteStream(part, { flags:offset ? 'a' : 'w', mode:0o600 });"
+      },
+      {
+        "file": "lib/web-storage-writable.js",
+        "line": 279,
+        "text": "try { fs.unlink(part, () => {}); } catch (_) {}"
+      },
+      {
+        "file": "lib/web-storage-writable.js",
+        "line": 305,
+        "text": "if (!uploadId) { try { await fs.promises.unlink(part); } catch (_) {} }"
+      },
+      {
+        "file": "public/app.js",
+        "line": 662,
+        "text": "'ed.rename': 'Nom',"
+      },
+      {
+        "file": "public/app.js",
+        "line": 707,
+        "text": "'acc.rename': 'Renommer',"
+      },
+      {
+        "file": "public/app.js",
+        "line": 1693,
+        "text": "'photo.rename': '✎ Renommer',"
+      },
+      {
+        "file": "public/app.js",
+        "line": 1920,
+        "text": "'ipn.clickHint': 'Click to rename this client',"
+      },
+      {
+        "file": "public/app.js",
+        "line": 2356,
+        "text": "'ed.rename': 'Name',"
+      },
+      {
+        "file": "public/app.js",
+        "line": 2401,
+        "text": "'acc.rename': 'Rename',"
+      },
+      {
+        "file": "public/app.js",
+        "line": 3230,
+        "text": "'sh.renameTip': 'Double-click to rename',"
+      },
+      {
+        "file": "public/app.js",
+        "line": 3349,
+        "text": "'photo.renameHint': 'Double-click to rename',"
+      },
+      {
+        "file": "public/app.js",
+        "line": 3386,
+        "text": "'photo.rename': '✎ Rename',"
+      },
+      {
+        "file": "public/app.js",
+        "line": 4048,
+        "text": "'ed.rename': 'Nombre',"
+      },
+      {
+        "file": "public/app.js",
+        "line": 4093,
+        "text": "'acc.rename': 'Renombrar',"
+      },
+      {
+        "file": "public/app.js",
+        "line": 5079,
+        "text": "'photo.rename': '✎ Renombrar',"
+      },
+      {
+        "file": "public/app.js",
+        "line": 8628,
+        "text": "const h = Math.floor(m / 60), rm = m % 60;"
+      },
+      {
+        "file": "public/app.js",
+        "line": 8629,
+        "text": "return h + ' h' + (rm ? ' ' + rm + ' min' : '');"
+      },
+      {
+        "file": "public/app.js",
+        "line": 8823,
+        "text": "// `ip` become clickable to rename that client (reuses renameIp)."
+      },
+      {
+        "file": "public/app.js",
+        "line": 8842,
+        "text": "// Delegated click → rename the client behind that IP."
+      },
+      {
+        "file": "public/app.js",
+        "line": 12296,
+        "text": "// Don't rebuild the list while the user is typing in it (inline rename, adding"
+      },
+      {
+        "file": "public/app.js",
+        "line": 13131,
+        "text": "// name (reflects a rename done in the PWA). Owner/admin only, like the owner chip."
+      },
+      {
+        "file": "public/app.js",
+        "line": 13312,
+        "text": "const rm = el('button', { class: 'item-x', text: '✕', attrs: { title: t('sh.removeItem') } });"
+      },
+      {
+        "file": "public/app.js",
+        "line": 13313,
+        "text": "rm.addEventListener('click', () => removeItem(s, idx));"
+      },
+      {
+        "file": "public/app.js",
+        "line": 13314,
+        "text": "row.appendChild(rm);"
+      },
+      {
+        "file": "public/app.js",
+        "line": 14207,
+        "text": "// Inline rename: turn the card's name into an input on double-click."
+      },
+      {
+        "file": "public/app.js",
+        "line": 16157,
+        "text": "// their <img> previews stay decoded and in place (no flicker on rename / expiry"
+      },
+      {
+        "file": "public/app.js",
+        "line": 16429,
+        "text": "// Double-click the name to rename in place."
+      },
+      {
+        "file": "public/app.js",
+        "line": 16528,
+        "text": "const rename = el('button', { class: 'btn ghost sm', text: t('photo.rename') });"
+      },
+      {
+        "file": "public/app.js",
+        "line": 16529,
+        "text": "rename.addEventListener('click', () => startPhotoRename(s, nameEl));"
+      },
+      {
+        "file": "public/app.js",
+        "line": 16530,
+        "text": "actions.appendChild(rename);"
+      },
+      {
+        "file": "public/app.js",
+        "line": 16687,
+        "text": "// Inline rename for a photo card (restores the name on cancel/failure)."
+      },
+      {
+        "file": "public/app.js",
+        "line": 18072,
+        "text": "const rename = el('button', { class: 'btn ghost sm', text: t('acc.rename') });"
+      },
+      {
+        "file": "public/app.js",
+        "line": 18073,
+        "text": "rename.addEventListener('click', () => renameAccount(a, a.id === selfId));"
+      },
+      {
+        "file": "public/app.js",
+        "line": 18074,
+        "text": "actions.appendChild(rename);"
+      },
+      {
+        "file": "public/reception.js",
+        "line": 406,
+        "text": "var rm = el('button', 'upcancel', '✕');"
+      },
+      {
+        "file": "public/reception.js",
+        "line": 407,
+        "text": "rm.type = 'button';"
+      },
+      {
+        "file": "public/reception.js",
+        "line": 408,
+        "text": "rm.title = t('remove');"
+      },
+      {
+        "file": "public/reception.js",
+        "line": 409,
+        "text": "rm.setAttribute('aria-label', t('remove'));"
+      },
+      {
+        "file": "public/reception.js",
+        "line": 410,
+        "text": "rm.addEventListener('click', function () { removeItem(item); });"
+      },
+      {
+        "file": "public/reception.js",
+        "line": 411,
+        "text": "row.appendChild(rm);"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 2686,
+        "text": "var rm = document.createElement('button'); rm.type = 'button'; rm.className = 'icon-action remove'; rm.textContent = '✕'; rm.title = t('remove'); rm.setAttribute('aria-label', t('remove'));"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 2687,
+        "text": "rm.addEventListener('click', function () { removeItem(it, true); }); actions.appendChild(rm); top.appendChild(actions);"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 3735,
+        "text": "var ids = ['img-sort', 'img-filter', 'img-expiry', 'img-max-views', 'img-hotlink-hosts', 'img-smart-blur', 'img-tags', 'img-note', 'img-rename-template', 'img-copy-template', 'img-action-1', 'img-action-2', 'img-action-3'];"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 3741,
+        "text": "['img-sort', 'img-filter', 'img-expiry', 'img-max-views', 'img-hotlink-hosts', 'img-smart-blur', 'img-tags', 'img-note', 'img-rename-template', 'img-copy-template', 'img-action-1', 'img-action-2', 'img-action-3'].forEach(function (id) {"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 4012,
+        "text": "var tpl = String($('img-rename-template') && $('img-rename-template').value || '').trim();"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 7524,
+        "text": "if ($('rename-device-btn')) $('rename-device-btn').classList.toggle('hidden', !paired || !deviceInfo.device);"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 7561,
+        "text": "var rename = document.createElement('button'); rename.type = 'button'; rename.className = 'btn ghost sm'; rename.textContent = t('renameDevice');"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 7562,
+        "text": "rename.addEventListener('click', function () { renameDevice(d.id, d.name, false); }); row.appendChild(rename);"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 7677,
+        "text": "var rm = el('button', { class: 'btn danger sm', attrs: { type: 'button' }, text: t('passkeyRemove') });"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 7678,
+        "text": "rm.disabled = biometricMutationInFlight || !(deviceInfo && deviceInfo.passkeyManagement === true);"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 7679,
+        "text": "rm.addEventListener('click', function () { removePasskey(p); });"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 7680,
+        "text": "row.appendChild(rm);"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 7915,
+        "text": "var r = await appMutate('/app/device/rename', 'application/json', JSON.stringify({ id: (isCurrent ? null : id) || null, name: name }));"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 7916,
+        "text": "if (!r.ok) throw new Error('rename');"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 9854,
+        "text": "// Bulk rename selected files with a shared prefix + auto numbering."
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 10920,
+        "text": "if ($('rename-device-btn')) $('rename-device-btn').addEventListener('click', function () { renameDevice(null, deviceInfo && deviceInfo.device && deviceInfo.device.name, true); });"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 11034,
+        "text": "['img-expiry', 'img-max-views', 'img-hotlink-hosts', 'img-smart-blur', 'img-tags', 'img-note', 'img-rename-template'].forEach(function (id) { if ($(id)) $(id).addEventListener('change', persistImagePreferences); });"
+      },
+      {
+        "file": "pwa/app.js",
+        "line": 11129,
+        "text": "if ($('bulk-rename-btn')) $('bulk-rename-btn').addEventListener('click', bulkRename);"
+      },
+      {
+        "file": "scripts/security-inventory.js",
+        "line": 10,
+        "text": "filesystem:/\\b(?:writeFile|appendFile|unlink|rm|rename|copyFile|createWriteStream)\\b/,"
+      },
+      {
+        "file": "test/asvs-l3-authz-logging-pixel-cap-1.70.23.test.js",
+        "line": 40,
+        "text": "const checks = src.match(/if \\(dxPix && dxPix\\.w \\* dxPix\\.h > IMAGE_MAX_PIXELS\\) \\{ fs\\.unlink\\(dest, \\(\\) => \\{\\}\\); return res\\.status\\(413\\)\\.json\\(\\{ error:'image-too-many-pixels'/g) || [];"
+      },
+      {
+        "file": "test/core-state-application-deep-audit-1.70.4.test.js",
+        "line": 92,
+        "text": "const f = makeCore({ platformFs:{ ...fs, writeFile:null } });"
+      },
+      {
+        "file": "test/oauth-broker-public-deep-audit-1.67.25.test.js",
+        "line": 69,
+        "text": "assert.match(sh, /rm -f \"\\$file\"[\\s\\S]*return \"\\$status\"/);"
+      },
+      {
+        "file": "test/share-domain-service-refactor-1.69.6.test.js",
+        "line": 176,
+        "text": "const entry = f.service.recordUndoable(req, 'rename', 'rename share', {"
+      },
+      {
+        "file": "test/share-domain-service-refactor-1.69.6.test.js",
+        "line": 185,
+        "text": "const stale = f.service.recordUndoable(req, 'rename', 'stale', {"
+      },
+      {
+        "file": "test/state-bootstrap-service-refactor-1.69.22.test.js",
+        "line": 27,
+        "text": "unlinkSync(file) { calls.push(`unlink:${file}`); markers.delete(file); },"
+      },
+      {
+        "file": "test/state-bootstrap-service-refactor-1.69.22.test.js",
+        "line": 97,
+        "text": "'migrate-lifecycle','sanitize-quarantine','reconcile-quarantine','reindex','persist-now','unlink:marker-update','cleanup-quarantine',"
+      },
+      {
+        "file": "test/state-bootstrap-service-refactor-1.69.22.test.js",
+        "line": 139,
+        "text": "assert.equal(f.calls.some((entry) => entry.startsWith('unlink:')), false);"
+      },
+      {
+        "file": "test/state-store-boundary-1.69.5.test.js",
+        "line": 79,
+        "text": "controlledFs.writeFile = (file, data, options, callback) => {"
+      },
+      {
+        "file": "test/state-store-boundary-1.69.5.test.js",
+        "line": 80,
+        "text": "if (!first) return fs.writeFile(file, data, options, callback);"
+      },
+      {
+        "file": "test/state-store-boundary-1.69.5.test.js",
+        "line": 82,
+        "text": "fs.writeFile(file, data, options, (error) => {"
+      },
+      {
+        "file": "test/state-store-boundary-1.69.5.test.js",
+        "line": 136,
+        "text": "controlledFs.writeFile = (file, data, options, callback) => {"
+      },
+      {
+        "file": "test/state-store-boundary-1.69.5.test.js",
+        "line": 141,
+        "text": "return fs.writeFile(file, data, options, callback);"
+      },
+      {
+        "file": "test/state-store-boundary-1.69.5.test.js",
+        "line": 166,
+        "text": "controlledFs.writeFile = (_file, _data, _options, callback) => {"
+      },
+      {
+        "file": "test/web-reception-collaboration-links-1.67.0.test.js",
+        "line": 141,
+        "text": "assert.match(writableSource, /fs\\.createWriteStream\\(part/);"
+      },
+      {
+        "file": "test/web-reception-collaboration-links-1.67.0.test.js",
+        "line": 143,
+        "text": "assert.match(writableSource, /await fs\\.promises\\.unlink\\(part\\)/);"
+      }
+    ]
+  }
+}

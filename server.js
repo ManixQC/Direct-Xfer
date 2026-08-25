@@ -30,6 +30,7 @@ const {
 } = require('./lib/core-utils');
 const { createServerConfig } = require('./lib/server/config');
 const { createRuntimeBootstrap } = require('./lib/server/bootstrap');
+const { assertAsvsL3Configuration } = require('./lib/server/asvs-l3-policy');
 const { createApplicationContext } = require('./lib/server/application-context');
 const { createServerBootstrapReferences } = require('./lib/server/bootstrap-reference-registry');
 const { createCoreStateBridges } = require('./lib/server/core-state-bridges');
@@ -73,6 +74,9 @@ const { closePwaEventStreamsForSession, emitInboxEvent } = pwaServices.event;
 const platformDependencies = createPlatformDependencies();
 const { EventEmitter, AsyncLocalStorage } = platformDependencies;
 const serverConfig = createServerConfig({ rootDir:__dirname });
+// ASVS L3 deployments fail closed before any state, listener, or background job is
+// exposed when a mandatory deployment prerequisite is absent.
+assertAsvsL3Configuration(serverConfig, process.env);
 const { app:appConfig, http:httpConfig, paths:configPaths, security:securityConfig, notifications:notificationTransportConfig } = serverConfig.groups;
 // Request-local CSP/template values are runtime state, not process configuration.
 const requestContext = new AsyncLocalStorage();
@@ -299,7 +303,7 @@ function onDownloadComplete(info) {
 // after the public HTML renderers are available.
 const securityAuthApplication = createSecurityAuthApplication({
   platform:platformDependencies.views.securityAuth,
-  config:{ SESSION_TTL_MS:securityConfig.SESSION_TTL_MS, FAIL_WINDOW_MS:securityConfig.FAIL_WINDOW_MS },
+  config:{ SESSION_TTL_MS:securityConfig.SESSION_TTL_MS, FAIL_WINDOW_MS:securityConfig.FAIL_WINDOW_MS, ASVS_L3_MODE:serverConfig.ASVS_L3_MODE },
   request:{ clientIp, parseCookies, secureCookie },
   state:{ getSettings, scheduleFlush, persistNow },
   account:{

@@ -9,8 +9,8 @@
 (function () {
   // Build tag, shown in the footer so a user can confirm at a glance which version
   // is actually running after an update. Keep it in lock-step with sw.js VERSION.
-  var APP_VERSION = '1.70.23';
-  var APP_BUILD = '2026.08.24-pwa456';
+  var APP_VERSION = '1.70.24';
+  var APP_BUILD = '2026.08.24-pwa457';
   // Upload blocks are deliberately small on mobile. A number of reverse proxies
   // still default to a 1 MiB request-body limit; an 8 MiB first block can therefore
   // be rejected before the browser emits any useful progress event, which looks like
@@ -607,7 +607,7 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
   }
   function t(key, vars) {
     var s = (STRINGS[lang] && STRINGS[lang][key]) || STRINGS.fr[key] || key;
-    if (vars) Object.keys(vars).forEach(function (k) { s = s.replace(new RegExp('\\{' + k + '\\}', 'g'), String(vars[k])); });
+    if (vars) Object.keys(vars).forEach(function (k) { s = s.split('{' + k + '}').join(String(vars[k])); });
     return s;
   }
   function applyLanguage(next) {
@@ -626,9 +626,9 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
     if (manifest) {
       // Keep the URL sink independent from the DOM/select value. Only literal,
       // same-origin manifest paths can reach href.
-      var manifestHref = '/direct-xfer-pwa.webmanifest?v=441';
-      if (lang === 'en') manifestHref = '/direct-xfer-pwa-en.webmanifest?v=441';
-      else if (lang === 'es') manifestHref = '/direct-xfer-pwa-es.webmanifest?v=441';
+      var manifestHref = '/direct-xfer-pwa.webmanifest?v=442';
+      if (lang === 'en') manifestHref = '/direct-xfer-pwa-en.webmanifest?v=442';
+      else if (lang === 'es') manifestHref = '/direct-xfer-pwa-es.webmanifest?v=442';
       manifest.href = manifestHref;
     }
     $('lang-select').value = lang;
@@ -1795,7 +1795,14 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
   }
   function destinationForStorage(dest) {
     var copy = Object.assign({}, dest || {});
-    if (copy.remembered !== true || copy.rememberKey !== true) copy.key = '';
+    // In the L3 profile, client storage may retain non-secret resource locators for
+    // resumability but must never persist an E2E destination key. Keep such keys in
+    // memory only for the active authenticated session.
+    var strictL3Storage = !!(deviceInfo && deviceInfo.asvsL3 === true);
+    if (strictL3Storage || copy.remembered !== true || copy.rememberKey !== true) {
+      copy.key = '';
+      if (strictL3Storage) copy.rememberKey = false;
+    }
     return copy;
   }
   function persistDestination(dest) { saveDestsBackup(); return idbPut(DEST_STORE, destinationForStorage(dest)); }
@@ -4925,7 +4932,7 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
     var overlay=document.createElement('div'); overlay.id='pwa-version-overlay'; overlay.className='pair-overlay pwa-version-overlay';
     var dialog=document.createElement('div'); dialog.className='pair-dialog pwa-version-dialog'; dialog.setAttribute('role','dialog'); dialog.setAttribute('aria-modal','true');
     var head=document.createElement('div'); head.className='pwa-version-head'; var title=document.createElement('h3'); title.textContent=t('imgVersions')+' — '+(photo.name||''); var close=document.createElement('button');close.type='button';close.className='btn ghost';close.textContent='✕';close.title=t('imgClose');head.append(title,close);dialog.appendChild(head);
-    var compare=document.createElement('div');compare.className='pwa-version-compare hidden';compare.innerHTML='<div class="pwa-version-compare-stage"><img class="pwa-version-current" alt=""><div class="pwa-version-before-wrap"><img class="pwa-version-before" alt=""></div><input class="pwa-version-slider" type="range" min="0" max="100" value="50" aria-label="'+t('imgCompareBeforeAfter')+'"></div>';
+    var compare=document.createElement('div');compare.className='pwa-version-compare hidden';compare.innerHTML='<div class="pwa-version-compare-stage"><img class="pwa-version-current" alt=""><div class="pwa-version-before-wrap"><img class="pwa-version-before" alt=""></div><input class="pwa-version-slider" type="range" min="0" max="100" value="50"></div>';var compareSlider=compare.querySelector('.pwa-version-slider');if(compareSlider)compareSlider.setAttribute('aria-label',t('imgCompareBeforeAfter'));
     dialog.appendChild(compare);
     var list=document.createElement('div');list.className='pwa-version-list';
     async function restore(v){ if(!window.confirm(t('imgRestoreConfirm')))return; var rr=await imageJsonMutation('/app/image/'+encodeURIComponent(photo.token)+'/restore/'+encodeURIComponent(v.id),{}); if(!rr.ok){toast(t('revokeFail'),'err');return;} var updated=applyUpdatedImageRecord((await rr.json()).image); toast(t('imgVersionRestored'),'ok'); overlay.remove(); if(updated)manageImageVersions(updated); }
@@ -9296,19 +9303,22 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
       button.textContent = t('closingSession');
     }
     try {
-      checkpointPersistentUiState();
-      var localSave = Promise.allSettled([persistHistorySnapshot(), persistImageActionHistory()].concat(
-        Array.from(imageRecordsByToken.values()).map(function (photo) { return persistImageRecord(photo); })
-      ));
-      // IndexedDB and PushManager can occasionally remain pending on Android after
-      // a service-worker update. They are best-effort cleanup tasks and must never
-      // prevent the actual server-side logout.
-      await settleWithin(localSave, 900, null);
+      if (!deviceInfo) await settleWithin(fetchDeviceStatus(), 1200, null);
+      var strictL3Logout = !!(deviceInfo && deviceInfo.asvsL3 === true);
+      if (!strictL3Logout) {
+        checkpointPersistentUiState();
+        var localSave = Promise.allSettled([persistHistorySnapshot(), persistImageActionHistory()].concat(
+          Array.from(imageRecordsByToken.values()).map(function (photo) { return persistImageRecord(photo); })
+        ));
+        // IndexedDB can occasionally remain pending on Android after a service-worker
+        // update. Persistence is compatibility-only: L3 logout never re-saves local
+        // capability tokens, transfer metadata, history, or image records.
+        await settleWithin(localSave, 900, null);
+      }
       disconnectLive();
       accountNotifications = [];
       renderPwaNotifications();
       await settleWithin(disablePush(), 700, null);
-      if (!deviceInfo) await settleWithin(fetchDeviceStatus(), 1200, null);
       var response = await fetchWithTimeout('/app/session/logout', {
         method: 'POST',
         credentials: 'same-origin',
@@ -9318,6 +9328,7 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
         body: '{}'
       }, 5000);
       if (!response || !response.ok) throw new Error('logout-' + (response ? response.status : 'timeout'));
+      if (strictL3Logout) await settleWithin(clearLocalDataInternal(false), 1200, null);
       var redirected = false;
       function goToLogin() {
         if (redirected) return;
@@ -9583,7 +9594,7 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
   function registerServiceWorker() {
     if (!navigator.serviceWorker || typeof navigator.serviceWorker.register !== 'function') return;
     navigator.serviceWorker.addEventListener('controllerchange', refreshToNewVersion);
-    var registrationPromise = navigator.serviceWorker.register('/direct-xfer-pwa-sw.js?v=441', { scope: '/app/' }).then(function (reg) {
+    var registrationPromise = navigator.serviceWorker.register('/direct-xfer-pwa-sw.js?v=442', { scope: '/app/' }).then(function (reg) {
       swReg = reg;
       navigator.serviceWorker.ready.then(function () {
         swReadyForInstall = true;
@@ -9876,12 +9887,18 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
     var type=String(it.type||it.file.type||'').toLowerCase(), ext=extOf(it.name||it.file.name||'');
     return /^(image\/(jpeg|png|webp))$/.test(type) || /^(jpe?g|png|webp)$/.test(ext) || type==='application/pdf' || ext==='pdf' || /^(docx|xlsx|pptx)$/.test(ext);
   }
+  function ownPinnedGlobal(globalName) {
+    if (!Object.prototype.hasOwnProperty.call(window, globalName)) return null;
+    var value=window[globalName];
+    return (typeof value==='function'||(value&&typeof value==='object'))?value:null;
+  }
   function loadPinnedGlobal(src, globalName) {
-    if (window[globalName]) return Promise.resolve(window[globalName]);
+    var existing=ownPinnedGlobal(globalName);
+    if (existing) return Promise.resolve(existing);
     if (pinnedLibraryPromises[globalName]) return pinnedLibraryPromises[globalName];
     pinnedLibraryPromises[globalName]=new Promise(function(resolve,reject){
       var tag=document.createElement('script');tag.src=src;tag.async=true;tag.crossOrigin='anonymous';
-      tag.onload=function(){window[globalName]?resolve(window[globalName]):reject(new Error(globalName+' unavailable'));};
+      tag.onload=function(){var loaded=ownPinnedGlobal(globalName);loaded?resolve(loaded):reject(new Error(globalName+' unavailable'));};
       tag.onerror=function(){reject(new Error(t('ocrEngineNetwork')));};document.head.appendChild(tag);
     }).catch(function(err){delete pinnedLibraryPromises[globalName];throw err;});
     return pinnedLibraryPromises[globalName];
@@ -9922,8 +9939,22 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
   }
   function setPrivacyBusy(busy,status){privacyBusy=!!busy;if($('privacy-analyze'))$('privacy-analyze').disabled=busy;if($('privacy-clean'))$('privacy-clean').disabled=busy||!privacyCanClean(privacyCurrentItem);if(status&&$('privacy-status'))$('privacy-status').textContent=status;}
   async function analyzePrivacyCurrent(){if(!privacyCurrentItem||privacyBusy)return;setPrivacyBusy(true,t('privacyAnalyzing'));try{privacyCurrentFindings=await analyzePrivacyFile(privacyCurrentItem.file,privacyCurrentItem.name,privacyCurrentItem.type);renderPrivacyFindings();$('privacy-status').textContent=privacyCurrentFindings.length?t('privacyFindings',{n:privacyCurrentFindings.length}):t('privacyNoFindings');}catch(e){privacyCurrentFindings=[];renderPrivacyFindings();$('privacy-status').textContent=t('privacyUnsupported');}finally{setPrivacyBusy(false);}}
-  function xmlBlankTag(xml,tag){var esc=tag.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');return xml.replace(new RegExp('<'+esc+'([^>]*)>[\\s\\S]*?<\\/'+esc+'>','gi'),'<'+tag+'$1></'+tag+'>');}
-  function xmlRemoveRelationship(xml,needle){return xml.replace(new RegExp('<Relationship\\b[^>]*Type="[^"]*'+needle+'[^"]*"[^>]*/>','gi'),'');}
+  var OFFICE_BLANK_TAG_PATTERNS={
+    'dc:creator':/<dc:creator([^>]*)>[\s\S]*?<\/dc:creator>/gi,
+    'cp:lastModifiedBy':/<cp:lastModifiedBy([^>]*)>[\s\S]*?<\/cp:lastModifiedBy>/gi,
+    'cp:revision':/<cp:revision([^>]*)>[\s\S]*?<\/cp:revision>/gi,
+    'dcterms:created':/<dcterms:created([^>]*)>[\s\S]*?<\/dcterms:created>/gi,
+    'dcterms:modified':/<dcterms:modified([^>]*)>[\s\S]*?<\/dcterms:modified>/gi,
+    Company:/<Company([^>]*)>[\s\S]*?<\/Company>/gi,
+    Manager:/<Manager([^>]*)>[\s\S]*?<\/Manager>/gi
+  };
+  var OFFICE_RELATIONSHIP_PATTERNS={
+    'custom-properties':/<Relationship\b[^>]*Type="[^"]*custom-properties[^"]*"[^>]*\/>/gi,
+    thumbnail:/<Relationship\b[^>]*Type="[^"]*thumbnail[^"]*"[^>]*\/>/gi
+  };
+  function xmlBlankTag(xml,tag){var re=OFFICE_BLANK_TAG_PATTERNS[tag];if(!re)return xml;re.lastIndex=0;return xml.replace(re,'<'+tag+'$1></'+tag+'>');}
+  function xmlRemoveRelationship(xml,needle){var re=OFFICE_RELATIONSHIP_PATTERNS[needle];if(!re)return xml;re.lastIndex=0;return xml.replace(re,'');}
+
   function concatUint8(parts,total) { var out=new Uint8Array(total),pos=0;parts.forEach(function(part){out.set(part,pos);pos+=part.length;});return out; }
   function stripJpegMetadataBytes(bytes) {
     if(bytes.length<4||bytes[0]!==0xff||bytes[1]!==0xd8)throw new Error('jpeg');

@@ -1,9 +1,5 @@
 name: Build Direct-Xfer Windows C# + Installer
-<<<<<<< HEAD
-run-name: v1.71.3
-=======
 run-name: v1.71.4
->>>>>>> eb50626 (v1.71.4)
 
 on:
   workflow_dispatch:
@@ -45,11 +41,7 @@ jobs:
   build-windows:
     runs-on: windows-2025
     env:
-<<<<<<< HEAD
-      DX_VERSION: '1.71.3'
-=======
       DX_VERSION: '1.71.4'
->>>>>>> eb50626 (v1.71.4)
       # Runtime identity is independent from the stable launcher component version.
       DX_RUNTIME_BUILD: 'runtime169'
       DX_LAUNCHER_COMPONENT_VERSION: '1.70.1'
@@ -644,21 +636,11 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
-<<<<<<< HEAD
-          name: Direct-Xfer-1.71.3-Windows-CSharp
-          path: dist/Direct-Xfer-1.71.3-Windows-CSharp/**
-=======
           name: Direct-Xfer-${{ env.DX_VERSION }}-Windows-CSharp
           path: dist/Direct-Xfer-${{ env.DX_VERSION }}-Windows-CSharp/**
->>>>>>> eb50626 (v1.71.4)
           if-no-files-found: error
       - uses: actions/upload-artifact@v7
         with:
-<<<<<<< HEAD
-          name: Direct-Xfer-Setup-1.71.3
-          path: dist/installer/Direct-Xfer-Setup-1.71.3.exe
-=======
           name: Direct-Xfer-Setup-${{ env.DX_VERSION }}
           path: dist/installer/Direct-Xfer-Setup-${{ env.DX_VERSION }}.exe
->>>>>>> eb50626 (v1.71.4)
           if-no-files-found: error

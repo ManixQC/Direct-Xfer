@@ -9,8 +9,13 @@
 (function () {
   // Build tag, shown in the footer so a user can confirm at a glance which version
   // is actually running after an update. Keep it in lock-step with sw.js VERSION.
+<<<<<<< HEAD
   var APP_VERSION = '1.71.3';
   var APP_BUILD = '2026.08.25-pwa466';
+=======
+  var APP_VERSION = '1.71.4';
+  var APP_BUILD = '2026.08.25-pwa467';
+>>>>>>> eb50626 (v1.71.4)
   // Upload blocks are deliberately small on mobile. A number of reverse proxies
   // still default to a 1 MiB request-body limit; an 8 MiB first block can therefore
   // be rejected before the browser emits any useful progress event, which looks like
@@ -626,9 +631,15 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
     if (manifest) {
       // Keep the URL sink independent from the DOM/select value. Only literal,
       // same-origin manifest paths can reach href.
+<<<<<<< HEAD
       var manifestHref = '/direct-xfer-pwa.webmanifest?v=447';
       if (lang === 'en') manifestHref = '/direct-xfer-pwa-en.webmanifest?v=447';
       else if (lang === 'es') manifestHref = '/direct-xfer-pwa-es.webmanifest?v=447';
+=======
+      var manifestHref = '/direct-xfer-pwa.webmanifest?v=448';
+      if (lang === 'en') manifestHref = '/direct-xfer-pwa-en.webmanifest?v=448';
+      else if (lang === 'es') manifestHref = '/direct-xfer-pwa-es.webmanifest?v=448';
+>>>>>>> eb50626 (v1.71.4)
       manifest.href = manifestHref;
     }
     $('lang-select').value = lang;
@@ -9594,7 +9605,11 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
   function registerServiceWorker() {
     if (!navigator.serviceWorker || typeof navigator.serviceWorker.register !== 'function') return;
     navigator.serviceWorker.addEventListener('controllerchange', refreshToNewVersion);
+<<<<<<< HEAD
     var registrationPromise = navigator.serviceWorker.register('/direct-xfer-pwa-sw.js?v=447', { scope: '/app/' }).then(function (reg) {
+=======
+    var registrationPromise = navigator.serviceWorker.register('/direct-xfer-pwa-sw.js?v=448', { scope: '/app/' }).then(function (reg) {
+>>>>>>> eb50626 (v1.71.4)
       swReg = reg;
       navigator.serviceWorker.ready.then(function () {
         swReadyForInstall = true;

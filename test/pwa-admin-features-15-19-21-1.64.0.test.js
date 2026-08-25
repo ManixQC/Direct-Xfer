@@ -20,12 +20,21 @@ const theme = read('pwa/theme-init.js');
 const sw = read('pwa/sw.js');
 const { StorageConnectorService, safeLocalTarget } = require('../lib/storage-connectors');
 
+<<<<<<< HEAD
 test('PWA build pwa466 loads and precaches audit/connectors administration module', () => {
   for (const file of ['pwa/admin-advanced.js','pwa/app.js','pwa/index.html','pwa/sw.js','pwa/theme-init.js']) {
     assert.match(read(file), /pwa466|v=447/);
   }
   assert.match(theme, /admin-audit-connectors\.js\?v=447/);
   assert.match(sw, /admin-audit-connectors\.js\?v=447/);
+=======
+test('PWA build pwa467 loads and precaches audit/connectors administration module', () => {
+  for (const file of ['pwa/admin-advanced.js','pwa/app.js','pwa/index.html','pwa/sw.js','pwa/theme-init.js']) {
+    assert.match(read(file), /pwa467|v=448/);
+  }
+  assert.match(theme, /admin-audit-connectors\.js\?v=448/);
+  assert.match(sw, /admin-audit-connectors\.js\?v=448/);
+>>>>>>> eb50626 (v1.71.4)
   assert.match(server, /'\/admin-audit-connectors\.js'/);
   assert.doesNotMatch(theme + sw, /pwa321|v=321/);
 });
@@ -193,7 +202,11 @@ test('real server verifies signed audit and imports a nested remote file server-
   child.stderr.on('data', (d) => logs.push(d.toString()));
   try {
     await waitFor(base + '/healthz', child, logs);
+<<<<<<< HEAD
     const asset = await fetch(base + '/app/admin-audit-connectors.js?v=447');
+=======
+    const asset = await fetch(base + '/app/admin-audit-connectors.js?v=448');
+>>>>>>> eb50626 (v1.71.4)
     assert.equal(asset.status, 200);
     assert.match(await asset.text(), /server-to-server import/);
 

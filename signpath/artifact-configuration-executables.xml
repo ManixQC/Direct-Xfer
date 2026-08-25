@@ -1,14 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
   <parameters>
-    <parameter name="launcherVersion" required="true" />
-    <parameter name="serverHostVersion" required="true" />
+    <parameter name="version" required="true" />
+    <parameter name="launcherFileVersion" required="true" />
+    <parameter name="serverHostFileVersion" required="true" />
   </parameters>
   <zip-file>
     <pe-file path="launcher/Direct-Xfer.exe"
              product-name="Direct-Xfer"
-             product-version="${launcherVersion}"
-             file-version="${launcherVersion}.0"
+             product-version="${version}"
+             file-version="${launcherFileVersion}.0"
              company-name="Direct-Xfer"
              copyright="Copyright © Direct-Xfer 2026"
              original-filename="Direct-Xfer.exe">
@@ -16,8 +17,8 @@
     </pe-file>
     <pe-file path="server-host/Direct-Xfer.ServerHost.exe"
              product-name="Direct-Xfer"
-             product-version="${serverHostVersion}"
-             file-version="${serverHostVersion}.0"
+             product-version="${version}"
+             file-version="${serverHostFileVersion}.0"
              company-name="Direct-Xfer"
              copyright="Copyright © Direct-Xfer 2026"
              original-filename="Direct-Xfer.ServerHost.exe">

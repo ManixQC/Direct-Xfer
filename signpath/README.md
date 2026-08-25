@@ -1,33 +1,36 @@
 # SignPath Foundation setup for Direct-Xfer
 
-The repository is ready for SignPath Foundation Open Source Code Signing. The remaining steps require the repository owner to complete SignPath's external approval process once.
+Direct-Xfer 1.71.4 is prepared for SignPath Foundation Open Source Code Signing. Source-side preparation is complete; the remaining work is the one-time external SignPath approval/configuration and GitHub secret/variable setup.
 
 ## 1. Apply to SignPath Foundation
 
-Apply at https://signpath.org/ and use this repository as the source project:
+Apply at https://signpath.org/ with this public project:
 
 - Repository: `https://github.com/ManixQC/Direct-Xfer`
 - License: MIT (`LICENSE`)
 - Code signing policy: `CODE_SIGNING_POLICY.md`
 - Privacy policy: `PRIVACY.md`
 - Windows build workflow: `.github/workflows/build-windows-csharp.yml`
+- Prepared application notes: `signpath/FOUNDATION_APPLICATION.md`
 
-Keep MFA enabled on both GitHub and SignPath. Install/authorize the SignPath GitHub App for the Direct-Xfer repository when SignPath asks for it.
+Keep MFA enabled on both GitHub and SignPath. Authorize the SignPath GitHub integration for `ManixQC/Direct-Xfer` when requested.
 
 ## 2. Create the SignPath project configuration
 
-After the OSS subscription is approved, create or use one project and one release signing policy. Import these two artifact configurations into that project:
+After the Open Source subscription is approved, create/use one SignPath project and one manually approved release signing policy. Import these artifact configurations:
 
 - `signpath/artifact-configuration-executables.xml`
 - `signpath/artifact-configuration-installer.xml`
 
-The executable configuration requires separate `launcherVersion` and `serverHostVersion` signing-request parameters because the stable launcher and ServerHost now have component-scoped PE versions. The installer configuration keeps the application release `version` parameter. The first configuration signs only Direct-Xfer's own launcher and ServerHost. The second signs the Inno Setup EXE after it has been rebuilt with those signed executables inside.
+The executable configuration signs only Direct-Xfer's own launcher and ServerHost. Its `version` parameter is the Direct-Xfer release version and is enforced as the **ProductVersion on both signed executables**, as required by the Foundation policy. Component-scoped `FileVersion` values remain separate through `launcherFileVersion` and `serverHostFileVersion`.
+
+The installer configuration signs the final Inno Setup EXE after the already-signed launcher and ServerHost have been embedded. Third-party runtimes/tools are never signed using the Direct-Xfer certificate.
 
 ## 3. Configure GitHub repository settings
 
 Create this **Actions secret**:
 
-- `SIGNPATH_API_TOKEN` — SignPath API token with submitter permission for the project/signing policy.
+- `SIGNPATH_API_TOKEN` — SignPath API token with submitter permission for the Direct-Xfer release signing policy.
 
 Create these **Actions variables**:
 
@@ -37,38 +40,49 @@ Create these **Actions variables**:
 - `SIGNPATH_EXECUTABLES_ARTIFACT_CONFIGURATION_SLUG`
 - `SIGNPATH_INSTALLER_ARTIFACT_CONFIGURATION_SLUG`
 
-The workflow deliberately does not hard-code SignPath tenant IDs/slugs and never stores the API token in source control.
+The workflow does not store the API token or tenant identifiers in source control. SignPath signing is fail-closed unless all settings are present.
 
-## 4. Produce a signed Windows release
+## 4. Release-signing safety gates
 
-Open **Actions → Build Direct-Xfer Windows C# + Installer → Run workflow** and enable **Sign this Windows release with SignPath Foundation**.
+A signing-enabled workflow run is accepted only when all of these are true:
+
+1. the run was started manually with `workflow_dispatch`;
+2. the repository is exactly `ManixQC/Direct-Xfer`;
+3. the ref is `main` or the exact release tag `v<DX_VERSION>`;
+4. package, lockfile, OAuth broker and Cloudflare Worker package versions all equal `DX_VERSION`;
+5. the fresh Direct-Xfer EXEs are unsigned before submission;
+6. both EXEs have `ProductName=Direct-Xfer`, `CompanyName=Direct-Xfer`, the common release `ProductVersion`, and the expected component `FileVersion`;
+7. SignPath returns a Windows-trusted `Valid` Authenticode signature before any signed file is packaged or published.
+
+Push builds remain unsigned and do not create SignPath signing requests.
+
+## 5. Produce a signed Windows release
+
+Open **Actions → Build Direct-Xfer Windows C# + Installer → Run workflow**, choose `main` (or the exact release tag), and enable **Sign this Windows release with SignPath Foundation**.
 
 The workflow will:
 
-1. build and test the project on `windows-2025`;
-2. verify the fresh Direct-Xfer executables are unsigned;
-3. upload the launcher and ServerHost as a GitHub artifact and submit signing request 1;
-4. wait up to one hour for the required manual SignPath approval;
-5. validate and install the signed executables into the package;
-6. build the Inno Setup installer containing those signed executables;
-7. upload the installer and submit signing request 2;
-8. wait for manual approval, validate the returned installer signature, and publish the final artifacts.
+1. build and test Direct-Xfer on `windows-2025`;
+2. build the launcher and ServerHost with the current Direct-Xfer release as PE ProductVersion while preserving their component FileVersion values;
+3. verify both fresh EXEs are unsigned and their metadata matches the artifact configuration;
+4. upload both EXEs as a GitHub artifact and submit SignPath signing request 1;
+5. wait up to one hour for the required manual SignPath approval;
+6. validate the returned Authenticode signatures and install the signed EXEs into the portable tree;
+7. build the Inno Setup installer from those signed EXEs;
+8. upload the installer and submit SignPath signing request 2;
+9. wait for manual approval and validate the signed installer;
+10. publish the final portable and installer GitHub Actions artifacts.
 
-Regular push builds remain unsigned and do not consume signing requests. This prevents development commits from creating release-approval work.
+The SignPath GitHub action receives the current GitHub artifact ID and explicit `GITHUB_TOKEN`; repository permissions are limited to `contents: read` and `actions: read`.
 
-## 5. Release-page requirement
+## 6. Release page requirement
 
-Use `signpath/RELEASE_NOTES_TEMPLATE.md` for every Windows GitHub release/download page. It contains the required **Code signing policy** heading, the Foundation attribution, source/repository links and a place to record SHA-256 values and signing status.
+Use `signpath/RELEASE_NOTES_TEMPLATE.md` for every Windows GitHub release/download page. Every signed Windows release page must contain a visible **Code signing policy** heading/link and the Foundation attribution:
 
+`Free code signing provided by SignPath.io, certificate by SignPath Foundation.`
 
-On every GitHub release/download page for signed Windows binaries, include a link to `CODE_SIGNING_POLICY.md` and identify SignPath Foundation as the certificate publisher. This is a SignPath Foundation OSS requirement.
+Record the final SHA-256 values from the exact signed artifacts published to the release.
 
-## 6. GitHub project metadata before Foundation review
+## 7. Smart App Control expectation
 
-Recommended public repository description:
-
-`Self-hosted file sharing, reception, image hosting and cloud storage platform for Docker and Windows.`
-
-Recommended GitHub topics: `self-hosted`, `file-sharing`, `file-transfer`, `docker`, `windows`, `pwa`, `image-hosting`.
-
-These are repository settings rather than source files, so update them in the GitHub **About** panel before or while the Foundation application is reviewed.
+Unsigned Direct-Xfer Windows builds can still be blocked by Windows Smart App Control because Windows cannot verify their publisher. The intended public Windows downloads are the artifacts from a successful signing-enabled workflow after SignPath Foundation approval. Do not present an unsigned development artifact as a signed release.

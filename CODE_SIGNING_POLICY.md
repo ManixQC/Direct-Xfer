@@ -13,7 +13,7 @@ Changes from contributors who do not have direct commit access must be reviewed 
 
 Windows release binaries are built only by the repository's GitHub Actions workflow on GitHub-hosted Windows runners. The unsigned build output is uploaded as a GitHub Actions artifact before it is submitted to SignPath. Direct-Xfer's launcher and ServerHost are signed first, then the installer is built from those signed executables and the final installer is signed in a second SignPath request. The workflow validates every returned Authenticode signature before publishing the final artifacts.
 
-The SignPath artifact configurations enforce Direct-Xfer product name, version, company, copyright and original-file metadata. Third-party runtimes and tools are not signed with the Direct-Xfer certificate.
+The SignPath artifact configurations enforce Direct-Xfer product name, company, copyright and original-file metadata. Every Direct-Xfer binary signed in a release uses the same application release as its PE **ProductVersion**. The launcher and ServerHost keep component-scoped **FileVersion** values so unchanged component identities do not need artificial version bumps. Third-party runtimes and tools are not signed with the Direct-Xfer certificate.
 
 The Windows installer displays `PRIVACY.md`, exposes automatic startup as a visible task, and presents explicit options for network functions that contact systems not chosen by the user (automatic update checks and public-IP discovery). These choices are applied to Direct-Xfer settings and remain editable after installation.
 

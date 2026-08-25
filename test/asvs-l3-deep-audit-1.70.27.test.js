@@ -19,16 +19,28 @@ const { writeFakeProvider, writeEvidence } = require('./helpers/asvs-l3-fixture'
 
 function temp(t) { const dir=fs.mkdtempSync(path.join(os.tmpdir(),'dx-l3-deep-')); t.after(()=>fs.rmSync(dir,{recursive:true,force:true})); return dir; }
 
+<<<<<<< HEAD
 test('1.71.3 rejects observations older than seven days even when the bundle itself is current', (t) => {
+=======
+test('1.71.4 rejects observations older than seven days even when the bundle itself is current', (t) => {
+>>>>>>> eb50626 (v1.71.4)
   const dir=temp(t), ev=writeEvidence(dir), stale=JSON.parse(JSON.stringify(ev.bundle));
   const now=Date.now(); stale.generatedAt=now-1000; stale.expiresAt=now+3600000;
   stale.checks[0].observedAt=now-(8*24*60*60*1000);
   stale.signature=signEvidenceBundle(stale,ev.keyPair.privateKey.export({type:'pkcs8',format:'pem'})).signature;
+<<<<<<< HEAD
   const result=verifyEvidenceBundle(stale,{appVersion:'1.71.3',publicUrl:'https://direct-xfer.example',publicKey:ev.keyPair.publicKey,now});
   assert.equal(result.ok,false); assert.ok(result.failures.some((row)=>row.id===stale.checks[0].id));
 });
 
 test('1.71.3 L3 state loader rejects plaintext and legacy dxenc:1 stores', (t) => {
+=======
+  const result=verifyEvidenceBundle(stale,{appVersion:'1.71.4',publicUrl:'https://direct-xfer.example',publicKey:ev.keyPair.publicKey,now});
+  assert.equal(result.ok,false); assert.ok(result.failures.some((row)=>row.id===stale.checks[0].id));
+});
+
+test('1.71.4 L3 state loader rejects plaintext and legacy dxenc:1 stores', (t) => {
+>>>>>>> eb50626 (v1.71.4)
   const dir=temp(t), provider=writeFakeProvider(dir), state={shares:[]};
   const store=createStateStore({fs,crypto,dataDir:dir,getState:()=>state,asvsL3Mode:true,cryptoProviderCommand:provider});
   fs.writeFileSync(path.join(dir,'shares.json'),JSON.stringify(state));
@@ -38,7 +50,11 @@ test('1.71.3 L3 state loader rejects plaintext and legacy dxenc:1 stores', (t) =
   store.close();
 });
 
+<<<<<<< HEAD
 test('1.71.3 L3 backups are encrypted even though DATA_KEY is absent', () => {
+=======
+test('1.71.4 L3 backups are encrypted even though DATA_KEY is absent', () => {
+>>>>>>> eb50626 (v1.71.4)
   let encrypted=0, decrypted=0;
   const enc=(json)=>{ encrypted++; return JSON.stringify({dxenc:2,provider:'external',data:Buffer.from(json).toString('base64')}); };
   const dec=(obj)=>{ decrypted++; return Buffer.from(obj.data,'base64').toString('utf8'); };
@@ -50,7 +66,11 @@ test('1.71.3 L3 backups are encrypted even though DATA_KEY is absent', () => {
   assert.throws(()=>svc.parseBackup(JSON.stringify(bundle)),(e)=>e && e.code==='ASVS_L3_PLAINTEXT_BACKUP_FORBIDDEN');
 });
 
+<<<<<<< HEAD
 test('1.71.3 purges plaintext search and OCR caches on L3 startup', (t) => {
+=======
+test('1.71.4 purges plaintext search and OCR caches on L3 startup', (t) => {
+>>>>>>> eb50626 (v1.71.4)
   const dir=temp(t); const indexFile=path.join(dir,'search-index.json'), ocrFile=path.join(dir,'search-ocr-cache.json');
   fs.writeFileSync(indexFile,JSON.stringify({version:3,builtAt:1,docs:[{id:'sensitive',searchText:'secret'}]}));
   fs.writeFileSync(ocrFile,JSON.stringify({version:1,entries:{x:{text:'secret'}}}));
@@ -60,7 +80,11 @@ test('1.71.3 purges plaintext search and OCR caches on L3 startup', (t) => {
   ocr.loadCacheSync(); assert.equal(fs.existsSync(ocrFile),false);
 });
 
+<<<<<<< HEAD
 test('1.71.3 proxy trust accepts only valid non-global IP/CIDR literals', () => {
+=======
+test('1.71.4 proxy trust accepts only valid non-global IP/CIDR literals', () => {
+>>>>>>> eb50626 (v1.71.4)
   assert.equal(parseTrustProxy('999.999.1.1/24'),false);
   assert.equal(parseTrustProxy('10.0.0.1/99'),false);
   assert.equal(explicitTrustProxyPolicySafe('0.0.0.0/0'),false);
@@ -70,13 +94,21 @@ test('1.71.3 proxy trust accepts only valid non-global IP/CIDR literals', () => 
   assert.equal(explicitTrustProxyPolicySafe('2001:db8::1/128'),true);
 });
 
+<<<<<<< HEAD
 test('1.71.3 refuses a symlinked external crypto command', (t) => {
+=======
+test('1.71.4 refuses a symlinked external crypto command', (t) => {
+>>>>>>> eb50626 (v1.71.4)
   const dir=temp(t), provider=writeFakeProvider(dir), link=path.join(dir,'provider-link');
   try { fs.symlinkSync(provider,link); } catch (e) { if (process.platform==='win32') return; throw e; }
   assert.throws(()=>normalizeCommand(link),(e)=>e && e.code==='asvs-crypto-command-symlink-forbidden');
 });
 
+<<<<<<< HEAD
 test('1.71.3 migrates the legacy audit chain to the isolated provider and updates the encrypted state anchor', (t) => {
+=======
+test('1.71.4 migrates the legacy audit chain to the isolated provider and updates the encrypted state anchor', (t) => {
+>>>>>>> eb50626 (v1.71.4)
   const dir=temp(t), providerFile=writeFakeProvider(dir), provider=createExternalCryptoProvider({command:providerFile});
   const legacySecret='legacy-audit-hmac-secret-with-more-than-32-bytes';
   const legacyKey=crypto.createHash('sha256').update('direct-xfer:audit-chain:v1\0'+legacySecret).digest();
@@ -99,7 +131,11 @@ test('1.71.3 migrates the legacy audit chain to the isolated provider and update
 });
 
 
+<<<<<<< HEAD
 test('1.71.3 converts a 1.70.26 plaintext L3 backup to dxenc:2 offline', (t) => {
+=======
+test('1.71.4 converts a 1.70.26 plaintext L3 backup to dxenc:2 offline', (t) => {
+>>>>>>> eb50626 (v1.71.4)
   const dir=temp(t), providerFile=writeFakeProvider(dir), input=path.join(dir,'old.dxbackup');
   const bundle={kind:'dxbackup',store:{shares:[],settings:{secret:'sensitive'}}}; fs.writeFileSync(input,JSON.stringify(bundle));
   const run=spawnSync(process.execPath,[path.join(__dirname,'..','scripts','asvs-l3-migrate-backup.js'),input],{encoding:'utf8',env:{...process.env,ASVS_L3_CRYPTO_COMMAND:providerFile}});
@@ -108,7 +144,11 @@ test('1.71.3 converts a 1.70.26 plaintext L3 backup to dxenc:2 offline', (t) => 
   assert.equal(restored.store.settings.secret,'sensitive'); assert.ok(fs.readdirSync(dir).some((name)=>name.includes('.pre-external-crypto-')));
 });
 
+<<<<<<< HEAD
 test('1.71.3 accepts packed hardware attestation when x5c omits the pinned root certificate', (t) => {
+=======
+test('1.71.4 accepts packed hardware attestation when x5c omits the pinned root certificate', (t) => {
+>>>>>>> eb50626 (v1.71.4)
   if (!spawnSync('openssl',['version'],{encoding:'utf8'}).stdout) return;
   const dir=temp(t), provider=writeFakeProvider(dir), rootKey=path.join(dir,'root.key'), rootPem=path.join(dir,'root.pem'), leafKey=path.join(dir,'leaf.key'), csr=path.join(dir,'leaf.csr'), leafPem=path.join(dir,'leaf.pem'), ext=path.join(dir,'leaf.ext');
   const run=(args)=>{ const r=spawnSync('openssl',args,{encoding:'utf8'}); assert.equal(r.status,0,r.stderr); };

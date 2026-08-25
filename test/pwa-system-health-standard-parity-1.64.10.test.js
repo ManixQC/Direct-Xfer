@@ -25,14 +25,22 @@ test('PWA System Health reuses the standard dashboard markup and renderer', () =
     assert.match(standardHtml, new RegExp(`id=["']${id}["']`), `standard has ${id}`);
     assert.match(pwa, new RegExp(`id="${id}"`), `PWA clone has ${id}`);
   }
+<<<<<<< HEAD
   assert.match(pwa, /server-health-dashboard\.css\?v=447/);
+=======
+  assert.match(pwa, /server-health-dashboard\.css\?v=448/);
+>>>>>>> eb50626 (v1.71.4)
   assert.match(pwa, /server-health-dashboard\.js\?v=448/);
   assert.match(pwa, /window\.DirectXferServerHealth/);
   assert.match(pwa, /server-health-grid/);
   assert.match(pwa, /server-health-table-wrap/);
   assert.match(pwa, /data-health-text="storageSection"/);
   assert.match(pwa, /data-health-text="integritySection"/);
+<<<<<<< HEAD
   assert.match(sw, /server-health-dashboard\.css\?v=447/);
+=======
+  assert.match(sw, /server-health-dashboard\.css\?v=448/);
+>>>>>>> eb50626 (v1.71.4)
   assert.match(sw, /server-health-dashboard\.js\?v=448/);
 });
 

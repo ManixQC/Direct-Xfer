@@ -1,6 +1,10 @@
 {
   "schema": 1,
+<<<<<<< HEAD
   "generatedAt": "2026-08-25T18:19:26.930Z",
+=======
+  "generatedAt": "2026-08-25T18:41:04.914Z",
+>>>>>>> eb50626 (v1.71.4)
   "scope": [
     "server.js",
     "lib",

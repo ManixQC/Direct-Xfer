@@ -1,5 +1,9 @@
 name: Build Direct-Xfer Windows C# + Installer
+<<<<<<< HEAD
 run-name: v1.71.3
+=======
+run-name: v1.71.4
+>>>>>>> eb50626 (v1.71.4)
 
 on:
   workflow_dispatch:
@@ -33,11 +37,19 @@ permissions:
   contents: read
   actions: read
 
+concurrency:
+  group: direct-xfer-windows-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build-windows:
     runs-on: windows-2025
     env:
+<<<<<<< HEAD
       DX_VERSION: '1.71.3'
+=======
+      DX_VERSION: '1.71.4'
+>>>>>>> eb50626 (v1.71.4)
       # Runtime identity is independent from the stable launcher component version.
       DX_RUNTIME_BUILD: 'runtime169'
       DX_LAUNCHER_COMPONENT_VERSION: '1.70.1'
@@ -89,9 +101,9 @@ jobs:
           $launcherOut = Join-Path $buildRoot 'launcher'
           Remove-Item $buildRoot -Recurse -Force -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Force -Path $hostOut,$launcherOut | Out-Null
-          dotnet publish windows-server-host\DirectXfer.ServerHost.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:AppHostDotNetSearch=AppRelative -p:AppHostRelativeDotNet=runtime\dotnet -p:IncludeNativeLibrariesForSelfExtract=true -p:ContinuousIntegrationBuild=true -p:DebugSymbols=false -p:DebugType=None -o $hostOut
+          dotnet publish windows-server-host\DirectXfer.ServerHost.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:AppHostDotNetSearch=AppRelative -p:AppHostRelativeDotNet=runtime\dotnet -p:IncludeNativeLibrariesForSelfExtract=true -p:ContinuousIntegrationBuild=true -p:InformationalVersion=$env:DX_VERSION -p:DebugSymbols=false -p:DebugType=None -o $hostOut
           if ($LASTEXITCODE -ne 0) { throw "ServerHost .NET 10 publish failed: $LASTEXITCODE" }
-          dotnet publish windows-launcher\DirectXfer.Launcher.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:AppHostDotNetSearch=AppRelative -p:AppHostRelativeDotNet=runtime\dotnet -p:IncludeNativeLibrariesForSelfExtract=true -p:ContinuousIntegrationBuild=true -p:DebugSymbols=false -p:DebugType=None -o $launcherOut
+          dotnet publish windows-launcher\DirectXfer.Launcher.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:AppHostDotNetSearch=AppRelative -p:AppHostRelativeDotNet=runtime\dotnet -p:IncludeNativeLibrariesForSelfExtract=true -p:ContinuousIntegrationBuild=true -p:InformationalVersion=$env:DX_VERSION -p:DebugSymbols=false -p:DebugType=None -o $launcherOut
           if ($LASTEXITCODE -ne 0) { throw "Launcher .NET 10 publish failed: $LASTEXITCODE" }
 
           # Framework-dependent single-file apphosts keep app dependencies bundled while using one private shared runtime.
@@ -113,7 +125,7 @@ jobs:
           # Force a genuinely clean second compile. Without clearing bin/obj, dotnet publish
           # may reuse the first invocation's intermediate assembly and make this check vacuous.
           Remove-Item 'windows-launcher\bin','windows-launcher\obj' -Recurse -Force -ErrorAction SilentlyContinue
-          dotnet publish windows-launcher\DirectXfer.Launcher.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:AppHostDotNetSearch=AppRelative -p:AppHostRelativeDotNet=runtime\dotnet -p:IncludeNativeLibrariesForSelfExtract=true -p:ContinuousIntegrationBuild=true -p:DebugSymbols=false -p:DebugType=None -o $launcherRepeatOut
+          dotnet publish windows-launcher\DirectXfer.Launcher.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:AppHostDotNetSearch=AppRelative -p:AppHostRelativeDotNet=runtime\dotnet -p:IncludeNativeLibrariesForSelfExtract=true -p:ContinuousIntegrationBuild=true -p:InformationalVersion=$env:DX_VERSION -p:DebugSymbols=false -p:DebugType=None -o $launcherRepeatOut
           if ($LASTEXITCODE -ne 0) { throw "Launcher repeat .NET 10 publish failed: $LASTEXITCODE" }
           $launcherPrimary = Join-Path $launcherOut 'Direct-Xfer.exe'
           $launcherRepeat = Join-Path $launcherRepeatOut 'Direct-Xfer.exe'
@@ -126,10 +138,21 @@ jobs:
       - name: Verify freshly built executables before signing
         shell: pwsh
         run: |
-          foreach ($exe in @('build\windows-dotnet10\launcher\Direct-Xfer.exe','build\windows-dotnet10\server-host\Direct-Xfer.ServerHost.exe')) {
-            if (-not (Test-Path $exe)) { throw "Missing $exe" }
-            $sig = Get-AuthenticodeSignature $exe
+          $ErrorActionPreference = 'Stop'
+          $expected = @(
+            @{ Path='build\windows-dotnet10\launcher\Direct-Xfer.exe'; FileVersion="$env:DX_LAUNCHER_COMPONENT_VERSION.0" },
+            @{ Path='build\windows-dotnet10\server-host\Direct-Xfer.ServerHost.exe'; FileVersion="$env:DX_SERVER_HOST_COMPONENT_VERSION.0" }
+          )
+          foreach ($entry in $expected) {
+            $exe = $entry.Path
+            if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) { throw "Missing $exe" }
+            $sig = Get-AuthenticodeSignature -LiteralPath $exe
             if ($sig.Status -ne 'NotSigned') { throw "Fresh build must be unsigned before SignPath processing; $exe status=$($sig.Status)" }
+            $versionInfo = (Get-Item -LiteralPath $exe).VersionInfo
+            if ($versionInfo.ProductName -ne 'Direct-Xfer') { throw "$exe ProductName '$($versionInfo.ProductName)' is not Direct-Xfer." }
+            if ($versionInfo.ProductVersion -ne $env:DX_VERSION) { throw "$exe ProductVersion '$($versionInfo.ProductVersion)' does not match release $env:DX_VERSION." }
+            if ($versionInfo.FileVersion -ne $entry.FileVersion) { throw "$exe FileVersion '$($versionInfo.FileVersion)' does not match component version $($entry.FileVersion)." }
+            if ($versionInfo.CompanyName -ne 'Direct-Xfer') { throw "$exe CompanyName '$($versionInfo.CompanyName)' is not Direct-Xfer." }
           }
       - name: Validate SignPath Foundation configuration
         if: ${{ inputs.sign_with_signpath }}
@@ -156,13 +179,40 @@ jobs:
             throw ('SignPath signing was requested but these GitHub repository settings are missing: ' + ($missing -join ', '))
           }
 
+          if ($env:GITHUB_EVENT_NAME -ne 'workflow_dispatch') {
+            throw 'SignPath release signing is allowed only from an explicit workflow_dispatch run.'
+          }
+          if ($env:GITHUB_REPOSITORY -ne 'ManixQC/Direct-Xfer') {
+            throw "SignPath release signing is restricted to ManixQC/Direct-Xfer, not '$env:GITHUB_REPOSITORY'."
+          }
+          $allowedRefs = @('refs/heads/main', "refs/tags/v$env:DX_VERSION")
+          if ($allowedRefs -notcontains $env:GITHUB_REF) {
+            throw "SignPath release signing is allowed only from main or refs/tags/v$env:DX_VERSION; current ref is '$env:GITHUB_REF'."
+          }
+
+          $package = Get-Content -LiteralPath 'package.json' -Raw | ConvertFrom-Json
+          $lock = Get-Content -LiteralPath 'package-lock.json' -Raw | ConvertFrom-Json
+          $broker = Get-Content -LiteralPath 'oauth-broker/package.json' -Raw | ConvertFrom-Json
+          $worker = Get-Content -LiteralPath 'oauth-broker/cloudflare-worker/package.json' -Raw | ConvertFrom-Json
+          foreach ($entry in @(
+            @{ Name='package.json'; Version=[string]$package.version },
+            @{ Name='package-lock.json'; Version=[string]$lock.version },
+            @{ Name='package-lock root'; Version=[string]$lock.packages.PSObject.Properties[''].Value.version },
+            @{ Name='oauth-broker/package.json'; Version=[string]$broker.version },
+            @{ Name='oauth-broker/cloudflare-worker/package.json'; Version=[string]$worker.version }
+          )) {
+            if ($entry.Version -ne $env:DX_VERSION) {
+              throw "$($entry.Name) version '$($entry.Version)' does not match release $env:DX_VERSION."
+            }
+          }
+
       # Sign Direct-Xfer's own launcher and ServerHost before assembling the portable
       # package and Inno Setup installer. SignPath Foundation requires manual approval
       # for each release; the action waits for that approval and returns the signed ZIP.
       - name: Upload Direct-Xfer executables for SignPath
         if: ${{ inputs.sign_with_signpath }}
         id: upload-signpath-executables
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: _signpath-input-executables-${{ env.DX_VERSION }}
           path: |
@@ -182,12 +232,14 @@ jobs:
           signing-policy-slug: '${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}'
           artifact-configuration-slug: '${{ vars.SIGNPATH_EXECUTABLES_ARTIFACT_CONFIGURATION_SLUG }}'
           github-artifact-id: '${{ steps.upload-signpath-executables.outputs.artifact-id }}'
+          github-token: '${{ secrets.GITHUB_TOKEN }}'
           wait-for-completion: true
           wait-for-completion-timeout-in-seconds: 3600
           output-artifact-directory: 'build/signpath-signed-executables'
           parameters: |
-            launcherVersion: "${{ env.DX_LAUNCHER_COMPONENT_VERSION }}"
-            serverHostVersion: "${{ env.DX_SERVER_HOST_COMPONENT_VERSION }}"
+            version: "${{ env.DX_VERSION }}"
+            launcherFileVersion: "${{ env.DX_LAUNCHER_COMPONENT_VERSION }}"
+            serverHostFileVersion: "${{ env.DX_SERVER_HOST_COMPONENT_VERSION }}"
 
       - name: Install SignPath-signed Direct-Xfer executables into build tree
         if: ${{ inputs.sign_with_signpath }}
@@ -521,7 +573,7 @@ jobs:
       - name: Upload Direct-Xfer installer for SignPath
         if: ${{ inputs.sign_with_signpath }}
         id: upload-signpath-installer
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: _signpath-input-installer-${{ env.DX_VERSION }}
           path: dist/installer/Direct-Xfer-Setup-${{ env.DX_VERSION }}.exe
@@ -539,6 +591,7 @@ jobs:
           signing-policy-slug: '${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}'
           artifact-configuration-slug: '${{ vars.SIGNPATH_INSTALLER_ARTIFACT_CONFIGURATION_SLUG }}'
           github-artifact-id: '${{ steps.upload-signpath-installer.outputs.artifact-id }}'
+          github-token: '${{ secrets.GITHUB_TOKEN }}'
           wait-for-completion: true
           wait-for-completion-timeout-in-seconds: 3600
           output-artifact-directory: 'dist/signpath-signed-installer'
@@ -589,13 +642,23 @@ jobs:
             )
           }
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
+<<<<<<< HEAD
           name: Direct-Xfer-1.71.3-Windows-CSharp
           path: dist/Direct-Xfer-1.71.3-Windows-CSharp/**
+=======
+          name: Direct-Xfer-${{ env.DX_VERSION }}-Windows-CSharp
+          path: dist/Direct-Xfer-${{ env.DX_VERSION }}-Windows-CSharp/**
+>>>>>>> eb50626 (v1.71.4)
           if-no-files-found: error
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
+<<<<<<< HEAD
           name: Direct-Xfer-Setup-1.71.3
           path: dist/installer/Direct-Xfer-Setup-1.71.3.exe
+=======
+          name: Direct-Xfer-Setup-${{ env.DX_VERSION }}
+          path: dist/installer/Direct-Xfer-Setup-${{ env.DX_VERSION }}.exe
+>>>>>>> eb50626 (v1.71.4)
           if-no-files-found: error

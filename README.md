@@ -21,7 +21,7 @@
 
 Windows release signing is prepared for **SignPath Foundation Open Source Code Signing**. Free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by [SignPath Foundation](https://signpath.org/). See [CODE_SIGNING_POLICY.md](CODE_SIGNING_POLICY.md) for team roles, build-origin rules and release approval, and [PRIVACY.md](PRIVACY.md) for outbound-network/privacy details.
 
-When SignPath signing is enabled after Foundation approval, GitHub Actions signs Direct-Xfer's launcher and ServerHost before the installer is assembled, then signs the final installer separately and validates all three Authenticode signatures. Regular development artifacts remain unsigned and are clearly distinguished from signed release artifacts.
+When SignPath signing is enabled after Foundation approval, GitHub Actions signs Direct-Xfer's launcher and ServerHost before the installer is assembled, then signs the final installer separately and validates all three Authenticode signatures. All signed Direct-Xfer binaries carry the same release **ProductVersion**, while launcher/ServerHost component **FileVersion** values remain independently scoped. Regular development artifacts remain unsigned and are clearly distinguished from signed release artifacts.
 
 ---
 

@@ -12,7 +12,11 @@ const read = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
 function metaFor(asvsL3) {
   let payload = null;
   const routes = createRootRoutes({
+<<<<<<< HEAD
     APP_NAME:'Direct-Xfer', APP_VERSION:'1.71.3', APP_YEAR:'2026', RELEASE_DATE:'2026-08-25',
+=======
+    APP_NAME:'Direct-Xfer', APP_VERSION:'1.71.4', APP_YEAR:'2026', RELEASE_DATE:'2026-08-25',
+>>>>>>> eb50626 (v1.71.4)
     STORAGE_SETUP:{ inboxUnconfigured:false, imagesUnconfigured:false },
     ASVS_L3_MODE:asvsL3,
     updateState:{ available:false, latest:null },

@@ -29,5 +29,9 @@ test('ASVS V14.3.3 login controls start fail-closed before server policy is know
   assert.match(pwaHtml, /id="mobile-remember-password-row"[^>]*hidden[^>]*aria-hidden="true"/);
   assert.match(publicHtml, /id="remember-password"[^>]*disabled/);
   assert.match(publicHtml, /id="remember-password-row"[^>]*hidden[^>]*aria-hidden="true"/);
+<<<<<<< HEAD
   assert.match(pwaHtml, /login-vault\.js\?v=447/);
+=======
+  assert.match(pwaHtml, /login-vault\.js\?v=448/);
+>>>>>>> eb50626 (v1.71.4)
 });

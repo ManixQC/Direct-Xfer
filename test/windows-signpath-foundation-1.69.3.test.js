@@ -22,7 +22,7 @@ test('SignPath Foundation policy and OSS prerequisites are present', () => {
   assert.match(read('PRIVACY.md'), /does not include advertising, analytics SDKs, or usage telemetry/);
 });
 
-test('SignPath artifact configurations enforce component-scoped executable PE metadata', () => {
+test('SignPath artifact configurations enforce common release ProductVersion and component FileVersion metadata', () => {
   const executables = read('signpath/artifact-configuration-executables.xml');
   const installer = read('signpath/artifact-configuration-installer.xml');
   for (const xml of [executables, installer]) {
@@ -31,10 +31,11 @@ test('SignPath artifact configurations enforce component-scoped executable PE me
     assert.match(xml, /company-name="Direct-Xfer"/);
     assert.match(xml, /<authenticode-sign hash-algorithm="sha256"/);
   }
-  assert.match(executables, /<parameter name="launcherVersion" required="true"/);
-  assert.match(executables, /<parameter name="serverHostVersion" required="true"/);
-  assert.match(executables, /launcher\/Direct-Xfer\.exe[\s\S]*?product-version="\$\{launcherVersion\}"[\s\S]*?file-version="\$\{launcherVersion\}\.0"/);
-  assert.match(executables, /server-host\/Direct-Xfer\.ServerHost\.exe[\s\S]*?product-version="\$\{serverHostVersion\}"[\s\S]*?file-version="\$\{serverHostVersion\}\.0"/);
+  assert.match(executables, /<parameter name="version" required="true"/);
+  assert.match(executables, /<parameter name="launcherFileVersion" required="true"/);
+  assert.match(executables, /<parameter name="serverHostFileVersion" required="true"/);
+  assert.match(executables, /launcher\/Direct-Xfer\.exe[\s\S]*?product-version="\$\{version\}"[\s\S]*?file-version="\$\{launcherFileVersion\}\.0"/);
+  assert.match(executables, /server-host\/Direct-Xfer\.ServerHost\.exe[\s\S]*?product-version="\$\{version\}"[\s\S]*?file-version="\$\{serverHostFileVersion\}\.0"/);
   assert.match(installer, /<parameter name="version" required="true"/);
   assert.match(installer, /product-version="\$\{version\}"/);
   assert.match(installer, /file-version="\$\{version\}\.0"/);
@@ -69,8 +70,10 @@ test('GitHub Actions signs own executables before rebuilding and signing install
   assert.match(workflow, /SIGNPATH_INSTALLER_ARTIFACT_CONFIGURATION_SLUG/);
   assert.match(workflow, /DX_LAUNCHER_COMPONENT_VERSION: '1\.70\.1'/);
   assert.match(workflow, /DX_SERVER_HOST_COMPONENT_VERSION: '1\.70\.22'/);
-  assert.match(workflow, /launcherVersion: "\$\{\{ env\.DX_LAUNCHER_COMPONENT_VERSION \}\}"/);
-  assert.match(workflow, /serverHostVersion: "\$\{\{ env\.DX_SERVER_HOST_COMPONENT_VERSION \}\}"/);
+  assert.match(workflow, /version: "\$\{\{ env\.DX_VERSION \}\}"/);
+  assert.match(workflow, /launcherFileVersion: "\$\{\{ env\.DX_LAUNCHER_COMPONENT_VERSION \}\}"/);
+  assert.match(workflow, /serverHostFileVersion: "\$\{\{ env\.DX_SERVER_HOST_COMPONENT_VERSION \}\}"/);
+  assert.equal((workflow.match(/-p:InformationalVersion=\$env:DX_VERSION/g) || []).length, 3);
   assert.equal((workflow.match(/signpath\/github-action-submit-signing-request@v2/g) || []).length, 2);
   assert.match(workflow, /github-artifact-id: '\$\{\{ steps\.upload-signpath-executables\.outputs\.artifact-id \}\}'/);
   assert.match(workflow, /github-artifact-id: '\$\{\{ steps\.upload-signpath-installer\.outputs\.artifact-id \}\}'/);

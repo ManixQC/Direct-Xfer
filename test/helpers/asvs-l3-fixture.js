@@ -61,11 +61,7 @@ function writeEvidence(dir, options = {}) {
     observation:obs[id], digest:sha256Canonical(obs[id]),
   }));
   let bundle = {
-<<<<<<< HEAD
-    evidenceVersion:1, profile:'OWASP-ASVS-5.0.0-L3', release:options.release || '1.71.3',
-=======
     evidenceVersion:1, profile:'OWASP-ASVS-5.0.0-L3', release:options.release || '1.71.4',
->>>>>>> eb50626 (v1.71.4)
     publicOrigin:options.publicOrigin || 'https://direct-xfer.example', generatedAt:now - 2000,
     expiresAt:now + 24*60*60*1000, checks,
   };
@@ -79,11 +75,7 @@ function completeL3Config(dir, overrides = {}) {
   const provider = writeFakeProvider(dir);
   const evidence = writeEvidence(dir);
   return {
-<<<<<<< HEAD
-    ASVS_L3_MODE:true, APP_VERSION:'1.71.3', PUBLIC_URL:'https://direct-xfer.example',
-=======
     ASVS_L3_MODE:true, APP_VERSION:'1.71.4', PUBLIC_URL:'https://direct-xfer.example',
->>>>>>> eb50626 (v1.71.4)
     DATA_KEY:'', AUDIT_HMAC_KEY:'', AUDIT_SIGNING_PRIVATE_KEY:'', AUDIT_SIGNING_PRIVATE_KEY_FILE:'',
     CLAMAV_SOCKET:'/run/clamd.sock', CLAMAV_HOST:'', CLAMAV_PORT:3310, CLAMAV_TLS:false,
     AUDIT_REMOTE_URL:'https://siem.example/ingest', ASVS_L3_EGRESS_ALLOWLIST:'siem.example,oauth2.googleapis.com',

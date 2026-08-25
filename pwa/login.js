@@ -550,11 +550,7 @@
   // from creating a simple home-screen shortcut with no WebAPK/share-target
   // integration when the user installs before signing in.
   if ('serviceWorker' in navigator) {
-<<<<<<< HEAD
-    navigator.serviceWorker.register('/direct-xfer-pwa-sw.js?v=447', { scope: '/app/' }).catch(function () {});
-=======
     navigator.serviceWorker.register('/direct-xfer-pwa-sw.js?v=448', { scope: '/app/' }).catch(function () {});
->>>>>>> eb50626 (v1.71.4)
   }
   hydrateRememberedLogin().finally(function () { ((rememberPassword.checked && password.value) ? password : user).focus(); });
 })();

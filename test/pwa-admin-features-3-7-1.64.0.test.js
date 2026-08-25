@@ -35,16 +35,6 @@ test.after(() => {
   fs.rmSync(dataDir, { recursive:true, force:true });
 });
 
-<<<<<<< HEAD
-test('PWA cache build is synchronized to pwa466', () => {
-  assert.match(theme, /2026\.08\.25-pwa466/);
-  assert.match(theme, /admin-advanced\.js\?v=447/);
-  assert.match(sw, /2026\.08\.25-pwa466/);
-  assert.match(sw, /admin-advanced\.js\?v=447/);
-  assert.match(read('pwa/app.js'), /2026\.08\.25-pwa466/);
-  assert.match(read('pwa/login.js'), /v=447/);
-  assert.match(read('pwa/index.html'), /pwa466/);
-=======
 test('PWA cache build is synchronized to pwa467', () => {
   assert.match(theme, /2026\.08\.25-pwa467/);
   assert.match(theme, /admin-advanced\.js\?v=448/);
@@ -53,7 +43,6 @@ test('PWA cache build is synchronized to pwa467', () => {
   assert.match(read('pwa/app.js'), /2026\.08\.25-pwa467/);
   assert.match(read('pwa/login.js'), /v=448/);
   assert.match(read('pwa/index.html'), /pwa467/);
->>>>>>> eb50626 (v1.71.4)
   for (const file of ['pwa/admin-advanced.js','pwa/app.js','pwa/index.html','pwa/login.js','pwa/sw.js','pwa/theme-init.js']) {
     assert.doesNotMatch(read(file), /pwa320|v=320/);
   }
@@ -155,11 +144,7 @@ test('global pause includes scheduled links and resume only touches panic-paused
 
 test('advanced-admin script is a public static PWA asset so first service-worker install can cache it', () => {
   assert.match(server, /'\/admin-advanced\.js'/);
-<<<<<<< HEAD
-  assert.match(sw, /'\/app\/admin-advanced\.js\?v=447'/);
-=======
   assert.match(sw, /'\/app\/admin-advanced\.js\?v=448'/);
->>>>>>> eb50626 (v1.71.4)
 });
 
 test('lite settings query actually omits the large logo payload', () => {
@@ -230,15 +215,9 @@ test('real server keeps new endpoints protected, serves PWA asset pre-login, and
   try {
     await waitFor(base + '/healthz', child, logs);
 
-<<<<<<< HEAD
-    const publicAsset = await fetch(base + '/app/admin-advanced.js?v=447');
-    assert.equal(publicAsset.status, 200);
-    assert.match(await publicAsset.text(), /pwa466/);
-=======
     const publicAsset = await fetch(base + '/app/admin-advanced.js?v=448');
     assert.equal(publicAsset.status, 200);
     assert.match(await publicAsset.text(), /pwa467/);
->>>>>>> eb50626 (v1.71.4)
 
     const anonHealth = await fetch(base + '/api/pwa-admin-health');
     assert.equal(anonHealth.status, 401);

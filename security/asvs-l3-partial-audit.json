@@ -1,14 +1,8 @@
 {
   "schema": 1,
-<<<<<<< HEAD
-  "generatedAt": "2026-08-25T18:19:27.180Z",
-  "version": "1.71.3",
-  "sourceTreeSha256": "b5bc26b7f563965be541b300dbcb8d7e61474b3ee4313433086225579d6945fc",
-=======
   "generatedAt": "2026-08-25T18:41:05.181Z",
   "version": "1.71.4",
   "sourceTreeSha256": "7b2dea32770e1ebee25c35b294d450ee3caf43b0caa9b55bde3bfd1c6f5f12d4",
->>>>>>> eb50626 (v1.71.4)
   "filesScanned": 127,
   "scope": [
     "server.js",

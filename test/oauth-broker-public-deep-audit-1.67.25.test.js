@@ -87,11 +87,7 @@ test('1.67.26 redeploy scripts preserve the broker data key and clean temporary 
 
 test('1.67.26 public broker pins a Wrangler baseline that supports required-secret validation', () => {
   const pkg = JSON.parse(read('oauth-broker/cloudflare-worker/package.json'));
-<<<<<<< HEAD
-  assert.equal(pkg.version, '1.71.3');
-=======
   assert.equal(pkg.version, '1.71.4');
->>>>>>> eb50626 (v1.71.4)
   assert.match(String(pkg.devDependencies && pkg.devDependencies.wrangler || ''), /^\^4\.94\.0$/);
 });
 

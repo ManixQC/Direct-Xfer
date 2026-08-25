@@ -3,25 +3,12 @@
 Audit date: 2026-08-25  
 Target: OWASP Application Security Verification Standard 5.0.0, Level 3  
 Repository: `ManixQC/Direct-Xfer`  
-<<<<<<< HEAD
-Release: Direct-Xfer `1.71.3`  
-=======
 Release: Direct-Xfer `1.71.4`  
->>>>>>> eb50626 (v1.71.4)
 Baseline input: Direct-Xfer `1.70.26` ASVS-L3 release  
 Detailed matrix: `security/ASVS-5.0.0-L3-MATRIX.md`
 
 ## Release verification result
 
-<<<<<<< HEAD
-Direct-Xfer 1.71.3 is a Windows resumable cloud-upload cleanup correction over 1.71.2. The upload writer now reaches its `close` event before an incomplete chunk response or finalization proceeds, and cancellation removes an already-closed staging file synchronously. This eliminates the Windows `EPERM` race observed by the `build-windows` workflow when a conflicting upload ID is aborted and its temporary directory is removed immediately. The status matrix remains 253 PASS / 92 N/A / 0 MANUAL / 0 PARTIAL / 0 FAIL / 0 REVIEW.
-
-### 1.71.3 Windows resumable-upload cleanup correction
-
-- `lib/web-storage-writable.js` finalizes completed/incomplete cloud chunks only after the `WriteStream` has released its file descriptor, avoiding Windows file-lock races during subsequent cancellation or cleanup.
-- Explicit cancellation synchronously removes a staging part when the writer is already closed and otherwise defers removal until `close`; a regression test verifies the staging file is gone before immediate cleanup continues.
-- Application/package metadata is synchronized to `1.71.3`, with PWA generation `pwa466` and refreshed cache-busters. OAuth broker metadata, Windows workflow artifact names, SBOM and ASVS release evidence are synchronized to the new release.
-=======
 Direct-Xfer 1.71.4 prepares the Windows release pipeline for SignPath Foundation Open Source Code Signing over the 1.71.3 Windows upload-cleanup release. The application/runtime security model is unchanged; this release hardens release provenance and signing metadata so the two Direct-Xfer executables and the final installer can be origin-verified, manually approved and Authenticode-signed without signing third-party runtimes. The status matrix remains 253 PASS / 92 N/A / 0 MANUAL / 0 PARTIAL / 0 FAIL / 0 REVIEW.
 
 ### 1.71.4 SignPath Foundation release-signing preparation
@@ -38,7 +25,6 @@ Direct-Xfer 1.71.4 prepares the Windows release pipeline for SignPath Foundation
 - `lib/web-storage-writable.js` finalizes completed/incomplete cloud chunks only after the `WriteStream` has released its file descriptor, avoiding Windows file-lock races during subsequent cancellation or cleanup.
 - Explicit cancellation synchronously removes a staging part when the writer is already closed and otherwise defers removal until `close`; a regression test verifies the staging file is gone before immediate cleanup continues.
 - Application/package metadata was synchronized to `1.71.3`, with PWA generation `pwa466` and refreshed cache-busters. OAuth broker metadata, Windows workflow artifact names, SBOM and ASVS release evidence were synchronized to that release.
->>>>>>> eb50626 (v1.71.4)
 
 ### 1.70.29 reverse-proxy System Health correction
 
@@ -70,21 +56,12 @@ Direct-Xfer 1.70.26 closes the 26 deployment-bound `MANUAL` rows from 1.70.25 wi
 Repository/release gates completed for this candidate:
 
 - ASVS regression suite: `node --test test/asvs-l3-*.test.js` — **96 passed, 0 failed, 0 skipped**.
-<<<<<<< HEAD
-- Full current regression tree: **1134 passed, 0 failed, 0 skipped across all 189 `test/*.test.js` files** in the normal `npm test` run.
-- Static ASVS audit: **PASS** — 127 production JavaScript source files, 13 reviewed decoder sites.
-- PARTIAL-closure audit: **PASS** — 127 production JavaScript source files, 38 repository-verifiable controls, 0 blocking findings.
-- Security inventory regenerated for 1.71.3 — **959 entries**.
-- Windows ServerHost critical runtime manifest: **103 entries, 0 stale hashes** after final synchronization.
-- CycloneDX SBOM root component synchronized to 1.71.3.
-=======
 - Full current regression tree: **1139 passed, 0 failed, 0 skipped across all 190 `test/*.test.js` files** in the normal `npm test` run.
 - Static ASVS audit: **PASS** — 127 production JavaScript source files, 13 reviewed decoder sites.
 - PARTIAL-closure audit: **PASS** — 127 production JavaScript source files, 38 repository-verifiable controls, 0 blocking findings.
 - Security inventory regenerated for 1.71.4 — **959 entries**.
 - Windows ServerHost critical runtime manifest: **103 entries, 0 stale hashes** after final synchronization.
 - CycloneDX SBOM root component synchronized to 1.71.4.
->>>>>>> eb50626 (v1.71.4)
 
 This document is an implementation/evidence audit, not a third-party certification. A production installation can operate in `ASVS_L3_MODE=true` only while all mandatory runtime controls and the signed deployment evidence are valid.
 
@@ -160,27 +137,16 @@ The direct dependency graph remains lockfile-pinned. V15.2.1 is no longer an ope
 
 ## Final release gates
 
-<<<<<<< HEAD
-- [x] package and lockfile version synchronized to 1.71.3.
-- [x] PWA version/cache generation synchronized to 1.71.3 / pwa466.
-- [x] ASVS regression suite green (96/96).
-- [x] Complete current test tree green (1134/1134 across 189 files).
-=======
 - [x] package and lockfile version synchronized to 1.71.4.
 - [x] PWA version/cache generation synchronized to 1.71.4 / pwa467.
 - [x] ASVS regression suite green (96/96).
 - [x] Complete current test tree green (1139/1139 across 190 files).
->>>>>>> eb50626 (v1.71.4)
 - [x] Static ASVS audit green.
 - [x] PARTIAL-closure audit green.
 - [x] Security inventory regenerated.
 - [x] Windows runtime integrity manifest synchronized and rechecked.
 - [x] Matrix has 0 MANUAL, 0 PARTIAL, 0 FAIL and 0 REVIEW.
-<<<<<<< HEAD
-- [x] SBOM root component synchronized to 1.71.3.
-=======
 - [x] SBOM root component synchronized to 1.71.4.
->>>>>>> eb50626 (v1.71.4)
 - [x] Former operator-declared manual-attestation flags removed from the L3 configuration surface.
 
 Independent review of N/A decisions, production evidence collection and a focused penetration test remain appropriate before making an external certification/compliance representation.

@@ -10,7 +10,7 @@ permissions:
   contents: write
 
 jobs:
-  repair:
+  repair-repository:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
@@ -86,7 +86,22 @@ jobs:
           for name in repaired_files:
               print('  repaired:', name)
 
-      - name: Persist repository repair before tests
+      - name: Validate repaired repository metadata
+        shell: python
+        run: |
+          from pathlib import Path
+          import json
+
+          for rel in (
+              'package.json',
+              'package-lock.json',
+              'oauth-broker/package.json',
+              'oauth-broker/cloudflare-worker/package.json',
+          ):
+              json.loads(Path(rel).read_text(encoding='utf-8'))
+              print('valid json:', rel)
+
+      - name: Persist repository repair
         shell: bash
         run: |
           set -euo pipefail
@@ -99,6 +114,26 @@ jobs:
           else
             git commit -m 'repair: remove accidental merge conflict artifacts'
             git push origin HEAD:main
+          fi
+
+  prepare-and-test-release:
+    needs: repair-repository
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Ensure checkout contains persisted repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git reset --hard origin/main
+          if git grep -n -E '^(<<<<<<< |=======|>>>>>>> )' -- ':!.github/workflows' ':!node_modules' ; then
+            echo 'Unresolved merge markers remain in persisted main.' >&2
+            exit 1
           fi
 
       - name: Prepare 1.71.5 release metadata
@@ -149,7 +184,6 @@ jobs:
               if updated != text:
                   path.write_text(updated, encoding='utf-8', newline='\n')
 
-          # Fail closed on malformed primary package metadata before npm ci.
           for rel in ('package.json', 'package-lock.json', 'oauth-broker/package.json', 'oauth-broker/cloudflare-worker/package.json'):
               json.loads(Path(rel).read_text(encoding='utf-8'))
 

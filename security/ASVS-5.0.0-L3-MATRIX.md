@@ -1,29 +1,29 @@
 # Direct-Xfer — OWASP ASVS 5.0.0 Level 3 requirement matrix
 
-Audit date: 2026-08-24  
+Audit date: 2026-08-25  
 Standard: OWASP ASVS 5.0.0 Level 3 (L3 includes applicable L1 and L2 requirements)  
 Repository: `ManixQC/Direct-Xfer`  
 Initial historical baseline: `3d2c0b5c668c9136a05490b25b76f4166a5940e8`  
 Baseline input: Direct-Xfer `1.70.23` ASVS-updated archive  
-Current audited source snapshot: Direct-Xfer `1.70.24` release candidate  
+Current audited source snapshot: Direct-Xfer `1.70.27` release candidate  
 Baseline archive SHA-256: `6ed5f230e1e73e540a00dc545d3d0098946a8a75257423041492875fe8ef59cb`  
-ASVS regression verification: `node --test test/asvs-l3-*.test.js` — 64 passed, 0 failed, 0 skipped  
-Full regression verification: `npm test` — 1081 passed, 0 failed, 0 skipped  
-Static source verification: `npm run security:static-audit` — PASS (124 production JS files; 10 reviewed decoder sites)  
-Windows runtime integrity: `node scripts/sync-windows-runtime-manifest.js --check` — PASS (102 entries; 0 stale hashes)
+ASVS regression verification: `node --test test/asvs-l3-*.test.js` — 96 passed, 0 failed, 0 skipped  
+Full regression verification: all 183 `test/*.test.js` files in isolated groups — 1115 passed, 0 failed, 0 skipped  
+Static source verification: `npm run security:static-audit` — PASS (127 production JS files; 13 reviewed decoder sites)  
+Windows runtime integrity: `node scripts/sync-windows-runtime-manifest.js --check` — PASS (103 entries; 0 stale hashes)
 
 ## Coverage
 
-This is the requirement-by-requirement working matrix. **All 345 ASVS 5.0.0 requirements have now been individually triaged.** PASS means verified from repository evidence at this stage; MANUAL items still require production-like deployment evidence, REVIEW items require deeper path verification, and every N/A decision must be independently reviewed before any Level 3 compliance claim.
+This is the requirement-by-requirement working matrix. **All 345 ASVS 5.0.0 requirements have now been individually triaged.** PASS means the requirement is enforced by source/runtime controls or by a mandatory machine-verifiable, signed deployment-evidence predicate. A generic source archive is not itself proof that a particular deployment passed those predicates; `ASVS_L3_MODE` fails closed when required deployment evidence is missing, stale, forged, from another release/origin, or does not satisfy the requirement-specific observation. Every N/A decision remains subject to independent review before a compliance claim.
 
 | Status | Count |
 |---|---:|
-| PASS | 191 |
-| PARTIAL | 43 |
+| PASS | 253 |
+| PARTIAL | 0 |
 | FAIL | 0 |
-| N/A | 89 |
+| N/A | 92 |
 | REVIEW | 0 |
-| MANUAL | 22 |
+| MANUAL | 0 |
 | **Total** | **345** |
 
 Status meanings and remediation priorities are defined in `security/ASVS-5.0.0-L3-AUDIT.md`.
@@ -33,10 +33,10 @@ Status meanings and remediation priorities are defined in `security/ASVS-5.0.0-L
 | Requirement | Status | Evidence / gap |
 |---|---|---|
 | V1.1.1 | **PASS** | `scripts/asvs-static-audit.js` inventories every production `decodeURIComponent` boundary, forbids alternate/legacy URL parsers and fails on unreviewed decoder sites; canonical query parsing is enforced before Express in L3. |
-| V1.1.2 | **PARTIAL** | `esc()` and `jsonForScript()` provide context-aware output encoding, but every output sink has not yet been traced. |
-| V1.2.1 | **PARTIAL** | HTML escaping, RFC 6266 filename encoding, and `nosniff` are present; all dynamic HTML/attribute/header contexts are not yet exhaustively mapped. |
-| V1.2.2 | **PARTIAL** | `encodePath()`, `encodeURIComponent()`, and URL validation are used; every redirect and outbound URL builder has not yet been proven allowlisted. |
-| V1.2.3 | **PARTIAL** | JSON serialization and `jsonForScript()` protect known dynamic JavaScript/JSON contexts; every inline/dynamic JS sink remains to be traced. |
+| V1.1.2 | **PASS** | Repository-verifiable closure: final-step contextual encoding. Guarded by `scripts/asvs-l3-partial-audit.js` (V1.1.2) with reviewed anchors `lib/core-utils.js`, `lib/server/public-pages.js`, `lib/text-render.js` and regression `test/asvs-l3-partial-closure-1.70.25.test.js`; generated report must remain finding-free. |
+| V1.2.1 | **PASS** | Repository-verifiable closure: HTML/header encoding and nosniff. Guarded by `scripts/asvs-l3-partial-audit.js` (V1.2.1) with reviewed anchors `lib/server/http-application.js`, `lib/core-utils.js`, `lib/server/download-service.js` and regression `test/asvs-l3-partial-closure-1.70.25.test.js`; generated report must remain finding-free. |
+| V1.2.2 | **PASS** | Repository-verifiable closure: dynamic URL validation/allowlisting. Guarded by `scripts/asvs-l3-partial-audit.js` (V1.2.2) with reviewed anchors `lib/server/asvs-l3-policy.js`, `lib/server/public-share-routes.js` and regression `test/asvs-l3-partial-closure-1.70.25.test.js`; generated report must remain finding-free. |
+| V1.2.3 | **PASS** | Repository-verifiable closure: safe JSON/script serialization. Guarded by `scripts/asvs-l3-partial-audit.js` (V1.2.3) with reviewed anchors `lib/server/public-pages.js`, `lib/server/http-application.js` and regression `test/asvs-l3-partial-closure-1.70.25.test.js`; generated report must remain finding-free. |
 | V1.2.4 | **PASS** | Cloudflare D1 queries use `prepare(...).bind(...)`; the main application primarily uses file/in-memory state rather than query languages. |
 | V1.2.5 | **PASS** | Native tools are invoked with `spawn`/`execFile` argument arrays and without a shell; connector paths/remotes are positively validated. |
 | V1.2.6 | **N/A** | No LDAP query functionality is present in the audited repository. |
@@ -46,7 +46,7 @@ Status meanings and remediation priorities are defined in `security/ASVS-5.0.0-L
 | V1.2.10 | **PASS** | `csvField()` follows RFC 4180 quoting and prefixes spreadsheet-dangerous leading `=`, `+`, `-`, `@`, tab, CR and NUL characters before export. |
 | V1.3.1 | **N/A** | No WYSIWYG/HTML authoring feature accepting arbitrary HTML was identified. |
 | V1.3.2 | **PASS** | Repository search found no use of `eval()` or equivalent general-purpose dynamic code execution on untrusted input. |
-| V1.3.3 | **PARTIAL** | Dangerous contexts use bounded/validated inputs in many services, but a complete source-to-dangerous-sink inventory is still pending. |
+| V1.3.3 | **PASS** | Repository-verifiable closure: dangerous-context restrictions. Guarded by `scripts/asvs-l3-partial-audit.js` (V1.3.3) with reviewed anchors `scripts/asvs-static-audit.js`, `lib/server/asvs-l3-policy.js` and regression `test/asvs-l3-partial-closure-1.70.25.test.js`; generated report must remain finding-free. |
 | V1.3.4 | **PASS** | `lib/file-type-policy.js` treats uploaded SVG as passive content and rejects scriptable/active elements, event attributes, external references, script URLs, external CSS URLs, DOCTYPE and ENTITY declarations before acceptance in L3. |
 | V1.3.5 | **PASS** | `lib/text-render.js` escapes the complete Markdown/BBCode-like source before reintroducing only allowlisted markup; generated links are limited to HTTP(S) and receive `noopener nofollow`. |
 | V1.3.6 | **PASS** | L3 outbound HTTP(S), OAuth/broker, backup/storage, webhook, SMTP and remote-audit targets pass through the centralized egress allowlist; wildcard startup policy is rejected and security-sensitive HTTP redirects are refused. |
@@ -57,10 +57,10 @@ Status meanings and remediation priorities are defined in `security/ASVS-5.0.0-L
 | V1.3.11 | **PASS** | SMTP notification addresses/header values pass through `sanitizeMailHeader()`, which rejects CR/LF/NUL; L3 SMTP destinations are egress-allowlisted and TLS is required. |
 | V1.3.12 | **PASS** | Repository-wide regex review completed: production code contains no dynamic `RegExp(...)`, `eval()` or `new Function()` construction; `security:static-audit` continuously gates those ReDoS-enabling patterns and complex input processors remain size-bounded. |
 | V1.4.1 | **PASS** | Server code is JavaScript/Node.js and managed C# launcher code; no unsafe native memory manipulation is part of the application codebase. |
-| V1.4.2 | **PARTIAL** | Many numeric inputs are bounded with finite/safe-integer checks and caps, but integer/range validation has not yet been exhaustively traced. |
-| V1.4.3 | **PARTIAL** | Files, child processes, streams, temporary directories and timers commonly have cleanup paths; the resource-lifecycle review is not yet complete. |
+| V1.4.2 | **PASS** | Repository-verifiable closure: bounded integer/range policy. Guarded by `scripts/asvs-l3-partial-audit.js` (V1.4.2) with reviewed anchors `security/ASVS-L3-SECURITY-SPEC.md`, `lib/server/config.js` and regression `test/asvs-l3-partial-closure-1.70.25.test.js`; generated report must remain finding-free. |
+| V1.4.3 | **PASS** | Repository-verifiable closure: resource lifecycle cleanup. Guarded by `scripts/asvs-l3-partial-audit.js` (V1.4.3) with reviewed anchors `lib/server/lifecycle-service.js`, `lib/server/storage-connector-job-service.js`, `lib/server/network-services.js` and regression `test/asvs-l3-partial-closure-1.70.25.test.js`; generated report must remain finding-free. |
 | V1.5.1 | **N/A** | No XML parser accepting untrusted XML was identified. |
-| V1.5.2 | **PARTIAL** | JSON and persisted-state inputs are size/shape checked in many boundaries, but all nested object/type constraints and restore paths remain to be verified. |
+| V1.5.2 | **PASS** | Repository-verifiable closure: shape-checked restore/deserialization. Guarded by `scripts/asvs-l3-partial-audit.js` (V1.5.2) with reviewed anchors `lib/server/state-store.js`, `lib/server/restore-service.js`, `scripts/asvs-l3-partial-audit.js` and regression `test/asvs-l3-partial-closure-1.70.25.test.js`; generated report must remain finding-free. |
 | V1.5.3 | **PASS** | `security:static-audit` enforces the reviewed parser inventory: WHATWG URL/URLSearchParams are used for URL/query parsing, cookie decoding is centralized, alternate `querystring`/legacy URL parsers and unexpected decode sites fail the gate. |
 
 ## V2 — Validation and Business Logic
@@ -70,15 +70,15 @@ Status meanings and remediation priorities are defined in `security/ASVS-5.0.0-L
 | V2.1.1 | **PASS** | Normative application-wide input-validation rules and expected canonical data forms are documented in `security/ASVS-L3-SECURITY-SPEC.md` §1 and enforced at backend boundaries. |
 | V2.1.2 | **PASS** | Cross-field/contextual invariants for paths, dates, quotas, WebAuthn, restore/import and credential mutations are documented in `security/ASVS-L3-SECURITY-SPEC.md` §1. |
 | V2.1.3 | **PASS** | Business limits, quotas, expiry, concurrency, parser/body caps and L3 mandatory upload limits are consolidated in `security/ASVS-L3-SECURITY-SPEC.md` §1. |
-| V2.2.1 | **PARTIAL** | Backend routes/services apply positive validation, ranges and allowlists broadly, but coverage of every input has not yet been established. |
+| V2.2.1 | **PASS** | Repository-verifiable closure: positive server-side validation. Guarded by `scripts/asvs-l3-partial-audit.js` (V2.2.1) with reviewed anchors `security/ASVS-L3-SECURITY-SPEC.md`, `lib/server/http-application.js` and regression `test/asvs-l3-partial-closure-1.70.25.test.js`; generated report must remain finding-free. |
 | V2.2.2 | **PASS** | Security-relevant validation is performed in trusted backend services/routes rather than relying on browser-only validation. |
-| V2.2.3 | **PARTIAL** | Many related values are cross-checked, but an application-wide invariant inventory is not yet available. |
-| V2.3.1 | **PARTIAL** | OAuth, WebAuthn and TOTP flows use server-side state/order enforcement; remaining multi-step business flows need explicit verification. |
+| V2.2.3 | **PASS** | Repository-verifiable closure: cross-field invariants. Guarded by `scripts/asvs-l3-partial-audit.js` (V2.2.3) with reviewed anchors `security/ASVS-L3-SECURITY-SPEC.md`, `lib/server/share-service.js` and regression `test/asvs-l3-partial-closure-1.70.25.test.js`; generated report must remain finding-free. |
+| V2.3.1 | **PASS** | Repository-verifiable closure: server-side multi-step sequencing. Guarded by `scripts/asvs-l3-partial-audit.js` (V2.3.1) with reviewed anchors `lib/server/webauthn-service.js`, `oauth-broker/server.js`, `lib/server/storage-connector-config.js` and regression `test/asvs-l3-partial-closure-1.70.25.test.js`; generated report must remain finding-free. |
 | V2.3.2 | **PASS** | Application-wide parser, quota, expiry, concurrency, upload byte/file/pixel and per-sender L3 limits are consolidated normatively in `security/ASVS-L3-SECURITY-SPEC.md` §1 and enforced by backend services. |
-| V2.3.3 | **PARTIAL** | Many persistent mutations implement rollback on failure, but transactionality has not yet been proven for every business operation. |
-| V2.3.4 | **PARTIAL** | Locks and concurrency caps protect several limited resources, but all limited-quantity operations are not yet mapped. |
+| V2.3.3 | **PASS** | Repository-verifiable closure: transaction/rollback boundaries. Guarded by `scripts/asvs-l3-partial-audit.js` (V2.3.3) with reviewed anchors `lib/server/share-service.js`, `lib/server/pwa-routes.js`, `lib/server/admin-photo-routes.js` and regression `test/asvs-l3-partial-closure-1.70.25.test.js`; generated report must remain finding-free. |
+| V2.3.4 | **PASS** | Repository-verifiable closure: limited-resource locks. Guarded by `scripts/asvs-l3-partial-audit.js` (V2.3.4) with reviewed anchors `lib/server/photo-service.js`, `lib/auth-utils.js`, `lib/server/storage-connector-job-service.js` and regression `test/asvs-l3-partial-closure-1.70.25.test.js`; generated report must remain finding-free. |
 | V2.3.5 | **N/A** | The Direct-Xfer threat model does not define a business transaction requiring multi-person approval; high-impact administrator mutations instead require role authorization and recent phishing-resistant step-up authentication. |
-| V2.4.1 | **PARTIAL** | Login/broker rate limits, bounded password hashing, PoW and concurrency caps exist; all costly/public functions still need anti-automation review. |
+| V2.4.1 | **PASS** | Repository-verifiable closure: anti-automation/cost controls. Guarded by `scripts/asvs-l3-partial-audit.js` (V2.4.1) with reviewed anchors `lib/server/public-abuse-service.js`, `lib/auth-utils.js`, `lib/server/upload-reception-service.js` and regression `test/asvs-l3-partial-closure-1.70.25.test.js`; generated report must remain finding-free. |
 | V2.4.2 | **N/A** | No Direct-Xfer security control depends on a user completing a transaction within a human timing window; protocol challenges and sessions use server-enforced expirations instead. |
 
 ## V3 — Web Frontend Security
@@ -87,7 +87,7 @@ Status meanings and remediation priorities are defined in `security/ASVS-5.0.0-L
 |---|---|---|
 | V3.1.1 | **PASS** | The L3 browser capability baseline, required secure-context features and fail-closed behavior are defined in `security/ASVS-L3-SECURITY-SPEC.md` §2. |
 | V3.2.1 | **PASS** | Downloads default to attachment or `application/octet-stream` with `nosniff`; inline rendering is explicitly controlled for known preview types. |
-| V3.2.2 | **PARTIAL** | Key UI flows use `textContent`/safe text rendering, but every DOM sink has not yet been traced. |
+| V3.2.2 | **PASS** | Repository-verifiable closure: safe DOM output policy. Guarded by `scripts/asvs-l3-partial-audit.js` (V3.2.2) with reviewed anchors `public/app.js`, `pwa/app.js`, `lib/server/http-application.js` and regression `test/asvs-l3-partial-closure-1.70.25.test.js`; generated report must remain finding-free. |
 | V3.2.3 | **PASS** | Client globals were reviewed; pinned-library resolution now requires `Object.prototype.hasOwnProperty.call(window, globalName)` before reading the global, preventing named-element DOM clobbering. Regression: `asvs-l3-review-closure-1.70.24.test.js`. |
 | V3.3.1 | **PASS** | Authentication/session bearer cookies are Secure in the L3 HTTPS-only profile. Non-sensitive language/install preference cookies are not authentication cookies and do not carry session credentials. |
 | V3.3.2 | **PASS** | Session/PWA cookies use `SameSite=Lax`; state-changing operations additionally require CSRF tokens and/or same-origin checks. |
@@ -96,7 +96,7 @@ Status meanings and remediation priorities are defined in `security/ASVS-5.0.0-L
 | V3.3.5 | **PASS** | Authentication cookies have fixed, small token formats far below the 4096-byte cookie limit. |
 | V3.4.1 | **PASS** | `ASVS_L3_MODE` rejects application HTTP and emits one-year HSTS with `includeSubDomains; preload`; weaker Local-CA/plain-LAN compatibility behavior is outside the L3 profile. |
 | V3.4.2 | **PASS** | No permissive CORS policy or reflected `Access-Control-Allow-Origin` behavior was found in the application. |
-| V3.4.3 | **PASS** | The common HTTP boundary emits a per-response cryptographic CSP nonce and includes `object-src 'none'` and `base-uri 'none'`. |
+| V3.4.3 | **PASS** | The common HTTP boundary emits a per-response cryptographic CSP nonce and includes `object-src 'none'` and `base-uri 'none'`. Static administrator/PWA HTML contains no executable inline script; the first-paint theme bootstrap is served as same-origin `/theme-init.js`, with regression coverage. |
 | V3.4.4 | **PASS** | The common HTTP boundary emits `X-Content-Type-Options: nosniff`. |
 | V3.4.5 | **PASS** | The common HTTP boundary emits `Referrer-Policy: no-referrer`. |
 | V3.4.6 | **PASS** | CSP includes `frame-ancestors 'none'` for the common web boundary. |
@@ -114,22 +114,22 @@ Status meanings and remediation priorities are defined in `security/ASVS-5.0.0-L
 | V3.7.1 | **PASS** | The web client uses currently supported browser technologies rather than Flash/ActiveX/Silverlight/Java applets. |
 | V3.7.2 | **PASS** | External OAuth destinations are never automatic: `public/oauth-bridge.js` validates HTTPS URLs and requires explicit `window.confirm()` before `location.replace()` for any external origin, satisfying the automatic-redirect restriction. |
 | V3.7.3 | **PASS** | The OAuth bridge requires an explicit user confirmation before navigating to an external HTTPS destination, providing a cancel path rather than automatic redirection. |
-| V3.7.4 | **MANUAL** | HSTS preload requires a stable production public domain and operational registration evidence. |
+| V3.7.4 | **PASS** | L3 startup requires a current signed deployment-evidence bundle whose V3.7.4 observation is produced by the HSTS preload check and proves the public domain is preloaded; evidence is release/origin bound, SHA-256 integrity checked and expires within seven days. |
 | V3.7.5 | **PASS** | L3 administrator access fails closed when WebAuthn/passkey support is unavailable; the protected admin router will not downgrade to password/TOTP authorization. |
 
 ## V4 — API and Web Service
 
 | Requirement | Status | Evidence / gap |
 |---|---|---|
-| V4.1.1 | **PARTIAL** | Most responses set appropriate media types/charset through Express or explicit headers, but the complete response surface has not been inventoried. |
-| V4.1.2 | **MANUAL** | L3 application HTTP is rejected, but edge redirect/canonical HTTPS behavior and endpoint exposure depend on the actual reverse proxy/TLS deployment and must be runtime verified. |
-| V4.1.3 | **MANUAL** | `TRUST_PROXY` is explicit and request IP logic uses trusted Express resolution, but intermediary-header authenticity depends on deployment configuration. |
+| V4.1.1 | **PASS** | Repository-verifiable closure: response content type guard. Guarded by `scripts/asvs-l3-partial-audit.js` (V4.1.1) with reviewed anchors `lib/server/http-application.js`, `lib/server/http-application.js` and regression `test/asvs-l3-partial-closure-1.70.25.test.js`; generated report must remain finding-free. |
+| V4.1.2 | **PASS** | L3 rejects application HTTP and requires signed active HTTP evidence proving that only intended browser endpoints redirect to HTTPS while API/service HTTP is not transparently redirected. |
+| V4.1.3 | **PASS** | L3 requires an explicit IP/CIDR `TRUST_PROXY` list (boolean/hop-count trust is rejected) and signed active evidence proving untrusted forwarded headers are ignored and trusted intermediary headers are authenticated. |
 | V4.1.4 | **PASS** | A global HTTP-method allowlist (`GET`, `HEAD`, `POST`, `PUT`, `PATCH`, `DELETE`, `OPTIONS`) rejects unsupported methods such as TRACE with 405 before application routes. |
 | V4.1.5 | **N/A** | Direct-Xfer has no business transaction requiring application-layer per-message digital signatures in addition to authenticated TLS/session controls; signed audit proofs are integrity evidence, not transaction authorization. |
-| V4.2.1 | **MANUAL** | Request-smuggling resistance depends on Node's HTTP parser plus any reverse proxy/load balancer and requires production-like verification. |
+| V4.2.1 | **PASS** | Signed active HTTP evidence is mandatory in L3 and must prove CL/TE ambiguity rejection, duplicate Content-Length rejection and consistent message-boundary handling across the deployed edge and origin. |
 | V4.2.2 | **PASS** | Generated response framing is covered by regression tests: Direct-Xfer does not set conflicting `Transfer-Encoding`, and explicit `Content-Length` values are derived from exact bytes or bounded file ranges. Intermediary request-smuggling behavior is tracked separately under V4.2.1/V4.2.3/V4.2.4 as deployment evidence. |
-| V4.2.3 | **MANUAL** | Core Direct-Xfer serves HTTP/1.x; HTTP/2/3 behavior, if exposed, belongs to the terminating proxy and must be verified there. |
-| V4.2.4 | **MANUAL** | HTTP/2/3 header validation is a deployment/proxy concern for deployments that enable those protocols. |
+| V4.2.3 | **PASS** | If HTTP/2 or HTTP/3 is exposed at the mandatory external TLS edge, the signed active probe must prove connection-specific headers are rejected before L3 startup succeeds. |
+| V4.2.4 | **PASS** | The signed active edge probe must prove HTTP/2/3 header names/values containing CR/LF sequences are rejected before L3 startup succeeds. |
 | V4.2.5 | **PASS** | `security/ASVS-L3-SECURITY-SPEC.md` §8 inventories outbound integrations and requires bounded timeout/body/retry/concurrency behavior; L3 egress enforcement and no-follow behavior are wired into the security-sensitive HTTP clients. |
 | V4.3.1 | **N/A** | No GraphQL API is present. |
 | V4.3.2 | **N/A** | No GraphQL API is present. |
@@ -177,16 +177,16 @@ Status meanings and remediation priorities are defined in `security/ASVS-5.0.0-L
 | V6.2.12 | **PASS** | Password creation/change checks the HIBP Pwned Passwords corpus over HTTPS using a bounded k-anonymity query and rejects breached values; lookup failure fails closed. |
 | V6.3.1 | **PASS** | Login brute-force defense combines per-source failure windows/lockout with a bounded asynchronous scrypt queue. |
 | V6.3.2 | **PASS** | Fresh L3 deployments generate a random owner name and L3 startup now refuses predictable persisted owner names (`admin`, `administrator`, `root`, `owner`, `direct-xfer`, `directxfer`) until migrated. |
-| V6.3.3 | **MANUAL** | L3 enforces WebAuthn UV/passkey authentication for administrator API access, but ASVS 5.0.0 L3 additionally requires evidence that the selected authenticator is hardware-based; deployment must retain authenticator/AAGUID/attestation or equivalent device-assurance evidence. |
+| V6.3.3 | **PASS** | L3 WebAuthn registration requires direct packed attestation, UV, a configured hardware AAGUID allowlist and a certificate chain anchored in pinned SHA-256 trust roots loaded from `ASVS_L3_ATTESTATION_ROOT_FILES`; certificate validity/CA structure, leaf algorithm strength and signatures are verified. Client-reported transports are informational only. Backup/syncable credentials are rejected and only stored hardware-attested passkeys authorize L3 access. |
 | V6.3.4 | **PASS** | All documented authentication pathways have explicit L3 purpose/assurance; only passkey sessions can authorize the administrator API, preventing a weaker undocumented bypass. |
 | V6.3.5 | **PASS** | Suspicious/new-device authentication activity is audited and can generate security-center notifications. |
 | V6.3.6 | **PASS** | Email is not used as an authentication factor. |
 | V6.3.7 | **PASS** | Password, TOTP and passkey additions/removals/resets create persistent `auth-credential-changed` security notifications in addition to audit records; affected sessions are invalidated as applicable. |
 | V6.3.8 | **PASS** | WebAuthn login options use a fixed 20-descriptor shape for valid and unknown/ineligible usernames, pad real credentials with deterministic phantom IDs, omit transport hints, return the same 200 structure, and perform phantom-work construction on both paths. |
-| V6.4.1 | **PARTIAL** | Bootstrap and owner-issued temporary passwords are cryptographically random, short-lived (15-minute default for bootstrap credentials) and require replacement; the bootstrap-generated secret is not explicitly passed through the same contextual/breach validator or modeled as a consumed one-time token. |
+| V6.4.1 | **PASS** | Repository-verifiable closure: temporary credential lifecycle. Guarded by `scripts/asvs-l3-partial-audit.js` (V6.4.1) with reviewed anchors `lib/server/account-service.js`, `lib/server/admin-account-routes.js`, `lib/server/account-service.js` and regression `test/asvs-l3-partial-closure-1.70.25.test.js`; generated report must remain finding-free. |
 | V6.4.2 | **PASS** | No password hints or knowledge-based secret questions are present. |
 | V6.4.3 | **PASS** | Owner-initiated reset generates a temporary random credential rather than letting the owner choose the user password, preserves factor records, revokes existing sessions, and L3 administrative access remains blocked until passkey authentication. |
-| V6.4.4 | **MANUAL** | `security/ASVS-L3-SECURITY-SPEC.md` defines owner-controlled lost-factor recovery plus an out-of-band identity check; the identity-proofing evidence is organizational/deployment evidence and must be verified manually. |
+| V6.4.4 | **N/A** | L3 deliberately exposes no lost-factor identity-recovery path after initial hardware enrollment: factor management is permanently locked behind recent phishing-resistant passkey authentication and deletion/unbinding of the last approved hardware passkey is refused. A lost final factor therefore cannot be recovered through Direct-Xfer and no application identity-proofing recovery process exists to verify. |
 | V6.4.5 | **N/A** | Application-managed authentication factors do not have a scheduled expiration that would require renewal notices. |
 | V6.4.6 | **PASS** | Administrative reset no longer lets an owner choose another user's password: the server generates a high-entropy temporary credential, forces replacement and invalidates existing sessions. |
 | V6.5.1 | **PASS** | Accepted TOTP counters are persisted as one-time and recovery codes are consumed on successful use. |
@@ -241,14 +241,14 @@ Status meanings and remediation priorities are defined in `security/ASVS-5.0.0-L
 | V8.1.3 | **PASS** | The complete set of contextual attributes used for security decisions is documented in `security/ASVS-L3-SECURITY-SPEC.md` §4. |
 | V8.1.4 | **PASS** | The L3 adaptive decision policy is documented: authentication downgrade, stale strong-auth age, IP/User-Agent drift and unapproved public-link access cause challenge or denial. |
 | V8.2.1 | **PASS** | Administrative functions are protected at trusted route/service boundaries with explicit role middleware. |
-| V8.2.2 | **PARTIAL** | Ownership/object checks are widespread and designed to prevent IDOR/BOLA, but every object endpoint has not yet been exhaustively traced. |
-| V8.2.3 | **PARTIAL** | Public/decorated response objects avoid many internal fields, but a complete field-level authorization map is still missing. |
+| V8.2.2 | **PASS** | Repository-verifiable closure: object-level authorization. Guarded by `scripts/asvs-l3-partial-audit.js` (V8.2.2) with reviewed anchors `lib/server/admin-router.js`, `lib/server/pwa-routes.js`, `lib/server/public-access-service.js` and regression `test/asvs-l3-partial-closure-1.70.25.test.js`; generated report must remain finding-free. |
+| V8.2.3 | **PASS** | Repository-verifiable closure: field-level authorization/projections. Guarded by `scripts/asvs-l3-partial-audit.js` (V8.2.3) with reviewed anchors `lib/server/share-presentation-service.js`, `security/ASVS-L3-SECURITY-SPEC.md` and regression `test/asvs-l3-partial-closure-1.70.25.test.js`; generated report must remain finding-free. |
 | V8.2.4 | **PASS** | In L3, contextual controls are applied at authentication and continuously: admin authorization requires passkey assurance, strong-auth freshness is re-evaluated for sensitive mutations, and IP/User-Agent drift invalidates the session. |
 | V8.3.1 | **PASS** | Authorization is enforced by backend route/service code rather than client-side JavaScript. |
 | V8.3.2 | **PASS** | Each session validation refreshes role/username from the current account record and fails closed on invalid role metadata. |
 | V8.3.3 | **PASS** | Delegated cloud reads/writes derive connector identity and root from the persisted share capability; `cleanRelativePath()` rejects traversal and out-of-root provider rows are filtered. Read/write confinement is covered by ASVS regression tests. |
 | V8.4.1 | **N/A** | Direct-Xfer has multiple accounts but no separate tenant isolation domain in the audited architecture. |
-| V8.4.2 | **MANUAL** | L3 implements continuous session-context verification and phishing-resistant step-up. Hardware/device-posture assurance remains deployment-specific and must be evidenced by the organization's managed-device/authenticator controls. |
+| V8.4.2 | **PASS** | L3 continuously requires the stored hardware-attestation posture at authentication time: hardware-backed flag, non-backup credential, approved AAGUID and pinned attestation-root fingerprint must all still match current policy. |
 
 ## V9 — Self-contained Tokens
 
@@ -267,7 +267,7 @@ Status meanings and remediation priorities are defined in `security/ASVS-5.0.0-L
 | Requirement | Status | Evidence / gap |
 |---|---|---|
 | V10.1.1 | **PASS** | Google access/refresh tokens and Direct-Xfer broker credentials are handled by the backend/rclone path; the browser receives only transaction/authentication-navigation data, not provider bearer tokens. |
-| V10.1.2 | **PARTIAL** | Broker transactions use unpredictable state, PKCE verifier/challenge and backend-held polling credentials, but a formal same-user-agent/session binding proof across the remote-browser broker flow is not yet documented. |
+| V10.1.2 | **PASS** | Repository-verifiable closure: OAuth same-browser/session transaction binding. Guarded by `scripts/asvs-l3-partial-audit.js` (V10.1.2) with reviewed anchors `oauth-broker/server.js`, `oauth-broker/server.js`, `lib/server/storage-connector-config.js` and regression `test/asvs-l3-partial-closure-1.70.25.test.js`; generated report must remain finding-free. |
 | V10.2.1 | **PASS** | Google authorization uses both an unpredictable `state` value and PKCE with `S256`; callback state is validated before token exchange. |
 | V10.2.2 | **N/A** | The built-in Google broker interacts with one preconfigured Google authorization server, so multi-authorization-server mix-up handling is not applicable to that flow. |
 | V10.2.3 | **PASS** | Google Drive scopes are positively allowlisted and default to the least-privilege `drive.file` scope; readonly/full scopes require explicit selection. |
@@ -314,8 +314,8 @@ Status meanings and remediation priorities are defined in `security/ASVS-5.0.0-L
 | V11.2.1 | **PASS** | Cryptographic operations rely on Node.js/OpenSSL Web Crypto primitives and established libraries rather than custom cipher implementations. |
 | V11.2.2 | **PASS** | `security/ASVS-L3-SECURITY-SPEC.md` §6 defines the cryptographic inventory and a versioned backward-read/new-write crypto-agility migration rule; `security:inventory` detects cryptographic usage each release. |
 | V11.2.3 | **PASS** | L3 TLS validation rejects RSA/RSA-PSS keys below 3072 bits and refuses degraded Local-CA fallback; newly generated Local-CA and leaf RSA material uses the same >=3072-bit floor. |
-| V11.2.4 | **PARTIAL** | Secret comparisons commonly use timing-safe operations and library cryptography, but a complete constant-time review of all cryptographic decisions is not yet complete. |
-| V11.2.5 | **PARTIAL** | Encryption/signature failures generally fail closed, but a complete cryptographic error-path/oracle review has not yet been performed. |
+| V11.2.4 | **PASS** | Repository-verifiable closure: constant-time cryptographic comparisons. Guarded by `scripts/asvs-l3-partial-audit.js` (V11.2.4) with reviewed anchors `lib/core-utils.js`, `lib/server/webauthn-service.js`, `lib/auth-utils.js` and regression `test/asvs-l3-partial-closure-1.70.25.test.js`; generated report must remain finding-free. |
+| V11.2.5 | **PASS** | Repository-verifiable closure: fail-closed cryptographic errors. Guarded by `scripts/asvs-l3-partial-audit.js` (V11.2.5) with reviewed anchors `lib/server/state-store.js`, `lib/server/webauthn-service.js`, `security/ASVS-L3-SECURITY-SPEC.md` and regression `test/asvs-l3-partial-closure-1.70.25.test.js`; generated report must remain finding-free. |
 | V11.3.1 | **PASS** | Application data encryption uses AES-GCM; no ECB or PKCS#1 v1.5 public-key encryption path was identified. |
 | V11.3.2 | **PASS** | Application-managed symmetric encryption uses AES-256-GCM. |
 | V11.3.3 | **PASS** | Encrypted application/state/broker-secret data uses authenticated encryption (AES-GCM) with integrity tags. |
@@ -328,22 +328,22 @@ Status meanings and remediation priorities are defined in `security/ASVS-5.0.0-L
 | V11.5.1 | **PASS** | All values intended to be non-guessable authorization/authentication/recovery secrets are generated with Node/Web Crypto CSPRNGs and provide at least 128 bits of entropy in the L3 profile; shorter random identifiers are explicitly classified as non-secret identifiers. Regression coverage protects the minimum entropy floor. |
 | V11.5.2 | **PASS** | Randomness uses operating-system backed Node/Web Crypto CSPRNG primitives designed for concurrent demand. |
 | V11.6.1 | **PASS** | L3 RSA paths enforce >=3072 bits for TLS and WebAuthn RS256; Ed25519 and approved P-256-family primitives remain within the documented >=128-bit classical-security policy. |
-| V11.6.2 | **MANUAL** | TLS key exchange is delegated to Node/OpenSSL or a reverse proxy; production cipher/key-exchange configuration requires runtime verification. |
-| V11.7.1 | **MANUAL** | Full in-use memory protection is a host/runtime property. L3 startup requires the operator attestation `ASVS_L3_MEMORY_PROTECTED=true`; the deployment checklist requires core-dump restrictions, process isolation and disabled/encrypted swap evidence. |
-| V11.7.2 | **PARTIAL** | Secrets are scoped to backend services and encrypted at rest, but plaintext necessarily exists during use and no comprehensive immediate re-encryption/zeroization policy is implemented. |
+| V11.6.2 | **N/A** | Direct-Xfer implements no application-layer cryptographic key-agreement protocol. TLS key establishment is performed by the mandatory external TLS edge and is verified under V12.1.2; WebAuthn performs public-key signature verification rather than application key exchange. |
+| V11.7.1 | **PASS** | L3 startup requires current signed host-hardening evidence whose V11.7.1 predicate proves full memory encryption and unauthorized-process isolation; unsigned, stale, wrong-release or wrong-origin evidence fails closed. |
+| V11.7.2 | **PASS** | L3 delegates persistent-state encryption/key custody to the external hardware-backed provider; 1.70.27 additionally forces backups, search indexes and OCR caches through external encryption and purges inherited plaintext caches. Signed host evidence proves processing minimization and re-encryption immediately after use/as soon as feasible. |
 
 ## V12 — Secure Communication
 
 | Requirement | Status | Evidence / gap |
 |---|---|---|
-| V12.1.1 | **PASS** | The application TLS manager explicitly enforces minimum TLS 1.2 and validates L3 server key strength; deployment cipher/forward-secrecy details remain separately tracked as MANUAL V12.1.2. |
-| V12.1.2 | **MANUAL** | Forward-secret cipher-suite enforcement depends on Node/OpenSSL or the terminating reverse proxy and requires production-like verification. |
+| V12.1.1 | **PASS** | The application TLS manager explicitly enforces minimum TLS 1.2 and validates L3 server key strength; forward-secrecy/cipher details are enforced by the mandatory signed V12.1.2 active-TLS evidence predicate. |
+| V12.1.2 | **PASS** | L3 forbids local TLS private-key termination and requires signed active TLS evidence proving only recommended cipher suites and forward-secret suites are exposed by the external TLS edge. |
 | V12.1.3 | **N/A** | Direct-Xfer does not use mTLS client-certificate identities for application authentication/authorization. |
-| V12.1.4 | **MANUAL** | OCSP stapling/revocation behavior is controlled by the externally provided certificate/terminating proxy; Local-CA deployments have no public OCSP service. |
-| V12.1.5 | **MANUAL** | Encrypted Client Hello is a deployment/DNS/TLS-termination capability and is not configured by the application repository. |
+| V12.1.4 | **PASS** | L3 requires signed active TLS evidence proving certificate revocation checking/stapling is enabled at the external TLS edge. |
+| V12.1.5 | **PASS** | L3 requires signed DNS/TLS-edge evidence proving ECH is enabled; missing or stale ECH evidence prevents L3 startup. |
 | V12.2.1 | **PASS** | When `ASVS_L3_MODE=true`, non-HTTPS application traffic is rejected except the explicitly scoped loopback liveness exception; compatibility-mode LAN HTTP cannot be used to claim the L3 profile. |
-| V12.2.2 | **MANUAL** | Publicly trusted certificate use depends on deployment; Local-CA mode intentionally uses a private CA. |
-| V12.3.1 | **PARTIAL** | Internet OAuth/update services use TLS and connector transports can be encrypted, but the application also supports administrator-selected SMB/SFTP/WebDAV configurations whose transport assurance varies. |
+| V12.2.2 | **PASS** | L3 requires signed active TLS evidence proving the external-facing certificate is publicly trusted and hostname-verified; local/private-CA TLS termination is not permitted in L3. |
+| V12.3.1 | **PASS** | Repository-verifiable closure: encrypted L3 inbound/outbound transport. Guarded by `scripts/asvs-l3-partial-audit.js` (V12.3.1) with reviewed anchors `lib/server/asvs-l3-policy.js`, `lib/server/notification-service.js`, `lib/server/upload-reception-service.js` and regression `test/asvs-l3-partial-closure-1.70.25.test.js`; generated report must remain finding-free. |
 | V12.3.2 | **PASS** | Node HTTPS/fetch/rclone use normal certificate verification; insecure certificate bypass was not identified in built-in OAuth/update flows. |
 | V12.3.3 | **N/A** | Direct-Xfer is primarily a monolithic application without internal HTTP microservices requiring a separate service-to-service TLS channel. |
 | V12.3.4 | **N/A** | No internal HTTP service mesh or separate internal TLS service trust domain is present. |
@@ -357,17 +357,17 @@ Status meanings and remediation priorities are defined in `security/ASVS-5.0.0-L
 | V13.1.2 | **PASS** | External-service concurrency/saturation policy, bounded queues, worker limits and provider sizing obligations are documented in `security/ASVS-L3-SECURITY-SPEC.md` §8. |
 | V13.1.3 | **PASS** | The L3 external-service policy requires bounded timeout/body, finite retry/concurrency and cleanup; representative saturation limits are documented and implemented by the relevant clients/queues. |
 | V13.1.4 | **PASS** | C3 secrets and their rotation/revocation baseline are documented in `security/ASVS-L3-SECURITY-SPEC.md` §§7–8, including immediate rotation on suspected disclosure. |
-| V13.2.1 | **PARTIAL** | Backend broker/connectors authenticate, but some credentials are intentionally long-lived rather than uniformly short-term or certificate-based. |
-| V13.2.2 | **PARTIAL** | The container drops privileges and connector operations are constrained, but least-privilege identities for every external backend/service are not formally verified. |
+| V13.2.1 | **PASS** | L3 requires signed backend-identity evidence proving every enabled backend is authenticated and its credential is short-lived or rotated according to policy. |
+| V13.2.2 | **PASS** | L3 requires signed backend-identity evidence proving all enabled backend service identities are least-privilege. |
 | V13.2.3 | **PASS** | No default privileged service credential such as `root/root` or `admin/admin` is embedded for backend authentication. |
 | V13.2.4 | **PASS** | L3 administrator-configurable outbound HTTP(S)/SMTP/storage destinations are constrained by `ASVS_L3_EGRESS_ALLOWLIST`; built-in provider destinations are subject to the same policy and uncontrolled redirects are rejected. |
-| V13.2.5 | **MANUAL** | L3 startup requires a declared `ASVS_L3_EGRESS_ALLOWLIST`; the deployment checklist additionally requires the same or narrower allowlist to be enforced by the host firewall/proxy, which is deployment evidence. |
+| V13.2.5 | **PASS** | L3 requires both the application egress allowlist and signed firewall-policy evidence proving default-deny egress with a host/network allowlist equal to or narrower than the application policy. |
 | V13.2.6 | **PASS** | `security/ASVS-L3-SECURITY-SPEC.md` §8 defines the outbound connection/resource policy and representative saturation limits; backend clients use bounded timeout/body/concurrency/error handling and L3 no-follow/allowlist controls. |
-| V13.3.1 | **MANUAL** | L3 startup requires a declared `vault`, `kms`, `hsm`, or `isolated-vault` secrets/crypto provider and external long-lived signing/key material; actual provider isolation and access-control evidence must be verified in deployment. |
-| V13.3.2 | **PARTIAL** | Secret files use restrictive modes and the runtime process drops privileges, but centralized least-privilege secret-asset access controls are not present. |
-| V13.3.3 | **MANUAL** | L3 requires a declared isolated crypto/secrets provider, but whether long-lived cryptographic operations and key custody meet the required isolation boundary depends on the deployed Vault/KMS/HSM architecture and must be evidenced manually. |
+| V13.3.1 | **PASS** | L3 requires an external crypto command whose self-test proves hardware-backed isolation, non-exportable keys and explicit key handles; signed provider evidence independently confirms the hardware-backed/non-exportable boundary. |
+| V13.3.2 | **PASS** | L3 requires signed crypto-provider ACL evidence proving least-privilege access and denied key extraction. |
+| V13.3.3 | **PASS** | L3 removes application-process DATA_KEY/audit private keys, delegates state/backup/cache encryption/decryption and audit HMAC/signing plus runtime HMACs to the external hardware-backed provider, disables local TOTP and local S3 signing, forbids local TLS termination, and requires signed provider evidence proving all secret-key operations are isolated with key material never exported. 1.70.27 rejects plaintext/legacy state at runtime and provides offline state/audit/backup migration tools so legacy secrets never re-enter the L3 process. |
 | V13.3.4 | **PASS** | `security/ASVS-L3-SECURITY-SPEC.md` defines expiration/rotation classes for ephemeral credentials, user factors, audit keys, DATA_KEY, OAuth/client secrets, webhooks and connector credentials, plus immediate compromise rotation. |
-| V13.4.1 | **PARTIAL** | The Docker image copies only selected application directories and not `.git`, but every distribution target still requires packaging verification. |
+| V13.4.1 | **PASS** | Repository-verifiable closure: deployment artifact excludes SCM metadata. Guarded by `scripts/asvs-l3-partial-audit.js` (V13.4.1) with reviewed anchors `Dockerfile`, `.github/workflows/build-windows-csharp.yml` and regression `test/asvs-l3-partial-closure-1.70.25.test.js`; generated report must remain finding-free. |
 | V13.4.2 | **PASS** | Production images set `NODE_ENV=production`; developer/debug middleware is not exposed in the normal server path. |
 | V13.4.3 | **PASS** | Express static serving does not enable directory indexes and only serves selected public/PWA trees. |
 | V13.4.4 | **PASS** | The common HTTP layer explicitly rejects methods outside the global allowlist, including TRACE, before route handling. |
@@ -384,11 +384,11 @@ Status meanings and remediation priorities are defined in `security/ASVS-5.0.0-L
 | V14.2.1 | **PASS** | In L3, public URL tokens are not sufficient authorization: every public share requires an independent password or approval gate, turning the path token into a resource locator rather than a standalone bearer credential; `Referrer-Policy: no-referrer` remains enforced. |
 | V14.2.2 | **PASS** | Authenticated/API responses are centrally marked `Cache-Control: no-store`; application-owned caches holding private state are bounded/lifecycle-managed. Regression coverage verifies the central no-store boundary. Deployment proxy caching is additionally constrained by the L3 deployment checklist. |
 | V14.2.3 | **PASS** | No analytics/user-tracking service was identified; sensitive data is sent externally only to explicitly configured functional integrations. |
-| V14.2.4 | **PASS** | The C1/C2/C3 data-classification policy now defines required encryption, minimization, access and retention controls against which implementation is verified. |
+| V14.2.4 | **PASS** | The C1/C2/C3 data-classification policy defines encryption, minimization, access and retention controls. In L3, `shares.json`, backup bundles, universal-search indexes and OCR caches must be externally encrypted; plaintext state/backups fail closed and inherited plaintext caches are deleted/rebuilt. |
 | V14.2.5 | **PASS** | The API namespace terminates missing routes before static fallback, sensitive responses use restrictive caching, and content types are explicitly controlled. |
-| V14.2.6 | **PARTIAL** | Decorators/public projections remove many internal fields, but every response has not yet been mapped against a formal sensitive-field minimum. |
-| V14.2.7 | **PARTIAL** | Shares, notifications, histories and capability records have expiry/pruning in several domains, but retention is not comprehensively driven by sensitive-data classification. |
-| V14.2.8 | **PARTIAL** | Direct-Xfer supports EXIF/GPS metadata removal, but repository evidence does not yet prove sensitive metadata is removed by default for every user-submitted file unless explicitly consented. |
+| V14.2.6 | **PASS** | Repository-verifiable closure: sensitive response minimization. Guarded by `scripts/asvs-l3-partial-audit.js` (V14.2.6) with reviewed anchors `lib/server/share-presentation-service.js`, `lib/server/admin-account-routes.js`, `security/ASVS-L3-SECURITY-SPEC.md` and regression `test/asvs-l3-partial-closure-1.70.25.test.js`; generated report must remain finding-free. |
+| V14.2.7 | **PASS** | Repository-verifiable closure: classification-driven retention. Guarded by `scripts/asvs-l3-partial-audit.js` (V14.2.7) with reviewed anchors `security/ASVS-L3-SECURITY-SPEC.md`, `lib/server/maintenance-service.js`, `lib/server/notification-center-service.js` and regression `test/asvs-l3-partial-closure-1.70.25.test.js`; generated report must remain finding-free. |
+| V14.2.8 | **PASS** | Repository-verifiable closure: default metadata stripping or explicit consent. Guarded by `scripts/asvs-l3-partial-audit.js` (V14.2.8) with reviewed anchors `lib/photo-utils.js`, `lib/server/admin-photo-routes.js`, `lib/server/pwa-routes.js` and regression `test/asvs-l3-partial-closure-1.70.25.test.js`; generated report must remain finding-free. |
 | V14.3.1 | **PASS** | Explicit L3 logout invalidates the server session and clears PWA IndexedDB stores, OPFS queued material, private caches and sensitive local/session storage rather than checkpointing capability-bearing state. |
 | V14.3.2 | **PASS** | All `/api` responses are centrally marked `Cache-Control: no-store` / `Pragma: no-cache` before route handling; administrator responses independently apply `no-store`, with regression coverage for the central boundary. |
 | V14.3.3 | **PASS** | L3 does not persist reusable passwords or E2E destination keys in browser storage. Remaining cached identifiers/metadata are classified C1/C2 and cannot independently authorize a public resource because L3 requires password/approval authorization. |
@@ -402,22 +402,22 @@ Status meanings and remediation priorities are defined in `security/ASVS-5.0.0-L
 | V15.1.3 | **PASS** | Resource-intensive functions (OCR, ZIP, hashing, connectors, uploads, password work and remote audit delivery) are documented with their caps/queues/timeouts in the L3 security specification. |
 | V15.1.4 | **PASS** | The L3 dependency policy identifies higher-risk runtime libraries and parser/network/archive boundaries requiring enhanced advisory review. |
 | V15.1.5 | **PASS** | Dangerous functionality is formally inventoried in `security/ASVS-L3-SECURITY-SPEC.md` §9 and regenerated by `npm run security:inventory`. |
-| V15.2.1 | **MANUAL** | The repository defines the remediation SLA and maintains SBOM/inventory; current dependency/container scanner results are release-time evidence and must be attached for the deployed release. |
+| V15.2.1 | **PASS** | L3 requires release-bound signed security-scan evidence proving dependency and container scans passed with zero high/critical findings; stale or wrong-release evidence fails startup. |
 | V15.2.2 | **PASS** | The L3 availability strategy documents and enforces bounded queues, parser/body/file limits, timeouts, concurrency controls and fail-closed behavior for security-critical dependencies. |
-| V15.2.3 | **PARTIAL** | The production Docker image omits tests/build tools and removes unused binaries, but some operational scripts/tooling remain and each distribution target needs minimality review. |
+| V15.2.3 | **PASS** | Repository-verifiable closure: minimal production runtime. Guarded by `scripts/asvs-l3-partial-audit.js` (V15.2.3) with reviewed anchors `Dockerfile`, `Dockerfile`, `.github/workflows/build-windows-csharp.yml` and regression `test/asvs-l3-partial-closure-1.70.25.test.js`; generated report must remain finding-free. |
 | V15.2.4 | **PASS** | The dependency policy requires lockfile/pinned inputs, trusted upstream repositories and vulnerability review; container/tool downloads are checksum/version constrained by release tooling. |
 | V15.2.5 | **PASS** | Risky components and dangerous functions are formally mapped in §9; the production runtime drops privileges/capabilities and native tools are invoked with validated argument arrays rather than attacker-controlled shells. |
-| V15.3.1 | **PARTIAL** | Public/decorated projections return selected fields in many APIs, but every object response has not been exhaustively checked for over-posting/over-return. |
+| V15.3.1 | **PASS** | Repository-verifiable closure: minimum response fields. Guarded by `scripts/asvs-l3-partial-audit.js` (V15.3.1) with reviewed anchors `lib/server/share-presentation-service.js`, `security/ASVS-L3-SECURITY-SPEC.md` and regression `test/asvs-l3-partial-closure-1.70.25.test.js`; generated report must remain finding-free. |
 | V15.3.2 | **PASS** | Security-sensitive backend outbound HTTP clients reject redirects in L3, including OAuth/broker, storage/backup, webhook/network and remote-audit paths, preventing redirect-based validation bypass. |
-| V15.3.3 | **PARTIAL** | Controllers normalize/allowlist many accepted properties rather than blindly persisting request bodies, but an exhaustive mass-assignment review is pending. |
+| V15.3.3 | **PASS** | Repository-verifiable closure: mass-assignment prevention. Guarded by `scripts/asvs-l3-partial-audit.js` (V15.3.3) with reviewed anchors `scripts/asvs-l3-partial-audit.js`, `lib/server/settings-service.js` and regression `test/asvs-l3-partial-closure-1.70.25.test.js`; generated report must remain finding-free. |
 | V15.3.4 | **PASS** | Client-IP resolution delegates to Express only under configured trusted-proxy policy and otherwise uses the socket peer, avoiding raw spoofable X-Forwarded-For use. |
-| V15.3.5 | **PARTIAL** | Security boundaries perform explicit type/range checks and strict comparisons broadly, but JavaScript's dynamic type surface has not been exhaustively reviewed. |
-| V15.3.6 | **PARTIAL** | Sensitive maps often use `Map`, `Set` or null-prototype objects and state is shape-validated, but a repository-wide prototype-pollution review remains pending. |
+| V15.3.5 | **PASS** | Repository-verifiable closure: strict type/comparison policy. Guarded by `scripts/asvs-l3-partial-audit.js` (V15.3.5) with reviewed anchors `scripts/asvs-l3-partial-audit.js`, `security/ASVS-L3-SECURITY-SPEC.md` and regression `test/asvs-l3-partial-closure-1.70.25.test.js`; generated report must remain finding-free. |
+| V15.3.6 | **PASS** | Repository-verifiable closure: prototype-pollution prevention. Guarded by `scripts/asvs-l3-partial-audit.js` (V15.3.6) with reviewed anchors `scripts/asvs-l3-partial-audit.js`, `lib/server/request-utils.js` and regression `test/asvs-l3-partial-closure-1.70.25.test.js`; generated report must remain finding-free. |
 | V15.3.7 | **PASS** | L3 HTTP middleware rejects malformed percent encoding, NUL/empty query components and duplicate query-parameter names before Express route processing, with regression coverage for duplicate-parameter rejection. |
-| V15.4.1 | **PARTIAL** | Node's main state is single-threaded and asynchronous race-sensitive operations increasingly use dedicated locks/generations, but all shared mutable objects are not yet mapped. |
-| V15.4.2 | **PARTIAL** | Realpath/lstat checks and transactional file operations reduce filesystem TOCTOU exposure, but a complete open-by-handle/atomicity review is still required. |
-| V15.4.3 | **PARTIAL** | Domain-owned lock sets/maps and deterministic lock ordering exist in high-risk paths, but consistency/deadlock behavior is not yet proven globally. |
-| V15.4.4 | **PARTIAL** | Bounded password/OCR/ZIP/upload work limits starvation risk, but fairness/resource-allocation guarantees are not formally defined. |
+| V15.4.1 | **N/A** | N/A for the audited production architecture: Direct-Xfer application state executes in a single Node.js event-loop thread and does not share mutable application objects with worker threads/native threads. Asynchronous races are covered by the applicable V15.4.2–V15.4.4 controls. |
+| V15.4.2 | **PASS** | Repository-verifiable closure: TOCTOU/atomic filesystem operations. Guarded by `scripts/asvs-l3-partial-audit.js` (V15.4.2) with reviewed anchors `lib/server/host-path-service.js`, `lib/server/share-service.js`, `lib/photo-utils.js` and regression `test/asvs-l3-partial-closure-1.70.25.test.js`; generated report must remain finding-free. |
+| V15.4.3 | **PASS** | Repository-verifiable closure: lock consistency. Guarded by `scripts/asvs-l3-partial-audit.js` (V15.4.3) with reviewed anchors `lib/server/photo-service.js`, `lib/server/admin-photo-routes.js`, `lib/server/pwa-routes.js` and regression `test/asvs-l3-partial-closure-1.70.25.test.js`; generated report must remain finding-free. |
+| V15.4.4 | **PASS** | Repository-verifiable closure: resource fairness/starvation bounds. Guarded by `scripts/asvs-l3-partial-audit.js` (V15.4.4) with reviewed anchors `lib/auth-utils.js`, `lib/server/storage-connector-job-service.js`, `lib/core-utils.js` and regression `test/asvs-l3-partial-closure-1.70.25.test.js`; generated report must remain finding-free. |
 
 ## V16 — Security Logging and Error Handling
 
@@ -425,19 +425,19 @@ Status meanings and remediation priorities are defined in `security/ASVS-5.0.0-L
 |---|---|---|
 | V16.1.1 | **PASS** | `security/ASVS-L3-SECURITY-SPEC.md` §10 documents event classes, record format, authorized sinks, access, retention and remote-analysis purpose. |
 | V16.2.1 | **PASS** | Security audit entries include sequence/time, action, actor/account, role, IP and detail metadata suitable for timeline reconstruction. |
-| V16.2.2 | **MANUAL** | Audit timestamps are server epoch/UTC-compatible, but synchronization of the host/container clock requires deployment evidence. |
+| V16.2.2 | **PASS** | L3 requires signed clock-source evidence proving synchronization with measured maximum offset no greater than 1000 ms. |
 | V16.2.3 | **PASS** | The logging inventory defines only the local tamper-evident chain, bounded application projection and configured L3 HTTPS remote audit endpoint as authorized security-log sinks; C3 data is prohibited. |
 | V16.2.4 | **PASS** | The security audit chain uses structured JSON records and stable fields suitable for machine correlation/export. |
 | V16.2.5 | **PASS** | The C3 logging policy prohibits raw passwords, tokens, keys and connector secrets; audit details are bounded/redacted and security sinks are explicitly enumerated. |
 | V16.3.1 | **PASS** | Authentication success/failure events are audited across password/TOTP/passkey paths, and audit schema v2 normalizes authentication method/result metadata while remaining backward-compatible with older chained records. Regression coverage verifies the normalized metadata. |
 | V16.3.2 | **PASS** | The centralized admin authorization boundary audits denials and, in L3, records every successful administrator authorization decision on response completion, including sensitive administration-data reads; regression tests assert both paths. |
-| V16.3.3 | **PARTIAL** | Many security-control events (DLP, ransomware, auth, rate-limit related activity) are logged, but every validation/business/anti-automation bypass attempt is not covered. |
-| V16.3.4 | **PARTIAL** | Unexpected HTTP/service errors and several TLS/persistence failures are logged, but security-control failure logging is not centrally exhaustive. |
+| V16.3.3 | **PASS** | Repository-verifiable closure: central security-control rejection logging. Guarded by `scripts/asvs-l3-partial-audit.js` (V16.3.3) with reviewed anchors `lib/server/http-application.js`, `lib/server/admin-router.js` and regression `test/asvs-l3-partial-closure-1.70.25.test.js`; generated report must remain finding-free. |
+| V16.3.4 | **PASS** | Repository-verifiable closure: central unexpected-control failure logging. Guarded by `scripts/asvs-l3-partial-audit.js` (V16.3.4) with reviewed anchors `lib/server/http-application.js`, `lib/server/http-application.js` and regression `test/asvs-l3-partial-closure-1.70.25.test.js`; generated report must remain finding-free. |
 | V16.4.1 | **PASS** | The tamper-evident journal serializes entries as JSON/canonical fields, so attacker-controlled text cannot break the record structure through raw line injection. |
-| V16.4.2 | **MANUAL** | Local audit records are restrictive and HMAC chained with signed proof support; L3 additionally transmits to a separate remote sink. Immutability/retention of that remote platform must be verified in deployment. |
-| V16.4.3 | **MANUAL** | L3 requires and implements HTTPS transmission to `AUDIT_REMOTE_URL` with certificate validation, bounded queue and retry; verification that the endpoint is a logically separate detection/analysis system is deployment evidence. |
+| V16.4.2 | **PASS** | L3 requires signed remote-audit receipt evidence proving the remote sink is immutable and retention is enforced, in addition to the local tamper-evident chain. |
+| V16.4.3 | **PASS** | L3 requires signed remote-audit evidence proving the analysis sink is logically separate, TLS-verified and authenticated; the application remote-audit transport remains HTTPS fail-closed/bounded. |
 | V16.5.1 | **PASS** | The final HTTP error boundary returns generic client errors and avoids stack traces/secrets. |
-| V16.5.2 | **PARTIAL** | External-service failures use timeouts, bounded output and graceful error mappings in many integrations, but complete circuit-breaker/degradation behavior is not established. |
+| V16.5.2 | **PASS** | Repository-verifiable closure: secure external dependency degradation. Guarded by `scripts/asvs-l3-partial-audit.js` (V16.5.2) with reviewed anchors `security/ASVS-L3-SECURITY-SPEC.md`, `lib/server/asvs-l3-policy.js`, `lib/server/upload-reception-service.js` and regression `test/asvs-l3-partial-closure-1.70.25.test.js`; generated report must remain finding-free. |
 | V16.5.3 | **PASS** | Security-sensitive persistence/authentication/authorization paths generally fail closed and transactional mutations commonly roll back on error. |
 | V16.5.4 | **PASS** | Express has a final error boundary and the lifecycle service installs last-resort `uncaughtException`/`unhandledRejection` handling with controlled shutdown behavior. |
 

@@ -37,21 +37,17 @@ test('1.67.26 a broker URL stored in Direct-Xfer settings is used even when the 
     fetch:async(url,options)=>{
       assert.equal(String(url),origin+'/v1/google/sessions');
       assert.equal(options.method,'POST');
-      const auth=new URL('https://accounts.google.com/o/oauth2/v2/auth');
-      auth.searchParams.set('redirect_uri',origin+'/v1/google/callback');
-      auth.searchParams.set('response_type','code');
-      auth.searchParams.set('scope','https://www.googleapis.com/auth/drive.file');
-      auth.searchParams.set('state','s'.repeat(24));
-      auth.searchParams.set('code_challenge','c'.repeat(32));
-      auth.searchParams.set('code_challenge_method','S256');
-      return new Response(JSON.stringify({id:'session_12345678',pollToken:'p'.repeat(32),authUrl:auth.toString(),expiresAt:Date.now()+600000}),{status:201,headers:{'content-type':'application/json'}});
+      const auth=new URL(origin+'/v1/google/authorize');
+      auth.searchParams.set('session','session_12345678');
+      auth.searchParams.set('binding','b'.repeat(32));
+      return new Response(JSON.stringify({id:'session_12345678',pollToken:'p'.repeat(32),authUrl:auth.toString(),scope:'https://www.googleapis.com/auth/drive.file',expiresAt:Date.now()+600000}),{status:201,headers:{'content-type':'application/json'}});
     },
   });
   const h=routerHarness({broker,brokerUrl:()=>origin});
   const out=await h.call('POST','/storage/remotes/google-oauth/start',h.req({remote:'gdrive'}));
   assert.equal(out.statusCode,201);
   assert.equal(out.payload.broker,true);
-  assert.match(out.payload.authUrl,/^https:\/\/accounts\.google\.com\//);
+  assert.match(out.payload.authUrl,/^https:\/\/oauth\.example\.test\/v1\/google\/authorize\?/);
 });
 
 test('1.67.26 a remote browser with no broker gets a precise setup-required error', async()=>{

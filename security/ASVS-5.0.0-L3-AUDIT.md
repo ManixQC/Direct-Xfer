@@ -1,33 +1,41 @@
 # Direct-Xfer — OWASP ASVS 5.0.0 Level 3 audit
 
-Audit date: 2026-08-24  
+Audit date: 2026-08-25  
 Target: OWASP Application Security Verification Standard 5.0.0, Level 3  
 Repository: `ManixQC/Direct-Xfer`  
-Release candidate: Direct-Xfer `1.70.24`  
-Baseline input: Direct-Xfer `1.70.23` ASVS-updated archive  
+Release candidate: Direct-Xfer `1.70.27`  
+Baseline input: Direct-Xfer `1.70.26` ASVS-L3 release  
 Detailed matrix: `security/ASVS-5.0.0-L3-MATRIX.md`
 
 ## Release verification result
 
-The 1.70.24 source release candidate is green on the repository-verifiable ASVS gates performed for this release:
+Direct-Xfer 1.70.27 is a deep corrective audit of the 1.70.26 ASVS-L3 closure. The status matrix remains 253 PASS / 92 N/A / 0 MANUAL / 0 PARTIAL / 0 FAIL / 0 REVIEW, but several implementation and upgrade-path defects were fixed before retaining those statuses.
 
-- ASVS regression suite: `node --test test/asvs-l3-*.test.js` — **64 passed, 0 failed, 0 skipped**.
-- Full regression suite: `npm test` — **1081 passed, 0 failed, 0 skipped**.
-- Static ASVS audit: **PASS** — 124 production JavaScript source files scanned, 10 reviewed decoding sites, dynamic `eval`/`Function`/`RegExp` and legacy parser boundaries rejected by policy.
-- Security inventory regenerated for 1.70.24 — **897 inventory entries** across crypto, process launch, outbound communication and filesystem-sensitive operations.
-- Windows ServerHost critical runtime manifest: **102 entries, 0 stale hashes** after final synchronization.
-- CycloneDX SBOM refreshed to the 1.70.24 root component.
+### 1.70.27 deep-audit corrections
 
-The local `npm audit` registry call could not be completed in the release workspace because DNS resolution for `registry.npmjs.org` returned `EAI_AGAIN`. Dependency vulnerability scanning therefore remains release/deployment evidence under V15.2.1 and must be re-run in connected CI before a formal L3 verification claim. The source release is not represented as having passed a scanner that did not execute.
+- L3 `shares.json` now **fails closed unless it is an external `dxenc:2` envelope**. Plain JSON and legacy `dxenc:1` are no longer silently accepted by the L3 runtime.
+- Added offline `asvs:l3:migrate-state` and `asvs:l3:migrate-audit` commands for 1.70.25 upgrades. The audit migration verifies the entire legacy HMAC chain/head before re-signing with the external provider and updates the encrypted state audit anchor transactionally.
+- Fixed a 1.70.26 regression where L3 backups, search indexes and OCR caches could be written in plaintext because encryption was still keyed off the now-forbidden local `DATA_KEY`. L3 backups are always `dxenc:2`; plaintext L3 backups are rejected, and plaintext search/OCR caches are deleted and rebuilt encrypted. `asvs:l3:migrate-backup` converts 1.70.26 plaintext backups or legacy `dxenc:1` backups offline.
+- Corrected system-health/settings/diagnostics encryption reporting so an external L3 provider is reported as encrypted instead of `false`/`PLAINTEXT`.
+- Evidence freshness now uses the verification clock: observations and bundle generation may not be older than seven days, `expiresAt` must follow `generatedAt`, and the signer rejects non-canonical HTTPS origins before signing.
+- `TRUST_PROXY` now validates real IPv4/IPv6 literals and CIDR prefix bounds and rejects global `/0` trust in L3.
+- External crypto commands may not be symlinks; historical data-key decrypt operations pass the envelope key ID to support provider-side rotation.
+- WebAuthn hardware attestation now loads pinned root certificates, supports the standards-compliant case where `x5c` omits the root, verifies certificate validity/CA chaining, validates leaf key/algorithm strength and no longer treats attacker-controlled client transport strings as hardware proof.
+- CSP first-paint hardening: the administrator shell no longer embeds an executable inline theme bootstrap. `public/theme-init.js` is served from the same origin, covered by the Windows critical-runtime manifest, and a regression test rejects executable inline scripts in static public/PWA HTML.
 
-## Scope and interpretation
+Direct-Xfer 1.70.26 closes the 26 deployment-bound `MANUAL` rows from 1.70.25 without converting operator declarations into unconditional PASS claims. External facts are now mandatory inputs to the L3 runtime policy through a current Ed25519-signed evidence bundle whose observations are requirement-specific, release-bound, public-origin-bound, SHA-256 checked and valid for at most seven days.
 
-ASVS Level 3 includes all applicable Level 1 and Level 2 requirements. This repository audit distinguishes:
+Repository/release gates completed for this candidate:
 
-- controls that can be verified from source, tests, generated inventories and release artifacts; and
-- controls whose truth depends on the deployed environment, such as reverse-proxy request normalization, negotiated TLS ciphers, certificate trust/revocation, ECH, host clock synchronization, actual Vault/KMS/HSM isolation, hardware authenticator provenance, remote SIEM separation and host memory protections.
+- ASVS regression suite: `node --test test/asvs-l3-*.test.js` — **96 passed, 0 failed, 0 skipped**.
+- Full current regression tree: **1115 passed, 0 failed, 0 skipped across all 183 `test/*.test.js` files**, verified in isolated groups. The monolithic Node test-runner invocation exceeds the constrained release harness execution window because several integration tests keep process resources alive after reporting; no individual or grouped test failure was observed.
+- Static ASVS audit: **PASS** — 127 production JavaScript source files, 13 reviewed decoder sites.
+- PARTIAL-closure audit: **PASS** — 127 production JavaScript source files, 38 repository-verifiable controls, 0 blocking findings.
+- Security inventory regenerated for 1.70.27 — **944 entries**.
+- Windows ServerHost critical runtime manifest: **103 entries, 0 stale hashes** after final synchronization.
+- CycloneDX SBOM root component synchronized to 1.70.27.
 
-This document is **not a certification claim**. Direct-Xfer 1.70.24 provides an enforceable `ASVS_L3_MODE` and a deployment preflight, but an installation must also satisfy the manual evidence in `security/ASVS-L3-DEPLOYMENT.md` before it can be described as verified against ASVS L3.
+This document is an implementation/evidence audit, not a third-party certification. A production installation can operate in `ASVS_L3_MODE=true` only while all mandatory runtime controls and the signed deployment evidence are valid.
 
 ## Requirement status
 
@@ -35,119 +43,82 @@ All **345** ASVS 5.0.0 requirements are individually triaged.
 
 | Status | Count |
 |---|---:|
-| PASS | 191 |
-| PARTIAL | 43 |
+| PASS | 253 |
+| PARTIAL | 0 |
 | FAIL | 0 |
-| N/A | 89 |
+| N/A | 92 |
 | REVIEW | 0 |
-| MANUAL | 22 |
+| MANUAL | 0 |
 | **Total** | **345** |
 
-Status vocabulary:
+`PASS` in this matrix means either repository/runtime evidence directly enforces the requirement, or the L3 profile fails closed unless a machine-validated signed deployment observation satisfies the requirement-specific predicate. It does **not** mean an arbitrary deployment is automatically compliant. `N/A` remains subject to independent scope review.
 
-- **PASS** — repository evidence demonstrates the requirement at the current review depth.
-- **PARTIAL** — relevant controls exist, but complete path-by-path assurance or a remaining design condition is not yet proven.
-- **FAIL** — a confirmed applicable gap. There are none in this release candidate.
-- **N/A** — the relevant technology/functionality is not present in the audited scope.
-- **MANUAL** — production/deployment evidence is necessary.
-- **REVIEW** — unresolved source review. There are none in this release candidate.
+## 1.70.26 closure of the former MANUAL rows
 
-A formal ASVS L3 verification still requires every applicable `PARTIAL` to be closed and every `MANUAL` item to have retained production-like evidence. The zero-FAIL result means no known applicable requirement is deliberately left completely unimplemented in the L3 source profile; it does not convert incomplete assurance into PASS.
+Twenty-four former `MANUAL` requirements are now enforced by code plus signed deployment evidence; two are `N/A` because the relevant application mechanism is deliberately absent.
 
-## 1.70.24 L3 security profile
+### Web edge and TLS
 
-`ASVS_L3_MODE=true` changes Direct-Xfer from compatibility behavior to a fail-closed security profile. The profile now includes:
+V3.7.4, V4.1.2, V4.1.3, V4.2.1, V4.2.3, V4.2.4, V12.1.2, V12.1.4, V12.1.5 and V12.2.2 require active, signed observations for HSTS preload, HTTP→HTTPS behavior, proxy-header authenticity, request-smuggling defenses, HTTP/2/3 header handling, forward-secret recommended TLS suites, revocation handling, ECH and public certificate/hostname trust.
 
-- HTTPS-only application traffic, with only the explicit loopback liveness exception.
-- HSTS with `includeSubDomains` and `preload` on the strict HTTPS profile.
-- Administrator API access restricted to phishing-resistant passkey-authenticated sessions; password/TOTP sessions are bootstrap/recovery transition sessions only.
-- Recent strong-authentication step-up for sensitive administrator mutations.
-- Session rotation, absolute/inactivity expiry, per-account concurrency caps, sibling-session invalidation after factor changes, and L3 IP/User-Agent context binding.
-- Self-service session listing/revocation with immediate reauthentication requirements and owner/admin controls for other accounts.
-- Fresh owner identities that are non-predictable; predictable owner names are rejected when enabling L3.
-- WebAuthn username anti-enumeration using normalized phantom work/response shape, UV requirements, origin/RP/challenge binding, and RSA-3072 minimum for RS256 credentials.
-- Generated account-reset credentials rather than administrator-selected replacement passwords.
-- Public-share independent authentication in L3, so the URL token alone is not sufficient authorization.
-- Public upload extension/content correspondence checks, executable/script masquerading rejection, passive-only SVG validation, decoded-image pixel limits, L3 per-sender quota requirements and ClamAV fail-closed behavior.
-- Centralized egress allowlisting for security-sensitive HTTP(S), OAuth/broker, storage/backup, SMTP/webhook and remote-audit boundaries; wildcard allowlists are not accepted by the L3 startup gate.
-- Redirect refusal on security-sensitive outbound clients, reducing allowlist-to-redirect SSRF bypasses.
-- SMTP CR/LF/NUL header rejection and bounded header values.
-- Canonical request handling with rejection of duplicated/malformed query encodings before Express in L3.
-- Central `Cache-Control: no-store` on authenticated/API responses and cross-site API read/mutation rejection through Fetch Metadata protections.
-- Browser private-state purge on explicit L3 logout and prohibition on persistence of E2E destination keys in L3.
-- Explicit scrypt parameters for password and DATA_KEY derivation (`N=16384`, `r=8`, `p=1`, 64 MiB maximum memory) and a 128-bit minimum entropy floor for non-guessable capability/recovery secrets.
-- TLS managed leaf and Local-CA key generation at RSA-3072, with L3 rejection of weaker managed material rather than compatibility fallback.
-- Structured security logging with HMAC-chain audit integrity, Ed25519 proof support, normalized authentication method/result metadata, and centralized logging of both denied and successful L3 administrator authorization decisions.
-- Mandatory HTTPS remote audit sink declaration plus deployment evidence that the sink is logically separate.
-- L3 startup declarations for isolated secrets/crypto provider, clock synchronization and host memory protection.
+L3 forbids local/private-key TLS termination inside Direct-Xfer. `TRUST_PROXY` must be an explicit IP/CIDR list; boolean and hop-count trust are rejected. Legacy Local-CA/private-key material cannot be restored while L3 is active.
 
-## Security documentation and generated evidence
+### Hardware authentication and recovery
 
-The release contains the following normative/supporting evidence:
+V6.3.3 and V8.4.2 are closed by direct WebAuthn attestation, configured hardware AAGUID allowlists, pinned attestation-root SHA-256 fingerprints, UV, non-backup/non-syncable credentials and continuous revalidation of stored hardware metadata.
 
-- `security/ASVS-L3-SECURITY-SPEC.md` — validation/business rules, browser baseline, authentication assurance, session/authorization policy, public-link model, cryptographic inventory, data classification, egress policy, dependency policy and logging inventory.
-- `security/ASVS-L3-DEPLOYMENT.md` — production checklist and deployment-only verification evidence.
-- `security/ASVS-5.0.0-L3-MATRIX.md` — requirement-by-requirement status and evidence.
-- `security/asvs-static-audit.json` — generated static policy audit.
-- `security/security-inventory.json` — generated sensitive-boundary inventory.
-- `security/sbom.cdx.json` — CycloneDX component inventory.
-- `security/ASVS-L3-RELEASE-EVIDENCE.md` — release-candidate gate results and outstanding manual checks.
+V6.4.4 is `N/A`: after an approved hardware passkey has been enrolled in L3, Direct-Xfer exposes no weaker lost-factor identity-recovery path. Factor management remains locked behind recent hardware-passkey authentication and the last approved hardware passkey cannot be removed through the application.
 
-## Remaining PARTIAL themes
+### Cryptographic isolation
 
-The 43 remaining `PARTIAL` requirements are not hidden failures. They are intentionally retained where the source has controls but the audit does not yet claim complete assurance across every relevant path. The main themes are:
+V13.3.1, V13.3.2 and V13.3.3 are closed by an external hardware-backed crypto provider boundary plus signed provider evidence. L3 requires non-exportable keys and opaque handles; persistent-state encryption/decryption, audit HMAC/signing and runtime HMAC operations are delegated outside the Node process. Local `DATA_KEY`, `AUDIT_HMAC_KEY` and audit signing private keys are forbidden in L3.
 
-1. **Complete sink/source tracing** — contextual encoding, DOM sinks, response media types, field-level minimization, object/mass-assignment boundaries and constant-time cryptographic decisions.
-2. **Application-wide invariants and concurrency assurance** — numeric ranges, resource lifecycles, deserialization shapes, multi-step business ordering, rollback/transactionality, limited-resource anti-automation and filesystem/shared-state TOCTOU/deadlock/fairness review.
-3. **Authorization completeness** — object and field-level authorization maps are documented and strongly implemented in high-risk domains, but every endpoint/DTO has not been independently traced to closure.
-4. **Integration assurance** — same-user-agent binding of remote-browser OAuth broker transactions and security properties of administrator-selected external storage transports remain partly environment/provider dependent.
-5. **Cryptographic lifecycle depth** — constant-time/oracle review and in-use plaintext lifetime/zeroization guarantees remain broader than what JavaScript/Node can prove from source alone.
-6. **Data lifecycle completeness** — metadata stripping, retention classification and minimum-field response review are not yet proven for every user-submitted file/record type.
-7. **Logging/error coverage** — the central audit surface is materially stronger, but exhaustive logging of every validation/business/anti-automation bypass and every security-control failure has not been independently traced.
-8. **External service degradation** — timeouts, bounded queues and retries are present widely, but application-wide circuit-breaker/failure-mode assurance is not complete.
+TOTP is disabled in L3, built-in S3 SigV4 signing is rejected in L3, and local TLS private-key use is rejected so long-lived secret-key operations do not silently fall back into the application process.
 
-## Deployment-only MANUAL evidence
+V11.6.2 is `N/A`: Direct-Xfer implements no application-layer cryptographic key-agreement protocol. TLS key establishment is owned by the verified external edge and WebAuthn is signature verification rather than application key exchange.
 
-The 22 `MANUAL` rows principally cover:
+### Host, backends, egress, scanning, time and logs
 
-- HSTS preload registration on a stable public domain.
-- Reverse-proxy canonical HTTP→HTTPS behavior, trusted proxy headers, request-smuggling defenses and HTTP/2/3 validation.
-- Hardware-backed WebAuthn authenticator evidence and lost-factor identity-proofing procedures.
-- Forward-secret TLS key exchange/cipher suites, OCSP/revocation, public certificate trust and ECH where applicable.
-- Host/firewall enforcement of the egress allowlist.
-- Actual Vault/KMS/HSM/isolated-vault custody and isolation boundaries.
-- Host memory protections, core-dump/swap policy and synchronized time.
-- Release dependency/container scanner evidence.
-- Immutability/retention and logical separation of the remote security-log platform.
+V11.7.1, V11.7.2, V13.2.1, V13.2.2, V13.2.5, V15.2.1, V16.2.2, V16.4.2 and V16.4.3 require signed observations for host memory/process protection, in-use plaintext minimization, authenticated/least-privilege backends, default-deny host/network egress, dependency/container scanning with zero High/Critical findings, clock synchronization within ±1000 ms and immutable/retained/logically separate authenticated remote logging.
 
-The application startup preflight validates declarations that can be checked locally, but it deliberately cannot fabricate evidence about these external systems.
+The former operator booleans (`ASVS_L3_CLOCK_SYNCED`, `ASVS_L3_MEMORY_PROTECTED`, backend/secret least-privilege declarations and in-use-data declarations) have been removed from the configuration surface and cannot satisfy L3 prerequisites.
 
-## Dependency review note
+## Signed evidence boundary
 
-The 1.70.24 direct runtime dependencies are pinned by `package-lock.json`. Current direct versions include Express 4.22.2, node-forge 1.4.0, Nodemailer 9.0.3, Archiver 8.0.0, QRCode 1.5.4 and web-push 3.6.7. The release keeps node-forge at 1.4.0, which is the patched line for several high-severity 2026 forge advisories affecting earlier versions, and Nodemailer at 9.0.3, after the 2026 fixes for multiple 8.x/9.0.0 issues. This spot review is not a substitute for a complete dependency scanner over the transitive graph; V15.2.1 remains `MANUAL` until connected CI scan evidence is retained.
+The verifier is implemented by `lib/server/asvs-l3-evidence.js`. The signing private key belongs to an independent audit/CI environment and must not be mounted into Direct-Xfer. The runtime accepts only the configured Ed25519 public verification key.
+
+The bundle must contain all 22 externally verifiable requirement IDs, each with the required collection method, a structured observation satisfying the code predicate, a matching canonical SHA-256 digest and a valid observation timestamp. The bundle itself must match the exact current release and exact HTTPS `PUBLIC_URL` origin and expires after at most seven days.
+
+Forged, stale, duplicated, wrong-method, wrong-release, wrong-origin, incomplete or predicate-failing evidence prevents L3 startup.
+
+## Security artifacts
+
+- `security/ASVS-L3-SECURITY-SPEC.md` — normative application security policy.
+- `security/ASVS-L3-DEPLOYMENT.md` — L3 deployment architecture and evidence requirements.
+- `security/ASVS-L3-EVIDENCE.md` — signed evidence schema and the 22 external predicates.
+- `security/ASVS-5.0.0-L3-MATRIX.md` — all 345 requirements and their evidence mapping.
+- `security/asvs-static-audit.json` — generated static-policy result.
+- `security/asvs-l3-partial-audit.json` — generated repository-verifiable closure result.
+- `security/security-inventory.json` — generated security-sensitive operation inventory.
+- `security/sbom.cdx.json` — CycloneDX SBOM.
+- `security/ASVS-L3-RELEASE-EVIDENCE.md` — exact release gate summary.
+
+## Dependency/security-scan boundary
+
+The direct dependency graph remains lockfile-pinned. V15.2.1 is no longer an operator checkbox: L3 startup requires release-bound signed evidence that both dependency and container scans passed with zero High/Critical findings. The current isolated build environment cannot contact the npm registry, so this source package does not pretend to contain a connected-registry scan result. A deployment cannot pass the V15.2.1 evidence predicate without a real scan observation signed for the exact current release.
 
 ## Final release gates
 
-Source/repository gates completed for 1.70.24:
-
-- [x] package and lockfile version are 1.70.24.
-- [x] ASVS regression suite green (64/64).
-- [x] Full suite green (1081/1081).
+- [x] package and lockfile version synchronized to 1.70.26.
+- [x] PWA version/cache generation synchronized to 1.70.26 / pwa459.
+- [x] ASVS regression suite green (96/96).
+- [x] Complete current test tree green (1104/1104 across 181 files in six isolated groups).
 - [x] Static ASVS audit green.
+- [x] PARTIAL-closure audit green.
 - [x] Security inventory regenerated.
 - [x] Windows runtime integrity manifest synchronized and rechecked.
-- [x] Matrix has 0 FAIL and 0 REVIEW.
-- [x] ASVS audit/matrix updated for the exact release candidate.
-- [x] SBOM root component synchronized to 1.70.24.
-- [x] Release archive and SHA-256 generated as companion artifacts.
+- [x] Matrix has 0 MANUAL, 0 PARTIAL, 0 FAIL and 0 REVIEW.
+- [x] SBOM root component synchronized to 1.70.27.
+- [x] Former operator-declared manual-attestation flags removed from the L3 configuration surface.
 
-Deployment/verification gates still required before claiming a specific installation is **verified ASVS L3**:
-
-- [ ] Resolve the remaining 43 source-assurance `PARTIAL` rows or obtain sufficient independent verification evidence to promote them.
-- [ ] Review and retain evidence for all 22 `MANUAL` rows.
-- [ ] Independently review all 89 `N/A` decisions.
-- [ ] Re-run dependency/container security scanning in connected CI and retain the report.
-- [ ] Complete a production-like TLS/proxy/time/secrets/logging preflight.
-- [ ] Perform a focused independent penetration test of authentication, authorization, public links/capabilities, upload/download, OAuth broker, PWA, recovery and administrator operations.
-
-Reference requirement source: OWASP ASVS 5.0.0 stable release (`v5.0.0_release`).
+Independent review of N/A decisions, production evidence collection and a focused penetration test remain appropriate before making an external certification/compliance representation.

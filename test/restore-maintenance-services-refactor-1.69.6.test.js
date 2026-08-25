@@ -693,7 +693,7 @@ test('trash retention purges sequentially and exposes its state-replacement barr
     assert.equal(fixture.service.isStateReplacementBusy(), false);
     assert.equal(maxActive, 1);
     assert.deepEqual(order, ['trash-1', 'trash-2']);
-    assert.equal(persisted, 2);
+    assert.equal(persisted, 0); // purgeTrashRecordById owns its durable intent/final commits
   } finally {
     fixture.close();
   }

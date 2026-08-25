@@ -23,5 +23,5 @@ test('ASVS V14.3.3 PWA remember-password control is retired', () => {
   const html = fs.readFileSync(path.join(root, 'pwa/login.html'), 'utf8');
   assert.match(html, /id="mobile-remember-password"[^>]*disabled/);
   assert.match(html, /class="mobile-login-check hidden"[^>]*aria-hidden="true"/);
-  assert.match(html, /login-vault\.js\?v=442/);
+  assert.match(html, /login-vault\.js\?v=443/);
 });

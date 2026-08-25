@@ -15,27 +15,9 @@ const {
 } = require('../lib/server/asvs-l3-policy');
 const { createSessionService } = require('../lib/server/session-service');
 const { strictFileContentReason } = require('../lib/file-type-policy');
+const { completeL3Config } = require('./helpers/asvs-l3-fixture');
 
-function completeL3Config(overrides = {}) {
-  return {
-    ASVS_L3_MODE: true,
-    PUBLIC_URL: 'https://direct-xfer.example',
-    DATA_KEY: 'D'.repeat(40),
-    AUDIT_HMAC_KEY: 'A'.repeat(40),
-    AUDIT_SIGNING_PRIVATE_KEY_FILE: '/run/secrets/direct-xfer-audit-ed25519.pem',
-    CLAMAV_HOST: 'clamav',
-    CLAMAV_PORT: 3310,
-    AUDIT_REMOTE_URL: 'https://siem.example/ingest',
-    ASVS_L3_EGRESS_ALLOWLIST: 'siem.example,oauth2.googleapis.com',
-    ASVS_L3_CRYPTO_PROVIDER: 'vault',
-    ASVS_L3_CLOCK_SYNCED: true,
-    ASVS_L3_MEMORY_PROTECTED: true,
-    ADMIN_ALLOW_ANY: false,
-    ...overrides,
-  };
-}
-
-test('ASVS L3 startup gate fails closed until mandatory deployment prerequisites are declared', () => {
+test('ASVS L3 startup gate fails closed until machine-verifiable deployment prerequisites are satisfied', (t) => {
   const incomplete = buildAsvsL3Report({ ASVS_L3_MODE: true }, { ASVS_L3_MODE: 'true' });
   assert.equal(incomplete.enabled, true);
   assert.equal(incomplete.ok, false);
@@ -44,10 +26,11 @@ test('ASVS L3 startup gate fails closed until mandatory deployment prerequisites
     () => assertAsvsL3Configuration({ ASVS_L3_MODE: true }, { ASVS_L3_MODE: 'true' }),
     (err) => err && err.code === 'asvs-l3-prerequisites',
   );
-
-  const complete = buildAsvsL3Report(completeL3Config(), {});
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dx-asvs-l3-complete-'));
+  t.after(() => fs.rmSync(dir, { recursive:true, force:true }));
+  const complete = buildAsvsL3Report(completeL3Config(dir), {});
   assert.equal(complete.enabled, true);
-  assert.equal(complete.ok, true);
+  assert.equal(complete.ok, true, complete.failures.map((row) => `${row.id}:${row.detail}`).join('; '));
   assert.equal(complete.failures.length, 0);
 });
 
@@ -131,11 +114,13 @@ test('L3 source policy requires passkeys for admin API, step-up for sensitive mu
 });
 
 
-test('ASVS L3 egress policy is fail-closed and cannot be bypassed with a wildcard declaration', () => {
+test('ASVS L3 egress policy is fail-closed and cannot be bypassed with a wildcard declaration', (t) => {
   assert.equal(isAsvsL3OutboundUrlAllowed('https://siem.example/ingest', { asvsL3Mode:true, allowlist:'siem.example' }), true);
   assert.equal(isAsvsL3OutboundUrlAllowed('https://evil.example/ingest', { asvsL3Mode:true, allowlist:'siem.example' }), false);
   assert.equal(isAsvsL3OutboundUrlAllowed('http://siem.example/ingest', { asvsL3Mode:true, allowlist:'siem.example' }), false);
-  const wildcard = buildAsvsL3Report(completeL3Config({ ASVS_L3_EGRESS_ALLOWLIST:'*' }), {});
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dx-asvs-l3-egress-'));
+  t.after(() => fs.rmSync(dir, { recursive:true, force:true }));
+  const wildcard = buildAsvsL3Report(completeL3Config(dir, { ASVS_L3_EGRESS_ALLOWLIST:'*' }), {});
   assert.equal(wildcard.ok, false);
   assert.ok(wildcard.failures.some((row) => row.id === 'network.egress-allowlist'));
 });

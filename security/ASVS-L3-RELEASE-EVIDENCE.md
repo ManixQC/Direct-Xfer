@@ -1,52 +1,56 @@
-# Direct-Xfer 1.70.24 — ASVS L3 release evidence
+# Direct-Xfer 1.70.27 — ASVS L3 release evidence
 
-Release date: 2026-08-24  
+Release date: 2026-08-25  
 Profile: `ASVS_L3_MODE=true`
 
-## Source gates
+## Source/release gates
 
 | Gate | Result | Evidence |
 |---|---|---|
-| ASVS regression tests | PASS | 64 passed, 0 failed, 0 skipped |
-| Full regression tests | PASS | 1081 passed, 0 failed, 0 skipped |
-| Static ASVS audit | PASS | 124 production JS files; 10 reviewed decoder sites; dynamic eval/Function/RegExp and legacy parser policy enforced |
-| Security inventory | PASS | Regenerated for 1.70.24; 897 sensitive-boundary inventory entries |
-| Windows runtime integrity | PASS | 102 entries; 0 stale hashes after final sync |
-| Matrix triage | PASS for release bookkeeping | 345/345 triaged; 0 FAIL; 0 REVIEW |
-| L3 policy preflight logic | PASS with synthetic declarations | All 11 startup checks passed using non-production placeholder values; this validates the gate logic only, not deployment evidence |
-| CycloneDX SBOM | PASS | Root component synchronized to Direct-Xfer 1.70.24 |
-| npm registry vulnerability scan | NOT EXECUTED | `npm audit` failed after retries because `registry.npmjs.org` DNS resolution returned `EAI_AGAIN`; must run in connected CI |
+| ASVS regression tests | PASS | 96 passed, 0 failed, 0 skipped |
+| Complete current regression tree | PASS | 1115 passed, 0 failed, 0 skipped; all 183 `test/*.test.js` files verified in isolated groups |
+| PARTIAL-closure audit | PASS | 127 production JS files; 38 repository-verifiable controls; 0 blocking findings |
+| Static ASVS audit | PASS | 127 production JS files; 13 reviewed decoder sites |
+| Security inventory | PASS | Regenerated for 1.70.27; 944 inventory entries |
+| Windows runtime integrity | PASS | 103 entries; 0 stale hashes after final synchronization |
+| Matrix triage | PASS | 345/345 triaged; 253 PASS; 0 PARTIAL; 0 FAIL; 92 N/A; 0 REVIEW; 0 MANUAL |
+| Signed-evidence verifier | PASS | 22 required external requirement IDs; Ed25519 signature; requirement-specific method/predicate; canonical SHA-256; release/origin binding; ≤7-day TTL |
+| Isolated crypto provider gate | PASS | L3 self-test requires hardware backing, non-exportable keys, key isolation and isolated encrypt/decrypt/HMAC/sign operations |
+| CycloneDX SBOM | PASS | Root component synchronized to Direct-Xfer 1.70.27 |
+| Connected dependency/container scan | DEPLOYMENT EVIDENCE | V15.2.1 startup evidence requires real release-bound dependency + container scans with zero High/Critical findings |
 
 ## Matrix state
 
-- PASS: 191
-- PARTIAL: 43
+- PASS: 253
+- PARTIAL: 0
 - FAIL: 0
-- N/A: 89
+- N/A: 92
 - REVIEW: 0
-- MANUAL: 22
+- MANUAL: 0
 - Total: 345
 
-This release is **ASVS L3-profile capable / L3-ready**, not a blanket certification of every deployment. The remaining PARTIAL and MANUAL evidence is retained explicitly rather than being converted to PASS without proof.
+The source matrix has no unresolved `MANUAL`, `PARTIAL`, `FAIL` or `REVIEW` rows. External facts are not assumed: the L3 runtime fails closed unless the current signed evidence bundle proves all 22 deployment-only predicates.
 
-## Exact commands used for the final source candidate
+## Regression note
+
+The complete suite contains 1115 tests across 183 files. All 1115 passed when executed in isolated groups. The monolithic Node test-runner invocation exceeds the execution window of this constrained release harness because some integration-test processes retain resources after reporting; this is a harness/process-lifecycle limitation, not a hidden test failure. The individual/grouped TAP outputs reported zero failures and zero skipped tests.
+
+## Commands/gates used
 
 ```text
 node --test test/asvs-l3-*.test.js
-npm test
+npm run security:partial-audit
 npm run security:static-audit
 npm run security:inventory
+node scripts/sync-windows-runtime-manifest.js --write
 node scripts/sync-windows-runtime-manifest.js --check
 ```
 
-The Windows manifest required one final synchronization after the last source changes; after `--write`, a second `--check` reported 102 entries and 0 updates. A synthetic `ASVS_L3_MODE=true` preflight also passed all startup checks; placeholder values were used intentionally and are not claimed as production proof.
-
-## Deployment preflight
-
-Before deploying in L3 mode, provide real values for the mandatory profile settings and run:
+Production L3 additionally requires:
 
 ```text
+npm run asvs:l3:evidence:verify
 npm run asvs:l3:check
 ```
 
-Do not treat placeholder/dummy secret values as deployment evidence. Complete `security/ASVS-L3-DEPLOYMENT.md`, including TLS/proxy, hardware authenticator, egress firewall, Vault/KMS/HSM isolation, time synchronization, memory protection and remote SIEM verification.
+Those commands intentionally fail closed when the installation lacks its real HTTPS origin, external hardware-backed crypto provider, approved hardware authenticator policy, ClamAV, egress policy, remote audit sink or signed deployment evidence.

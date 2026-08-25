@@ -12,15 +12,11 @@ const read=(rel)=>fs.readFileSync(path.join(ROOT,rel),'utf8');
 const normalizeText=(value)=>String(value).replace(/\r\n?/g,'\n');
 
 function brokerResponse(scope){
-  const auth=new URL('https://accounts.google.com/o/oauth2/v2/auth');
-  auth.searchParams.set('client_id','123.apps.googleusercontent.com');
-  auth.searchParams.set('redirect_uri','https://oauth.example.test/v1/google/callback');
-  auth.searchParams.set('response_type','code');
-  auth.searchParams.set('scope',scope);
-  auth.searchParams.set('state','s'.repeat(32));
-  auth.searchParams.set('code_challenge','c'.repeat(43));
-  auth.searchParams.set('code_challenge_method','S256');
-  return {id:'session_abcdefgh',pollToken:'p'.repeat(32),authUrl:auth.toString(),scope,expiresAt:Date.now()+600000};
+  const id='session_abcdefgh';
+  const auth=new URL('https://oauth.example.test/v1/google/authorize');
+  auth.searchParams.set('session',id);
+  auth.searchParams.set('binding','b'.repeat(32));
+  return {id,pollToken:'p'.repeat(32),authUrl:auth.toString(),scope,expiresAt:Date.now()+600000};
 }
 
 test('1.67.30 broker client requests drive.file by default and explicit broader scopes only on demand',async()=>{

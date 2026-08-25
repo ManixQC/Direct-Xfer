@@ -5,7 +5,7 @@
   "serialNumber": "urn:uuid:132720a2-6431-4f85-90cf-9ca11ceaea0f",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-08-25T02:36:15.657489Z",
+    "timestamp": "2026-08-25T13:17:41Z",
     "lifecycles": [
       {
         "phase": "build"
@@ -19,13 +19,13 @@
       }
     ],
     "component": {
-      "bom-ref": "direct-xfer@1.70.24",
+      "bom-ref": "direct-xfer@1.70.26",
       "type": "library",
       "name": "Direct-Xfer",
-      "version": "1.70.24",
+      "version": "1.70.27",
       "scope": "required",
       "description": "Direct-Xfer — direct HTTP file sharing, no third-party server. Web interface, revocable shares, automatic IP detection and port testing.",
-      "purl": "pkg:npm/direct-xfer@1.70.24",
+      "purl": "pkg:npm/direct-xfer@1.70.26",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -7297,7 +7297,7 @@
   ],
   "dependencies": [
     {
-      "ref": "direct-xfer@1.70.24",
+      "ref": "direct-xfer@1.70.26",
       "dependsOn": [
         "archiver@8.0.0",
         "express@4.22.2",

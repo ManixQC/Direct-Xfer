@@ -1,6 +1,6 @@
 # Direct-Xfer — ASVS 5.0.0 Level 3 security specification
 
-Version scope: Direct-Xfer 1.70.24 and later when `ASVS_L3_MODE=true`.
+Version scope: Direct-Xfer 1.70.27 and later when `ASVS_L3_MODE=true`.
 
 This document is normative for the Direct-Xfer ASVS L3 profile. Compatibility mode may intentionally allow weaker deployment choices. A deployment must not claim the Direct-Xfer L3 profile unless the startup policy passes and the deployment checklist in `ASVS-L3-DEPLOYMENT.md` is completed.
 
@@ -16,7 +16,7 @@ Business limits are enforced in backend services. Relevant defaults/maximums inc
 
 ## 2. Browser security baseline
 
-Required browser capabilities for the administrator application in L3 are HTTPS secure context, cookies with Secure/HttpOnly/SameSite support, CSP, Fetch Metadata, Web Crypto/WebAuthn, and modern ES support. The administrator application must block rather than silently downgrade when a phishing-resistant passkey ceremony is unavailable. L3 rejects application HTTP except the loopback liveness exception. HSTS is emitted with `includeSubDomains` and `preload` in the strict profile.
+Required browser capabilities for the administrator application in L3 are HTTPS secure context, cookies with Secure/HttpOnly/SameSite support, CSP, Fetch Metadata, Web Crypto/WebAuthn, and modern ES support. The administrator application must block rather than silently downgrade when a phishing-resistant passkey ceremony is unavailable. L3 requires TLS termination at an independently verified external edge and rejects application HTTP except the loopback liveness exception. HSTS is emitted with `includeSubDomains` and `preload`; current signed deployment evidence must prove the public domain is actually preloaded and the deployed edge satisfies the protocol requirements.
 
 The common web boundary emits CSP with a cryptographic nonce, `object-src 'none'`, `base-uri 'none'`, `frame-ancestors 'none'`, CSP reporting, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, and `Cross-Origin-Opener-Policy: same-origin`. State-changing administrator requests also require a CSRF token and pass same-origin / Fetch Metadata defenses.
 
@@ -28,18 +28,16 @@ Authentication methods are classified as follows:
 
 | Method | Purpose in L3 | Phishing resistant | May authorize administrator API |
 |---|---|---:|---:|
-| Password only | bootstrap/password change only | No | No |
-| Password + TOTP | bootstrap/recovery transition only | No | No |
-| WebAuthn passkey with UV | normal administrator authentication | Yes at protocol level | Yes |
-| Recovery code | emergency recovery transition | No | No until a new passkey login |
+| Password only | first hardware-passkey bootstrap/password change only | No | No |
+| Password + TOTP | disabled in L3 | No | No |
+| Hardware-attested WebAuthn passkey with UV | normal administrator authentication and factor management | Yes | Yes |
+| Recovery code | disabled as an L3 factor-recovery bypass | No | No |
 
-A password/TOTP session can be minted only to permit bootstrap activities such as passkey enrollment. The protected administrator router requires `authMethod=passkey` and `phishingResistant=true` in L3. Sensitive mutations additionally require recent strong authentication. Standard web UI automatically initiates a new passkey ceremony when a protected mutation returns `reauth-required`.
+Before the first approved hardware credential is enrolled, a password session may exist only for bootstrap activities such as initial passkey registration. After the first approved hardware passkey is enrolled, the account records a permanent L3 hardware-enrollment lock: passkey management requires recent phishing-resistant passkey authentication even if the credential list is later corrupted or emptied. The last approved hardware passkey cannot be deleted or unbound through the application. Direct-Xfer therefore exposes no lost-final-factor identity-recovery path in L3.
 
-Passkey assertions require user presence and user verification, exact RP ID hash, exact origin, cross-origin=false, challenge binding, credential binding and signature validation. Single-device counters must progress; backup-eligible credentials are handled according to WebAuthn synchronization semantics. RS256 keys must meet the configured RSA-3072 floor.
+L3 registration requests direct attestation and `userVerification=required`. Accepted credentials must be non-backup credentials with an AAGUID in `ASVS_L3_HARDWARE_AAGUIDS` and packed attestation anchored by a SHA-256 fingerprint in `ASVS_L3_ATTESTATION_ROOT_SHA256` whose trusted root certificate is supplied through `ASVS_L3_ATTESTATION_ROOT_FILES`. Certificate validity/CA chaining, the attestation signature and leaf key strength are verified before hardware metadata is persisted; client-reported transport strings are informational and are never hardware proof. Authentication re-evaluates that stored hardware posture against the current allowlists; backup/syncable credentials cannot authorize the L3 administrator API. RS256 keys must meet the RSA-3072 floor.
 
-MFA-factor replacement is an owner-controlled recovery operation: the owner may revoke factors/sessions and initiate a reset, but does not choose another user's new password. Password reset generates a cryptographically random temporary credential, invalidates sessions and requires the user to replace it. Lost-factor recovery must be performed through an authenticated owner process with an out-of-band identity check documented by the operator; the replacement user must then enroll and authenticate with a new passkey before administrative access is restored.
-
-Hardware-backed authenticator assurance is deployment-specific. If the threat model requires a physically hardware-backed FIDO authenticator rather than platform WebAuthn UV, the operator must enforce an enterprise authenticator/AAGUID/attestation policy at the identity/device layer and record evidence.
+The protected administrator router requires `authMethod=passkey`, `phishingResistant=true`, and the current hardware-attestation policy. Sensitive mutations additionally require recent strong authentication. Standard web UI initiates a new passkey ceremony when a protected mutation returns `reauth-required`.
 
 ## 4. Session and contextual authorization policy
 
@@ -70,19 +68,19 @@ Approved primitives are Node/OpenSSL/Web Crypto primitives with at least 128-bit
 
 | Asset / purpose | Primitive | Key source / storage | Rotation / lifecycle |
 |---|---|---|---|
-| Application state at rest | AES-256-GCM; scrypt-derived 256-bit key (`N=16384`, `r=8`, `p=1`, 64 MiB max memory) where applicable | `DATA_KEY` / protected deployment secret | Rotate under documented maintenance procedure; backup before re-encryption |
-| Audit chain | HMAC-SHA-256 | dedicated `AUDIT_HMAC_KEY` in L3 | independent from `DATA_KEY`; rotate by verified chain migration |
-| Audit export/head proof | Ed25519 | external key/file in L3 | deployment secret manager; replace with recorded key ID transition |
+| Application state at rest | provider-defined authenticated encryption (test contract requires encrypt/decrypt round trip; production provider must satisfy approved cryptographic policy) | non-exportable `data` key handle in hardware-backed external provider | provider-controlled rotation/migration; application receives ciphertext only |
+| Audit chain | HMAC-SHA-256 | non-exportable `audit-hmac` handle in hardware-backed external provider | independent handle; rotate by verified chain migration |
+| Audit export/head proof | Ed25519 | non-exportable `audit-signing` handle in hardware-backed external provider | provider-controlled key transition with retained public-key history |
 | Sessions/CSRF/challenges/tokens | CSPRNG (`crypto.randomBytes`) | memory only | short-lived/rotated by protocol |
 | Non-guessable recovery/capability secrets | CSPRNG (`crypto.randomBytes`), minimum 128 bits in L3 | memory or one-way password hash as appropriate | one-time/rotated by protocol |
 | WebAuthn | ES256 / RS256 (RSA >=3072) | public keys persisted; private key remains authenticator-side | credential revocation/re-enrollment |
 | TLS local CA (non-L3 public trust use) | RSA >=3072 for newly generated material | protected filesystem | certificate validity/renewal policy |
 | Password hashing | scrypt (`N=16384`, `r=8`, `p=1`, 64 MiB max memory), 16-byte per-record salt, 64-byte derived value | per-record salt | parameters are pinned in code; benchmark/review before any parameter migration |
-| TOTP | HMAC-SHA1 as required by interoperable TOTP profile | encrypted application state | rotate on factor replacement |
+| TOTP | HMAC-SHA1 only in compatibility/non-L3 deployments | encrypted application state | disabled in L3; compatibility factor rotation only |
 
 Protocol-mandated SHA-1 inside TOTP is not approved for general hashing/signatures. MD5/SHA-1 are not to be introduced for security decisions. Cryptographic comparisons use timing-safe comparison where secrets/signatures are compared directly.
 
-L3 deployment requires a declared isolated secrets/crypto provider (`vault`, `kms`, `hsm`, or `isolated-vault`). Long-lived master/signing material must be provisioned from that system. Where Direct-Xfer still invokes local OpenSSL/Node primitives with derived/runtime key material, deployment evidence must demonstrate the required isolation boundary for the applicable ASVS control.
+L3 requires `ASVS_L3_CRYPTO_COMMAND`, a thin local IPC/command bridge to a hardware-backed `vault`, `kms`, `hsm`, or `isolated-vault`. Its mandatory self-test must prove `hardwareBacked=true`, `keyExportable=false`, `keyIsolation=true`, `allSecretKeyOperationsIsolated=true` and support for encrypt/decrypt/HMAC/sign operations by opaque key handle. `DATA_KEY`, `AUDIT_HMAC_KEY` and an application-readable audit private signing key are forbidden in the L3 process. State encryption/decryption, audit HMAC/signing and runtime HMAC operations use provider handles; local TOTP and built-in S3 SigV4 signing are disabled in L3. Local TLS termination/Local-CA generation is also disabled so TLS private-key operations remain at the separately verified edge.
 
 Crypto-agility rule: algorithms, key sizes and formats must be represented in this inventory and migrated through versioned code with backward-read/new-write transitions; new hard-coded legacy primitives are prohibited. Cryptographic discovery is run by `npm run security:inventory` for each release and reviewed with this inventory.
 
@@ -103,7 +101,7 @@ C3 material must never be placed in query strings, normal response payloads, ana
 
 External communications include update/public-IP services, Google OAuth broker/provider, SMTP, webhook endpoints, Web Push endpoints, rclone-backed cloud/storage services, ClamAV, remote audit sink, and administrator-configured storage/notification connectors. Each client must use a bounded timeout, bounded response/body handling, finite retry/concurrency behavior and cleanup on cancellation/error.
 
-L3 startup requires a non-wildcard `ASVS_L3_EGRESS_ALLOWLIST`. The application enforces that allowlist at administrator-configurable HTTP(S), OAuth/broker, backup/storage, webhook, SMTP and remote-audit outbound boundaries; security-sensitive HTTP clients reject redirects so an approved origin cannot redirect to an unapproved target. SMTP address/header fields reject CR/LF/NUL injection. The deployment firewall/proxy must enforce the same or narrower allowlist; application configuration alone is not considered sufficient network isolation. The remote audit sink must be HTTPS and logically separate. ClamAV is mandatory and scan errors fail closed for public uploads.
+L3 startup requires a non-wildcard `ASVS_L3_EGRESS_ALLOWLIST`. The application enforces that allowlist at administrator-configurable HTTP(S), OAuth/broker, backup/storage, webhook, SMTP and remote-audit outbound boundaries; security-sensitive HTTP clients reject redirects so an approved origin cannot redirect to an unapproved target. SMTP address/header fields reject CR/LF/NUL injection. The deployment firewall/proxy must enforce the same or narrower allowlist. L3 startup accepts that external fact only through current signed V13.2.5 evidence satisfying the firewall predicate; application configuration alone is insufficient. The remote audit sink must be HTTPS and logically separate. ClamAV is mandatory and scan errors fail closed for public uploads.
 
 Representative saturation/concurrency policy: connector jobs use the configured bounded active-job count; password work uses bounded asynchronous workers; public transfers and abuse controls are rate/concurrency limited; remote audit delivery uses a bounded queue (100–10,000, default 2,000) with exponential retry; outbound HTTP clients use timeouts and reject uncontrolled redirects where security-sensitive. Operators must size SMTP/webhook/provider connection pools below provider limits and document any reverse-proxy limits.
 
@@ -125,4 +123,11 @@ Authorized sinks are: (1) the local durable tamper-evident audit chain under the
 
 L3 remote audit transmission validates TLS certificates, has a bounded queue, bounded timeout and retry backoff. The local chain is committed before asynchronous transmission so an unavailable SIEM cannot cause silent loss of the primary record. Deployment monitoring must alert on remote sink delivery failures and queue saturation.
 
-Retention and access: audit retention is controlled by configured bounded history/local log lifecycle plus the organization's remote SIEM retention. Audit/security read access is owner/admin/auditor only. Production operators must configure remote retention suitable for incident investigation and applicable legal requirements.
+Retention and access: audit retention is controlled by configured bounded history/local log lifecycle plus the organization's remote SIEM retention. Audit/security read access is owner/admin/auditor only. Production operators must configure remote retention suitable for incident investigation and applicable legal requirements. L3 startup additionally requires current signed V16.4.2/V16.4.3 evidence proving remote immutability/retention, logical separation, authenticated ingest and verified TLS, plus V16.2.2 evidence proving synchronized time with measured absolute offset no greater than 1000 ms.
+
+
+## 11. Signed deployment evidence
+
+External deployment facts are not accepted from operator booleans in 1.70.27. `lib/server/asvs-l3-evidence.js` requires 22 requirement-specific observations covering HSTS preload, proxy/HTTP normalization, host memory protection, TLS/ECH/public trust, backend identities, network egress, hardware crypto/ACL isolation, release dependency/container scans, clock synchronization and remote-log separation/immutability. Each observation has an exact allowed collection method and structured predicate, carries a canonical SHA-256 digest, and is included in an Ed25519-signed bundle.
+
+The bundle is bound to the exact `OWASP-ASVS-5.0.0-L3` profile, Direct-Xfer release and HTTPS public origin, and may be valid for at most seven days. Wrong-release/origin, stale/future, duplicate, forged, wrong-method, predicate-failing or signature-invalid evidence causes the L3 startup preflight to fail closed. The verifier public key may be configured in the Direct-Xfer process; the signing private key belongs to the independent audit/CI environment and must not be mounted into the application runtime. Exact fields are documented in `security/ASVS-L3-EVIDENCE.md`.

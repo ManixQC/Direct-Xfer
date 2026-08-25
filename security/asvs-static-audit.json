@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-08-25T02:33:50.896Z",
+  "generatedAt": "2026-08-25T14:12:06.520Z",
   "scope": [
     "server.js",
     "lib",
@@ -9,12 +9,17 @@
     "oauth-broker/server.js",
     "oauth-broker/cloudflare-worker/src"
   ],
-  "filesScanned": 124,
-  "regexLiteralEstimate": 4456,
+  "filesScanned": 127,
+  "regexLiteralEstimate": 4520,
   "decoderInventory": [
     {
       "file": "lib/assets/oauth-broker-worker.mjs",
-      "line": 162,
+      "line": 83,
+      "hash": "7c8f3881ffc73f6a"
+    },
+    {
+      "file": "lib/assets/oauth-broker-worker.mjs",
+      "line": 195,
       "hash": "d96214f5e694a8dc"
     },
     {
@@ -24,12 +29,22 @@
     },
     {
       "file": "oauth-broker/cloudflare-worker/src/index.js",
-      "line": 162,
+      "line": 83,
+      "hash": "7c8f3881ffc73f6a"
+    },
+    {
+      "file": "oauth-broker/cloudflare-worker/src/index.js",
+      "line": 195,
       "hash": "d96214f5e694a8dc"
     },
     {
       "file": "oauth-broker/server.js",
-      "line": 81,
+      "line": 80,
+      "hash": "7d8f680939bbb104"
+    },
+    {
+      "file": "oauth-broker/server.js",
+      "line": 113,
       "hash": "39b8f86520446775"
     },
     {

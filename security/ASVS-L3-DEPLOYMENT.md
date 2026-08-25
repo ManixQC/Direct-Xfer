@@ -1,52 +1,63 @@
-# Direct-Xfer — ASVS L3 deployment checklist
+# Direct-Xfer — ASVS 5.0.0 Level 3 deployment
 
-This checklist is required in addition to the source controls. ASVS is verified against a deployed application, not a source archive alone.
+Direct-Xfer 1.70.27 has no unresolved `MANUAL`, `PARTIAL`, `FAIL`, or `REVIEW` row in its source matrix. This does **not** mean a source ZIP certifies an installation. Facts that only exist at the production edge/host/provider are now mandatory, machine-validated startup evidence rather than operator declarations. A specific deployment can use the L3 profile only while its signed evidence remains valid.
 
-## Mandatory profile
+## Mandatory L3 runtime profile
 
-- Set `ASVS_L3_MODE=true`.
-- Set an absolute HTTPS `PUBLIC_URL` using the production host.
-- Do not set `ADMIN_ALLOW_ANY=true`; constrain administrator access by network policy/allowlist.
-- Provision `DATA_KEY` with >=32 bytes of high-entropy secret material.
-- Provision a distinct `AUDIT_HMAC_KEY` with >=32 bytes.
-- Provision the audit Ed25519 private key through `AUDIT_SIGNING_PRIVATE_KEY` or `AUDIT_SIGNING_PRIVATE_KEY_FILE` from the deployment secret manager.
-- Configure ClamAV (`CLAMAV_HOST`, `CLAMAV_PORT`) and monitor it; L3 upload scanning fails closed.
-- Configure a logically separate HTTPS `AUDIT_REMOTE_URL` and, where required, `AUDIT_REMOTE_TOKEN`.
-- Configure and network-enforce `ASVS_L3_EGRESS_ALLOWLIST`.
-- Set `ASVS_L3_CRYPTO_PROVIDER` to the actually deployed `vault`, `kms`, `hsm`, or `isolated-vault` solution.
-- Verify host clock synchronization, then set `ASVS_L3_CLOCK_SYNCED=true`.
-- Restrict core dumps/debug access, disable or encrypt swap, apply OS process isolation/hardening, then set `ASVS_L3_MEMORY_PROTECTED=true`.
+Set `ASVS_L3_MODE=true` and an absolute production `PUBLIC_URL=https://...`. Configure `TRUST_PROXY` as the exact IP/CIDR list of the external TLS edge; boolean trust and hop counts are rejected. Keep `ADMIN_ALLOW_ANY` disabled. Do not configure `TLS_CERT`, `TLS_KEY`, `TLS_SELF_SIGNED`, `DATA_KEY`, `AUDIT_HMAC_KEY`, `AUDIT_SIGNING_PRIVATE_KEY`, or `AUDIT_SIGNING_PRIVATE_KEY_FILE` in the Direct-Xfer process.
 
-Run `npm run asvs:l3:check` before launch. Direct-Xfer itself also fails startup when mandatory profile prerequisites are absent.
+Configure ClamAV using a local Unix socket or authenticated/verified TLS transport, configure the required HTTPS `AUDIT_REMOTE_URL`, and define a non-wildcard `ASVS_L3_EGRESS_ALLOWLIST` containing only the enabled external services.
 
-## TLS / edge evidence
+Configure the cryptographic boundary with `ASVS_L3_CRYPTO_PROVIDER` (`vault`, `kms`, `hsm`, or `isolated-vault`) and an absolute `ASVS_L3_CRYPTO_COMMAND`. The command must be a restrictive local bridge to a hardware-backed provider and must pass the provider self-test: non-exportable isolated keys, hardware backing, all secret-key operations isolated, and working encrypt/decrypt/HMAC/sign operations by key handle. Direct-Xfer L3 does not accept raw long-lived data/audit signing keys in the Node process.
 
-Verify with the real edge/reverse proxy: TLS 1.2/1.3 only; forward-secret AEAD cipher suites; trusted certificate chain and hostname; certificate revocation/OCSP behavior where applicable; HSTS delivery on the public origin; HTTP to HTTPS redirect performed at the edge before application traffic; HTTP request normalization/smuggling defenses; HTTP/2 and HTTP/3 settings where enabled; ECH where organizational policy and client support require it.
+Configure approved hardware authenticators with `ASVS_L3_HARDWARE_AAGUIDS`, pinned trust-anchor fingerprints with `ASVS_L3_ATTESTATION_ROOT_SHA256`, and the corresponding PEM root certificate files with `ASVS_L3_ATTESTATION_ROOT_FILES`. L3 registration uses direct attestation and rejects backup/syncable credentials. After the first hardware credential is enrolled, factor management permanently requires recent hardware-passkey authentication and the last approved hardware passkey cannot be removed through Direct-Xfer.
 
-The Direct-Xfer application rejects non-HTTPS application requests in L3, but reverse-proxy protocol/cipher behavior remains deployment evidence.
+## Signed deployment evidence
 
-## WebAuthn / device assurance
+Generate current observations for all 22 externally verifiable requirements defined in `security/ASVS-L3-EVIDENCE.md`, then sign the bundle in an independent audit/CI environment with Ed25519. Keep the private signing key outside the Direct-Xfer runtime. Configure the verifier with:
 
-Enroll at least one passkey for every administrator-capable account. Confirm password/TOTP sessions cannot access the administrator API in L3. Confirm a passkey-authenticated session can. Confirm sensitive mutations older than the configured strong-auth freshness window trigger a new passkey ceremony.
+- `ASVS_L3_EVIDENCE_FILE=/path/to/signed-evidence.json`
+- `ASVS_L3_EVIDENCE_PUBLIC_KEY=...` **or** `ASVS_L3_EVIDENCE_PUBLIC_KEY_FILE=/path/to/evidence-public.pem`
 
-If the assurance target specifically requires hardware-backed authenticators, enforce the organization's trusted authenticator/AAGUID/attestation policy outside or in front of Direct-Xfer and retain evidence. Browser `userVerification=required` alone is not proof that every authenticator is hardware backed.
+The bundle must match the exact Direct-Xfer release and exact HTTPS public origin and can be valid for at most seven days. Every requirement has a fixed collection-method label and a structured observation predicate. Digests and the final signature are verified before startup. A stale, forged, duplicate, wrong-release, wrong-origin, wrong-method, incomplete, or predicate-failing bundle fails closed.
 
-## Public links
+Run:
 
-Every public share in L3 must use an independent password or access-approval gate. Verify an unprotected share returns `l3-independent-auth-required`. Treat public URLs as private metadata even though the URL token alone is not sufficient authorization in this profile.
+```text
+npm run asvs:l3:evidence:verify
+npm run asvs:l3:check
+```
 
-## Logging / monitoring
+The second command is the complete startup preflight. Direct-Xfer runs the same policy during normal L3 startup.
 
-Confirm the remote audit system is logically separate, receives a login, failed login, authorization denial, settings change and session revocation event, and alerts when delivery stops. Restrict remote log access and set a retention period appropriate to incident-response/legal requirements. Confirm clock skew between Direct-Xfer and the analysis system is within the organization's threshold.
+## Evidence collection domains
 
-## Secret isolation and rotation
+The signed bundle must independently prove: public HSTS preload registration; intended HTTP→HTTPS edge behavior without API redirect ambiguity; proxy-header authenticity; request-smuggling and HTTP/2/3 header rejection; host memory/process protection and in-use plaintext minimization; forward-secret recommended TLS ciphers; revocation checking; ECH; public certificate/hostname trust; authenticated and least-privilege backend identities; host/network default-deny egress; hardware-backed non-exportable crypto isolation and ACLs; dependency plus container scans with zero High/Critical findings; clock offset within ±1000 ms; and immutable/retained/logically separate authenticated remote audit ingestion.
 
-Validate that the declared Vault/KMS/HSM/isolated-vault implementation actually prevents unauthorized application/host users from extracting long-lived master/signing material. Record key IDs and rotation dates. Test audit-HMAC migration and backup/restore before a DATA_KEY rotation. Revoke credentials immediately after suspected disclosure.
+Exact field names and allowed methods are normative in `security/ASVS-L3-EVIDENCE.md` and `lib/server/asvs-l3-evidence.js`.
 
-## Host / container hardening
+## TLS and edge architecture
 
-Run as non-root; read-only root filesystem where feasible; minimal Linux capabilities; no Docker socket; no privileged mode; restrictive `/data` and secret mounts; kernel/host security updates; outbound firewall allowlist; inbound firewall only to intended edge/admin networks; core dumps disabled; debug endpoints disabled in production; backup destination access separated from normal share access.
+L3 terminates TLS outside Direct-Xfer at the verified edge. Local-CA/self-signed/provided private-key termination in Node is prohibited, including restoration of legacy TLS key material from backups. The edge must provide the signed V3/V4/V12 observations and the app trusts only explicitly configured edge IP/CIDR peers.
 
-## Release evidence
+Browser-facing HTTP may redirect to HTTPS only as demonstrated by V4.1.2 evidence; API/service HTTP must not be silently transformed into a security-ambiguous request. Edge/origin tests must cover CL/TE ambiguity, duplicate Content-Length, HTTP/2/3 connection-specific headers and CR/LF header injection.
 
-For each release retain: source/archive SHA-256, `npm test` output, `npm run asvs:l3:check` output, `npm run security:inventory` output, SBOM, dependency vulnerability scan, matrix/audit versions, TLS scan, remote logging test and any MANUAL/N/A evidence.
+## Hardware WebAuthn and factor-loss behavior
+
+Enroll at least one approved hardware authenticator for every administrator-capable account before normal L3 operation. Hardware status is not inferred from `userVerification` or client-reported transports: AAGUID, verified packed-attestation trust and non-backup status are recorded and rechecked.
+
+Direct-Xfer intentionally provides no application recovery path for a lost final L3 hardware factor. Keep at least two approved hardware authenticators per administrator/owner as an operational practice. The application refuses to delete the last approved credential. Recovery after loss of every authenticator is therefore an installation/account lifecycle operation outside Direct-Xfer rather than a weaker in-app identity-proofing bypass.
+
+## Crypto/provider boundary
+
+The provider bridge must not return key material. In L3, application-state encryption/decryption, audit HMAC/signing and runtime HMAC operations are delegated by opaque key handle. TOTP is disabled; built-in S3 SigV4 backup signing is rejected; local TLS private-key use is rejected. If S3 backup is required for an L3 installation, use an external connector/service whose credential and signing boundary satisfies the signed backend/crypto evidence.
+
+Legacy state encrypted with an application `DATA_KEY` must be migrated outside the active L3 profile before enabling L3. For a 1.70.25 → 1.70.27 upgrade, stop Direct-Xfer and run `npm run asvs:l3:migrate-state -- /path/to/shares.json` with `ASVS_L3_LEGACY_DATA_KEY` plus `ASVS_L3_CRYPTO_COMMAND`, then run `npm run asvs:l3:migrate-audit -- /path/to/data` with `ASVS_L3_LEGACY_AUDIT_HMAC_KEY` plus the provider command. Both tools retain rollback backups and the audit tool refuses to re-sign an invalid legacy chain/head.
+
+Backups created by 1.70.26 L3 may be plaintext because of the corrected encryption-selection bug. Convert them offline with `npm run asvs:l3:migrate-backup -- old.dxbackup` before L3 restore. The same converter accepts legacy `dxenc:1` backups when `ASVS_L3_LEGACY_DATA_KEY` is supplied. L3 itself rejects plaintext backups. Legacy local TLS backup material cannot be imported while L3 is active.
+
+## Release/security evidence
+
+For every release retain the release archive SHA-256, full and ASVS test output, static/partial audits, security inventory, SBOM, Windows runtime manifest check, dependency scan, container scan and the signed deployment-evidence bundle. V15.2.1 evidence is release-bound, so upgrading Direct-Xfer invalidates the previous release scan bundle until the new exact release is scanned and re-signed.
+
+A focused independent penetration test remains recommended before representing a production installation as independently verified against ASVS L3. The source matrix is an implementation/evidence map, not a third-party certification.

@@ -1,6 +1,6 @@
 {
   "name": "direct-xfer-public-oauth-broker",
-  "version": "1.70.23",
+  "version": "1.70.27",
   "private": true,
   "type": "module",
   "scripts": {

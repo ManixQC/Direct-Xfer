@@ -72,6 +72,7 @@ function makeOptions(context = makeContext()) {
       FULL_IMAGES_DIR:'/tmp/dx-runtime-app/images/full', INBOX_DIR:'/tmp/dx-runtime-app/inbox',
       MAX_CONCURRENT_UPLOADS:2, QUARANTINE_DIR:'/tmp/dx-runtime-app/quarantine',
       UPLOAD_IDLE_TIMEOUT_MS:1000, CLAMAV_HOST:'127.0.0.1', CLAMAV_PORT:3310,
+      CLAMAV_SOCKET:null, CLAMAV_TLS:false, CLAMAV_TLS_SERVERNAME:'', CLAMAV_TLS_CA_FILE:'',
       FAIL_WINDOW_MS:60000, clamavEnabled:() => false,
     },
     constants:{ DAY_MS:86400000, LOG_FILE:'/tmp/dx-runtime-app/transfers.log' },

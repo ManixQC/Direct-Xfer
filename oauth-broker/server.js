@@ -53,7 +53,7 @@ function json(res, status, body) {
   });
   res.end(data);
 }
-function html(res, status, title, message, close = false) {
+function html(res, status, title, message, close = false, extraHeaders = {}) {
   const esc = (s) => String(s || '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const nonce = base64url(crypto.randomBytes(18));
   const script = close ? `<script nonce="${nonce}">try{window.opener&&window.opener.postMessage({type:'dx-oauth-broker-complete'},'*')}catch(_){}setTimeout(()=>window.close(),350);</script>` : '';
@@ -61,9 +61,41 @@ function html(res, status, title, message, close = false) {
   res.writeHead(status, {
     'Content-Type':'text/html; charset=utf-8', 'Cache-Control':'no-store', 'X-Content-Type-Options':'nosniff',
     'Referrer-Policy':'no-referrer', 'Content-Security-Policy':`default-src 'none'; script-src 'nonce-${nonce}'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'`,
+    ...extraHeaders,
   });
   res.end(body);
 }
+
+function oauthBrowserCookieName(id) {
+  const safe = String(id || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 160);
+  return safe ? `__Host-dxo_${safe}` : '';
+}
+function cookieValue(req, name) {
+  if (!name) return '';
+  const raw = String(req.headers && req.headers.cookie || '');
+  for (const part of raw.split(';')) {
+    const idx = part.indexOf('=');
+    if (idx < 1) continue;
+    if (part.slice(0, idx).trim() !== name) continue;
+    try { return decodeURIComponent(part.slice(idx + 1).trim()); } catch (_) { return ''; }
+  }
+  return '';
+}
+function googleAuthorizationUrl(item) {
+  const auth = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+  const challenge = base64url(crypto.createHash('sha256').update(item.verifier).digest());
+  auth.searchParams.set('client_id', GOOGLE_CLIENT_ID);
+  auth.searchParams.set('redirect_uri', `${PUBLIC_URL}/v1/google/callback`);
+  auth.searchParams.set('response_type','code');
+  auth.searchParams.set('scope',item.scope);
+  auth.searchParams.set('access_type','offline');
+  auth.searchParams.set('prompt','consent');
+  auth.searchParams.set('state',item.state);
+  auth.searchParams.set('code_challenge',challenge);
+  auth.searchParams.set('code_challenge_method','S256');
+  return auth;
+}
+
 function clientIp(req) { return String(req.socket && req.socket.remoteAddress || 'unknown').replace(/^::ffff:/,''); }
 function allowRate(req, key, limit, windowMs) {
   const now = Date.now(), id = `${key}:${clientIp(req)}`;
@@ -188,21 +220,44 @@ async function handle(req, res) {
       const requestedScope = normalizeGoogleDriveScope(body.scope);
       if (!requestedScope) return json(res,400,{error:'invalid-google-drive-scope'});
       const id = base64url(crypto.randomBytes(18)), pollToken = base64url(crypto.randomBytes(32)), state = base64url(crypto.randomBytes(32));
-      const verifier = base64url(crypto.randomBytes(48)); const challenge = base64url(crypto.createHash('sha256').update(verifier).digest());
-      const item = { id, pollHash:sha256(pollToken), state, verifier, version, scope:requestedScope, status:'waiting', error:null, createdAt:Date.now(), updatedAt:Date.now(), result:null };
+      const verifier = base64url(crypto.randomBytes(48));
+      const browserToken = base64url(crypto.randomBytes(32));
+      const item = { id, pollHash:sha256(pollToken), browserHash:sha256(browserToken), state, verifier, version, scope:requestedScope, status:'waiting', error:null, createdAt:Date.now(), updatedAt:Date.now(), result:null };
       sessions.set(id,item);
-      const auth = new URL('https://accounts.google.com/o/oauth2/v2/auth');
-      auth.searchParams.set('client_id', GOOGLE_CLIENT_ID); auth.searchParams.set('redirect_uri', `${PUBLIC_URL}/v1/google/callback`);
-      auth.searchParams.set('response_type','code'); auth.searchParams.set('scope',requestedScope);
-      auth.searchParams.set('access_type','offline'); auth.searchParams.set('prompt','consent');
-      auth.searchParams.set('state',state); auth.searchParams.set('code_challenge',challenge); auth.searchParams.set('code_challenge_method','S256');
-      return json(res, 201, { id, pollToken, authUrl:auth.toString(), scope:requestedScope, expiresAt:Date.now()+SESSION_TTL_MS });
+      const launch = new URL(`${PUBLIC_URL}/v1/google/authorize`);
+      launch.searchParams.set('session', id);
+      launch.searchParams.set('binding', browserToken);
+      return json(res, 201, { id, pollToken, authUrl:launch.toString(), scope:requestedScope, expiresAt:Date.now()+SESSION_TTL_MS });
+    }
+
+    if (req.method === 'GET' && url.pathname === '/v1/google/authorize') {
+      const id = String(url.searchParams.get('session') || '');
+      const binding = String(url.searchParams.get('binding') || '');
+      const item = sessions.get(id);
+      if (!item || item.status !== 'waiting' || !safeEqual(item.browserHash, sha256(binding))) {
+        return html(res, 400, 'Connexion expirée', 'Revenez à Direct-Xfer et relancez la connexion.', false);
+      }
+      const cookieName = oauthBrowserCookieName(item.id);
+      const maxAge = Math.max(1, Math.ceil((item.createdAt + SESSION_TTL_MS - Date.now()) / 1000));
+      res.writeHead(303, {
+        Location: googleAuthorizationUrl(item).toString(),
+        'Cache-Control':'no-store',
+        'Referrer-Policy':'no-referrer',
+        'X-Content-Type-Options':'nosniff',
+        'Set-Cookie':`${cookieName}=${encodeURIComponent(binding)}; Secure; HttpOnly; SameSite=Lax; Path=/; Max-Age=${maxAge}`,
+      });
+      return res.end();
     }
 
     if (req.method === 'GET' && url.pathname === '/v1/google/callback') {
       const state = String(url.searchParams.get('state') || '');
       const item = [...sessions.values()].find((entry) => entry && safeEqual(entry.state, state));
       if (!item) return html(res, 400, 'Connexion expirée', 'Revenez à Direct-Xfer et relancez la connexion.', false);
+      const cookieName = oauthBrowserCookieName(item.id);
+      const browserToken = cookieValue(req, cookieName);
+      if (!browserToken || !safeEqual(item.browserHash, sha256(browserToken))) {
+        return html(res, 400, 'Navigateur non reconnu', 'Cette autorisation OAuth doit revenir dans le même navigateur qui a démarré la connexion.', false);
+      }
       if (item.status !== 'waiting') return html(res, 409, 'Connexion déjà traitée', 'Revenez à Direct-Xfer.', item.status === 'completed');
       const providerError = String(url.searchParams.get('error') || '');
       if (providerError) { item.status='error'; item.error=providerError === 'access_denied' ? 'oauth-access-denied' : 'oauth-provider-error'; item.updatedAt=Date.now(); return html(res,400,'Connexion annulée','Google n’a pas autorisé l’accès.',true); }

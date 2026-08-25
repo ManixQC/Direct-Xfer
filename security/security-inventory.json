@@ -1,71 +1,76 @@
 {
-  "generatedAt": "2026-08-25T02:30:30.127Z",
-  "version": "1.70.24",
+  "generatedAt": "2026-08-25T14:12:09.970Z",
+  "version": "1.70.27",
   "categories": {
     "crypto": [
       {
         "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 53,
+        "line": 55,
         "text": "const nonce = b64url(randomBytes(18));"
       },
       {
         "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 70,
+        "line": 103,
         "text": "function randomBytes(length) {"
       },
       {
         "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 118,
+        "line": 151,
         "text": "const iv = randomBytes(12);"
       },
       {
         "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 256,
+        "line": 289,
         "text": "const id = `dxc_${b64url(randomBytes(18))}`;"
       },
       {
         "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 257,
+        "line": 290,
         "text": "const secret = b64url(randomBytes(32));"
       },
       {
         "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 258,
+        "line": 291,
         "text": "const refreshHandle = `dxr_${b64url(randomBytes(24))}`;"
       },
       {
         "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 281,
+        "line": 314,
         "text": "const id = b64url(randomBytes(18));"
       },
       {
         "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 282,
+        "line": 315,
         "text": "const pollToken = b64url(randomBytes(32));"
       },
       {
         "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 283,
+        "line": 316,
         "text": "const state = b64url(randomBytes(32));"
       },
       {
         "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 284,
+        "line": 317,
         "text": "const verifier = b64url(randomBytes(48));"
       },
       {
         "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 355,
+        "line": 318,
+        "text": "const browserToken = b64url(randomBytes(32));"
+      },
+      {
+        "file": "lib/assets/oauth-broker-worker.mjs",
+        "line": 412,
         "text": "const id = `dxc_${b64url(randomBytes(18))}`;"
       },
       {
         "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 356,
+        "line": 413,
         "text": "const secret = b64url(randomBytes(32));"
       },
       {
         "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 357,
+        "line": 414,
         "text": "const refreshHandle = `dxr_${b64url(randomBytes(24))}`;"
       },
       {
@@ -235,22 +240,22 @@
       },
       {
         "file": "lib/server/admin-account-routes.js",
-        "line": 412,
+        "line": 413,
         "text": "const secret = base32encode(crypto.randomBytes(20));"
       },
       {
         "file": "lib/server/admin-account-routes.js",
-        "line": 414,
+        "line": 415,
         "text": "for (let i = 0; i < 8; i += 1) recoveryPlain.push(crypto.randomBytes(16).toString('hex')); // 128-bit recovery secrets"
       },
       {
         "file": "lib/server/admin-account-routes.js",
-        "line": 490,
+        "line": 492,
         "text": "// the raw scrypt helper directly. Check the breached/common/contextual policy"
       },
       {
         "file": "lib/server/admin-account-routes.js",
-        "line": 535,
+        "line": 537,
         "text": "const password = crypto.randomBytes(24).toString('base64url');"
       },
       {
@@ -260,12 +265,12 @@
       },
       {
         "file": "lib/server/admin-photo-routes.js",
-        "line": 589,
+        "line": 614,
         "text": "const fname = crypto.randomBytes(12).toString('hex') + '.' + ext;"
       },
       {
         "file": "lib/server/admin-photo-routes.js",
-        "line": 667,
+        "line": 701,
         "text": "const fname = crypto.randomBytes(12).toString('hex') + '.' + ext;"
       },
       {
@@ -349,63 +354,83 @@
         "text": "connector.id = crypto.randomBytes(12).toString('hex');"
       },
       {
+        "file": "lib/server/asvs-l3-evidence.js",
+        "line": 38,
+        "text": "return crypto.createHash('sha256').update(canonicalize(value)).digest('hex');"
+      },
+      {
+        "file": "lib/server/asvs-l3-evidence.js",
+        "line": 96,
+        "text": "const key = crypto.createPublicKey(pem);"
+      },
+      {
+        "file": "lib/server/asvs-l3-evidence.js",
+        "line": 161,
+        "text": "const key = crypto.createPrivateKey(String(privateKeyPem || ''));"
+      },
+      {
         "file": "lib/server/audit-service.js",
-        "line": 158,
+        "line": 165,
         "text": "return crypto.createHash('sha256').update('direct-xfer:audit-chain:v1\\0' + String(secret || '')).digest();"
       },
       {
         "file": "lib/server/audit-service.js",
-        "line": 161,
+        "line": 169,
         "text": "return crypto.createHash('sha256').update(key).digest('hex').slice(0, 12);"
       },
       {
         "file": "lib/server/audit-service.js",
-        "line": 191,
+        "line": 200,
         "text": "const candidate = crypto.randomBytes(32);"
       },
       {
         "file": "lib/server/audit-service.js",
-        "line": 232,
+        "line": 227,
+        "text": "if (!auditProofPublicKey) auditProofPublicKey = crypto.createPublicKey(externalCrypto.signingPublicKey);"
+      },
+      {
+        "file": "lib/server/audit-service.js",
+        "line": 246,
         "text": "if (privatePem) auditProofPrivateKey = crypto.createPrivateKey(privatePem);"
       },
       {
         "file": "lib/server/audit-service.js",
-        "line": 255,
+        "line": 269,
         "text": "auditProofPrivateKey = crypto.createPrivateKey(fs.readFileSync(AUDIT_SIGNING_PRIVATE_FILE, 'utf8'));"
       },
       {
         "file": "lib/server/audit-service.js",
-        "line": 269,
+        "line": 283,
         "text": "auditProofPublicKey = crypto.createPublicKey(auditProofPrivateKey);"
       },
       {
         "file": "lib/server/audit-service.js",
-        "line": 279,
+        "line": 293,
         "text": "return crypto.createHash('sha256').update(der).digest('hex');"
       },
       {
         "file": "lib/server/audit-service.js",
-        "line": 282,
+        "line": 296,
         "text": "const hash = crypto.createHash('sha256');"
       },
       {
         "file": "lib/server/audit-service.js",
-        "line": 311,
+        "line": 325,
         "text": "const publicKey = crypto.createPublicKey(String(proof.publicKey || ''));"
       },
       {
         "file": "lib/server/audit-service.js",
-        "line": 415,
+        "line": 430,
         "text": "return crypto.createHmac('sha256', key).update(auditChainPayload(entry)).digest('hex');"
       },
       {
         "file": "lib/server/audit-service.js",
-        "line": 421,
-        "text": "return crypto.createHmac('sha256', key).update('head|' + String(seq) + '|' + String(hash || '')).digest('hex');"
+        "line": 438,
+        "text": "return crypto.createHmac('sha256', key).update(payload).digest('hex');"
       },
       {
         "file": "lib/server/audit-service.js",
-        "line": 428,
+        "line": 445,
         "text": "const tmp = AUDIT_HEAD_FILE + '.tmp-' + process.pid + '-' + crypto.randomBytes(5).toString('hex');"
       },
       {
@@ -420,57 +445,57 @@
       },
       {
         "file": "lib/server/auth-service.js",
-        "line": 280,
+        "line": 283,
         "text": "// A wrong TOTP must not trigger the expensive recovery-code scrypt loop."
       },
       {
         "file": "lib/server/auth-service.js",
-        "line": 285,
+        "line": 288,
         "text": "// scrypt comparison is pending because a different IP can consume another"
       },
       {
         "file": "lib/server/auth-service.js",
-        "line": 297,
+        "line": 300,
         "text": "// code while scrypt was running. A concurrent 2FA reset may also have"
       },
       {
         "file": "lib/server/auth-service.js",
-        "line": 348,
+        "line": 351,
         "text": "// scrypt runs off-thread, so account state may change while verification is"
       },
       {
         "file": "lib/server/auth-service.js",
-        "line": 395,
+        "line": 398,
         "text": "// login already waiting on second-factor scrypt just as it invalidates"
       },
       {
         "file": "lib/server/auth-service.js",
-        "line": 532,
+        "line": 535,
         "text": "// before spending scrypt resources if the account changed while it was pending."
       },
       {
         "file": "lib/server/auth-service.js",
-        "line": 548,
+        "line": 551,
         "text": "// new scrypt value was being derived."
       },
       {
         "file": "lib/server/backup-service.js",
-        "line": 187,
+        "line": 197,
         "text": "const payloadHash = crypto.createHash('sha256').update(buf).digest('hex');"
       },
       {
         "file": "lib/server/backup-service.js",
-        "line": 192,
+        "line": 202,
         "text": "const stringToSign = `AWS4-HMAC-SHA256\\n${amzDate}\\n${scope}\\n${crypto.createHash('sha256').update(canonicalRequest).digest('hex')}`;"
       },
       {
         "file": "lib/server/backup-service.js",
-        "line": 193,
+        "line": 203,
         "text": "const hmac = (k, d) => crypto.createHmac('sha256', k).update(d).digest();"
       },
       {
         "file": "lib/server/backup-service.js",
-        "line": 195,
+        "line": 205,
         "text": "const signature = crypto.createHmac('sha256', signingKey).update(stringToSign).digest('hex');"
       },
       {
@@ -495,17 +520,17 @@
       },
       {
         "file": "lib/server/http-application.js",
-        "line": 67,
+        "line": 68,
         "text": "if (!crypto || typeof crypto.randomBytes !== 'function') {"
       },
       {
         "file": "lib/server/http-application.js",
-        "line": 68,
+        "line": 69,
         "text": "throw new TypeError('createHttpApplication requires crypto.randomBytes');"
       },
       {
         "file": "lib/server/http-application.js",
-        "line": 311,
+        "line": 312,
         "text": "const cspNonce = crypto.randomBytes(18).toString('base64');"
       },
       {
@@ -585,7 +610,7 @@
       },
       {
         "file": "lib/server/ocr-service.js",
-        "line": 175,
+        "line": 192,
         "text": "const id = crypto.createHash('sha256').update(String(abs)).digest('hex').slice(0, 32);"
       },
       {
@@ -655,37 +680,37 @@
       },
       {
         "file": "lib/server/public-abuse-service.js",
-        "line": 36,
+        "line": 40,
         "text": "if (!crypto || typeof crypto.randomBytes !== 'function' || typeof crypto.createHmac !== 'function' || typeof crypto.createHash !== 'function') {"
       },
       {
         "file": "lib/server/public-abuse-service.js",
-        "line": 50,
+        "line": 54,
         "text": "let powSecret = crypto.randomBytes(32);"
       },
       {
         "file": "lib/server/public-abuse-service.js",
-        "line": 87,
+        "line": 93,
         "text": "const hash = crypto.createHash('sha256').update(`${text}\\n${file || ''}`).digest('hex');"
       },
       {
         "file": "lib/server/public-abuse-service.js",
-        "line": 146,
-        "text": "return crypto.createHmac('sha256', powSecret).update(parts.join('.')).digest('hex');"
+        "line": 153,
+        "text": "return externalCrypto ? externalCrypto.hmac(payload, 'runtime-hmac') : crypto.createHmac('sha256', powSecret).update(parts.join('.')).digest('hex');"
       },
       {
         "file": "lib/server/public-abuse-service.js",
-        "line": 161,
+        "line": 168,
         "text": "const digest = crypto.createHash('sha256').update(String(nonce) + String(solution)).digest();"
       },
       {
         "file": "lib/server/public-abuse-service.js",
-        "line": 175,
+        "line": 182,
         "text": "const nonce = crypto.randomBytes(16).toString('hex');"
       },
       {
         "file": "lib/server/public-abuse-service.js",
-        "line": 257,
+        "line": 264,
         "text": "powSecret = crypto.randomBytes(32);"
       },
       {
@@ -750,7 +775,7 @@
       },
       {
         "file": "lib/server/pwa-application.js",
-        "line": 294,
+        "line": 295,
         "text": "const pwaNetworkTestPayload = crypto.randomBytes(1024 * 1024);"
       },
       {
@@ -785,77 +810,82 @@
       },
       {
         "file": "lib/server/pwa-routes.js",
-        "line": 466,
+        "line": 492,
         "text": "const challenge = crypto.randomBytes(32);"
       },
       {
         "file": "lib/server/pwa-routes.js",
-        "line": 467,
+        "line": 493,
         "text": "const token = crypto.randomBytes(18).toString('base64url');"
       },
       {
         "file": "lib/server/pwa-routes.js",
-        "line": 531,
+        "line": 558,
         "text": "if (parsed.rpIdHash.toString('hex') !== crypto.createHash('sha256').update(rp.id).digest('hex')) throw new Error('rpid');"
       },
       {
         "file": "lib/server/pwa-routes.js",
-        "line": 534,
+        "line": 561,
         "text": "const clientDataHash = crypto.createHash('sha256').update(fromB64u(resp.clientDataJSON)).digest();"
       },
       {
         "file": "lib/server/pwa-routes.js",
-        "line": 578,
+        "line": 605,
         "text": "const challenge = crypto.randomBytes(32);"
       },
       {
         "file": "lib/server/pwa-routes.js",
-        "line": 579,
+        "line": 606,
         "text": "const token = crypto.randomBytes(18).toString('base64url');"
       },
       {
         "file": "lib/server/pwa-routes.js",
-        "line": 631,
+        "line": 661,
         "text": "if (parsed.rpIdHash.toString('hex') !== crypto.createHash('sha256').update(rp.id).digest('hex')) throw new Error('rpid');"
       },
       {
         "file": "lib/server/pwa-routes.js",
-        "line": 962,
+        "line": 666,
+        "text": "const clientDataHash = crypto.createHash('sha256').update(fromB64u(resp.clientDataJSON)).digest();"
+      },
+      {
+        "file": "lib/server/pwa-routes.js",
+        "line": 1008,
         "text": "relDir: dirBase + '-' + crypto.randomBytes(3).toString('hex'), // unique folder (no collisions)"
       },
       {
         "file": "lib/server/pwa-routes.js",
-        "line": 1286,
+        "line": 1332,
         "text": "const secret = crypto.randomBytes(32).toString('base64url');"
       },
       {
         "file": "lib/server/pwa-routes.js",
-        "line": 1288,
+        "line": 1334,
         "text": "id: crypto.randomBytes(8).toString('hex'), tokenHash: albumInviteHash(secret), role,"
       },
       {
         "file": "lib/server/pwa-routes.js",
-        "line": 1431,
+        "line": 1477,
         "text": "const fname = crypto.randomBytes(12).toString('hex') + '.' + ext; const dest = path.join(FULL_IMAGES_DIR, fname);"
       },
       {
         "file": "lib/server/pwa-routes.js",
-        "line": 1484,
+        "line": 1539,
         "text": "const fname = crypto.randomBytes(12).toString('hex') + '.' + ext;"
       },
       {
         "file": "lib/server/pwa-routes.js",
-        "line": 1766,
+        "line": 1834,
         "text": "clone.relDir=base+'-'+crypto.randomBytes(3).toString('hex'); clone.bytesReceived=0;"
       },
       {
         "file": "lib/server/pwa-routes.js",
-        "line": 1957,
+        "line": 2022,
         "text": "appendReceptionThreadMessage(s, { id: crypto.randomBytes(8).toString('hex'), at: Date.now(), from: 'owner', name: null, text });"
       },
       {
         "file": "lib/server/pwa-routes.js",
-        "line": 2136,
+        "line": 2201,
         "text": "const ticket = crypto.randomBytes(36).toString('base64url');"
       },
       {
@@ -905,32 +935,32 @@
       },
       {
         "file": "lib/server/restore-service.js",
-        "line": 502,
+        "line": 505,
         "text": "const stage = tlsDirPath() + '.restore-stage-' + process.pid + '-' + crypto.randomBytes(5).toString('hex');"
       },
       {
         "file": "lib/server/restore-service.js",
-        "line": 549,
+        "line": 552,
         "text": "const tmp = file + '.tmp-' + process.pid + '-' + crypto.randomBytes(4).toString('hex');"
       },
       {
         "file": "lib/server/restore-service.js",
-        "line": 645,
+        "line": 648,
         "text": "const old = liveTls + '.restore-old-' + process.pid + '-' + crypto.randomBytes(5).toString('hex');"
       },
       {
         "file": "lib/server/restore-service.js",
-        "line": 646,
+        "line": 649,
         "text": "const transactionId = crypto.randomBytes(12).toString('hex');"
       },
       {
         "file": "lib/server/restore-service.js",
-        "line": 750,
+        "line": 753,
         "text": "journalStage = LOG_FILE + '.restore-stage-' + process.pid + '-' + crypto.randomBytes(5).toString('hex');"
       },
       {
         "file": "lib/server/search-service.js",
-        "line": 368,
+        "line": 385,
         "text": "id:String(s.id) + ':' + crypto.createHash('sha1').update(rel).digest('hex').slice(0,16), shareId:s.id, shareName:s.name || '', type:s.type, token:s.token || '', file:rel,"
       },
       {
@@ -965,57 +995,62 @@
       },
       {
         "file": "lib/server/state-store.js",
-        "line": 6,
+        "line": 7,
         "text": "// the same approved scrypt parameters used by the authentication boundary."
       },
       {
         "file": "lib/server/state-store.js",
-        "line": 33,
+        "line": 36,
         "text": "if (!crypto || typeof crypto.scryptSync !== 'function' || typeof crypto.createCipheriv !== 'function') {"
       },
       {
         "file": "lib/server/state-store.js",
-        "line": 91,
+        "line": 109,
         "text": "const salt = (encKeyCache && encKeyCache.salt) || crypto.randomBytes(16);"
       },
       {
         "file": "lib/server/state-store.js",
-        "line": 93,
+        "line": 111,
         "text": "const iv = crypto.randomBytes(12);"
       },
       {
         "file": "lib/server/state-store.js",
-        "line": 94,
+        "line": 112,
         "text": "const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);"
       },
       {
         "file": "lib/server/state-store.js",
-        "line": 107,
+        "line": 138,
         "text": "const decipher = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(envelope.iv, 'hex'));"
       },
       {
         "file": "lib/server/storage-connector-config.js",
-        "line": 311,
+        "line": 45,
+        "text": "return sid ? crypto.createHash('sha256').update('Direct-Xfer\\0GoogleOAuthUA\\0').update(sid).digest('hex') : '';"
+      },
+      {
+        "file": "lib/server/storage-connector-config.js",
+        "line": 319,
         "text": "const id = crypto.randomBytes(18).toString('hex');"
       },
       {
         "file": "lib/server/storage-connector-config.js",
-        "line": 363,
+        "line": 371,
         "text": "const id = crypto.randomBytes(18).toString('hex'), state = crypto.randomBytes(32).toString('hex');"
       },
       {
         "file": "lib/server/storage-connector-config.js",
-        "line": 364,
+        "line": 372,
         "text": "const verifier = base64url(crypto.randomBytes(48));"
       },
       {
         "file": "lib/server/storage-connector-config.js",
-        "line": 365,
+        "line": 373,
         "text": "const challenge = base64url(crypto.createHash('sha256').update(verifier).digest());"
       },
       {
         "file": "lib/server/storage-connector-config.js",
-        "line": 586,
+        "line": 608,
         "text": "id:crypto.randomBytes(18).toString('hex'), ownerId:owner(req), remote, type, backend, parameters,"
       },
       {
@@ -1030,17 +1065,17 @@
       },
       {
         "file": "lib/server/tls-manager.js",
-        "line": 72,
+        "line": 75,
         "text": "const tmp = file + '.tmp-' + process.pid + '-' + crypto.randomBytes(4).toString('hex');"
       },
       {
         "file": "lib/server/tls-manager.js",
-        "line": 101,
+        "line": 104,
         "text": "const b = crypto.randomBytes(16); b[0] &= 0x7f; if (b.every((v) => v === 0)) b[15] = 1;"
       },
       {
         "file": "lib/server/tls-manager.js",
-        "line": 109,
+        "line": 112,
         "text": "const h = crypto.createHash('sha256');"
       },
       {
@@ -1055,57 +1090,57 @@
       },
       {
         "file": "lib/server/upload-reception-service.js",
-        "line": 587,
+        "line": 592,
         "text": "? path.join(realDir, `${base}-${Date.now()}-${crypto.randomBytes(3).toString('hex')}${ext}`)"
       },
       {
         "file": "lib/server/upload-reception-service.js",
-        "line": 673,
+        "line": 678,
         "text": "const staged = path.join(PENDING_DIR, `.staged-${String(purpose || 'remove').replace(/[^a-z0-9_-]/gi,'').slice(0,24)}-${String(id || '').replace(/[^a-z0-9]/gi,'').slice(0,24)}-${crypto.randomBytes(4).toString('hex')}`);"
       },
       {
         "file": "lib/server/upload-reception-service.js",
-        "line": 724,
+        "line": 729,
         "text": "const id = crypto.randomBytes(9).toString('hex');"
       },
       {
         "file": "lib/server/upload-reception-service.js",
-        "line": 923,
+        "line": 944,
         "text": "const dest = path.join(QUARANTINE_DIR, crypto.randomBytes(8).toString('hex') + '-' + safeUploadName(name));"
       },
       {
         "file": "lib/server/upload-reception-service.js",
-        "line": 944,
+        "line": 965,
         "text": "const dest = path.join(QUARANTINE_DIR, crypto.randomBytes(8).toString('hex') + '-unscanned-' + safeUploadName(name));"
       },
       {
         "file": "lib/server/upload-reception-service.js",
-        "line": 957,
+        "line": 978,
         "text": "return crypto.createHash('sha256').update(String(s.id)).update('\\0').update(id).digest('hex');"
       },
       {
         "file": "lib/server/upload-reception-service.js",
-        "line": 1125,
+        "line": 1146,
         "text": "const digest = crypto.createHash('sha256').update(nonce + ':' + i).digest('hex').slice(0, 16);"
       },
       {
         "file": "lib/server/webauthn-service.js",
-        "line": 10,
+        "line": 35,
         "text": "if (!crypto || typeof crypto.createPublicKey !== 'function') throw new TypeError('webauthn-service requires crypto');"
       },
       {
         "file": "lib/server/webauthn-service.js",
-        "line": 48,
+        "line": 73,
         "text": "if (!phantomCredentialSecret) phantomCredentialSecret = crypto.randomBytes(32);"
       },
       {
         "file": "lib/server/webauthn-service.js",
-        "line": 54,
-        "text": "const id = crypto.createHmac('sha256', phantomCredentialSecret)"
+        "line": 82,
+        "text": ": crypto.createHmac('sha256', phantomCredentialSecret).update(material).digest();"
       },
       {
         "file": "lib/server/webauthn-service.js",
-        "line": 137,
+        "line": 164,
         "text": "const key = crypto.createPublicKey({ key: jwk, format: 'jwk' });"
       },
       {
@@ -1170,67 +1205,72 @@
       },
       {
         "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 53,
+        "line": 55,
         "text": "const nonce = b64url(randomBytes(18));"
       },
       {
         "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 70,
+        "line": 103,
         "text": "function randomBytes(length) {"
       },
       {
         "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 118,
+        "line": 151,
         "text": "const iv = randomBytes(12);"
       },
       {
         "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 256,
+        "line": 289,
         "text": "const id = `dxc_${b64url(randomBytes(18))}`;"
       },
       {
         "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 257,
+        "line": 290,
         "text": "const secret = b64url(randomBytes(32));"
       },
       {
         "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 258,
+        "line": 291,
         "text": "const refreshHandle = `dxr_${b64url(randomBytes(24))}`;"
       },
       {
         "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 281,
+        "line": 314,
         "text": "const id = b64url(randomBytes(18));"
       },
       {
         "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 282,
+        "line": 315,
         "text": "const pollToken = b64url(randomBytes(32));"
       },
       {
         "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 283,
+        "line": 316,
         "text": "const state = b64url(randomBytes(32));"
       },
       {
         "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 284,
+        "line": 317,
         "text": "const verifier = b64url(randomBytes(48));"
       },
       {
         "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 355,
+        "line": 318,
+        "text": "const browserToken = b64url(randomBytes(32));"
+      },
+      {
+        "file": "oauth-broker/cloudflare-worker/src/index.js",
+        "line": 412,
         "text": "const id = `dxc_${b64url(randomBytes(18))}`;"
       },
       {
         "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 356,
+        "line": 413,
         "text": "const secret = b64url(randomBytes(32));"
       },
       {
         "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 357,
+        "line": 414,
         "text": "const refreshHandle = `dxr_${b64url(randomBytes(24))}`;"
       },
       {
@@ -1245,53 +1285,133 @@
       },
       {
         "file": "oauth-broker/server.js",
-        "line": 99,
+        "line": 86,
+        "text": "const challenge = base64url(crypto.createHash('sha256').update(item.verifier).digest());"
+      },
+      {
+        "file": "oauth-broker/server.js",
+        "line": 131,
         "text": "if (provided) return crypto.createHash('sha256').update('Direct-Xfer\\0OAuthBroker\\0').update(provided).digest();"
       },
       {
         "file": "oauth-broker/server.js",
-        "line": 104,
+        "line": 136,
         "text": "const key = crypto.randomBytes(32); fs.writeFileSync(KEY_FILE, key, { mode:0o600, flag:'wx' }); return key;"
       },
       {
         "file": "oauth-broker/server.js",
-        "line": 109,
+        "line": 141,
         "text": "const iv = crypto.randomBytes(12); const cipher = crypto.createCipheriv('aes-256-gcm', MASTER_KEY, iv);"
       },
       {
         "file": "oauth-broker/server.js",
-        "line": 115,
+        "line": 147,
         "text": "const decipher = crypto.createDecipheriv('aes-256-gcm', MASTER_KEY, Buffer.from(obj.iv,'base64'));"
       },
       {
         "file": "oauth-broker/server.js",
-        "line": 127,
+        "line": 159,
         "text": "const tmp = `${STORE_FILE}.${process.pid}.${crypto.randomBytes(4).toString('hex')}.tmp`;"
       },
       {
         "file": "oauth-broker/server.js",
-        "line": 132,
+        "line": 164,
         "text": "const id = `dxc_${base64url(crypto.randomBytes(18))}`;"
       },
       {
         "file": "oauth-broker/server.js",
-        "line": 133,
+        "line": 165,
         "text": "const secret = base64url(crypto.randomBytes(32));"
       },
       {
         "file": "oauth-broker/server.js",
-        "line": 134,
+        "line": 166,
         "text": "const refreshHandle = `dxr_${base64url(crypto.randomBytes(24))}`;"
       },
       {
         "file": "oauth-broker/server.js",
-        "line": 190,
+        "line": 222,
         "text": "const id = base64url(crypto.randomBytes(18)), pollToken = base64url(crypto.randomBytes(32)), state = base64url(crypto.randomBytes(32));"
       },
       {
         "file": "oauth-broker/server.js",
-        "line": 191,
-        "text": "const verifier = base64url(crypto.randomBytes(48)); const challenge = base64url(crypto.createHash('sha256').update(verifier).digest());"
+        "line": 223,
+        "text": "const verifier = base64url(crypto.randomBytes(48));"
+      },
+      {
+        "file": "oauth-broker/server.js",
+        "line": 224,
+        "text": "const browserToken = base64url(crypto.randomBytes(32));"
+      },
+      {
+        "file": "scripts/asvs-l3-migrate-audit.js",
+        "line": 20,
+        "text": "return crypto.createHash('sha256').update('direct-xfer:audit-chain:v1\\0' + String(secret || '')).digest();"
+      },
+      {
+        "file": "scripts/asvs-l3-migrate-audit.js",
+        "line": 102,
+        "text": "const expected = crypto.createHmac('sha256', legacyKey).update(payload(e)).digest('hex');"
+      },
+      {
+        "file": "scripts/asvs-l3-migrate-audit.js",
+        "line": 109,
+        "text": "const expectedSeal = crypto.createHmac('sha256', legacyKey).update(`head|${head.seq}|${head.hash || ''}`).digest('hex');"
+      },
+      {
+        "file": "scripts/asvs-l3-migrate-audit.js",
+        "line": 147,
+        "text": "[chainFile, `${chainFile}.migrate-${process.pid}-${crypto.randomBytes(4).toString('hex')}`, resigned.map((e) => JSON.stringify(e)).join('\\n') + '\\n'],"
+      },
+      {
+        "file": "scripts/asvs-l3-migrate-audit.js",
+        "line": 148,
+        "text": "[headFile, `${headFile}.migrate-${process.pid}-${crypto.randomBytes(4).toString('hex')}`, JSON.stringify(newHead)],"
+      },
+      {
+        "file": "scripts/asvs-l3-migrate-audit.js",
+        "line": 149,
+        "text": "[stateFile, `${stateFile}.migrate-${process.pid}-${crypto.randomBytes(4).toString('hex')}`, newStateRaw],"
+      },
+      {
+        "file": "scripts/asvs-l3-migrate-audit.js",
+        "line": 167,
+        "text": "const restore = `${target}.rollback-${process.pid}-${crypto.randomBytes(3).toString('hex')}`;"
+      },
+      {
+        "file": "scripts/asvs-l3-migrate-backup.js",
+        "line": 28,
+        "text": "try { const key=crypto.scryptSync(legacy,Buffer.from(outer.salt,'hex'),32,SCRYPT_OPTIONS); try { const d=crypto.createDecipheriv('aes-256-gcm',key,Buffer.from(outer.iv,'hex')); d.setAuthTag(Buffer.from(outer.tag,'hex')); plaintext=Buffer.co"
+      },
+      {
+        "file": "scripts/asvs-l3-migrate-backup.js",
+        "line": 38,
+        "text": "const dir=path.dirname(output), temp=`${output}.migrate-${process.pid}-${crypto.randomBytes(4).toString('hex')}`;"
+      },
+      {
+        "file": "scripts/asvs-l3-migrate-state.js",
+        "line": 52,
+        "text": "const decipher = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(envelope.iv, 'hex'));"
+      },
+      {
+        "file": "scripts/asvs-l3-migrate-state.js",
+        "line": 85,
+        "text": "const temp = `${storeFile}.migrate-${process.pid}-${crypto.randomBytes(5).toString('hex')}`;"
+      },
+      {
+        "file": "scripts/asvs-l3-partial-audit.js",
+        "line": 62,
+        "text": "collect(/\\b(?:timingSafeEqual|verify\\s*\\(|createHmac|createCipheriv|createDecipheriv|scrypt|scryptSync)\\s*\\(/g, inventories.cryptoDecisions, 'crypto');"
+      },
+      {
+        "file": "scripts/asvs-l3-partial-audit.js",
+        "line": 127,
+        "text": "requireAnchors('V6.4.1','temporary credential lifecycle',[['lib/server/account-service.js','initialPasswordPlaintext = crypto.randomBytes'],['lib/server/admin-account-routes.js','temporaryPassword'],['lib/server/account-service.js','bootstr"
+      },
+      {
+        "file": "scripts/asvs-l3-partial-audit.js",
+        "line": 155,
+        "text": "const sourceDigest = crypto.createHash('sha256');"
       },
       {
         "file": "scripts/asvs-static-audit.js",
@@ -1344,8 +1464,33 @@
         "text": "assert.match(source, /owner-\\$\\{crypto\\.randomBytes\\(6\\)\\.toString\\('hex'\\)\\}/);"
       },
       {
+        "file": "test/asvs-l3-deep-audit-1.70.27.test.js",
+        "line": 82,
+        "text": "const legacyKey=crypto.createHash('sha256').update('direct-xfer:audit-chain:v1\\0'+legacySecret).digest();"
+      },
+      {
+        "file": "test/asvs-l3-deep-audit-1.70.27.test.js",
+        "line": 85,
+        "text": "for (let i=1;i<=2;i++) { const e={seq:i,at:1700000000000+i,action:'legacy-'+i,actor:'owner',actorId:'a',role:'owner',ip:'127.0.0.1',detail:null,prevHash:prev}; e.hash=crypto.createHmac('sha256',legacyKey).update(auditPayload(e)).digest('hex"
+      },
+      {
+        "file": "test/asvs-l3-deep-audit-1.70.27.test.js",
+        "line": 86,
+        "text": "const head={version:1,seq:2,hash:prev,seal:crypto.createHmac('sha256',legacyKey).update(`head|2|${prev}`).digest('hex'),at:Date.now()}; legacyKey.fill(0);"
+      },
+      {
+        "file": "test/asvs-l3-deep-audit-1.70.27.test.js",
+        "line": 123,
+        "text": "const authData=crypto.randomBytes(64), clientHash=crypto.randomBytes(32), signed=Buffer.concat([authData,clientHash]);"
+      },
+      {
+        "file": "test/asvs-l3-deep-audit-1.70.27.test.js",
+        "line": 124,
+        "text": "const leafPrivate=crypto.createPrivateKey(fs.readFileSync(leafKey)); const sig=crypto.sign('sha256',signed,leafPrivate);"
+      },
+      {
         "file": "test/asvs-l3-enforcement-1.70.24.test.js",
-        "line": 127,
+        "line": 110,
         "text": "assert.match(accountRoutes, /randomBytes\\(24\\)\\.toString\\('base64url'\\)/);"
       },
       {
@@ -1484,6 +1629,11 @@
         "text": "const hash = crypto.createHash('sha256').update(read(rel)).digest('hex');"
       },
       {
+        "file": "test/helpers/asvs-l3-fixture.js",
+        "line": 49,
+        "text": "const source = `#!/usr/bin/env node\\n'use strict';\\nconst crypto=require('crypto');\\nconst req=JSON.parse(require('fs').readFileSync(0,'utf8'));\\nconst dataKey=Buffer.alloc(32,11), hmacKey=Buffer.alloc(32,22);\\nconst self=${JSON.stringify(s"
+      },
+      {
         "file": "test/http-pwa-lifecycle-application-refactor-1.70.6.test.js",
         "line": 137,
         "text": "const hash = crypto.createHash('sha256').update(read(rel)).digest('hex');"
@@ -1590,7 +1740,7 @@
       },
       {
         "file": "test/runtime-services-application-refactor-1.70.9.test.js",
-        "line": 149,
+        "line": 150,
         "text": "const hash = crypto.createHash('sha256').update(source).digest('hex');"
       },
       {
@@ -1627,7 +1777,7 @@
     "process": [
       {
         "file": "lib/server/ocr-service.js",
-        "line": 89,
+        "line": 91,
         "text": "execFile(bin, args, {"
       },
       {
@@ -1689,12 +1839,12 @@
     "outbound": [
       {
         "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 201,
+        "line": 234,
         "text": "const response = await fetch(GOOGLE_TOKEN_URL, {"
       },
       {
         "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 468,
+        "line": 526,
         "text": "async fetch(request, env) {"
       },
       {
@@ -1734,12 +1884,12 @@
       },
       {
         "file": "lib/server/admin-diagnostics-routes.js",
-        "line": 83,
+        "line": 84,
         "text": "webpush,"
       },
       {
         "file": "lib/server/admin-diagnostics-routes.js",
-        "line": 428,
+        "line": 429,
         "text": "add('web-push', 'notifications', webpush ? (subscriptions.length ? 'ok' : 'info') : 'warn', { module:!!webpush, subscriptions:subscriptions.length });"
       },
       {
@@ -1789,17 +1939,17 @@
       },
       {
         "file": "lib/server/audit-service.js",
-        "line": 95,
+        "line": 102,
         "text": "const req = https.request(remoteAuditEndpoint, {"
       },
       {
         "file": "lib/server/backup-service.js",
-        "line": 173,
+        "line": 183,
         "text": "const res = await fetch(target, { method: 'PUT', headers, body: buf, signal: AbortSignal.timeout(120000), redirect:ASVS_L3_MODE === true ? 'error' : 'follow' });"
       },
       {
         "file": "lib/server/backup-service.js",
-        "line": 199,
+        "line": 209,
         "text": "const res = await fetch(target, {"
       },
       {
@@ -1819,12 +1969,12 @@
       },
       {
         "file": "lib/server/http-application.js",
-        "line": 400,
+        "line": 447,
         "text": "const site = String(req.headers['sec-fetch-site'] || '').toLowerCase();"
       },
       {
         "file": "lib/server/http-application.js",
-        "line": 403,
+        "line": 450,
         "text": "const mode = String(req.headers['sec-fetch-mode'] || '').toLowerCase();"
       },
       {
@@ -2009,27 +2159,27 @@
       },
       {
         "file": "lib/server/pwa-application.js",
-        "line": 250,
+        "line": 251,
         "text": "get webpush() { return live.getWebpush(); },"
       },
       {
         "file": "lib/server/pwa-composition-service.js",
-        "line": 122,
+        "line": 123,
         "text": "const PWA_LIVE_BINDING_NAMES = Object.freeze(['state', 'searchIndexBuilding', 'universalSearchIndex', 'webpush']);"
       },
       {
         "file": "lib/server/pwa-routes.js",
-        "line": 860,
+        "line": 906,
         "text": "if (!live.webpush) return res.status(400).json({ error: 'no-module' });"
       },
       {
         "file": "lib/server/pwa-routes.js",
-        "line": 866,
+        "line": 912,
         "text": "if (!live.webpush) return res.status(400).json({ error: 'no-module' });"
       },
       {
         "file": "lib/server/pwa-routes.js",
-        "line": 938,
+        "line": 984,
         "text": "if (!live.webpush) return res.status(400).json({ error: 'no-module' });"
       },
       {
@@ -2064,7 +2214,7 @@
       },
       {
         "file": "lib/server/storage-connector-config.js",
-        "line": 465,
+        "line": 480,
         "text": "const tokenResponse = await fetch(googleTokenUrl, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded',Accept:'application/json'}, body, redirect:ASVS_L3_MODE ? 'error' : 'follow', signal:AbortSignal.timeout(15000) }"
       },
       {
@@ -2084,17 +2234,17 @@
       },
       {
         "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 201,
+        "line": 234,
         "text": "const response = await fetch(GOOGLE_TOKEN_URL, {"
       },
       {
         "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 468,
+        "line": 526,
         "text": "async fetch(request, env) {"
       },
       {
         "file": "oauth-broker/server.js",
-        "line": 149,
+        "line": 181,
         "text": "const response = await fetch('https://oauth2.googleapis.com/token', {"
       },
       {
@@ -2768,6 +2918,11 @@
         "text": "window.fetch = function (input, init) {"
       },
       {
+        "file": "scripts/asvs-l3-partial-audit.js",
+        "line": 64,
+        "text": "collect(/\\b(?:fetch|https\\.request|https\\.get|createTransport|request)\\s*\\(/g, inventories.outboundCalls, 'outbound');"
+      },
+      {
         "file": "scripts/restore-historical-tests.js",
         "line": 19,
         "text": "const req = https.get(url, { headers: { 'User-Agent': 'Direct-Xfer-test-restorer/1.67.30', Accept: 'application/octet-stream' }, timeout: 20000 }, res => {"
@@ -2818,6 +2973,21 @@
         "text": "'sec-fetch-dest':'empty',"
       },
       {
+        "file": "test/asvs-l3-partial-closure-1.70.25.test.js",
+        "line": 121,
+        "text": "const fetch = async () => ({"
+      },
+      {
+        "file": "test/asvs-l3-partial-closure-1.70.25.test.js",
+        "line": 126,
+        "text": "const client = new GoogleOAuthBrokerClient({ baseUrl, fetch });"
+      },
+      {
+        "file": "test/asvs-l3-partial-closure-1.70.25.test.js",
+        "line": 131,
+        "text": "const bad = new GoogleOAuthBrokerClient({ baseUrl, fetch:async () => ({"
+      },
+      {
         "file": "test/core-state-application-deep-audit-1.70.4.test.js",
         "line": 32,
         "text": "platform:{ fs:platformFs, path, crypto, os, net, tls, forge:null, nodemailer:null, webpush:null },"
@@ -2829,12 +2999,12 @@
       },
       {
         "file": "test/google-drive-least-privilege-1.67.30.test.js",
-        "line": 28,
+        "line": 24,
         "text": "const client=new GoogleOAuthBrokerClient({baseUrl:'https://oauth.example.test',version:'1.67.30',fetch:async(_url,options)=>{"
       },
       {
         "file": "test/google-drive-least-privilege-1.67.30.test.js",
-        "line": 41,
+        "line": 37,
         "text": "const client=new GoogleOAuthBrokerClient({baseUrl:'https://oauth.example.test',version:'1.67.30',fetch:async()=>new Response(JSON.stringify(brokerResponse(GOOGLE_DRIVE_SCOPE_MAP.full)),{status:201,headers:{'content-type':'application/json'}"
       },
       {
@@ -3019,17 +3189,22 @@
       },
       {
         "file": "test/oauth-broker-service-1.67.20.test.js",
-        "line": 40,
-        "text": "const callback=await fetch(`http://127.0.0.1:${port}/v1/google/callback?state=${encodeURIComponent(state)}&code=code-123`);"
+        "line": 43,
+        "text": "const launch=await fetch(created.authUrl,{redirect:'manual'});"
       },
       {
         "file": "test/oauth-broker-service-1.67.20.test.js",
-        "line": 42,
+        "line": 50,
+        "text": "const callback=await fetch(`http://127.0.0.1:${port}/v1/google/callback?state=${encodeURIComponent(state)}&code=code-123`,{headers:{cookie:browserCookie}});"
+      },
+      {
+        "file": "test/oauth-broker-service-1.67.20.test.js",
+        "line": 52,
         "text": "const polledRes=await fetch(`http://127.0.0.1:${port}/v1/google/sessions/${created.id}`,{headers:{authorization:`Bearer ${created.pollToken}`}});"
       },
       {
         "file": "test/oauth-broker-service-1.67.20.test.js",
-        "line": 51,
+        "line": 61,
         "text": "const refreshRes=await fetch(polled.credential.tokenUrl,{method:'POST',headers:{authorization:`Basic ${basic}`,'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({grant_type:'refresh_token',refresh_token:polled.cre"
       },
       {
@@ -3090,7 +3265,7 @@
       {
         "file": "test/pwa-admin-features-15-19-21-1.64.0.test.js",
         "line": 196,
-        "text": "const asset = await fetch(base + '/app/admin-audit-connectors.js?v=442');"
+        "text": "const asset = await fetch(base + '/app/admin-audit-connectors.js?v=443');"
       },
       {
         "file": "test/pwa-admin-features-15-19-21-1.64.0.test.js",
@@ -3140,7 +3315,7 @@
       {
         "file": "test/pwa-admin-features-3-7-1.64.0.test.js",
         "line": 218,
-        "text": "const publicAsset = await fetch(base + '/app/admin-advanced.js?v=442');"
+        "text": "const publicAsset = await fetch(base + '/app/admin-advanced.js?v=443');"
       },
       {
         "file": "test/pwa-admin-features-3-7-1.64.0.test.js",
@@ -3230,12 +3405,12 @@
       {
         "file": "test/pwa-mobile-features-24-25-27-29-31-42-45-46-47-1.64.0.test.js",
         "line": 150,
-        "text": "const mod = await fetch(base + '/app/mobile-intelligence.js?v=442');"
+        "text": "const mod = await fetch(base + '/app/mobile-intelligence.js?v=443');"
       },
       {
         "file": "test/pwa-mobile-features-24-25-27-29-31-42-45-46-47-1.64.0.test.js",
         "line": 154,
-        "text": "const r = await fetch(base + '/app/' + name + '?v=442');"
+        "text": "const r = await fetch(base + '/app/' + name + '?v=443');"
       },
       {
         "file": "test/pwa-routes-refactor.test.js",
@@ -3465,6 +3640,21 @@
     ],
     "filesystem": [
       {
+        "file": "lib/photo-utils.js",
+        "line": 422,
+        "text": "await fs.promises.writeFile(tmp, output, { mode:0o600, flag:'wx' });"
+      },
+      {
+        "file": "lib/photo-utils.js",
+        "line": 423,
+        "text": "try { await fs.promises.rename(tmp, filePath); }"
+      },
+      {
+        "file": "lib/photo-utils.js",
+        "line": 424,
+        "text": "catch (error) { try { await fs.promises.unlink(tmp); } catch (_) {} throw error; }"
+      },
+      {
         "file": "lib/server/account-service.js",
         "line": 69,
         "text": "// must never silently rename an existing legacy `admin` account."
@@ -3476,67 +3666,77 @@
       },
       {
         "file": "lib/server/admin-diagnostics-routes.js",
-        "line": 139,
+        "line": 140,
         "text": "await fs.promises.writeFile(p, buf, { mode: 0o600 });"
       },
       {
         "file": "lib/server/admin-diagnostics-routes.js",
-        "line": 140,
+        "line": 141,
         "text": "await fs.promises.unlink(p).catch(() => {});"
       },
       {
         "file": "lib/server/admin-photo-routes.js",
-        "line": 593,
+        "line": 618,
         "text": "const dxPix = imageDimensions(dest); if (dxPix && dxPix.w * dxPix.h > IMAGE_MAX_PIXELS) { fs.unlink(dest, () => {}); return res.status(413).json({ error:'image-too-many-pixels', maxPixels: IMAGE_MAX_PIXELS }); }"
       },
       {
         "file": "lib/server/admin-photo-routes.js",
-        "line": 599,
+        "line": 623,
+        "text": "fs.unlink(dest, () => {});"
+      },
+      {
+        "file": "lib/server/admin-photo-routes.js",
+        "line": 633,
         "text": "if (dlpDecision(req, res, dlpBody, scan, 'photo-edit', { file:dest, name:s.name })) { fs.unlink(dest, () => {}); return; }"
       },
       {
         "file": "lib/server/admin-photo-routes.js",
-        "line": 601,
-        "text": "const hashLock = await acquireManagedPhotoHashResponseLock(res, sha256); if (!hashLock) { fs.unlink(dest, () => {}); return; }"
+        "line": 635,
+        "text": "const hashLock = await acquireManagedPhotoHashResponseLock(res, finalSha256); if (!hashLock) { fs.unlink(dest, () => {}); return; }"
       },
       {
         "file": "lib/server/admin-photo-routes.js",
-        "line": 603,
-        "text": "if (duplicate && !/^(1|true|yes|on)$/i.test(String(req.query.duplicateOverride || ''))) { fs.unlink(dest, () => {}); return res.status(409).json({ error:'duplicate-content', duplicate:duplicatePhotoPayload(duplicate,req,false), sha256 }); }"
+        "line": 637,
+        "text": "if (duplicate && !/^(1|true|yes|on)$/i.test(String(req.query.duplicateOverride || ''))) { fs.unlink(dest, () => {}); return res.status(409).json({ error:'duplicate-content', duplicate:duplicatePhotoPayload(duplicate,req,false), sha256:final"
       },
       {
         "file": "lib/server/admin-photo-routes.js",
-        "line": 608,
+        "line": 642,
         "text": "try { archivedVersion = archiveCurrentPhotoVersion(s, { reason:'edit', operations:editOperations }); } catch (e) { fs.unlink(dest, () => {}); return res.status(500).json({ error: 'archive-failed' }); }"
       },
       {
         "file": "lib/server/admin-photo-routes.js",
-        "line": 628,
+        "line": 662,
         "text": "})().catch(() => { fs.unlink(dest, () => {}); if (!res.headersSent) res.status(500).json({ error: 'edit-failed' }); else res.destroy(); });"
       },
       {
         "file": "lib/server/admin-photo-routes.js",
-        "line": 671,
+        "line": 705,
         "text": "const dxPix = imageDimensions(dest); if (dxPix && dxPix.w * dxPix.h > IMAGE_MAX_PIXELS) { fs.unlink(dest, () => {}); return res.status(413).json({ error:'image-too-many-pixels', maxPixels: IMAGE_MAX_PIXELS }); }"
       },
       {
         "file": "lib/server/admin-photo-routes.js",
-        "line": 678,
+        "line": 710,
+        "text": "fs.unlink(dest, () => {});"
+      },
+      {
+        "file": "lib/server/admin-photo-routes.js",
+        "line": 721,
         "text": "if (dlpDecision(req, res, dlpBody, scan, 'photo-upload', { file:dest, name })) { fs.unlink(dest, () => {}); return; }"
       },
       {
         "file": "lib/server/admin-photo-routes.js",
-        "line": 680,
-        "text": "const hashLock = await acquireManagedPhotoHashResponseLock(res, sha256); if (!hashLock) { fs.unlink(dest, () => {}); return; }"
+        "line": 723,
+        "text": "const hashLock = await acquireManagedPhotoHashResponseLock(res, finalSha256); if (!hashLock) { fs.unlink(dest, () => {}); return; }"
       },
       {
         "file": "lib/server/admin-photo-routes.js",
-        "line": 682,
-        "text": "if (duplicate && !/^(1|true|yes|on)$/i.test(String(req.query.duplicateOverride || ''))) { fs.unlink(dest, () => {}); return res.status(409).json({ error:'duplicate-content', duplicate:duplicatePhotoPayload(duplicate,req,false), sha256 }); }"
+        "line": 725,
+        "text": "if (duplicate && !/^(1|true|yes|on)$/i.test(String(req.query.duplicateOverride || ''))) { fs.unlink(dest, () => {}); return res.status(409).json({ error:'duplicate-content', duplicate:duplicatePhotoPayload(duplicate,req,false), sha256:final"
       },
       {
         "file": "lib/server/admin-photo-routes.js",
-        "line": 692,
+        "line": 735,
         "text": "})().catch((e) => { fs.unlink(dest, () => {}); if (!res.headersSent) res.status(500).json({ error:'dlp-scan-failed' }); else res.destroy(); });"
       },
       {
@@ -3571,27 +3771,27 @@
       },
       {
         "file": "lib/server/audit-service.js",
-        "line": 430,
+        "line": 447,
         "text": "// fsync the temporary head before rename. Without this, a power loss could"
       },
       {
         "file": "lib/server/auth-service.js",
-        "line": 351,
+        "line": 354,
         "text": "// account deletion, or username rename."
       },
       {
         "file": "lib/server/backup-service.js",
-        "line": 153,
+        "line": 163,
         "text": "await fs.promises.writeFile(tmp, buf, { mode: 0o600 });"
       },
       {
         "file": "lib/server/backup-service.js",
-        "line": 154,
+        "line": 164,
         "text": "await fs.promises.rename(tmp, path.join(dir, filename));"
       },
       {
         "file": "lib/server/backup-service.js",
-        "line": 161,
+        "line": 171,
         "text": "try { await fs.promises.unlink(path.join(dir, old)); } catch (_) {}"
       },
       {
@@ -3606,7 +3806,12 @@
       },
       {
         "file": "lib/server/ocr-service.js",
-        "line": 220,
+        "line": 167,
+        "text": "if (e && e.code === 'ASVS_L3_PLAINTEXT_CACHE_REJECTED') try { await fs.promises.unlink(CACHE_FILE); } catch (_) {}"
+      },
+      {
+        "file": "lib/server/ocr-service.js",
+        "line": 237,
         "text": "try { await fs.promises.rm(tmp, { recursive:true, force:true }); } catch (_) {}"
       },
       {
@@ -3656,72 +3861,82 @@
       },
       {
         "file": "lib/server/pwa-routes.js",
-        "line": 439,
+        "line": 465,
         "text": "// always sends a default deviceName, which used to clobber a custom rename on every"
       },
       {
         "file": "lib/server/pwa-routes.js",
-        "line": 440,
+        "line": 466,
         "text": "// sign-in. The name is only set when the device is first issued, or via explicit rename."
       },
       {
         "file": "lib/server/pwa-routes.js",
-        "line": 1434,
+        "line": 1480,
         "text": "const dxPix = imageDimensions(dest); if (dxPix && dxPix.w * dxPix.h > IMAGE_MAX_PIXELS) { fs.unlink(dest, () => {}); return res.status(413).json({ error:'image-too-many-pixels', maxPixels: IMAGE_MAX_PIXELS }); }"
       },
       {
         "file": "lib/server/pwa-routes.js",
-        "line": 1441,
+        "line": 1485,
+        "text": "fs.unlink(dest, () => {});"
+      },
+      {
+        "file": "lib/server/pwa-routes.js",
+        "line": 1496,
         "text": "if (dlpDecision(req, res, dlpBody, scan, 'pwa-photo-replace', { file:dest, name:nextName })) { fs.unlink(dest, () => {}); return; }"
       },
       {
         "file": "lib/server/pwa-routes.js",
-        "line": 1443,
-        "text": "const hashLock = await acquireManagedPhotoHashResponseLock(res, sha256); if (!hashLock) { fs.unlink(dest, () => {}); return; }"
+        "line": 1498,
+        "text": "const hashLock = await acquireManagedPhotoHashResponseLock(res, finalSha256); if (!hashLock) { fs.unlink(dest, () => {}); return; }"
       },
       {
         "file": "lib/server/pwa-routes.js",
-        "line": 1445,
-        "text": "if (duplicate && !/^(1|true|yes|on)$/i.test(String(req.query.duplicateOverride || ''))) { fs.unlink(dest, () => {}); return res.status(409).json({ error:'duplicate-content', duplicate:duplicatePhotoPayload(duplicate,req,true), sha256 }); }"
+        "line": 1500,
+        "text": "if (duplicate && !/^(1|true|yes|on)$/i.test(String(req.query.duplicateOverride || ''))) { fs.unlink(dest, () => {}); return res.status(409).json({ error:'duplicate-content', duplicate:duplicatePhotoPayload(duplicate,req,true), sha256:finalS"
       },
       {
         "file": "lib/server/pwa-routes.js",
-        "line": 1450,
+        "line": 1505,
         "text": "try { archivedVersion = archiveCurrentPhotoVersion(photo, { reason:'edit', operations:editOperations }); } catch (e) { fs.unlink(dest, () => {}); return res.status(500).json({ error: 'archive-failed' }); }"
       },
       {
         "file": "lib/server/pwa-routes.js",
-        "line": 1470,
+        "line": 1525,
         "text": "})().catch(() => { fs.unlink(dest, () => {}); if (!res.headersSent) res.status(500).json({ error:'dlp-scan-failed' }); else res.destroy(); });"
       },
       {
         "file": "lib/server/pwa-routes.js",
-        "line": 1488,
+        "line": 1543,
         "text": "const dxPix = imageDimensions(dest); if (dxPix && dxPix.w * dxPix.h > IMAGE_MAX_PIXELS) { fs.unlink(dest, () => {}); return res.status(413).json({ error:'image-too-many-pixels', maxPixels: IMAGE_MAX_PIXELS }); }"
       },
       {
         "file": "lib/server/pwa-routes.js",
-        "line": 1495,
+        "line": 1548,
+        "text": "fs.unlink(dest, () => {});"
+      },
+      {
+        "file": "lib/server/pwa-routes.js",
+        "line": 1559,
         "text": "if (dlpDecision(req, res, dlpBody, scan, 'pwa-photo-create', { file:dest, name })) { fs.unlink(dest, () => {}); return; }"
       },
       {
         "file": "lib/server/pwa-routes.js",
-        "line": 1497,
-        "text": "const hashLock = await acquireManagedPhotoHashResponseLock(res, sha256); if (!hashLock) { fs.unlink(dest, () => {}); return; }"
+        "line": 1561,
+        "text": "const hashLock = await acquireManagedPhotoHashResponseLock(res, finalSha256); if (!hashLock) { fs.unlink(dest, () => {}); return; }"
       },
       {
         "file": "lib/server/pwa-routes.js",
-        "line": 1499,
-        "text": "if (duplicate && !/^(1|true|yes|on)$/i.test(String(req.query.duplicateOverride || ''))) { fs.unlink(dest, () => {}); return res.status(409).json({ error:'duplicate-content', duplicate:duplicatePhotoPayload(duplicate,req,true), sha256 }); }"
+        "line": 1563,
+        "text": "if (duplicate && !/^(1|true|yes|on)$/i.test(String(req.query.duplicateOverride || ''))) { fs.unlink(dest, () => {}); return res.status(409).json({ error:'duplicate-content', duplicate:duplicatePhotoPayload(duplicate,req,true), sha256:finalS"
       },
       {
         "file": "lib/server/pwa-routes.js",
-        "line": 1517,
+        "line": 1581,
         "text": "})().catch(() => { fs.unlink(dest, () => {}); if (!res.headersSent) res.status(500).json({ error:'dlp-scan-failed' }); else res.destroy(); });"
       },
       {
         "file": "lib/server/pwa-routes.js",
-        "line": 2224,
+        "line": 2289,
         "text": "app.post('/app/device/rename', pwaJsonParser, (req, res) => {"
       },
       {
@@ -3885,48 +4100,53 @@
         "text": "// Never unlink first: a crash between unlink and rename would lose the"
       },
       {
+        "file": "lib/server/search-service.js",
+        "line": 173,
+        "text": "if (e && e.code === 'ASVS_L3_PLAINTEXT_CACHE_REJECTED') try { await fs.promises.unlink(INDEX_FILE); } catch (_) {}"
+      },
+      {
         "file": "lib/server/share-service.js",
         "line": 1198,
         "text": "try { await fs.promises.unlink(candidate); }"
       },
       {
         "file": "lib/server/share-service.js",
-        "line": 1221,
+        "line": 1239,
         "text": "try { await fs.promises.unlink(managedPending.abs); }"
       },
       {
         "file": "lib/server/share-service.js",
-        "line": 1230,
+        "line": 1248,
         "text": "if(managedEnc){try{await fs.promises.unlink(managedEnc.abs);}catch(e){if(!e||e.code!=='ENOENT')throw e;}}"
       },
       {
         "file": "lib/server/share-service.js",
-        "line": 1237,
+        "line": 1255,
         "text": "assertCurrent(); const d=photoVersionDir(sh.token);if(d)await fs.promises.rm(d,{recursive:true,force:true});"
       },
       {
         "file": "lib/server/share-service.js",
-        "line": 1246,
+        "line": 1264,
         "text": "if(managedInbox) await fs.promises.rm(managedInbox.abs,{recursive:true,force:true});"
       },
       {
         "file": "lib/server/state-store.js",
-        "line": 30,
+        "line": 33,
         "text": "if (!fs || typeof fs.readFileSync !== 'function' || typeof fs.writeFile !== 'function') {"
       },
       {
         "file": "lib/server/state-store.js",
-        "line": 62,
+        "line": 76,
         "text": "fs.unlink(file, () => { if (done) done(); });"
       },
       {
         "file": "lib/server/state-store.js",
-        "line": 160,
+        "line": 198,
         "text": "fs.writeFile(tempFile, snapshot, { mode: 0o600 }, (error) => {"
       },
       {
         "file": "lib/server/state-store.js",
-        "line": 180,
+        "line": 218,
         "text": "logError('[store] rename failed:', renameError);"
       },
       {
@@ -3936,77 +4156,77 @@
       },
       {
         "file": "lib/server/upload-reception-service.js",
-        "line": 579,
+        "line": 584,
         "text": "try { await fs.promises.unlink(candidate); } catch (_) {}"
       },
       {
         "file": "lib/server/upload-reception-service.js",
-        "line": 729,
+        "line": 734,
         "text": "try { await fs.promises.rename(srcPart, dest); }"
       },
       {
         "file": "lib/server/upload-reception-service.js",
-        "line": 731,
+        "line": 736,
         "text": "try { await fs.promises.copyFile(srcPart, dest); await fs.promises.unlink(srcPart); }"
       },
       {
         "file": "lib/server/upload-reception-service.js",
-        "line": 749,
+        "line": 754,
         "text": "try { await fs.promises.unlink(dest); } catch (_) {}"
       },
       {
         "file": "lib/server/upload-reception-service.js",
-        "line": 761,
+        "line": 766,
         "text": "// short rename→metadata insertion window."
       },
       {
         "file": "lib/server/upload-reception-service.js",
-        "line": 773,
+        "line": 778,
         "text": "await fs.promises.unlink(file); removed += 1;"
       },
       {
         "file": "lib/server/upload-reception-service.js",
-        "line": 822,
+        "line": 827,
         "text": "try { await fs.promises.rename(target, restorePath); return true; }"
       },
       {
         "file": "lib/server/upload-reception-service.js",
-        "line": 824,
+        "line": 829,
         "text": "try { await fs.promises.copyFile(target, restorePath); await fs.promises.unlink(target); return true; }"
       },
       {
         "file": "lib/server/upload-reception-service.js",
-        "line": 828,
+        "line": 833,
         "text": "await fs.promises.unlink(target); return true;"
       },
       {
         "file": "lib/server/upload-reception-service.js",
-        "line": 860,
+        "line": 865,
         "text": "try { await fs.promises.rename(src, dest); }"
       },
       {
         "file": "lib/server/upload-reception-service.js",
-        "line": 862,
+        "line": 867,
         "text": "try { await fs.promises.copyFile(src, dest); await fs.promises.unlink(src); }"
       },
       {
         "file": "lib/server/upload-reception-service.js",
-        "line": 863,
+        "line": 868,
         "text": "catch (e) { try { await fs.promises.unlink(dest); } catch (_) {} return { error: 'write-error' }; }"
       },
       {
         "file": "lib/server/upload-reception-service.js",
-        "line": 924,
+        "line": 945,
         "text": "try { await fs.promises.rename(src, dest); } catch (_) { try { await fs.promises.unlink(src); } catch (e) {} }"
       },
       {
         "file": "lib/server/upload-reception-service.js",
-        "line": 945,
+        "line": 966,
         "text": "try { await fs.promises.rename(part, dest); } catch (_) { try { await fs.promises.unlink(part); } catch (_) {} }"
       },
       {
         "file": "lib/server/upload-reception-service.js",
-        "line": 969,
+        "line": 990,
         "text": "fs.stat(p, (e, st) => { if (!e && st.mtimeMs < cutoff) fs.unlink(p, () => {}); });"
       },
       {
@@ -4408,6 +4628,21 @@
         "file": "pwa/app.js",
         "line": 11129,
         "text": "if ($('bulk-rename-btn')) $('bulk-rename-btn').addEventListener('click', bulkRename);"
+      },
+      {
+        "file": "scripts/asvs-l3-partial-audit.js",
+        "line": 65,
+        "text": "collect(/\\bfs(?:\\.promises)?\\.(?:writeFile|rename|unlink|rm|copyFile|mkdir|open)\\s*\\(/g, inventories.filesystemMutations, 'filesystem-mutation');"
+      },
+      {
+        "file": "scripts/asvs-l3-partial-audit.js",
+        "line": 138,
+        "text": "requireAnchors('V15.2.3','minimal production runtime',[['Dockerfile','npm ci --omit=dev'],['Dockerfile','rm -rf /usr/local/lib/node_modules/npm'],['.github/workflows/build-windows-csharp.yml','prune-windows-node-modules.ps1']]),"
+      },
+      {
+        "file": "scripts/asvs-l3-partial-audit.js",
+        "line": 143,
+        "text": "requireAnchors('V15.4.2','TOCTOU/atomic filesystem operations',[['lib/server/host-path-service.js','realpath'],['lib/server/share-service.js','purgePendingAt'],['lib/photo-utils.js','fs.promises.rename(tmp, filePath)']]),"
       },
       {
         "file": "scripts/security-inventory.js",

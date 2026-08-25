@@ -1,6 +1,6 @@
 {
   "name": "direct-xfer",
-  "version": "1.70.24",
+  "version": "1.70.27",
   "description": "Direct-Xfer — direct HTTP file sharing, no third-party server. Web interface, revocable shares, automatic IP detection and port testing.",
   "main": "server.js",
   "type": "commonjs",
@@ -11,7 +11,13 @@
     "test:historical": "node --test test-historical/*.test.js",
     "asvs:l3:check": "node scripts/asvs-l3-check.js",
     "security:inventory": "node scripts/security-inventory.js",
-    "security:static-audit": "node scripts/asvs-static-audit.js --write"
+    "security:static-audit": "node scripts/asvs-static-audit.js --write",
+    "security:partial-audit": "node scripts/asvs-l3-partial-audit.js --write",
+    "asvs:l3:evidence:verify": "node scripts/asvs-l3-evidence-verify.js",
+    "asvs:l3:evidence:sign": "node scripts/asvs-l3-evidence-sign.js",
+    "asvs:l3:migrate-state": "node scripts/asvs-l3-migrate-state.js",
+    "asvs:l3:migrate-audit": "node scripts/asvs-l3-migrate-audit.js",
+    "asvs:l3:migrate-backup": "node scripts/asvs-l3-migrate-backup.js"
   },
   "engines": {
     "node": "20 || >=22"

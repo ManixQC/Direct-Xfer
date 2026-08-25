@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "generatedAt": "2026-08-25T18:41:05.181Z",
-  "version": "1.71.4",
-  "sourceTreeSha256": "7b2dea32770e1ebee25c35b294d450ee3caf43b0caa9b55bde3bfd1c6f5f12d4",
+  "generatedAt": "2026-08-25T20:58:00.831Z",
+  "version": "1.71.5",
+  "sourceTreeSha256": "98fd02b32e19065f57698af90f0679616eb7112d466db5840db22c0fdbcd8ac6",
   "filesScanned": 127,
   "scope": [
     "server.js",

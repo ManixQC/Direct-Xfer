@@ -1,0 +1,171 @@
+name: Repair and bump Direct-Xfer 1.71.5
+
+on:
+  push:
+    paths:
+      - '.github/workflows/repair-release-1.71.5.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Resolve accidental merge markers and bump 1.71.5
+        shell: python
+        run: |
+          from pathlib import Path
+          import json
+
+          ROOT = Path('.')
+          OLD = '1.71.4'
+          NEW = '1.71.5'
+          OLD_BUILD = 'pwa467'
+          NEW_BUILD = 'pwa468'
+          OLD_CACHE = 'v=448'
+          NEW_CACHE = 'v=449'
+
+          def resolve_theirs(text: str):
+              lines = text.splitlines(keepends=True)
+              out = []
+              conflicts = 0
+              i = 0
+              while i < len(lines):
+                  if lines[i].startswith('<<<<<<< '):
+                      conflicts += 1
+                      i += 1
+                      while i < len(lines) and not lines[i].startswith('======='):
+                          i += 1
+                      if i >= len(lines):
+                          raise RuntimeError('Malformed conflict: missing =======')
+                      i += 1
+                      chosen = []
+                      while i < len(lines) and not lines[i].startswith('>>>>>>> '):
+                          chosen.append(lines[i])
+                          i += 1
+                      if i >= len(lines):
+                          raise RuntimeError('Malformed conflict: missing >>>>>>>')
+                      out.extend(chosen)
+                      i += 1
+                      continue
+                  out.append(lines[i])
+                  i += 1
+              return ''.join(out), conflicts
+
+          repaired_files = []
+          conflict_count = 0
+          for path in ROOT.rglob('*'):
+              if not path.is_file() or '.git' in path.parts or path.parts[:2] == ('.github', 'workflows'):
+                  continue
+              try:
+                  text = path.read_text(encoding='utf-8')
+              except (UnicodeDecodeError, OSError):
+                  continue
+              if '<<<<<<< ' not in text:
+                  continue
+              repaired, count = resolve_theirs(text)
+              if count:
+                  for marker in ('<<<<<<< ', '=======', '>>>>>>> '):
+                      if any(line.startswith(marker) for line in repaired.splitlines()):
+                          raise RuntimeError(f'Unresolved merge marker remains in {path}: {marker}')
+                  path.write_text(repaired, encoding='utf-8', newline='\n')
+                  repaired_files.append(str(path))
+                  conflict_count += count
+
+          if conflict_count == 0:
+              raise RuntimeError('Expected accidental merge markers, found none')
+          print(f'Resolved {conflict_count} conflict blocks in {len(repaired_files)} files')
+          for name in repaired_files:
+              print('  repaired:', name)
+
+          # Structured package metadata updates avoid touching third-party versions in the lockfile.
+          for rel in ('package.json', 'oauth-broker/package.json', 'oauth-broker/cloudflare-worker/package.json'):
+              path = Path(rel)
+              data = json.loads(path.read_text(encoding='utf-8'))
+              data['version'] = NEW
+              path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+          lock_path = Path('package-lock.json')
+          lock = json.loads(lock_path.read_text(encoding='utf-8'))
+          lock['version'] = NEW
+          lock['packages']['']['version'] = NEW
+          lock_path.write_text(json.dumps(lock, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+          # Release surfaces and regression expectations that intentionally track the current build.
+          targets = []
+          targets += [p for p in Path('pwa').rglob('*') if p.is_file()]
+          targets += [Path('public/index.html'), Path('installer/Direct-Xfer.iss')]
+          targets += [p for p in Path('security').rglob('*') if p.is_file()]
+          targets += [p for p in Path('test').rglob('*.js') if p.is_file()]
+          targets += [p for p in Path('signpath').rglob('*') if p.is_file()]
+
+          seen = set()
+          for path in targets:
+              if path in seen or not path.exists():
+                  continue
+              seen.add(path)
+              try:
+                  text = path.read_text(encoding='utf-8')
+              except UnicodeDecodeError:
+                  continue
+              updated = text.replace(OLD, NEW).replace(OLD_BUILD, NEW_BUILD).replace(OLD_CACHE, NEW_CACHE)
+              if updated != text:
+                  path.write_text(updated, encoding='utf-8', newline='\n')
+
+          # Keep the standard admin first-paint version marker synchronized.
+          public_index = Path('public/index.html')
+          text = public_index.read_text(encoding='utf-8').replace('/theme-init.js?v=1.71.4', '/theme-init.js?v=1.71.5')
+          public_index.write_text(text, encoding='utf-8', newline='\n')
+
+          # Fail closed if any real merge marker remains outside workflow files.
+          leftovers = []
+          for path in ROOT.rglob('*'):
+              if not path.is_file() or '.git' in path.parts or path.parts[:2] == ('.github', 'workflows'):
+                  continue
+              try:
+                  lines = path.read_text(encoding='utf-8').splitlines()
+              except (UnicodeDecodeError, OSError):
+                  continue
+              if any(line.startswith(('<<<<<<< ', '=======', '>>>>>>> ')) for line in lines):
+                  leftovers.append(str(path))
+          if leftovers:
+              raise RuntimeError('Unresolved merge markers: ' + ', '.join(leftovers))
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Regenerate security inventories and Windows integrity manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run security:inventory
+          npm run security:static-audit
+          node scripts/asvs-l3-partial-audit.js --write
+          node scripts/sync-windows-runtime-manifest.js
+
+      - name: Validate source and tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' file; do node --check "$file"; done < <(find . -type f -name '*.js' -not -path './node_modules/*' -print0)
+          npm test
+
+      - name: Commit repaired 1.71.5 tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A -- ':!.github/workflows'
+          git diff --cached --check
+          if git diff --cached --quiet; then
+            echo 'No repair changes to commit.'
+            exit 1
+          fi
+          git commit -m 'v1.71.5 repair merge markers and release metadata'
+          git push origin HEAD:main

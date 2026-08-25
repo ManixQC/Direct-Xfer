@@ -1,0 +1,183 @@
+name: Bump Direct-Xfer 1.71.6
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/bump-release-1.71.6.yml'
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  bump-test-package:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Bump release metadata to 1.71.6
+        shell: python
+        run: |
+          from pathlib import Path
+          import json
+
+          OLD = '1.71.5'
+          NEW = '1.71.6'
+          OLD_BUILD = 'pwa468'
+          NEW_BUILD = 'pwa469'
+          OLD_CACHE = 'v=449'
+          NEW_CACHE = 'v=450'
+
+          skip_roots = {'.git', 'node_modules', 'build', 'dist'}
+          changed = []
+
+          for path in Path('.').rglob('*'):
+              if not path.is_file():
+                  continue
+              if any(part in skip_roots for part in path.parts):
+                  continue
+              if path.parts[:2] == ('.github', 'workflows'):
+                  continue
+              try:
+                  text = path.read_text(encoding='utf-8')
+              except (UnicodeDecodeError, OSError):
+                  continue
+
+              updated = text.replace(OLD, NEW)
+              escaped_old = OLD.replace('.', '\\.')
+              escaped_new = NEW.replace('.', '\\.')
+              updated = updated.replace(escaped_old, escaped_new)
+              updated = updated.replace(OLD_BUILD, NEW_BUILD)
+              updated = updated.replace(OLD_CACHE, NEW_CACHE)
+              if updated != text:
+                  path.write_text(updated, encoding='utf-8', newline='\n')
+                  changed.append(str(path))
+
+          # The Windows workflow is validated by tests but is persisted separately after
+          # the tested source tree commit, because GITHUB_TOKEN workflow-file writes are
+          # intentionally avoided here.
+          windows = Path('.github/workflows/build-windows-csharp.yml')
+          text = windows.read_text(encoding='utf-8')
+          updated = text.replace('run-name: v1.71.5', 'run-name: v1.71.6')
+          updated = updated.replace("DX_VERSION: '1.71.5'", "DX_VERSION: '1.71.6'")
+          if updated == text:
+              raise RuntimeError('Windows workflow 1.71.5 markers were not found')
+          windows.write_text(updated, encoding='utf-8', newline='\n')
+
+          # Canonical JSON version fields must be exact even if surrounding formatting changes.
+          for rel in ('package.json', 'oauth-broker/package.json', 'oauth-broker/cloudflare-worker/package.json'):
+              path = Path(rel)
+              data = json.loads(path.read_text(encoding='utf-8'))
+              data['version'] = NEW
+              path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+          lock_path = Path('package-lock.json')
+          lock = json.loads(lock_path.read_text(encoding='utf-8'))
+          lock['version'] = NEW
+          lock['packages']['']['version'] = NEW
+          lock_path.write_text(json.dumps(lock, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+          # Fail closed on stale escaped assertions in tests.
+          stale = []
+          escaped_old = OLD.replace('.', '\\.')
+          for path in Path('test').rglob('*.js'):
+              text = path.read_text(encoding='utf-8')
+              if OLD in text or escaped_old in text:
+                  stale.append(str(path))
+          if stale:
+              raise RuntimeError('Stale 1.71.5 release assertions remain: ' + ', '.join(stale))
+
+          print(f'Updated {len(changed)} tracked source files to {NEW}')
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Regenerate security inventories and Windows integrity manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run security:inventory
+          npm run security:static-audit
+          node scripts/asvs-l3-partial-audit.js --write
+          node scripts/sync-windows-runtime-manifest.js
+
+      - name: Validate source and tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' file; do node --check "$file"; done < <(find . -type f -name '*.js' -not -path './node_modules/*' -print0)
+          npm test
+
+      - name: Normalize and commit tested 1.71.6 source tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A -- ':!.github/workflows'
+
+          python - <<'PY'
+          from pathlib import Path
+          import subprocess
+
+          names = subprocess.check_output(['git', 'diff', '--cached', '--name-only', '-z']).decode().split('\0')
+          for name in filter(None, names):
+              path = Path(name)
+              if not path.is_file():
+                  continue
+              try:
+                  text = path.read_text(encoding='utf-8')
+              except (UnicodeDecodeError, OSError):
+                  continue
+              lines = text.splitlines(keepends=True)
+              normalized = ''.join(
+                  line.rstrip(' \t\r\n') + ('\n' if line.endswith(('\n', '\r')) else '')
+                  for line in lines
+              )
+              if normalized != text:
+                  path.write_text(normalized, encoding='utf-8', newline='\n')
+          PY
+
+          git add -A -- ':!.github/workflows'
+          git diff --cached --check
+          if git diff --cached --quiet; then
+            echo 'No 1.71.6 source changes to commit.' >&2
+            exit 1
+          fi
+          git commit -m 'v1.71.6 synchronize release metadata'
+          git push origin HEAD:main
+
+      - name: Build Direct-Xfer 1.71.6 source ZIP
+        shell: python
+        run: |
+          from pathlib import Path
+          import subprocess
+          import zipfile
+
+          out = Path('Direct-Xfer-1.71.6.zip')
+          files = subprocess.check_output(['git', 'ls-files', '-z']).decode().split('\0')
+          excluded = {
+              '.github/workflows/bump-release-1.71.6.yml',
+          }
+          with zipfile.ZipFile(out, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
+              for name in filter(None, files):
+                  if name in excluded:
+                      continue
+                  base = Path(name).name
+                  if base.startswith('AUDIT') or base.startswith('README-PATCH') or base.startswith('UNSIGNED-WINDOWS-'):
+                      continue
+                  path = Path(name)
+                  if path.is_file():
+                      zf.write(path, f'Direct-Xfer/{name}')
+          print(f'Created {out} ({out.stat().st_size} bytes)')
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: Direct-Xfer-1.71.6-source
+          path: Direct-Xfer-1.71.6.zip
+          if-no-files-found: error
+          retention-days: 7

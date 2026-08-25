@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "generatedAt": "2026-08-25T16:59:17.453Z",
-  "version": "1.71.2",
-  "sourceTreeSha256": "9fdee34a34737bea820e0716e0efa83841f4c514aa2b54f4030fc02a6157f73c",
+  "generatedAt": "2026-08-25T18:19:27.180Z",
+  "version": "1.71.3",
+  "sourceTreeSha256": "b5bc26b7f563965be541b300dbcb8d7e61474b3ee4313433086225579d6945fc",
   "filesScanned": 127,
   "scope": [
     "server.js",
@@ -14346,7 +14346,7 @@
       ]
     },
     "filesystemMutations": {
-      "count": 160,
+      "count": 159,
       "rows": [
         {
           "file": "lib/fd-utils.js",
@@ -15135,17 +15135,12 @@
         },
         {
           "file": "lib/web-storage-writable.js",
-          "line": 268,
+          "line": 267,
           "token": "filesystem-mutation"
         },
         {
           "file": "lib/web-storage-writable.js",
-          "line": 279,
-          "token": "filesystem-mutation"
-        },
-        {
-          "file": "lib/web-storage-writable.js",
-          "line": 305,
+          "line": 321,
           "token": "filesystem-mutation"
         }
       ]

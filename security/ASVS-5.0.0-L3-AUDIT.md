@@ -3,19 +3,19 @@
 Audit date: 2026-08-25  
 Target: OWASP Application Security Verification Standard 5.0.0, Level 3  
 Repository: `ManixQC/Direct-Xfer`  
-Release: Direct-Xfer `1.71.2`  
+Release: Direct-Xfer `1.71.3`  
 Baseline input: Direct-Xfer `1.70.26` ASVS-L3 release  
 Detailed matrix: `security/ASVS-5.0.0-L3-MATRIX.md`
 
 ## Release verification result
 
-Direct-Xfer 1.71.2 is a release/version synchronization bump over the fully corrected 1.71.1 source. No functional security-control behavior is intentionally changed by this bump; package metadata, PWA cache generation, OAuth broker metadata, Windows workflow metadata, SBOM and ASVS release evidence are synchronized to the new release. The status matrix remains 253 PASS / 92 N/A / 0 MANUAL / 0 PARTIAL / 0 FAIL / 0 REVIEW.
+Direct-Xfer 1.71.3 is a Windows resumable cloud-upload cleanup correction over 1.71.2. The upload writer now reaches its `close` event before an incomplete chunk response or finalization proceeds, and cancellation removes an already-closed staging file synchronously. This eliminates the Windows `EPERM` race observed by the `build-windows` workflow when a conflicting upload ID is aborted and its temporary directory is removed immediately. The status matrix remains 253 PASS / 92 N/A / 0 MANUAL / 0 PARTIAL / 0 FAIL / 0 REVIEW.
 
-### 1.71.2 release synchronization
+### 1.71.3 Windows resumable-upload cleanup correction
 
-- Application/package metadata is synchronized to `1.71.2`, with PWA generation `pwa465` and refreshed cache-busters so clients do not retain 1.71.1 assets.
-- The corrected 1.71.1 System Health detailed-diagnostic summary behavior is carried forward unchanged: a completed diagnostic is not overwritten by the translated static “not run” placeholder during refresh.
-- Release-specific ASVS evidence, SBOM metadata and Windows build artifact names are bound to 1.71.2.
+- `lib/web-storage-writable.js` finalizes completed/incomplete cloud chunks only after the `WriteStream` has released its file descriptor, avoiding Windows file-lock races during subsequent cancellation or cleanup.
+- Explicit cancellation synchronously removes a staging part when the writer is already closed and otherwise defers removal until `close`; a regression test verifies the staging file is gone before immediate cleanup continues.
+- Application/package metadata is synchronized to `1.71.3`, with PWA generation `pwa466` and refreshed cache-busters. OAuth broker metadata, Windows workflow artifact names, SBOM and ASVS release evidence are synchronized to the new release.
 
 ### 1.70.29 reverse-proxy System Health correction
 
@@ -47,12 +47,12 @@ Direct-Xfer 1.70.26 closes the 26 deployment-bound `MANUAL` rows from 1.70.25 wi
 Repository/release gates completed for this candidate:
 
 - ASVS regression suite: `node --test test/asvs-l3-*.test.js` — **96 passed, 0 failed, 0 skipped**.
-- Full current regression tree: **1133 passed, 0 failed, 0 skipped across all 189 `test/*.test.js` files**, verified in isolated groups. The monolithic Node test-runner invocation exceeds the constrained release harness execution window because several integration tests keep process resources alive after reporting; no individual or grouped test failure was observed.
+- Full current regression tree: **1134 passed, 0 failed, 0 skipped across all 189 `test/*.test.js` files** in the normal `npm test` run.
 - Static ASVS audit: **PASS** — 127 production JavaScript source files, 13 reviewed decoder sites.
 - PARTIAL-closure audit: **PASS** — 127 production JavaScript source files, 38 repository-verifiable controls, 0 blocking findings.
-- Security inventory regenerated for 1.71.2 — **959 entries**.
+- Security inventory regenerated for 1.71.3 — **959 entries**.
 - Windows ServerHost critical runtime manifest: **103 entries, 0 stale hashes** after final synchronization.
-- CycloneDX SBOM root component synchronized to 1.71.2.
+- CycloneDX SBOM root component synchronized to 1.71.3.
 
 This document is an implementation/evidence audit, not a third-party certification. A production installation can operate in `ASVS_L3_MODE=true` only while all mandatory runtime controls and the signed deployment evidence are valid.
 
@@ -128,16 +128,16 @@ The direct dependency graph remains lockfile-pinned. V15.2.1 is no longer an ope
 
 ## Final release gates
 
-- [x] package and lockfile version synchronized to 1.71.2.
-- [x] PWA version/cache generation synchronized to 1.71.2 / pwa465.
+- [x] package and lockfile version synchronized to 1.71.3.
+- [x] PWA version/cache generation synchronized to 1.71.3 / pwa466.
 - [x] ASVS regression suite green (96/96).
-- [x] Complete current test tree green (1133/1133 across 189 files in twelve isolated groups).
+- [x] Complete current test tree green (1134/1134 across 189 files).
 - [x] Static ASVS audit green.
 - [x] PARTIAL-closure audit green.
 - [x] Security inventory regenerated.
 - [x] Windows runtime integrity manifest synchronized and rechecked.
 - [x] Matrix has 0 MANUAL, 0 PARTIAL, 0 FAIL and 0 REVIEW.
-- [x] SBOM root component synchronized to 1.71.2.
+- [x] SBOM root component synchronized to 1.71.3.
 - [x] Former operator-declared manual-attestation flags removed from the L3 configuration surface.
 
 Independent review of N/A decisions, production evidence collection and a focused penetration test remain appropriate before making an external certification/compliance representation.

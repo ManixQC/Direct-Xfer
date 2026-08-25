@@ -1,7 +1,7 @@
 'use strict';
 (function () {
-  var RELEASE = (window.__DX_PWA_RELEASE && window.__DX_PWA_RELEASE.version) || '1.71.2';
-  var BUILD = (window.__DX_PWA_RELEASE && window.__DX_PWA_RELEASE.build) || '2026.08.25-pwa465';
+  var RELEASE = (window.__DX_PWA_RELEASE && window.__DX_PWA_RELEASE.version) || '1.71.3';
+  var BUILD = (window.__DX_PWA_RELEASE && window.__DX_PWA_RELEASE.build) || '2026.08.25-pwa466';
   var adminAccess = false;
   var accessAnnounced = false;
   var refreshTimer = 0;
@@ -78,7 +78,7 @@
 
   function addStyles(){
     if(!document.getElementById('dx-server-health-standard-css')){
-      var link=document.createElement('link');link.id='dx-server-health-standard-css';link.rel='stylesheet';link.href='/server-health-dashboard.css?v=446';document.head.appendChild(link);
+      var link=document.createElement('link');link.id='dx-server-health-standard-css';link.rel='stylesheet';link.href='/server-health-dashboard.css?v=447';document.head.appendChild(link);
     }
     if(document.getElementById('dx-admin-advanced-style'))return;
     var s=document.createElement('style');s.id='dx-admin-advanced-style';s.textContent=`

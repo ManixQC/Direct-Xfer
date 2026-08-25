@@ -93,6 +93,17 @@ test('an in-progress upload id cannot be retargeted to a different cloud path or
   fs.rmSync(temp,{recursive:true,force:true});
 });
 
+test('cancelling an incomplete cloud upload releases its closed staging file before returning', async () => {
+  const temp=fs.mkdtempSync(path.join(os.tmpdir(),'dx-cloud-cancel-cleanup-')); const f=uploadFixture(temp), share=fakeShare('collab');
+  const first=await sendChunk(f,share,{data:'abc',offset:0,size:6});
+  assert.equal(first.statusCode,409);
+  const part=path.join(temp,'s1-u1.part');
+  assert.equal(fs.existsSync(part),true);
+  f.uploadTransfers.get('s1:u1').abort();
+  assert.equal(fs.existsSync(part),false);
+  fs.rmSync(temp,{recursive:true,force:true});
+});
+
 test('unexpected cloud finalization failures are contained and leave resumable staging available', async () => {
   const temp=fs.mkdtempSync(path.join(os.tmpdir(),'dx-cloud-finalize-')); const f=uploadFixture(temp,{deps:{applyReceptionAccountingState(){throw new Error('boom');}}}), share=fakeShare('inbox');
   const response=await sendChunk(f,share,{data:'abc',offset:0,size:3});

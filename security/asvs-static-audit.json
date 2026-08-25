@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-08-25T16:59:15.607Z",
+  "generatedAt": "2026-08-25T18:19:26.930Z",
   "scope": [
     "server.js",
     "lib",
@@ -10,7 +10,7 @@
     "oauth-broker/cloudflare-worker/src"
   ],
   "filesScanned": 127,
-  "regexLiteralEstimate": 4539,
+  "regexLiteralEstimate": 4540,
   "decoderInventory": [
     {
       "file": "lib/assets/oauth-broker-worker.mjs",

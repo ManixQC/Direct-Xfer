@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-08-25T16:59:17.717Z",
-  "version": "1.71.2",
+  "generatedAt": "2026-08-25T18:18:21.699Z",
+  "version": "1.71.3",
   "categories": {
     "crypto": [
       {
@@ -3325,7 +3325,7 @@
       {
         "file": "test/pwa-admin-features-15-19-21-1.64.0.test.js",
         "line": 196,
-        "text": "const asset = await fetch(base + '/app/admin-audit-connectors.js?v=446');"
+        "text": "const asset = await fetch(base + '/app/admin-audit-connectors.js?v=447');"
       },
       {
         "file": "test/pwa-admin-features-15-19-21-1.64.0.test.js",
@@ -3375,7 +3375,7 @@
       {
         "file": "test/pwa-admin-features-3-7-1.64.0.test.js",
         "line": 218,
-        "text": "const publicAsset = await fetch(base + '/app/admin-advanced.js?v=446');"
+        "text": "const publicAsset = await fetch(base + '/app/admin-advanced.js?v=447');"
       },
       {
         "file": "test/pwa-admin-features-3-7-1.64.0.test.js",
@@ -3465,12 +3465,12 @@
       {
         "file": "test/pwa-mobile-features-24-25-27-29-31-42-45-46-47-1.64.0.test.js",
         "line": 150,
-        "text": "const mod = await fetch(base + '/app/mobile-intelligence.js?v=446');"
+        "text": "const mod = await fetch(base + '/app/mobile-intelligence.js?v=447');"
       },
       {
         "file": "test/pwa-mobile-features-24-25-27-29-31-42-45-46-47-1.64.0.test.js",
         "line": 154,
-        "text": "const r = await fetch(base + '/app/' + name + '?v=446');"
+        "text": "const r = await fetch(base + '/app/' + name + '?v=447');"
       },
       {
         "file": "test/pwa-routes-refactor.test.js",
@@ -4411,22 +4411,22 @@
       },
       {
         "file": "lib/web-storage-writable.js",
-        "line": 268,
-        "text": "try { fs.unlink(part, () => {}); } catch (_) {}"
-      },
-      {
-        "file": "lib/web-storage-writable.js",
-        "line": 274,
+        "line": 263,
         "text": "const ws = fs.createWriteStream(part, { flags:offset ? 'a' : 'w', mode:0o600 });"
       },
       {
         "file": "lib/web-storage-writable.js",
-        "line": 279,
-        "text": "try { fs.unlink(part, () => {}); } catch (_) {}"
+        "line": 267,
+        "text": "catch (_) { try { fs.unlink(part, () => {}); } catch (_) {} }"
       },
       {
         "file": "lib/web-storage-writable.js",
-        "line": 305,
+        "line": 272,
+        "text": "// asynchronous unlink.  Otherwise defer removal until close."
+      },
+      {
+        "file": "lib/web-storage-writable.js",
+        "line": 321,
         "text": "if (!uploadId) { try { await fs.promises.unlink(part); } catch (_) {} }"
       },
       {

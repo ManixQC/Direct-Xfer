@@ -1,0 +1,53 @@
+name: Chain Direct-Xfer release to Windows build
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: 'Git ref containing the already-tested release tree'
+        required: false
+        default: main
+        type: string
+      sign_with_signpath:
+        description: 'Request SignPath Foundation signing for the Windows release'
+        required: false
+        default: false
+        type: boolean
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Git ref containing the already-tested release tree'
+        required: true
+        default: main
+        type: string
+      sign_with_signpath:
+        description: 'Request SignPath Foundation signing for the Windows release'
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: direct-xfer-release-windows-dispatch-${{ inputs.ref || 'main' }}
+  cancel-in-progress: false
+
+jobs:
+  dispatch-windows-build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || 'main' }}
+          fetch-depth: 1
+
+      - name: Validate tested release and dispatch Windows build
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          & '.github/scripts/dispatch-windows-release-build.ps1' `
+            -Ref '${{ inputs.ref || 'main' }}' `
+            -SignWithSignPath ([System.Convert]::ToBoolean('${{ inputs.sign_with_signpath || false }}'))

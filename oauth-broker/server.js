@@ -66,9 +66,9 @@ function html(res, status, title, message, close = false, extraHeaders = {}) {
   res.end(body);
 }
 
-function oauthBrowserCookieName(id) {
-  const safe = String(id || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 160);
-  return safe ? `__Host-dxo_${safe}` : '';
+function newOAuthBrowserCookie() {
+  const suffix = base64url(crypto.randomBytes(12));
+  return `__Host-dxo_${suffix}`;
 }
 function cookieValue(req, name) {
   if (!name) return '';
@@ -222,7 +222,7 @@ async function handle(req, res) {
       const id = base64url(crypto.randomBytes(18)), pollToken = base64url(crypto.randomBytes(32)), state = base64url(crypto.randomBytes(32));
       const verifier = base64url(crypto.randomBytes(48));
       const browserToken = base64url(crypto.randomBytes(32));
-      const item = { id, pollHash:sha256(pollToken), browserHash:sha256(browserToken), state, verifier, version, scope:requestedScope, status:'waiting', error:null, createdAt:Date.now(), updatedAt:Date.now(), result:null };
+      const item = { id, pollHash:sha256(pollToken), browserHash:sha256(browserToken), callbackHash:'', callbackCookie:'', state, verifier, version, scope:requestedScope, status:'waiting', error:null, createdAt:Date.now(), updatedAt:Date.now(), result:null };
       sessions.set(id,item);
       const launch = new URL(`${PUBLIC_URL}/v1/google/authorize`);
       launch.searchParams.set('session', id);
@@ -237,14 +237,17 @@ async function handle(req, res) {
       if (!item || item.status !== 'waiting' || !safeEqual(item.browserHash, sha256(binding))) {
         return html(res, 400, 'Connexion expirée', 'Revenez à Direct-Xfer et relancez la connexion.', false);
       }
-      const cookieName = oauthBrowserCookieName(item.id);
+      const callbackToken = base64url(crypto.randomBytes(32));
+      item.callbackHash = sha256(callbackToken);
+      item.callbackCookie = newOAuthBrowserCookie();
+      item.updatedAt = Date.now();
       const maxAge = Math.max(1, Math.ceil((item.createdAt + SESSION_TTL_MS - Date.now()) / 1000));
       res.writeHead(303, {
         Location: googleAuthorizationUrl(item).toString(),
         'Cache-Control':'no-store',
         'Referrer-Policy':'no-referrer',
         'X-Content-Type-Options':'nosniff',
-        'Set-Cookie':`${cookieName}=${encodeURIComponent(binding)}; Secure; HttpOnly; SameSite=Lax; Path=/; Max-Age=${maxAge}`,
+        'Set-Cookie':`${item.callbackCookie}=${callbackToken}; Secure; HttpOnly; SameSite=Lax; Path=/v1/google/callback; Max-Age=${maxAge}`,
       });
       return res.end();
     }
@@ -253,9 +256,8 @@ async function handle(req, res) {
       const state = String(url.searchParams.get('state') || '');
       const item = [...sessions.values()].find((entry) => entry && safeEqual(entry.state, state));
       if (!item) return html(res, 400, 'Connexion expirée', 'Revenez à Direct-Xfer et relancez la connexion.', false);
-      const cookieName = oauthBrowserCookieName(item.id);
-      const browserToken = cookieValue(req, cookieName);
-      if (!browserToken || !safeEqual(item.browserHash, sha256(browserToken))) {
+      const callbackToken = cookieValue(req, item.callbackCookie);
+      if (!item.callbackHash || !callbackToken || !safeEqual(item.callbackHash, sha256(callbackToken))) {
         return html(res, 400, 'Navigateur non reconnu', 'Cette autorisation OAuth doit revenir dans le même navigateur qui a démarré la connexion.', false);
       }
       if (item.status !== 'waiting') return html(res, 409, 'Connexion déjà traitée', 'Revenez à Direct-Xfer.', item.status === 'completed');

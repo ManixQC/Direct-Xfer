@@ -107,7 +107,7 @@ test('automatic health export does not carry raw connector or notification trans
   assert.match(server,/error:lastWebhook\.error \? 'failed' : null/);
 });
 test('server health chrome is localized in all three languages and assets are cache-busted',()=>{
-  assert.match(html,/server-health-dashboard\.js\?v=4/);
+  assert.match(html,/server-health-dashboard\.js\?v=7/);
   assert.match(html,/server-health-dashboard\.css\?v=3/);
   assert.match(html,/data-health-text="cpuSystemTitle"/);
   assert.match(html,/data-health-aria="rangeAria"/);

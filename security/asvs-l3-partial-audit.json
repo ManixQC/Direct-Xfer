@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "generatedAt": "2026-08-25T15:00:10.006Z",
-  "version": "1.70.28",
-  "sourceTreeSha256": "7e249405c9dbf8a4177aa10e0fd59b887d24094dfb85754112ad975294abd1c4",
+  "generatedAt": "2026-08-25T16:59:17.453Z",
+  "version": "1.71.2",
+  "sourceTreeSha256": "9fdee34a34737bea820e0716e0efa83841f4c514aa2b54f4030fc02a6157f73c",
   "filesScanned": 127,
   "scope": [
     "server.js",
@@ -372,7 +372,7 @@
         },
         {
           "file": "oauth-broker/server.js",
-          "text": "oauthBrowserCookieName"
+          "text": "callbackHash"
         },
         {
           "file": "lib/server/storage-connector-config.js",
@@ -1065,157 +1065,157 @@
         },
         {
           "file": "public/server-health-dashboard.js",
-          "line": 35,
+          "line": 57,
           "token": "html-sink"
         },
         {
           "file": "public/server-health-dashboard.js",
-          "line": 36,
+          "line": 58,
           "token": "html-sink"
         },
         {
           "file": "public/server-health-dashboard.js",
-          "line": 36,
+          "line": 58,
           "token": "html-sink"
         },
         {
           "file": "public/server-health-dashboard.js",
-          "line": 36,
+          "line": 58,
           "token": "html-sink"
         },
         {
           "file": "public/server-health-dashboard.js",
-          "line": 36,
+          "line": 58,
           "token": "html-sink"
         },
         {
           "file": "public/server-health-dashboard.js",
-          "line": 36,
+          "line": 58,
           "token": "html-sink"
         },
         {
           "file": "public/server-health-dashboard.js",
-          "line": 36,
+          "line": 58,
           "token": "html-sink"
         },
         {
           "file": "public/server-health-dashboard.js",
-          "line": 38,
+          "line": 60,
           "token": "html-sink"
         },
         {
           "file": "public/server-health-dashboard.js",
-          "line": 38,
+          "line": 60,
           "token": "html-sink"
         },
         {
           "file": "public/server-health-dashboard.js",
-          "line": 39,
+          "line": 61,
           "token": "html-sink"
         },
         {
           "file": "public/server-health-dashboard.js",
-          "line": 39,
+          "line": 61,
           "token": "html-sink"
         },
         {
           "file": "public/server-health-dashboard.js",
-          "line": 40,
+          "line": 62,
           "token": "html-sink"
         },
         {
           "file": "public/server-health-dashboard.js",
-          "line": 40,
+          "line": 62,
           "token": "html-sink"
         },
         {
           "file": "public/server-health-dashboard.js",
-          "line": 41,
+          "line": 63,
           "token": "html-sink"
         },
         {
           "file": "public/server-health-dashboard.js",
-          "line": 41,
+          "line": 63,
           "token": "html-sink"
         },
         {
           "file": "public/server-health-dashboard.js",
-          "line": 41,
+          "line": 63,
           "token": "html-sink"
         },
         {
           "file": "public/server-health-dashboard.js",
-          "line": 41,
+          "line": 63,
           "token": "html-sink"
         },
         {
           "file": "public/server-health-dashboard.js",
-          "line": 41,
+          "line": 63,
           "token": "html-sink"
         },
         {
           "file": "public/server-health-dashboard.js",
-          "line": 41,
+          "line": 63,
           "token": "html-sink"
         },
         {
           "file": "public/server-health-dashboard.js",
-          "line": 41,
+          "line": 63,
           "token": "html-sink"
         },
         {
           "file": "public/server-health-dashboard.js",
-          "line": 41,
+          "line": 63,
           "token": "html-sink"
         },
         {
           "file": "public/server-health-dashboard.js",
-          "line": 41,
+          "line": 63,
           "token": "html-sink"
         },
         {
           "file": "public/server-health-dashboard.js",
-          "line": 41,
+          "line": 63,
           "token": "html-sink"
         },
         {
           "file": "public/server-health-dashboard.js",
-          "line": 41,
+          "line": 63,
           "token": "html-sink"
         },
         {
           "file": "public/server-health-dashboard.js",
-          "line": 41,
+          "line": 63,
           "token": "html-sink"
         },
         {
           "file": "public/server-health-dashboard.js",
-          "line": 41,
+          "line": 63,
           "token": "html-sink"
         },
         {
           "file": "public/server-health-dashboard.js",
-          "line": 41,
+          "line": 63,
           "token": "html-sink"
         },
         {
           "file": "public/server-health-dashboard.js",
-          "line": 43,
+          "line": 65,
           "token": "html-sink"
         },
         {
           "file": "public/server-health-dashboard.js",
-          "line": 44,
+          "line": 66,
           "token": "html-sink"
         },
         {
           "file": "public/server-health-dashboard.js",
-          "line": 49,
+          "line": 71,
           "token": "html-sink"
         },
         {
           "file": "public/server-health-dashboard.js",
-          "line": 50,
+          "line": 95,
           "token": "html-sink"
         },
         {
@@ -1820,37 +1820,32 @@
         },
         {
           "file": "lib/server/admin-dashboard-routes.js",
-          "line": 161,
+          "line": 202,
           "token": "response-sink"
         },
         {
           "file": "lib/server/admin-dashboard-routes.js",
-          "line": 171,
+          "line": 212,
           "token": "response-sink"
         },
         {
           "file": "lib/server/admin-dashboard-routes.js",
-          "line": 176,
+          "line": 217,
           "token": "response-sink"
         },
         {
           "file": "lib/server/admin-dashboard-routes.js",
-          "line": 180,
+          "line": 221,
           "token": "response-sink"
         },
         {
           "file": "lib/server/admin-dashboard-routes.js",
-          "line": 196,
+          "line": 237,
           "token": "response-sink"
         },
         {
           "file": "lib/server/admin-dashboard-routes.js",
-          "line": 309,
-          "token": "response-sink"
-        },
-        {
-          "file": "lib/server/admin-dashboard-routes.js",
-          "line": 615,
+          "line": 350,
           "token": "response-sink"
         },
         {
@@ -1860,17 +1855,22 @@
         },
         {
           "file": "lib/server/admin-dashboard-routes.js",
-          "line": 676,
-          "token": "response-sink"
-        },
-        {
-          "file": "lib/server/admin-dashboard-routes.js",
-          "line": 691,
+          "line": 697,
           "token": "response-sink"
         },
         {
           "file": "lib/server/admin-dashboard-routes.js",
           "line": 717,
+          "token": "response-sink"
+        },
+        {
+          "file": "lib/server/admin-dashboard-routes.js",
+          "line": 732,
+          "token": "response-sink"
+        },
+        {
+          "file": "lib/server/admin-dashboard-routes.js",
+          "line": 758,
           "token": "response-sink"
         },
         {
@@ -3320,7 +3320,7 @@
         },
         {
           "file": "oauth-broker/server.js",
-          "line": 249,
+          "line": 252,
           "token": "response-sink"
         },
         {
@@ -3475,27 +3475,27 @@
         },
         {
           "file": "lib/server/admin-dashboard-routes.js",
-          "line": 153,
+          "line": 194,
           "token": "request-input"
         },
         {
           "file": "lib/server/admin-dashboard-routes.js",
-          "line": 176,
+          "line": 217,
           "token": "request-input"
         },
         {
           "file": "lib/server/admin-dashboard-routes.js",
-          "line": 201,
+          "line": 242,
           "token": "request-input"
         },
         {
           "file": "lib/server/admin-dashboard-routes.js",
-          "line": 201,
+          "line": 242,
           "token": "request-input"
         },
         {
           "file": "lib/server/admin-dashboard-routes.js",
-          "line": 660,
+          "line": 701,
           "token": "request-input"
         },
         {
@@ -6625,7 +6625,7 @@
         },
         {
           "file": "lib/server/admin-dashboard-routes.js",
-          "line": 709,
+          "line": 750,
           "token": "persistence"
         },
         {
@@ -7625,17 +7625,17 @@
         },
         {
           "file": "lib/server/admin-dashboard-routes.js",
-          "line": 60,
+          "line": 101,
           "token": "concurrency-control"
         },
         {
           "file": "lib/server/admin-dashboard-routes.js",
-          "line": 153,
+          "line": 194,
           "token": "concurrency-control"
         },
         {
           "file": "lib/server/admin-dashboard-routes.js",
-          "line": 488,
+          "line": 529,
           "token": "concurrency-control"
         },
         {
@@ -10165,7 +10165,7 @@
         },
         {
           "file": "public/server-health-dashboard.js",
-          "line": 35,
+          "line": 57,
           "token": "concurrency-control"
         },
         {
@@ -11110,7 +11110,7 @@
       "rows": [
         {
           "file": "lib/assets/oauth-broker-worker.mjs",
-          "line": 57,
+          "line": 59,
           "token": "lifecycle"
         },
         {
@@ -11525,7 +11525,7 @@
         },
         {
           "file": "oauth-broker/cloudflare-worker/src/index.js",
-          "line": 57,
+          "line": 59,
           "token": "lifecycle"
         },
         {
@@ -12175,37 +12175,37 @@
         },
         {
           "file": "public/server-health-dashboard.js",
-          "line": 30,
+          "line": 35,
           "token": "lifecycle"
         },
         {
           "file": "public/server-health-dashboard.js",
-          "line": 30,
+          "line": 35,
           "token": "lifecycle"
         },
         {
           "file": "public/server-health-dashboard.js",
-          "line": 30,
+          "line": 35,
           "token": "lifecycle"
         },
         {
           "file": "public/server-health-dashboard.js",
-          "line": 47,
+          "line": 69,
           "token": "lifecycle"
         },
         {
           "file": "public/server-health-dashboard.js",
-          "line": 48,
+          "line": 70,
           "token": "lifecycle"
         },
         {
           "file": "public/server-health-dashboard.js",
-          "line": 48,
+          "line": 70,
           "token": "lifecycle"
         },
         {
           "file": "public/server-health-dashboard.js",
-          "line": 51,
+          "line": 96,
           "token": "lifecycle"
         },
         {
@@ -13740,12 +13740,12 @@
       "rows": [
         {
           "file": "lib/assets/oauth-broker-worker.mjs",
-          "line": 234,
+          "line": 235,
           "token": "outbound"
         },
         {
           "file": "lib/assets/oauth-broker-worker.mjs",
-          "line": 526,
+          "line": 534,
           "token": "outbound"
         },
         {
@@ -13820,12 +13820,12 @@
         },
         {
           "file": "oauth-broker/cloudflare-worker/src/index.js",
-          "line": 234,
+          "line": 235,
           "token": "outbound"
         },
         {
           "file": "oauth-broker/cloudflare-worker/src/index.js",
-          "line": 526,
+          "line": 534,
           "token": "outbound"
         },
         {
@@ -14005,7 +14005,7 @@
         },
         {
           "file": "public/server-health-dashboard.js",
-          "line": 30,
+          "line": 35,
           "token": "outbound"
         },
         {

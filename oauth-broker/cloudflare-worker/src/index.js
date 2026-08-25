@@ -25,14 +25,16 @@ function verifierPayload(raw) {
       const verifier = String(parsed.verifier || '');
       const scope = normalizeDriveScope(parsed.scope, '');
       const browserHash = String(parsed.browserHash || '');
+      const callbackHash = String(parsed.callbackHash || '');
+      const callbackCookie = String(parsed.callbackCookie || '');
       const state = String(parsed.state || '');
-      if (verifier && scope) return { verifier, scope, browserHash, state };
+      if (verifier && scope) return { verifier, scope, browserHash, callbackHash, callbackCookie, state };
     }
   } catch {}
   // Sessions created by broker versions <= 1.67.29 stored only the PKCE verifier
   // and always requested the old full-Drive scope. Preserve those in-flight
   // callbacks while all new sessions default to drive.file.
-  return { verifier:text, scope:LEGACY_SCOPE, browserHash:'', state:'' };
+  return { verifier:text, scope:LEGACY_SCOPE, browserHash:'', callbackHash:'', callbackCookie:'', state:'' };
 }
 const SESSION_TTL_MS = 15 * 60 * 1000;
 const CREDENTIAL_TTL_MS = 365 * 24 * 60 * 60 * 1000;
@@ -71,9 +73,8 @@ function html(title, message, status = 200, close = false, extraHeaders = {}) {
 }
 
 
-function oauthBrowserCookieName(id) {
-  const safe = String(id || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 160);
-  return safe ? `__Host-dxo_${safe}` : '';
+function newOAuthBrowserCookie() {
+  return `__Host-dxo_${b64url(randomBytes(12))}`;
 }
 function cookieValue(request, name) {
   const raw = String(request.headers.get('cookie') || '');
@@ -348,13 +349,20 @@ async function handleAuthorize(request, env) {
   }
   const origin = String(item.callback_origin || brokerOrigin(request));
   if (!verifierData.state || !safeEqual(await sha256(verifierData.state), String(item.state_hash || ''))) return html('Connexion expirée', 'Revenez à Direct-Xfer et relancez la connexion.', 400);
+  const callbackToken = b64url(randomBytes(32));
+  const callbackCookie = newOAuthBrowserCookie();
+  const callbackHash = await sha256(callbackToken);
+  const updatedPayload = JSON.stringify({ ...verifierData, callbackHash, callbackCookie });
+  const updated = await env.DB.prepare("UPDATE sessions SET verifier_enc=?, updated_at=? WHERE id=? AND status='waiting'")
+    .bind(await encryptText(env, updatedPayload), Date.now(), id).run();
+  if (Number(updated?.meta?.changes || 0) !== 1) return html('Connexion déjà traitée', 'Revenez à Direct-Xfer.', 409);
   const auth = await googleAuthorizationUrl(env, origin, verifierData.state, verifierData.verifier, verifierData.scope);
   return new Response(null, { status:303, headers:{
     location:auth.toString(),
     'cache-control':'no-store',
     'referrer-policy':'no-referrer',
     'x-content-type-options':'nosniff',
-    'set-cookie':`${oauthBrowserCookieName(id)}=${encodeURIComponent(binding)}; Secure; HttpOnly; SameSite=Lax; Path=/; Max-Age=${Math.max(1, Math.ceil((Number(item.expires_at) - Date.now()) / 1000))}`,
+    'set-cookie':`${callbackCookie}=${callbackToken}; Secure; HttpOnly; SameSite=Lax; Path=/v1/google/callback; Max-Age=${Math.max(1, Math.ceil((Number(item.expires_at) - Date.now()) / 1000))}`,
   }});
 }
 
@@ -367,8 +375,8 @@ async function handleCallback(request, env) {
   if (!item) return html('Connexion expirée', 'Revenez à Direct-Xfer et relancez la connexion.', 400);
   if (item.status !== 'waiting') return html('Connexion déjà traitée', 'Revenez à Direct-Xfer.', 409, item.status === 'completed');
   const verifierDataForBinding = verifierPayload(await decryptText(env, item.verifier_enc));
-  const browserToken = cookieValue(request, oauthBrowserCookieName(item.id));
-  if (!verifierDataForBinding.browserHash || !browserToken || !safeEqual(verifierDataForBinding.browserHash, await sha256(browserToken))) {
+  const callbackToken = cookieValue(request, verifierDataForBinding.callbackCookie);
+  if (!verifierDataForBinding.callbackHash || !callbackToken || !safeEqual(verifierDataForBinding.callbackHash, await sha256(callbackToken))) {
     return html('Navigateur non reconnu', 'Cette autorisation OAuth doit revenir dans le même navigateur qui a démarré la connexion.', 400);
   }
 

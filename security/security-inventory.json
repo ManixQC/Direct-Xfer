@@ -1,76 +1,86 @@
 {
-  "generatedAt": "2026-08-25T15:00:12.005Z",
-  "version": "1.70.28",
+  "generatedAt": "2026-08-25T16:59:17.717Z",
+  "version": "1.71.2",
   "categories": {
     "crypto": [
       {
         "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 55,
+        "line": 57,
         "text": "const nonce = b64url(randomBytes(18));"
       },
       {
         "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 103,
+        "line": 77,
+        "text": "return `__Host-dxo_${b64url(randomBytes(12))}`;"
+      },
+      {
+        "file": "lib/assets/oauth-broker-worker.mjs",
+        "line": 104,
         "text": "function randomBytes(length) {"
       },
       {
         "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 151,
+        "line": 152,
         "text": "const iv = randomBytes(12);"
       },
       {
         "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 289,
-        "text": "const id = `dxc_${b64url(randomBytes(18))}`;"
-      },
-      {
-        "file": "lib/assets/oauth-broker-worker.mjs",
         "line": 290,
-        "text": "const secret = b64url(randomBytes(32));"
+        "text": "const id = `dxc_${b64url(randomBytes(18))}`;"
       },
       {
         "file": "lib/assets/oauth-broker-worker.mjs",
         "line": 291,
-        "text": "const refreshHandle = `dxr_${b64url(randomBytes(24))}`;"
-      },
-      {
-        "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 314,
-        "text": "const id = b64url(randomBytes(18));"
-      },
-      {
-        "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 315,
-        "text": "const pollToken = b64url(randomBytes(32));"
-      },
-      {
-        "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 316,
-        "text": "const state = b64url(randomBytes(32));"
-      },
-      {
-        "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 317,
-        "text": "const verifier = b64url(randomBytes(48));"
-      },
-      {
-        "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 318,
-        "text": "const browserToken = b64url(randomBytes(32));"
-      },
-      {
-        "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 412,
-        "text": "const id = `dxc_${b64url(randomBytes(18))}`;"
-      },
-      {
-        "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 413,
         "text": "const secret = b64url(randomBytes(32));"
       },
       {
         "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 414,
+        "line": 292,
+        "text": "const refreshHandle = `dxr_${b64url(randomBytes(24))}`;"
+      },
+      {
+        "file": "lib/assets/oauth-broker-worker.mjs",
+        "line": 315,
+        "text": "const id = b64url(randomBytes(18));"
+      },
+      {
+        "file": "lib/assets/oauth-broker-worker.mjs",
+        "line": 316,
+        "text": "const pollToken = b64url(randomBytes(32));"
+      },
+      {
+        "file": "lib/assets/oauth-broker-worker.mjs",
+        "line": 317,
+        "text": "const state = b64url(randomBytes(32));"
+      },
+      {
+        "file": "lib/assets/oauth-broker-worker.mjs",
+        "line": 318,
+        "text": "const verifier = b64url(randomBytes(48));"
+      },
+      {
+        "file": "lib/assets/oauth-broker-worker.mjs",
+        "line": 319,
+        "text": "const browserToken = b64url(randomBytes(32));"
+      },
+      {
+        "file": "lib/assets/oauth-broker-worker.mjs",
+        "line": 352,
+        "text": "const callbackToken = b64url(randomBytes(32));"
+      },
+      {
+        "file": "lib/assets/oauth-broker-worker.mjs",
+        "line": 420,
+        "text": "const id = `dxc_${b64url(randomBytes(18))}`;"
+      },
+      {
+        "file": "lib/assets/oauth-broker-worker.mjs",
+        "line": 421,
+        "text": "const secret = b64url(randomBytes(32));"
+      },
+      {
+        "file": "lib/assets/oauth-broker-worker.mjs",
+        "line": 422,
         "text": "const refreshHandle = `dxr_${b64url(randomBytes(24))}`;"
       },
       {
@@ -260,7 +270,7 @@
       },
       {
         "file": "lib/server/admin-dashboard-routes.js",
-        "line": 697,
+        "line": 738,
         "text": "const backup = `${LOG_FILE}.clear-${process.pid}-${crypto.randomBytes(4).toString('hex')}`;"
       },
       {
@@ -1205,72 +1215,82 @@
       },
       {
         "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 55,
+        "line": 57,
         "text": "const nonce = b64url(randomBytes(18));"
       },
       {
         "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 103,
+        "line": 77,
+        "text": "return `__Host-dxo_${b64url(randomBytes(12))}`;"
+      },
+      {
+        "file": "oauth-broker/cloudflare-worker/src/index.js",
+        "line": 104,
         "text": "function randomBytes(length) {"
       },
       {
         "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 151,
+        "line": 152,
         "text": "const iv = randomBytes(12);"
       },
       {
         "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 289,
-        "text": "const id = `dxc_${b64url(randomBytes(18))}`;"
-      },
-      {
-        "file": "oauth-broker/cloudflare-worker/src/index.js",
         "line": 290,
-        "text": "const secret = b64url(randomBytes(32));"
+        "text": "const id = `dxc_${b64url(randomBytes(18))}`;"
       },
       {
         "file": "oauth-broker/cloudflare-worker/src/index.js",
         "line": 291,
-        "text": "const refreshHandle = `dxr_${b64url(randomBytes(24))}`;"
-      },
-      {
-        "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 314,
-        "text": "const id = b64url(randomBytes(18));"
-      },
-      {
-        "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 315,
-        "text": "const pollToken = b64url(randomBytes(32));"
-      },
-      {
-        "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 316,
-        "text": "const state = b64url(randomBytes(32));"
-      },
-      {
-        "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 317,
-        "text": "const verifier = b64url(randomBytes(48));"
-      },
-      {
-        "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 318,
-        "text": "const browserToken = b64url(randomBytes(32));"
-      },
-      {
-        "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 412,
-        "text": "const id = `dxc_${b64url(randomBytes(18))}`;"
-      },
-      {
-        "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 413,
         "text": "const secret = b64url(randomBytes(32));"
       },
       {
         "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 414,
+        "line": 292,
+        "text": "const refreshHandle = `dxr_${b64url(randomBytes(24))}`;"
+      },
+      {
+        "file": "oauth-broker/cloudflare-worker/src/index.js",
+        "line": 315,
+        "text": "const id = b64url(randomBytes(18));"
+      },
+      {
+        "file": "oauth-broker/cloudflare-worker/src/index.js",
+        "line": 316,
+        "text": "const pollToken = b64url(randomBytes(32));"
+      },
+      {
+        "file": "oauth-broker/cloudflare-worker/src/index.js",
+        "line": 317,
+        "text": "const state = b64url(randomBytes(32));"
+      },
+      {
+        "file": "oauth-broker/cloudflare-worker/src/index.js",
+        "line": 318,
+        "text": "const verifier = b64url(randomBytes(48));"
+      },
+      {
+        "file": "oauth-broker/cloudflare-worker/src/index.js",
+        "line": 319,
+        "text": "const browserToken = b64url(randomBytes(32));"
+      },
+      {
+        "file": "oauth-broker/cloudflare-worker/src/index.js",
+        "line": 352,
+        "text": "const callbackToken = b64url(randomBytes(32));"
+      },
+      {
+        "file": "oauth-broker/cloudflare-worker/src/index.js",
+        "line": 420,
+        "text": "const id = `dxc_${b64url(randomBytes(18))}`;"
+      },
+      {
+        "file": "oauth-broker/cloudflare-worker/src/index.js",
+        "line": 421,
+        "text": "const secret = b64url(randomBytes(32));"
+      },
+      {
+        "file": "oauth-broker/cloudflare-worker/src/index.js",
+        "line": 422,
         "text": "const refreshHandle = `dxr_${b64url(randomBytes(24))}`;"
       },
       {
@@ -1282,6 +1302,11 @@
         "file": "oauth-broker/server.js",
         "line": 58,
         "text": "const nonce = base64url(crypto.randomBytes(18));"
+      },
+      {
+        "file": "oauth-broker/server.js",
+        "line": 70,
+        "text": "const suffix = base64url(crypto.randomBytes(12));"
       },
       {
         "file": "oauth-broker/server.js",
@@ -1342,6 +1367,11 @@
         "file": "oauth-broker/server.js",
         "line": 224,
         "text": "const browserToken = base64url(crypto.randomBytes(32));"
+      },
+      {
+        "file": "oauth-broker/server.js",
+        "line": 240,
+        "text": "const callbackToken = base64url(crypto.randomBytes(32));"
       },
       {
         "file": "scripts/asvs-l3-migrate-audit.js",
@@ -1834,17 +1864,22 @@
         "file": "test/standard-view-features-16-19-21-22-37-39-45-49-1.64.0.test.js",
         "line": 54,
         "text": "const child=spawn(process.execPath,['server.js'],{cwd:root,env:{...process.env,PORT:String(port),HOST_ROOT:host,DATA_DIR:data,IMAGES_DIR:images,INBOX_DIR:inbox,ADMIN_USERNAME:'admin',ADMIN_PASSWORD:'AuditPass123!',UPDATE_CHECK:'false',PUBLI"
+      },
+      {
+        "file": "test/system-health-reverse-proxy-scheme-1.70.29.test.js",
+        "line": 70,
+        "text": "const child = spawn(process.execPath, ['server.js'], {"
       }
     ],
     "outbound": [
       {
         "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 234,
+        "line": 235,
         "text": "const response = await fetch(GOOGLE_TOKEN_URL, {"
       },
       {
         "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 526,
+        "line": 534,
         "text": "async fetch(request, env) {"
       },
       {
@@ -2234,12 +2269,12 @@
       },
       {
         "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 234,
+        "line": 235,
         "text": "const response = await fetch(GOOGLE_TOKEN_URL, {"
       },
       {
         "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 526,
+        "line": 534,
         "text": "async fetch(request, env) {"
       },
       {
@@ -2569,7 +2604,7 @@
       },
       {
         "file": "public/server-health-dashboard.js",
-        "line": 30,
+        "line": 35,
         "text": "async function getJson(url,opts,timeoutMs){const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),Math.max(1000,Number(timeoutMs)||12000));try{const extra=opts||{},options=Object.assign({},extra,{credentials:'same-origin',cache:"
       },
       {
@@ -3214,22 +3249,22 @@
       },
       {
         "file": "test/oauth-broker-service-1.67.20.test.js",
-        "line": 43,
+        "line": 44,
         "text": "const launch=await fetch(created.authUrl,{redirect:'manual'});"
       },
       {
         "file": "test/oauth-broker-service-1.67.20.test.js",
-        "line": 50,
+        "line": 55,
         "text": "const callback=await fetch(`http://127.0.0.1:${port}/v1/google/callback?state=${encodeURIComponent(state)}&code=code-123`,{headers:{cookie:browserCookie}});"
       },
       {
         "file": "test/oauth-broker-service-1.67.20.test.js",
-        "line": 52,
+        "line": 57,
         "text": "const polledRes=await fetch(`http://127.0.0.1:${port}/v1/google/sessions/${created.id}`,{headers:{authorization:`Bearer ${created.pollToken}`}});"
       },
       {
         "file": "test/oauth-broker-service-1.67.20.test.js",
-        "line": 61,
+        "line": 66,
         "text": "const refreshRes=await fetch(polled.credential.tokenUrl,{method:'POST',headers:{authorization:`Basic ${basic}`,'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({grant_type:'refresh_token',refresh_token:polled.cre"
       },
       {
@@ -3290,7 +3325,7 @@
       {
         "file": "test/pwa-admin-features-15-19-21-1.64.0.test.js",
         "line": 196,
-        "text": "const asset = await fetch(base + '/app/admin-audit-connectors.js?v=444');"
+        "text": "const asset = await fetch(base + '/app/admin-audit-connectors.js?v=446');"
       },
       {
         "file": "test/pwa-admin-features-15-19-21-1.64.0.test.js",
@@ -3340,7 +3375,7 @@
       {
         "file": "test/pwa-admin-features-3-7-1.64.0.test.js",
         "line": 218,
-        "text": "const publicAsset = await fetch(base + '/app/admin-advanced.js?v=444');"
+        "text": "const publicAsset = await fetch(base + '/app/admin-advanced.js?v=446');"
       },
       {
         "file": "test/pwa-admin-features-3-7-1.64.0.test.js",
@@ -3430,12 +3465,12 @@
       {
         "file": "test/pwa-mobile-features-24-25-27-29-31-42-45-46-47-1.64.0.test.js",
         "line": 150,
-        "text": "const mod = await fetch(base + '/app/mobile-intelligence.js?v=444');"
+        "text": "const mod = await fetch(base + '/app/mobile-intelligence.js?v=446');"
       },
       {
         "file": "test/pwa-mobile-features-24-25-27-29-31-42-45-46-47-1.64.0.test.js",
         "line": 154,
-        "text": "const r = await fetch(base + '/app/' + name + '?v=444');"
+        "text": "const r = await fetch(base + '/app/' + name + '?v=446');"
       },
       {
         "file": "test/pwa-routes-refactor.test.js",
@@ -3550,7 +3585,7 @@
       {
         "file": "test/standard-server-health-dashboard-1.64.0.test.js",
         "line": 77,
-        "text": "for(const asset of ['/server-health-dashboard.js?v=4','/server-health-dashboard.css?v=3']){const r=await fetch(base+asset);assert.equal(r.status,200);}"
+        "text": "for(const asset of ['/server-health-dashboard.js?v=7','/server-health-dashboard.css?v=3']){const r=await fetch(base+asset);assert.equal(r.status,200);}"
       },
       {
         "file": "test/standard-server-health-dashboard-1.64.0.test.js",
@@ -3636,6 +3671,21 @@
         "file": "test/storage-connector-oauth-persistent-broker-1.67.26.test.js",
         "line": 37,
         "text": "fetch:async(url,options)=>{"
+      },
+      {
+        "file": "test/system-health-reverse-proxy-scheme-1.70.29.test.js",
+        "line": 29,
+        "text": "try { const response = await fetch(url); if (response.ok) return; } catch (_) {}"
+      },
+      {
+        "file": "test/system-health-reverse-proxy-scheme-1.70.29.test.js",
+        "line": 84,
+        "text": "const login = await fetch(`${base}/api/login`, {"
+      },
+      {
+        "file": "test/system-health-reverse-proxy-scheme-1.70.29.test.js",
+        "line": 90,
+        "text": "const response = await fetch(`${base}/api/server-health-dashboard`, {"
       },
       {
         "file": "test/windows-signpath-readiness-1.69.3.test.js",

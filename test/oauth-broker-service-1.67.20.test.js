@@ -40,10 +40,15 @@ global.fetch=async function(url,options){
   assert.equal(launchUrl.pathname,'/v1/google/authorize');
   assert.equal(launchUrl.searchParams.get('session'),created.id);
   assert.ok(launchUrl.searchParams.get('binding'));
+  const launchBinding=launchUrl.searchParams.get('binding');
   const launch=await fetch(created.authUrl,{redirect:'manual'});
   assert.equal(launch.status,303);
-  const browserCookie=String(launch.headers.get('set-cookie')||'').split(';')[0];
+  const setCookie=String(launch.headers.get('set-cookie')||'');
+  const browserCookie=setCookie.split(';')[0];
   assert.ok(browserCookie);
+  assert.equal(setCookie.includes(launchBinding), false);
+  assert.ok(!browserCookie.startsWith(`__Host-dxo_${created.id}=`));
+  assert.match(setCookie,/Secure; HttpOnly; SameSite=Lax; Path=\/v1\/google\/callback/);
   const auth=new URL(String(launch.headers.get('location')||''));
   const state=auth.searchParams.get('state'); assert.ok(state);
   assert.equal(auth.searchParams.get('redirect_uri'),`http://127.0.0.1:${port}/v1/google/callback`);

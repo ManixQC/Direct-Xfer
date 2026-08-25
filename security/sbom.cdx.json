@@ -22,7 +22,7 @@
       "bom-ref": "direct-xfer@1.70.26",
       "type": "library",
       "name": "Direct-Xfer",
-      "version": "1.70.28",
+      "version": "1.71.2",
       "scope": "required",
       "description": "Direct-Xfer — direct HTTP file sharing, no third-party server. Web interface, revocable shares, automatic IP detection and port testing.",
       "purl": "pkg:npm/direct-xfer@1.70.26",

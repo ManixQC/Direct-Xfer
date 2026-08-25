@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-08-25T14:12:09.970Z",
-  "version": "1.70.27",
+  "generatedAt": "2026-08-25T15:00:12.005Z",
+  "version": "1.70.28",
   "categories": {
     "crypto": [
       {
@@ -2304,48 +2304,33 @@
       },
       {
         "file": "public/app.js",
-        "line": 7876,
+        "line": 7903,
         "text": "// Begin enrollment: fetch a fresh secret + QR, show the verify step."
       },
       {
         "file": "public/app.js",
-        "line": 9651,
+        "line": 9678,
         "text": "// `publicLogoSet` flag. The modal is already visible, so fetch the full settings"
       },
       {
         "file": "public/app.js",
-        "line": 10947,
+        "line": 10974,
         "text": "if(code==='fetch-timeout') return t('webStorage.requestTimeout');"
       },
       {
         "file": "public/app.js",
-        "line": 11317,
+        "line": 11344,
         "text": "const r = await fetch('/api/restore', {"
       },
       {
         "file": "public/app.js",
-        "line": 11463,
+        "line": 11490,
         "text": "const toggle = $('cfg-webpush-toggle');"
       },
       {
         "file": "public/app.js",
-        "line": 11464,
+        "line": 11491,
         "text": "const testBtn = $('cfg-webpush-test');"
-      },
-      {
-        "file": "public/app.js",
-        "line": 11465,
-        "text": "const status = $('cfg-webpush-status');"
-      },
-      {
-        "file": "public/app.js",
-        "line": 11466,
-        "text": "const unavail = $('cfg-webpush-unavail');"
-      },
-      {
-        "file": "public/app.js",
-        "line": 11467,
-        "text": "const insecure = $('cfg-webpush-insecure');"
       },
       {
         "file": "public/app.js",
@@ -2354,92 +2339,107 @@
       },
       {
         "file": "public/app.js",
-        "line": 11522,
-        "text": "if ($('cfg-webpush-toggle')) $('cfg-webpush-toggle').addEventListener('click', async () => {"
+        "line": 11493,
+        "text": "const unavail = $('cfg-webpush-unavail');"
       },
       {
         "file": "public/app.js",
-        "line": 11527,
-        "text": "if ($('cfg-webpush-test')) $('cfg-webpush-test').addEventListener('click', async () => {"
+        "line": 11494,
+        "text": "const insecure = $('cfg-webpush-insecure');"
       },
       {
         "file": "public/app.js",
-        "line": 11528,
+        "line": 11519,
         "text": "const status = $('cfg-webpush-status');"
       },
       {
         "file": "public/app.js",
-        "line": 13878,
+        "line": 11549,
+        "text": "if ($('cfg-webpush-toggle')) $('cfg-webpush-toggle').addEventListener('click', async () => {"
+      },
+      {
+        "file": "public/app.js",
+        "line": 11554,
+        "text": "if ($('cfg-webpush-test')) $('cfg-webpush-test').addEventListener('click', async () => {"
+      },
+      {
+        "file": "public/app.js",
+        "line": 11555,
+        "text": "const status = $('cfg-webpush-status');"
+      },
+      {
+        "file": "public/app.js",
+        "line": 13905,
         "text": "const resp = await fetch(url, { credentials: 'same-origin', cache: 'no-store' });"
       },
       {
         "file": "public/app.js",
-        "line": 13879,
+        "line": 13906,
         "text": "if (!resp.ok) throw new Error('fetch');"
       },
       {
         "file": "public/app.js",
-        "line": 13896,
+        "line": 13923,
         "text": "return fetch(url, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/octet-stream', 'X-CSRF-Token': state.csrf || '' }, body: blob });"
       },
       {
         "file": "public/app.js",
-        "line": 15289,
+        "line": 15316,
         "text": "const res = await fetch('/api/transfers/export?format=' + encodeURIComponent(format), {"
       },
       {
         "file": "public/app.js",
-        "line": 15437,
+        "line": 15464,
         "text": "const r = await fetch(url, { credentials:'same-origin', cache:'no-store' });"
       },
       {
         "file": "public/app.js",
-        "line": 15807,
+        "line": 15834,
         "text": "const response = await fetch('/api/photos/' + encodeURIComponent(photo.id) + '/' + variant, {"
       },
       {
         "file": "public/app.js",
-        "line": 15861,
+        "line": 15888,
         "text": "const response = await fetch('/api/photos/' + encodeURIComponent(s.id) + '/' + variant, {"
       },
       {
         "file": "public/app.js",
-        "line": 16339,
+        "line": 16366,
         "text": "// doesn't fetch every thumbnail up front). A single shared observer unobserves"
       },
       {
         "file": "public/app.js",
-        "line": 16389,
+        "line": 16416,
         "text": "// every thumb eagerly here would fetch the whole library on render."
       },
       {
         "file": "public/app.js",
-        "line": 16672,
+        "line": 16699,
         "text": "// once when a variant is generated after the first fetch (so its figures appear)."
       },
       {
         "file": "public/app.js",
-        "line": 16921,
+        "line": 16948,
         "text": "const response = await fetch('/api/photos/source', {"
       },
       {
         "file": "public/app.js",
-        "line": 16964,
+        "line": 16991,
         "text": "const sendPhoto = (url) => fetch(url, {"
       },
       {
         "file": "public/app.js",
-        "line": 17786,
+        "line": 17813,
         "text": "return fetch('/api/enc-share' + qs, {"
       },
       {
         "file": "public/app.js",
-        "line": 17852,
+        "line": 17879,
         "text": "return fetch('/api/secret?mode=' + mode + '&expiresInSeconds=' + expiry, {"
       },
       {
         "file": "public/app.js",
-        "line": 18522,
+        "line": 18549,
         "text": "refreshShares(); // re-fetch: nicknames refresh across transfers + history"
       },
       {
@@ -2511,6 +2511,16 @@
         "file": "public/dxsecret.js",
         "line": 39,
         "text": "fetch('/x/' + encodeURIComponent(token) + '/blob', { credentials: 'same-origin' })"
+      },
+      {
+        "file": "public/login-vault.js",
+        "line": 84,
+        "text": "if (!result.available || typeof global.fetch !== 'function') {"
+      },
+      {
+        "file": "public/login-vault.js",
+        "line": 88,
+        "text": "var response = await global.fetch('/api/meta', { credentials:'same-origin', cache:'no-store', headers:{ Accept:'application/json' } });"
       },
       {
         "file": "public/oauth-bridge.js",
@@ -2863,6 +2873,16 @@
         "text": "var html = await fetch('/app/', { credentials: 'same-origin', cache: 'no-store' }).then(function (r) { return r.text(); });"
       },
       {
+        "file": "pwa/login-vault.js",
+        "line": 84,
+        "text": "if (!result.available || typeof global.fetch !== 'function') {"
+      },
+      {
+        "file": "pwa/login-vault.js",
+        "line": 88,
+        "text": "var response = await global.fetch('/api/meta', { credentials:'same-origin', cache:'no-store', headers:{ Accept:'application/json' } });"
+      },
+      {
         "file": "pwa/login.js",
         "line": 153,
         "text": "return Promise.race([fetch(url, options), new Promise(function (_, reject) { fallbackTimer = setTimeout(function () { reject(new Error('fetch-timeout')); }, timeoutMs); })])"
@@ -2874,7 +2894,7 @@
       },
       {
         "file": "pwa/login.js",
-        "line": 475,
+        "line": 500,
         "text": "var response = await fetch('/app/install-info', { credentials: 'same-origin', cache: 'no-store' });"
       },
       {
@@ -2941,6 +2961,11 @@
         "file": "test/admin-routes-deep-audit-1.69.6.test.js",
         "line": 155,
         "text": "webpush:null,"
+      },
+      {
+        "file": "test/asvs-l3-browser-password-storage-1.70.22.test.js",
+        "line": 13,
+        "text": "assert.match(source, /fetch\\('\\/api\\/meta'/);"
       },
       {
         "file": "test/asvs-l3-http-csv-hardening-1.70.22.test.js",
@@ -3265,7 +3290,7 @@
       {
         "file": "test/pwa-admin-features-15-19-21-1.64.0.test.js",
         "line": 196,
-        "text": "const asset = await fetch(base + '/app/admin-audit-connectors.js?v=443');"
+        "text": "const asset = await fetch(base + '/app/admin-audit-connectors.js?v=444');"
       },
       {
         "file": "test/pwa-admin-features-15-19-21-1.64.0.test.js",
@@ -3315,7 +3340,7 @@
       {
         "file": "test/pwa-admin-features-3-7-1.64.0.test.js",
         "line": 218,
-        "text": "const publicAsset = await fetch(base + '/app/admin-advanced.js?v=443');"
+        "text": "const publicAsset = await fetch(base + '/app/admin-advanced.js?v=444');"
       },
       {
         "file": "test/pwa-admin-features-3-7-1.64.0.test.js",
@@ -3405,12 +3430,12 @@
       {
         "file": "test/pwa-mobile-features-24-25-27-29-31-42-45-46-47-1.64.0.test.js",
         "line": 150,
-        "text": "const mod = await fetch(base + '/app/mobile-intelligence.js?v=443');"
+        "text": "const mod = await fetch(base + '/app/mobile-intelligence.js?v=444');"
       },
       {
         "file": "test/pwa-mobile-features-24-25-27-29-31-42-45-46-47-1.64.0.test.js",
         "line": 154,
-        "text": "const r = await fetch(base + '/app/' + name + '?v=443');"
+        "text": "const r = await fetch(base + '/app/' + name + '?v=444');"
       },
       {
         "file": "test/pwa-routes-refactor.test.js",
@@ -4416,97 +4441,97 @@
       },
       {
         "file": "public/app.js",
-        "line": 8628,
+        "line": 8655,
         "text": "const h = Math.floor(m / 60), rm = m % 60;"
       },
       {
         "file": "public/app.js",
-        "line": 8629,
+        "line": 8656,
         "text": "return h + ' h' + (rm ? ' ' + rm + ' min' : '');"
       },
       {
         "file": "public/app.js",
-        "line": 8823,
+        "line": 8850,
         "text": "// `ip` become clickable to rename that client (reuses renameIp)."
       },
       {
         "file": "public/app.js",
-        "line": 8842,
+        "line": 8869,
         "text": "// Delegated click → rename the client behind that IP."
       },
       {
         "file": "public/app.js",
-        "line": 12296,
+        "line": 12323,
         "text": "// Don't rebuild the list while the user is typing in it (inline rename, adding"
       },
       {
         "file": "public/app.js",
-        "line": 13131,
+        "line": 13158,
         "text": "// name (reflects a rename done in the PWA). Owner/admin only, like the owner chip."
       },
       {
         "file": "public/app.js",
-        "line": 13312,
+        "line": 13339,
         "text": "const rm = el('button', { class: 'item-x', text: '✕', attrs: { title: t('sh.removeItem') } });"
       },
       {
         "file": "public/app.js",
-        "line": 13313,
+        "line": 13340,
         "text": "rm.addEventListener('click', () => removeItem(s, idx));"
       },
       {
         "file": "public/app.js",
-        "line": 13314,
+        "line": 13341,
         "text": "row.appendChild(rm);"
       },
       {
         "file": "public/app.js",
-        "line": 14207,
+        "line": 14234,
         "text": "// Inline rename: turn the card's name into an input on double-click."
       },
       {
         "file": "public/app.js",
-        "line": 16157,
+        "line": 16184,
         "text": "// their <img> previews stay decoded and in place (no flicker on rename / expiry"
       },
       {
         "file": "public/app.js",
-        "line": 16429,
+        "line": 16456,
         "text": "// Double-click the name to rename in place."
       },
       {
         "file": "public/app.js",
-        "line": 16528,
+        "line": 16555,
         "text": "const rename = el('button', { class: 'btn ghost sm', text: t('photo.rename') });"
       },
       {
         "file": "public/app.js",
-        "line": 16529,
+        "line": 16556,
         "text": "rename.addEventListener('click', () => startPhotoRename(s, nameEl));"
       },
       {
         "file": "public/app.js",
-        "line": 16530,
+        "line": 16557,
         "text": "actions.appendChild(rename);"
       },
       {
         "file": "public/app.js",
-        "line": 16687,
+        "line": 16714,
         "text": "// Inline rename for a photo card (restores the name on cancel/failure)."
       },
       {
         "file": "public/app.js",
-        "line": 18072,
+        "line": 18099,
         "text": "const rename = el('button', { class: 'btn ghost sm', text: t('acc.rename') });"
       },
       {
         "file": "public/app.js",
-        "line": 18073,
+        "line": 18100,
         "text": "rename.addEventListener('click', () => renameAccount(a, a.id === selfId));"
       },
       {
         "file": "public/app.js",
-        "line": 18074,
+        "line": 18101,
         "text": "actions.appendChild(rename);"
       },
       {

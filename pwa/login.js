@@ -170,12 +170,28 @@
     password.readOnly = true;
     password.setAttribute('autocomplete', 'off');
   }
+  async function mobilePasswordVaultStatus() {
+    var vault = window.DXLoginVault;
+    if (!vault || typeof vault.status !== 'function') return { available:false, allowed:false };
+    try { return await vault.status(); } catch (_) { return { available:false, allowed:false }; }
+  }
+  function renderMobilePasswordRememberPolicy(enabled) {
+    var row = document.getElementById('mobile-remember-password-row');
+    var hint = document.getElementById('mobile-remember-password-hint');
+    rememberPassword.disabled = !enabled;
+    if (row) { row.classList.toggle('hidden', !enabled); row.setAttribute('aria-hidden', enabled ? 'false' : 'true'); }
+    if (hint) { hint.classList.toggle('hidden', !enabled); hint.setAttribute('aria-hidden', enabled ? 'false' : 'true'); }
+  }
   async function hydrateRememberedLogin() {
+    var vaultStatus = await mobilePasswordVaultStatus();
+    var passwordStorageAllowed = vaultStatus.available === true && vaultStatus.allowed === true;
+    renderMobilePasswordRememberPolicy(passwordStorageAllowed);
     var legacy = storageGet('dxuser') || '';
     var rememberUser = storageGet(LOGIN_KEYS.rememberUsername) === '1' || (!!legacy && storageGet(LOGIN_KEYS.rememberUsername) == null);
-    var rememberPass = storageGet(LOGIN_KEYS.rememberPassword) === '1';
+    var rememberPass = passwordStorageAllowed && storageGet(LOGIN_KEYS.rememberPassword) === '1';
     rememberUsername.checked = rememberUser;
     rememberPassword.checked = rememberPass;
+    if (!passwordStorageAllowed) storageSet(LOGIN_KEYS.rememberPassword, '0');
     if (rememberUser) user.value = storageGet(LOGIN_KEYS.username) || legacy;
     if (!rememberPass) {
       lockMobilePasswordField();
@@ -189,13 +205,28 @@
         if (saved) {
           if (saved.username) user.value = saved.username;
           if (saved.password) password.value = saved.password;
+        } else {
+          rememberPassword.checked = false;
+          storageSet(LOGIN_KEYS.rememberPassword, '0');
+          lockMobilePasswordField();
         }
-      } catch (_) {}
+      } catch (_) {
+        rememberPassword.checked = false;
+        storageSet(LOGIN_KEYS.rememberPassword, '0');
+        lockMobilePasswordField();
+      }
     }
   }
   async function persistRememberedLogin(username, secret, allowPasswordStore) {
     var keepUser = rememberUsername.checked;
-    var keepPassword = rememberPassword.checked && allowPasswordStore;
+    var keepPassword = !rememberPassword.disabled && rememberPassword.checked && allowPasswordStore;
+    if (keepPassword) {
+      try { keepPassword = !!(window.DXLoginVault && await window.DXLoginVault.save(username, secret)); }
+      catch (_) { keepPassword = false; }
+      if (!keepPassword) rememberPassword.checked = false;
+    } else if (window.DXLoginVault) {
+      try { await window.DXLoginVault.clear(); } catch (_) {}
+    }
     storageSet(LOGIN_KEYS.rememberUsername, keepUser ? '1' : '0');
     storageSet(LOGIN_KEYS.rememberPassword, keepPassword ? '1' : '0');
     if (keepUser || keepPassword) {
@@ -204,12 +235,6 @@
     } else {
       storageRemove(LOGIN_KEYS.username);
       storageRemove('dxuser');
-    }
-    if (window.DXLoginVault) {
-      try {
-        if (keepPassword) await window.DXLoginVault.save(username, secret);
-        else await window.DXLoginVault.clear();
-      } catch (_) {}
     }
   }
   function installPullToRefresh() {
@@ -525,7 +550,7 @@
   // from creating a simple home-screen shortcut with no WebAPK/share-target
   // integration when the user installs before signing in.
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/direct-xfer-pwa-sw.js?v=443', { scope: '/app/' }).catch(function () {});
+    navigator.serviceWorker.register('/direct-xfer-pwa-sw.js?v=444', { scope: '/app/' }).catch(function () {});
   }
   hydrateRememberedLogin().finally(function () { ((rememberPassword.checked && password.value) ? password : user).focus(); });
 })();

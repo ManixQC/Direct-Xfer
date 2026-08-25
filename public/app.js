@@ -6053,15 +6053,32 @@ function lockAdminPasswordField() {
   field.readOnly = true;
   field.setAttribute('autocomplete', 'off');
 }
+async function adminPasswordVaultStatus() {
+  const vault = window.DXLoginVault;
+  if (!vault || typeof vault.status !== 'function') return { available:false, allowed:false };
+  try { return await vault.status(); } catch (_) { return { available:false, allowed:false }; }
+}
+function renderAdminPasswordRememberPolicy(enabled) {
+  const rememberPassEl = $('remember-password');
+  const row = $('remember-password-row');
+  const hint = $('remember-password-hint');
+  if (rememberPassEl) rememberPassEl.disabled = !enabled;
+  if (row) { row.classList.toggle('hidden', !enabled); row.setAttribute('aria-hidden', enabled ? 'false' : 'true'); }
+  if (hint) { hint.classList.toggle('hidden', !enabled); hint.setAttribute('aria-hidden', enabled ? 'false' : 'true'); }
+}
 async function hydrateRememberedAdminLogin() {
   const rememberUserEl = $('remember-username');
   const rememberPassEl = $('remember-password');
   if (!rememberUserEl || !rememberPassEl) return;
+  const vaultStatus = await adminPasswordVaultStatus();
+  const passwordStorageAllowed = vaultStatus.available === true && vaultStatus.allowed === true;
+  renderAdminPasswordRememberPolicy(passwordStorageAllowed);
   const legacy = loginStorageGet('dxuser') || '';
   const rememberUsername = loginStorageGet(LOGIN_MEMORY_KEYS.rememberUsername) === '1' || (!!legacy && loginStorageGet(LOGIN_MEMORY_KEYS.rememberUsername) == null);
-  const rememberPassword = loginStorageGet(LOGIN_MEMORY_KEYS.rememberPassword) === '1';
+  let rememberPassword = passwordStorageAllowed && loginStorageGet(LOGIN_MEMORY_KEYS.rememberPassword) === '1';
   rememberUserEl.checked = rememberUsername;
   rememberPassEl.checked = rememberPassword;
+  if (!passwordStorageAllowed) loginStorageSet(LOGIN_MEMORY_KEYS.rememberPassword, '0');
   if (rememberUsername && !$('username').value) $('username').value = loginStorageGet(LOGIN_MEMORY_KEYS.username) || legacy;
   if (!rememberPassword) {
     lockAdminPasswordField();
@@ -6081,15 +6098,31 @@ async function hydrateRememberedAdminLogin() {
       if (saved && hydrateAuthEpoch === state.authEpoch && rememberPassEl.checked) {
         if (saved.username && $('username').value === usernameBeforeVault) $('username').value = saved.username;
         if (saved.password && $('password').value === passwordBeforeVault) $('password').value = saved.password;
+      } else if (!saved) {
+        rememberPassword = false;
+        rememberPassEl.checked = false;
+        loginStorageSet(LOGIN_MEMORY_KEYS.rememberPassword, '0');
+        lockAdminPasswordField();
       }
-    } catch (_) {}
+    } catch (_) {
+      rememberPassEl.checked = false;
+      loginStorageSet(LOGIN_MEMORY_KEYS.rememberPassword, '0');
+      lockAdminPasswordField();
+    }
   }
 }
 async function persistRememberedAdminLogin(username, password, allowPasswordStore) {
   const rememberUserEl = $('remember-username');
   const rememberPassEl = $('remember-password');
   const rememberUsername = !!(rememberUserEl && rememberUserEl.checked);
-  const rememberPassword = !!(rememberPassEl && rememberPassEl.checked && allowPasswordStore);
+  let rememberPassword = !!(rememberPassEl && !rememberPassEl.disabled && rememberPassEl.checked && allowPasswordStore);
+  if (rememberPassword) {
+    try { rememberPassword = !!(window.DXLoginVault && await window.DXLoginVault.save(username, password)); }
+    catch (_) { rememberPassword = false; }
+    if (!rememberPassword && rememberPassEl) rememberPassEl.checked = false;
+  } else if (window.DXLoginVault) {
+    try { await window.DXLoginVault.clear(); } catch (_) {}
+  }
   loginStorageSet(LOGIN_MEMORY_KEYS.rememberUsername, rememberUsername ? '1' : '0');
   loginStorageSet(LOGIN_MEMORY_KEYS.rememberPassword, rememberPassword ? '1' : '0');
   if (rememberUsername || rememberPassword) {
@@ -6098,12 +6131,6 @@ async function persistRememberedAdminLogin(username, password, allowPasswordStor
   } else {
     loginStorageRemove(LOGIN_MEMORY_KEYS.username);
     loginStorageRemove('dxuser');
-  }
-  if (window.DXLoginVault) {
-    try {
-      if (rememberPassword) await window.DXLoginVault.save(username, password);
-      else await window.DXLoginVault.clear();
-    } catch (_) {}
   }
 }
 

@@ -7,7 +7,7 @@
     <title>Direct-Xfer — Admin</title>
     <link rel="icon" href="/favicon.png?v=269" type="image/png" sizes="192x192" />
     <!-- Apply the saved theme before first paint without violating the CSP. -->
-    <script src="/theme-init.js?v=1.70.27"></script>
+    <script src="/theme-init.js?v=1.70.28"></script>
     <link rel="manifest" href="/admin-pwa-detect.webmanifest" />
     <link rel="stylesheet" href="/style.css?v=319" />
     <link rel="stylesheet" href="/server-health-dashboard.css?v=3" />
@@ -60,11 +60,11 @@
             <input id="remember-username" type="checkbox" />
             <span data-i18n="login.rememberUsername">Se souvenir du nom d’utilisateur</span>
           </label>
-          <label class="login-check" for="remember-password">
-            <input id="remember-password" type="checkbox" />
+          <label id="remember-password-row" class="login-check hidden" for="remember-password" aria-hidden="true">
+            <input id="remember-password" type="checkbox" disabled />
             <span data-i18n="login.rememberPassword">Se souvenir du mot de passe</span>
           </label>
-          <small data-i18n="login.rememberPasswordHint">Le mot de passe est chiffré dans ce navigateur uniquement lorsque cette case est cochée.</small>
+          <small id="remember-password-hint" class="hidden" aria-hidden="true" data-i18n="login.rememberPasswordHint">Le mot de passe est chiffré dans ce navigateur uniquement lorsque cette case est cochée.</small>
         </div>
         <div id="login-totp-row" class="hidden">
           <p class="muted sm" data-i18n="login.totpHint">Enter the 6-digit code from your authenticator app (or a recovery code).</p>

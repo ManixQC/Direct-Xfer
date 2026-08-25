@@ -78,7 +78,7 @@ for (const file of files) {
     // tracked as inventory metadata; the repository-wide ReDoS review is paired
     // with regression tests for complex parsers and input-size bounds.
     // Approximate fixed literal count, used only as review inventory metadata.
-    const matches = line.match(/\/(?:\\.|\[(?:\\.|[^\]\\])*\]|[^/\n\\])+\/[dgimsuvy]*/g);
+    const matches = line.match(/\/(?:\\.|[^/\n\\])+\/[dgimsuvy]*/g);
     if (matches) regexLiteralEstimate += matches.length;
   }
 }

@@ -15,7 +15,7 @@ test('admin HTML uses an external first-paint theme bootstrap allowed by script-
   const html = read('public/index.html');
   const themeInit = read('public/theme-init.js');
 
-  assert.match(html, /<script\s+src="\/theme-init\.js\?v=1\.70\.27"><\/script>/);
+  assert.match(html, /<script\s+src="\/theme-init\.js\?v=1\.70\.28"><\/script>/);
   assert.doesNotMatch(html, /<script(?:\s[^>]*)?>\s*\(function\s*\(\)/i);
   assert.match(themeInit, /localStorage\.getItem\('dx-theme'\)/);
   assert.match(themeInit, /document\.documentElement\.setAttribute\('data-theme', t\)/);

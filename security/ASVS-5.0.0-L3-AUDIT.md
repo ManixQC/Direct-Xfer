@@ -3,13 +3,19 @@
 Audit date: 2026-08-25  
 Target: OWASP Application Security Verification Standard 5.0.0, Level 3  
 Repository: `ManixQC/Direct-Xfer`  
-Release candidate: Direct-Xfer `1.70.27`  
+Release: Direct-Xfer `1.70.28`  
 Baseline input: Direct-Xfer `1.70.26` ASVS-L3 release  
 Detailed matrix: `security/ASVS-5.0.0-L3-MATRIX.md`
 
 ## Release verification result
 
-Direct-Xfer 1.70.27 is a deep corrective audit of the 1.70.26 ASVS-L3 closure. The status matrix remains 253 PASS / 92 N/A / 0 MANUAL / 0 PARTIAL / 0 FAIL / 0 REVIEW, but several implementation and upgrade-path defects were fixed before retaining those statuses.
+Direct-Xfer 1.70.28 is a CI/CodeQL corrective release on top of the 1.70.27 ASVS-L3 deep audit. The status matrix remains 253 PASS / 92 N/A / 0 MANUAL / 0 PARTIAL / 0 FAIL / 0 REVIEW.
+
+### 1.70.28 CI and CodeQL corrections
+
+- External JavaScript crypto-provider commands are now launched explicitly through the current Node executable. This removes the Windows `spawnSync ... EFTYPE` failure in the ASVS hardware-provider tests while preserving `shell:false`, absolute-path validation and the symlink prohibition. Native provider executables remain invoked directly.
+- The fixed-regex inventory estimator in `scripts/asvs-static-audit.js` no longer uses the nested character-class branch flagged by CodeQL `js/redos`. The replacement has disjoint alternatives (`\\.` or one non-slash/non-backslash character) and retains the same approximate inventory purpose without exponential backtracking.
+- Added release regression coverage that verifies the JavaScript-provider execution path and prevents restoration of the vulnerable inventory-regex structure.
 
 ### 1.70.27 deep-audit corrections
 
@@ -22,18 +28,19 @@ Direct-Xfer 1.70.27 is a deep corrective audit of the 1.70.26 ASVS-L3 closure. T
 - External crypto commands may not be symlinks; historical data-key decrypt operations pass the envelope key ID to support provider-side rotation.
 - WebAuthn hardware attestation now loads pinned root certificates, supports the standards-compliant case where `x5c` omits the root, verifies certificate validity/CA chaining, validates leaf key/algorithm strength and no longer treats attacker-controlled client transport strings as hardware proof.
 - CSP first-paint hardening: the administrator shell no longer embeds an executable inline theme bootstrap. `public/theme-init.js` is served from the same origin, covered by the Windows critical-runtime manifest, and a regression test rejects executable inline scripts in static public/PWA HTML.
+- Login-memory regression fix: normal profiles may again persist an explicitly opted-in password in an AES-256-GCM IndexedDB vault using a non-extractable WebCrypto key. The server advertises this capability through uncached `/api/meta`; ASVS L3 advertises it as forbidden, and both login surfaces keep the control hidden/disabled and purge the vault when forbidden.
 
 Direct-Xfer 1.70.26 closes the 26 deployment-bound `MANUAL` rows from 1.70.25 without converting operator declarations into unconditional PASS claims. External facts are now mandatory inputs to the L3 runtime policy through a current Ed25519-signed evidence bundle whose observations are requirement-specific, release-bound, public-origin-bound, SHA-256 checked and valid for at most seven days.
 
 Repository/release gates completed for this candidate:
 
 - ASVS regression suite: `node --test test/asvs-l3-*.test.js` — **96 passed, 0 failed, 0 skipped**.
-- Full current regression tree: **1115 passed, 0 failed, 0 skipped across all 183 `test/*.test.js` files**, verified in isolated groups. The monolithic Node test-runner invocation exceeds the constrained release harness execution window because several integration tests keep process resources alive after reporting; no individual or grouped test failure was observed.
+- Full current regression tree: **1122 passed, 0 failed, 0 skipped across all 185 `test/*.test.js` files**, verified in isolated groups. The monolithic Node test-runner invocation exceeds the constrained release harness execution window because several integration tests keep process resources alive after reporting; no individual or grouped test failure was observed.
 - Static ASVS audit: **PASS** — 127 production JavaScript source files, 13 reviewed decoder sites.
 - PARTIAL-closure audit: **PASS** — 127 production JavaScript source files, 38 repository-verifiable controls, 0 blocking findings.
-- Security inventory regenerated for 1.70.27 — **944 entries**.
+- Security inventory regenerated for 1.70.28 — **949 entries**.
 - Windows ServerHost critical runtime manifest: **103 entries, 0 stale hashes** after final synchronization.
-- CycloneDX SBOM root component synchronized to 1.70.27.
+- CycloneDX SBOM root component synchronized to 1.70.28.
 
 This document is an implementation/evidence audit, not a third-party certification. A production installation can operate in `ASVS_L3_MODE=true` only while all mandatory runtime controls and the signed deployment evidence are valid.
 
@@ -109,16 +116,16 @@ The direct dependency graph remains lockfile-pinned. V15.2.1 is no longer an ope
 
 ## Final release gates
 
-- [x] package and lockfile version synchronized to 1.70.26.
-- [x] PWA version/cache generation synchronized to 1.70.26 / pwa459.
+- [x] package and lockfile version synchronized to 1.70.28.
+- [x] PWA version/cache generation synchronized to 1.70.28 / pwa461.
 - [x] ASVS regression suite green (96/96).
-- [x] Complete current test tree green (1104/1104 across 181 files in six isolated groups).
+- [x] Complete current test tree green (1122/1122 across 185 files in eight isolated groups).
 - [x] Static ASVS audit green.
 - [x] PARTIAL-closure audit green.
 - [x] Security inventory regenerated.
 - [x] Windows runtime integrity manifest synchronized and rechecked.
 - [x] Matrix has 0 MANUAL, 0 PARTIAL, 0 FAIL and 0 REVIEW.
-- [x] SBOM root component synchronized to 1.70.27.
+- [x] SBOM root component synchronized to 1.70.28.
 - [x] Former operator-declared manual-attestation flags removed from the L3 configuration surface.
 
 Independent review of N/A decisions, production evidence collection and a focused penetration test remain appropriate before making an external certification/compliance representation.

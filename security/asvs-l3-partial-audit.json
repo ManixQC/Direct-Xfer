@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "generatedAt": "2026-08-25T14:12:09.161Z",
-  "version": "1.70.27",
-  "sourceTreeSha256": "d84daec3adaaf75e1721abd43b17f41d5950a918392c191646bb241da06d9257",
+  "generatedAt": "2026-08-25T15:00:10.006Z",
+  "version": "1.70.28",
+  "sourceTreeSha256": "7e249405c9dbf8a4177aa10e0fd59b887d24094dfb85754112ad975294abd1c4",
   "filesScanned": 127,
   "scope": [
     "server.js",
@@ -725,47 +725,22 @@
         },
         {
           "file": "public/app.js",
-          "line": 8040,
+          "line": 8067,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 8043,
+          "line": 8070,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 8081,
+          "line": 8108,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 8093,
-          "token": "html-sink"
-        },
-        {
-          "file": "public/app.js",
-          "line": 8105,
-          "token": "html-sink"
-        },
-        {
-          "file": "public/app.js",
-          "line": 8107,
-          "token": "html-sink"
-        },
-        {
-          "file": "public/app.js",
-          "line": 8113,
-          "token": "html-sink"
-        },
-        {
-          "file": "public/app.js",
-          "line": 8115,
-          "token": "html-sink"
-        },
-        {
-          "file": "public/app.js",
-          "line": 8124,
+          "line": 8120,
           "token": "html-sink"
         },
         {
@@ -775,152 +750,152 @@
         },
         {
           "file": "public/app.js",
-          "line": 8144,
+          "line": 8134,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 8160,
+          "line": 8140,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 8162,
+          "line": 8142,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 8163,
+          "line": 8151,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 8164,
+          "line": 8159,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 8165,
+          "line": 8171,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 8339,
+          "line": 8187,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 8367,
+          "line": 8189,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 8379,
+          "line": 8190,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 8380,
+          "line": 8191,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 8390,
+          "line": 8192,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 8397,
+          "line": 8366,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 8446,
+          "line": 8394,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 8448,
+          "line": 8406,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 8514,
+          "line": 8407,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 8517,
+          "line": 8417,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 8530,
+          "line": 8424,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 8530,
+          "line": 8473,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 8530,
+          "line": 8475,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 8533,
+          "line": 8541,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 8545,
+          "line": 8544,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 8547,
+          "line": 8557,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 8556,
+          "line": 8557,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 8563,
+          "line": 8557,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 8587,
+          "line": 8560,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 8588,
+          "line": 8572,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 8589,
+          "line": 8574,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 8595,
+          "line": 8583,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 8612,
+          "line": 8590,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 8613,
+          "line": 8614,
           "token": "html-sink"
         },
         {
@@ -930,97 +905,102 @@
         },
         {
           "file": "public/app.js",
-          "line": 8646,
+          "line": 8616,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 8827,
+          "line": 8622,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 8829,
+          "line": 8639,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 8944,
+          "line": 8640,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 8968,
+          "line": 8642,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 8969,
+          "line": 8673,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 9007,
+          "line": 8854,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 9025,
+          "line": 8856,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 9028,
+          "line": 8971,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 9039,
+          "line": 8995,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 9040,
+          "line": 8996,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 9092,
+          "line": 9034,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 9092,
+          "line": 9052,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 9092,
+          "line": 9055,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 9098,
+          "line": 9066,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 9104,
+          "line": 9067,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 9107,
+          "line": 9119,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 9116,
+          "line": 9119,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 9118,
+          "line": 9119,
+          "token": "html-sink"
+        },
+        {
+          "file": "public/app.js",
+          "line": 9125,
           "token": "html-sink"
         },
         {
@@ -1030,32 +1010,52 @@
         },
         {
           "file": "public/app.js",
-          "line": 9132,
+          "line": 9134,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 12010,
+          "line": 9143,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 12815,
+          "line": 9145,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 14817,
+          "line": 9158,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 14943,
+          "line": 9159,
           "token": "html-sink"
         },
         {
           "file": "public/app.js",
-          "line": 15126,
+          "line": 12037,
+          "token": "html-sink"
+        },
+        {
+          "file": "public/app.js",
+          "line": 12842,
+          "token": "html-sink"
+        },
+        {
+          "file": "public/app.js",
+          "line": 14844,
+          "token": "html-sink"
+        },
+        {
+          "file": "public/app.js",
+          "line": 14970,
+          "token": "html-sink"
+        },
+        {
+          "file": "public/app.js",
+          "line": 15153,
           "token": "html-sink"
         },
         {
@@ -3210,7 +3210,7 @@
         },
         {
           "file": "lib/server/root-routes.js",
-          "line": 120,
+          "line": 121,
           "token": "response-sink"
         },
         {
@@ -3330,22 +3330,22 @@
         },
         {
           "file": "public/app.js",
-          "line": 6439,
+          "line": 6466,
           "token": "response-sink"
         },
         {
           "file": "public/app.js",
-          "line": 6834,
+          "line": 6861,
           "token": "response-sink"
         },
         {
           "file": "public/app.js",
-          "line": 17792,
+          "line": 17819,
           "token": "response-sink"
         },
         {
           "file": "public/app.js",
-          "line": 17858,
+          "line": 17885,
           "token": "response-sink"
         }
       ]
@@ -9755,357 +9755,332 @@
         },
         {
           "file": "public/app.js",
-          "line": 6852,
+          "line": 6879,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 6852,
+          "line": 6879,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 7288,
+          "line": 7315,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 7478,
+          "line": 7505,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 7484,
+          "line": 7511,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 7489,
+          "line": 7516,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 7885,
+          "line": 7912,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 7903,
+          "line": 7930,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 7904,
+          "line": 7931,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 7995,
+          "line": 8022,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 8002,
+          "line": 8029,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 8007,
+          "line": 8034,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 8018,
+          "line": 8045,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 8643,
+          "line": 8670,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 8921,
+          "line": 8948,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 8964,
+          "line": 8991,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 8981,
+          "line": 9008,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 9348,
+          "line": 9375,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 9396,
+          "line": 9423,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 11732,
+          "line": 11759,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 11896,
+          "line": 11923,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 11919,
+          "line": 11946,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 11930,
+          "line": 11957,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 12035,
+          "line": 12062,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 12042,
+          "line": 12069,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 12186,
+          "line": 12213,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 12300,
+          "line": 12327,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 12302,
+          "line": 12329,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 12514,
+          "line": 12541,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 12516,
+          "line": 12543,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 12523,
+          "line": 12550,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 12872,
+          "line": 12899,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 13057,
+          "line": 13084,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 13324,
+          "line": 13351,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 13433,
+          "line": 13460,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 13449,
+          "line": 13476,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 13544,
+          "line": 13571,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 13545,
+          "line": 13572,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 13708,
+          "line": 13735,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 13800,
+          "line": 13827,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 13801,
+          "line": 13828,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 14055,
+          "line": 14082,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 14056,
+          "line": 14083,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 14056,
+          "line": 14083,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 14059,
+          "line": 14086,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 14081,
+          "line": 14108,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 14089,
+          "line": 14116,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 14092,
+          "line": 14119,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 14098,
+          "line": 14125,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 14106,
+          "line": 14133,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 14106,
+          "line": 14133,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 14114,
+          "line": 14141,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 14114,
+          "line": 14141,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 14124,
+          "line": 14151,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 14128,
+          "line": 14155,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 14129,
+          "line": 14156,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 14719,
+          "line": 14746,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 14722,
+          "line": 14749,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 14725,
+          "line": 14752,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 16214,
+          "line": 16241,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 16375,
+          "line": 16402,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 16558,
+          "line": 16585,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 16591,
+          "line": 16618,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 16598,
+          "line": 16625,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 16627,
+          "line": 16654,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 17306,
-          "token": "concurrency-control"
-        },
-        {
-          "file": "public/app.js",
-          "line": 17309,
-          "token": "concurrency-control"
-        },
-        {
-          "file": "public/app.js",
-          "line": 17309,
-          "token": "concurrency-control"
-        },
-        {
-          "file": "public/app.js",
-          "line": 17311,
-          "token": "concurrency-control"
-        },
-        {
-          "file": "public/app.js",
-          "line": 17330,
-          "token": "concurrency-control"
-        },
-        {
-          "file": "public/app.js",
-          "line": 17330,
+          "line": 17333,
           "token": "concurrency-control"
         },
         {
@@ -10115,12 +10090,37 @@
         },
         {
           "file": "public/app.js",
-          "line": 17368,
+          "line": 17336,
           "token": "concurrency-control"
         },
         {
           "file": "public/app.js",
-          "line": 17581,
+          "line": 17338,
+          "token": "concurrency-control"
+        },
+        {
+          "file": "public/app.js",
+          "line": 17357,
+          "token": "concurrency-control"
+        },
+        {
+          "file": "public/app.js",
+          "line": 17357,
+          "token": "concurrency-control"
+        },
+        {
+          "file": "public/app.js",
+          "line": 17363,
+          "token": "concurrency-control"
+        },
+        {
+          "file": "public/app.js",
+          "line": 17395,
+          "token": "concurrency-control"
+        },
+        {
+          "file": "public/app.js",
+          "line": 17608,
           "token": "concurrency-control"
         },
         {
@@ -11605,362 +11605,362 @@
         },
         {
           "file": "public/app.js",
-          "line": 6629,
+          "line": 6656,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 6649,
+          "line": 6676,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 6804,
+          "line": 6831,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 6822,
+          "line": 6849,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 6866,
+          "line": 6893,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 6890,
+          "line": 6917,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 7295,
+          "line": 7322,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 7299,
+          "line": 7326,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 7309,
+          "line": 7336,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 7314,
+          "line": 7341,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 7315,
+          "line": 7342,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 7996,
+          "line": 8023,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 8019,
+          "line": 8046,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 8860,
+          "line": 8887,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 8861,
+          "line": 8888,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 8922,
+          "line": 8949,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 9151,
+          "line": 9178,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 9152,
+          "line": 9179,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 9364,
+          "line": 9391,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 9369,
+          "line": 9396,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 9371,
+          "line": 9398,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 9867,
+          "line": 9894,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 10015,
+          "line": 10042,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 10051,
+          "line": 10078,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 10065,
+          "line": 10092,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 10069,
+          "line": 10096,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 10113,
+          "line": 10140,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 10133,
+          "line": 10160,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 10243,
+          "line": 10270,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 10333,
+          "line": 10360,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 10336,
+          "line": 10363,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 10361,
+          "line": 10388,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 10627,
+          "line": 10654,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 10756,
+          "line": 10783,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 10758,
+          "line": 10785,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 10768,
+          "line": 10795,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 10808,
+          "line": 10835,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 11177,
+          "line": 11204,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 11325,
+          "line": 11352,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 11918,
+          "line": 11945,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 11929,
+          "line": 11956,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 12182,
+          "line": 12209,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 12183,
+          "line": 12210,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 12191,
+          "line": 12218,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 12195,
+          "line": 12222,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 12199,
+          "line": 12226,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 12203,
+          "line": 12230,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 12341,
+          "line": 12368,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 12729,
+          "line": 12756,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 13445,
+          "line": 13472,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 13618,
+          "line": 13645,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 13634,
+          "line": 13661,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 14083,
+          "line": 14110,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 14091,
+          "line": 14118,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 14101,
+          "line": 14128,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 15305,
+          "line": 15332,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 15765,
+          "line": 15792,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 15766,
+          "line": 15793,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 16115,
+          "line": 16142,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 16119,
+          "line": 16146,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 16187,
+          "line": 16214,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 16664,
+          "line": 16691,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 16665,
+          "line": 16692,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 16773,
+          "line": 16800,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 17011,
+          "line": 17038,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 17346,
+          "line": 17373,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 17410,
+          "line": 17437,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 17556,
+          "line": 17583,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 17569,
+          "line": 17596,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 17571,
+          "line": 17598,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 17643,
+          "line": 17670,
           "token": "lifecycle"
         },
         {
           "file": "public/app.js",
-          "line": 17940,
+          "line": 17967,
           "token": "lifecycle"
         },
         {
@@ -12120,12 +12120,12 @@
         },
         {
           "file": "public/login-vault.js",
-          "line": 24,
+          "line": 67,
           "token": "lifecycle"
         },
         {
           "file": "public/login-vault.js",
-          "line": 32,
+          "line": 71,
           "token": "lifecycle"
         },
         {
@@ -13015,12 +13015,12 @@
         },
         {
           "file": "pwa/login-vault.js",
-          "line": 24,
+          "line": 67,
           "token": "lifecycle"
         },
         {
           "file": "pwa/login-vault.js",
-          "line": 32,
+          "line": 71,
           "token": "lifecycle"
         },
         {
@@ -13060,7 +13060,7 @@
         },
         {
           "file": "pwa/login.js",
-          "line": 254,
+          "line": 279,
           "token": "lifecycle"
         },
         {
@@ -13736,7 +13736,7 @@
       ]
     },
     "outboundCalls": {
-      "count": 119,
+      "count": 121,
       "rows": [
         {
           "file": "lib/assets/oauth-broker-worker.mjs",
@@ -13850,62 +13850,62 @@
         },
         {
           "file": "public/app.js",
-          "line": 11317,
+          "line": 11344,
           "token": "outbound"
         },
         {
           "file": "public/app.js",
-          "line": 13878,
+          "line": 13905,
           "token": "outbound"
         },
         {
           "file": "public/app.js",
-          "line": 13896,
+          "line": 13923,
           "token": "outbound"
         },
         {
           "file": "public/app.js",
-          "line": 15289,
+          "line": 15316,
           "token": "outbound"
         },
         {
           "file": "public/app.js",
-          "line": 15437,
+          "line": 15464,
           "token": "outbound"
         },
         {
           "file": "public/app.js",
-          "line": 15807,
+          "line": 15834,
           "token": "outbound"
         },
         {
           "file": "public/app.js",
-          "line": 15861,
+          "line": 15888,
           "token": "outbound"
         },
         {
           "file": "public/app.js",
-          "line": 16672,
+          "line": 16699,
           "token": "outbound"
         },
         {
           "file": "public/app.js",
-          "line": 16921,
+          "line": 16948,
           "token": "outbound"
         },
         {
           "file": "public/app.js",
-          "line": 16964,
+          "line": 16991,
           "token": "outbound"
         },
         {
           "file": "public/app.js",
-          "line": 17786,
+          "line": 17813,
           "token": "outbound"
         },
         {
           "file": "public/app.js",
-          "line": 17852,
+          "line": 17879,
           "token": "outbound"
         },
         {
@@ -13956,6 +13956,11 @@
         {
           "file": "public/dxsecret.js",
           "line": 39,
+          "token": "outbound"
+        },
+        {
+          "file": "public/login-vault.js",
+          "line": 88,
           "token": "outbound"
         },
         {
@@ -14299,6 +14304,11 @@
           "token": "outbound"
         },
         {
+          "file": "pwa/login-vault.js",
+          "line": 88,
+          "token": "outbound"
+        },
+        {
           "file": "pwa/login.js",
           "line": 153,
           "token": "outbound"
@@ -14310,7 +14320,7 @@
         },
         {
           "file": "pwa/login.js",
-          "line": 475,
+          "line": 500,
           "token": "outbound"
         },
         {

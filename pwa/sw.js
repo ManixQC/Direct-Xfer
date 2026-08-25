@@ -3,7 +3,7 @@
  * Shell versioning + network-aware updates. Upload/API requests are never cached.
  * Web Share Target batches are isolated so simultaneous shares cannot overwrite one another.
  */
-var VERSION = '2026.08.25-pwa460';
+var VERSION = '2026.08.25-pwa461';
 var SHELL_CACHE = 'dx-pwa-shell-' + VERSION;
 var RUNTIME_CACHE = 'dx-pwa-runtime-' + VERSION;
 var SHARE_CACHE = 'dx-share-v2';
@@ -13,17 +13,17 @@ var SHARE_CACHE = 'dx-share-v2';
 var SHELL = [
   '/app/launch',
   '/direct-xfer-pwa-shell.html',
-  '/app/app.css?v=443',
-  '/app/theme-init.js?v=443',
-  '/app/admin-advanced.js?v=443',
-  '/app/admin-audit-connectors.js?v=443',
-  '/server-health-dashboard.css?v=443',
-  '/server-health-dashboard.js?v=443',
+  '/app/app.css?v=444',
+  '/app/theme-init.js?v=444',
+  '/app/admin-advanced.js?v=444',
+  '/app/admin-audit-connectors.js?v=444',
+  '/server-health-dashboard.css?v=444',
+  '/server-health-dashboard.js?v=444',
   '/app/login-vault.js?v=269',
   '/app/dlp-local.js?v=270',
   '/download-resume.js?v=269',
-  '/app/app.js?v=443',
-  '/app/mobile-intelligence.js?v=443',
+  '/app/app.js?v=444',
+  '/app/mobile-intelligence.js?v=444',
   '/direct-xfer-pwa.webmanifest',
   '/direct-xfer-pwa-en.webmanifest',
   '/direct-xfer-pwa-es.webmanifest',

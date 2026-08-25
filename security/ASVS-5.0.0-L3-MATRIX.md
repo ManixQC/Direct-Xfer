@@ -5,10 +5,10 @@ Standard: OWASP ASVS 5.0.0 Level 3 (L3 includes applicable L1 and L2 requirement
 Repository: `ManixQC/Direct-Xfer`  
 Initial historical baseline: `3d2c0b5c668c9136a05490b25b76f4166a5940e8`  
 Baseline input: Direct-Xfer `1.70.23` ASVS-updated archive  
-Current audited source snapshot: Direct-Xfer `1.70.27` release candidate  
+Current audited source snapshot: Direct-Xfer `1.70.28` release  
 Baseline archive SHA-256: `6ed5f230e1e73e540a00dc545d3d0098946a8a75257423041492875fe8ef59cb`  
 ASVS regression verification: `node --test test/asvs-l3-*.test.js` — 96 passed, 0 failed, 0 skipped  
-Full regression verification: all 183 `test/*.test.js` files in isolated groups — 1115 passed, 0 failed, 0 skipped  
+Full regression verification: all 185 `test/*.test.js` files in isolated groups — 1122 passed, 0 failed, 0 skipped  
 Static source verification: `npm run security:static-audit` — PASS (127 production JS files; 13 reviewed decoder sites)  
 Windows runtime integrity: `node scripts/sync-windows-runtime-manifest.js --check` — PASS (103 entries; 0 stale hashes)
 
@@ -391,7 +391,7 @@ Status meanings and remediation priorities are defined in `security/ASVS-5.0.0-L
 | V14.2.8 | **PASS** | Repository-verifiable closure: default metadata stripping or explicit consent. Guarded by `scripts/asvs-l3-partial-audit.js` (V14.2.8) with reviewed anchors `lib/photo-utils.js`, `lib/server/admin-photo-routes.js`, `lib/server/pwa-routes.js` and regression `test/asvs-l3-partial-closure-1.70.25.test.js`; generated report must remain finding-free. |
 | V14.3.1 | **PASS** | Explicit L3 logout invalidates the server session and clears PWA IndexedDB stores, OPFS queued material, private caches and sensitive local/session storage rather than checkpointing capability-bearing state. |
 | V14.3.2 | **PASS** | All `/api` responses are centrally marked `Cache-Control: no-store` / `Pragma: no-cache` before route handling; administrator responses independently apply `no-store`, with regression coverage for the central boundary. |
-| V14.3.3 | **PASS** | L3 does not persist reusable passwords or E2E destination keys in browser storage. Remaining cached identifiers/metadata are classified C1/C2 and cannot independently authorize a public resource because L3 requires password/approval authorization. |
+| V14.3.3 | **PASS** | L3 does not persist reusable passwords or E2E destination keys in browser storage. `/api/meta` advertises `loginPasswordStorageAllowed=false` in L3; both login surfaces keep the remember-password control fail-closed and the browser vault purges any retained Direct-Xfer credential. Remaining cached identifiers/metadata are classified C1/C2 and cannot independently authorize a public resource because L3 requires password/approval authorization. |
 
 ## V15 — Secure Coding and Architecture
 

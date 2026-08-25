@@ -1,0 +1,52 @@
+name: Repair Windows workflow
+
+on:
+  push:
+    paths:
+      - '.github/workflows/repair-build-windows-workflow.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Remove merge-conflict markers from Windows workflow
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('.github/workflows/build-windows-csharp.yml')
+          text = path.read_text(encoding='utf-8')
+
+          replacements = {
+              "<<<<<<< HEAD\nrun-name: v1.71.3\n=======\nrun-name: v1.71.4\n>>>>>>> eb50626 (v1.71.4)": "run-name: v1.71.4",
+              "<<<<<<< HEAD\n      DX_VERSION: '1.71.3'\n=======\n      DX_VERSION: '1.71.4'\n>>>>>>> eb50626 (v1.71.4)": "      DX_VERSION: '1.71.4'",
+              "<<<<<<< HEAD\n          name: Direct-Xfer-1.71.3-Windows-CSharp\n          path: dist/Direct-Xfer-1.71.3-Windows-CSharp/**\n=======\n          name: Direct-Xfer-${{ env.DX_VERSION }}-Windows-CSharp\n          path: dist/Direct-Xfer-${{ env.DX_VERSION }}-Windows-CSharp/**\n>>>>>>> eb50626 (v1.71.4)": "          name: Direct-Xfer-${{ env.DX_VERSION }}-Windows-CSharp\n          path: dist/Direct-Xfer-${{ env.DX_VERSION }}-Windows-CSharp/**",
+              "<<<<<<< HEAD\n          name: Direct-Xfer-Setup-1.71.3\n          path: dist/installer/Direct-Xfer-Setup-1.71.3.exe\n=======\n          name: Direct-Xfer-Setup-${{ env.DX_VERSION }}\n          path: dist/installer/Direct-Xfer-Setup-${{ env.DX_VERSION }}.exe\n>>>>>>> eb50626 (v1.71.4)": "          name: Direct-Xfer-Setup-${{ env.DX_VERSION }}\n          path: dist/installer/Direct-Xfer-Setup-${{ env.DX_VERSION }}.exe",
+          }
+
+          for old, new in replacements.items():
+              if old not in text:
+                  raise SystemExit(f'Expected conflict block not found:\n{old}')
+              text = text.replace(old, new, 1)
+
+          for marker in ('<<<<<<<', '=======', '>>>>>>>'):
+              if marker in text:
+                  raise SystemExit(f'Unresolved merge marker remains: {marker}')
+
+          path.write_text(text, encoding='utf-8', newline='\n')
+      - name: Commit repaired workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/workflows/build-windows-csharp.yml
+          git diff --cached --check
+          git commit -m 'Fix Windows workflow merge conflict'
+          git push origin HEAD:main

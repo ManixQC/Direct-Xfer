@@ -238,6 +238,46 @@ jobs:
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+          # Stage first so the whitespace cleanup covers every file that will actually be committed,
+          # including generated/untracked release outputs. Git's --check rejects trailing spaces in
+          # changed Markdown lines, so normalize staged UTF-8 text before validating the tree.
+          git add -A -- ':!.github/workflows'
+          python - <<'PY'
+          from pathlib import Path
+          import os
+          import subprocess
+
+          raw_names = subprocess.check_output(
+              ['git', 'diff', '--cached', '--name-only', '-z', '--', '.', ':!.github/workflows']
+          ).split(b'\0')
+
+          cleaned = []
+          for raw_name in raw_names:
+              if not raw_name:
+                  continue
+              rel = os.fsdecode(raw_name)
+              path = Path(rel)
+              if not path.is_file():
+                  continue
+              try:
+                  text = path.read_text(encoding='utf-8')
+              except (UnicodeDecodeError, OSError):
+                  continue
+
+              had_final_newline = text.endswith(('\n', '\r'))
+              normalized = '\n'.join(line.rstrip(' \t') for line in text.splitlines())
+              if had_final_newline:
+                  normalized += '\n'
+              if normalized != text:
+                  path.write_text(normalized, encoding='utf-8', newline='\n')
+                  cleaned.append(rel)
+
+          if cleaned:
+              print('Normalized trailing whitespace in staged text files:')
+              for rel in cleaned:
+                  print('  ', rel)
+          PY
           git add -A -- ':!.github/workflows'
           git diff --cached --check
           if git diff --cached --quiet; then

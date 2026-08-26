@@ -113,7 +113,19 @@ jobs:
       - name: Build Direct-Xfer amd64 image
         shell: bash
         run: |
-          docker build --pull --platform=linux/amd64 --tag direct-xfer:trivy .
+          set -euo pipefail
+          built=0
+          for attempt in 1 2 3; do
+            if docker build --pull --platform=linux/amd64 --tag direct-xfer:trivy .; then
+              built=1
+              break
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "Docker build hit a transient failure; retrying attempt $((attempt + 1))/3 after backoff."
+              sleep "$((attempt * 15))"
+            fi
+          done
+          test "$built" = "1"
           test "$(docker image inspect direct-xfer:trivy --format '{{.Architecture}}')" = "amd64"
 
       - name: Generate complete image report

@@ -22,7 +22,9 @@ ARG DX_RCLONE_X_IMAGE_VERSION
 # interpreted as the boolean --version flag, which makes every rclone invocation fail.
 # GOTOOLCHAIN=local forbids an implicit toolchain download.
 ENV GOTOOLCHAIN=local \
-    GOSUMDB=sum.golang.org
+    GOSUMDB=sum.golang.org \
+    GOPROXY=https://proxy.golang.org,direct \
+    GODEBUG=http2client=0
 RUN mkdir -p /out /src \
   && test "${DX_RCLONE_BUILD_VERSION}" = "v1.75.0" \
   && test "${DX_RCLONE_X_IMAGE_VERSION}" = "v0.45.0" \
@@ -31,11 +33,20 @@ RUN mkdir -p /out /src \
 # CVE-2026-46603. Build the exact tagged rclone source but raise only x/image to
 # the fixed v0.45.0 release before compiling. This keeps the rclone release pinned
 # while preventing the vulnerable image decoder from being embedded in the binary.
-RUN go mod download "github.com/rclone/rclone@${DX_RCLONE_BUILD_VERSION}" \
-  && rclone_src="$(go env GOMODCACHE)/github.com/rclone/rclone@${DX_RCLONE_BUILD_VERSION}" \
-  && test -f "${rclone_src}/go.mod" \
-  && cp -a "${rclone_src}" /src/rclone \
-  && chmod -R u+w /src/rclone
+RUN set -eux; \
+  retry_go() { \
+    attempt=1; \
+    while ! "$@"; do \
+      if [ "$attempt" -ge 5 ]; then return 1; fi; \
+      sleep "$((attempt * 4))"; \
+      attempt="$((attempt + 1))"; \
+    done; \
+  }; \
+  retry_go go mod download "github.com/rclone/rclone@${DX_RCLONE_BUILD_VERSION}"; \
+  rclone_src="$(go env GOMODCACHE)/github.com/rclone/rclone@${DX_RCLONE_BUILD_VERSION}"; \
+  test -f "${rclone_src}/go.mod"; \
+  cp -a "${rclone_src}" /src/rclone; \
+  chmod -R u+w /src/rclone
 
 WORKDIR /src/rclone
 
@@ -43,10 +54,23 @@ WORKDIR /src/rclone
 # requirements (notably x/text v0.41.0 required by x/image v0.45.0) remain
 # internally consistent. Editing only the x/image require line can leave the
 # copied release module in a graph that needs further go.mod updates at build time.
-RUN go get "golang.org/x/image@${DX_RCLONE_X_IMAGE_VERSION}" \
-  && test "$(go list -m -f '{{.Version}}' golang.org/x/image)" = "${DX_RCLONE_X_IMAGE_VERSION}" \
-  && go mod download all \
-  && go mod verify
+# GitHub-hosted Docker builds occasionally see transient HTTP/2 stream resets from
+# proxy.golang.org/sum.golang.org. Keep checksum verification enabled, force the
+# simpler HTTP/1.1 transport, and retry only network operations. A bad checksum
+# still fails closed at go get/go mod download/go mod verify.
+RUN set -eux; \
+  retry_go() { \
+    attempt=1; \
+    while ! "$@"; do \
+      if [ "$attempt" -ge 5 ]; then return 1; fi; \
+      sleep "$((attempt * 4))"; \
+      attempt="$((attempt + 1))"; \
+    done; \
+  }; \
+  retry_go go get "golang.org/x/image@${DX_RCLONE_X_IMAGE_VERSION}"; \
+  test "$(go list -m -f '{{.Version}}' golang.org/x/image)" = "${DX_RCLONE_X_IMAGE_VERSION}"; \
+  retry_go go mod download all; \
+  go mod verify
 
 RUN CGO_ENABLED=0 go build -trimpath \
       -ldflags "-s -X github.com/rclone/rclone/fs.Version=${DX_RCLONE_BUILD_VERSION}" \

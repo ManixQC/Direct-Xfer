@@ -32,16 +32,22 @@ jobs:
           results_format: sarif
           publish_results: true
 
-      - name: Upload Scorecard SARIF artifact
+      - name: Filter Scorecard SARIF for Code Scanning
+        shell: bash
+        run: node scripts/filter-scorecard-sarif.js scorecard-results.sarif scorecard-security.sarif
+
+      - name: Upload full Scorecard SARIF artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: openssf-scorecard-sarif
-          path: scorecard-results.sarif
+          path: |
+            scorecard-results.sarif
+            scorecard-security.sarif
           if-no-files-found: error
           retention-days: 5
 
-      - name: Upload Scorecard security findings to Code Scanning
+      - name: Upload technical Scorecard security findings to Code Scanning
         uses: github/codeql-action/upload-sarif@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4.37.4
         with:
-          sarif_file: scorecard-results.sarif
+          sarif_file: scorecard-security.sarif
           category: openssf-scorecard

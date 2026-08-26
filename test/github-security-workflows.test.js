@@ -60,3 +60,32 @@ test("Windows provenance uses a separate least-privilege attestation job", () =>
   assert.match(text, /Direct-Xfer\.ServerHost\.exe/);
   assert.match(text, /Direct-Xfer-Setup-\$\{\{ env\.DX_VERSION \}\}\.exe/);
 });
+
+test("OpenSSF Scorecard keeps governance posture out of Code Scanning while preserving technical findings", () => {
+  const scorecard = read(".github/workflows/scorecard.yml");
+  const filter = read("scripts/filter-scorecard-sarif.js");
+  assert.match(scorecard, /filter-scorecard-sarif\.js scorecard-results\.sarif scorecard-security\.sarif/);
+  assert.match(scorecard, /sarif_file:\s*scorecard-security\.sarif/);
+  assert.match(scorecard, /category:\s*openssf-scorecard/);
+  assert.match(filter, /'CodeReviewID'/);
+  assert.match(filter, /'ContributorsID'/);
+  assert.match(filter, /'MaintainedID'/);
+  assert.match(filter, /GOVERNANCE_ONLY_RULE_IDS/);
+});
+
+test("rclone Go dependency downloads retry transient network failures without disabling checksum verification", () => {
+  const dockerfile = read("Dockerfile");
+  assert.match(dockerfile, /GOSUMDB=sum\.golang\.org/);
+  assert.match(dockerfile, /GOPROXY=https:\/\/proxy\.golang\.org,direct/);
+  assert.match(dockerfile, /GODEBUG=http2client=0/);
+  assert.match(dockerfile, /retry_go go mod download "github\.com\/rclone\/rclone@\$\{DX_RCLONE_BUILD_VERSION\}"/);
+  assert.match(dockerfile, /retry_go go get "golang\.org\/x\/image@\$\{DX_RCLONE_X_IMAGE_VERSION\}"/);
+  assert.match(dockerfile, /retry_go go mod download all/);
+  assert.match(dockerfile, /go mod verify/);
+  assert.doesNotMatch(dockerfile, /GOSUMDB=off/);
+  assert.doesNotMatch(dockerfile, /GONOSUMDB=\*/);
+  const trivy = read(".github/workflows/trivy.yml");
+  assert.match(trivy, /for attempt in 1 2 3; do/);
+  assert.match(trivy, /Docker build hit a transient failure/);
+  assert.match(trivy, /test "\$built" = "1"/);
+});

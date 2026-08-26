@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-08-26T18:59:15.788Z",
+  "generatedAt": "2026-08-26T19:11:08.417Z",
   "scope": [
     "server.js",
     "lib",
@@ -19,7 +19,7 @@
     },
     {
       "file": "lib/assets/oauth-broker-worker.mjs",
-      "line": 196,
+      "line": 204,
       "hash": "d96214f5e694a8dc"
     },
     {
@@ -34,17 +34,17 @@
     },
     {
       "file": "oauth-broker/cloudflare-worker/src/index.js",
-      "line": 196,
+      "line": 204,
       "hash": "d96214f5e694a8dc"
     },
     {
       "file": "oauth-broker/server.js",
-      "line": 80,
+      "line": 91,
       "hash": "7d8f680939bbb104"
     },
     {
       "file": "oauth-broker/server.js",
-      "line": 113,
+      "line": 124,
       "hash": "39b8f86520446775"
     },
     {

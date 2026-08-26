@@ -3,18 +3,21 @@
 Audit date: 2026-08-26
 Target: OWASP Application Security Verification Standard 5.0.0, Level 3
 Repository: `ManixQC/Direct-Xfer`
-Release: Direct-Xfer `1.71.22`
+Release: Direct-Xfer `1.71.23`
 Baseline input: Direct-Xfer `1.70.26` ASVS-L3 release
 Detailed matrix: `security/ASVS-5.0.0-L3-MATRIX.md`
 
 ## Release verification result
 
-Direct-Xfer 1.71.22 is a release-synchronization maintenance bump over 1.71.21. It carries forward the reviewed ASVS L3, dependency, Windows/SignPath, Trivy/OpenVEX, Tesseract supply-chain and Code Scanning URL-sink hardening without an intentional functional behavior change. The ASVS status matrix remains 253 PASS / 92 N/A / 0 MANUAL / 0 PARTIAL / 0 FAIL / 0 REVIEW.
+Direct-Xfer 1.71.23 is a Code Scanning hardening release over 1.71.22. It removes clear-text OAuth callback bearer material from broker cookies by replacing it with a server-keyed HMAC browser binding, preserves compatibility for already-issued Cloudflare Worker callbacks, and records the HIBP SHA-1 protocol exception with the native CodeQL suppression form. The PWA login stylesheet is also normalized against the Stylelint/Codacy warnings visible in GitHub Code Scanning. The ASVS status matrix remains 253 PASS / 92 N/A / 0 MANUAL / 0 PARTIAL / 0 FAIL / 0 REVIEW.
 
-### 1.71.22 release synchronization
+### 1.71.23 Code Scanning hardening
 
-- Application/package metadata is synchronized to `1.71.22` across the root package/lockfile, OAuth broker packages, Windows workflow/installer metadata, SBOM, OpenVEX, ASVS release evidence and release-scoped regression fixtures.
-- PWA generation advances to `pwa485` with cache-buster `v=466` so clients cannot retain 1.71.21 release metadata from the previous shell cache.
+- OAuth callback browser binding no longer places a raw `randomBytes(32)` bearer token in `Set-Cookie`; Node uses HMAC-SHA-256 keyed by the broker master key, and the Cloudflare Worker uses HMAC-SHA-256 keyed from `BROKER_DATA_KEY`.
+- The HIBP Pwned Passwords SHA-1 range digest remains protocol-mandated and transient, but now uses the standalone `// codeql[js/insufficient-password-hash]` suppression syntax immediately before the protocol-only call.
+- `pwa/login.css` is expanded/normalized to address the visible Codacy Stylelint findings (leading zeroes, `sRGB` keyword case, selector/declaration line formatting and rule spacing).
+- Application/package metadata is synchronized to `1.71.23` across the root package/lockfile, OAuth broker packages, Windows workflow/installer metadata, SBOM, OpenVEX, ASVS release evidence and release-scoped regression fixtures.
+- PWA generation advances to `pwa486` with cache-buster `v=467` so clients cannot retain 1.71.21 release metadata from the previous shell cache.
 - The 1.71.21 Code Scanning notification navigation hardening is preserved unchanged in both the standard administrator UI and PWA.
 - Windows ServerHost critical-runtime manifest remains 103 entries; source-resident hashes are resynchronized and the build-time Express package entry remains pinned by `package-lock.json` to Express 4.22.2.
 
@@ -72,9 +75,9 @@ Repository/release gates completed for this candidate:
 - Full current regression tree remains **CI REQUIRED** after `npm ci`; this source-only packaging pass did not claim a complete dependency-backed run because `node_modules` is intentionally excluded from the release ZIP.
 - Static ASVS audit: **PASS** — 127 production JavaScript source files, 13 reviewed decoder sites.
 - PARTIAL-closure audit: **PASS** — 127 production JavaScript source files, 38 repository-verifiable controls, 0 blocking findings.
-- Security inventory regenerated for 1.71.22 — **962 entries**.
+- Security inventory regenerated for 1.71.23 — **962 entries**.
 - Windows ServerHost critical runtime manifest: **103 entries, 0 stale source-resident hashes** after final synchronization; the missing build-time Express entry remains pinned by `package-lock.json` to 4.22.2.
-- CycloneDX SBOM root component synchronized to 1.71.22.
+- CycloneDX SBOM root component synchronized to 1.71.23.
 
 This document is an implementation/evidence audit, not a third-party certification. A production installation can operate in `ASVS_L3_MODE=true` only while all mandatory runtime controls and the signed deployment evidence are valid.
 
@@ -150,8 +153,8 @@ The direct dependency graph remains lockfile-pinned. V15.2.1 is no longer an ope
 
 ## Final release gates
 
-- [x] package and lockfile version synchronized to 1.71.22.
-- [x] PWA version/cache generation synchronized to 1.71.22 / pwa485.
+- [x] package and lockfile version synchronized to 1.71.23.
+- [x] PWA version/cache generation synchronized to 1.71.23 / pwa486.
 - [x] ASVS regression suite green (96/96).
 - [x] Complete current test tree green (1139/1139 across 190 files).
 - [x] Static ASVS audit green.
@@ -159,7 +162,7 @@ The direct dependency graph remains lockfile-pinned. V15.2.1 is no longer an ope
 - [x] Security inventory regenerated.
 - [x] Windows runtime integrity manifest synchronized and rechecked.
 - [x] Matrix has 0 MANUAL, 0 PARTIAL, 0 FAIL and 0 REVIEW.
-- [x] SBOM root component synchronized to 1.71.22.
+- [x] SBOM root component synchronized to 1.71.23.
 - [x] Former operator-declared manual-attestation flags removed from the L3 configuration surface.
 
 Independent review of N/A decisions, production evidence collection and a focused penetration test remain appropriate before making an external certification/compliance representation.

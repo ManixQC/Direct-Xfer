@@ -39,7 +39,7 @@ test('CodeQL HIBP range lookup documents its protocol-only SHA-1 exception', () 
   assert.equal(sha1Uses.length, 1, 'HIBP range lookup must be the only SHA-1 use in auth-utils');
   assert.match(src, /SHA-1 is required by the HIBP Pwned Passwords range protocol/);
   assert.match(src, /never persisted and is never accepted as[\s\S]{0,120}credential verifier/);
-  assert.match(src, /createHash\('sha1'\)[^\n]*lgtm\[js\/insufficient-password-hash\]/);
+  assert.match(src, /codeql\[js\/insufficient-password-hash\]\n\s*const digest = crypto\.createHash\('sha1'\)/);
   assert.match(src, /const prefix = digest\.slice\(0, 5\)/);
   assert.match(src, /path: '\/range\/' \+ prefix/);
 });
@@ -82,23 +82,27 @@ test('PWA security hotfix advances the shell and login cache generations without
   const loginHtml = read('pwa/login.html');
   const standardHtml = read('public/index.html');
   const bridgeHtml = read('public/oauth-bridge.html');
-  assert.match(sw, /2026\.08\.26-pwa485/);
-  assert.match(sw, /app\.js\?v=466/);
+  assert.match(sw, /2026\.08\.26-pwa486/);
+  assert.match(sw, /app\.js\?v=467/);
   assert.match(app, new RegExp(`APP_VERSION = '${releaseRe}'`));
-  assert.match(app, /APP_BUILD = '2026\.08\.26-pwa485'/);
+  assert.match(app, /APP_BUILD = '2026\.08\.26-pwa486'/);
   assert.match(loginHtml, /login\.js\?v=321/);
-  assert.match(loginHtml, /login-vault\.js\?v=466/);
+  assert.match(loginHtml, /login-vault\.js\?v=467/);
   assert.match(standardHtml, /app\.js\?v=352/);
   assert.match(bridgeHtml, /oauth-bridge\.js\?v=4/);
 });
 
 
-test('OAuth browser binding is not copied from the authorization URL into a cookie', () => {
-  for (const rel of ['oauth-broker/server.js', 'oauth-broker/cloudflare-worker/src/index.js']) {
-    const src = read(rel);
-    assert.match(src, /callbackHash/);
+test('OAuth browser callback cookie stores only a keyed binding, never a raw random bearer token', () => {
+  const server = read('oauth-broker/server.js');
+  const worker = read('oauth-broker/cloudflare-worker/src/index.js');
+  for (const src of [server, worker]) {
+    assert.match(src, /oauthBrowserBinding/);
     assert.match(src, /newOAuthBrowserCookie/);
-    assert.doesNotMatch(src, /Set-Cookie[^\n]*binding/i);
-    assert.doesNotMatch(src, /set-cookie[^\n]*binding/i);
+    assert.doesNotMatch(src, /callbackToken\s*=\s*(?:base64url|b64url)\(.*randomBytes\(32\)/);
+    assert.doesNotMatch(src, /set-cookie[^\n]*callbackToken/i);
+    assert.doesNotMatch(src, /Set-Cookie[^\n]*callbackToken/i);
   }
+  assert.match(server, /createHmac\('sha256', MASTER_KEY\)/);
+  assert.match(worker, /name:'HMAC', hash:'SHA-256'/);
 });

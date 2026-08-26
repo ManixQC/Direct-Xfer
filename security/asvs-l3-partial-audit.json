@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "generatedAt": "2026-08-26T18:59:15.574Z",
-  "version": "1.71.22",
-  "sourceTreeSha256": "3f13dd528f54150fd9ee618d31b7fbbfcd41e1e469d5bf184231fe875bfd91a6",
+  "generatedAt": "2026-08-26T19:11:57.997Z",
+  "version": "1.71.23",
+  "sourceTreeSha256": "b38638a0260b95bdd485524b90e917247195dc706f6647ed4dce921d7329d6ed",
   "filesScanned": 127,
   "scope": [
     "server.js",
@@ -372,7 +372,7 @@
         },
         {
           "file": "oauth-broker/server.js",
-          "text": "callbackHash"
+          "text": "oauthBrowserBinding"
         },
         {
           "file": "lib/server/storage-connector-config.js",
@@ -3320,7 +3320,7 @@
         },
         {
           "file": "oauth-broker/server.js",
-          "line": 252,
+          "line": 262,
           "token": "response-sink"
         },
         {
@@ -7560,12 +7560,12 @@
         },
         {
           "file": "lib/auth-utils.js",
-          "line": 256,
+          "line": 257,
           "token": "concurrency-control"
         },
         {
           "file": "lib/auth-utils.js",
-          "line": 258,
+          "line": 259,
           "token": "concurrency-control"
         },
         {
@@ -11115,7 +11115,7 @@
         },
         {
           "file": "lib/auth-utils.js",
-          "line": 215,
+          "line": 216,
           "token": "lifecycle"
         },
         {
@@ -11535,7 +11535,7 @@
         },
         {
           "file": "oauth-broker/server.js",
-          "line": 209,
+          "line": 220,
           "token": "lifecycle"
         },
         {
@@ -13226,7 +13226,7 @@
       ]
     },
     "cryptoDecisions": {
-      "count": 28,
+      "count": 29,
       "rows": [
         {
           "file": "lib/auth-utils.js",
@@ -13360,12 +13360,17 @@
         },
         {
           "file": "oauth-broker/server.js",
-          "line": 141,
+          "line": 75,
           "token": "crypto"
         },
         {
           "file": "oauth-broker/server.js",
-          "line": 147,
+          "line": 152,
+          "token": "crypto"
+        },
+        {
+          "file": "oauth-broker/server.js",
+          "line": 158,
           "token": "crypto"
         }
       ]
@@ -13740,12 +13745,12 @@
       "rows": [
         {
           "file": "lib/assets/oauth-broker-worker.mjs",
-          "line": 235,
+          "line": 243,
           "token": "outbound"
         },
         {
           "file": "lib/assets/oauth-broker-worker.mjs",
-          "line": 534,
+          "line": 547,
           "token": "outbound"
         },
         {
@@ -13820,17 +13825,17 @@
         },
         {
           "file": "oauth-broker/cloudflare-worker/src/index.js",
-          "line": 235,
+          "line": 243,
           "token": "outbound"
         },
         {
           "file": "oauth-broker/cloudflare-worker/src/index.js",
-          "line": 534,
+          "line": 547,
           "token": "outbound"
         },
         {
           "file": "oauth-broker/server.js",
-          "line": 181,
+          "line": 192,
           "token": "outbound"
         },
         {

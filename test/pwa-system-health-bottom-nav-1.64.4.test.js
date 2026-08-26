@@ -64,10 +64,10 @@ test('all System Health entry points are centrally access-gated and initial non-
   assert.match(app, /syncSystemHealthNavAccess\(announcedAdminAccess === '1'\)/);
 });
 
-test('PWA shell generation is pwa485 while application version stays 1.71.22', () => {
+test('PWA shell generation is pwa486 while application version stays 1.71.23', () => {
   assert.equal(JSON.parse(read('package.json')).version, releaseVersion);
   for (const file of ['pwa/index.html','pwa/app.js','pwa/sw.js','pwa/theme-init.js','pwa/admin-advanced.js','pwa/mobile-intelligence.js']) {
-    assert.match(read(file), /pwa485|v=466/);
+    assert.match(read(file), /pwa486|v=467/);
     assert.doesNotMatch(read(file), /pwa329|v=329/);
   }
 });

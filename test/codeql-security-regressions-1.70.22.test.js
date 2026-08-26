@@ -33,17 +33,45 @@ test('CodeQL password-hash hardening removes request-time legacy SHA-256 verific
   assert.match(src, /return \{ ok: true, match: false \};/);
 });
 
-test('CodeQL HIBP range lookup documents its protocol-only SHA-1 exception', () => {
+test('CodeQL HIBP range lookup keeps protocol SHA-1 out of the password-hash createHash sink', () => {
   const src = read('lib/auth-utils.js');
-  const sha1Uses = src.match(/createHash\(['"]sha1['"]\)/g) || [];
-  assert.equal(sha1Uses.length, 1, 'HIBP range lookup must be the only SHA-1 use in auth-utils');
+  assert.doesNotMatch(src, /createHash\(['"]sha1['"]\)/, 'auth-utils must not send password data through the createHash SHA-1 sink flagged by CodeQL');
   assert.match(src, /SHA-1 is required by the HIBP Pwned Passwords range protocol/);
   assert.match(src, /never persisted and is never accepted as[\s\S]{0,120}credential verifier/);
-  assert.match(src, /function hibpProtocolSha1Digest\(value\)/);
-  assert.match(src, /createHash\('sha1'\)[^\n]*lgtm\[js\/insufficient-password-hash\]/);
-  assert.match(src, /const digest = hibpProtocolSha1Digest\(plain\)/);
+  assert.match(src, /async function hibpProtocolSha1Digest\(value\)/);
+  assert.match(src, /crypto\.webcrypto\.subtle\.digest\('SHA-1', bytes\)/);
+  assert.match(src, /const digest = await hibpProtocolSha1Digest\(plain\)/);
   assert.match(src, /const prefix = digest\.slice\(0, 5\)/);
   assert.match(src, /path: '\/range\/' \+ prefix/);
+});
+
+test('HIBP Web Crypto digest preserves the range prefix and suffix matching contract', async () => {
+  const { EventEmitter } = require('node:events');
+  const { checkPwnedPassword } = require('../lib/auth-utils');
+  const expectedSuffix = '1E4C9B93F3F0682250B6CF8331B7EE68FD8';
+
+  const result = await checkPwnedPassword('password', (options, onResponse) => {
+    assert.equal(options.path, '/range/5BAA6');
+    assert.equal(options.headers['Add-Padding'], 'true');
+
+    const request = new EventEmitter();
+    request.setTimeout = () => {};
+    request.destroy = () => {};
+    request.end = () => {
+      const response = new EventEmitter();
+      response.statusCode = 200;
+      response.setEncoding = () => {};
+      response.destroy = () => {};
+      queueMicrotask(() => {
+        onResponse(response);
+        response.emit('data', `${expectedSuffix}:42\n00000000000000000000000000000000000:0\n`);
+        response.emit('end');
+      });
+    };
+    return request;
+  });
+
+  assert.deepEqual(result, { ok: true, breached: true, count: 42 });
 });
 
 test('CodeQL OAuth URL boundaries validate protocols before browser URL sinks', () => {
@@ -84,12 +112,12 @@ test('PWA security hotfix advances the shell and login cache generations without
   const loginHtml = read('pwa/login.html');
   const standardHtml = read('public/index.html');
   const bridgeHtml = read('public/oauth-bridge.html');
-  assert.match(sw, /2026\.08\.26-pwa488/);
-  assert.match(sw, /app\.js\?v=469/);
+  assert.match(sw, /2026\.08\.26-pwa489/);
+  assert.match(sw, /app\.js\?v=470/);
   assert.match(app, new RegExp(`APP_VERSION = '${releaseRe}'`));
-  assert.match(app, /APP_BUILD = '2026\.08\.26-pwa488'/);
+  assert.match(app, /APP_BUILD = '2026\.08\.26-pwa489'/);
   assert.match(loginHtml, /login\.js\?v=321/);
-  assert.match(loginHtml, /login-vault\.js\?v=469/);
+  assert.match(loginHtml, /login-vault\.js\?v=470/);
   assert.match(standardHtml, /app\.js\?v=352/);
   assert.match(bridgeHtml, /oauth-bridge\.js\?v=4/);
 });

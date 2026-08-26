@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-08-26T19:34:21.638Z",
-  "version": "1.71.25",
+  "generatedAt": "2026-08-26T19:47:21.562Z",
+  "version": "1.71.26",
   "categories": {
     "crypto": [
       {
@@ -137,11 +137,6 @@
         "file": "lib/auth-utils.js",
         "line": 148,
         "text": "* a Direct-Xfer credential verifier. Account credentials remain scrypt-derived."
-      },
-      {
-        "file": "lib/auth-utils.js",
-        "line": 153,
-        "text": "return crypto.createHash('sha1').update(Buffer.from(String(value), 'utf8')).digest('hex').toUpperCase(); // lgtm[js/insufficient-password-hash]"
       },
       {
         "file": "lib/google-oauth-profile.js",
@@ -1600,13 +1595,13 @@
       },
       {
         "file": "test/codeql-security-regressions-1.70.22.test.js",
-        "line": 38,
-        "text": "const sha1Uses = src.match(/createHash\\(['\"]sha1['\"]\\)/g) || [];"
+        "line": 36,
+        "text": "test('CodeQL HIBP range lookup keeps protocol SHA-1 out of the password-hash createHash sink', () => {"
       },
       {
         "file": "test/codeql-security-regressions-1.70.22.test.js",
-        "line": 43,
-        "text": "assert.match(src, /createHash\\('sha1'\\)[^\\n]*lgtm\\[js\\/insufficient-password-hash\\]/);"
+        "line": 38,
+        "text": "assert.doesNotMatch(src, /createHash\\(['\"]sha1['\"]\\)/, 'auth-utils must not send password data through the createHash SHA-1 sink flagged by CodeQL');"
       },
       {
         "file": "test/connector-status-idempotency-1.67.39.test.js",
@@ -1854,8 +1849,8 @@
       },
       {
         "file": "lib/auth-utils.js",
-        "line": 156,
-        "text": "function checkPwnedPassword(plain, requestFactory = https.request) {"
+        "line": 159,
+        "text": "async function checkPwnedPassword(plain, requestFactory = https.request) {"
       },
       {
         "file": "lib/google-oauth-broker-client.js",
@@ -3300,7 +3295,7 @@
       {
         "file": "test/pwa-admin-features-15-19-21-1.64.0.test.js",
         "line": 196,
-        "text": "const asset = await fetch(base + '/app/admin-audit-connectors.js?v=469');"
+        "text": "const asset = await fetch(base + '/app/admin-audit-connectors.js?v=470');"
       },
       {
         "file": "test/pwa-admin-features-15-19-21-1.64.0.test.js",
@@ -3350,7 +3345,7 @@
       {
         "file": "test/pwa-admin-features-3-7-1.64.0.test.js",
         "line": 218,
-        "text": "const publicAsset = await fetch(base + '/app/admin-advanced.js?v=469');"
+        "text": "const publicAsset = await fetch(base + '/app/admin-advanced.js?v=470');"
       },
       {
         "file": "test/pwa-admin-features-3-7-1.64.0.test.js",
@@ -3440,12 +3435,12 @@
       {
         "file": "test/pwa-mobile-features-24-25-27-29-31-42-45-46-47-1.64.0.test.js",
         "line": 150,
-        "text": "const mod = await fetch(base + '/app/mobile-intelligence.js?v=469');"
+        "text": "const mod = await fetch(base + '/app/mobile-intelligence.js?v=470');"
       },
       {
         "file": "test/pwa-mobile-features-24-25-27-29-31-42-45-46-47-1.64.0.test.js",
         "line": 154,
-        "text": "const r = await fetch(base + '/app/' + name + '?v=469');"
+        "text": "const r = await fetch(base + '/app/' + name + '?v=470');"
       },
       {
         "file": "test/pwa-routes-refactor.test.js",

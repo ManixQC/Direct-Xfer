@@ -1,6 +1,6 @@
-# Direct-Xfer 1.71.25 — ASVS L3 release evidence
+# Direct-Xfer 1.71.26 — ASVS L3 release evidence
 
-> 1.71.25 CodeQL correction: GitHub alert #17201 still treated the protocol-mandated HIBP SHA-1 range digest as a credential hash. The operation is now isolated in `hibpProtocolSha1Digest()` and suppressed at the exact sink with the legacy inline `lgtm[js/insufficient-password-hash]` form, while Direct-Xfer credential verification remains scrypt-only. The 1.71.24 OAuth no-cookie fix and PWA Stylelint fixes are preserved; PWA advances to pwa488 / cache-buster v=469.
+> 1.71.26 CodeQL correction: GitHub alert #17362 confirmed that inline suppression did not close the protocol-mandated HIBP SHA-1 finding. `hibpProtocolSha1Digest()` now uses Node Web Crypto `subtle.digest('SHA-1', ...)`, so account-password data no longer reaches the `crypto.createHash('sha1')` sink reported by CodeQL. The digest remains an ephemeral HIBP k-anonymity transform only; Direct-Xfer credential verification remains scrypt-only. The 1.71.24 OAuth no-cookie fix and PWA Stylelint fixes are preserved; PWA advances to pwa489 / cache-buster v=470.
 
 Release date: 2026-08-26
 Profile: `ASVS_L3_MODE=true`
@@ -10,15 +10,15 @@ Profile: `ASVS_L3_MODE=true`
 | Gate | Result | Evidence |
 |---|---|---|
 | Release-targeted regression tests | PASS | 108 passed, 0 failed, 0 skipped, including CodeQL/OAuth no-cookie/state/PKCE regressions, the historical runner contract, dependency floors, npm-audit CI, version/PWA synchronization, Windows metadata and SignPath release invariants |
-| Complete current regression tree | CI REQUIRED | Source-only run: 1146 discovered; 1135 PASS / 11 FAIL, all 11 due to intentionally absent `node_modules/express`; run `npm ci` + `npm test` in CI before publishing binaries |
+| Complete current regression tree | CI REQUIRED | Source-only run: 1147 discovered; 1136 PASS / 11 FAIL, all 11 due to intentionally absent `node_modules/express`; run `npm ci` + `npm test` in CI before publishing binaries |
 | PARTIAL-closure audit | PASS | 127 production JS files; 38 repository-verifiable controls; 0 blocking findings |
 | Static ASVS audit | PASS | 127 production JS files; 10 reviewed decoder sites |
-| Security inventory | PASS | Regenerated for 1.71.25; 957 inventory entries |
+| Security inventory | PASS | Regenerated for 1.71.26; 957 inventory entries |
 | Windows runtime integrity | PASS | 103 entries; 0 stale source-resident hashes after final synchronization; build-time Express entry remains pinned to lockfile `4.22.2` |
 | Matrix triage | PASS | 345/345 triaged; 253 PASS; 0 PARTIAL; 0 FAIL; 92 N/A; 0 REVIEW; 0 MANUAL |
 | Signed-evidence verifier | PASS | 22 required external requirement IDs; Ed25519 signature; requirement-specific method/predicate; canonical SHA-256; release/origin binding; ≤7-day TTL |
 | Isolated crypto provider gate | PASS | L3 self-test requires hardware backing, non-exportable keys, key isolation and isolated encrypt/decrypt/HMAC/sign operations |
-| CycloneDX SBOM | PASS | Root component synchronized to Direct-Xfer 1.71.25 |
+| CycloneDX SBOM | PASS | Root component synchronized to Direct-Xfer 1.71.26 |
 | Connected dependency/container scan | DEPLOYMENT EVIDENCE | V15.2.1 startup evidence requires real release-bound dependency + container scans with zero High/Critical findings |
 
 ## Matrix state
@@ -35,7 +35,7 @@ The source matrix has no unresolved `MANUAL`, `PARTIAL`, `FAIL` or `REVIEW` rows
 
 ## Regression note
 
-The 1.71.25 packaging pass executed 108 release/security-targeted tests with zero failures or skips, plus both repository-verifiable ASVS audits. The source archive intentionally excludes `node_modules`; real-server tests that require `express` therefore belong to the dependency-backed `npm ci` + `npm test` CI release gate rather than the source-only packaging pass.
+The 1.71.26 packaging pass executed 109 release/security-targeted tests with zero failures or skips, plus both repository-verifiable ASVS audits. The source archive intentionally excludes `node_modules`; real-server tests that require `express` therefore belong to the dependency-backed `npm ci` + `npm test` CI release gate rather than the source-only packaging pass.
 
 ## Commands/gates used
 

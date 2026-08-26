@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "generatedAt": "2026-08-26T19:35:13.852Z",
-  "version": "1.71.25",
-  "sourceTreeSha256": "41f9f833311f4c929ad8a6ed25f83b5c77db1618c4e4886553801c57fa3c387a",
+  "generatedAt": "2026-08-26T19:46:46.557Z",
+  "version": "1.71.26",
+  "sourceTreeSha256": "34ded637c365d749e9281bcd09102e842e3be19983414cecedc13243cbace18e",
   "filesScanned": 127,
   "scope": [
     "server.js",
@@ -7560,12 +7560,12 @@
         },
         {
           "file": "lib/auth-utils.js",
-          "line": 262,
+          "line": 265,
           "token": "concurrency-control"
         },
         {
           "file": "lib/auth-utils.js",
-          "line": 264,
+          "line": 267,
           "token": "concurrency-control"
         },
         {
@@ -11115,7 +11115,7 @@
         },
         {
           "file": "lib/auth-utils.js",
-          "line": 221,
+          "line": 224,
           "token": "lifecycle"
         },
         {

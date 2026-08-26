@@ -29,7 +29,7 @@ test(`${releaseVersion} builds Tesseract 5.5.3 from the exact signed-release com
   const commitDefault = dockerfile.indexOf('ARG DX_TESSERACT_BUILD_COMMIT=db0ec62f81b0737fbbe184d8fea40af5738f8eef');
   assert.ok(versionDefault >= 0 && versionDefault < firstFrom, 'Tesseract version ARG default must be global so later stages inherit it');
   assert.ok(commitDefault >= 0 && commitDefault < firstFrom, 'Tesseract commit ARG default must be global so later stages inherit it');
-  assert.match(dockerfile, /FROM node:22-trixie-slim AS tesseract-builder\nARG DX_TESSERACT_BUILD_VERSION\nARG DX_TESSERACT_BUILD_COMMIT/);
+  assert.match(dockerfile, /FROM node:22\.23\.2-trixie-slim@sha256:[0-9a-f]{64} AS tesseract-builder\nARG DX_TESSERACT_BUILD_VERSION\nARG DX_TESSERACT_BUILD_COMMIT/);
   assert.match(dockerfile, /ARG DX_TESSERACT_BUILD_VERSION=5\.5\.3/);
   assert.match(dockerfile, /ARG DX_TESSERACT_BUILD_COMMIT=db0ec62f81b0737fbbe184d8fea40af5738f8eef/);
   assert.match(dockerfile, /git -C \/src\/tesseract fetch --depth=1 origin/);
@@ -104,8 +104,8 @@ test(`${releaseVersion} Trivy produces a complete report but gates only fixable,
   assert.match(trivy, /trivy convert[\s\S]*?trivy-image-full\.json \| tee trivy-image-full\.txt/);
   assert.match(trivy, /Scan actionable repository findings[\s\S]*?TRIVY_VEX: security\/openvex\.json[\s\S]*?ignore-unfixed: true[\s\S]*?trivyignores: \.trivyignore\.yaml/);
   assert.match(trivy, /Scan actionable image findings[\s\S]*?TRIVY_VEX: security\/openvex\.json[\s\S]*?ignore-unfixed: true[\s\S]*?trivyignores: \.trivyignore\.yaml/);
-  assert.match(trivy, /actions\/upload-artifact@v7/);
-  assert.match(trivy, /github\/codeql-action\/upload-sarif@v4/);
+  assert.match(trivy, /actions\/upload-artifact@[0-9a-f]{40}/);
+  assert.match(trivy, /github\/codeql-action\/upload-sarif@[0-9a-f]{40}/);
   assert.match(trivy, /docker build --pull --platform=linux\/amd64/);
   assert.match(trivy, /Upload image Trivy reports[\s\S]*?hashFiles\('trivy-image-full\.json'\)/);
   assert.match(trivy, /\.Architecture}}'\)" = "amd64"/);

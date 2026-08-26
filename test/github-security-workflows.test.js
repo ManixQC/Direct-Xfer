@@ -61,16 +61,19 @@ test("Windows provenance uses a separate least-privilege attestation job", () =>
   assert.match(text, /Direct-Xfer-Setup-\$\{\{ env\.DX_VERSION \}\}\.exe/);
 });
 
-test("OpenSSF Scorecard keeps governance posture out of Code Scanning while preserving technical findings", () => {
+test("OpenSSF Scorecard uses an allowlist so only concrete technical findings reach Code Scanning", () => {
   const scorecard = read(".github/workflows/scorecard.yml");
   const filter = read("scripts/filter-scorecard-sarif.js");
   assert.match(scorecard, /filter-scorecard-sarif\.js scorecard-results\.sarif scorecard-security\.sarif/);
   assert.match(scorecard, /sarif_file:\s*scorecard-security\.sarif/);
   assert.match(scorecard, /category:\s*openssf-scorecard/);
-  assert.match(filter, /'CodeReviewID'/);
-  assert.match(filter, /'ContributorsID'/);
-  assert.match(filter, /'MaintainedID'/);
-  assert.match(filter, /GOVERNANCE_ONLY_RULE_IDS/);
+  assert.match(filter, /CODE_SCANNING_RULE_IDS/);
+  for (const id of ['DangerousWorkflowID', 'PinnedDependenciesID', 'TokenPermissionsID', 'VulnerabilitiesID']) {
+    assert.match(filter, new RegExp(`'${id}'`));
+  }
+  for (const posture of ['CodeReviewID', 'BranchProtectionID', 'FuzzingID', 'SecurityPolicyID']) {
+    assert.doesNotMatch(filter, new RegExp(`'${posture}'`));
+  }
 });
 
 test("rclone Go dependency downloads retry transient network failures without disabling checksum verification", () => {
@@ -88,4 +91,53 @@ test("rclone Go dependency downloads retry transient network failures without di
   assert.match(trivy, /for attempt in 1 2 3; do/);
   assert.match(trivy, /Docker build hit a transient failure/);
   assert.match(trivy, /test "\$built" = "1"/);
+});
+
+
+test("all third-party GitHub Actions are pinned to immutable commit SHAs", () => {
+  const workflowDir = path.join(ROOT, ".github", "workflows");
+  for (const name of fs.readdirSync(workflowDir).filter((x) => x.endsWith(".yml"))) {
+    const text = fs.readFileSync(path.join(workflowDir, name), "utf8");
+    for (const line of text.split(/\r?\n/)) {
+      const match = line.match(/^\s*-?\s*uses:\s*([^\s#]+)\s*(?:#.*)?$/);
+      if (!match) continue;
+      const target = match[1];
+      if (target.startsWith("./") || target.startsWith("docker://")) continue;
+      assert.match(target, /@[0-9a-f]{40}$/, `${name}: unpinned action ${target}`);
+    }
+  }
+});
+
+test("Scorecard Token-Permissions writes are job-scoped rather than workflow-global", () => {
+  const trivy = read(".github/workflows/trivy.yml");
+  const trivyPreamble = trivy.slice(0, trivy.indexOf("jobs:"));
+  assert.doesNotMatch(trivyPreamble, /^\s*security-events:\s*write\s*$/m);
+  assert.match(trivy, /repository-scan:[\s\S]*?permissions:[\s\S]*?security-events:\s*write/);
+  assert.match(trivy, /image-scan:[\s\S]*?permissions:[\s\S]*?security-events:\s*write/);
+
+  const chain = read(".github/workflows/release-windows-build-chain.yml");
+  const chainPreamble = chain.slice(0, chain.indexOf("jobs:"));
+  assert.doesNotMatch(chainPreamble, /^\s*actions:\s*write\s*$/m);
+  assert.match(chain, /dispatch-windows-build:[\s\S]*?permissions:[\s\S]*?actions:\s*write/);
+});
+
+test("container base images and Cloudflare deployment tooling are immutably or exactly pinned", () => {
+  const dockerfile = read("Dockerfile");
+  for (const line of dockerfile.split(/\r?\n/).filter((x) => /^FROM\s+/i.test(x))) {
+    assert.match(line, /@sha256:[0-9a-f]{64}/, `unpinned Docker base: ${line}`);
+  }
+  const brokerDocker = read("oauth-broker/Dockerfile");
+  assert.match(brokerDocker.split(/\r?\n/)[0], /node:22\.23\.2-alpine@sha256:[0-9a-f]{64}$/);
+  const deploySh = read("oauth-broker/cloudflare-worker/scripts/deploy.sh");
+  const deployPs = read("oauth-broker/cloudflare-worker/scripts/deploy.ps1");
+  assert.doesNotMatch(deploySh, /npm install --package-lock-only/);
+  assert.doesNotMatch(deployPs, /npm install --package-lock-only/);
+  assert.match(deploySh, /wrangler@4\.94\.0/);
+  assert.match(deployPs, /wrangler@4\.94\.0/);
+});
+
+test("repository publishes a non-public-disclosure security policy", () => {
+  const policy = read(".github/SECURITY.md");
+  assert.match(policy, /do not disclose suspected vulnerabilities in a public issue/i);
+  assert.match(policy, /private vulnerability reporting/i);
 });

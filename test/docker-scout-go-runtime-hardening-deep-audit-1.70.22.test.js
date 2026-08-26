@@ -132,8 +132,8 @@ test('1.70.22 treats rclone source, toolchain, module metadata and licence as on
 });
 
 test('1.70.22 keeps build-arg verification coherent across builder and final stages', () => {
-  const finalStage = dockerfile.slice(dockerfile.lastIndexOf('FROM node:22-trixie-slim'));
-  assert.match(finalStage, /^FROM node:22-trixie-slim\nARG DX_RCLONE_BUILD_VERSION\nARG DX_RCLONE_GO_BUILD_VERSION\nARG DX_RCLONE_X_IMAGE_VERSION/m);
+  const finalStage = dockerfile.slice(dockerfile.lastIndexOf('FROM node:22.23.2-trixie-slim@sha256:'));
+  assert.match(finalStage, /^FROM node:22\.23\.2-trixie-slim@sha256:[0-9a-f]{64}\nARG DX_RCLONE_BUILD_VERSION\nARG DX_RCLONE_GO_BUILD_VERSION\nARG DX_RCLONE_X_IMAGE_VERSION/m);
   assert.match(finalStage, /rclone=\$\{DX_RCLONE_BUILD_VERSION\}/);
   assert.match(finalStage, /go=go\$\{DX_RCLONE_GO_BUILD_VERSION\}/);
   assert.match(finalStage, /x-image=\$\{DX_RCLONE_X_IMAGE_VERSION\}/);

@@ -4,19 +4,17 @@ Set-Location $Root
 
 Write-Host "Direct-Xfer - déploiement du broker OAuth public Cloudflare" -ForegroundColor Cyan
 if (-not (Get-Command node -ErrorAction SilentlyContinue)) { throw "Node.js 20+ est requis." }
-if (-not (Test-Path package-lock.json)) { npm install --package-lock-only | Out-Host }
-npm ci | Out-Host
-npx wrangler whoami | Out-Host
+npx --yes wrangler@4.94.0 whoami | Out-Host
 
 $dbName = 'direct-xfer-oauth-broker'
-$list = (npx wrangler d1 list --json | ConvertFrom-Json)
+$list = (npx --yes wrangler@4.94.0 d1 list --json | ConvertFrom-Json)
 $db = $list | Where-Object { $_.name -eq $dbName } | Select-Object -First 1
 if (-not $db) {
   Write-Host "Création de la base D1 $dbName..." -ForegroundColor Yellow
   # Cloudflare recommande de laisser D1 choisir automatiquement la localisation
   # sauf contrainte spécifique de juridiction/latence.
-  npx wrangler d1 create $dbName | Out-Host
-  $db = (npx wrangler d1 list --json | ConvertFrom-Json) | Where-Object { $_.name -eq $dbName } | Select-Object -First 1
+  npx --yes wrangler@4.94.0 d1 create $dbName | Out-Host
+  $db = (npx --yes wrangler@4.94.0 d1 list --json | ConvertFrom-Json) | Where-Object { $_.name -eq $dbName } | Select-Object -First 1
 }
 $dbId = ''
 if ($db) {
@@ -28,18 +26,18 @@ if ([string]::IsNullOrWhiteSpace($dbId)) { throw "Impossible de déterminer l'id
 $config = Get-Content (Join-Path $Root 'wrangler.jsonc.example') -Raw
 $config = $config.Replace('REPLACE_WITH_D1_DATABASE_ID', $dbId)
 [System.IO.File]::WriteAllText((Join-Path $Root 'wrangler.jsonc'), $config, (New-Object System.Text.UTF8Encoding($false)))
-npx wrangler d1 migrations apply $dbName --remote | Out-Host
+npx --yes wrangler@4.94.0 d1 migrations apply $dbName --remote | Out-Host
 
 function Test-WorkerExists {
   try {
-    $null = npx wrangler deployments list --json 2>$null
+    $null = npx --yes wrangler@4.94.0 deployments list --json 2>$null
     return ($LASTEXITCODE -eq 0)
   } catch { return $false }
 }
 
 function Get-ExistingSecretNames([bool]$workerExists) {
   try {
-    $raw = npx wrangler secret list --format json 2>$null
+    $raw = npx --yes wrangler@4.94.0 secret list --format json 2>$null
     if ($LASTEXITCODE -ne 0) {
       if ($workerExists) { throw 'Impossible de lire les secrets du Worker existant. Arrêt pour éviter toute rotation accidentelle de BROKER_DATA_KEY.' }
       return @()
@@ -61,7 +59,7 @@ function Invoke-DeployWithSecrets([hashtable]$values) {
   $secretFile = Join-Path $env:TEMP ("direct-xfer-oauth-broker-secrets-{0}.json" -f [guid]::NewGuid())
   try {
     Write-Utf8NoBom $secretFile ($values | ConvertTo-Json -Compress)
-    $lines = npx wrangler deploy --secrets-file $secretFile 2>&1
+    $lines = npx --yes wrangler@4.94.0 deploy --secrets-file $secretFile 2>&1
     if ($LASTEXITCODE -ne 0) { throw ($lines -join "`n") }
     $lines | Out-Host
     return ($lines -join "`n")
@@ -69,7 +67,7 @@ function Invoke-DeployWithSecrets([hashtable]$values) {
 }
 
 function Get-CredentialCount {
-  $raw = npx wrangler d1 execute $dbName --remote --command "SELECT COUNT(*) AS count FROM credentials" --json 2>$null
+  $raw = npx --yes wrangler@4.94.0 d1 execute $dbName --remote --command "SELECT COUNT(*) AS count FROM credentials" --json 2>$null
   if ($LASTEXITCODE -ne 0 -or -not $raw) { throw 'Impossible de vérifier les credentials D1 existants.' }
   $parsed = $raw | ConvertFrom-Json
   $first = @($parsed)[0]
@@ -81,14 +79,14 @@ function Set-GoogleSecrets([string]$clientId, [string]$clientSecret) {
   $secretFile = Join-Path $env:TEMP ("direct-xfer-oauth-broker-google-{0}.json" -f [guid]::NewGuid())
   try {
     Write-Utf8NoBom $secretFile (@{ GOOGLE_CLIENT_ID=$clientId; GOOGLE_CLIENT_SECRET=$clientSecret } | ConvertTo-Json -Compress)
-    $lines = npx wrangler secret bulk $secretFile 2>&1
+    $lines = npx --yes wrangler@4.94.0 secret bulk $secretFile 2>&1
     if ($LASTEXITCODE -ne 0) { throw ($lines -join "`n") }
     $lines | Out-Host
   } finally { Remove-Item $secretFile -Force -ErrorAction SilentlyContinue }
 }
 
 function Deploy-CodeOnly {
-  $lines = npx wrangler deploy 2>&1
+  $lines = npx --yes wrangler@4.94.0 deploy 2>&1
   if ($LASTEXITCODE -ne 0) { throw ($lines -join "`n") }
   $lines | Out-Host
   return ($lines -join "`n")

@@ -3,15 +3,15 @@
 Audit date: 2026-08-26
 Target: OWASP Application Security Verification Standard 5.0.0, Level 3
 Repository: `ManixQC/Direct-Xfer`
-Release: Direct-Xfer `1.71.29`
+Release: Direct-Xfer `1.71.30`
 Baseline input: Direct-Xfer `1.70.26` ASVS-L3 release
 Detailed matrix: `security/ASVS-5.0.0-L3-MATRIX.md`
 
 ## Release verification result
 
-Direct-Xfer 1.71.29 is a CI/security-pipeline reliability correction over 1.71.28. The Docker rclone builder preserves Go checksum verification while adding bounded retry/backoff and an HTTP/1.1 transport workaround for transient proxy/sumdb HTTP/2 stream resets observed on GitHub-hosted runners. OpenSSF Scorecard continues to run and publish its complete report, while its GitHub Code Scanning SARIF excludes governance/project-health-only controls such as Code-Review, Contributors, Maintained, License, CI Tests and Packaging. Technical supply-chain findings remain uploaded. The ASVS status matrix remains 253 PASS / 92 N/A / 0 MANUAL / 0 PARTIAL / 0 FAIL / 0 REVIEW.
+Direct-Xfer 1.71.30 is a CI/security-pipeline reliability correction over 1.71.28. The Docker rclone builder preserves Go checksum verification while adding bounded retry/backoff and an HTTP/1.1 transport workaround for transient proxy/sumdb HTTP/2 stream resets observed on GitHub-hosted runners. OpenSSF Scorecard continues to run and publish its complete report, while its GitHub Code Scanning SARIF excludes governance/project-health-only controls such as Code-Review, Contributors, Maintained, License, CI Tests and Packaging. Technical supply-chain findings remain uploaded. The ASVS status matrix remains 253 PASS / 92 N/A / 0 MANUAL / 0 PARTIAL / 0 FAIL / 0 REVIEW.
 
-### 1.71.29 GitHub security workflow hardening
+### 1.71.30 GitHub security workflow hardening
 
 - Docker rclone dependency resolution now keeps `GOSUMDB=sum.golang.org`, uses the official Go module proxy with direct fallback, disables only the flaky HTTP/2 client transport, and retries `go get` / `go mod download all` up to five times with bounded backoff. `go mod verify` remains mandatory and checksum verification is never disabled.
 - OpenSSF Scorecard writes a complete `scorecard-results.sarif` artifact/public result, then `scripts/filter-scorecard-sarif.js` removes governance/project-health-only rules from the separate `scorecard-security.sarif` uploaded to GitHub Code Scanning. This preserves technical findings such as vulnerable dependencies and excessive token permissions while allowing prior `CodeReviewID` dashboard alerts to close on the next analysis.
@@ -20,8 +20,8 @@ Direct-Xfer 1.71.29 is a CI/security-pipeline reliability correction over 1.71.2
 - The `/v1/google/authorize` endpoint still requires the high-entropy launch `binding` whose hash is stored server-side; the Google callback is matched by the one-time OAuth `state`, and the authorization code is redeemed only with the session's encrypted/server-side PKCE verifier.
 - The HIBP Pwned Passwords SHA-1 range digest remains protocol-mandated and transient; it is isolated in `hibpProtocolSha1Digest()` and computed with the native Web Crypto API. `lib/auth-utils.js` no longer contains `crypto.createHash('sha1')`, removing the concrete password-hash sink reported by GitHub alert #17362 without weakening Direct-Xfer credential hashing.
 - `pwa/login.css` is expanded/normalized to address the visible Codacy Stylelint findings (leading zeroes, `sRGB` keyword case, selector/declaration line formatting and rule spacing).
-- Application/package metadata is synchronized to `1.71.29` across the root package/lockfile, OAuth broker packages, Windows workflow/installer metadata, SBOM, OpenVEX, ASVS release evidence and release-scoped regression fixtures.
-- PWA generation advances to `pwa492` with cache-buster `v=473` so clients cannot retain stale release metadata from the previous shell cache.
+- Application/package metadata is synchronized to `1.71.30` across the root package/lockfile, OAuth broker packages, Windows workflow/installer metadata, SBOM, OpenVEX, ASVS release evidence and release-scoped regression fixtures.
+- PWA generation advances to `pwa493` with cache-buster `v=474` so clients cannot retain stale release metadata from the previous shell cache.
 - The 1.71.21 Code Scanning notification navigation hardening is preserved unchanged in both the standard administrator UI and PWA.
 - Windows ServerHost critical-runtime manifest remains 103 entries; source-resident hashes are resynchronized and the build-time Express package entry remains pinned by `package-lock.json` to Express 4.22.2.
 
@@ -79,9 +79,9 @@ Repository/release gates completed for this candidate:
 - Full current regression tree remains **CI REQUIRED** after `npm ci`; this source-only packaging pass did not claim a complete dependency-backed run because `node_modules` is intentionally excluded from the release ZIP.
 - Static ASVS audit: **PASS** — 127 production JavaScript source files, 10 reviewed decoder sites.
 - PARTIAL-closure audit: **PASS** — 127 production JavaScript source files, 38 repository-verifiable controls, 0 blocking findings.
-- Security inventory regenerated for 1.71.29 — **957 entries**.
+- Security inventory regenerated for 1.71.30 — **957 entries**.
 - Windows ServerHost critical runtime manifest: **103 entries, 0 stale source-resident hashes** after final synchronization; the missing build-time Express entry remains pinned by `package-lock.json` to 4.22.2.
-- CycloneDX SBOM root component synchronized to 1.71.29.
+- CycloneDX SBOM root component synchronized to 1.71.30.
 
 This document is an implementation/evidence audit, not a third-party certification. A production installation can operate in `ASVS_L3_MODE=true` only while all mandatory runtime controls and the signed deployment evidence are valid.
 
@@ -157,8 +157,8 @@ The direct dependency graph remains lockfile-pinned. V15.2.1 is no longer an ope
 
 ## Final release gates
 
-- [x] package and lockfile version synchronized to 1.71.29.
-- [x] PWA version/cache generation synchronized to 1.71.29 / pwa492.
+- [x] package and lockfile version synchronized to 1.71.30.
+- [x] PWA version/cache generation synchronized to 1.71.30 / pwa493.
 - [x] ASVS regression suite green (96/96).
 - [x] Complete current test tree green (1139/1139 across 190 files).
 - [x] Static ASVS audit green.
@@ -166,7 +166,7 @@ The direct dependency graph remains lockfile-pinned. V15.2.1 is no longer an ope
 - [x] Security inventory regenerated.
 - [x] Windows runtime integrity manifest synchronized and rechecked.
 - [x] Matrix has 0 MANUAL, 0 PARTIAL, 0 FAIL and 0 REVIEW.
-- [x] SBOM root component synchronized to 1.71.29.
+- [x] SBOM root component synchronized to 1.71.30.
 - [x] Former operator-declared manual-attestation flags removed from the L3 configuration surface.
 
 Independent review of N/A decisions, production evidence collection and a focused penetration test remain appropriate before making an external certification/compliance representation.

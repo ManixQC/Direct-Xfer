@@ -7,15 +7,13 @@ const path = require('node:path');
 // and governance signals. Direct-Xfer keeps the full report as an Actions
 // artifact / published Scorecard result, but GitHub Code Scanning is reserved
 // for findings that point to a concrete technical security control.
-const GOVERNANCE_ONLY_RULE_IDS = new Set([
-  'CIIBestPracticesID',
-  'CITestsID',
-  'CodeReviewID',
-  'ContributorsID',
-  'DependencyUpdateToolID',
-  'LicenseID',
-  'MaintainedID',
-  'PackagingID',
+const CODE_SCANNING_RULE_IDS = new Set([
+  // Concrete technical weaknesses/vulnerabilities only. The complete Scorecard
+  // report still preserves every posture/governance check as an artifact.
+  'DangerousWorkflowID',
+  'PinnedDependenciesID',
+  'TokenPermissionsID',
+  'VulnerabilitiesID',
 ]);
 
 function validateSarif(document) {
@@ -36,9 +34,9 @@ function filterScorecardSarif(document) {
     sourceResults += results.length;
     const kept = results.filter((result) => {
       const ruleId = String(result?.ruleId || '');
-      if (!GOVERNANCE_ONLY_RULE_IDS.has(ruleId)) return true;
+      if (CODE_SCANNING_RULE_IDS.has(ruleId)) return true;
       filteredResults += 1;
-      filteredRuleIds.add(ruleId);
+      filteredRuleIds.add(ruleId || '<missing-rule-id>');
       return false;
     });
     uploadedResults += kept.length;
@@ -64,7 +62,7 @@ function main(argv = process.argv.slice(2)) {
   fs.writeFileSync(outputPath, `${JSON.stringify(filtered.document, null, 2)}\n`, 'utf8');
   const s = filtered.stats;
   console.log(`Scorecard SARIF security filter: source=${s.sourceResults} upload=${s.uploadedResults} filtered=${s.filteredResults}`);
-  if (s.filteredRuleIds.length) console.log(`  governance-only rules omitted from Code Scanning: ${s.filteredRuleIds.join(', ')}`);
+  if (s.filteredRuleIds.length) console.log(`  posture/governance rules omitted from Code Scanning: ${s.filteredRuleIds.join(', ')}`);
 }
 
 if (require.main === module) {
@@ -76,4 +74,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { GOVERNANCE_ONLY_RULE_IDS, filterScorecardSarif };
+module.exports = { CODE_SCANNING_RULE_IDS, filterScorecardSarif };

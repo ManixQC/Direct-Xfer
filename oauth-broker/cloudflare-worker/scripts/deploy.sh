@@ -3,23 +3,21 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 command -v node >/dev/null || { echo 'Node.js 20+ est requis.' >&2; exit 1; }
-[ -f package-lock.json ] || npm install --package-lock-only
-npm ci
-npx wrangler whoami
+npx --yes wrangler@4.94.0 whoami
 DB_NAME=direct-xfer-oauth-broker
-DB_ID="$(npx wrangler d1 list --json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const x=JSON.parse(s).find(v=>v.name==='direct-xfer-oauth-broker');if(x)process.stdout.write(x.uuid||x.id||'')})")"
+DB_ID="$(npx --yes wrangler@4.94.0 d1 list --json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const x=JSON.parse(s).find(v=>v.name==='direct-xfer-oauth-broker');if(x)process.stdout.write(x.uuid||x.id||'')})")"
 if [ -z "$DB_ID" ]; then
   # Laisser Cloudflare choisir automatiquement la localisation D1 par défaut.
-  npx wrangler d1 create "$DB_NAME"
-  DB_ID="$(npx wrangler d1 list --json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const x=JSON.parse(s).find(v=>v.name==='direct-xfer-oauth-broker');if(x)process.stdout.write(x.uuid||x.id||'')})")"
+  npx --yes wrangler@4.94.0 d1 create "$DB_NAME"
+  DB_ID="$(npx --yes wrangler@4.94.0 d1 list --json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const x=JSON.parse(s).find(v=>v.name==='direct-xfer-oauth-broker');if(x)process.stdout.write(x.uuid||x.id||'')})")"
 fi
 [ -n "$DB_ID" ] || { echo 'Impossible de déterminer identifiant D1.' >&2; exit 1; }
 sed "s/REPLACE_WITH_D1_DATABASE_ID/$DB_ID/g" wrangler.jsonc.example > wrangler.jsonc
-npx wrangler d1 migrations apply "$DB_NAME" --remote
+npx --yes wrangler@4.94.0 d1 migrations apply "$DB_NAME" --remote
 
 worker_exists() {
   set +e
-  npx wrangler deployments list --json >/dev/null 2>&1
+  npx --yes wrangler@4.94.0 deployments list --json >/dev/null 2>&1
   local status=$?
   set -e
   [ "$status" -eq 0 ]
@@ -28,7 +26,7 @@ worker_exists() {
 secret_names() {
   local output status
   set +e
-  output="$(npx wrangler secret list --format json 2>/dev/null)"; status=$?
+  output="$(npx --yes wrangler@4.94.0 secret list --format json 2>/dev/null)"; status=$?
   set -e
   if [ "$status" -ne 0 ]; then
     if worker_exists; then
@@ -52,7 +50,7 @@ deploy_with_secrets() {
   file="$(secure_json_file)"
   GOOGLE_CLIENT_ID="$cid" GOOGLE_CLIENT_SECRET="$csecret" BROKER_DATA_KEY="$key" node -e "const fs=require('fs');fs.writeFileSync(process.argv[1],JSON.stringify({GOOGLE_CLIENT_ID:process.env.GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET:process.env.GOOGLE_CLIENT_SECRET,BROKER_DATA_KEY:process.env.BROKER_DATA_KEY}))" "$file"
   set +e
-  output="$(npx wrangler deploy --secrets-file "$file" 2>&1)"; status=$?
+  output="$(npx --yes wrangler@4.94.0 deploy --secrets-file "$file" 2>&1)"; status=$?
   set -e
   rm -f "$file"
   printf '%s\n' "$output"
@@ -62,7 +60,7 @@ deploy_with_secrets() {
 credential_count() {
   local output status
   set +e
-  output="$(npx wrangler d1 execute "$DB_NAME" --remote --command "SELECT COUNT(*) AS count FROM credentials" --json 2>/dev/null)"; status=$?
+  output="$(npx --yes wrangler@4.94.0 d1 execute "$DB_NAME" --remote --command "SELECT COUNT(*) AS count FROM credentials" --json 2>/dev/null)"; status=$?
   set -e
   [ "$status" -eq 0 ] || { echo 'Impossible de vérifier les credentials D1 existants.' >&2; return 1; }
   printf '%s' "$output" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const x=JSON.parse(s);const first=Array.isArray(x)?x[0]:x;const r=first&&Array.isArray(first.results)?first.results[0]:null;const n=Number(r&&r.count);if(!Number.isFinite(n))process.exit(2);process.stdout.write(String(n))})"
@@ -73,7 +71,7 @@ set_google_secrets() {
   file="$(secure_json_file)"
   GOOGLE_CLIENT_ID="$cid" GOOGLE_CLIENT_SECRET="$csecret" node -e "const fs=require('fs');fs.writeFileSync(process.argv[1],JSON.stringify({GOOGLE_CLIENT_ID:process.env.GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET:process.env.GOOGLE_CLIENT_SECRET}))" "$file"
   set +e
-  output="$(npx wrangler secret bulk "$file" 2>&1)"; status=$?
+  output="$(npx --yes wrangler@4.94.0 secret bulk "$file" 2>&1)"; status=$?
   set -e
   rm -f "$file"
   printf '%s\n' "$output"
@@ -104,7 +102,7 @@ else
   if [ "$HAS_GOOGLE_ID" -eq 0 ] || [ "$HAS_GOOGLE_SECRET" -eq 0 ]; then
     set_google_secrets 'bootstrap.disabled.apps.googleusercontent.com' 'bootstrap.disabled'
   fi
-  DEPLOY_OUTPUT="$(npx wrangler deploy 2>&1)"
+  DEPLOY_OUTPUT="$(npx --yes wrangler@4.94.0 deploy 2>&1)"
   printf '%s\n' "$DEPLOY_OUTPUT"
 fi
 
@@ -150,7 +148,7 @@ if [ "$GOOGLE_READY" -eq 0 ]; then
   [[ "$GOOGLE_CLIENT_ID" =~ ^[0-9A-Za-z._-]+\.apps\.googleusercontent\.com$ ]] || { echo 'Client ID invalide.' >&2; exit 1; }
   [ -n "$GOOGLE_CLIENT_SECRET" ] || { echo 'Client Secret requis.' >&2; exit 1; }
   set_google_secrets "$GOOGLE_CLIENT_ID" "$GOOGLE_CLIENT_SECRET"
-  DEPLOY_OUTPUT="$(npx wrangler deploy 2>&1)"
+  DEPLOY_OUTPUT="$(npx --yes wrangler@4.94.0 deploy 2>&1)"
   printf '%s\n' "$DEPLOY_OUTPUT"
 fi
 

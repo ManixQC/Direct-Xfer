@@ -30,10 +30,10 @@ test('public broker deployment requires secrets instead of embedding Google cred
 
 test('PowerShell deployment provisions D1, migrations, secrets, and a public Worker', () => {
   const ps = read('oauth-broker/cloudflare-worker/scripts/deploy.ps1');
-  assert.match(ps, /wrangler d1 list --json/);
-  assert.match(ps, /wrangler d1 create/);
-  assert.match(ps, /wrangler d1 migrations apply/);
-  assert.match(ps, /wrangler deploy --secrets-file/);
+  assert.match(ps, /wrangler@4\.94\.0 d1 list --json/);
+  assert.match(ps, /wrangler@4\.94\.0 d1 create/);
+  assert.match(ps, /wrangler@4\.94\.0 d1 migrations apply/);
+  assert.match(ps, /wrangler@4\.94\.0 deploy --secrets-file/);
   assert.match(ps, /workers\\\.dev/);
   assert.match(ps, /DIRECT_XFER_OAUTH_BROKER_URL/);
 });

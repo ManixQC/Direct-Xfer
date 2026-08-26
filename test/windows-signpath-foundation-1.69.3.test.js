@@ -74,7 +74,7 @@ test('GitHub Actions signs own executables before rebuilding and signing install
   assert.match(workflow, /launcherFileVersion: "\$\{\{ env\.DX_LAUNCHER_COMPONENT_VERSION \}\}"/);
   assert.match(workflow, /serverHostFileVersion: "\$\{\{ env\.DX_SERVER_HOST_COMPONENT_VERSION \}\}"/);
   assert.equal((workflow.match(/-p:InformationalVersion=\$env:DX_VERSION/g) || []).length, 3);
-  assert.equal((workflow.match(/signpath\/github-action-submit-signing-request@v2/g) || []).length, 2);
+  assert.equal((workflow.match(/signpath\/github-action-submit-signing-request@[0-9a-f]{40}/g) || []).length, 2);
   assert.match(workflow, /github-artifact-id: '\$\{\{ steps\.upload-signpath-executables\.outputs\.artifact-id \}\}'/);
   assert.match(workflow, /github-artifact-id: '\$\{\{ steps\.upload-signpath-installer\.outputs\.artifact-id \}\}'/);
   const signExecutablesAt = workflow.indexOf('Sign Direct-Xfer executables with SignPath Foundation');

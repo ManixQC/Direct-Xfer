@@ -67,12 +67,12 @@ test('1.67.26 redeploy scripts preserve the broker data key and clean temporary 
     assert.match(src, /BROKER_DATA_KEY existante|BROKER_DATA_KEY/);
   }
   assert.match(sh, /rm -f "\$file"[\s\S]*return "\$status"/);
-  assert.match(sh, /wrangler deployments list --json/);
+  assert.match(sh, /wrangler@4\.94\.0 deployments list --json/);
   assert.match(sh, /SELECT COUNT\(\*\) AS count FROM credentials/);
   assert.match(sh, /DX_OAUTH_BROKER_FORCE_GOOGLE_CREDENTIAL_REPLACE/);
   assert.match(sh, /Arrêt pour éviter toute rotation accidentelle de BROKER_DATA_KEY/);
   assert.doesNotMatch(sh, /--location\s+enam/);
-  assert.match(ps, /wrangler deployments list --json/);
+  assert.match(ps, /wrangler@4\.94\.0 deployments list --json/);
   assert.match(ps, /SELECT COUNT\(\*\) AS count FROM credentials/);
   assert.match(ps, /DX_OAUTH_BROKER_FORCE_GOOGLE_CREDENTIAL_REPLACE/);
   assert.match(ps, /Write-Utf8NoBom/);
@@ -87,8 +87,8 @@ test('1.67.26 redeploy scripts preserve the broker data key and clean temporary 
 
 test('1.67.26 public broker pins a Wrangler baseline that supports required-secret validation', () => {
   const pkg = JSON.parse(read('oauth-broker/cloudflare-worker/package.json'));
-  assert.equal(pkg.version, '1.71.29');
-  assert.match(String(pkg.devDependencies && pkg.devDependencies.wrangler || ''), /^\^4\.94\.0$/);
+  assert.equal(pkg.version, '1.71.30');
+  assert.match(String(pkg.devDependencies && pkg.devDependencies.wrangler || ''), /^4\.94\.0$/);
 });
 
 test('1.67.26 node broker cleans rate buckets and extends active credential lifetime', () => {

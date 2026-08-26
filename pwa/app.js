@@ -9,8 +9,8 @@
 (function () {
   // Build tag, shown in the footer so a user can confirm at a glance which version
   // is actually running after an update. Keep it in lock-step with sw.js VERSION.
-  var APP_VERSION = '1.71.29';
-  var APP_BUILD = '2026.08.26-pwa492';
+  var APP_VERSION = '1.71.30';
+  var APP_BUILD = '2026.08.26-pwa493';
   // Upload blocks are deliberately small on mobile. A number of reverse proxies
   // still default to a 1 MiB request-body limit; an 8 MiB first block can therefore
   // be rejected before the browser emits any useful progress event, which looks like
@@ -626,9 +626,9 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
     if (manifest) {
       // Keep the URL sink independent from the DOM/select value. Only literal,
       // same-origin manifest paths can reach href.
-      var manifestHref = '/direct-xfer-pwa.webmanifest?v=473';
-      if (lang === 'en') manifestHref = '/direct-xfer-pwa-en.webmanifest?v=473';
-      else if (lang === 'es') manifestHref = '/direct-xfer-pwa-es.webmanifest?v=473';
+      var manifestHref = '/direct-xfer-pwa.webmanifest?v=474';
+      if (lang === 'en') manifestHref = '/direct-xfer-pwa-en.webmanifest?v=474';
+      else if (lang === 'es') manifestHref = '/direct-xfer-pwa-es.webmanifest?v=474';
       manifest.href = manifestHref;
     }
     $('lang-select').value = lang;
@@ -9595,7 +9595,7 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
   function registerServiceWorker() {
     if (!navigator.serviceWorker || typeof navigator.serviceWorker.register !== 'function') return;
     navigator.serviceWorker.addEventListener('controllerchange', refreshToNewVersion);
-    var registrationPromise = navigator.serviceWorker.register('/direct-xfer-pwa-sw.js?v=473', { scope: '/app/' }).then(function (reg) {
+    var registrationPromise = navigator.serviceWorker.register('/direct-xfer-pwa-sw.js?v=474', { scope: '/app/' }).then(function (reg) {
       swReg = reg;
       navigator.serviceWorker.ready.then(function () {
         swReadyForInstall = true;

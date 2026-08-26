@@ -21,7 +21,7 @@ function count(source, expression) {
   return [...source.matchAll(expression)].length;
 }
 
-test('1.71.29 SignPath executable configuration uses one release ProductVersion for every Direct-Xfer binary', () => {
+test('1.71.30 SignPath executable configuration uses one release ProductVersion for every Direct-Xfer binary', () => {
   assert.match(executablesConfig, /<parameter name="version" required="true"\s*\/>/);
   assert.match(executablesConfig, /<parameter name="launcherFileVersion" required="true"\s*\/>/);
   assert.match(executablesConfig, /<parameter name="serverHostFileVersion" required="true"\s*\/>/);
@@ -35,7 +35,7 @@ test('1.71.29 SignPath executable configuration uses one release ProductVersion 
   assert.match(executablesConfig, /path="server-host\/Direct-Xfer\.ServerHost\.exe"/);
 });
 
-test('1.71.29 Windows CI builds SignPath inputs with release ProductVersion and component FileVersion checks', () => {
+test('1.71.30 Windows CI builds SignPath inputs with release ProductVersion and component FileVersion checks', () => {
   assert.match(workflow, new RegExp(`DX_VERSION: '${releaseRe}'`));
   assert.equal(count(workflow, /-p:InformationalVersion=\$env:DX_VERSION/g), 3);
   assert.match(workflow, /ProductVersion -ne \$env:DX_VERSION/);
@@ -52,8 +52,8 @@ test('SignPath requests are manual, origin-restricted, version-bound and use cur
   assert.match(workflow, /refs\/heads\/main/);
   assert.match(workflow, /refs\/tags\/v\$env:DX_VERSION/);
   assert.match(workflow, /oauth-broker\/cloudflare-worker\/package\.json/);
-  assert.equal(count(workflow, /uses: actions\/upload-artifact@v7/g), 4);
-  assert.equal(count(workflow, /uses: signpath\/github-action-submit-signing-request@v2/g), 2);
+  assert.equal(count(workflow, /uses: actions\/upload-artifact@[0-9a-f]{40}/g), 4);
+  assert.equal(count(workflow, /uses: signpath\/github-action-submit-signing-request@[0-9a-f]{40}/g), 2);
   assert.equal(count(workflow, /github-token: '\$\{\{ secrets\.GITHUB_TOKEN \}\}'/g), 2);
   assert.match(workflow, /permissions:\s*\n\s*contents: read\s*\n\s*actions: read/);
   assert.match(workflow, /cancel-in-progress: false/);

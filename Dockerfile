@@ -91,7 +91,7 @@ RUN go version /out/rclone | tee /out/rclone-go-version.txt \
 # build the signed-release commit directly and copy only the production OCR
 # executable into the final image. Training, graphics, libarchive and libcurl
 # support are intentionally disabled because Direct-Xfer does not use them.
-FROM node:22-trixie-slim AS tesseract-builder
+FROM node:22.23.2-trixie-slim@sha256:7b8a0c89c54499bee567618f96578e1a12a800f062fbdbfd1fb6a443fa6f6284 AS tesseract-builder
 ARG DX_TESSERACT_BUILD_VERSION
 ARG DX_TESSERACT_BUILD_COMMIT
 RUN apt-get update \
@@ -136,7 +136,7 @@ RUN cmake -S /src/tesseract -B /src/tesseract/build -G Ninja \
        "${DX_TESSERACT_BUILD_VERSION}" "${DX_TESSERACT_BUILD_COMMIT}" \
        > /out/tesseract-build-manifest.txt
 
-FROM node:22-trixie-slim AS dependencies
+FROM node:22.23.2-trixie-slim@sha256:7b8a0c89c54499bee567618f96578e1a12a800f062fbdbfd1fb6a443fa6f6284 AS dependencies
 
 WORKDIR /app
 
@@ -145,7 +145,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
 
-FROM node:22-trixie-slim
+FROM node:22.23.2-trixie-slim@sha256:7b8a0c89c54499bee567618f96578e1a12a800f062fbdbfd1fb6a443fa6f6284
 ARG DX_RCLONE_BUILD_VERSION
 ARG DX_RCLONE_GO_BUILD_VERSION
 ARG DX_RCLONE_X_IMAGE_VERSION

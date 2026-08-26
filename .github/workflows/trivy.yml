@@ -13,7 +13,6 @@ on:
 
 permissions:
   contents: read
-  security-events: write
 
 concurrency:
   group: trivy-${{ github.workflow }}-${{ github.ref }}
@@ -26,14 +25,17 @@ jobs:
   repository-scan:
     name: Trivy repository scan
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      security-events: write
     timeout-minutes: 25
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Generate complete repository report
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           version: ${{ env.TRIVY_ENGINE_VERSION }}
           scan-type: fs
@@ -57,7 +59,7 @@ jobs:
       - name: Scan actionable repository findings
         id: trivy-repository-gate
         continue-on-error: true
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         env:
           TRIVY_VEX: security/openvex.json
           TRIVY_SHOW_SUPPRESSED: "true"
@@ -77,14 +79,14 @@ jobs:
       - name: Upload repository findings to code scanning
         if: always() && hashFiles('trivy-repository.sarif') != ''
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4.37.4
         with:
           sarif_file: trivy-repository.sarif
           category: trivy-repository
 
       - name: Upload repository Trivy reports
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: trivy-repository-reports
           path: |
@@ -104,11 +106,14 @@ jobs:
   image-scan:
     name: Trivy Docker image scan
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      security-events: write
     timeout-minutes: 55
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Build Direct-Xfer amd64 image
         shell: bash
@@ -129,7 +134,7 @@ jobs:
           test "$(docker image inspect direct-xfer:trivy --format '{{.Architecture}}')" = "amd64"
 
       - name: Generate complete image report
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           version: ${{ env.TRIVY_ENGINE_VERSION }}
           image-ref: direct-xfer:trivy
@@ -152,7 +157,7 @@ jobs:
       - name: Scan actionable image findings
         id: trivy-image-gate
         continue-on-error: true
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         env:
           TRIVY_VEX: security/openvex.json
           TRIVY_SHOW_SUPPRESSED: "true"
@@ -171,14 +176,14 @@ jobs:
       - name: Upload image findings to code scanning
         if: always() && hashFiles('trivy-image.sarif') != ''
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4.37.4
         with:
           sarif_file: trivy-image.sarif
           category: trivy-image
 
       - name: Upload image Trivy reports
         if: always() && (hashFiles('trivy-image-full.json') != '' || hashFiles('trivy-image-full.txt') != '' || hashFiles('trivy-image.sarif') != '')
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: trivy-image-reports
           path: |

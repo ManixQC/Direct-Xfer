@@ -26,9 +26,11 @@ on:
         default: false
         type: boolean
 
+# Default token stays read-only. The one job that dispatches another workflow
+# receives actions:write explicitly below. This prevents future jobs from
+# silently inheriting a repository-wide write token.
 permissions:
   contents: read
-  actions: write
 
 concurrency:
   group: direct-xfer-release-windows-dispatch-${{ inputs.ref || 'main' }}
@@ -37,11 +39,15 @@ concurrency:
 jobs:
   dispatch-windows-build:
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.ref || 'main' }}
           fetch-depth: 1
+          persist-credentials: false
 
       - name: Validate tested release and dispatch Windows build
         shell: pwsh

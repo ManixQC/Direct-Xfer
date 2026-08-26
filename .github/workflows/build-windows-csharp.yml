@@ -1,5 +1,5 @@
 name: Build Direct-Xfer Windows C# + Installer
-run-name: v1.71.29
+run-name: v1.71.30
 
 on:
   workflow_dispatch:
@@ -41,7 +41,7 @@ jobs:
   build-windows:
     runs-on: windows-2025
     env:
-      DX_VERSION: '1.71.29'
+      DX_VERSION: '1.71.30'
       # Runtime identity is independent from the stable launcher component version.
       DX_RUNTIME_BUILD: 'runtime169'
       DX_LAUNCHER_COMPONENT_VERSION: '1.70.1'
@@ -53,12 +53,12 @@ jobs:
       DX_NODE_MODULES_BUDGET_MB: '15'
       INNO_VERSION: '6.7.3'
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-dotnet@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: '10.0.400'
           architecture: x64
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '24.19.0'
           package-manager-cache: false
@@ -202,7 +202,7 @@ jobs:
       - name: Upload Direct-Xfer executables for SignPath
         if: ${{ inputs.sign_with_signpath }}
         id: upload-signpath-executables
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: _signpath-input-executables-${{ env.DX_VERSION }}
           path: |
@@ -214,7 +214,7 @@ jobs:
       - name: Sign Direct-Xfer executables with SignPath Foundation
         if: ${{ inputs.sign_with_signpath }}
         id: signpath-executables
-        uses: signpath/github-action-submit-signing-request@v2
+        uses: signpath/github-action-submit-signing-request@c92b958760219087e01f8d67a1669ed57afe2627 # v2
         with:
           api-token: '${{ secrets.SIGNPATH_API_TOKEN }}'
           organization-id: '${{ vars.SIGNPATH_ORGANIZATION_ID }}'
@@ -563,7 +563,7 @@ jobs:
       - name: Upload Direct-Xfer installer for SignPath
         if: ${{ inputs.sign_with_signpath }}
         id: upload-signpath-installer
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: _signpath-input-installer-${{ env.DX_VERSION }}
           path: dist/installer/Direct-Xfer-Setup-${{ env.DX_VERSION }}.exe
@@ -573,7 +573,7 @@ jobs:
       - name: Sign Direct-Xfer installer with SignPath Foundation
         if: ${{ inputs.sign_with_signpath }}
         id: signpath-installer
-        uses: signpath/github-action-submit-signing-request@v2
+        uses: signpath/github-action-submit-signing-request@c92b958760219087e01f8d67a1669ed57afe2627 # v2
         with:
           api-token: '${{ secrets.SIGNPATH_API_TOKEN }}'
           organization-id: '${{ vars.SIGNPATH_ORGANIZATION_ID }}'
@@ -632,12 +632,12 @@ jobs:
             )
           }
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: Direct-Xfer-${{ env.DX_VERSION }}-Windows-CSharp
           path: dist/Direct-Xfer-${{ env.DX_VERSION }}-Windows-CSharp/**
           if-no-files-found: error
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: Direct-Xfer-Setup-${{ env.DX_VERSION }}
           path: dist/installer/Direct-Xfer-Setup-${{ env.DX_VERSION }}.exe
@@ -650,7 +650,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      DX_VERSION: '1.71.29'
+      DX_VERSION: '1.71.30'
     # Keep OIDC/attestation privileges out of the build/signing job. This job only
     # reads the final immutable Actions artifacts and creates GitHub attestations.
     permissions:

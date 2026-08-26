@@ -1,6 +1,6 @@
 # Direct-Xfer — signed ASVS L3 deployment evidence
 
-Direct-Xfer 1.71.29 retains the former operator-declared `MANUAL` booleans from the L3 decision path. External facts are accepted only through a current, Ed25519-signed evidence bundle. The verifier is implemented in `lib/server/asvs-l3-evidence.js` and is executed by both `npm run asvs:l3:evidence:verify` and the L3 startup policy.
+Direct-Xfer 1.71.30 retains the former operator-declared `MANUAL` booleans from the L3 decision path. External facts are accepted only through a current, Ed25519-signed evidence bundle. The verifier is implemented in `lib/server/asvs-l3-evidence.js` and is executed by both `npm run asvs:l3:evidence:verify` and the L3 startup policy.
 
 A bundle is accepted only when it is bound to `OWASP-ASVS-5.0.0-L3`, the exact Direct-Xfer release and the exact HTTPS `PUBLIC_URL` origin; its validity is at most seven days; `generatedAt` and every required `observedAt` must also be no older than seven days at verification time; every required row is `pass`; every observation matches a requirement-specific predicate; every observation digest matches its canonical SHA-256; and the whole bundle has a valid Ed25519 signature.
 
@@ -16,7 +16,7 @@ Set `ASVS_L3_EVIDENCE_FILE` to the signed JSON file and configure the verifier k
 {
   "evidenceVersion": 1,
   "profile": "OWASP-ASVS-5.0.0-L3",
-  "release": "1.71.29",
+  "release": "1.71.30",
   "publicOrigin": "https://direct-xfer.example",
   "generatedAt": 1787659200000,
   "expiresAt": 1788264000000,

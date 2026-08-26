@@ -18,7 +18,7 @@ test('dedicated npm audit workflow checks lockfile changes and the advisory data
   assert.match(workflow, /npm ci --ignore-scripts --no-audit --no-fund/);
   assert.match(workflow, AUDIT_GATE);
   assert.match(workflow, /--json > npm-audit\.json/);
-  assert.match(workflow, /actions\/upload-artifact@v7/);
+  assert.match(workflow, /actions\/upload-artifact@[0-9a-f]{40}/);
   assert.match(workflow, /name: npm-audit-report/);
   assert.match(workflow, /Enforce npm audit security gate/);
   assert.match(workflow, /steps\.npm-audit-gate\.outputs\.exit_code != '0'/);

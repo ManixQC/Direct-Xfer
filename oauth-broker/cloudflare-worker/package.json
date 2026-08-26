@@ -1,6 +1,6 @@
 {
   "name": "direct-xfer-public-oauth-broker",
-  "version": "1.71.29",
+  "version": "1.71.30",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,6 +9,6 @@
     "db:migrate": "wrangler d1 migrations apply direct-xfer-oauth-broker --remote"
   },
   "devDependencies": {
-    "wrangler": "^4.94.0"
+    "wrangler": "4.94.0"
   }
 }

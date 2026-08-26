@@ -54,77 +54,36 @@ jobs:
           # This will handover control about PR rejection to the GitHub side
           max-allowed-issues: 2147483647
 
-      # GitHub code scanning accepts at most 5,000 displayed results per SARIF run
-      # (25,000 hard maximum) and at most 20 runs per SARIF file. Codacy may emit
-      # several tools in one file and noisy tools such as JSHint may exceed 5,000
-      # results. Split oversized runs into deterministic 5,000-result chunks and
-      # assign every derived run a unique automationDetails.id/category.
-      - name: Normalize Codacy SARIF for GitHub limits
+      # GitHub Security is for actionable security findings, not code-style debt.
+      # Filter Codacy SARIF before upload. The filter:
+      # - emits empty tombstone runs for Stylelint/JSHint and other quality-only tools
+      #   using the same automationDetails.id scheme as previous uploads, so old lint
+      #   alerts are automatically closed by GitHub Code Scanning;
+      # - keeps dedicated security scanners;
+      # - keeps only security-tagged/rule-metadata findings from mixed or unknown tools;
+      # - preserves GitHub's 5,000-results-per-run and 20-runs-per-file limits.
+      - name: Filter Codacy SARIF for GitHub Security
         shell: bash
         run: |
           set -euo pipefail
           test -s results.sarif
-          jq -e '.version and (.runs | type == "array") and (.runs | length > 0)' results.sarif >/dev/null
+          node scripts/filter-codacy-sarif.js results.sarif results.security.sarif
+          test -s results.security.sarif
+          jq -e '.version and (.runs | type == "array") and (.runs | length > 0)' results.security.sarif >/dev/null
 
-          jq '
-            def slug:
-              ascii_downcase
-              | gsub("[^a-z0-9._-]+"; "-")
-              | gsub("^-+|-+$"; "");
-
-            .runs |= (
-              to_entries
-              | map(
-                  . as $entry
-                  | ($entry.value.results // []) as $results
-                  | (($results | length) as $result_count
-                    | ([1, (($result_count + 4999) / 5000 | floor)] | max) as $chunk_count
-                    | [range(0; $chunk_count)]
-                    | map(
-                        . as $chunk
-                        | $entry.value
-                        | .results = $results[($chunk * 5000):((($chunk + 1) * 5000))]
-                        | .automationDetails = ((.automationDetails // {}) + {
-                            id: (
-                              "codacy/"
-                              + ((.tool.driver.name // "tool") | slug)
-                              + "-"
-                              + ($entry.key | tostring)
-                              + (if $chunk_count > 1 then "-part-" + (($chunk + 1) | tostring) else "" end)
-                              + "/"
-                            )
-                          })
-                      )
-                  )
-                )
-              | add
-            )
-          ' results.sarif > results.normalized.sarif
-          mv results.normalized.sarif results.sarif
-
-          run_count="$(jq '.runs | length' results.sarif)"
-          if [ "$run_count" -gt 20 ]; then
-            echo "::error::Normalized Codacy SARIF contains $run_count runs; GitHub accepts at most 20 runs per SARIF file."
+          run_count="$(jq '.runs | length' results.security.sarif)"
+          max_results="$(jq '[.runs[].results | length] | max // 0' results.security.sarif)"
+          unique_count="$(jq '[.runs[].automationDetails.id] | unique | length' results.security.sarif)"
+          if [ "$run_count" -gt 20 ] || [ "$max_results" -gt 5000 ] || [ "$run_count" -ne "$unique_count" ]; then
+            echo "::error::Filtered Codacy SARIF violates GitHub Code Scanning limits or category uniqueness."
             exit 1
           fi
 
-          max_results="$(jq '[.runs[].results | length] | max // 0' results.sarif)"
-          if [ "$max_results" -gt 5000 ]; then
-            echo "::error::A normalized Codacy SARIF run still contains $max_results results (limit 5000)."
-            exit 1
-          fi
-
-          unique_count="$(jq '[.runs[].automationDetails.id] | unique | length' results.sarif)"
-          if [ "$run_count" -ne "$unique_count" ]; then
-            echo "::error::Codacy SARIF categories are not unique after normalization."
-            exit 1
-          fi
-
-          echo "Normalized Codacy SARIF runs: $run_count"
-          jq -r '.runs[] | "\(.automationDetails.id) results=\(.results | length)"' results.sarif
+          echo "Filtered Codacy SARIF runs: $run_count; max results/run: $max_results"
+          jq -r '.runs[] | "\(.automationDetails.id) tool=\(.tool.driver.name // "tool") security-results=\(.results | length)"' results.security.sarif
 
       # Upload the SARIF file generated in the previous step
       - name: Upload SARIF results file
         uses: github/codeql-action/upload-sarif@v4
         with:
-          sarif_file: results.sarif
+          sarif_file: results.security.sarif

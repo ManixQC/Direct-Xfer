@@ -1,81 +1,76 @@
 {
-  "generatedAt": "2026-08-26T19:11:08.563Z",
-  "version": "1.71.23",
+  "generatedAt": "2026-08-26T19:25:42.006Z",
+  "version": "1.71.24",
   "categories": {
     "crypto": [
       {
         "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 57,
+        "line": 55,
         "text": "const nonce = b64url(randomBytes(18));"
       },
       {
         "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 77,
-        "text": "return `__Host-dxo_${b64url(randomBytes(12))}`;"
-      },
-      {
-        "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 104,
+        "line": 90,
         "text": "function randomBytes(length) {"
       },
       {
         "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 160,
+        "line": 139,
         "text": "const iv = randomBytes(12);"
       },
       {
         "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 298,
+        "line": 277,
         "text": "const id = `dxc_${b64url(randomBytes(18))}`;"
       },
       {
         "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 299,
+        "line": 278,
         "text": "const secret = b64url(randomBytes(32));"
       },
       {
         "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 300,
+        "line": 279,
         "text": "const refreshHandle = `dxr_${b64url(randomBytes(24))}`;"
       },
       {
         "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 323,
+        "line": 302,
         "text": "const id = b64url(randomBytes(18));"
       },
       {
         "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 324,
+        "line": 303,
         "text": "const pollToken = b64url(randomBytes(32));"
       },
       {
         "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 325,
+        "line": 304,
         "text": "const state = b64url(randomBytes(32));"
       },
       {
         "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 326,
+        "line": 305,
         "text": "const verifier = b64url(randomBytes(48));"
       },
       {
         "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 327,
+        "line": 306,
         "text": "const browserToken = b64url(randomBytes(32));"
       },
       {
         "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 433,
+        "line": 400,
         "text": "const id = `dxc_${b64url(randomBytes(18))}`;"
       },
       {
         "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 434,
+        "line": 401,
         "text": "const secret = b64url(randomBytes(32));"
       },
       {
         "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 435,
+        "line": 402,
         "text": "const refreshHandle = `dxr_${b64url(randomBytes(24))}`;"
       },
       {
@@ -1210,77 +1205,72 @@
       },
       {
         "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 57,
+        "line": 55,
         "text": "const nonce = b64url(randomBytes(18));"
       },
       {
         "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 77,
-        "text": "return `__Host-dxo_${b64url(randomBytes(12))}`;"
-      },
-      {
-        "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 104,
+        "line": 90,
         "text": "function randomBytes(length) {"
       },
       {
         "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 160,
+        "line": 139,
         "text": "const iv = randomBytes(12);"
       },
       {
         "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 298,
+        "line": 277,
         "text": "const id = `dxc_${b64url(randomBytes(18))}`;"
       },
       {
         "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 299,
+        "line": 278,
         "text": "const secret = b64url(randomBytes(32));"
       },
       {
         "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 300,
+        "line": 279,
         "text": "const refreshHandle = `dxr_${b64url(randomBytes(24))}`;"
       },
       {
         "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 323,
+        "line": 302,
         "text": "const id = b64url(randomBytes(18));"
       },
       {
         "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 324,
+        "line": 303,
         "text": "const pollToken = b64url(randomBytes(32));"
       },
       {
         "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 325,
+        "line": 304,
         "text": "const state = b64url(randomBytes(32));"
       },
       {
         "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 326,
+        "line": 305,
         "text": "const verifier = b64url(randomBytes(48));"
       },
       {
         "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 327,
+        "line": 306,
         "text": "const browserToken = b64url(randomBytes(32));"
       },
       {
         "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 433,
+        "line": 400,
         "text": "const id = `dxc_${b64url(randomBytes(18))}`;"
       },
       {
         "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 434,
+        "line": 401,
         "text": "const secret = b64url(randomBytes(32));"
       },
       {
         "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 435,
+        "line": 402,
         "text": "const refreshHandle = `dxr_${b64url(randomBytes(24))}`;"
       },
       {
@@ -1295,72 +1285,62 @@
       },
       {
         "file": "oauth-broker/server.js",
-        "line": 70,
-        "text": "const suffix = base64url(crypto.randomBytes(12));"
-      },
-      {
-        "file": "oauth-broker/server.js",
-        "line": 75,
-        "text": "return base64url(crypto.createHmac('sha256', MASTER_KEY)"
-      },
-      {
-        "file": "oauth-broker/server.js",
-        "line": 97,
+        "line": 71,
         "text": "const challenge = base64url(crypto.createHash('sha256').update(item.verifier).digest());"
       },
       {
         "file": "oauth-broker/server.js",
-        "line": 142,
+        "line": 116,
         "text": "if (provided) return crypto.createHash('sha256').update('Direct-Xfer\\0OAuthBroker\\0').update(provided).digest();"
       },
       {
         "file": "oauth-broker/server.js",
-        "line": 147,
+        "line": 121,
         "text": "const key = crypto.randomBytes(32); fs.writeFileSync(KEY_FILE, key, { mode:0o600, flag:'wx' }); return key;"
       },
       {
         "file": "oauth-broker/server.js",
-        "line": 152,
+        "line": 126,
         "text": "const iv = crypto.randomBytes(12); const cipher = crypto.createCipheriv('aes-256-gcm', MASTER_KEY, iv);"
       },
       {
         "file": "oauth-broker/server.js",
-        "line": 158,
+        "line": 132,
         "text": "const decipher = crypto.createDecipheriv('aes-256-gcm', MASTER_KEY, Buffer.from(obj.iv,'base64'));"
       },
       {
         "file": "oauth-broker/server.js",
-        "line": 170,
+        "line": 144,
         "text": "const tmp = `${STORE_FILE}.${process.pid}.${crypto.randomBytes(4).toString('hex')}.tmp`;"
       },
       {
         "file": "oauth-broker/server.js",
-        "line": 175,
+        "line": 149,
         "text": "const id = `dxc_${base64url(crypto.randomBytes(18))}`;"
       },
       {
         "file": "oauth-broker/server.js",
-        "line": 176,
+        "line": 150,
         "text": "const secret = base64url(crypto.randomBytes(32));"
       },
       {
         "file": "oauth-broker/server.js",
-        "line": 177,
+        "line": 151,
         "text": "const refreshHandle = `dxr_${base64url(crypto.randomBytes(24))}`;"
       },
       {
         "file": "oauth-broker/server.js",
-        "line": 233,
+        "line": 207,
         "text": "const id = base64url(crypto.randomBytes(18)), pollToken = base64url(crypto.randomBytes(32)), state = base64url(crypto.randomBytes(32));"
       },
       {
         "file": "oauth-broker/server.js",
-        "line": 234,
+        "line": 208,
         "text": "const verifier = base64url(crypto.randomBytes(48));"
       },
       {
         "file": "oauth-broker/server.js",
-        "line": 235,
+        "line": 209,
         "text": "const browserToken = base64url(crypto.randomBytes(32));"
       },
       {
@@ -1629,16 +1609,6 @@
         "text": "assert.match(src, /codeql\\[js\\/insufficient-password-hash\\]\\n\\s*const digest = crypto\\.createHash\\('sha1'\\)/);"
       },
       {
-        "file": "test/codeql-security-regressions-1.70.22.test.js",
-        "line": 102,
-        "text": "assert.doesNotMatch(src, /callbackToken\\s*=\\s*(?:base64url|b64url)\\(.*randomBytes\\(32\\)/);"
-      },
-      {
-        "file": "test/codeql-security-regressions-1.70.22.test.js",
-        "line": 106,
-        "text": "assert.match(server, /createHmac\\('sha256', MASTER_KEY\\)/);"
-      },
-      {
         "file": "test/connector-status-idempotency-1.67.39.test.js",
         "line": 37,
         "text": "assert.ok(block.indexOf('const existing = list.find') < block.indexOf(\"connector.id = crypto.randomBytes\"));"
@@ -1874,12 +1844,12 @@
     "outbound": [
       {
         "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 243,
+        "line": 222,
         "text": "const response = await fetch(GOOGLE_TOKEN_URL, {"
       },
       {
         "file": "lib/assets/oauth-broker-worker.mjs",
-        "line": 547,
+        "line": 514,
         "text": "async fetch(request, env) {"
       },
       {
@@ -2269,17 +2239,17 @@
       },
       {
         "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 243,
+        "line": 222,
         "text": "const response = await fetch(GOOGLE_TOKEN_URL, {"
       },
       {
         "file": "oauth-broker/cloudflare-worker/src/index.js",
-        "line": 547,
+        "line": 514,
         "text": "async fetch(request, env) {"
       },
       {
         "file": "oauth-broker/server.js",
-        "line": 192,
+        "line": 166,
         "text": "const response = await fetch('https://oauth2.googleapis.com/token', {"
       },
       {
@@ -3254,17 +3224,22 @@
       },
       {
         "file": "test/oauth-broker-service-1.67.20.test.js",
-        "line": 55,
-        "text": "const callback=await fetch(`http://127.0.0.1:${port}/v1/google/callback?state=${encodeURIComponent(state)}&code=code-123`,{headers:{cookie:browserCookie}});"
+        "line": 51,
+        "text": "const wrongState=await fetch(`http://127.0.0.1:${port}/v1/google/callback?state=wrong-state&code=code-123`);"
       },
       {
         "file": "test/oauth-broker-service-1.67.20.test.js",
-        "line": 57,
+        "line": 53,
+        "text": "const callback=await fetch(`http://127.0.0.1:${port}/v1/google/callback?state=${encodeURIComponent(state)}&code=code-123`);"
+      },
+      {
+        "file": "test/oauth-broker-service-1.67.20.test.js",
+        "line": 55,
         "text": "const polledRes=await fetch(`http://127.0.0.1:${port}/v1/google/sessions/${created.id}`,{headers:{authorization:`Bearer ${created.pollToken}`}});"
       },
       {
         "file": "test/oauth-broker-service-1.67.20.test.js",
-        "line": 66,
+        "line": 64,
         "text": "const refreshRes=await fetch(polled.credential.tokenUrl,{method:'POST',headers:{authorization:`Basic ${basic}`,'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({grant_type:'refresh_token',refresh_token:polled.cre"
       },
       {
@@ -3325,7 +3300,7 @@
       {
         "file": "test/pwa-admin-features-15-19-21-1.64.0.test.js",
         "line": 196,
-        "text": "const asset = await fetch(base + '/app/admin-audit-connectors.js?v=467');"
+        "text": "const asset = await fetch(base + '/app/admin-audit-connectors.js?v=468');"
       },
       {
         "file": "test/pwa-admin-features-15-19-21-1.64.0.test.js",
@@ -3375,7 +3350,7 @@
       {
         "file": "test/pwa-admin-features-3-7-1.64.0.test.js",
         "line": 218,
-        "text": "const publicAsset = await fetch(base + '/app/admin-advanced.js?v=467');"
+        "text": "const publicAsset = await fetch(base + '/app/admin-advanced.js?v=468');"
       },
       {
         "file": "test/pwa-admin-features-3-7-1.64.0.test.js",
@@ -3465,12 +3440,12 @@
       {
         "file": "test/pwa-mobile-features-24-25-27-29-31-42-45-46-47-1.64.0.test.js",
         "line": 150,
-        "text": "const mod = await fetch(base + '/app/mobile-intelligence.js?v=467');"
+        "text": "const mod = await fetch(base + '/app/mobile-intelligence.js?v=468');"
       },
       {
         "file": "test/pwa-mobile-features-24-25-27-29-31-42-45-46-47-1.64.0.test.js",
         "line": 154,
-        "text": "const r = await fetch(base + '/app/' + name + '?v=467');"
+        "text": "const r = await fetch(base + '/app/' + name + '?v=468');"
       },
       {
         "file": "test/pwa-routes-refactor.test.js",

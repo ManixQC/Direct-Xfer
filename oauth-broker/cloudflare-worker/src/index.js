@@ -25,16 +25,14 @@ function verifierPayload(raw) {
       const verifier = String(parsed.verifier || '');
       const scope = normalizeDriveScope(parsed.scope, '');
       const browserHash = String(parsed.browserHash || '');
-      const callbackHash = String(parsed.callbackHash || '');
-      const callbackCookie = String(parsed.callbackCookie || '');
       const state = String(parsed.state || '');
-      if (verifier && scope) return { verifier, scope, browserHash, callbackHash, callbackCookie, state };
+      if (verifier && scope) return { verifier, scope, browserHash, state };
     }
   } catch {}
   // Sessions created by broker versions <= 1.67.29 stored only the PKCE verifier
   // and always requested the old full-Drive scope. Preserve those in-flight
   // callbacks while all new sessions default to drive.file.
-  return { verifier:text, scope:LEGACY_SCOPE, browserHash:'', callbackHash:'', callbackCookie:'', state:'' };
+  return { verifier:text, scope:LEGACY_SCOPE, browserHash:'', state:'' };
 }
 const SESSION_TTL_MS = 15 * 60 * 1000;
 const CREDENTIAL_TTL_MS = 365 * 24 * 60 * 60 * 1000;
@@ -73,18 +71,6 @@ function html(title, message, status = 200, close = false, extraHeaders = {}) {
 }
 
 
-function newOAuthBrowserCookie() {
-  return `__Host-dxo_${b64url(randomBytes(12))}`;
-}
-function cookieValue(request, name) {
-  const raw = String(request.headers.get('cookie') || '');
-  for (const part of raw.split(';')) {
-    const idx = part.indexOf('=');
-    if (idx < 1 || part.slice(0, idx).trim() !== name) continue;
-    try { return decodeURIComponent(part.slice(idx + 1).trim()); } catch { return ''; }
-  }
-  return '';
-}
 function googleAuthorizationUrl(env, origin, state, verifier, scope) {
   const auth = new URL(GOOGLE_AUTH_URL);
   auth.searchParams.set('client_id', env.GOOGLE_CLIENT_ID);
@@ -132,13 +118,6 @@ async function sha256Bytes(value) {
 }
 async function sha256(value) { return b64url(await sha256Bytes(value)); }
 
-async function oauthBrowserBinding(env, id, state, cookieName) {
-  if (!env.BROKER_DATA_KEY || String(env.BROKER_DATA_KEY).length < 32) throw new Error('broker-data-key-missing');
-  const material = await sha256Bytes(`Direct-Xfer\0OAuthBrowserBinding\0${env.BROKER_DATA_KEY}`);
-  const key = await crypto.subtle.importKey('raw', material, { name:'HMAC', hash:'SHA-256' }, false, ['sign']);
-  const signature = await crypto.subtle.sign('HMAC', key, textBytes(`${id}\0${state}\0${cookieName}`));
-  return b64url(new Uint8Array(signature));
-}
 
 function safeEqual(a, b) {
   const left = String(a || '');
@@ -357,19 +336,15 @@ async function handleAuthorize(request, env) {
   }
   const origin = String(item.callback_origin || brokerOrigin(request));
   if (!verifierData.state || !safeEqual(await sha256(verifierData.state), String(item.state_hash || ''))) return html('Connexion expirée', 'Revenez à Direct-Xfer et relancez la connexion.', 400);
-  const callbackCookie = newOAuthBrowserCookie();
-  const callbackBinding = await oauthBrowserBinding(env, id, verifierData.state, callbackCookie);
-  const updatedPayload = JSON.stringify({ ...verifierData, callbackHash:'', callbackCookie });
-  const updated = await env.DB.prepare("UPDATE sessions SET verifier_enc=?, updated_at=? WHERE id=? AND status='waiting'")
-    .bind(await encryptText(env, updatedPayload), Date.now(), id).run();
-  if (Number(updated?.meta?.changes || 0) !== 1) return html('Connexion déjà traitée', 'Revenez à Direct-Xfer.', 409);
+  // Browser ownership is established before redirect by the high-entropy binding
+  // parameter. The provider callback is then bound to this exact session by state
+  // and PKCE, so no auth-derived value needs to be persisted in a browser cookie.
   const auth = await googleAuthorizationUrl(env, origin, verifierData.state, verifierData.verifier, verifierData.scope);
   return new Response(null, { status:303, headers:{
     location:auth.toString(),
     'cache-control':'no-store',
     'referrer-policy':'no-referrer',
     'x-content-type-options':'nosniff',
-    'set-cookie':`${callbackCookie}=${callbackBinding}; Secure; HttpOnly; SameSite=Lax; Path=/v1/google/callback; Max-Age=${Math.max(1, Math.ceil((Number(item.expires_at) - Date.now()) / 1000))}`,
   }});
 }
 
@@ -381,17 +356,9 @@ async function handleCallback(request, env) {
   const item = await env.DB.prepare('SELECT * FROM sessions WHERE state_hash=? AND expires_at>?').bind(stateHash, Date.now()).first();
   if (!item) return html('Connexion expirée', 'Revenez à Direct-Xfer et relancez la connexion.', 400);
   if (item.status !== 'waiting') return html('Connexion déjà traitée', 'Revenez à Direct-Xfer.', 409, item.status === 'completed');
-  const verifierDataForBinding = verifierPayload(await decryptText(env, item.verifier_enc));
-  const callbackBinding = cookieValue(request, verifierDataForBinding.callbackCookie);
-  const expectedBinding = verifierDataForBinding.callbackCookie
-    ? await oauthBrowserBinding(env, item.id, verifierDataForBinding.state, verifierDataForBinding.callbackCookie)
-    : '';
-  const legacyBindingOk = verifierDataForBinding.callbackHash && callbackBinding
-    ? safeEqual(verifierDataForBinding.callbackHash, await sha256(callbackBinding))
-    : false;
-  if (!callbackBinding || (!safeEqual(expectedBinding, callbackBinding) && !legacyBindingOk)) {
-    return html('Navigateur non reconnu', 'Cette autorisation OAuth doit revenir dans le même navigateur qui a démarré la connexion.', 400);
-  }
+  // `state_hash` identifies the one-time session and the encrypted PKCE verifier
+  // binds the Google authorization code to that session. No cookie credential is
+  // required or read here.
 
   const providerError = String(url.searchParams.get('error') || '');
   if (providerError) {

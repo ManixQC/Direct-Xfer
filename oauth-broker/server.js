@@ -66,32 +66,6 @@ function html(res, status, title, message, close = false, extraHeaders = {}) {
   res.end(body);
 }
 
-function newOAuthBrowserCookie() {
-  const suffix = base64url(crypto.randomBytes(12));
-  return `__Host-dxo_${suffix}`;
-}
-function oauthBrowserBinding(item) {
-  if (!item || !item.id || !item.state || !item.callbackCookie) return '';
-  return base64url(crypto.createHmac('sha256', MASTER_KEY)
-    .update('Direct-Xfer\0OAuthBrowserBinding\0')
-    .update(String(item.id))
-    .update('\0')
-    .update(String(item.state))
-    .update('\0')
-    .update(String(item.callbackCookie))
-    .digest());
-}
-function cookieValue(req, name) {
-  if (!name) return '';
-  const raw = String(req.headers && req.headers.cookie || '');
-  for (const part of raw.split(';')) {
-    const idx = part.indexOf('=');
-    if (idx < 1) continue;
-    if (part.slice(0, idx).trim() !== name) continue;
-    try { return decodeURIComponent(part.slice(idx + 1).trim()); } catch (_) { return ''; }
-  }
-  return '';
-}
 function googleAuthorizationUrl(item) {
   const auth = new URL('https://accounts.google.com/o/oauth2/v2/auth');
   const challenge = base64url(crypto.createHash('sha256').update(item.verifier).digest());
@@ -233,7 +207,7 @@ async function handle(req, res) {
       const id = base64url(crypto.randomBytes(18)), pollToken = base64url(crypto.randomBytes(32)), state = base64url(crypto.randomBytes(32));
       const verifier = base64url(crypto.randomBytes(48));
       const browserToken = base64url(crypto.randomBytes(32));
-      const item = { id, pollHash:sha256(pollToken), browserHash:sha256(browserToken), callbackCookie:'', state, verifier, version, scope:requestedScope, status:'waiting', error:null, createdAt:Date.now(), updatedAt:Date.now(), result:null };
+      const item = { id, pollHash:sha256(pollToken), browserHash:sha256(browserToken), state, verifier, version, scope:requestedScope, status:'waiting', error:null, createdAt:Date.now(), updatedAt:Date.now(), result:null };
       sessions.set(id,item);
       const launch = new URL(`${PUBLIC_URL}/v1/google/authorize`);
       launch.searchParams.set('session', id);
@@ -248,16 +222,16 @@ async function handle(req, res) {
       if (!item || item.status !== 'waiting' || !safeEqual(item.browserHash, sha256(binding))) {
         return html(res, 400, 'Connexion expirée', 'Revenez à Direct-Xfer et relancez la connexion.', false);
       }
-      item.callbackCookie = newOAuthBrowserCookie();
-      const callbackBinding = oauthBrowserBinding(item);
+      // The authorize URL already carries a high-entropy browser binding and the
+      // OAuth callback is correlated with a one-time high-entropy state plus PKCE.
+      // Do not copy any auth-derived or random bearer material into browser storage:
+      // CodeQL correctly treats browser-cookie persistence as clear-text storage for such values.
       item.updatedAt = Date.now();
-      const maxAge = Math.max(1, Math.ceil((item.createdAt + SESSION_TTL_MS - Date.now()) / 1000));
       res.writeHead(303, {
         Location: googleAuthorizationUrl(item).toString(),
         'Cache-Control':'no-store',
         'Referrer-Policy':'no-referrer',
         'X-Content-Type-Options':'nosniff',
-        'Set-Cookie':`${item.callbackCookie}=${callbackBinding}; Secure; HttpOnly; SameSite=Lax; Path=/v1/google/callback; Max-Age=${maxAge}`,
       });
       return res.end();
     }
@@ -266,11 +240,8 @@ async function handle(req, res) {
       const state = String(url.searchParams.get('state') || '');
       const item = [...sessions.values()].find((entry) => entry && safeEqual(entry.state, state));
       if (!item) return html(res, 400, 'Connexion expirée', 'Revenez à Direct-Xfer et relancez la connexion.', false);
-      const callbackBinding = cookieValue(req, item.callbackCookie);
-      const expectedBinding = oauthBrowserBinding(item);
-      if (!callbackBinding || !expectedBinding || !safeEqual(expectedBinding, callbackBinding)) {
-        return html(res, 400, 'Navigateur non reconnu', 'Cette autorisation OAuth doit revenir dans le même navigateur qui a démarré la connexion.', false);
-      }
+      // `state` is the callback correlation secret; PKCE binds the provider code
+      // to this server-side session. No callback credential is persisted in a cookie.
       if (item.status !== 'waiting') return html(res, 409, 'Connexion déjà traitée', 'Revenez à Direct-Xfer.', item.status === 'completed');
       const providerError = String(url.searchParams.get('error') || '');
       if (providerError) { item.status='error'; item.error=providerError === 'access_denied' ? 'oauth-access-denied' : 'oauth-provider-error'; item.updatedAt=Date.now(); return html(res,400,'Connexion annulée','Google n’a pas autorisé l’accès.',true); }

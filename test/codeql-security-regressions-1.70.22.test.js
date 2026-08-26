@@ -82,27 +82,28 @@ test('PWA security hotfix advances the shell and login cache generations without
   const loginHtml = read('pwa/login.html');
   const standardHtml = read('public/index.html');
   const bridgeHtml = read('public/oauth-bridge.html');
-  assert.match(sw, /2026\.08\.26-pwa486/);
-  assert.match(sw, /app\.js\?v=467/);
+  assert.match(sw, /2026\.08\.26-pwa487/);
+  assert.match(sw, /app\.js\?v=468/);
   assert.match(app, new RegExp(`APP_VERSION = '${releaseRe}'`));
-  assert.match(app, /APP_BUILD = '2026\.08\.26-pwa486'/);
+  assert.match(app, /APP_BUILD = '2026\.08\.26-pwa487'/);
   assert.match(loginHtml, /login\.js\?v=321/);
-  assert.match(loginHtml, /login-vault\.js\?v=467/);
+  assert.match(loginHtml, /login-vault\.js\?v=468/);
   assert.match(standardHtml, /app\.js\?v=352/);
   assert.match(bridgeHtml, /oauth-bridge\.js\?v=4/);
 });
 
 
-test('OAuth browser callback cookie stores only a keyed binding, never a raw random bearer token', () => {
+test('OAuth callback keeps auth material server-side and stores no callback credential in cookies', () => {
   const server = read('oauth-broker/server.js');
   const worker = read('oauth-broker/cloudflare-worker/src/index.js');
   for (const src of [server, worker]) {
-    assert.match(src, /oauthBrowserBinding/);
-    assert.match(src, /newOAuthBrowserCookie/);
-    assert.doesNotMatch(src, /callbackToken\s*=\s*(?:base64url|b64url)\(.*randomBytes\(32\)/);
-    assert.doesNotMatch(src, /set-cookie[^\n]*callbackToken/i);
-    assert.doesNotMatch(src, /Set-Cookie[^\n]*callbackToken/i);
+    assert.match(src, /browserHash/);
+    assert.match(src, /state/);
+    assert.match(src, /code_challenge_method/);
+    assert.doesNotMatch(src, /newOAuthBrowserCookie/);
+    assert.doesNotMatch(src, /oauthBrowserBinding/);
+    assert.doesNotMatch(src, /callbackBinding/);
+    assert.doesNotMatch(src, /callbackCookie/);
+    assert.doesNotMatch(src, /set-cookie/i);
   }
-  assert.match(server, /createHmac\('sha256', MASTER_KEY\)/);
-  assert.match(worker, /name:'HMAC', hash:'SHA-256'/);
 });

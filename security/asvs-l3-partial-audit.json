@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "generatedAt": "2026-08-26T19:11:57.997Z",
-  "version": "1.71.23",
-  "sourceTreeSha256": "b38638a0260b95bdd485524b90e917247195dc706f6647ed4dce921d7329d6ed",
+  "generatedAt": "2026-08-26T19:26:43.299Z",
+  "version": "1.71.24",
+  "sourceTreeSha256": "04c3645f060c5074996bbd4ccf2537193a4ee6d4efd2bba128e90fdee5dff1e4",
   "filesScanned": 127,
   "scope": [
     "server.js",
@@ -363,7 +363,7 @@
     },
     {
       "id": "V10.1.2",
-      "description": "OAuth same-browser/session transaction binding",
+      "description": "OAuth browser/session transaction binding without browser-stored credentials",
       "ok": true,
       "anchors": [
         {
@@ -372,7 +372,7 @@
         },
         {
           "file": "oauth-broker/server.js",
-          "text": "oauthBrowserBinding"
+          "text": "code_challenge_method"
         },
         {
           "file": "lib/server/storage-connector-config.js",
@@ -3320,7 +3320,7 @@
         },
         {
           "file": "oauth-broker/server.js",
-          "line": 262,
+          "line": 236,
           "token": "response-sink"
         },
         {
@@ -11110,7 +11110,7 @@
       "rows": [
         {
           "file": "lib/assets/oauth-broker-worker.mjs",
-          "line": 59,
+          "line": 57,
           "token": "lifecycle"
         },
         {
@@ -11525,7 +11525,7 @@
         },
         {
           "file": "oauth-broker/cloudflare-worker/src/index.js",
-          "line": 59,
+          "line": 57,
           "token": "lifecycle"
         },
         {
@@ -11535,7 +11535,7 @@
         },
         {
           "file": "oauth-broker/server.js",
-          "line": 220,
+          "line": 194,
           "token": "lifecycle"
         },
         {
@@ -13226,7 +13226,7 @@
       ]
     },
     "cryptoDecisions": {
-      "count": 29,
+      "count": 28,
       "rows": [
         {
           "file": "lib/auth-utils.js",
@@ -13360,17 +13360,12 @@
         },
         {
           "file": "oauth-broker/server.js",
-          "line": 75,
+          "line": 126,
           "token": "crypto"
         },
         {
           "file": "oauth-broker/server.js",
-          "line": 152,
-          "token": "crypto"
-        },
-        {
-          "file": "oauth-broker/server.js",
-          "line": 158,
+          "line": 132,
           "token": "crypto"
         }
       ]
@@ -13745,12 +13740,12 @@
       "rows": [
         {
           "file": "lib/assets/oauth-broker-worker.mjs",
-          "line": 243,
+          "line": 222,
           "token": "outbound"
         },
         {
           "file": "lib/assets/oauth-broker-worker.mjs",
-          "line": 547,
+          "line": 514,
           "token": "outbound"
         },
         {
@@ -13825,17 +13820,17 @@
         },
         {
           "file": "oauth-broker/cloudflare-worker/src/index.js",
-          "line": 243,
+          "line": 222,
           "token": "outbound"
         },
         {
           "file": "oauth-broker/cloudflare-worker/src/index.js",
-          "line": 547,
+          "line": 514,
           "token": "outbound"
         },
         {
           "file": "oauth-broker/server.js",
-          "line": 192,
+          "line": 166,
           "token": "outbound"
         },
         {

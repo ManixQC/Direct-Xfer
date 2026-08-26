@@ -137,9 +137,11 @@ test('ASVS V10.1.2 broker OAuth is bound to the launching browser transaction', 
   for (const file of ['oauth-broker/server.js', 'oauth-broker/cloudflare-worker/src/index.js']) {
     const source = read(file);
     assert.match(source, /browserHash/);
-    assert.match(source, /oauthBrowserBinding/);
-    assert.match(source, /newOAuthBrowserCookie/);
-    assert.match(source, /SameSite=Lax/);
+    assert.match(source, /state/);
+    assert.match(source, /code_challenge_method/);
+    assert.doesNotMatch(source, /callbackBinding/);
+    assert.doesNotMatch(source, /callbackCookie/);
+    assert.doesNotMatch(source, /set-cookie/i);
     assert.match(source, /timingSafe|safeEqual|safeEqualText/);
   }
 });

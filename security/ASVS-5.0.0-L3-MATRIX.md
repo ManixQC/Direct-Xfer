@@ -5,7 +5,7 @@ Standard: OWASP ASVS 5.0.0 Level 3 (L3 includes applicable L1 and L2 requirement
 Repository: `ManixQC/Direct-Xfer`
 Initial historical baseline: `3d2c0b5c668c9136a05490b25b76f4166a5940e8`
 Baseline input: Direct-Xfer `1.70.23` ASVS-updated archive
-Current audited source snapshot: Direct-Xfer `1.71.17` release
+Current audited source snapshot: Direct-Xfer `1.71.18` release
 Baseline archive SHA-256: `6ed5f230e1e73e540a00dc545d3d0098946a8a75257423041492875fe8ef59cb`
 ASVS regression verification: `node --test test/asvs-l3-*.test.js` — 96 passed, 0 failed, 0 skipped
 Full regression verification: all 190 `test/*.test.js` files — 1139 passed, 0 failed, 0 skipped

@@ -3,17 +3,17 @@
 Audit date: 2026-08-26
 Target: OWASP Application Security Verification Standard 5.0.0, Level 3
 Repository: `ManixQC/Direct-Xfer`
-Release: Direct-Xfer `1.71.17`
+Release: Direct-Xfer `1.71.18`
 Baseline input: Direct-Xfer `1.70.26` ASVS-L3 release
 Detailed matrix: `security/ASVS-5.0.0-L3-MATRIX.md`
 
 ## Release verification result
 
-Direct-Xfer 1.71.17 retains the reviewed dependency, SignPath, Trivy/OpenVEX and Tesseract 5.5.3 supply-chain baseline, and fixes the remaining Trivy Docker image-build blocker in the final runtime stage. The custom Tesseract 5.5.3 builder was already succeeding; the failure occurred because runtime validation pointed `TESSDATA_PREFIX` at `/usr/share/tesseract-ocr/5`, while the custom binary expects the directory that directly contains the traineddata files. The image now derives and verifies the installed Debian language-data directory, uses `/usr/share/tesseract-ocr/5/tessdata` as `TESSDATA_PREFIX`, and keeps the engine pinned to commit `db0ec62f81b0737fbbe184d8fea40af5738f8eef`. The fail-closed `npm audit` gate remains at Moderate severity or higher and now preserves machine-readable diagnostics as a CI artifact. The ASVS status matrix is unchanged: 253 PASS / 92 N/A / 0 MANUAL / 0 PARTIAL / 0 FAIL / 0 REVIEW.
+Direct-Xfer 1.71.18 retains the reviewed dependency, SignPath, Trivy/OpenVEX and Tesseract 5.5.3 supply-chain baseline, and fixes the remaining Trivy Docker image-build blocker in the final runtime stage. The custom Tesseract 5.5.3 builder was already succeeding; the failure occurred because runtime validation pointed `TESSDATA_PREFIX` at `/usr/share/tesseract-ocr/5`, while the custom binary expects the directory that directly contains the traineddata files. The image now derives and verifies the installed Debian language-data directory, uses `/usr/share/tesseract-ocr/5/tessdata` as `TESSDATA_PREFIX`, and keeps the engine pinned to commit `db0ec62f81b0737fbbe184d8fea40af5738f8eef`. The fail-closed `npm audit` gate remains at Moderate severity or higher and now preserves machine-readable diagnostics as a CI artifact. The ASVS status matrix is unchanged: 253 PASS / 92 N/A / 0 MANUAL / 0 PARTIAL / 0 FAIL / 0 REVIEW.
 
-### 1.71.17 supply-chain CI hardening
+### 1.71.18 supply-chain CI hardening
 
-- Windows CI release validation no longer depends on a stale hard-coded OpenVEX release URL: the Trivy container regression reads the active application version from `package.json` and validates `security/openvex.json` against that value.
+- Windows CI release validation no longer depends on stale release-numbered regression files or a hard-coded OpenVEX release URL. `test/trivy-container-hardening.test.js` and `test/release-maintenance.test.js` are release-agnostic; they derive the active application version from `package.json`, validate `security/openvex.json` against that value, and derive the PWA build/cache generation from the source instead of pinning the previous release.
 
 - Fixed the final Docker runtime validation that used `TESSDATA_PREFIX=/usr/share/tesseract-ocr/5`. Direct-Xfer now points `TESSDATA_PREFIX` at the verified Debian traineddata directory `/usr/share/tesseract-ocr/5/tessdata` and validates all required `eng`, `fra`, `osd` and `spa` language files before runtime startup.
 - Removed the brittle assumption that the language-data path only needs to be hard-coded: the build derives `eng.traineddata` from the installed `tesseract-ocr-eng` package, verifies the common directory and required files, then checks that the supported Debian 13 layout resolves to `/usr/share/tesseract-ocr/5/tessdata`.
@@ -23,7 +23,7 @@ Direct-Xfer 1.71.17 retains the reviewed dependency, SignPath, Trivy/OpenVEX and
 - Enhanced `.github/workflows/npm-audit.yml` without weakening the gate. The workflow captures `npm audit --omit=dev --audit-level=moderate --json`, prints advisory/package diagnostics, uploads `npm-audit.json` for 14 days, and fails closed in a separate enforcement step when npm reports an advisory or audit-service error. It never runs `npm audit fix` automatically.
 - Nodemailer remains `^9.0.5` / resolved `9.0.5`; Express remains `^4.22.2` / resolved `4.22.2`; `node-forge` remains `^1.4.0` / resolved `1.4.0`.
 - Dependabot continues to ignore Express semver-major updates so Express 5 remains a deliberate framework migration rather than an automatic dependency update.
-- Application/package metadata is synchronized to `1.71.17`, with PWA generation `pwa480` and cache-buster `v=461`. OAuth broker metadata, Windows workflow artifacts, SBOM, OpenVEX and ASVS release evidence are synchronized to the release.
+- Application/package metadata is synchronized to `1.71.18`, with PWA generation `pwa481` and cache-buster `v=462`. OAuth broker metadata, Windows workflow artifacts, SBOM, OpenVEX and ASVS release evidence are synchronized to the release.
 - The Windows ServerHost critical-runtime manifest was resynchronized for all source-resident entries changed by this release; the build-time Express package entry remains tied to the unchanged resolved `4.22.2` package.
 
 ### 1.71.8 dependency floor hardening
@@ -69,12 +69,12 @@ Direct-Xfer 1.70.26 closes the 26 deployment-bound `MANUAL` rows from 1.70.25 wi
 Repository/release gates completed for this candidate:
 
 - Release-targeted regression suite: **82 passed, 0 failed, 0 skipped**, covering dependency floors, npm-audit CI, version/PWA synchronization, Windows metadata and SignPath release invariants.
-- Full current regression tree: **CI REQUIRED** after `npm ci`; the source-only local run discovered 1152 tests and reached 1141 PASS / 11 FAIL, with all 11 failures caused by the intentionally absent `node_modules/express` dependency. No source assertion failure remained after the Docker regression test was synchronized.
+- Full current regression tree: **CI REQUIRED** after `npm ci`; the source-only local run discovered 1152 tests and reached 1141 PASS / 11 FAIL, with all 11 failures caused by the intentionally absent `node_modules/express` dependency. No release-version, PWA-cache, OpenVEX, Docker/Tesseract, Windows metadata or SignPath source assertion failure remained.
 - Static ASVS audit: **PASS** — 127 production JavaScript source files, 13 reviewed decoder sites.
 - PARTIAL-closure audit: **PASS** — 127 production JavaScript source files, 38 repository-verifiable controls, 0 blocking findings.
-- Security inventory regenerated for 1.71.17 — **967 entries**.
+- Security inventory regenerated for 1.71.18 — **967 entries**.
 - Windows ServerHost critical runtime manifest: **103 entries, 0 stale source-resident hashes** after final synchronization; the missing build-time Express entry remains pinned by `package-lock.json` to 4.22.2.
-- CycloneDX SBOM root component synchronized to 1.71.17.
+- CycloneDX SBOM root component synchronized to 1.71.18.
 
 This document is an implementation/evidence audit, not a third-party certification. A production installation can operate in `ASVS_L3_MODE=true` only while all mandatory runtime controls and the signed deployment evidence are valid.
 
@@ -150,8 +150,8 @@ The direct dependency graph remains lockfile-pinned. V15.2.1 is no longer an ope
 
 ## Final release gates
 
-- [x] package and lockfile version synchronized to 1.71.17.
-- [x] PWA version/cache generation synchronized to 1.71.17 / pwa480.
+- [x] package and lockfile version synchronized to 1.71.18.
+- [x] PWA version/cache generation synchronized to 1.71.18 / pwa481.
 - [x] ASVS regression suite green (96/96).
 - [x] Complete current test tree green (1139/1139 across 190 files).
 - [x] Static ASVS audit green.
@@ -159,7 +159,7 @@ The direct dependency graph remains lockfile-pinned. V15.2.1 is no longer an ope
 - [x] Security inventory regenerated.
 - [x] Windows runtime integrity manifest synchronized and rechecked.
 - [x] Matrix has 0 MANUAL, 0 PARTIAL, 0 FAIL and 0 REVIEW.
-- [x] SBOM root component synchronized to 1.71.17.
+- [x] SBOM root component synchronized to 1.71.18.
 - [x] Former operator-declared manual-attestation flags removed from the L3 configuration surface.
 
 Independent review of N/A decisions, production evidence collection and a focused penetration test remain appropriate before making an external certification/compliance representation.

@@ -1,6 +1,6 @@
 # SignPath Foundation setup for Direct-Xfer
 
-Direct-Xfer 1.71.17 is prepared for SignPath Foundation Open Source Code Signing. Source-side preparation is complete; the remaining work is the one-time external SignPath approval/configuration and GitHub secret/variable setup.
+Direct-Xfer 1.71.18 is prepared for SignPath Foundation Open Source Code Signing. Source-side preparation is complete; the remaining work is the one-time external SignPath approval/configuration and GitHub secret/variable setup.
 
 ## 1. Apply to SignPath Foundation
 

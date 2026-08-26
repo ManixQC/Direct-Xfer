@@ -36,11 +36,11 @@ test.after(() => {
 });
 
 test('PWA cache build is synchronized to pwa472', () => {
-  assert.match(theme, /2026\.08\.25-pwa472/);
+  assert.match(theme, /2026\.08\.26-pwa472/);
   assert.match(theme, /admin-advanced\.js\?v=453/);
-  assert.match(sw, /2026\.08\.25-pwa472/);
+  assert.match(sw, /2026\.08\.26-pwa472/);
   assert.match(sw, /admin-advanced\.js\?v=453/);
-  assert.match(read('pwa/app.js'), /2026\.08\.25-pwa472/);
+  assert.match(read('pwa/app.js'), /2026\.08\.26-pwa472/);
   assert.match(read('pwa/login.js'), /v=453/);
   assert.match(read('pwa/index.html'), /pwa472/);
   for (const file of ['pwa/admin-advanced.js','pwa/app.js','pwa/index.html','pwa/login.js','pwa/sw.js','pwa/theme-init.js']) {

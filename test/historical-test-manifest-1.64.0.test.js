@@ -9,6 +9,7 @@ const manifestPath = path.join(root, 'test-historical', 'MANIFEST.json');
 const manifest = fs.existsSync(manifestPath) ? JSON.parse(fs.readFileSync(manifestPath, 'utf8')) : null;
 const packageJson = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
 const restorer = fs.readFileSync(path.join(root, 'scripts', 'restore-historical-tests.js'), 'utf8');
+const testRunner = fs.readFileSync(path.join(root, 'scripts', 'run-tests.js'), 'utf8');
 
 test('historical test manifest preserves the complete reference test tree', { skip: !manifest ? 'optional historical archive is not present' : false }, () => {
   assert.equal(manifest.repository, 'ManixQC/Direct-Xfer');
@@ -32,8 +33,12 @@ test('historical test restorer verifies Git blob integrity before writing', () =
   assert.match(restorer, /atomicWrite/);
 });
 
-test('default test command remains scoped to current 1.69.6 tests', () => {
-  assert.equal(packageJson.scripts.test, 'node --test test/*.test.js');
+test('default test command remains scoped to current tests through the release-aware runner', () => {
+  assert.equal(packageJson.scripts.test, 'node scripts/run-tests.js');
+  assert.match(testRunner, /const TEST_DIR = path\.join\(ROOT, 'test'\)/);
+  assert.match(testRunner, /RETIRED_RELEASE_TEST/);
+  assert.match(testRunner, /REQUIRED_CURRENT_TESTS/);
+  assert.match(testRunner, /spawnSync\(process\.execPath, \['--test', \.\.\.tests\]/);
   assert.equal(packageJson.scripts['test:historical:restore'], 'node scripts/restore-historical-tests.js');
   assert.equal(packageJson.scripts['test:historical'], 'node --test test-historical/*.test.js');
 });

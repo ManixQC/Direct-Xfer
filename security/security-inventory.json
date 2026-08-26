@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-08-26T17:23:49.584Z",
-  "version": "1.71.16",
+  "generatedAt": "2026-08-26T17:39:12.583Z",
+  "version": "1.71.17",
   "categories": {
     "crypto": [
       {
@@ -3325,7 +3325,7 @@
       {
         "file": "test/pwa-admin-features-15-19-21-1.64.0.test.js",
         "line": 196,
-        "text": "const asset = await fetch(base + '/app/admin-audit-connectors.js?v=460');"
+        "text": "const asset = await fetch(base + '/app/admin-audit-connectors.js?v=461');"
       },
       {
         "file": "test/pwa-admin-features-15-19-21-1.64.0.test.js",
@@ -3375,7 +3375,7 @@
       {
         "file": "test/pwa-admin-features-3-7-1.64.0.test.js",
         "line": 218,
-        "text": "const publicAsset = await fetch(base + '/app/admin-advanced.js?v=460');"
+        "text": "const publicAsset = await fetch(base + '/app/admin-advanced.js?v=461');"
       },
       {
         "file": "test/pwa-admin-features-3-7-1.64.0.test.js",
@@ -3465,12 +3465,12 @@
       {
         "file": "test/pwa-mobile-features-24-25-27-29-31-42-45-46-47-1.64.0.test.js",
         "line": 150,
-        "text": "const mod = await fetch(base + '/app/mobile-intelligence.js?v=460');"
+        "text": "const mod = await fetch(base + '/app/mobile-intelligence.js?v=461');"
       },
       {
         "file": "test/pwa-mobile-features-24-25-27-29-31-42-45-46-47-1.64.0.test.js",
         "line": 154,
-        "text": "const r = await fetch(base + '/app/' + name + '?v=460');"
+        "text": "const r = await fetch(base + '/app/' + name + '?v=461');"
       },
       {
         "file": "test/pwa-routes-refactor.test.js",
@@ -3528,12 +3528,12 @@
         "text": "assert.equal(lock.packages['node_modules/nodemailer'].version, '9.0.5');"
       },
       {
-        "file": "test/release-maintenance-1.71.16.test.js",
+        "file": "test/release-maintenance-1.71.17.test.js",
         "line": 19,
         "text": "assert.equal(pkg.dependencies.nodemailer, '^9.0.5');"
       },
       {
-        "file": "test/release-maintenance-1.71.16.test.js",
+        "file": "test/release-maintenance-1.71.17.test.js",
         "line": 20,
         "text": "assert.equal(lock.packages['node_modules/nodemailer'].version, '9.0.5');"
       },
@@ -3723,8 +3723,8 @@
         "text": "const response = await fetch(`${base}/api/server-health-dashboard`, {"
       },
       {
-        "file": "test/trivy-container-hardening-1.71.16.test.js",
-        "line": 33,
+        "file": "test/trivy-container-hardening-1.71.17.test.js",
+        "line": 35,
         "text": "assert.match(dockerfile, /git -C \\/src\\/tesseract fetch --depth=1 origin/);"
       },
       {

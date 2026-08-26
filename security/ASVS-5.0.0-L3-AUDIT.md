@@ -3,13 +3,20 @@
 Audit date: 2026-08-26
 Target: OWASP Application Security Verification Standard 5.0.0, Level 3
 Repository: `ManixQC/Direct-Xfer`
-Release: Direct-Xfer `1.71.21`
+Release: Direct-Xfer `1.71.22`
 Baseline input: Direct-Xfer `1.70.26` ASVS-L3 release
 Detailed matrix: `security/ASVS-5.0.0-L3-MATRIX.md`
 
 ## Release verification result
 
-Direct-Xfer 1.71.21 retains the reviewed ASVS L3, dependency, Windows/SignPath, Trivy/OpenVEX and Tesseract supply-chain baseline and adds a Code Scanning-focused browser-navigation hardening. Notification `manageUrl` values are no longer sent directly to `location.assign`; both the standard administrator UI and PWA parse the value against the current origin, reject protocol-relative/control-character inputs and reject any URL whose resolved origin differs from the current application origin. Server-generated management URLs remain relative and account-bound. The ASVS status matrix remains 253 PASS / 92 N/A / 0 MANUAL / 0 PARTIAL / 0 FAIL / 0 REVIEW.
+Direct-Xfer 1.71.22 is a release-synchronization maintenance bump over 1.71.21. It carries forward the reviewed ASVS L3, dependency, Windows/SignPath, Trivy/OpenVEX, Tesseract supply-chain and Code Scanning URL-sink hardening without an intentional functional behavior change. The ASVS status matrix remains 253 PASS / 92 N/A / 0 MANUAL / 0 PARTIAL / 0 FAIL / 0 REVIEW.
+
+### 1.71.22 release synchronization
+
+- Application/package metadata is synchronized to `1.71.22` across the root package/lockfile, OAuth broker packages, Windows workflow/installer metadata, SBOM, OpenVEX, ASVS release evidence and release-scoped regression fixtures.
+- PWA generation advances to `pwa485` with cache-buster `v=466` so clients cannot retain 1.71.21 release metadata from the previous shell cache.
+- The 1.71.21 Code Scanning notification navigation hardening is preserved unchanged in both the standard administrator UI and PWA.
+- Windows ServerHost critical-runtime manifest remains 103 entries; source-resident hashes are resynchronized and the build-time Express package entry remains pinned by `package-lock.json` to Express 4.22.2.
 
 ### 1.71.21 Code Scanning URL-sink hardening
 
@@ -17,8 +24,7 @@ Direct-Xfer 1.71.21 retains the reviewed ASVS L3, dependency, Windows/SignPath, 
 - Applied the same defense-in-depth boundary to `pwa/app.js`, preventing an externally controlled absolute or protocol-relative URL from becoming a PWA navigation target even if malformed/stale notification data is restored.
 - Added `test/code-scanning-notification-url-hardening.test.js` so future refactors cannot restore direct `location.assign(String(n.manageUrl))` sinks in either client.
 - Existing CodeQL regressions for login redirects, OAuth URL boundaries, generated-page JavaScript, object-URL media previews, dashboard DOM rendering, password hashing and ReDoS remain enabled.
-- Application/package metadata is synchronized to `1.71.21`, with PWA generation `pwa484` and cache-buster `v=465`. OAuth broker metadata, Windows workflow artifacts, SBOM, OpenVEX and ASVS release evidence are synchronized to the release.
-- Windows ServerHost critical-runtime manifest remains 103 entries; source-resident hashes are resynchronized and the build-time Express package entry remains pinned by `package-lock.json` to Express 4.22.2.
+- Application/package metadata was synchronized to `1.71.21`, with PWA generation `pwa484` and cache-buster `v=465`. OAuth broker metadata, Windows workflow artifacts, SBOM, OpenVEX and ASVS release evidence were synchronized to that release.
 
 ### 1.71.8 dependency floor hardening
 
@@ -66,9 +72,9 @@ Repository/release gates completed for this candidate:
 - Full current regression tree remains **CI REQUIRED** after `npm ci`; this source-only packaging pass did not claim a complete dependency-backed run because `node_modules` is intentionally excluded from the release ZIP.
 - Static ASVS audit: **PASS** — 127 production JavaScript source files, 13 reviewed decoder sites.
 - PARTIAL-closure audit: **PASS** — 127 production JavaScript source files, 38 repository-verifiable controls, 0 blocking findings.
-- Security inventory regenerated for 1.71.21 — **962 entries**.
+- Security inventory regenerated for 1.71.22 — **962 entries**.
 - Windows ServerHost critical runtime manifest: **103 entries, 0 stale source-resident hashes** after final synchronization; the missing build-time Express entry remains pinned by `package-lock.json` to 4.22.2.
-- CycloneDX SBOM root component synchronized to 1.71.21.
+- CycloneDX SBOM root component synchronized to 1.71.22.
 
 This document is an implementation/evidence audit, not a third-party certification. A production installation can operate in `ASVS_L3_MODE=true` only while all mandatory runtime controls and the signed deployment evidence are valid.
 
@@ -144,8 +150,8 @@ The direct dependency graph remains lockfile-pinned. V15.2.1 is no longer an ope
 
 ## Final release gates
 
-- [x] package and lockfile version synchronized to 1.71.21.
-- [x] PWA version/cache generation synchronized to 1.71.21 / pwa484.
+- [x] package and lockfile version synchronized to 1.71.22.
+- [x] PWA version/cache generation synchronized to 1.71.22 / pwa485.
 - [x] ASVS regression suite green (96/96).
 - [x] Complete current test tree green (1139/1139 across 190 files).
 - [x] Static ASVS audit green.
@@ -153,7 +159,7 @@ The direct dependency graph remains lockfile-pinned. V15.2.1 is no longer an ope
 - [x] Security inventory regenerated.
 - [x] Windows runtime integrity manifest synchronized and rechecked.
 - [x] Matrix has 0 MANUAL, 0 PARTIAL, 0 FAIL and 0 REVIEW.
-- [x] SBOM root component synchronized to 1.71.21.
+- [x] SBOM root component synchronized to 1.71.22.
 - [x] Former operator-declared manual-attestation flags removed from the L3 configuration surface.
 
 Independent review of N/A decisions, production evidence collection and a focused penetration test remain appropriate before making an external certification/compliance representation.

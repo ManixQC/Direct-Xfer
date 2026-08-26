@@ -6679,9 +6679,18 @@ function notificationShare(n) {
   return (state.allShares || []).find((s) => s && s.token === n.token) || null;
 }
 // Take the operator to the section a notification is about.
+function safeNotificationManageUrl(value) {
+  try {
+    const raw = String(value || '').trim();
+    if (!raw || raw.startsWith('//') || /[\u0000-\u001f\u007f]/.test(raw)) return '';
+    const parsed = new URL(raw, location.origin);
+    if (parsed.origin !== location.origin || !parsed.pathname.startsWith('/')) return '';
+    return parsed.pathname + parsed.search + parsed.hash;
+  } catch (_) { return ''; }
+}
 function openNotificationTarget(n) {
   closeNotificationsMenu();
-  if (n && n.manageUrl) { try { window.location.assign(String(n.manageUrl)); return; } catch (_) {} }
+  if (n && n.manageUrl) { const manageUrl = safeNotificationManageUrl(n.manageUrl); if (manageUrl) { window.location.assign(manageUrl); return; } }
   const cat = String((n && n.category) || ''), type = String((n && n.type) || '');
   if (cat === 'images' || type.indexOf('image') === 0 || type === 'ocr-failed') { openImagesPage(); return; }
   if (['system','system_health','maintenance','network','restarts','updates','pwa'].includes(cat)) { void openConfigModal(); return; }

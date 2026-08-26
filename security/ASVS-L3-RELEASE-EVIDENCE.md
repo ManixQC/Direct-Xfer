@@ -1,6 +1,6 @@
-# Direct-Xfer 1.71.20 — ASVS L3 release evidence
+# Direct-Xfer 1.71.21 — ASVS L3 release evidence
 
-> 1.71.20 maintenance fix: the release-aware test runner remains the default `npm test` entry point, and the historical-test manifest regression now validates that runner contract instead of requiring the obsolete literal command `node --test test/*.test.js`. The runner still scopes execution to the current `test/` tree, rejects missing current release-maintenance/Trivy tests, and ignores only superseded version-stamped copies. This removes the legacy assertion that was breaking the Windows `Validate source and tests` gate after the 1.71.19 runner hardening.
+> 1.71.21 maintenance fix: the release-aware test runner remains the default `npm test` entry point, and the historical-test manifest regression now validates that runner contract instead of requiring the obsolete literal command `node --test test/*.test.js`. The runner still scopes execution to the current `test/` tree, rejects missing current release-maintenance/Trivy tests, and ignores only superseded version-stamped copies. This removes the legacy assertion that was breaking the Windows `Validate source and tests` gate after the 1.71.19 runner hardening.
 
 Release date: 2026-08-26
 Profile: `ASVS_L3_MODE=true`
@@ -13,12 +13,12 @@ Profile: `ASVS_L3_MODE=true`
 | Complete current regression tree | CI REQUIRED | Source-only run: 1145 discovered; 1134 PASS / 11 FAIL, all 11 due to intentionally absent `node_modules/express`; run `npm ci` + `npm test` in CI before publishing binaries |
 | PARTIAL-closure audit | PASS | 127 production JS files; 38 repository-verifiable controls; 0 blocking findings |
 | Static ASVS audit | PASS | 127 production JS files; 13 reviewed decoder sites |
-| Security inventory | PASS | Regenerated for 1.71.20; 962 inventory entries |
+| Security inventory | PASS | Regenerated for 1.71.21; 962 inventory entries |
 | Windows runtime integrity | PASS | 103 entries; 0 stale source-resident hashes after final synchronization; build-time Express entry remains pinned to lockfile `4.22.2` |
 | Matrix triage | PASS | 345/345 triaged; 253 PASS; 0 PARTIAL; 0 FAIL; 92 N/A; 0 REVIEW; 0 MANUAL |
 | Signed-evidence verifier | PASS | 22 required external requirement IDs; Ed25519 signature; requirement-specific method/predicate; canonical SHA-256; release/origin binding; ≤7-day TTL |
 | Isolated crypto provider gate | PASS | L3 self-test requires hardware backing, non-exportable keys, key isolation and isolated encrypt/decrypt/HMAC/sign operations |
-| CycloneDX SBOM | PASS | Root component synchronized to Direct-Xfer 1.71.20 |
+| CycloneDX SBOM | PASS | Root component synchronized to Direct-Xfer 1.71.21 |
 | Connected dependency/container scan | DEPLOYMENT EVIDENCE | V15.2.1 startup evidence requires real release-bound dependency + container scans with zero High/Critical findings |
 
 ## Matrix state
@@ -35,7 +35,7 @@ The source matrix has no unresolved `MANUAL`, `PARTIAL`, `FAIL` or `REVIEW` rows
 
 ## Regression note
 
-The 1.71.20 packaging pass executed 86 release-targeted tests with zero failures or skips, plus both repository-verifiable ASVS audits. The source archive intentionally excludes `node_modules`; real-server tests that require `express` therefore belong to the dependency-backed `npm ci` + `npm test` CI release gate rather than the source-only packaging pass.
+The 1.71.21 packaging pass executed 86 release-targeted tests with zero failures or skips, plus both repository-verifiable ASVS audits. The source archive intentionally excludes `node_modules`; real-server tests that require `express` therefore belong to the dependency-backed `npm ci` + `npm test` CI release gate rather than the source-only packaging pass.
 
 ## Commands/gates used
 

@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-08-26T18:17:47.666Z",
-  "version": "1.71.20",
+  "generatedAt": "2026-08-26T18:39:01.540Z",
+  "version": "1.71.21",
   "categories": {
     "crypto": [
       {
@@ -2339,142 +2339,142 @@
       },
       {
         "file": "public/app.js",
-        "line": 7903,
+        "line": 7912,
         "text": "// Begin enrollment: fetch a fresh secret + QR, show the verify step."
       },
       {
         "file": "public/app.js",
-        "line": 9678,
+        "line": 9687,
         "text": "// `publicLogoSet` flag. The modal is already visible, so fetch the full settings"
       },
       {
         "file": "public/app.js",
-        "line": 10974,
+        "line": 10983,
         "text": "if(code==='fetch-timeout') return t('webStorage.requestTimeout');"
       },
       {
         "file": "public/app.js",
-        "line": 11344,
+        "line": 11353,
         "text": "const r = await fetch('/api/restore', {"
       },
       {
         "file": "public/app.js",
-        "line": 11490,
+        "line": 11499,
         "text": "const toggle = $('cfg-webpush-toggle');"
       },
       {
         "file": "public/app.js",
-        "line": 11491,
+        "line": 11500,
         "text": "const testBtn = $('cfg-webpush-test');"
       },
       {
         "file": "public/app.js",
-        "line": 11492,
+        "line": 11501,
         "text": "const status = $('cfg-webpush-status');"
       },
       {
         "file": "public/app.js",
-        "line": 11493,
+        "line": 11502,
         "text": "const unavail = $('cfg-webpush-unavail');"
       },
       {
         "file": "public/app.js",
-        "line": 11494,
+        "line": 11503,
         "text": "const insecure = $('cfg-webpush-insecure');"
       },
       {
         "file": "public/app.js",
-        "line": 11519,
+        "line": 11528,
         "text": "const status = $('cfg-webpush-status');"
       },
       {
         "file": "public/app.js",
-        "line": 11549,
+        "line": 11558,
         "text": "if ($('cfg-webpush-toggle')) $('cfg-webpush-toggle').addEventListener('click', async () => {"
       },
       {
         "file": "public/app.js",
-        "line": 11554,
+        "line": 11563,
         "text": "if ($('cfg-webpush-test')) $('cfg-webpush-test').addEventListener('click', async () => {"
       },
       {
         "file": "public/app.js",
-        "line": 11555,
+        "line": 11564,
         "text": "const status = $('cfg-webpush-status');"
       },
       {
         "file": "public/app.js",
-        "line": 13905,
+        "line": 13914,
         "text": "const resp = await fetch(url, { credentials: 'same-origin', cache: 'no-store' });"
       },
       {
         "file": "public/app.js",
-        "line": 13906,
+        "line": 13915,
         "text": "if (!resp.ok) throw new Error('fetch');"
       },
       {
         "file": "public/app.js",
-        "line": 13923,
+        "line": 13932,
         "text": "return fetch(url, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/octet-stream', 'X-CSRF-Token': state.csrf || '' }, body: blob });"
       },
       {
         "file": "public/app.js",
-        "line": 15316,
+        "line": 15325,
         "text": "const res = await fetch('/api/transfers/export?format=' + encodeURIComponent(format), {"
       },
       {
         "file": "public/app.js",
-        "line": 15464,
+        "line": 15473,
         "text": "const r = await fetch(url, { credentials:'same-origin', cache:'no-store' });"
       },
       {
         "file": "public/app.js",
-        "line": 15834,
+        "line": 15843,
         "text": "const response = await fetch('/api/photos/' + encodeURIComponent(photo.id) + '/' + variant, {"
       },
       {
         "file": "public/app.js",
-        "line": 15888,
+        "line": 15897,
         "text": "const response = await fetch('/api/photos/' + encodeURIComponent(s.id) + '/' + variant, {"
       },
       {
         "file": "public/app.js",
-        "line": 16366,
+        "line": 16375,
         "text": "// doesn't fetch every thumbnail up front). A single shared observer unobserves"
       },
       {
         "file": "public/app.js",
-        "line": 16416,
+        "line": 16425,
         "text": "// every thumb eagerly here would fetch the whole library on render."
       },
       {
         "file": "public/app.js",
-        "line": 16699,
+        "line": 16708,
         "text": "// once when a variant is generated after the first fetch (so its figures appear)."
       },
       {
         "file": "public/app.js",
-        "line": 16948,
+        "line": 16957,
         "text": "const response = await fetch('/api/photos/source', {"
       },
       {
         "file": "public/app.js",
-        "line": 16991,
+        "line": 17000,
         "text": "const sendPhoto = (url) => fetch(url, {"
       },
       {
         "file": "public/app.js",
-        "line": 17813,
+        "line": 17822,
         "text": "return fetch('/api/enc-share' + qs, {"
       },
       {
         "file": "public/app.js",
-        "line": 17879,
+        "line": 17888,
         "text": "return fetch('/api/secret?mode=' + mode + '&expiresInSeconds=' + expiry, {"
       },
       {
         "file": "public/app.js",
-        "line": 18549,
+        "line": 18558,
         "text": "refreshShares(); // re-fetch: nicknames refresh across transfers + history"
       },
       {
@@ -2659,252 +2659,252 @@
       },
       {
         "file": "pwa/app.js",
-        "line": 1287,
+        "line": 1288,
         "text": "var r=await fetch('/app/notifications',{credentials:'same-origin',cache:'no-store',signal:ctrl?ctrl.signal:undefined});"
       },
       {
         "file": "pwa/app.js",
-        "line": 1383,
+        "line": 1384,
         "text": "var r=await fetch('/app/notifications/prefs',{credentials:'same-origin',cache:'no-store'});"
       },
       {
         "file": "pwa/app.js",
-        "line": 1415,
+        "line": 1416,
         "text": "async function loadPwaNotificationRules(){var seq=++notificationRulesRequestSeq;try{var r=await fetch('/app/notification-rules',{credentials:'same-origin',cache:'no-store'});if(!r.ok)throw new Error('rules-'+r.status);var data=await r.json("
       },
       {
         "file": "pwa/app.js",
-        "line": 2733,
+        "line": 2734,
         "text": "await fetch('/u/' + encodeURIComponent(snap.token) + '/upload-cancel?id=' + encodeURIComponent(it.uploadId), { method: 'POST', credentials: 'same-origin' });"
       },
       {
         "file": "pwa/app.js",
-        "line": 2963,
+        "line": 2964,
         "text": "var r = await fetch('/app/host/browse?path=' + encodeURIComponent(path || '/'), { credentials: 'same-origin', cache: 'no-store' });"
       },
       {
         "file": "pwa/app.js",
-        "line": 3158,
+        "line": 3159,
         "text": "var r = await fetch('/app/host/shares', { credentials: 'same-origin', cache: 'no-store' });"
       },
       {
         "file": "pwa/app.js",
-        "line": 3395,
+        "line": 3396,
         "text": "var response = await fetch('/app/host/shares/' + encodeURIComponent(share.token) + '/stats-detail?period=' + encodeURIComponent(pwaHostStatsPeriod), { credentials:'same-origin', cache:'no-store', headers:{ Accept:'application/json' } });"
       },
       {
         "file": "pwa/app.js",
-        "line": 3436,
+        "line": 3437,
         "text": "var r=await fetch('/app/trash',{credentials:'same-origin',cache:'no-store'});if(!r.ok)throw new Error('trash');var data=await r.json();var items=data.items||[],canPurge=!!data.canPurge;pwaTrashPurgeSummary=data.purgeSummary||null;box.textCo"
       },
       {
         "file": "pwa/app.js",
-        "line": 3486,
+        "line": 3487,
         "text": "var r=await fetch('/app/undo',{credentials:'same-origin',cache:'no-store'});if(!r.ok)throw new Error('undo-history');"
       },
       {
         "file": "pwa/app.js",
-        "line": 3512,
+        "line": 3513,
         "text": "async function appDeleteMutate(url){if(!deviceInfo)await fetchDeviceStatus();var r=await fetch(url,{method:'DELETE',credentials:'same-origin',cache:'no-store',headers:appMutationHeaders()});if(r.status===403){var e=await r.clone().json().ca"
       },
       {
         "file": "pwa/app.js",
-        "line": 3520,
+        "line": 3521,
         "text": "try{var r=await fetch('/app/search?q='+encodeURIComponent(q)+'&semantic=1',{credentials:'same-origin',cache:'no-store'});if(!r.ok)throw new Error('search');var data=await r.json();var results=data.results||[];if(!results.length){box.textCon"
       },
       {
         "file": "pwa/app.js",
-        "line": 3578,
+        "line": 3579,
         "text": "var r = await fetch('/app/receptions', { credentials: 'same-origin', cache: 'no-store' });"
       },
       {
         "file": "pwa/app.js",
-        "line": 3677,
+        "line": 3678,
         "text": "fetch('/app/receptions/' + encodeURIComponent(tk) + '/thread', { credentials: 'same-origin', cache: 'no-store' })"
       },
       {
         "file": "pwa/app.js",
-        "line": 3843,
+        "line": 3844,
         "text": "var r = await fetch('/app/images/retention', { credentials: 'same-origin', cache: 'no-store' });"
       },
       {
         "file": "pwa/app.js",
-        "line": 3933,
+        "line": 3934,
         "text": "var r = await fetch('/app/images/search?q=' + encodeURIComponent(q) + '&limit=500', { credentials:'same-origin', cache:'no-store' });"
       },
       {
         "file": "pwa/app.js",
-        "line": 4070,
+        "line": 4071,
         "text": "try { var r = await fetch('/app/image/duplicate?hash=' + encodeURIComponent(hash), { credentials: 'same-origin', cache: 'no-store' }); return r.ok ? (await r.json()).image : null; } catch (_) { return null; }"
       },
       {
         "file": "pwa/app.js",
-        "line": 4074,
+        "line": 4075,
         "text": "var r = await fetch('/app/qr?data=' + encodeURIComponent(url), { credentials: 'same-origin', cache: 'no-store' });"
       },
       {
         "file": "pwa/app.js",
-        "line": 4243,
+        "line": 4244,
         "text": "var r = await fetch('/app/album/' + encodeURIComponent(album.token) + '/invitations', { credentials: 'same-origin', cache: 'no-store' });"
       },
       {
         "file": "pwa/app.js",
-        "line": 4269,
+        "line": 4270,
         "text": "try { var r = await fetch('/app/albums', { credentials: 'same-origin', cache: 'no-store' }); if (!r.ok) throw new Error(); imageAlbums = (await r.json()).albums || []; } catch (_) { imageAlbums = []; }"
       },
       {
         "file": "pwa/app.js",
-        "line": 4311,
+        "line": 4312,
         "text": "var r = await fetch('/app/images/dashboard?days=' + encodeURIComponent(days), { credentials: 'same-origin', cache: 'no-store' }); if (!r.ok) throw new Error();"
       },
       {
         "file": "pwa/app.js",
-        "line": 4368,
+        "line": 4369,
         "text": "var resp = await fetch(url, { credentials: 'same-origin', cache: 'no-store' });"
       },
       {
         "file": "pwa/app.js",
-        "line": 4369,
+        "line": 4370,
         "text": "if (!resp.ok) throw new Error('fetch');"
       },
       {
         "file": "pwa/app.js",
-        "line": 4583,
+        "line": 4584,
         "text": "var response = await fetch('/app/image/' + encodeURIComponent(photo.token) + '/stats-detail', { credentials: 'same-origin', cache: 'no-store' });"
       },
       {
         "file": "pwa/app.js",
-        "line": 4795,
+        "line": 4796,
         "text": "// fetch() resolves even for HTTP 4xx/5xx. Mini + Micro are required; adaptive"
       },
       {
         "file": "pwa/app.js",
-        "line": 4838,
+        "line": 4839,
         "text": "var fresh = await fetch('/app/image/' + encodeURIComponent(photo.token) + '/stats', { credentials: 'same-origin', cache: 'no-store' });"
       },
       {
         "file": "pwa/app.js",
-        "line": 4847,
+        "line": 4848,
         "text": "var sourceResponse = await fetch(sourceUrl, { credentials: 'same-origin', cache: 'no-store' });"
       },
       {
         "file": "pwa/app.js",
-        "line": 4894,
+        "line": 4895,
         "text": "var r = await fetch('/app/image/' + encodeURIComponent(photo.token) + '/preview/full', { credentials: 'same-origin', cache: 'no-store' });"
       },
       {
         "file": "pwa/app.js",
-        "line": 4914,
+        "line": 4915,
         "text": "var fresh = await fetch('/app/image/' + encodeURIComponent(photo.token) + '/stats', { credentials: 'same-origin', cache: 'no-store' });"
       },
       {
         "file": "pwa/app.js",
-        "line": 4927,
+        "line": 4928,
         "text": "var r = await fetch('/app/image/' + encodeURIComponent(photo.token) + '/versions', { credentials: 'same-origin', cache: 'no-store' });"
       },
       {
         "file": "pwa/app.js",
-        "line": 6932,
+        "line": 6933,
         "text": "var r = await fetch('/app/activity/recent?limit=1000', { credentials:'same-origin', cache:'no-store' });"
       },
       {
         "file": "pwa/app.js",
-        "line": 7173,
+        "line": 7174,
         "text": "// the upload preflight fails closed until Direct-Xfer can fetch the policy."
       },
       {
         "file": "pwa/app.js",
-        "line": 7193,
+        "line": 7194,
         "text": "return requestOptions.timeoutMs ? fetchWithTimeout(url, opts, requestOptions.timeoutMs) : fetch(url, opts);"
       },
       {
         "file": "pwa/app.js",
-        "line": 7693,
+        "line": 7694,
         "text": "var r = await fetch('/app/webauthn/passkeys', { credentials: 'same-origin', cache: 'no-store' });"
       },
       {
         "file": "pwa/app.js",
-        "line": 7771,
+        "line": 7772,
         "text": "var r = await fetch(url, { method: 'DELETE', credentials: 'same-origin', cache: 'no-store', headers: appMutationHeaders() });"
       },
       {
         "file": "pwa/app.js",
-        "line": 7776,
+        "line": 7777,
         "text": "r = await fetch(url, { method: 'DELETE', credentials: 'same-origin', cache: 'no-store', headers: appMutationHeaders() });"
       },
       {
         "file": "pwa/app.js",
-        "line": 7852,
+        "line": 7853,
         "text": "var response = await fetch('/app/device/status', { credentials: 'same-origin', cache: 'no-store' });"
       },
       {
         "file": "pwa/app.js",
-        "line": 7857,
+        "line": 7858,
         "text": "var r = await fetch('/app/device/register', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': status.csrf }, body: JSON.stringify({ name: name }) });"
       },
       {
         "file": "pwa/app.js",
-        "line": 7873,
+        "line": 7874,
         "text": "var status = await fetch('/app/device/status', { credentials: 'same-origin', cache: 'no-store' }).then(function (r) { return r.json(); });"
       },
       {
         "file": "pwa/app.js",
-        "line": 7875,
+        "line": 7876,
         "text": "var r = await fetch('/app/device/pairing', {"
       },
       {
         "file": "pwa/app.js",
-        "line": 7965,
+        "line": 7966,
         "text": "var pendingReq = fetch('/app/inbox/' + encodeURIComponent(token) + '/pending', { credentials: 'same-origin', cache: 'no-store' }).then(function(resp){ return resp.ok ? resp.json() : { pending: [] }; }).catch(function(){ return { pending: []"
       },
       {
         "file": "pwa/app.js",
-        "line": 7966,
+        "line": 7967,
         "text": "var r = await fetch('/app/inbox/' + encodeURIComponent(token) + '/files', { credentials: 'same-origin', cache: 'no-store' });"
       },
       {
         "file": "pwa/app.js",
-        "line": 8026,
+        "line": 8027,
         "text": "var r = await fetch('/app/qr?data=' + encodeURIComponent(url), { credentials: 'same-origin', cache: 'no-store' });"
       },
       {
         "file": "pwa/app.js",
-        "line": 9497,
+        "line": 9498,
         "text": "var response = await fetch('/app/install-info', { credentials: 'same-origin', cache: 'no-store' });"
       },
       {
         "file": "pwa/app.js",
-        "line": 9679,
+        "line": 9680,
         "text": "try{var r=await fetch('/pwa/install-state',{credentials:'same-origin',cache:'no-store'});if(r.ok){var d=await r.json();server=!!d.installed;}}catch(_){}"
       },
       {
         "file": "pwa/app.js",
-        "line": 9771,
+        "line": 9772,
         "text": "var r = await fetch(u.href, { mode: 'cors', credentials: 'omit', cache: 'no-store' });"
       },
       {
         "file": "pwa/app.js",
-        "line": 10184,
+        "line": 10185,
         "text": "var r = await fetch('/app/image/' + encodeURIComponent(photo.token) + '/preview/full', { credentials:'same-origin', cache:'no-store' });"
       },
       {
         "file": "pwa/app.js",
-        "line": 10887,
+        "line": 10888,
         "text": "fetch('/u/' + encodeURIComponent(currentDest.token) + '/unlock', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'password=' + encodeURIComponent($('unlock-pw').value) })"
       },
       {
         "file": "pwa/app.js",
-        "line": 11571,
+        "line": 11572,
         "text": "var st = await fetch('/app/device/status', { credentials: 'same-origin', cache: 'no-store' }).then(function (r) { return r.json(); });"
       },
       {
         "file": "pwa/app.js",
-        "line": 11575,
+        "line": 11576,
         "text": "var ir = await fetch('/app/images?limit=500&includeInactive=1', { credentials: 'same-origin', cache: 'no-store' });"
       },
       {
         "file": "pwa/app.js",
-        "line": 11580,
+        "line": 11581,
         "text": "var html = await fetch('/app/', { credentials: 'same-origin', cache: 'no-store' }).then(function (r) { return r.text(); });"
       },
       {
@@ -3325,7 +3325,7 @@
       {
         "file": "test/pwa-admin-features-15-19-21-1.64.0.test.js",
         "line": 196,
-        "text": "const asset = await fetch(base + '/app/admin-audit-connectors.js?v=464');"
+        "text": "const asset = await fetch(base + '/app/admin-audit-connectors.js?v=465');"
       },
       {
         "file": "test/pwa-admin-features-15-19-21-1.64.0.test.js",
@@ -3375,7 +3375,7 @@
       {
         "file": "test/pwa-admin-features-3-7-1.64.0.test.js",
         "line": 218,
-        "text": "const publicAsset = await fetch(base + '/app/admin-advanced.js?v=464');"
+        "text": "const publicAsset = await fetch(base + '/app/admin-advanced.js?v=465');"
       },
       {
         "file": "test/pwa-admin-features-3-7-1.64.0.test.js",
@@ -3465,12 +3465,12 @@
       {
         "file": "test/pwa-mobile-features-24-25-27-29-31-42-45-46-47-1.64.0.test.js",
         "line": 150,
-        "text": "const mod = await fetch(base + '/app/mobile-intelligence.js?v=464');"
+        "text": "const mod = await fetch(base + '/app/mobile-intelligence.js?v=465');"
       },
       {
         "file": "test/pwa-mobile-features-24-25-27-29-31-42-45-46-47-1.64.0.test.js",
         "line": 154,
-        "text": "const r = await fetch(base + '/app/' + name + '?v=464');"
+        "text": "const r = await fetch(base + '/app/' + name + '?v=465');"
       },
       {
         "file": "test/pwa-routes-refactor.test.js",
@@ -4506,97 +4506,97 @@
       },
       {
         "file": "public/app.js",
-        "line": 8655,
+        "line": 8664,
         "text": "const h = Math.floor(m / 60), rm = m % 60;"
       },
       {
         "file": "public/app.js",
-        "line": 8656,
+        "line": 8665,
         "text": "return h + ' h' + (rm ? ' ' + rm + ' min' : '');"
       },
       {
         "file": "public/app.js",
-        "line": 8850,
+        "line": 8859,
         "text": "// `ip` become clickable to rename that client (reuses renameIp)."
       },
       {
         "file": "public/app.js",
-        "line": 8869,
+        "line": 8878,
         "text": "// Delegated click → rename the client behind that IP."
       },
       {
         "file": "public/app.js",
-        "line": 12323,
+        "line": 12332,
         "text": "// Don't rebuild the list while the user is typing in it (inline rename, adding"
       },
       {
         "file": "public/app.js",
-        "line": 13158,
+        "line": 13167,
         "text": "// name (reflects a rename done in the PWA). Owner/admin only, like the owner chip."
       },
       {
         "file": "public/app.js",
-        "line": 13339,
+        "line": 13348,
         "text": "const rm = el('button', { class: 'item-x', text: '✕', attrs: { title: t('sh.removeItem') } });"
       },
       {
         "file": "public/app.js",
-        "line": 13340,
+        "line": 13349,
         "text": "rm.addEventListener('click', () => removeItem(s, idx));"
       },
       {
         "file": "public/app.js",
-        "line": 13341,
+        "line": 13350,
         "text": "row.appendChild(rm);"
       },
       {
         "file": "public/app.js",
-        "line": 14234,
+        "line": 14243,
         "text": "// Inline rename: turn the card's name into an input on double-click."
       },
       {
         "file": "public/app.js",
-        "line": 16184,
+        "line": 16193,
         "text": "// their <img> previews stay decoded and in place (no flicker on rename / expiry"
       },
       {
         "file": "public/app.js",
-        "line": 16456,
+        "line": 16465,
         "text": "// Double-click the name to rename in place."
       },
       {
         "file": "public/app.js",
-        "line": 16555,
+        "line": 16564,
         "text": "const rename = el('button', { class: 'btn ghost sm', text: t('photo.rename') });"
       },
       {
         "file": "public/app.js",
-        "line": 16556,
+        "line": 16565,
         "text": "rename.addEventListener('click', () => startPhotoRename(s, nameEl));"
       },
       {
         "file": "public/app.js",
-        "line": 16557,
+        "line": 16566,
         "text": "actions.appendChild(rename);"
       },
       {
         "file": "public/app.js",
-        "line": 16714,
+        "line": 16723,
         "text": "// Inline rename for a photo card (restores the name on cancel/failure)."
       },
       {
         "file": "public/app.js",
-        "line": 18099,
+        "line": 18108,
         "text": "const rename = el('button', { class: 'btn ghost sm', text: t('acc.rename') });"
       },
       {
         "file": "public/app.js",
-        "line": 18100,
+        "line": 18109,
         "text": "rename.addEventListener('click', () => renameAccount(a, a.id === selfId));"
       },
       {
         "file": "public/app.js",
-        "line": 18101,
+        "line": 18110,
         "text": "actions.appendChild(rename);"
       },
       {
@@ -4631,92 +4631,92 @@
       },
       {
         "file": "pwa/app.js",
-        "line": 2686,
+        "line": 2687,
         "text": "var rm = document.createElement('button'); rm.type = 'button'; rm.className = 'icon-action remove'; rm.textContent = '✕'; rm.title = t('remove'); rm.setAttribute('aria-label', t('remove'));"
       },
       {
         "file": "pwa/app.js",
-        "line": 2687,
+        "line": 2688,
         "text": "rm.addEventListener('click', function () { removeItem(it, true); }); actions.appendChild(rm); top.appendChild(actions);"
       },
       {
         "file": "pwa/app.js",
-        "line": 3735,
+        "line": 3736,
         "text": "var ids = ['img-sort', 'img-filter', 'img-expiry', 'img-max-views', 'img-hotlink-hosts', 'img-smart-blur', 'img-tags', 'img-note', 'img-rename-template', 'img-copy-template', 'img-action-1', 'img-action-2', 'img-action-3'];"
       },
       {
         "file": "pwa/app.js",
-        "line": 3741,
+        "line": 3742,
         "text": "['img-sort', 'img-filter', 'img-expiry', 'img-max-views', 'img-hotlink-hosts', 'img-smart-blur', 'img-tags', 'img-note', 'img-rename-template', 'img-copy-template', 'img-action-1', 'img-action-2', 'img-action-3'].forEach(function (id) {"
       },
       {
         "file": "pwa/app.js",
-        "line": 4012,
+        "line": 4013,
         "text": "var tpl = String($('img-rename-template') && $('img-rename-template').value || '').trim();"
       },
       {
         "file": "pwa/app.js",
-        "line": 7524,
+        "line": 7525,
         "text": "if ($('rename-device-btn')) $('rename-device-btn').classList.toggle('hidden', !paired || !deviceInfo.device);"
       },
       {
         "file": "pwa/app.js",
-        "line": 7561,
+        "line": 7562,
         "text": "var rename = document.createElement('button'); rename.type = 'button'; rename.className = 'btn ghost sm'; rename.textContent = t('renameDevice');"
       },
       {
         "file": "pwa/app.js",
-        "line": 7562,
+        "line": 7563,
         "text": "rename.addEventListener('click', function () { renameDevice(d.id, d.name, false); }); row.appendChild(rename);"
       },
       {
         "file": "pwa/app.js",
-        "line": 7677,
+        "line": 7678,
         "text": "var rm = el('button', { class: 'btn danger sm', attrs: { type: 'button' }, text: t('passkeyRemove') });"
       },
       {
         "file": "pwa/app.js",
-        "line": 7678,
+        "line": 7679,
         "text": "rm.disabled = biometricMutationInFlight || !(deviceInfo && deviceInfo.passkeyManagement === true);"
       },
       {
         "file": "pwa/app.js",
-        "line": 7679,
+        "line": 7680,
         "text": "rm.addEventListener('click', function () { removePasskey(p); });"
       },
       {
         "file": "pwa/app.js",
-        "line": 7680,
+        "line": 7681,
         "text": "row.appendChild(rm);"
       },
       {
         "file": "pwa/app.js",
-        "line": 7915,
+        "line": 7916,
         "text": "var r = await appMutate('/app/device/rename', 'application/json', JSON.stringify({ id: (isCurrent ? null : id) || null, name: name }));"
       },
       {
         "file": "pwa/app.js",
-        "line": 7916,
+        "line": 7917,
         "text": "if (!r.ok) throw new Error('rename');"
       },
       {
         "file": "pwa/app.js",
-        "line": 9854,
+        "line": 9855,
         "text": "// Bulk rename selected files with a shared prefix + auto numbering."
       },
       {
         "file": "pwa/app.js",
-        "line": 10920,
+        "line": 10921,
         "text": "if ($('rename-device-btn')) $('rename-device-btn').addEventListener('click', function () { renameDevice(null, deviceInfo && deviceInfo.device && deviceInfo.device.name, true); });"
       },
       {
         "file": "pwa/app.js",
-        "line": 11034,
+        "line": 11035,
         "text": "['img-expiry', 'img-max-views', 'img-hotlink-hosts', 'img-smart-blur', 'img-tags', 'img-note', 'img-rename-template'].forEach(function (id) { if ($(id)) $(id).addEventListener('change', persistImagePreferences); });"
       },
       {
         "file": "pwa/app.js",
-        "line": 11129,
+        "line": 11130,
         "text": "if ($('bulk-rename-btn')) $('bulk-rename-btn').addEventListener('click', bulkRename);"
       },
       {

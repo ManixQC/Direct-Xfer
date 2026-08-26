@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-08-26T18:17:47.974Z",
+  "generatedAt": "2026-08-26T18:38:49.666Z",
   "scope": [
     "server.js",
     "lib",
@@ -10,7 +10,7 @@
     "oauth-broker/cloudflare-worker/src"
   ],
   "filesScanned": 127,
-  "regexLiteralEstimate": 4541,
+  "regexLiteralEstimate": 4544,
   "decoderInventory": [
     {
       "file": "lib/assets/oauth-broker-worker.mjs",
@@ -54,7 +54,7 @@
     },
     {
       "file": "public/app.js",
-      "line": 16961,
+      "line": 16970,
       "hash": "87e695899b09f310"
     },
     {
@@ -69,12 +69,12 @@
     },
     {
       "file": "pwa/app.js",
-      "line": 4706,
+      "line": 4707,
       "hash": "edb843f758a6dc16"
     },
     {
       "file": "pwa/app.js",
-      "line": 9774,
+      "line": 9775,
       "hash": "27e13ee9203bd221"
     }
   ],

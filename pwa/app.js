@@ -9,8 +9,8 @@
 (function () {
   // Build tag, shown in the footer so a user can confirm at a glance which version
   // is actually running after an update. Keep it in lock-step with sw.js VERSION.
-  var APP_VERSION = '1.71.20';
-  var APP_BUILD = '2026.08.26-pwa483';
+  var APP_VERSION = '1.71.21';
+  var APP_BUILD = '2026.08.26-pwa484';
   // Upload blocks are deliberately small on mobile. A number of reverse proxies
   // still default to a 1 MiB request-body limit; an 8 MiB first block can therefore
   // be rejected before the browser emits any useful progress event, which looks like
@@ -626,9 +626,9 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
     if (manifest) {
       // Keep the URL sink independent from the DOM/select value. Only literal,
       // same-origin manifest paths can reach href.
-      var manifestHref = '/direct-xfer-pwa.webmanifest?v=464';
-      if (lang === 'en') manifestHref = '/direct-xfer-pwa-en.webmanifest?v=464';
-      else if (lang === 'es') manifestHref = '/direct-xfer-pwa-es.webmanifest?v=464';
+      var manifestHref = '/direct-xfer-pwa.webmanifest?v=465';
+      if (lang === 'en') manifestHref = '/direct-xfer-pwa-en.webmanifest?v=465';
+      else if (lang === 'es') manifestHref = '/direct-xfer-pwa-es.webmanifest?v=465';
       manifest.href = manifestHref;
     }
     $('lang-select').value = lang;
@@ -1164,7 +1164,8 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
     if(['system','system_health','maintenance','network','restarts','updates','pwa'].indexOf(cat)!==-1) return 'settings';
     return 'activity';
   }
-  function openPwaNotificationTarget(n){ closePwaNotifications(); if(n&&n.manageUrl){try{location.assign(String(n.manageUrl));return;}catch(_){}} activatePwaPanel(pwaNotificationPanel(n)); }
+  function safePwaNotificationManageUrl(value){try{var raw=String(value||'').trim();if(!raw||raw.indexOf('//')===0||/[\u0000-\u001f\u007f]/.test(raw))return '';var parsed=new URL(raw,location.origin);if(parsed.origin!==location.origin||parsed.pathname.indexOf('/')!==0)return '';return parsed.pathname+parsed.search+parsed.hash;}catch(_){return '';}}
+  function openPwaNotificationTarget(n){ closePwaNotifications(); if(n&&n.manageUrl){var manageUrl=safePwaNotificationManageUrl(n.manageUrl);if(manageUrl){location.assign(manageUrl);return;}} activatePwaPanel(pwaNotificationPanel(n)); }
   // Public link for a notification's share, by category (download /s/,
   // reception /u/, image /i/). Only shown when a token is present.
   function pwaNotificationLink(n){
@@ -9594,7 +9595,7 @@ Object.assign(STRINGS.fr, { imgVersionHistory:'Historique des modifications', im
   function registerServiceWorker() {
     if (!navigator.serviceWorker || typeof navigator.serviceWorker.register !== 'function') return;
     navigator.serviceWorker.addEventListener('controllerchange', refreshToNewVersion);
-    var registrationPromise = navigator.serviceWorker.register('/direct-xfer-pwa-sw.js?v=464', { scope: '/app/' }).then(function (reg) {
+    var registrationPromise = navigator.serviceWorker.register('/direct-xfer-pwa-sw.js?v=465', { scope: '/app/' }).then(function (reg) {
       swReg = reg;
       navigator.serviceWorker.ready.then(function () {
         swReadyForInstall = true;

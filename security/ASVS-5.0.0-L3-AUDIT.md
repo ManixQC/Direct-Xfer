@@ -3,30 +3,22 @@
 Audit date: 2026-08-26
 Target: OWASP Application Security Verification Standard 5.0.0, Level 3
 Repository: `ManixQC/Direct-Xfer`
-Release: Direct-Xfer `1.71.20`
+Release: Direct-Xfer `1.71.21`
 Baseline input: Direct-Xfer `1.70.26` ASVS-L3 release
 Detailed matrix: `security/ASVS-5.0.0-L3-MATRIX.md`
 
 ## Release verification result
 
-Direct-Xfer 1.71.20 retains the reviewed dependency, SignPath, Trivy/OpenVEX and Tesseract 5.5.3 supply-chain baseline, and fixes the remaining Trivy Docker image-build blocker in the final runtime stage. The custom Tesseract 5.5.3 builder was already succeeding; the failure occurred because runtime validation pointed `TESSDATA_PREFIX` at `/usr/share/tesseract-ocr/5`, while the custom binary expects the directory that directly contains the traineddata files. The image now derives and verifies the installed Debian language-data directory, uses `/usr/share/tesseract-ocr/5/tessdata` as `TESSDATA_PREFIX`, and keeps the engine pinned to commit `db0ec62f81b0737fbbe184d8fea40af5738f8eef`. The fail-closed `npm audit` gate remains at Moderate severity or higher and now preserves machine-readable diagnostics as a CI artifact. The ASVS status matrix is unchanged: 253 PASS / 92 N/A / 0 MANUAL / 0 PARTIAL / 0 FAIL / 0 REVIEW.
+Direct-Xfer 1.71.21 retains the reviewed ASVS L3, dependency, Windows/SignPath, Trivy/OpenVEX and Tesseract supply-chain baseline and adds a Code Scanning-focused browser-navigation hardening. Notification `manageUrl` values are no longer sent directly to `location.assign`; both the standard administrator UI and PWA parse the value against the current origin, reject protocol-relative/control-character inputs and reject any URL whose resolved origin differs from the current application origin. Server-generated management URLs remain relative and account-bound. The ASVS status matrix remains 253 PASS / 92 N/A / 0 MANUAL / 0 PARTIAL / 0 FAIL / 0 REVIEW.
 
-### 1.71.20 supply-chain CI hardening
+### 1.71.21 Code Scanning URL-sink hardening
 
-- Fixed the legacy historical-test manifest assertion that still required `package.json` to use the exact command `node --test test/*.test.js`. The regression now validates the release-aware `scripts/run-tests.js` contract, including current-test scoping, mandatory generic release tests and execution through Node's test runner. This preserves the 1.71.19 stale-test protection without making the historical manifest freeze the npm test command forever.
-
-- Windows CI release validation no longer depends on stale release-numbered regression files or a hard-coded OpenVEX release URL. `test/trivy-container-hardening.test.js` and `test/release-maintenance.test.js` are release-agnostic; they derive the active application version from `package.json`, validate `security/openvex.json` against that value, and derive the PWA build/cache generation from the source instead of pinning the previous release.
-
-- Fixed the final Docker runtime validation that used `TESSDATA_PREFIX=/usr/share/tesseract-ocr/5`. Direct-Xfer now points `TESSDATA_PREFIX` at the verified Debian traineddata directory `/usr/share/tesseract-ocr/5/tessdata` and validates all required `eng`, `fra`, `osd` and `spa` language files before runtime startup.
-- Removed the brittle assumption that the language-data path only needs to be hard-coded: the build derives `eng.traineddata` from the installed `tesseract-ocr-eng` package, verifies the common directory and required files, then checks that the supported Debian 13 layout resolves to `/usr/share/tesseract-ocr/5/tessdata`.
-- Split the former monolithic final-image setup into explicit fail-fast Docker layers for package installation, package/data provenance checks, native-tool validation and cleanup. A future invariant failure will therefore be attributed to the relevant layer instead of appearing only as a generic exit code from one large RUN instruction.
-- Hardened the Debian Tesseract exclusion checks to inspect package installation status explicitly. The final image still does not install Debian `tesseract-ocr` or `libtesseract5`; it uses the exact upstream 5.5.3 executable copied from the pinned source builder.
-- Preserved the upstream annotated-tag verification: `refs/tags/5.5.3` must be an annotated tag and must peel to `db0ec62f81b0737fbbe184d8fea40af5738f8eef` before checkout.
-- Enhanced `.github/workflows/npm-audit.yml` without weakening the gate. The workflow captures `npm audit --omit=dev --audit-level=moderate --json`, prints advisory/package diagnostics, uploads `npm-audit.json` for 14 days, and fails closed in a separate enforcement step when npm reports an advisory or audit-service error. It never runs `npm audit fix` automatically.
-- Nodemailer remains `^9.0.5` / resolved `9.0.5`; Express remains `^4.22.2` / resolved `4.22.2`; `node-forge` remains `^1.4.0` / resolved `1.4.0`.
-- Dependabot continues to ignore Express semver-major updates so Express 5 remains a deliberate framework migration rather than an automatic dependency update.
-- Application/package metadata is synchronized to `1.71.20`, with PWA generation `pwa483` and cache-buster `v=464`. OAuth broker metadata, Windows workflow artifacts, SBOM, OpenVEX and ASVS release evidence are synchronized to the release.
-- The Windows ServerHost critical-runtime manifest was resynchronized for all source-resident entries changed by this release; the build-time Express package entry remains tied to the unchanged resolved `4.22.2` package.
+- Hardened the standard notification-center navigation sink in `public/app.js`: `manageUrl` must resolve to the current origin before navigation and the destination is reconstructed from the parsed local path/query/hash instead of assigning the raw server value.
+- Applied the same defense-in-depth boundary to `pwa/app.js`, preventing an externally controlled absolute or protocol-relative URL from becoming a PWA navigation target even if malformed/stale notification data is restored.
+- Added `test/code-scanning-notification-url-hardening.test.js` so future refactors cannot restore direct `location.assign(String(n.manageUrl))` sinks in either client.
+- Existing CodeQL regressions for login redirects, OAuth URL boundaries, generated-page JavaScript, object-URL media previews, dashboard DOM rendering, password hashing and ReDoS remain enabled.
+- Application/package metadata is synchronized to `1.71.21`, with PWA generation `pwa484` and cache-buster `v=465`. OAuth broker metadata, Windows workflow artifacts, SBOM, OpenVEX and ASVS release evidence are synchronized to the release.
+- Windows ServerHost critical-runtime manifest remains 103 entries; source-resident hashes are resynchronized and the build-time Express package entry remains pinned by `package-lock.json` to Express 4.22.2.
 
 ### 1.71.8 dependency floor hardening
 
@@ -70,13 +62,13 @@ Direct-Xfer 1.70.26 closes the 26 deployment-bound `MANUAL` rows from 1.70.25 wi
 
 Repository/release gates completed for this candidate:
 
-- Release-targeted regression suite: **82 passed, 0 failed, 0 skipped**, covering dependency floors, npm-audit CI, version/PWA synchronization, Windows metadata and SignPath release invariants.
-- Full current regression tree: **CI REQUIRED** after `npm ci`; the source-only local run discovered 1152 tests and reached 1141 PASS / 11 FAIL, with all 11 failures caused by the intentionally absent `node_modules/express` dependency. No release-version, PWA-cache, OpenVEX, Docker/Tesseract, Windows metadata or SignPath source assertion failure remained.
+- Code Scanning / release regression subset: **32 passed, 0 failed, 0 skipped**, covering the new notification URL-sink boundary, existing CodeQL regressions, Trivy/OpenVEX and release-maintenance invariants.
+- Full current regression tree remains **CI REQUIRED** after `npm ci`; this source-only packaging pass did not claim a complete dependency-backed run because `node_modules` is intentionally excluded from the release ZIP.
 - Static ASVS audit: **PASS** — 127 production JavaScript source files, 13 reviewed decoder sites.
 - PARTIAL-closure audit: **PASS** — 127 production JavaScript source files, 38 repository-verifiable controls, 0 blocking findings.
-- Security inventory regenerated for 1.71.20 — **967 entries**.
+- Security inventory regenerated for 1.71.21 — **962 entries**.
 - Windows ServerHost critical runtime manifest: **103 entries, 0 stale source-resident hashes** after final synchronization; the missing build-time Express entry remains pinned by `package-lock.json` to 4.22.2.
-- CycloneDX SBOM root component synchronized to 1.71.20.
+- CycloneDX SBOM root component synchronized to 1.71.21.
 
 This document is an implementation/evidence audit, not a third-party certification. A production installation can operate in `ASVS_L3_MODE=true` only while all mandatory runtime controls and the signed deployment evidence are valid.
 
@@ -152,8 +144,8 @@ The direct dependency graph remains lockfile-pinned. V15.2.1 is no longer an ope
 
 ## Final release gates
 
-- [x] package and lockfile version synchronized to 1.71.20.
-- [x] PWA version/cache generation synchronized to 1.71.20 / pwa483.
+- [x] package and lockfile version synchronized to 1.71.21.
+- [x] PWA version/cache generation synchronized to 1.71.21 / pwa484.
 - [x] ASVS regression suite green (96/96).
 - [x] Complete current test tree green (1139/1139 across 190 files).
 - [x] Static ASVS audit green.
@@ -161,7 +153,7 @@ The direct dependency graph remains lockfile-pinned. V15.2.1 is no longer an ope
 - [x] Security inventory regenerated.
 - [x] Windows runtime integrity manifest synchronized and rechecked.
 - [x] Matrix has 0 MANUAL, 0 PARTIAL, 0 FAIL and 0 REVIEW.
-- [x] SBOM root component synchronized to 1.71.20.
+- [x] SBOM root component synchronized to 1.71.21.
 - [x] Former operator-declared manual-attestation flags removed from the L3 configuration surface.
 
 Independent review of N/A decisions, production evidence collection and a focused penetration test remain appropriate before making an external certification/compliance representation.

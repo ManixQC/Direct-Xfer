@@ -184,16 +184,16 @@ RUN set -eux; \
   printf '%s\n' "$tessdata_dir" > /usr/share/doc/direct-xfer/tessdata-dir.txt; \
   test "$tessdata_dir" = /usr/share/tesseract-ocr/5/tessdata
 
-# TESSDATA_PREFIX is the *parent* of the tessdata directory in Tesseract 5. The
-# previous value pointed at tessdata itself, making Tesseract search one level too
-# deep (…/tessdata/tessdata) and causing the Docker validation layer to exit 1.
+# TESSDATA_PREFIX must point to the directory that directly contains the
+# traineddata files. Debian installs those files in /usr/share/tesseract-ocr/5/tessdata;
+# using its parent makes the custom Tesseract 5.5.3 binary report no languages.
 RUN set -eux; \
   rm -f /usr/bin/pdfattach /usr/bin/pdfdetach /usr/bin/pdffonts /usr/bin/pdfimages \
     /usr/bin/pdfinfo /usr/bin/pdfseparate /usr/bin/pdfsig /usr/bin/pdftocairo /usr/bin/pdfunite \
     /usr/bin/text2image; \
   for unused in pdfattach pdfdetach pdffonts pdfimages pdfinfo pdfseparate pdfsig pdftocairo pdfunite text2image; do test ! -e "/usr/bin/$unused"; done; \
-  TESSDATA_PREFIX=/usr/share/tesseract-ocr/5 tesseract --version | head -n 1 | grep -Fx "tesseract ${DX_TESSERACT_BUILD_VERSION}"; \
-  for lang in eng fra osd spa; do TESSDATA_PREFIX=/usr/share/tesseract-ocr/5 tesseract --list-langs 2>/dev/null | grep -Fx "$lang" >/dev/null; done; \
+  TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata tesseract --version | head -n 1 | grep -Fx "tesseract ${DX_TESSERACT_BUILD_VERSION}"; \
+  for lang in eng fra osd spa; do TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata tesseract --list-langs 2>/dev/null | grep -Fx "$lang" >/dev/null; done; \
   pdftotext -v >/dev/null 2>&1; \
   pdftoppm -v >/dev/null 2>&1; \
   setpriv --version >/dev/null; \
@@ -234,7 +234,7 @@ ENV HOST_ROOT=/host \
     DATA_DIR=/data \
     IMAGES_DIR=/Images \
     INBOX_DIR=/Direct-Xfer \
-    TESSDATA_PREFIX=/usr/share/tesseract-ocr/5 \
+    TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata \
     PORT=55750 \
     NODE_ENV=production
 VOLUME ["/data", "/Images"]

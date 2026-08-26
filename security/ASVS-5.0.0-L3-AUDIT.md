@@ -3,17 +3,17 @@
 Audit date: 2026-08-26
 Target: OWASP Application Security Verification Standard 5.0.0, Level 3
 Repository: `ManixQC/Direct-Xfer`
-Release: Direct-Xfer `1.71.15`
+Release: Direct-Xfer `1.71.16`
 Baseline input: Direct-Xfer `1.70.26` ASVS-L3 release
 Detailed matrix: `security/ASVS-5.0.0-L3-MATRIX.md`
 
 ## Release verification result
 
-Direct-Xfer 1.71.15 retains the reviewed dependency, SignPath, Trivy/OpenVEX and Tesseract 5.5.3 supply-chain baseline, and fixes the remaining Trivy Docker image-build blocker in the final runtime stage. The custom Tesseract 5.5.3 builder was already succeeding; the failure occurred when the runtime validation set `TESSDATA_PREFIX` to the `tessdata` directory itself. Tesseract 5 interprets that variable as the parent data root, so it searched one directory too deep. The image now derives and verifies the installed Debian language-data directory, uses `/usr/share/tesseract-ocr/5` as `TESSDATA_PREFIX`, and keeps the engine pinned to commit `db0ec62f81b0737fbbe184d8fea40af5738f8eef`. The fail-closed `npm audit` gate remains at Moderate severity or higher and now preserves machine-readable diagnostics as a CI artifact. The ASVS status matrix is unchanged: 253 PASS / 92 N/A / 0 MANUAL / 0 PARTIAL / 0 FAIL / 0 REVIEW.
+Direct-Xfer 1.71.16 retains the reviewed dependency, SignPath, Trivy/OpenVEX and Tesseract 5.5.3 supply-chain baseline, and fixes the remaining Trivy Docker image-build blocker in the final runtime stage. The custom Tesseract 5.5.3 builder was already succeeding; the failure occurred because runtime validation pointed `TESSDATA_PREFIX` at `/usr/share/tesseract-ocr/5`, while the custom binary expects the directory that directly contains the traineddata files. The image now derives and verifies the installed Debian language-data directory, uses `/usr/share/tesseract-ocr/5/tessdata` as `TESSDATA_PREFIX`, and keeps the engine pinned to commit `db0ec62f81b0737fbbe184d8fea40af5738f8eef`. The fail-closed `npm audit` gate remains at Moderate severity or higher and now preserves machine-readable diagnostics as a CI artifact. The ASVS status matrix is unchanged: 253 PASS / 92 N/A / 0 MANUAL / 0 PARTIAL / 0 FAIL / 0 REVIEW.
 
-### 1.71.15 supply-chain CI hardening
+### 1.71.16 supply-chain CI hardening
 
-- Fixed the final Docker runtime validation that used `TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata`. Tesseract 5 expects the environment variable to reference the parent of `tessdata`; Direct-Xfer now uses `/usr/share/tesseract-ocr/5` and verifies all required `eng`, `fra`, `osd` and `spa` traineddata files before runtime validation.
+- Fixed the final Docker runtime validation that used `TESSDATA_PREFIX=/usr/share/tesseract-ocr/5`. Direct-Xfer now points `TESSDATA_PREFIX` at the verified Debian traineddata directory `/usr/share/tesseract-ocr/5/tessdata` and validates all required `eng`, `fra`, `osd` and `spa` language files before runtime startup.
 - Removed the brittle assumption that the language-data path only needs to be hard-coded: the build derives `eng.traineddata` from the installed `tesseract-ocr-eng` package, verifies the common directory and required files, then checks that the supported Debian 13 layout resolves to `/usr/share/tesseract-ocr/5/tessdata`.
 - Split the former monolithic final-image setup into explicit fail-fast Docker layers for package installation, package/data provenance checks, native-tool validation and cleanup. A future invariant failure will therefore be attributed to the relevant layer instead of appearing only as a generic exit code from one large RUN instruction.
 - Hardened the Debian Tesseract exclusion checks to inspect package installation status explicitly. The final image still does not install Debian `tesseract-ocr` or `libtesseract5`; it uses the exact upstream 5.5.3 executable copied from the pinned source builder.
@@ -21,7 +21,7 @@ Direct-Xfer 1.71.15 retains the reviewed dependency, SignPath, Trivy/OpenVEX and
 - Enhanced `.github/workflows/npm-audit.yml` without weakening the gate. The workflow captures `npm audit --omit=dev --audit-level=moderate --json`, prints advisory/package diagnostics, uploads `npm-audit.json` for 14 days, and fails closed in a separate enforcement step when npm reports an advisory or audit-service error. It never runs `npm audit fix` automatically.
 - Nodemailer remains `^9.0.5` / resolved `9.0.5`; Express remains `^4.22.2` / resolved `4.22.2`; `node-forge` remains `^1.4.0` / resolved `1.4.0`.
 - Dependabot continues to ignore Express semver-major updates so Express 5 remains a deliberate framework migration rather than an automatic dependency update.
-- Application/package metadata is synchronized to `1.71.15`, with PWA generation `pwa478` and cache-buster `v=459`. OAuth broker metadata, Windows workflow artifacts, SBOM, OpenVEX and ASVS release evidence are synchronized to the release.
+- Application/package metadata is synchronized to `1.71.16`, with PWA generation `pwa479` and cache-buster `v=460`. OAuth broker metadata, Windows workflow artifacts, SBOM, OpenVEX and ASVS release evidence are synchronized to the release.
 - The Windows ServerHost critical-runtime manifest was resynchronized for all source-resident entries changed by this release; the build-time Express package entry remains tied to the unchanged resolved `4.22.2` package.
 
 ### 1.71.8 dependency floor hardening
@@ -70,9 +70,9 @@ Repository/release gates completed for this candidate:
 - Full current regression tree: **CI REQUIRED** after `npm ci`; the source-only local run discovered 1152 tests and reached 1141 PASS / 11 FAIL, with all 11 failures caused by the intentionally absent `node_modules/express` dependency. No source assertion failure remained after the Docker regression test was synchronized.
 - Static ASVS audit: **PASS** — 127 production JavaScript source files, 13 reviewed decoder sites.
 - PARTIAL-closure audit: **PASS** — 127 production JavaScript source files, 38 repository-verifiable controls, 0 blocking findings.
-- Security inventory regenerated for 1.71.15 — **967 entries**.
+- Security inventory regenerated for 1.71.16 — **967 entries**.
 - Windows ServerHost critical runtime manifest: **103 entries, 0 stale source-resident hashes** after final synchronization; the missing build-time Express entry remains pinned by `package-lock.json` to 4.22.2.
-- CycloneDX SBOM root component synchronized to 1.71.15.
+- CycloneDX SBOM root component synchronized to 1.71.16.
 
 This document is an implementation/evidence audit, not a third-party certification. A production installation can operate in `ASVS_L3_MODE=true` only while all mandatory runtime controls and the signed deployment evidence are valid.
 
@@ -148,8 +148,8 @@ The direct dependency graph remains lockfile-pinned. V15.2.1 is no longer an ope
 
 ## Final release gates
 
-- [x] package and lockfile version synchronized to 1.71.15.
-- [x] PWA version/cache generation synchronized to 1.71.15 / pwa478.
+- [x] package and lockfile version synchronized to 1.71.16.
+- [x] PWA version/cache generation synchronized to 1.71.16 / pwa479.
 - [x] ASVS regression suite green (96/96).
 - [x] Complete current test tree green (1139/1139 across 190 files).
 - [x] Static ASVS audit green.
@@ -157,7 +157,7 @@ The direct dependency graph remains lockfile-pinned. V15.2.1 is no longer an ope
 - [x] Security inventory regenerated.
 - [x] Windows runtime integrity manifest synchronized and rechecked.
 - [x] Matrix has 0 MANUAL, 0 PARTIAL, 0 FAIL and 0 REVIEW.
-- [x] SBOM root component synchronized to 1.71.15.
+- [x] SBOM root component synchronized to 1.71.16.
 - [x] Former operator-declared manual-attestation flags removed from the L3 configuration surface.
 
 Independent review of N/A decisions, production evidence collection and a focused penetration test remain appropriate before making an external certification/compliance representation.

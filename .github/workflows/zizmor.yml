@@ -1,0 +1,41 @@
+name: GitHub Actions security analysis (zizmor)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/**'
+      - '.github/actions/**'
+  schedule:
+    - cron: '41 4 * * 1'
+  workflow_dispatch:
+
+# zizmor is a security-only scanner. Its SARIF is intentionally published to
+# GitHub Code Scanning, unlike actionlint and general code-quality tools.
+permissions: {}
+
+jobs:
+  zizmor:
+    name: Audit GitHub Actions security
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run zizmor
+        uses: zizmorcore/zizmor-action@3dc1ecc9bcb9e94e9b2c709687979e1298497054 # v0.6.2
+        with:
+          version: '1.29.0'
+          inputs: '.github/workflows'
+          online-audits: true
+          persona: regular
+          min-severity: medium
+          min-confidence: medium
+          advanced-security: true

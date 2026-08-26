@@ -1,0 +1,48 @@
+name: GitHub Actions workflow lint
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/**'
+  workflow_dispatch:
+
+# actionlint is a correctness/quality gate. It deliberately does NOT request
+# security-events:write and does NOT upload SARIF to Code Scanning.
+permissions:
+  contents: read
+
+jobs:
+  actionlint:
+    name: Validate workflow syntax and expressions
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install verified actionlint 1.7.12
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive=actionlint_1.7.12_linux_amd64.tar.gz
+          curl --fail --silent --show-error --location \
+            --proto '=https' --tlsv1.2 \
+            --output "$archive" \
+            'https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz'
+          echo '8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  actionlint_1.7.12_linux_amd64.tar.gz' | sha256sum --check --strict
+          tar -xzf "$archive" actionlint
+          mkdir -p "$RUNNER_TEMP/actionlint-bin"
+          install -m 0755 actionlint "$RUNNER_TEMP/actionlint-bin/actionlint"
+          echo "$RUNNER_TEMP/actionlint-bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/actionlint-bin/actionlint" -version
+
+      - name: Run actionlint
+        shell: bash
+        run: actionlint -color

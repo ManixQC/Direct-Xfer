@@ -17,7 +17,7 @@ function read(rel) { return fs.readFileSync(path.join(__dirname,'..',rel),'utf8'
 
 test('signed deployment evidence validates all formerly external ASVS requirements', (t) => {
   const dir=temp(t), ev=writeEvidence(dir);
-  const result=verifyEvidenceBundle(ev.bundle,{ appVersion:'1.71.27', publicUrl:'https://direct-xfer.example', publicKey:ev.keyPair.publicKey });
+  const result=verifyEvidenceBundle(ev.bundle,{ appVersion:'1.71.28', publicUrl:'https://direct-xfer.example', publicKey:ev.keyPair.publicKey });
   assert.equal(result.ok,true,JSON.stringify(result.failures));
   assert.equal(REQUIRED_DEPLOYMENT_REQUIREMENTS.length,22);
 });
@@ -25,14 +25,14 @@ test('signed deployment evidence validates all formerly external ASVS requiremen
 test('deployment evidence is release and public-origin bound', (t) => {
   const dir=temp(t), ev=writeEvidence(dir);
   assert.equal(verifyEvidenceBundle(ev.bundle,{appVersion:'1.70.30',publicUrl:'https://direct-xfer.example',publicKey:ev.keyPair.publicKey}).ok,false);
-  assert.equal(verifyEvidenceBundle(ev.bundle,{appVersion:'1.71.27',publicUrl:'https://other.example',publicKey:ev.keyPair.publicKey}).ok,false);
+  assert.equal(verifyEvidenceBundle(ev.bundle,{appVersion:'1.71.28',publicUrl:'https://other.example',publicKey:ev.keyPair.publicKey}).ok,false);
 });
 
 test('deployment evidence rejects forged observations and stale expiry', (t) => {
   const dir=temp(t), ev=writeEvidence(dir), forged=JSON.parse(JSON.stringify(ev.bundle));
   forged.checks[0].observation.preloaded=false;
-  assert.equal(verifyEvidenceBundle(forged,{appVersion:'1.71.27',publicUrl:'https://direct-xfer.example',publicKey:ev.keyPair.publicKey}).ok,false);
-  assert.equal(verifyEvidenceBundle(ev.bundle,{appVersion:'1.71.27',publicUrl:'https://direct-xfer.example',publicKey:ev.keyPair.publicKey,now:ev.bundle.expiresAt+1}).ok,false);
+  assert.equal(verifyEvidenceBundle(forged,{appVersion:'1.71.28',publicUrl:'https://direct-xfer.example',publicKey:ev.keyPair.publicKey}).ok,false);
+  assert.equal(verifyEvidenceBundle(ev.bundle,{appVersion:'1.71.28',publicUrl:'https://direct-xfer.example',publicKey:ev.keyPair.publicKey,now:ev.bundle.expiresAt+1}).ok,false);
 });
 
 test('external crypto provider requires hardware-backed non-exportable isolation', (t) => {

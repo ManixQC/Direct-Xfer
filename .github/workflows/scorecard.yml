@@ -1,0 +1,47 @@
+name: OpenSSF Scorecard supply-chain security
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 3 * * 6'
+
+# OpenSSF Scorecard is a security-specific supply-chain scanner. Its SARIF is
+# intentionally sent to Code Scanning. General lint/quality workflows are not.
+permissions: read-all
+
+jobs:
+  scorecard:
+    name: Scorecard security analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run OpenSSF Scorecard
+        uses: ossf/scorecard-action@2d1146689b8cda280b9bc96326124645441f03bc # v2.4.4
+        with:
+          results_file: scorecard-results.sarif
+          results_format: sarif
+          publish_results: true
+
+      - name: Upload Scorecard SARIF artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: openssf-scorecard-sarif
+          path: scorecard-results.sarif
+          if-no-files-found: error
+          retention-days: 5
+
+      - name: Upload Scorecard security findings to Code Scanning
+        uses: github/codeql-action/upload-sarif@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4.37.4
+        with:
+          sarif_file: scorecard-results.sarif
+          category: openssf-scorecard

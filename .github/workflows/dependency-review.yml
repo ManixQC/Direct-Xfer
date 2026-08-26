@@ -1,0 +1,37 @@
+name: Dependency Review
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+      - 'oauth-broker/package.json'
+      - 'oauth-broker/package-lock.json'
+      - 'oauth-broker/cloudflare-worker/package.json'
+      - 'oauth-broker/cloudflare-worker/package-lock.json'
+      - '.github/workflows/dependency-review.yml'
+
+# Dependency Review is a PR gate and job-summary report. It intentionally does
+# not publish SARIF, so it cannot add code-quality noise to Code Scanning.
+permissions:
+  contents: read
+
+jobs:
+  dependency-review:
+    name: Block newly introduced vulnerable dependencies
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Review dependency changes
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: moderate
+          retry-on-snapshot-warnings: true
+          show-patched-versions: true
+          show-openssf-scorecard: false

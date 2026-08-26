@@ -29,16 +29,16 @@ function declaredFloor(spec) {
   return match[1];
 }
 
-test('1.71.8 dependency declarations no longer advertise vulnerable Express/node-forge floors', () => {
+test('1.71.9 dependency declarations no longer advertise vulnerable Express/node-forge floors', () => {
   assert.ok(atLeast(declaredFloor(pkg.dependencies.express), '4.22.2'));
   assert.ok(atLeast(declaredFloor(pkg.dependencies['node-forge']), '1.4.0'));
   assert.doesNotMatch(pkg.dependencies.express, /4\.19\.2/);
   assert.doesNotMatch(pkg.dependencies['node-forge'], /1\.3\.1/);
 });
 
-test('1.71.8 lockfile resolves the dependency floors to the audited safe versions', () => {
-  assert.equal(lock.version, '1.71.8');
-  assert.equal(lock.packages[''].version, '1.71.8');
+test('1.71.9 lockfile resolves the dependency floors to the audited safe versions', () => {
+  assert.equal(lock.version, '1.71.9');
+  assert.equal(lock.packages[''].version, '1.71.9');
   assert.equal(lock.packages[''].dependencies.express, pkg.dependencies.express);
   assert.equal(lock.packages[''].dependencies['node-forge'], pkg.dependencies['node-forge']);
   assert.ok(atLeast(lock.packages['node_modules/express'].version, '4.22.2'));

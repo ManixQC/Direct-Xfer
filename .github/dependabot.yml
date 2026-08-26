@@ -1,0 +1,42 @@
+version: 2
+
+updates:
+  # Keep Direct-Xfer's runtime npm dependencies current. "increase" raises the
+  # minimum version in package.json as well as the lockfile, so static scanners
+  # do not keep reporting an older vulnerable floor after the lockfile is fixed.
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Etc/UTC"
+    versioning-strategy: "increase"
+    open-pull-requests-limit: 5
+    groups:
+      npm-security:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
+      npm-non-major:
+        applies-to: "version-updates"
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Keep third-party GitHub Actions references current, including actions pinned
+  # to immutable commit SHAs in the release/signing workflows.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:15"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 5
+    groups:
+      github-actions:
+        patterns:
+          - "*"

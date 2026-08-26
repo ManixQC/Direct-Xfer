@@ -1,0 +1,53 @@
+name: npm Audit
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/npm-audit.yml"
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/npm-audit.yml"
+  schedule:
+    # Advisory data can change without a repository commit, so re-check daily.
+    - cron: "27 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: npm-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  production-dependencies:
+    name: Audit production dependencies
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24.19.0"
+          package-manager-cache: false
+
+      # Install exactly package-lock.json without executing dependency lifecycle
+      # scripts. npm's automatic install-time audit is disabled because the next
+      # explicit step is the fail-closed security gate and has a defined threshold.
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      # Fail on Moderate, High or Critical advisories in production dependencies.
+      # Keep this read-only: remediation belongs in a reviewed Dependabot/manual PR;
+      # this workflow never mutates the dependency tree automatically.
+      - name: Run npm audit security gate
+        run: npm audit --omit=dev --audit-level=moderate

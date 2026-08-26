@@ -17,6 +17,11 @@ test('dedicated npm audit workflow checks lockfile changes and the advisory data
   assert.match(workflow, /cron:\s*["']27 6 \* \* \*["']/);
   assert.match(workflow, /npm ci --ignore-scripts --no-audit --no-fund/);
   assert.match(workflow, AUDIT_GATE);
+  assert.match(workflow, /--json > npm-audit\.json/);
+  assert.match(workflow, /actions\/upload-artifact@v7/);
+  assert.match(workflow, /name: npm-audit-report/);
+  assert.match(workflow, /Enforce npm audit security gate/);
+  assert.match(workflow, /steps\.npm-audit-gate\.outputs\.exit_code != '0'/);
   assert.doesNotMatch(workflow, /\bnpm\s+audit\s+fix\b/);
 });
 
@@ -26,6 +31,8 @@ test('npm audit gate fails on Moderate or more severe production advisories only
   assert.match(workflow, /--audit-level=moderate/);
   assert.doesNotMatch(workflow, /--audit-level=high/);
   assert.doesNotMatch(workflow, /continue-on-error:\s*true/);
+  assert.match(workflow, /registry\/tool error/);
+  assert.match(workflow, /Moderate-or-higher production advisory or the audit service failed/);
 });
 
 test('Windows release build uses the same npm audit threshold', () => {

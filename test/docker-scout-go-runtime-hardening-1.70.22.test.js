@@ -8,9 +8,12 @@ const path = require('node:path');
 const dockerfile = fs.readFileSync(path.join(__dirname, '..', 'Dockerfile'), 'utf8');
 
 function runtimeAptInstallBlock() {
-  const start = dockerfile.indexOf('apt-get install -y --no-install-recommends');
+  const marker = '# Pull all Debian security updates before installing the OCR/PDF runtime.';
+  const runtimeStart = dockerfile.indexOf(marker);
+  assert.notEqual(runtimeStart, -1, 'runtime hardening stage must exist');
+  const start = dockerfile.indexOf('apt-get install -y --no-install-recommends', runtimeStart);
   assert.notEqual(start, -1, 'runtime apt install block must exist');
-  const end = dockerfile.indexOf('&& update-ca-certificates', start);
+  const end = dockerfile.indexOf('update-ca-certificates', start);
   assert.notEqual(end, -1, 'runtime apt install block must terminate before CA refresh');
   return dockerfile.slice(start, end);
 }
@@ -42,9 +45,9 @@ test('1.70.22 rebuilds rclone 1.75.0 with a patched pinned Go stdlib', () => {
 
 test('1.70.22 does not install Debian rclone or gosu in the final image', () => {
   const apt = runtimeAptInstallBlock();
-  assert.doesNotMatch(apt, /(^|\s)rclone(\s|\\|$)/m);
-  assert.doesNotMatch(apt, /(^|\s)gosu(\s|\\|$)/m);
-  assert.match(apt, /(^|\s)util-linux(\s|\\|$)/m);
+  assert.doesNotMatch(apt, /(^|\s)rclone(\s|\\|;|$)/m);
+  assert.doesNotMatch(apt, /(^|\s)gosu(\s|\\|;|$)/m);
+  assert.match(apt, /(^|\s)util-linux(\s|\\|;|$)/m);
   assert.doesNotMatch(dockerfile, /exec gosu/);
 });
 

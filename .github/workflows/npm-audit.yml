@@ -48,6 +48,62 @@ jobs:
 
       # Fail on Moderate, High or Critical advisories in production dependencies.
       # Keep this read-only: remediation belongs in a reviewed Dependabot/manual PR;
-      # this workflow never mutates the dependency tree automatically.
+      # this workflow never mutates the dependency tree automatically. Capture JSON
+      # first so a red gate always leaves enough evidence to identify the package and
+      # advisory instead of exposing only npm's generic exit code 1.
       - name: Run npm audit security gate
-        run: npm audit --omit=dev --audit-level=moderate
+        id: npm-audit-gate
+        shell: bash
+        run: |
+          set +e
+          npm audit --omit=dev --audit-level=moderate --json > npm-audit.json
+          audit_status=$?
+          set -e
+          echo "exit_code=$audit_status" >> "$GITHUB_OUTPUT"
+          node <<'NODE'
+          const fs = require('node:fs');
+          let report;
+          try {
+            report = JSON.parse(fs.readFileSync('npm-audit.json', 'utf8'));
+          } catch (error) {
+            console.error('npm audit did not return valid JSON:', error.message);
+            process.exit(0);
+          }
+          if (report.error) {
+            const code = report.error.code || 'AUDIT_ERROR';
+            const summary = report.error.summary || report.error.message || JSON.stringify(report.error);
+            console.error(`npm audit registry/tool error [${code}]: ${summary}`);
+          }
+          const accepted = new Set(['moderate', 'high', 'critical']);
+          const rows = Object.entries(report.vulnerabilities || {})
+            .filter(([, item]) => accepted.has(String(item && item.severity || '').toLowerCase()))
+            .sort((a, b) => String(a[1].severity).localeCompare(String(b[1].severity)) || a[0].localeCompare(b[0]));
+          if (rows.length === 0 && !report.error) {
+            console.log('npm audit: no Moderate, High or Critical production vulnerability found.');
+          }
+          for (const [name, item] of rows) {
+            const via = Array.isArray(item.via)
+              ? item.via.map((entry) => typeof entry === 'string' ? entry : (entry.url || entry.title || entry.source || 'advisory')).join('; ')
+              : '';
+            console.error(`${String(item.severity).toUpperCase()} ${name}${item.range ? ` ${item.range}` : ''}${via ? ` — ${via}` : ''}`);
+          }
+          const counts = report.metadata && report.metadata.vulnerabilities;
+          if (counts) console.log('npm audit severity counts:', JSON.stringify(counts));
+          NODE
+
+      - name: Upload npm audit report
+        if: always() && hashFiles('npm-audit.json') != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: npm-audit-report
+          path: npm-audit.json
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Enforce npm audit security gate
+        if: steps.npm-audit-gate.outputs.exit_code != '0'
+        shell: bash
+        run: |
+          echo "npm audit detected a Moderate-or-higher production advisory or the audit service failed."
+          echo "See the npm-audit-report artifact and the diagnostic output above."
+          exit 1

@@ -146,9 +146,12 @@ COPY --from=tesseract-builder /out/tesseract-build-manifest.txt /usr/share/doc/d
 # binary would otherwise add. Poppler remains for pdftotext/pdftoppm only.
 # npm/corepack are build tools, not runtime dependencies; removing them from the
 # final image drops their global dependency tree and its avoidable CVE surface.
-RUN apt-get update \
-  && DEBIAN_FRONTEND=noninteractive apt-get dist-upgrade -y \
-  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+# Keep setup and verification in separate layers so a failed invariant is named
+# explicitly in CI rather than being hidden in one very large shell command.
+RUN set -eux; \
+  apt-get update; \
+  DEBIAN_FRONTEND=noninteractive apt-get dist-upgrade -y; \
+  DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     ca-certificates \
     libleptonica6 \
     poppler-utils \
@@ -156,41 +159,61 @@ RUN apt-get update \
     tesseract-ocr-fra \
     tesseract-ocr-osd \
     tesseract-ocr-spa \
-    util-linux \
-  && update-ca-certificates \
-  && test -s /etc/ssl/certs/ca-certificates.crt \
-  && ! dpkg-query -W tesseract-ocr >/dev/null 2>&1 \
-  && ! dpkg-query -W libtesseract5 >/dev/null 2>&1 \
-  && giflib_version="$(dpkg-query -W -f='${Version}' libgif7)" \
-  && dpkg --compare-versions "$giflib_version" ge '5.2.2-1+deb13u1' \
-  && mkdir -p /usr/share/doc/direct-xfer \
-  && dpkg-query -W -f='${Package}\t${Version}\n' \
+    util-linux; \
+  update-ca-certificates; \
+  test -s /etc/ssl/certs/ca-certificates.crt
+
+# The distro language packs only recommend Debian's tesseract binary; they must
+# never pull it into this image. The actual OCR engine above is the pinned 5.5.3
+# build. Resolve the tessdata directory from the installed package instead of
+# relying on a distro path convention, and verify all requested languages exist.
+RUN set -eux; \
+  test "$(dpkg-query -W -f='${db:Status-Status}' tesseract-ocr 2>/dev/null || true)" != "installed"; \
+  test "$(dpkg-query -W -f='${db:Status-Status}' libtesseract5 2>/dev/null || true)" != "installed"; \
+  giflib_version="$(dpkg-query -W -f='${Version}' libgif7)"; \
+  dpkg --compare-versions "$giflib_version" ge '5.2.2-1+deb13u1'; \
+  mkdir -p /usr/share/doc/direct-xfer; \
+  dpkg-query -W -f='${Package}\t${Version}\n' \
     ca-certificates libgif7 libleptonica6 libnss3 poppler-utils util-linux \
-    > /usr/share/doc/direct-xfer/os-packages.tsv \
-  && rm -f /usr/bin/pdfattach /usr/bin/pdfdetach /usr/bin/pdffonts /usr/bin/pdfimages \
+    > /usr/share/doc/direct-xfer/os-packages.tsv; \
+  tessdata_eng="$(dpkg-query -L tesseract-ocr-eng | awk '/\/eng[.]traineddata$/{print; exit}')"; \
+  test -n "$tessdata_eng"; \
+  tessdata_dir="$(dirname "$tessdata_eng")"; \
+  test -d "$tessdata_dir"; \
+  for lang in eng fra osd spa; do test -s "$tessdata_dir/$lang.traineddata"; done; \
+  printf '%s\n' "$tessdata_dir" > /usr/share/doc/direct-xfer/tessdata-dir.txt; \
+  test "$tessdata_dir" = /usr/share/tesseract-ocr/5/tessdata
+
+# TESSDATA_PREFIX is the *parent* of the tessdata directory in Tesseract 5. The
+# previous value pointed at tessdata itself, making Tesseract search one level too
+# deep (…/tessdata/tessdata) and causing the Docker validation layer to exit 1.
+RUN set -eux; \
+  rm -f /usr/bin/pdfattach /usr/bin/pdfdetach /usr/bin/pdffonts /usr/bin/pdfimages \
     /usr/bin/pdfinfo /usr/bin/pdfseparate /usr/bin/pdfsig /usr/bin/pdftocairo /usr/bin/pdfunite \
-    /usr/bin/text2image \
-  && for unused in pdfattach pdfdetach pdffonts pdfimages pdfinfo pdfseparate pdfsig pdftocairo pdfunite text2image; do test ! -e "/usr/bin/$unused"; done \
-  && TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata tesseract --version | head -n 1 | grep -Fx "tesseract ${DX_TESSERACT_BUILD_VERSION}" \
-  && for lang in eng fra osd spa; do TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata tesseract --list-langs 2>/dev/null | grep -Fx "$lang" >/dev/null; done \
-  && pdftotext -v >/dev/null 2>&1 \
-  && pdftoppm -v >/dev/null 2>&1 \
-  && setpriv --version >/dev/null \
-  && env -u RCLONE_VERSION -u RCLONE_GO_VERSION rclone version > /usr/share/doc/direct-xfer/rclone-version.txt \
-  && test -s /usr/share/doc/direct-xfer/rclone-version.txt \
-  && grep -Fx "rclone=${DX_RCLONE_BUILD_VERSION}" /usr/share/doc/direct-xfer/rclone-build-manifest.txt >/dev/null \
-  && grep -Fx "go=go${DX_RCLONE_GO_BUILD_VERSION}" /usr/share/doc/direct-xfer/rclone-build-manifest.txt >/dev/null \
-  && grep -Fx "x-image=${DX_RCLONE_X_IMAGE_VERSION}" /usr/share/doc/direct-xfer/rclone-build-manifest.txt >/dev/null \
-  && grep -Fx "tesseract=${DX_TESSERACT_BUILD_VERSION}" /usr/share/doc/direct-xfer/tesseract-build-manifest.txt >/dev/null \
-  && grep -Fx "commit=${DX_TESSERACT_BUILD_COMMIT}" /usr/share/doc/direct-xfer/tesseract-build-manifest.txt >/dev/null \
-  && test -s /usr/share/doc/direct-xfer/rclone-COPYING \
-  && test -s /usr/share/doc/direct-xfer/rclone-buildinfo.txt \
-  && test -s /usr/share/doc/direct-xfer/tesseract-LICENSE \
-  && rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
-  && rm -f /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack \
-    /usr/local/bin/pnpm /usr/local/bin/yarn \
-  && apt-get clean \
-  && rm -rf /var/lib/apt/lists/*
+    /usr/bin/text2image; \
+  for unused in pdfattach pdfdetach pdffonts pdfimages pdfinfo pdfseparate pdfsig pdftocairo pdfunite text2image; do test ! -e "/usr/bin/$unused"; done; \
+  TESSDATA_PREFIX=/usr/share/tesseract-ocr/5 tesseract --version | head -n 1 | grep -Fx "tesseract ${DX_TESSERACT_BUILD_VERSION}"; \
+  for lang in eng fra osd spa; do TESSDATA_PREFIX=/usr/share/tesseract-ocr/5 tesseract --list-langs 2>/dev/null | grep -Fx "$lang" >/dev/null; done; \
+  pdftotext -v >/dev/null 2>&1; \
+  pdftoppm -v >/dev/null 2>&1; \
+  setpriv --version >/dev/null; \
+  env -u RCLONE_VERSION -u RCLONE_GO_VERSION rclone version > /usr/share/doc/direct-xfer/rclone-version.txt; \
+  test -s /usr/share/doc/direct-xfer/rclone-version.txt; \
+  grep -Fx "rclone=${DX_RCLONE_BUILD_VERSION}" /usr/share/doc/direct-xfer/rclone-build-manifest.txt >/dev/null; \
+  grep -Fx "go=go${DX_RCLONE_GO_BUILD_VERSION}" /usr/share/doc/direct-xfer/rclone-build-manifest.txt >/dev/null; \
+  grep -Fx "x-image=${DX_RCLONE_X_IMAGE_VERSION}" /usr/share/doc/direct-xfer/rclone-build-manifest.txt >/dev/null; \
+  grep -Fx "tesseract=${DX_TESSERACT_BUILD_VERSION}" /usr/share/doc/direct-xfer/tesseract-build-manifest.txt >/dev/null; \
+  grep -Fx "commit=${DX_TESSERACT_BUILD_COMMIT}" /usr/share/doc/direct-xfer/tesseract-build-manifest.txt >/dev/null; \
+  test -s /usr/share/doc/direct-xfer/rclone-COPYING; \
+  test -s /usr/share/doc/direct-xfer/rclone-buildinfo.txt; \
+  test -s /usr/share/doc/direct-xfer/tesseract-LICENSE
+
+RUN set -eux; \
+  rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack; \
+  rm -f /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack \
+    /usr/local/bin/pnpm /usr/local/bin/yarn; \
+  apt-get clean; \
+  rm -rf /var/lib/apt/lists/*
 
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY package.json package-lock.json ./
@@ -211,7 +234,7 @@ ENV HOST_ROOT=/host \
     DATA_DIR=/data \
     IMAGES_DIR=/Images \
     INBOX_DIR=/Direct-Xfer \
-    TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata \
+    TESSDATA_PREFIX=/usr/share/tesseract-ocr/5 \
     PORT=55750 \
     NODE_ENV=production
 VOLUME ["/data", "/Images"]

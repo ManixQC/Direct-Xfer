@@ -121,8 +121,8 @@ namespace DirectXfer.WindowsServerHost
         private static readonly IDictionary<string, string> CriticalRuntimeSha256 =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                { "package.json", "28e053f28094655904964aeb180bb8bade23a1e2d3f16c4f73e438175ad1fbd6" },
-                { "package-lock.json", "9d4f67a42e0c238dc4d45ab0db748bb5074814d9dc632df26157c46224794531" },
+                { "package.json", "c2a51d273d767b43ac65c64cbf61e6fccacdb1dbc8a848ab66469affe4867bf5" },
+                { "package-lock.json", "38da197c0a85354d8cf76c001cfddd8a20fd30829f7a40f08d461aaf13cc12f7" },
                 { "server.js", "3c3e5d2fb770c3030f328795d3d16963df095d45c76ea0a10016e842ec2e9ccd" },
                 { "lib/core-utils.js", "5b80d10afa030ccf8ebff5eb70147e4216f4a095821633be6f89aa11b73e2550" },
                 { "lib/server/config.js", "210656fbb97a22442b06fa4df0a049eff78a76438615bd7a428213e101888df6" },
@@ -209,14 +209,14 @@ namespace DirectXfer.WindowsServerHost
                 { "lib/server/notification-center-service.js", "ea19300a7f24fc42c5db39c0fd3e3a23c74a6104957b3e23f0cec05493dbac53" },
                 { "lib/server/pwa-notification-service.js", "408ff37bc00c481be61cfa85960bc0170bb4845b87105cf4dbf36e08f97a54b5" },
                 { "public/app.js", "845513362c4c2e522babf3e85ffa464158efad9e46c90fcbd12da4afa2048a7c" },
-                { "pwa/app.js", "800aed5f033b5a10444e5c5983599f6bf725813f5ed3214e85e5e30b73172c70" },
+                { "pwa/app.js", "8576593eca5a504d0d95b1d3c884c70a55e8310195e24d0db470e27e8d94169c" },
                 { "lib/dlp-utils.js", "0d8f768c3457ec713199ce9e82f9483be21df2ea01dce6ead26675d240fde768" },
                 { "lib/fd-utils.js", "947deee8d45440f49c4497621b8479f1a92ff4703789099b24aae4a81dd29bb5" },
                 { "pwa/dlp-local.js", "246267542621fc92f759438b2295b87f777ba6d6aa88b3c4d23dea25aebe7390" },
                 { "lib/storage-connectors.js", "90cc270a3e713b11460d950d013eee737b5aaaf8cb01d53db75ef3e8f4184e91" },
                 { "lib/web-storage-share.js", "16f747b2632a7eca5a17c80bb34ce7b97a3f066779afa523f730bedda4c1295f" },
                 { "lib/web-storage-writable.js", "f4b8e54f665ba6b7f5975522f009e06cbad20d69822d27dcc80363b58198081c" },
-                { "public/index.html", "4c5b7ffdb65a381fefe32ef7e0c6b34f791d79f672cb33f95f6415dcb3328f6d" },
+                { "public/index.html", "09ee58da61d1be5cd7e03bc191608bba00229ebf4a5fe813e3e92322e411877d" },
                 { "public/theme-init.js", "f9cf54c5ca7007f29570f6e517524af50da90ed3ae2a8af15100d5d7ef9752d8" },
                 { "public/oauth-bridge.html", "1b394bbf8583f1a4cf3e27b46457afefcafe054327e78af3bada2ce3d22c4afb" },
                 { "public/oauth-bridge.css", "32a468581ae0ae93c818fe00217a55cdec62dc5cb4796c748003ad4f71bbbbbb" },

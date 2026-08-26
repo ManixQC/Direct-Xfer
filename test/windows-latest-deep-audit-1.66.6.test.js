@@ -13,6 +13,8 @@ const installer = read('installer/Direct-Xfer.iss');
 const workflow = read('.github/workflows/build-windows-csharp.yml');
 const pkg = JSON.parse(read('package.json'));
 const lock = JSON.parse(read('package-lock.json'));
+const releaseVersion = pkg.version;
+const releaseRe = releaseVersion.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 function sliceBetween(source, startMarker, endMarker) {
   const start = source.indexOf(startMarker);
@@ -22,11 +24,11 @@ function sliceBetween(source, startMarker, endMarker) {
   return source.slice(start, end);
 }
 
-test('1.71.18 version, Windows builds and PWA generation are synchronized', () => {
-  assert.equal(pkg.version, '1.71.18');
-  assert.equal(lock.version, '1.71.18');
-  assert.equal(lock.packages[''].version, '1.71.18');
-  assert.match(workflow, /^run-name: v1\.71\.18$/m);
+test('1.71.19 version, Windows builds and PWA generation are synchronized', () => {
+  assert.equal(pkg.version, releaseVersion);
+  assert.equal(lock.version, releaseVersion);
+  assert.equal(lock.packages[''].version, releaseVersion);
+  assert.match(workflow, new RegExp(`^run-name: v${releaseRe}$`, 'm'));
   assert.match(workflow, /DX_RUNTIME_BUILD: 'runtime169'/);
   assert.match(workflow, /DX_LAUNCHER_COMPONENT_VERSION: '1\.70\.1'/);
   assert.match(workflow, /DX_SERVER_HOST_COMPONENT_VERSION: '1\.70\.22'/);
@@ -38,7 +40,7 @@ test('1.71.18 version, Windows builds and PWA generation are synchronized', () =
   assert.match(read('windows-launcher/app.manifest'), /assemblyIdentity version="1\.70\.1\.0"/);
   assert.match(read('windows-server-host/app.manifest'), /assemblyIdentity version="1\.70\.22\.0"/);
   for (const rel of ['pwa/theme-init.js','pwa/mobile-intelligence.js','pwa/index.html','pwa/admin-advanced.js','pwa/app.js','pwa/sw.js']) {
-    assert.match(read(rel), /1\.71\.18|pwa481/);
+    assert.match(read(rel), new RegExp(`${releaseRe}|pwa482`));
   }
   for (const rel of ['pwa/login.html','pwa/theme-init.js','pwa/index.html','pwa/login.js','pwa/admin-advanced.js','pwa/app.js','pwa/sw.js']) {
     assert.doesNotMatch(read(rel), /v=356/);

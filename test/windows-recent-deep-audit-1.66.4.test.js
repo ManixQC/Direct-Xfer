@@ -6,6 +6,8 @@ const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
+const releaseVersion = JSON.parse(read('package.json')).version;
+const releaseRe = releaseVersion.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const launcher = read('windows-launcher/Program.cs');
 const host = read('windows-server-host/Program.cs');
 
@@ -33,11 +35,11 @@ test('optional Windows Tesseract is selected only when it can satisfy SEARCH_OCR
   assert.match(host, /optional Tesseract cannot satisfy the requested OCR languages/);
 });
 
-test('1.71.18 bump advances the PWA cache generation so changed release metadata is not served from pwa353', () => {
-  assert.match(read('package.json'), /"version"\s*:\s*"1\.71\.18"/);
+test('1.71.19 bump advances the PWA cache generation so changed release metadata is not served from pwa353', () => {
+  assert.equal(JSON.parse(read('package.json')).version, releaseVersion);
   for (const rel of ['pwa/app.js', 'pwa/index.html', 'pwa/sw.js', 'pwa/theme-init.js', 'pwa/admin-advanced.js', 'pwa/mobile-intelligence.js']) {
     const source = read(rel);
-    assert.match(source, /1\.71\.18|pwa481|v=462/);
+    assert.match(source, new RegExp(`${releaseRe}|pwa482|v=463`));
     assert.doesNotMatch(source, /1\.69\.12|pwa419|v=405|pwa353|v=353/);
   }
 });

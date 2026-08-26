@@ -19,13 +19,13 @@
       }
     ],
     "component": {
-      "bom-ref": "direct-xfer@1.71.18",
+      "bom-ref": "direct-xfer@1.71.19",
       "type": "library",
       "name": "Direct-Xfer",
-      "version": "1.71.18",
+      "version": "1.71.19",
       "scope": "required",
       "description": "Direct-Xfer — direct HTTP file sharing, no third-party server. Web interface, revocable shares, automatic IP detection and port testing.",
-      "purl": "pkg:npm/direct-xfer@1.71.18",
+      "purl": "pkg:npm/direct-xfer@1.71.19",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -7297,7 +7297,7 @@
   ],
   "dependencies": [
     {
-      "ref": "direct-xfer@1.71.18",
+      "ref": "direct-xfer@1.71.19",
       "dependsOn": [
         "archiver@8.0.0",
         "express@4.22.2",

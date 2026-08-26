@@ -7,6 +7,8 @@ const path = require('node:path');
 
 const ROOT = path.resolve(__dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8').replace(/\r\n?/g, '\n');
+const releaseVersion = JSON.parse(read('package.json')).version;
+const releaseRe = releaseVersion.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 test('CodeQL login redirect hardening never navigates directly to the next query value', () => {
   const login = read('pwa/login.js');
@@ -80,12 +82,12 @@ test('PWA security hotfix advances the shell and login cache generations without
   const loginHtml = read('pwa/login.html');
   const standardHtml = read('public/index.html');
   const bridgeHtml = read('public/oauth-bridge.html');
-  assert.match(sw, /2026\.08\.26-pwa481/);
-  assert.match(sw, /app\.js\?v=462/);
-  assert.match(app, /APP_VERSION = '1\.71\.18'/);
-  assert.match(app, /APP_BUILD = '2026\.08\.26-pwa481'/);
+  assert.match(sw, /2026\.08\.26-pwa482/);
+  assert.match(sw, /app\.js\?v=463/);
+  assert.match(app, new RegExp(`APP_VERSION = '${releaseRe}'`));
+  assert.match(app, /APP_BUILD = '2026\.08\.26-pwa482'/);
   assert.match(loginHtml, /login\.js\?v=321/);
-  assert.match(loginHtml, /login-vault\.js\?v=462/);
+  assert.match(loginHtml, /login-vault\.js\?v=463/);
   assert.match(standardHtml, /app\.js\?v=352/);
   assert.match(bridgeHtml, /oauth-bridge\.js\?v=4/);
 });

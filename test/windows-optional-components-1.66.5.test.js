@@ -6,6 +6,8 @@ const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
 const read = rel => fs.readFileSync(path.join(root, rel), 'utf8');
+const releaseVersion = JSON.parse(read('package.json')).version;
+const releaseRe = releaseVersion.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const launcher = read('windows-launcher/Program.cs');
 const host = read('windows-server-host/Program.cs');
 const workflow = read('.github/workflows/build-windows-csharp.yml');
@@ -111,7 +113,7 @@ test('launcher session parsing is bounded and stale optional download work is cl
 });
 
 test('default Windows payload still excludes rclone and Tesseract in 1.69.6', () => {
-  assert.match(workflow, /DX_VERSION: '1\.71\.18'/);
+  assert.match(workflow, new RegExp(`DX_VERSION: '${releaseRe}'`));
   assert.doesNotMatch(workflow, /downloads\.rclone\.org|tesseract-ocr-w64-setup/);
   assert.match(workflow, /Optional Windows component leaked into the default payload/);
 });

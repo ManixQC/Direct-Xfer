@@ -11,11 +11,14 @@ function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), 'utf8');
 }
 
+const releaseVersion = JSON.parse(read('package.json')).version;
+const releaseRe = releaseVersion.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 test('admin HTML uses an external first-paint theme bootstrap allowed by script-src self', () => {
   const html = read('public/index.html');
   const themeInit = read('public/theme-init.js');
 
-  assert.match(html, /<script\s+src="\/theme-init\.js\?v=1\.71\.18"><\/script>/);
+  assert.match(html, new RegExp(`<script\\s+src=\"\\/theme-init\\.js\\?v=${releaseRe}\"><\\/script>`));
   assert.equal(html.includes('(function () {'), false);
   assert.match(themeInit, /localStorage\.getItem\('dx-theme'\)/);
   assert.match(themeInit, /document\.documentElement\.setAttribute\('data-theme', t\)/);

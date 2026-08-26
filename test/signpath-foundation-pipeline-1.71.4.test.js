@@ -14,12 +14,14 @@ const installerConfig = read('signpath/artifact-configuration-installer.xml');
 const policy = read('CODE_SIGNING_POLICY.md');
 const readme = read('README.md');
 const installer = read('installer/Direct-Xfer.iss');
+const releaseVersion = JSON.parse(read('package.json')).version;
+const releaseRe = releaseVersion.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 function count(source, expression) {
   return [...source.matchAll(expression)].length;
 }
 
-test('1.71.18 SignPath executable configuration uses one release ProductVersion for every Direct-Xfer binary', () => {
+test('1.71.19 SignPath executable configuration uses one release ProductVersion for every Direct-Xfer binary', () => {
   assert.match(executablesConfig, /<parameter name="version" required="true"\s*\/>/);
   assert.match(executablesConfig, /<parameter name="launcherFileVersion" required="true"\s*\/>/);
   assert.match(executablesConfig, /<parameter name="serverHostFileVersion" required="true"\s*\/>/);
@@ -33,8 +35,8 @@ test('1.71.18 SignPath executable configuration uses one release ProductVersion 
   assert.match(executablesConfig, /path="server-host\/Direct-Xfer\.ServerHost\.exe"/);
 });
 
-test('1.71.18 Windows CI builds SignPath inputs with release ProductVersion and component FileVersion checks', () => {
-  assert.match(workflow, /DX_VERSION: '1\.71\.18'/);
+test('1.71.19 Windows CI builds SignPath inputs with release ProductVersion and component FileVersion checks', () => {
+  assert.match(workflow, new RegExp(`DX_VERSION: '${releaseRe}'`));
   assert.equal(count(workflow, /-p:InformationalVersion=\$env:DX_VERSION/g), 3);
   assert.match(workflow, /ProductVersion -ne \$env:DX_VERSION/);
   assert.match(workflow, /DX_LAUNCHER_COMPONENT_VERSION\.0/);
@@ -79,6 +81,6 @@ test('Foundation public policy, privacy display and uninstall requirements stay 
   assert.match(installer, /Uninstallable=yes/);
   assert.match(installer, /Name: "updatecheck"/);
   assert.match(installer, /Name: "publicip"/);
-  assert.match(installer, /#define AppVersion "1\.71\.18"/);
-  assert.match(installer, /#define SourceDir "\.\.\\dist\\Direct-Xfer-1\.71\.18-Windows-CSharp"/);
+  assert.match(installer, new RegExp(`#define AppVersion \"${releaseRe}\"`));
+  assert.match(installer, new RegExp(`#define SourceDir \"\\.\\.\\\\dist\\\\Direct-Xfer-${releaseRe}-Windows-CSharp\"`));
 });

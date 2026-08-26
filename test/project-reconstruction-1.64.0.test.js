@@ -5,6 +5,8 @@ const fs = require('fs');
 const path = require('path');
 const ROOT = path.join(__dirname, '..');
 const read = p => fs.readFileSync(path.join(ROOT, p), 'utf8');
+const releaseVersion = JSON.parse(read('package.json')).version;
+const releaseRe = releaseVersion.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 test('complete project infrastructure is present', () => {
   for (const rel of [
     '.github/workflows/build-windows-csharp.yml','installer/Direct-Xfer.iss','README.md',
@@ -22,7 +24,7 @@ test('source tree does not keep a redundant prebuilt Windows runtime', () => {
   assert.ok(workflow.includes("Copy-Item @('lib','public','pwa','scripts','security') $app -Recurse"));
   assert.match(workflow, /npm ci --omit=dev --ignore-scripts --no-audit --no-fund/);
 });
-test('Windows metadata keeps app 1.71.18 separate from stable Windows component identities', () => {
+test('Windows metadata keeps app 1.71.19 separate from stable Windows component identities', () => {
   const launcher = read('windows-launcher/Program.cs');
   const host = read('windows-server-host/Program.cs');
   const hostProject = read('windows-server-host/DirectXfer.ServerHost.csproj');
@@ -61,7 +63,7 @@ test('forbidden generated project files are absent', () => {
   assert.deepEqual(forbidden, []);
 });
 
-test('Windows GitHub Actions run name follows Direct-Xfer 1.71.18', () => {
+test('Windows GitHub Actions run name follows Direct-Xfer 1.71.19', () => {
   const workflow = read('.github/workflows/build-windows-csharp.yml');
-  assert.match(workflow, /^run-name: v1\.71\.18$/m);
+  assert.match(workflow, new RegExp(`^run-name: v${releaseRe}$`, 'm'));
 });

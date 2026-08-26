@@ -75,6 +75,30 @@ test(`${releaseVersion} PWA release metadata advances atomically without release
   for (const [source, pattern, label] of releaseCacheChecks) assert.match(source, pattern, `${label} must use the current cache generation`);
 });
 
+
+test(`${releaseVersion} test runner ignores stale version-stamped maintenance copies but keeps current generic tests`, () => {
+  const { selectTests } = require('../scripts/run-tests');
+  const fixture = [
+    'account-service-deep-audit-1.69.11.test.js',
+    'trivy-container-hardening-1.71.15.test.js',
+    'trivy-container-hardening-1.71.16.test.js',
+    'release-maintenance-1.71.11.test.js',
+    'release-maintenance-1.71.12.test.js',
+    'trivy-container-hardening.test.js',
+    'release-maintenance.test.js',
+  ];
+  const { retired, selected } = selectTests(fixture);
+  assert.deepEqual(retired, [
+    'release-maintenance-1.71.11.test.js',
+    'release-maintenance-1.71.12.test.js',
+    'trivy-container-hardening-1.71.15.test.js',
+    'trivy-container-hardening-1.71.16.test.js',
+  ]);
+  assert.ok(selected.includes('account-service-deep-audit-1.69.11.test.js'));
+  assert.ok(selected.includes('release-maintenance.test.js'));
+  assert.ok(selected.includes('trivy-container-hardening.test.js'));
+});
+
 test(`${releaseVersion} Tesseract source acquisition targets the exact annotated release tag ref`, () => {
   const dockerfile = read('Dockerfile');
   const firstFrom = dockerfile.indexOf('FROM ');

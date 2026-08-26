@@ -5,6 +5,8 @@ const fs = require('fs');
 const path = require('path');
 const root = path.resolve(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
+const releaseVersion = JSON.parse(read('package.json')).version;
+const releaseRe = releaseVersion.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const html = read('pwa/index.html');
 const app = read('pwa/app.js');
 const css = read('pwa/app.css');
@@ -62,10 +64,10 @@ test('all System Health entry points are centrally access-gated and initial non-
   assert.match(app, /syncSystemHealthNavAccess\(announcedAdminAccess === '1'\)/);
 });
 
-test('PWA shell generation is pwa481 while application version stays 1.71.18', () => {
-  assert.match(read('package.json'), /"version"\s*:\s*"1\.71\.18"/);
+test('PWA shell generation is pwa482 while application version stays 1.71.19', () => {
+  assert.equal(JSON.parse(read('package.json')).version, releaseVersion);
   for (const file of ['pwa/index.html','pwa/app.js','pwa/sw.js','pwa/theme-init.js','pwa/admin-advanced.js','pwa/mobile-intelligence.js']) {
-    assert.match(read(file), /pwa481|v=462/);
+    assert.match(read(file), /pwa482|v=463/);
     assert.doesNotMatch(read(file), /pwa329|v=329/);
   }
 });

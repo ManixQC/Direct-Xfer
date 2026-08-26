@@ -35,14 +35,14 @@ test.after(() => {
   fs.rmSync(dataDir, { recursive:true, force:true });
 });
 
-test('PWA cache build is synchronized to pwa476', () => {
-  assert.match(theme, /2026\.08\.26-pwa476/);
-  assert.match(theme, /admin-advanced\.js\?v=457/);
-  assert.match(sw, /2026\.08\.26-pwa476/);
-  assert.match(sw, /admin-advanced\.js\?v=457/);
-  assert.match(read('pwa/app.js'), /2026\.08\.26-pwa476/);
-  assert.match(read('pwa/login.js'), /v=457/);
-  assert.match(read('pwa/index.html'), /pwa476/);
+test('PWA cache build is synchronized to pwa477', () => {
+  assert.match(theme, /2026\.08\.26-pwa477/);
+  assert.match(theme, /admin-advanced\.js\?v=458/);
+  assert.match(sw, /2026\.08\.26-pwa477/);
+  assert.match(sw, /admin-advanced\.js\?v=458/);
+  assert.match(read('pwa/app.js'), /2026\.08\.26-pwa477/);
+  assert.match(read('pwa/login.js'), /v=458/);
+  assert.match(read('pwa/index.html'), /pwa477/);
   for (const file of ['pwa/admin-advanced.js','pwa/app.js','pwa/index.html','pwa/login.js','pwa/sw.js','pwa/theme-init.js']) {
     assert.doesNotMatch(read(file), /pwa320|v=320/);
   }
@@ -144,7 +144,7 @@ test('global pause includes scheduled links and resume only touches panic-paused
 
 test('advanced-admin script is a public static PWA asset so first service-worker install can cache it', () => {
   assert.match(server, /'\/admin-advanced\.js'/);
-  assert.match(sw, /'\/app\/admin-advanced\.js\?v=457'/);
+  assert.match(sw, /'\/app\/admin-advanced\.js\?v=458'/);
 });
 
 test('lite settings query actually omits the large logo payload', () => {
@@ -215,9 +215,9 @@ test('real server keeps new endpoints protected, serves PWA asset pre-login, and
   try {
     await waitFor(base + '/healthz', child, logs);
 
-    const publicAsset = await fetch(base + '/app/admin-advanced.js?v=457');
+    const publicAsset = await fetch(base + '/app/admin-advanced.js?v=458');
     assert.equal(publicAsset.status, 200);
-    assert.match(await publicAsset.text(), /pwa476/);
+    assert.match(await publicAsset.text(), /pwa477/);
 
     const anonHealth = await fetch(base + '/api/pwa-admin-health');
     assert.equal(anonHealth.status, 401);

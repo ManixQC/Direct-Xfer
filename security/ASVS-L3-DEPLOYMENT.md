@@ -1,6 +1,6 @@
 # Direct-Xfer — ASVS 5.0.0 Level 3 deployment
 
-Direct-Xfer 1.71.13 has no unresolved `MANUAL`, `PARTIAL`, `FAIL`, or `REVIEW` row in its source matrix. This does **not** mean a source ZIP certifies an installation. Facts that only exist at the production edge/host/provider are now mandatory, machine-validated startup evidence rather than operator declarations. A specific deployment can use the L3 profile only while its signed evidence remains valid.
+Direct-Xfer 1.71.14 has no unresolved `MANUAL`, `PARTIAL`, `FAIL`, or `REVIEW` row in its source matrix. This does **not** mean a source ZIP certifies an installation. Facts that only exist at the production edge/host/provider are now mandatory, machine-validated startup evidence rather than operator declarations. A specific deployment can use the L3 profile only while its signed evidence remains valid.
 
 ## Mandatory L3 runtime profile
 
@@ -52,7 +52,7 @@ Direct-Xfer intentionally provides no application recovery path for a lost final
 
 The provider bridge must not return key material. In L3, application-state encryption/decryption, audit HMAC/signing and runtime HMAC operations are delegated by opaque key handle. TOTP is disabled; built-in S3 SigV4 backup signing is rejected; local TLS private-key use is rejected. If S3 backup is required for an L3 installation, use an external connector/service whose credential and signing boundary satisfies the signed backend/crypto evidence.
 
-Legacy state encrypted with an application `DATA_KEY` must be migrated outside the active L3 profile before enabling L3. For a 1.70.25 → 1.71.13 upgrade, stop Direct-Xfer and run `npm run asvs:l3:migrate-state -- /path/to/shares.json` with `ASVS_L3_LEGACY_DATA_KEY` plus `ASVS_L3_CRYPTO_COMMAND`, then run `npm run asvs:l3:migrate-audit -- /path/to/data` with `ASVS_L3_LEGACY_AUDIT_HMAC_KEY` plus the provider command. Both tools retain rollback backups and the audit tool refuses to re-sign an invalid legacy chain/head.
+Legacy state encrypted with an application `DATA_KEY` must be migrated outside the active L3 profile before enabling L3. For a 1.70.25 → 1.71.14 upgrade, stop Direct-Xfer and run `npm run asvs:l3:migrate-state -- /path/to/shares.json` with `ASVS_L3_LEGACY_DATA_KEY` plus `ASVS_L3_CRYPTO_COMMAND`, then run `npm run asvs:l3:migrate-audit -- /path/to/data` with `ASVS_L3_LEGACY_AUDIT_HMAC_KEY` plus the provider command. Both tools retain rollback backups and the audit tool refuses to re-sign an invalid legacy chain/head.
 
 Backups created by 1.70.26 L3 may be plaintext because of the corrected encryption-selection bug. Convert them offline with `npm run asvs:l3:migrate-backup -- old.dxbackup` before L3 restore. The same converter accepts legacy `dxenc:1` backups when `ASVS_L3_LEGACY_DATA_KEY` is supplied. L3 itself rejects plaintext backups. Legacy local TLS backup material cannot be imported while L3 is active.
 

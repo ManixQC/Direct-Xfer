@@ -6,6 +6,8 @@
 ARG DX_RCLONE_BUILD_VERSION=v1.75.0
 ARG DX_RCLONE_GO_BUILD_VERSION=1.25.14
 ARG DX_RCLONE_X_IMAGE_VERSION=v0.45.0
+ARG DX_TESSERACT_BUILD_VERSION=5.5.3
+ARG DX_TESSERACT_BUILD_COMMIT=db0ec62f81b0737fbbe184d8fea40af5738f8eef
 FROM golang:${DX_RCLONE_GO_BUILD_VERSION}-bookworm@sha256:3b4a11519ad929d1e1d261a12cff056f0c85b735253d7d861346b9c6f8b36437 AS rclone-builder
 ARG DX_RCLONE_BUILD_VERSION
 ARG DX_RCLONE_GO_BUILD_VERSION
@@ -65,8 +67,6 @@ RUN go version /out/rclone | tee /out/rclone-go-version.txt \
 # build the signed-release commit directly and copy only the production OCR
 # executable into the final image. Training, graphics, libarchive and libcurl
 # support are intentionally disabled because Direct-Xfer does not use them.
-ARG DX_TESSERACT_BUILD_VERSION=5.5.3
-ARG DX_TESSERACT_BUILD_COMMIT=db0ec62f81b0737fbbe184d8fea40af5738f8eef
 FROM node:22-trixie-slim AS tesseract-builder
 ARG DX_TESSERACT_BUILD_VERSION
 ARG DX_TESSERACT_BUILD_COMMIT

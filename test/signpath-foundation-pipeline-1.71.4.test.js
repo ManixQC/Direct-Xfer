@@ -21,7 +21,7 @@ function count(source, expression) {
   return [...source.matchAll(expression)].length;
 }
 
-test('1.71.30 SignPath executable configuration uses one release ProductVersion for every Direct-Xfer binary', () => {
+test('1.71.31 SignPath executable configuration uses one release ProductVersion for every Direct-Xfer binary', () => {
   assert.match(executablesConfig, /<parameter name="version" required="true"\s*\/>/);
   assert.match(executablesConfig, /<parameter name="launcherFileVersion" required="true"\s*\/>/);
   assert.match(executablesConfig, /<parameter name="serverHostFileVersion" required="true"\s*\/>/);
@@ -35,7 +35,7 @@ test('1.71.30 SignPath executable configuration uses one release ProductVersion 
   assert.match(executablesConfig, /path="server-host\/Direct-Xfer\.ServerHost\.exe"/);
 });
 
-test('1.71.30 Windows CI builds SignPath inputs with release ProductVersion and component FileVersion checks', () => {
+test('1.71.31 Windows CI builds SignPath inputs with release ProductVersion and component FileVersion checks', () => {
   assert.match(workflow, new RegExp(`DX_VERSION: '${releaseRe}'`));
   assert.equal(count(workflow, /-p:InformationalVersion=\$env:DX_VERSION/g), 3);
   assert.match(workflow, /ProductVersion -ne \$env:DX_VERSION/);

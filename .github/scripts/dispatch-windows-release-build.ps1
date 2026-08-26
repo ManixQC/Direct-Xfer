@@ -11,6 +11,22 @@ if ([string]::IsNullOrWhiteSpace($env:GH_TOKEN)) {
 if ([string]::IsNullOrWhiteSpace($env:GITHUB_REPOSITORY)) {
   throw 'GITHUB_REPOSITORY is required to dispatch the Windows build workflow.'
 }
+if ([string]::IsNullOrWhiteSpace($Ref) -or $Ref.Length -gt 255) {
+  throw 'The release ref is empty or exceeds 255 characters.'
+}
+
+# GitHub ref names may contain slash-separated branch/tag components, but this
+# dispatch path intentionally rejects shell metacharacters and ambiguous git
+# ref constructs. Values arrive through an environment variable instead of a
+# GitHub expression embedded in PowerShell, preventing template injection.
+if ($Ref -notmatch '^[A-Za-z0-9][A-Za-z0-9._/+@-]*$') {
+  throw "Invalid release ref '$Ref'."
+}
+if ($Ref.Contains('..') -or $Ref.Contains('@{') -or $Ref.Contains('//') -or
+    $Ref.EndsWith('/') -or $Ref.EndsWith('.') -or $Ref.EndsWith('.lock')) {
+  throw "Ambiguous or unsafe release ref '$Ref'."
+}
+
 if (-not (Test-Path -LiteralPath 'package.json' -PathType Leaf)) {
   throw 'package.json is missing from the checked-out release tree.'
 }

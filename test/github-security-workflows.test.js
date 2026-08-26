@@ -141,3 +141,20 @@ test("repository publishes a non-public-disclosure security policy", () => {
   assert.match(policy, /do not disclose suspected vulnerabilities in a public issue/i);
   assert.match(policy, /private vulnerability reporting/i);
 });
+
+
+test("Windows release dispatch keeps workflow inputs out of executable PowerShell", () => {
+  const chain = read(".github/workflows/release-windows-build-chain.yml");
+  const runBlockMatch = chain.match(/- name: Validate tested release and dispatch Windows build[\s\S]*?\n\s*run:\s*\|([\s\S]*?)(?=\n\s{6}- name:|\n\S|$)/);
+  assert.ok(runBlockMatch, "release dispatch run block must exist");
+  assert.doesNotMatch(runBlockMatch[1], /\$\{\{\s*inputs\./, "untrusted workflow inputs must not be template-expanded into PowerShell");
+  assert.match(chain, /DX_RELEASE_REF:\s*\$\{\{ inputs\.ref \|\| 'main' \}\}/);
+  assert.match(chain, /DX_SIGN_WITH_SIGNPATH:/);
+  assert.match(runBlockMatch[1], /GetEnvironmentVariable\('DX_RELEASE_REF'\)/);
+  assert.match(runBlockMatch[1], /-Ref \$releaseRef/);
+
+  const dispatcher = read(".github/scripts/dispatch-windows-release-build.ps1");
+  assert.match(dispatcher, /Invalid release ref/);
+  assert.match(dispatcher, /\$Ref\.Contains\('\.\.'\)/);
+  assert.match(dispatcher, /gh workflow run build-windows-csharp\.yml/);
+});

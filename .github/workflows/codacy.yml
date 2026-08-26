@@ -55,21 +55,22 @@ jobs:
           max-allowed-issues: 2147483647
 
       # GitHub Security is for actionable security findings, not code-style debt.
-      # Filter Codacy SARIF before upload. The filter:
-      # - emits empty tombstone runs for Stylelint/JSHint and other quality-only tools
-      #   using the same automationDetails.id scheme as previous uploads, so old lint
-      #   alerts are automatically closed by GitHub Code Scanning;
-      # - keeps dedicated security scanners;
-      # - keeps only security-tagged/rule-metadata findings from mixed or unknown tools;
-      # - preserves GitHub's 5,000-results-per-run and 20-runs-per-file limits.
+      # Filter Codacy SARIF before upload. Current security findings use their own
+      # codacy-security/* category namespace. A separate 13-run legacy tombstone
+      # file reproduces the exact ff5ccb27 category IDs that originally uploaded
+      # Stylelint/JSHint/quality debt, allowing GitHub to close those old alerts.
+      # Dedicated security scanners remain intact; mixed analyzers keep only rules
+      # with explicit security metadata.
       - name: Filter Codacy SARIF for GitHub Security
         shell: bash
         run: |
           set -euo pipefail
           test -s results.sarif
-          node scripts/filter-codacy-sarif.js results.sarif results.security.sarif
+          node scripts/filter-codacy-sarif.js results.sarif results.security.sarif results.legacy-tombstones.sarif
           test -s results.security.sarif
+          test -s results.legacy-tombstones.sarif
           jq -e '.version and (.runs | type == "array") and (.runs | length > 0)' results.security.sarif >/dev/null
+          jq -e '.version and (.runs | type == "array") and (.runs | length == 13) and all(.runs[]; (.results | length) == 0)' results.legacy-tombstones.sarif >/dev/null
 
           run_count="$(jq '.runs | length' results.security.sarif)"
           max_results="$(jq '[.runs[].results | length] | max // 0' results.security.sarif)"
@@ -82,8 +83,15 @@ jobs:
           echo "Filtered Codacy SARIF runs: $run_count; max results/run: $max_results"
           jq -r '.runs[] | "\(.automationDetails.id) tool=\(.tool.driver.name // "tool") security-results=\(.results | length)"' results.security.sarif
 
-      # Upload the SARIF file generated in the previous step
-      - name: Upload SARIF results file
+      # First publish exact empty historical categories so the broad Stylelint,
+      # JSHint and other quality findings from ff5ccb27 are retired.
+      - name: Close legacy Codacy quality alerts
+        uses: github/codeql-action/upload-sarif@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4.37.4
+        with:
+          sarif_file: results.legacy-tombstones.sarif
+
+      # Current Codacy security findings live in a distinct stable namespace.
+      - name: Upload filtered Codacy security results
         uses: github/codeql-action/upload-sarif@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4.37.4
         with:
           sarif_file: results.security.sarif

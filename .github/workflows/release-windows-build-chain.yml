@@ -53,7 +53,13 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
+          DX_RELEASE_REF: ${{ inputs.ref || 'main' }}
+          DX_SIGN_WITH_SIGNPATH: ${{ inputs.sign_with_signpath && 'true' || 'false' }}
         run: |
+          $releaseRef = [Environment]::GetEnvironmentVariable('DX_RELEASE_REF')
+          $signWithSignPath = [System.Convert]::ToBoolean(
+            [Environment]::GetEnvironmentVariable('DX_SIGN_WITH_SIGNPATH')
+          )
           & '.github/scripts/dispatch-windows-release-build.ps1' `
-            -Ref '${{ inputs.ref || 'main' }}' `
-            -SignWithSignPath ([System.Convert]::ToBoolean('${{ inputs.sign_with_signpath || false }}'))
+            -Ref $releaseRef `
+            -SignWithSignPath $signWithSignPath

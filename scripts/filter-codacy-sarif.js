@@ -16,12 +16,37 @@ const DEDICATED_SECURITY_TOOL_RE = /(?:^|[\s._/-])(?:codeql|bandit|gosec|brakema
 
 const SECURITY_MARKER_RE = /(?:\bsecurity\b|vulnerab|cwe[-_:/ ]?\d+|\bowasp\b|\binjection\b|cross[- ]site|\bxss\b|\bcsrf\b|\bssrf\b|path traversal|directory traversal|hardcoded (?:secret|credential|password)|credential leak|secret leak|password hash|clear.?text|weak (?:hash|crypt|cipher)|insecure (?:hash|crypt|cipher)|command injection|command execution|remote code execution|\brce\b|prototype pollution|deseriali[sz]ation|open redirect|log injection|\bredos\b|regular expression denial|denial of service|\bxxe\b|xml external entit|sensitive (?:data|information)|auth(?:entication|orization)? bypass|access control|sql injection|ldap injection|nosql injection|template injection|unsafe deserial)/i;
 
+// Exact categories produced by commit ff5ccb27 (the historical broad Codacy
+// upload that populated GitHub Security with Stylelint/JSHint/quality debt).
+// Keep these empty tombstones for backward compatibility so GitHub can close
+// those legacy analyses even though current security findings use a new,
+// stable codacy-security/* namespace.
+const LEGACY_BROAD_CODACY_CATEGORIES = Object.freeze([
+  ['SQLint (reported by Codacy)', 'codacy/sqlint-reported-by-codacy-0/'],
+  ['Hadolint (reported by Codacy)', 'codacy/hadolint-reported-by-codacy-1/'],
+  ['CSSLint (reported by Codacy)', 'codacy/csslint-reported-by-codacy-2/'],
+  ['SonarCSharp (reported by Codacy)', 'codacy/sonarscharp-reported-by-codacy-3/'],
+  ['Remark-Lint (reported by Codacy)', 'codacy/remark-lint-reported-by-codacy-4/'],
+  ['JacksonLinter (reported by Codacy)', 'codacy/jacksonlinter-reported-by-codacy-5/'],
+  ['Stylelint (reported by Codacy)', 'codacy/stylelint-reported-by-codacy-6-part-1/'],
+  ['Stylelint (reported by Codacy)', 'codacy/stylelint-reported-by-codacy-6-part-2/'],
+  ['ShellCheck (reported by Codacy)', 'codacy/shellcheck-reported-by-codacy-7/'],
+  ['JSHint (reported by Codacy)', 'codacy/jshint-reported-by-codacy-8-part-1/'],
+  ['JSHint (reported by Codacy)', 'codacy/jshint-reported-by-codacy-8-part-2/'],
+  ['PSScriptAnalyzer (reported by Codacy)', 'codacy/psscriptanalyzer-reported-by-codacy-9/'],
+  ['TSqlLint (reported by Codacy)', 'codacy/tsqllint-reported-by-codacy-10/'],
+]);
+
 function slug(value) {
   const normalized = String(value || 'tool')
     .toLowerCase()
     .replace(/[^a-z0-9._-]+/g, '-')
     .replace(/^-+|-+$/g, '');
   return normalized || 'tool';
+}
+
+function canonicalToolSlug(name) {
+  return slug(String(name || 'tool').replace(/\s*\(reported by codacy\)\s*$/i, ''));
 }
 
 function isQualityOnlyTool(name) {
@@ -81,63 +106,83 @@ function filterCodacySarif(document) {
 
   const outputRuns = [];
   const summary = [];
+  const toolOccurrences = new Map();
   let sourceResults = 0;
   let uploadedResults = 0;
   let filteredResults = 0;
   let tombstoneRuns = 0;
 
-  document.runs.forEach((run, runIndex) => {
+  document.runs.forEach((run) => {
     const toolName = String(run?.tool?.driver?.name || 'tool');
     const source = Array.isArray(run?.results) ? run.results : [];
-    const chunkCount = Math.max(1, Math.ceil(source.length / MAX_RESULTS_PER_RUN));
     const qualityOnly = isQualityOnlyTool(toolName);
     const dedicatedSecurity = isDedicatedSecurityTool(toolName);
-    let toolUploaded = 0;
+    const toolSlug = canonicalToolSlug(toolName);
+    const occurrence = (toolOccurrences.get(toolSlug) || 0) + 1;
+    toolOccurrences.set(toolSlug, occurrence);
+    const occurrenceSuffix = occurrence > 1 ? `-${occurrence}` : '';
 
     sourceResults += source.length;
 
+    // Quality-only analyzers stay in Codacy and are omitted entirely from the
+    // current GitHub Security namespace. Historical categories are closed by
+    // buildLegacyCodacyTombstoneSarif() below.
+    if (qualityOnly) {
+      filteredResults += source.length;
+      summary.push({
+        tool: toolName,
+        mode: 'quality-only',
+        source: source.length,
+        uploaded: 0,
+        filtered: source.length,
+        chunks: 0,
+      });
+      return;
+    }
+
+    const kept = dedicatedSecurity ? source : source.filter((result) => isSecurityResult(run, result));
+    filteredResults += source.length - kept.length;
+    uploadedResults += kept.length;
+
+    // Keep one empty current-security run when an analyzer has no current
+    // security results. This closes a previously-open codacy-security category.
+    const chunkCount = Math.max(1, Math.ceil(kept.length / MAX_RESULTS_PER_RUN));
     for (let chunk = 0; chunk < chunkCount; chunk += 1) {
-      const chunkResults = source.slice(chunk * MAX_RESULTS_PER_RUN, (chunk + 1) * MAX_RESULTS_PER_RUN);
-      let kept;
-      if (qualityOnly) {
-        kept = [];
-      } else if (dedicatedSecurity) {
-        kept = chunkResults;
-      } else {
-        kept = chunkResults.filter((result) => isSecurityResult(run, result));
-      }
-
-      const automationDetails = {
-        ...(run.automationDetails || {}),
-        // Keep the exact category scheme used by the former normalizer. Empty
-        // runs therefore act as tombstones and close previously uploaded lint
-        // alerts instead of leaving 17k historical alerts stranded as "open".
-        id: `codacy/${slug(toolName)}-${runIndex}${chunkCount > 1 ? `-part-${chunk + 1}` : ''}/`,
-      };
-
+      const chunkResults = kept.slice(chunk * MAX_RESULTS_PER_RUN, (chunk + 1) * MAX_RESULTS_PER_RUN);
+      const id = `codacy-security/${toolSlug}${occurrenceSuffix}${chunkCount > 1 ? `-part-${chunk + 1}` : ''}/`;
       outputRuns.push({
         ...run,
-        results: kept,
-        automationDetails,
+        results: chunkResults,
+        automationDetails: {
+          ...(run.automationDetails || {}),
+          id,
+        },
       });
-
-      if (kept.length === 0 && chunkResults.length > 0) tombstoneRuns += 1;
-      toolUploaded += kept.length;
-      uploadedResults += kept.length;
-      filteredResults += chunkResults.length - kept.length;
+      if (chunkResults.length === 0) tombstoneRuns += 1;
     }
 
     summary.push({
       tool: toolName,
-      mode: qualityOnly ? 'quality-only' : (dedicatedSecurity ? 'security-tool' : 'metadata-filter'),
+      mode: dedicatedSecurity ? 'security-tool' : 'metadata-filter',
       source: source.length,
-      uploaded: toolUploaded,
-      filtered: source.length - toolUploaded,
+      uploaded: kept.length,
+      filtered: source.length - kept.length,
       chunks: chunkCount,
     });
   });
 
-  if (outputRuns.length === 0) throw new Error('Security SARIF contains no runs after filtering.');
+  // A SARIF file must contain at least one run. If Codacy emitted only quality
+  // analyzers, publish a harmless empty security namespace run rather than raw
+  // lint results.
+  if (outputRuns.length === 0) {
+    outputRuns.push({
+      tool: { driver: { name: 'Codacy Security Filter' } },
+      automationDetails: { id: 'codacy-security/empty/' },
+      results: [],
+    });
+    tombstoneRuns += 1;
+  }
+
   if (outputRuns.length > MAX_RUNS) {
     throw new Error(`Security SARIF contains ${outputRuns.length} runs; GitHub accepts at most ${MAX_RUNS} runs per SARIF file.`);
   }
@@ -157,15 +202,40 @@ function filterCodacySarif(document) {
   };
 }
 
+function buildLegacyCodacyTombstoneSarif(sourceDocument = {}) {
+  const version = typeof sourceDocument.version === 'string' && sourceDocument.version ? sourceDocument.version : '2.1.0';
+  const schema = sourceDocument.$schema;
+  const runs = LEGACY_BROAD_CODACY_CATEGORIES.map(([toolName, id]) => ({
+    tool: {
+      driver: {
+        name: toolName,
+        informationUri: 'https://www.codacy.com/',
+        rules: [],
+      },
+    },
+    automationDetails: { id },
+    results: [],
+  }));
+  return {
+    ...(schema ? { $schema: schema } : {}),
+    version,
+    runs,
+  };
+}
+
 function main(argv = process.argv.slice(2)) {
   const inputPath = path.resolve(argv[0] || 'results.sarif');
   const outputPath = path.resolve(argv[1] || 'results.security.sarif');
+  const legacyOutputPath = path.resolve(argv[2] || 'results.legacy-tombstones.sarif');
   const source = JSON.parse(fs.readFileSync(inputPath, 'utf8'));
   const filtered = filterCodacySarif(source);
+  const legacy = buildLegacyCodacyTombstoneSarif(source);
   fs.writeFileSync(outputPath, `${JSON.stringify(filtered.document, null, 2)}\n`, 'utf8');
+  fs.writeFileSync(legacyOutputPath, `${JSON.stringify(legacy, null, 2)}\n`, 'utf8');
 
   const { stats } = filtered;
   console.log(`Codacy SARIF security filter: source=${stats.sourceResults} upload=${stats.uploadedResults} filtered=${stats.filteredResults} runs=${stats.runCount} tombstones=${stats.tombstoneRuns}`);
+  console.log(`Codacy legacy cleanup tombstones: runs=${legacy.runs.length}`);
   for (const row of filtered.summary) {
     console.log(`  ${row.tool}: mode=${row.mode} source=${row.source} upload=${row.uploaded} filtered=${row.filtered} chunks=${row.chunks}`);
   }
@@ -183,9 +253,12 @@ if (require.main === module) {
 module.exports = {
   MAX_RESULTS_PER_RUN,
   MAX_RUNS,
+  LEGACY_BROAD_CODACY_CATEGORIES,
   slug,
+  canonicalToolSlug,
   isQualityOnlyTool,
   isDedicatedSecurityTool,
   isSecurityResult,
   filterCodacySarif,
+  buildLegacyCodacyTombstoneSarif,
 };

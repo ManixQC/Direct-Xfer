@@ -46,7 +46,7 @@ test('launcher preserves shell opening behavior required by modern .NET', () => 
 
 test('Windows workflow uses pinned .NET 10 SDK and dotnet publish instead of legacy MSBuild', () => {
   const workflow = read('.github/workflows/build-windows-csharp.yml');
-  assert.match(workflow, /actions\/setup-dotnet@v5/);
+  assert.match(workflow, /actions\/setup-dotnet@v6/);
   assert.match(workflow, /dotnet-version: '10\.0\.400'/);
   assert.match(workflow, /dotnet publish windows-server-host\\DirectXfer\.ServerHost\.csproj/);
   assert.match(workflow, /dotnet publish windows-launcher\\DirectXfer\.Launcher\.csproj/);

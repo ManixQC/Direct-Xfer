@@ -13,6 +13,12 @@ updates:
       timezone: "Etc/UTC"
     versioning-strategy: "increase"
     open-pull-requests-limit: 5
+    ignore:
+      # Express 5 is a framework migration (new path-to-regexp semantics), not a
+      # drop-in dependency update. Keep receiving patched Express 4.x updates.
+      - dependency-name: "express"
+        update-types:
+          - "version-update:semver-major"
     groups:
       npm-security:
         applies-to: "security-updates"

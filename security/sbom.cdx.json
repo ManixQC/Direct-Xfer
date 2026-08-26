@@ -5,7 +5,7 @@
   "serialNumber": "urn:uuid:132720a2-6431-4f85-90cf-9ca11ceaea0f",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-08-25T13:17:41Z",
+    "timestamp": "2026-08-26T13:32:48Z",
     "lifecycles": [
       {
         "phase": "build"
@@ -19,13 +19,13 @@
       }
     ],
     "component": {
-      "bom-ref": "direct-xfer@1.70.26",
+      "bom-ref": "direct-xfer@1.71.11",
       "type": "library",
       "name": "Direct-Xfer",
-      "version": "1.71.9",
+      "version": "1.71.11",
       "scope": "required",
       "description": "Direct-Xfer — direct HTTP file sharing, no third-party server. Web interface, revocable shares, automatic IP detection and port testing.",
-      "purl": "pkg:npm/direct-xfer@1.70.26",
+      "purl": "pkg:npm/direct-xfer@1.71.11",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -4769,14 +4769,14 @@
       ]
     },
     {
-      "bom-ref": "nodemailer@9.0.3",
+      "bom-ref": "nodemailer@9.0.5",
       "type": "library",
       "name": "nodemailer",
-      "version": "9.0.3",
+      "version": "9.0.5",
       "scope": "required",
       "author": "Andris Reinman",
       "description": "Easy as cake e-mail sending from your Node.js applications",
-      "purl": "pkg:npm/nodemailer@9.0.3",
+      "purl": "pkg:npm/nodemailer@9.0.5",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -4786,7 +4786,7 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/nodemailer/-/nodemailer-9.0.3.tgz"
+          "url": "https://registry.npmjs.org/nodemailer/-/nodemailer-9.0.5.tgz"
         },
         {
           "type": "vcs",
@@ -4804,7 +4804,7 @@
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "9fe60ff8d2b0479cd159aeb49371a243a4370782970a8030e3474029e0ad627d36d2234def86962b69625c80b7644013786aa5ef07b7b44dedf10c216347ac93"
+          "content": "c2f8e22af8dcce6b0ded4ffcd34e8939d5ee6e0064d971406e2a0331b4feb0cedc3ecd10ae12536ba281457ecfe511061a40dc2d4cff11aad689d6fc1bc0b58d"
         }
       ],
       "licenses": [
@@ -7297,12 +7297,12 @@
   ],
   "dependencies": [
     {
-      "ref": "direct-xfer@1.70.26",
+      "ref": "direct-xfer@1.71.11",
       "dependsOn": [
         "archiver@8.0.0",
         "express@4.22.2",
         "node-forge@1.4.0",
-        "nodemailer@9.0.3",
+        "nodemailer@9.0.5",
         "qrcode@1.5.4",
         "web-push@3.6.7"
       ]
@@ -7897,7 +7897,7 @@
       "dependsOn": []
     },
     {
-      "ref": "nodemailer@9.0.3",
+      "ref": "nodemailer@9.0.5",
       "dependsOn": []
     },
     {

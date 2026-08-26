@@ -1,5 +1,5 @@
 name: Build Direct-Xfer Windows C# + Installer
-run-name: v1.71.9
+run-name: v1.71.11
 
 on:
   workflow_dispatch:
@@ -41,7 +41,7 @@ jobs:
   build-windows:
     runs-on: windows-2025
     env:
-      DX_VERSION: '1.71.9'
+      DX_VERSION: '1.71.11'
       # Runtime identity is independent from the stable launcher component version.
       DX_RUNTIME_BUILD: 'runtime169'
       DX_LAUNCHER_COMPONENT_VERSION: '1.70.1'
@@ -54,7 +54,7 @@ jobs:
       INNO_VERSION: '6.7.3'
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.400'
           architecture: x64

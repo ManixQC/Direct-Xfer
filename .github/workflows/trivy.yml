@@ -1,0 +1,102 @@
+name: Trivy Security Scan
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+  schedule:
+    - cron: "23 5 * * *"
+
+permissions:
+  contents: read
+  security-events: write
+
+concurrency:
+  group: trivy-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  repository-scan:
+    name: Trivy repository scan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Scan repository
+        id: trivy-repository
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret,misconfig
+          severity: MEDIUM,HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: 1
+          format: sarif
+          output: trivy-repository.sarif
+          limit-severities-for-sarif: true
+
+      - name: Upload repository findings to code scanning
+        if: always() && hashFiles('trivy-repository.sarif') != ''
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-repository.sarif
+          category: trivy-repository
+
+      - name: Enforce repository scan
+        if: steps.trivy-repository.outcome == 'failure'
+        shell: bash
+        run: |
+          echo "Trivy found a MEDIUM, HIGH, or CRITICAL repository finding, or the scan failed."
+          exit 1
+
+  image-scan:
+    name: Trivy Docker image scan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Build Direct-Xfer image
+        shell: bash
+        run: docker build --pull --tag direct-xfer:trivy .
+
+      - name: Scan Docker image
+        id: trivy-image
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: direct-xfer:trivy
+          scanners: vuln,secret
+          severity: MEDIUM,HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: 1
+          format: sarif
+          output: trivy-image.sarif
+          limit-severities-for-sarif: true
+
+      - name: Upload image findings to code scanning
+        if: always() && hashFiles('trivy-image.sarif') != ''
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-image.sarif
+          category: trivy-image
+
+      - name: Enforce image scan
+        if: steps.trivy-image.outcome == 'failure'
+        shell: bash
+        run: |
+          echo "Trivy found a MEDIUM, HIGH, or CRITICAL image finding, or the scan failed."
+          exit 1

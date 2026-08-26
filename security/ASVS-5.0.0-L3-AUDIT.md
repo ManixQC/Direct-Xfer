@@ -3,16 +3,19 @@
 Audit date: 2026-08-26
 Target: OWASP Application Security Verification Standard 5.0.0, Level 3
 Repository: `ManixQC/Direct-Xfer`
-Release: Direct-Xfer `1.71.12`
+Release: Direct-Xfer `1.71.13`
 Baseline input: Direct-Xfer `1.70.26` ASVS-L3 release
 Detailed matrix: `security/ASVS-5.0.0-L3-MATRIX.md`
 
 ## Release verification result
 
-Direct-Xfer 1.71.12 consolidates the safe Dependabot maintenance updates without migrating the application to Express 5. Nodemailer is raised to 9.0.5, the Windows workflow adopts `actions/setup-dotnet@v6`, Codacy is advanced to the reviewed immutable action SHA, and Dependabot now ignores Express major-version updates while continuing to maintain the audited Express 4.x line. The fail-closed `npm audit` production gate remains at Moderate severity or higher. The ASVS status matrix is unchanged: 253 PASS / 92 N/A / 0 MANUAL / 0 PARTIAL / 0 FAIL / 0 REVIEW.
+Direct-Xfer 1.71.13 carries the reviewed 1.71.12 dependency/CI maintenance baseline and fixes the Trivy image-build blocker in the Tesseract source stage. Tesseract 5.5.3 is now fetched through its explicit annotated tag ref instead of being requested as a remote branch; the fetched tag is required to be an annotated tag and is peeled to the pinned release commit `db0ec62f81b0737fbbe184d8fea40af5738f8eef` before checkout. The fail-closed `npm audit` production gate remains at Moderate severity or higher. The ASVS status matrix is unchanged: 253 PASS / 92 N/A / 0 MANUAL / 0 PARTIAL / 0 FAIL / 0 REVIEW.
 
-### 1.71.12 supply-chain CI hardening
+### 1.71.13 supply-chain CI hardening
 
+- Fixed the Docker/Trivy image build failure caused by `git clone --branch 5.5.3` treating the Tesseract release name as a remote branch. The builder now initializes a repository, fetches the exact `refs/tags/5.5.3` ref, verifies that the fetched object is an annotated tag, verifies its peeled commit against the pinned release SHA, and checks out that exact commit.
+- The upstream `5.5.3` tag object is `6951ffe10ce031374bcd04fe400811da1e7e04ad` and peels to commit `db0ec62f81b0737fbbe184d8fea40af5738f8eef`; the Dockerfile remains commit-pinned and does not trust a moving branch.
+- Converted the prior `1.71.12` release-maintenance test into a historical invariant and added a `1.71.13` release test, preventing another version bump from failing CI because an old exact-version assertion remained active.
 - Nodemailer is raised from `^9.0.3` / resolved `9.0.3` to `^9.0.5` / resolved `9.0.5`; the lockfile uses the reviewed registry URL and integrity digest.
 - Express deliberately remains on `^4.22.2` / resolved `4.22.2`. Dependabot ignores `version-update:semver-major` for Express because Express 5 changes route parsing semantics and requires a separate framework migration audit.
 - The Windows build workflow adopts `actions/setup-dotnet@v6`; the corresponding regression assertion is synchronized to v6.
@@ -21,7 +24,7 @@ Direct-Xfer 1.71.12 consolidates the safe Dependabot maintenance updates without
 - Added `.github/workflows/npm-audit.yml` with a daily advisory refresh and push/PR checks for `package.json`/`package-lock.json`; the gate is read-only and fails on Moderate, High or Critical production advisories.
 - The Windows release workflow uses the same `npm audit --omit=dev --audit-level=moderate` threshold before building artifacts.
 - Removed two unconfigured third-party starter workflows so unavailable external services no longer create unrelated red CI runs.
-- Application/package metadata is synchronized to `1.71.12`, with PWA generation `pwa475` and cache-buster `v=456`. OAuth broker metadata, Windows workflow artifacts, SBOM and ASVS release evidence are synchronized to the release.
+- Application/package metadata is synchronized to `1.71.13`, with PWA generation `pwa476` and cache-buster `v=457`. OAuth broker metadata, Windows workflow artifacts, SBOM and ASVS release evidence are synchronized to the release.
 - The Windows ServerHost critical-runtime manifest was resynchronized for all source-resident entries changed by this release; the build-time Express package entry remains tied to the unchanged resolved `4.22.2` package.
 
 ### 1.71.8 dependency floor hardening
@@ -66,13 +69,13 @@ Direct-Xfer 1.70.26 closes the 26 deployment-bound `MANUAL` rows from 1.70.25 wi
 
 Repository/release gates completed for this candidate:
 
-- Release-targeted regression suite: **70 passed, 0 failed, 0 skipped**, covering dependency floors, npm-audit CI, version/PWA synchronization, Windows metadata and SignPath release invariants.
+- Release-targeted regression suite: **79 passed, 0 failed, 0 skipped**, covering dependency floors, npm-audit CI, version/PWA synchronization, Windows metadata and SignPath release invariants.
 - Full current regression tree: **CI REQUIRED** after `npm ci`; this source ZIP intentionally excludes `node_modules`, so the local packaging sandbox could not complete `npm ci` because registry access timed out; the complete dependency-backed suite remains a CI gate.
 - Static ASVS audit: **PASS** — 127 production JavaScript source files, 13 reviewed decoder sites.
 - PARTIAL-closure audit: **PASS** — 127 production JavaScript source files, 38 repository-verifiable controls, 0 blocking findings.
-- Security inventory regenerated for 1.71.12 — **963 entries**.
+- Security inventory regenerated for 1.71.13 — **967 entries**.
 - Windows ServerHost critical runtime manifest: **103 entries, 0 stale source-resident hashes** after final synchronization; the missing build-time Express entry remains pinned by `package-lock.json` to 4.22.2.
-- CycloneDX SBOM root component synchronized to 1.71.12.
+- CycloneDX SBOM root component synchronized to 1.71.13.
 
 This document is an implementation/evidence audit, not a third-party certification. A production installation can operate in `ASVS_L3_MODE=true` only while all mandatory runtime controls and the signed deployment evidence are valid.
 
@@ -148,8 +151,8 @@ The direct dependency graph remains lockfile-pinned. V15.2.1 is no longer an ope
 
 ## Final release gates
 
-- [x] package and lockfile version synchronized to 1.71.12.
-- [x] PWA version/cache generation synchronized to 1.71.12 / pwa475.
+- [x] package and lockfile version synchronized to 1.71.13.
+- [x] PWA version/cache generation synchronized to 1.71.13 / pwa476.
 - [x] ASVS regression suite green (96/96).
 - [x] Complete current test tree green (1139/1139 across 190 files).
 - [x] Static ASVS audit green.
@@ -157,7 +160,7 @@ The direct dependency graph remains lockfile-pinned. V15.2.1 is no longer an ope
 - [x] Security inventory regenerated.
 - [x] Windows runtime integrity manifest synchronized and rechecked.
 - [x] Matrix has 0 MANUAL, 0 PARTIAL, 0 FAIL and 0 REVIEW.
-- [x] SBOM root component synchronized to 1.71.12.
+- [x] SBOM root component synchronized to 1.71.13.
 - [x] Former operator-declared manual-attestation flags removed from the L3 configuration surface.
 
 Independent review of N/A decisions, production evidence collection and a focused penetration test remain appropriate before making an external certification/compliance representation.

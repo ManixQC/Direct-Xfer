@@ -80,9 +80,14 @@ RUN apt-get update \
     ninja-build \
     pkg-config \
   && rm -rf /var/lib/apt/lists/*
-RUN mkdir -p /out \
-  && git clone --depth=1 --branch "${DX_TESSERACT_BUILD_VERSION}" \
-       https://github.com/tesseract-ocr/tesseract.git /src/tesseract \
+RUN mkdir -p /out /src/tesseract \
+  && git -C /src/tesseract init \
+  && git -C /src/tesseract remote add origin https://github.com/tesseract-ocr/tesseract.git \
+  && git -C /src/tesseract fetch --depth=1 origin \
+       "refs/tags/${DX_TESSERACT_BUILD_VERSION}:refs/tags/${DX_TESSERACT_BUILD_VERSION}" \
+  && test "$(git -C /src/tesseract cat-file -t refs/tags/${DX_TESSERACT_BUILD_VERSION})" = "tag" \
+  && test "$(git -C /src/tesseract rev-parse refs/tags/${DX_TESSERACT_BUILD_VERSION}^{commit})" = "${DX_TESSERACT_BUILD_COMMIT}" \
+  && git -C /src/tesseract checkout --detach "refs/tags/${DX_TESSERACT_BUILD_VERSION}^{commit}" \
   && test "$(git -C /src/tesseract rev-parse HEAD)" = "${DX_TESSERACT_BUILD_COMMIT}" \
   && test "$(cat /src/tesseract/VERSION)" = "${DX_TESSERACT_BUILD_VERSION}"
 WORKDIR /src/tesseract

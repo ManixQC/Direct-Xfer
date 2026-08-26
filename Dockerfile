@@ -80,14 +80,12 @@ RUN apt-get update \
     ninja-build \
     pkg-config \
   && rm -rf /var/lib/apt/lists/*
-RUN mkdir -p /src/tesseract /out \
-  && cd /src/tesseract \
-  && git init \
-  && git remote add origin https://github.com/tesseract-ocr/tesseract.git \
-  && git fetch --depth=1 origin "${DX_TESSERACT_BUILD_COMMIT}" \
-  && git checkout --detach FETCH_HEAD \
-  && test "$(git rev-parse HEAD)" = "${DX_TESSERACT_BUILD_COMMIT}" \
-  && test "$(cat VERSION)" = "${DX_TESSERACT_BUILD_VERSION}"
+RUN mkdir -p /out \
+  && git clone --depth=1 --branch "${DX_TESSERACT_BUILD_VERSION}" \
+       https://github.com/tesseract-ocr/tesseract.git /src/tesseract \
+  && test "$(git -C /src/tesseract rev-parse HEAD)" = "${DX_TESSERACT_BUILD_COMMIT}" \
+  && test "$(cat /src/tesseract/VERSION)" = "${DX_TESSERACT_BUILD_VERSION}"
+WORKDIR /src/tesseract
 RUN cmake -S /src/tesseract -B /src/tesseract/build -G Ninja \
       -DCMAKE_BUILD_TYPE=Release \
       -DBUILD_SHARED_LIBS=OFF \

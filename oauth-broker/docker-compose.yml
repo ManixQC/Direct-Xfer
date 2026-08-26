@@ -11,4 +11,7 @@ services:
       # Recommended: set a long random value and keep it backed up.
       DIRECT_XFER_OAUTH_BROKER_DATA_KEY: "CHANGE_ME_TO_A_LONG_RANDOM_SECRET"
     volumes:
-      - ./data:/data
+      - direct-xfer-oauth-broker-data:/data
+
+volumes:
+  direct-xfer-oauth-broker-data:

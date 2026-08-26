@@ -24,9 +24,12 @@ function runtimeInstallBlock() {
 test('1.71.12 builds Tesseract 5.5.3 from the exact signed-release commit with optional surfaces disabled', () => {
   assert.match(dockerfile, /ARG DX_TESSERACT_BUILD_VERSION=5\.5\.3/);
   assert.match(dockerfile, /ARG DX_TESSERACT_BUILD_COMMIT=db0ec62f81b0737fbbe184d8fea40af5738f8eef/);
-  assert.match(dockerfile, /git fetch --depth=1 origin "\$\{DX_TESSERACT_BUILD_COMMIT\}"/);
-  assert.match(dockerfile, /test "\$\(git rev-parse HEAD\)" = "\$\{DX_TESSERACT_BUILD_COMMIT\}"/);
-  assert.match(dockerfile, /test "\$\(cat VERSION\)" = "\$\{DX_TESSERACT_BUILD_VERSION\}"/);
+  assert.match(dockerfile, /git clone --depth=1 --branch "\$\{DX_TESSERACT_BUILD_VERSION\}"/);
+  assert.match(dockerfile, /https:\/\/github\.com\/tesseract-ocr\/tesseract\.git \/src\/tesseract/);
+  assert.match(dockerfile, /test "\$\(git -C \/src\/tesseract rev-parse HEAD\)" = "\$\{DX_TESSERACT_BUILD_COMMIT\}"/);
+  assert.match(dockerfile, /test "\$\(cat \/src\/tesseract\/VERSION\)" = "\$\{DX_TESSERACT_BUILD_VERSION\}"/);
+  assert.match(dockerfile, /WORKDIR \/src\/tesseract/);
+  assert.doesNotMatch(dockerfile, /&&\s+cd \/src\/tesseract/);
   assert.match(dockerfile, /-DBUILD_SHARED_LIBS=OFF/);
   assert.match(dockerfile, /-DBUILD_TRAINING_TOOLS=OFF/);
   assert.match(dockerfile, /-DGRAPHICS_DISABLED=ON/);
@@ -86,5 +89,17 @@ test('1.71.12 Trivy produces a complete report but gates only fixable, VEX-revie
   assert.match(trivy, /actions\/upload-artifact@v7/);
   assert.match(trivy, /github\/codeql-action\/upload-sarif@v4/);
   assert.match(trivy, /docker build --pull --platform=linux\/amd64/);
+  assert.match(trivy, /Upload image Trivy reports[\s\S]*?hashFiles\('trivy-image-full\.json'\)/);
   assert.match(trivy, /\.Architecture}}'\)" = "amd64"/);
+});
+
+
+test('1.71.12 OAuth broker image runs as the unprivileged node user with writable persistent data', () => {
+  const broker = read('oauth-broker/Dockerfile');
+  const compose = read('oauth-broker/docker-compose.yml');
+  assert.match(broker, /COPY --chown=node:node server\.js \.\/server\.js/);
+  assert.match(broker, /install -d -o node -g node -m 0700 \/data/);
+  assert.match(broker, /^USER node$/m);
+  assert.match(compose, /direct-xfer-oauth-broker-data:\/data/);
+  assert.match(compose, /^volumes:\n  direct-xfer-oauth-broker-data:$/m);
 });

@@ -36,6 +36,7 @@ Only the central broker stores the Google Web client secret and Google refresh t
 - Session poll tokens are short-lived and never sent to the browser.
 - Rate limits are applied to session creation and token refresh.
 - Use HTTPS in production and persist `/data` plus `DIRECT_XFER_OAUTH_BROKER_DATA_KEY`.
+- The container runs as the unprivileged `node` user. The provided Compose file uses a named volume whose `/data` ownership is initialized safely by the image. If you replace it with a host bind mount, create that directory first and grant it to UID/GID 1000 so the broker can persist its encrypted state without running as root.
 
 ## Production checklist for the public Google broker
 

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-26T14:40:12.572Z",
+  "generatedAt": "2026-08-26T14:56:59.208Z",
   "version": "1.71.12",
   "categories": {
     "crypto": [
@@ -3503,6 +3503,16 @@
         "text": "assert.match(app, /fetch\\('\\/api\\/session'/);"
       },
       {
+        "file": "test/release-maintenance-1.71.11.test.js",
+        "line": 16,
+        "text": "assert.equal(pkg.dependencies.nodemailer, '^9.0.5');"
+      },
+      {
+        "file": "test/release-maintenance-1.71.11.test.js",
+        "line": 17,
+        "text": "assert.equal(lock.packages['node_modules/nodemailer'].version, '9.0.5');"
+      },
+      {
         "file": "test/release-maintenance-1.71.12.test.js",
         "line": 17,
         "text": "assert.equal(pkg.dependencies.nodemailer, '^9.0.5');"
@@ -3706,11 +3716,6 @@
         "file": "test/system-health-reverse-proxy-scheme-1.70.29.test.js",
         "line": 90,
         "text": "const response = await fetch(`${base}/api/server-health-dashboard`, {"
-      },
-      {
-        "file": "test/trivy-container-hardening-1.71.12.test.js",
-        "line": 27,
-        "text": "assert.match(dockerfile, /git fetch --depth=1 origin \"\\$\\{DX_TESSERACT_BUILD_COMMIT\\}\"/);"
       },
       {
         "file": "test/windows-signpath-readiness-1.69.3.test.js",

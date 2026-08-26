@@ -19,7 +19,7 @@ function count(source, expression) {
   return [...source.matchAll(expression)].length;
 }
 
-test('1.71.11 SignPath executable configuration uses one release ProductVersion for every Direct-Xfer binary', () => {
+test('1.71.12 SignPath executable configuration uses one release ProductVersion for every Direct-Xfer binary', () => {
   assert.match(executablesConfig, /<parameter name="version" required="true"\s*\/>/);
   assert.match(executablesConfig, /<parameter name="launcherFileVersion" required="true"\s*\/>/);
   assert.match(executablesConfig, /<parameter name="serverHostFileVersion" required="true"\s*\/>/);
@@ -33,8 +33,8 @@ test('1.71.11 SignPath executable configuration uses one release ProductVersion 
   assert.match(executablesConfig, /path="server-host\/Direct-Xfer\.ServerHost\.exe"/);
 });
 
-test('1.71.11 Windows CI builds SignPath inputs with release ProductVersion and component FileVersion checks', () => {
-  assert.match(workflow, /DX_VERSION: '1\.71\.11'/);
+test('1.71.12 Windows CI builds SignPath inputs with release ProductVersion and component FileVersion checks', () => {
+  assert.match(workflow, /DX_VERSION: '1\.71\.12'/);
   assert.equal(count(workflow, /-p:InformationalVersion=\$env:DX_VERSION/g), 3);
   assert.match(workflow, /ProductVersion -ne \$env:DX_VERSION/);
   assert.match(workflow, /DX_LAUNCHER_COMPONENT_VERSION\.0/);
@@ -79,6 +79,6 @@ test('Foundation public policy, privacy display and uninstall requirements stay 
   assert.match(installer, /Uninstallable=yes/);
   assert.match(installer, /Name: "updatecheck"/);
   assert.match(installer, /Name: "publicip"/);
-  assert.match(installer, /#define AppVersion "1\.71\.11"/);
-  assert.match(installer, /#define SourceDir "\.\.\\dist\\Direct-Xfer-1\.71\.11-Windows-CSharp"/);
+  assert.match(installer, /#define AppVersion "1\.71\.12"/);
+  assert.match(installer, /#define SourceDir "\.\.\\dist\\Direct-Xfer-1\.71\.12-Windows-CSharp"/);
 });

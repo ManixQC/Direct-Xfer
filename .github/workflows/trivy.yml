@@ -19,26 +19,56 @@ concurrency:
   group: trivy-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  TRIVY_ENGINE_VERSION: v0.74.0
+
 jobs:
   repository-scan:
     name: Trivy repository scan
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 25
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      - name: Scan repository
-        id: trivy-repository
-        continue-on-error: true
+      - name: Generate complete repository report
         uses: aquasecurity/trivy-action@v0.36.0
         with:
+          version: ${{ env.TRIVY_ENGINE_VERSION }}
           scan-type: fs
           scan-ref: .
           scanners: vuln,secret,misconfig
           severity: MEDIUM,HIGH,CRITICAL
           ignore-unfixed: false
+          exit-code: 0
+          format: json
+          output: trivy-repository-full.json
+
+      - name: Print complete repository findings
+        shell: bash
+        run: |
+          trivy convert \
+            --format table \
+            --severity MEDIUM,HIGH,CRITICAL \
+            --scanners vuln,misconfig,secret \
+            trivy-repository-full.json | tee trivy-repository-full.txt
+
+      - name: Scan actionable repository findings
+        id: trivy-repository-gate
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@v0.36.0
+        env:
+          TRIVY_VEX: security/openvex.json
+          TRIVY_SHOW_SUPPRESSED: "true"
+        with:
+          version: ${{ env.TRIVY_ENGINE_VERSION }}
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret,misconfig
+          severity: MEDIUM,HIGH,CRITICAL
+          ignore-unfixed: true
+          trivyignores: .trivyignore.yaml
           exit-code: 1
           format: sarif
           output: trivy-repository.sarif
@@ -52,35 +82,75 @@ jobs:
           sarif_file: trivy-repository.sarif
           category: trivy-repository
 
-      - name: Enforce repository scan
-        if: steps.trivy-repository.outcome == 'failure'
+      - name: Upload repository Trivy reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: trivy-repository-reports
+          path: |
+            trivy-repository-full.json
+            trivy-repository-full.txt
+            trivy-repository.sarif
+          if-no-files-found: warn
+
+      - name: Enforce actionable repository scan
+        if: steps.trivy-repository-gate.outcome == 'failure'
         shell: bash
         run: |
-          echo "Trivy found a MEDIUM, HIGH, or CRITICAL repository finding, or the scan failed."
+          echo "Trivy found an actionable MEDIUM, HIGH, or CRITICAL repository finding, or the gate scan failed."
+          echo "The complete report remains available in the trivy-repository-reports artifact."
           exit 1
 
   image-scan:
     name: Trivy Docker image scan
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 55
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      - name: Build Direct-Xfer image
+      - name: Build Direct-Xfer amd64 image
         shell: bash
-        run: docker build --pull --tag direct-xfer:trivy .
+        run: |
+          docker build --pull --platform=linux/amd64 --tag direct-xfer:trivy .
+          test "$(docker image inspect direct-xfer:trivy --format '{{.Architecture}}')" = "amd64"
 
-      - name: Scan Docker image
-        id: trivy-image
-        continue-on-error: true
+      - name: Generate complete image report
         uses: aquasecurity/trivy-action@v0.36.0
         with:
+          version: ${{ env.TRIVY_ENGINE_VERSION }}
           image-ref: direct-xfer:trivy
           scanners: vuln,secret
           severity: MEDIUM,HIGH,CRITICAL
           ignore-unfixed: false
+          exit-code: 0
+          format: json
+          output: trivy-image-full.json
+
+      - name: Print complete image findings
+        shell: bash
+        run: |
+          trivy convert \
+            --format table \
+            --severity MEDIUM,HIGH,CRITICAL \
+            --scanners vuln,secret \
+            trivy-image-full.json | tee trivy-image-full.txt
+
+      - name: Scan actionable image findings
+        id: trivy-image-gate
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@v0.36.0
+        env:
+          TRIVY_VEX: security/openvex.json
+          TRIVY_SHOW_SUPPRESSED: "true"
+        with:
+          version: ${{ env.TRIVY_ENGINE_VERSION }}
+          image-ref: direct-xfer:trivy
+          scanners: vuln,secret
+          severity: MEDIUM,HIGH,CRITICAL
+          ignore-unfixed: true
+          trivyignores: .trivyignore.yaml
           exit-code: 1
           format: sarif
           output: trivy-image.sarif
@@ -94,9 +164,21 @@ jobs:
           sarif_file: trivy-image.sarif
           category: trivy-image
 
-      - name: Enforce image scan
-        if: steps.trivy-image.outcome == 'failure'
+      - name: Upload image Trivy reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: trivy-image-reports
+          path: |
+            trivy-image-full.json
+            trivy-image-full.txt
+            trivy-image.sarif
+          if-no-files-found: warn
+
+      - name: Enforce actionable image scan
+        if: steps.trivy-image-gate.outcome == 'failure'
         shell: bash
         run: |
-          echo "Trivy found a MEDIUM, HIGH, or CRITICAL image finding, or the scan failed."
+          echo "Trivy found an actionable MEDIUM, HIGH, or CRITICAL image finding, or the gate scan failed."
+          echo "The complete report remains available in the trivy-image-reports artifact."
           exit 1

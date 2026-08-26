@@ -1,0 +1,11 @@
+misconfigurations:
+  - id: AVD-DS-0002
+    paths:
+      - Dockerfile
+    expired_at: 2027-02-26
+    statement: >-
+      Direct-Xfer must start as root only long enough to chown user-provided bind mounts.
+      The generated entrypoint validates canonical non-root PUID/PGID values, clears
+      supplementary groups and the capability bounding set, enables no-new-privs, and
+      execs Node through setpriv before the application starts. A static USER directive
+      would break first-run ownership repair for Unraid and other host bind mounts.

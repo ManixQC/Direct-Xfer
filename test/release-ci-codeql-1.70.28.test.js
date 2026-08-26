@@ -15,7 +15,7 @@ function temp(t) {
   return dir;
 }
 
-test('1.71.11 launches JavaScript crypto providers through Node for Windows execFile compatibility', (t) => {
+test('1.71.12 launches JavaScript crypto providers through Node for Windows execFile compatibility', (t) => {
   const providerFile = writeFakeProvider(temp(t));
   const calls = [];
   const provider = createExternalCryptoProvider({
@@ -31,7 +31,7 @@ test('1.71.11 launches JavaScript crypto providers through Node for Windows exec
   assert.deepEqual(calls[0].args, [providerFile]);
 });
 
-test('1.71.11 static regex inventory avoids the CodeQL exponential-backtracking pattern', () => {
+test('1.71.12 static regex inventory avoids the CodeQL exponential-backtracking pattern', () => {
   const source = fs.readFileSync(path.join(ROOT, 'scripts', 'asvs-static-audit.js'), 'utf8');
   const vulnerable = String.raw`\/(?:\\.|\[(?:\\.|[^\]\\])*\]|[^/\n\\])+\/[dgimsuvy]*`;
   assert.equal(source.includes(vulnerable), false);

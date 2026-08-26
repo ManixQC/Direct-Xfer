@@ -60,6 +60,55 @@ RUN go version /out/rclone | tee /out/rclone-go-version.txt \
   && test -s /out/rclone-version.txt \
   && test -s /out/rclone-build-manifest.txt
 
+# Tesseract 5.5.3 contains the upstream fixes for the July/August 2026
+# traineddata memory-safety advisories. Debian 13 currently ships 5.5.0, so
+# build the signed-release commit directly and copy only the production OCR
+# executable into the final image. Training, graphics, libarchive and libcurl
+# support are intentionally disabled because Direct-Xfer does not use them.
+ARG DX_TESSERACT_BUILD_VERSION=5.5.3
+ARG DX_TESSERACT_BUILD_COMMIT=db0ec62f81b0737fbbe184d8fea40af5738f8eef
+FROM node:22-trixie-slim AS tesseract-builder
+ARG DX_TESSERACT_BUILD_VERSION
+ARG DX_TESSERACT_BUILD_COMMIT
+RUN apt-get update \
+  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    ca-certificates \
+    cmake \
+    g++ \
+    git \
+    libleptonica-dev \
+    ninja-build \
+    pkg-config \
+  && rm -rf /var/lib/apt/lists/*
+RUN mkdir -p /src/tesseract /out \
+  && cd /src/tesseract \
+  && git init \
+  && git remote add origin https://github.com/tesseract-ocr/tesseract.git \
+  && git fetch --depth=1 origin "${DX_TESSERACT_BUILD_COMMIT}" \
+  && git checkout --detach FETCH_HEAD \
+  && test "$(git rev-parse HEAD)" = "${DX_TESSERACT_BUILD_COMMIT}" \
+  && test "$(cat VERSION)" = "${DX_TESSERACT_BUILD_VERSION}"
+RUN cmake -S /src/tesseract -B /src/tesseract/build -G Ninja \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DBUILD_SHARED_LIBS=OFF \
+      -DBUILD_TRAINING_TOOLS=OFF \
+      -DBUILD_TESTS=OFF \
+      -DGRAPHICS_DISABLED=ON \
+      -DDISABLE_ARCHIVE=ON \
+      -DDISABLE_CURL=ON \
+      -DOPENMP_BUILD=OFF \
+      -DENABLE_NATIVE=OFF \
+      -DENABLE_CCACHE=OFF \
+      -DENABLE_PRECOMPILED_HEADERS=OFF \
+  && cmake --build /src/tesseract/build --target tesseract --parallel "$(nproc)" \
+  && cp /src/tesseract/build/bin/tesseract /out/tesseract \
+  && strip /out/tesseract \
+  && /out/tesseract --version | head -n 1 | grep -Fx "tesseract ${DX_TESSERACT_BUILD_VERSION}" \
+  && cp /src/tesseract/LICENSE /out/tesseract-LICENSE \
+  && printf 'tesseract=%s\ncommit=%s\nshared=off\ntraining=off\ngraphics=off\narchive=off\ncurl=off\n' \
+       "${DX_TESSERACT_BUILD_VERSION}" "${DX_TESSERACT_BUILD_COMMIT}" \
+       > /out/tesseract-build-manifest.txt
+
 FROM node:22-trixie-slim AS dependencies
 
 WORKDIR /app
@@ -73,6 +122,8 @@ FROM node:22-trixie-slim
 ARG DX_RCLONE_BUILD_VERSION
 ARG DX_RCLONE_GO_BUILD_VERSION
 ARG DX_RCLONE_X_IMAGE_VERSION
+ARG DX_TESSERACT_BUILD_VERSION
+ARG DX_TESSERACT_BUILD_COMMIT
 
 WORKDIR /app
 
@@ -80,36 +131,45 @@ COPY --from=rclone-builder /out/rclone /usr/local/bin/rclone
 COPY third_party/rclone/COPYING /usr/share/doc/direct-xfer/rclone-COPYING
 COPY --from=rclone-builder /out/rclone-buildinfo.txt /usr/share/doc/direct-xfer/rclone-buildinfo.txt
 COPY --from=rclone-builder /out/rclone-build-manifest.txt /usr/share/doc/direct-xfer/rclone-build-manifest.txt
+COPY --from=tesseract-builder /out/tesseract /usr/local/bin/tesseract
+COPY --from=tesseract-builder /out/tesseract-LICENSE /usr/share/doc/direct-xfer/tesseract-LICENSE
+COPY --from=tesseract-builder /out/tesseract-build-manifest.txt /usr/share/doc/direct-xfer/tesseract-build-manifest.txt
 
-# Pull all Debian security updates before installing the OCR/PDF runtime. The
-# installed giflib package must include Debian's CVE-2026-23868/26740 backport.
-# Direct-Xfer only invokes tesseract, pdftotext and pdftoppm; pdftocairo and the
-# Tesseract training renderer text2image are removed because their Cairo paths
-# are unnecessary and are the only paths relevant to CVE-2025-50422 here.
+# Pull all Debian security updates before installing the OCR/PDF runtime.
+# Tesseract itself is NOT installed from Debian: the final image receives the
+# pinned 5.5.3 executable from tesseract-builder above. Only distro language
+# data and the minimal Leptonica runtime are installed here. This avoids the
+# large Cairo/Pango/ICU/curl/archive dependency set that Debian's tesseract-ocr
+# binary would otherwise add. Poppler remains for pdftotext/pdftoppm only.
 # npm/corepack are build tools, not runtime dependencies; removing them from the
 # final image drops their global dependency tree and its avoidable CVE surface.
 RUN apt-get update \
   && DEBIAN_FRONTEND=noninteractive apt-get dist-upgrade -y \
   && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     ca-certificates \
+    libleptonica6 \
     poppler-utils \
-    util-linux \
-    tesseract-ocr \
     tesseract-ocr-eng \
     tesseract-ocr-fra \
+    tesseract-ocr-osd \
     tesseract-ocr-spa \
+    util-linux \
   && update-ca-certificates \
   && test -s /etc/ssl/certs/ca-certificates.crt \
+  && ! dpkg-query -W tesseract-ocr >/dev/null 2>&1 \
+  && ! dpkg-query -W libtesseract5 >/dev/null 2>&1 \
   && giflib_version="$(dpkg-query -W -f='${Version}' libgif7)" \
   && dpkg --compare-versions "$giflib_version" ge '5.2.2-1+deb13u1' \
   && mkdir -p /usr/share/doc/direct-xfer \
   && dpkg-query -W -f='${Package}\t${Version}\n' \
-    ca-certificates libcairo2 libgif7 libnss3 poppler-utils tesseract-ocr util-linux \
+    ca-certificates libgif7 libleptonica6 libnss3 poppler-utils util-linux \
     > /usr/share/doc/direct-xfer/os-packages.tsv \
-  && rm -f /usr/bin/pdftocairo /usr/bin/text2image \
-  && test ! -e /usr/bin/pdftocairo \
-  && test ! -e /usr/bin/text2image \
-  && tesseract --version >/dev/null \
+  && rm -f /usr/bin/pdfattach /usr/bin/pdfdetach /usr/bin/pdffonts /usr/bin/pdfimages \
+    /usr/bin/pdfinfo /usr/bin/pdfseparate /usr/bin/pdfsig /usr/bin/pdftocairo /usr/bin/pdfunite \
+    /usr/bin/text2image \
+  && for unused in pdfattach pdfdetach pdffonts pdfimages pdfinfo pdfseparate pdfsig pdftocairo pdfunite text2image; do test ! -e "/usr/bin/$unused"; done \
+  && TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata tesseract --version | head -n 1 | grep -Fx "tesseract ${DX_TESSERACT_BUILD_VERSION}" \
+  && for lang in eng fra osd spa; do TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata tesseract --list-langs 2>/dev/null | grep -Fx "$lang" >/dev/null; done \
   && pdftotext -v >/dev/null 2>&1 \
   && pdftoppm -v >/dev/null 2>&1 \
   && setpriv --version >/dev/null \
@@ -118,8 +178,11 @@ RUN apt-get update \
   && grep -Fx "rclone=${DX_RCLONE_BUILD_VERSION}" /usr/share/doc/direct-xfer/rclone-build-manifest.txt >/dev/null \
   && grep -Fx "go=go${DX_RCLONE_GO_BUILD_VERSION}" /usr/share/doc/direct-xfer/rclone-build-manifest.txt >/dev/null \
   && grep -Fx "x-image=${DX_RCLONE_X_IMAGE_VERSION}" /usr/share/doc/direct-xfer/rclone-build-manifest.txt >/dev/null \
+  && grep -Fx "tesseract=${DX_TESSERACT_BUILD_VERSION}" /usr/share/doc/direct-xfer/tesseract-build-manifest.txt >/dev/null \
+  && grep -Fx "commit=${DX_TESSERACT_BUILD_COMMIT}" /usr/share/doc/direct-xfer/tesseract-build-manifest.txt >/dev/null \
   && test -s /usr/share/doc/direct-xfer/rclone-COPYING \
   && test -s /usr/share/doc/direct-xfer/rclone-buildinfo.txt \
+  && test -s /usr/share/doc/direct-xfer/tesseract-LICENSE \
   && rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
   && rm -f /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack \
     /usr/local/bin/pnpm /usr/local/bin/yarn \
@@ -145,6 +208,7 @@ ENV HOST_ROOT=/host \
     DATA_DIR=/data \
     IMAGES_DIR=/Images \
     INBOX_DIR=/Direct-Xfer \
+    TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata \
     PORT=55750 \
     NODE_ENV=production
 VOLUME ["/data", "/Images"]

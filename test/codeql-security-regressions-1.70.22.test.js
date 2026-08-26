@@ -80,12 +80,12 @@ test('PWA security hotfix advances the shell and login cache generations without
   const loginHtml = read('pwa/login.html');
   const standardHtml = read('public/index.html');
   const bridgeHtml = read('public/oauth-bridge.html');
-  assert.match(sw, /2026\.08\.26-pwa474/);
-  assert.match(sw, /app\.js\?v=455/);
-  assert.match(app, /APP_VERSION = '1\.71\.11'/);
-  assert.match(app, /APP_BUILD = '2026\.08\.26-pwa474'/);
+  assert.match(sw, /2026\.08\.26-pwa475/);
+  assert.match(sw, /app\.js\?v=456/);
+  assert.match(app, /APP_VERSION = '1\.71\.12'/);
+  assert.match(app, /APP_BUILD = '2026\.08\.26-pwa475'/);
   assert.match(loginHtml, /login\.js\?v=321/);
-  assert.match(loginHtml, /login-vault\.js\?v=455/);
+  assert.match(loginHtml, /login-vault\.js\?v=456/);
   assert.match(standardHtml, /app\.js\?v=352/);
   assert.match(bridgeHtml, /oauth-bridge\.js\?v=4/);
 });

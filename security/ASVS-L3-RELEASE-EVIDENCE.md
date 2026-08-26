@@ -1,4 +1,4 @@
-# Direct-Xfer 1.71.7 — ASVS L3 release evidence
+# Direct-Xfer 1.71.8 — ASVS L3 release evidence
 
 Release date: 2026-08-25
 Profile: `ASVS_L3_MODE=true`
@@ -7,16 +7,16 @@ Profile: `ASVS_L3_MODE=true`
 
 | Gate | Result | Evidence |
 |---|---|---|
-| ASVS regression tests | PASS | 96 passed, 0 failed, 0 skipped |
-| Complete current regression tree | PASS | 1139 passed, 0 failed, 0 skipped; all 190 `test/*.test.js` files verified |
+| Release-targeted regression tests | PASS | 38 passed, 0 failed, 0 skipped, including dependency floors, version/PWA synchronization, Windows metadata and SignPath release invariants |
+| Complete current regression tree | CI REQUIRED | The source packaging environment intentionally excludes `node_modules` and has no npm-registry DNS; run `npm ci` + `npm test` in CI before publishing binaries |
 | PARTIAL-closure audit | PASS | 127 production JS files; 38 repository-verifiable controls; 0 blocking findings |
 | Static ASVS audit | PASS | 127 production JS files; 13 reviewed decoder sites |
-| Security inventory | PASS | Regenerated for 1.71.7; 959 inventory entries |
-| Windows runtime integrity | PASS | 103 entries; 0 stale hashes after final synchronization |
+| Security inventory | PASS | Regenerated for 1.71.8; 959 inventory entries |
+| Windows runtime integrity | PASS | 103 entries; 0 stale source-resident hashes after final synchronization; build-time Express entry remains pinned to lockfile `4.22.2` |
 | Matrix triage | PASS | 345/345 triaged; 253 PASS; 0 PARTIAL; 0 FAIL; 92 N/A; 0 REVIEW; 0 MANUAL |
 | Signed-evidence verifier | PASS | 22 required external requirement IDs; Ed25519 signature; requirement-specific method/predicate; canonical SHA-256; release/origin binding; ≤7-day TTL |
 | Isolated crypto provider gate | PASS | L3 self-test requires hardware backing, non-exportable keys, key isolation and isolated encrypt/decrypt/HMAC/sign operations |
-| CycloneDX SBOM | PASS | Root component synchronized to Direct-Xfer 1.71.7 |
+| CycloneDX SBOM | PASS | Root component synchronized to Direct-Xfer 1.71.8 |
 | Connected dependency/container scan | DEPLOYMENT EVIDENCE | V15.2.1 startup evidence requires real release-bound dependency + container scans with zero High/Critical findings |
 
 ## Matrix state
@@ -33,12 +33,12 @@ The source matrix has no unresolved `MANUAL`, `PARTIAL`, `FAIL` or `REVIEW` rows
 
 ## Regression note
 
-The complete suite contains 1139 tests across 190 files. All 1139 passed in the normal `npm test` run with zero failures and zero skipped tests.
+The 1.71.8 packaging pass executed 38 release-targeted tests with zero failures or skips, plus both repository-verifiable ASVS audits. A full `npm test` run must still be performed by CI after `npm ci`, because this source ZIP deliberately excludes `node_modules` and the packaging sandbox cannot resolve the npm registry.
 
 ## Commands/gates used
 
 ```text
-node --test test/asvs-l3-*.test.js
+node --test test/dependency-security-floors-1.71.8.test.js test/windows-latest-deep-audit-1.66.6.test.js test/pwa-mobile-deep-audit-1.64.0.test.js test/signpath-foundation-pipeline-1.71.4.test.js test/project-reconstruction-1.64.0.test.js test/windows-recent-deep-audit-1.66.4.test.js
 npm run security:partial-audit
 npm run security:static-audit
 npm run security:inventory

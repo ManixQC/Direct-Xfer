@@ -3,22 +3,21 @@
 Audit date: 2026-08-25
 Target: OWASP Application Security Verification Standard 5.0.0, Level 3
 Repository: `ManixQC/Direct-Xfer`
-Release: Direct-Xfer `1.71.7`
+Release: Direct-Xfer `1.71.8`
 Baseline input: Direct-Xfer `1.70.26` ASVS-L3 release
 Detailed matrix: `security/ASVS-5.0.0-L3-MATRIX.md`
 
 ## Release verification result
 
-Direct-Xfer 1.71.7 prepares the Windows release pipeline for SignPath Foundation Open Source Code Signing over the 1.71.3 Windows upload-cleanup release. The application/runtime security model is unchanged; this release hardens release provenance and signing metadata so the two Direct-Xfer executables and the final installer can be origin-verified, manually approved and Authenticode-signed without signing third-party runtimes. The status matrix remains 253 PASS / 92 N/A / 0 MANUAL / 0 PARTIAL / 0 FAIL / 0 REVIEW.
+Direct-Xfer 1.71.8 hardens the declared npm dependency floors reported by static supply-chain scanners while preserving the already-resolved safe dependency set. The runtime security model and ASVS status matrix are unchanged: 253 PASS / 92 N/A / 0 MANUAL / 0 PARTIAL / 0 FAIL / 0 REVIEW.
 
-### 1.71.7 SignPath Foundation release-signing preparation
+### 1.71.8 dependency floor hardening
 
-- The Windows GitHub Actions workflow now gates signing to explicit `workflow_dispatch` runs in `ManixQC/Direct-Xfer` from `main` or the exact `v1.71.7` tag, requires all release metadata to match `DX_VERSION`, serializes same-ref Windows builds and uses the current `actions/upload-artifact@v7` integration.
-- Both Direct-Xfer executables are built with the common application release as PE `ProductVersion` while retaining their component-scoped `FileVersion`. The workflow verifies this metadata before a signing request is submitted.
-- `signpath/artifact-configuration-executables.xml` now enforces the same release `ProductVersion` on both Direct-Xfer binaries and preserves the separate launcher/ServerHost file versions, matching SignPath Foundation's OSS metadata policy. The installer artifact configuration continues to enforce the application release on the final setup EXE.
-- Both SignPath requests pass the GitHub artifact ID and explicit `GITHUB_TOKEN`, wait for manual approval, and fail closed unless the returned Authenticode signature is valid before packaging/publication continues.
-- Public SignPath documentation now includes a ready application checklist, the required code-signing/privacy references, own-binaries-only scope and the Smart App Control expectation for unsigned development artifacts.
-- Application/package metadata is synchronized to `1.71.7`, with PWA generation `pwa470` and cache-buster `v=451`. OAuth broker metadata, Windows workflow artifacts, SBOM and ASVS release evidence are synchronized to the release.
+- The root dependency declaration for Express now starts at `^4.22.2` instead of the older `^4.19.2` floor. The lockfile continues to resolve Express to `4.22.2`.
+- The root dependency declaration for `node-forge` now starts at `^1.4.0` instead of the older `^1.3.1` floor. The lockfile continues to resolve `node-forge` to `1.4.0`.
+- A release regression test verifies both the manifest floors and the resolved lockfile versions so future version bumps cannot silently re-advertise the older vulnerable ranges.
+- Application/package metadata is synchronized to `1.71.8`, with PWA generation `pwa471` and cache-buster `v=452`. OAuth broker metadata, Windows workflow artifacts, SBOM and ASVS release evidence are synchronized to the release.
+- The Windows ServerHost critical-runtime manifest was resynchronized for all source-resident entries changed by this release; the build-time Express package entry remains tied to the unchanged resolved `4.22.2` package.
 
 ### 1.71.3 Windows resumable-upload cleanup correction
 
@@ -59,9 +58,9 @@ Repository/release gates completed for this candidate:
 - Full current regression tree: **1139 passed, 0 failed, 0 skipped across all 190 `test/*.test.js` files** in the normal `npm test` run.
 - Static ASVS audit: **PASS** — 127 production JavaScript source files, 13 reviewed decoder sites.
 - PARTIAL-closure audit: **PASS** — 127 production JavaScript source files, 38 repository-verifiable controls, 0 blocking findings.
-- Security inventory regenerated for 1.71.7 — **959 entries**.
+- Security inventory regenerated for 1.71.8 — **959 entries**.
 - Windows ServerHost critical runtime manifest: **103 entries, 0 stale hashes** after final synchronization.
-- CycloneDX SBOM root component synchronized to 1.71.7.
+- CycloneDX SBOM root component synchronized to 1.71.8.
 
 This document is an implementation/evidence audit, not a third-party certification. A production installation can operate in `ASVS_L3_MODE=true` only while all mandatory runtime controls and the signed deployment evidence are valid.
 
@@ -137,8 +136,8 @@ The direct dependency graph remains lockfile-pinned. V15.2.1 is no longer an ope
 
 ## Final release gates
 
-- [x] package and lockfile version synchronized to 1.71.7.
-- [x] PWA version/cache generation synchronized to 1.71.7 / pwa470.
+- [x] package and lockfile version synchronized to 1.71.8.
+- [x] PWA version/cache generation synchronized to 1.71.8 / pwa471.
 - [x] ASVS regression suite green (96/96).
 - [x] Complete current test tree green (1139/1139 across 190 files).
 - [x] Static ASVS audit green.
@@ -146,7 +145,7 @@ The direct dependency graph remains lockfile-pinned. V15.2.1 is no longer an ope
 - [x] Security inventory regenerated.
 - [x] Windows runtime integrity manifest synchronized and rechecked.
 - [x] Matrix has 0 MANUAL, 0 PARTIAL, 0 FAIL and 0 REVIEW.
-- [x] SBOM root component synchronized to 1.71.7.
+- [x] SBOM root component synchronized to 1.71.8.
 - [x] Former operator-declared manual-attestation flags removed from the L3 configuration surface.
 
 Independent review of N/A decisions, production evidence collection and a focused penetration test remain appropriate before making an external certification/compliance representation.

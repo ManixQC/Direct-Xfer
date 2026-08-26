@@ -17,7 +17,7 @@
 
   // 1.64.2: keep release metadata available before the large PWA bundle starts,
   // and layer the administrator-only health surface in an isolated module.
-  var release = { version: '1.71.7', build: '2026.08.25-pwa470' };
+  var release = { version: '1.71.8', build: '2026.08.25-pwa471' };
   window.__DX_PWA_RELEASE = release;
   if (typeof window.fetch === 'function' && !window.__dxPwaReleaseFetchWrapped) {
     window.__dxPwaReleaseFetchWrapped = true;
@@ -38,14 +38,14 @@
   }
   if (!document.querySelector('script[data-dx-admin-advanced]')) {
     var adminScript = document.createElement('script');
-    adminScript.src = '/app/admin-advanced.js?v=451';
+    adminScript.src = '/app/admin-advanced.js?v=452';
     adminScript.async = true;
     adminScript.setAttribute('data-dx-admin-advanced', '1');
     document.head.appendChild(adminScript);
   }
   if (!document.querySelector('script[data-dx-admin-audit-connectors]')) {
     var auditConnectorScript = document.createElement('script');
-    auditConnectorScript.src = '/app/admin-audit-connectors.js?v=451';
+    auditConnectorScript.src = '/app/admin-audit-connectors.js?v=452';
     auditConnectorScript.async = true;
     auditConnectorScript.setAttribute('data-dx-admin-audit-connectors', '1');
     document.head.appendChild(auditConnectorScript);

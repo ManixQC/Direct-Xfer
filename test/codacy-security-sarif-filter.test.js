@@ -93,8 +93,13 @@ test('dedicated security scanners keep their complete result set', () => {
 
 test('codacy workflow keeps SARIF outside checkout, times out, and uploads only filtered outputs', () => {
   const workflow = fs.readFileSync(path.join(ROOT, '.github', 'workflows', 'codacy.yml'), 'utf8');
-  assert.match(workflow, /timeout-minutes:\s*20/);
-  assert.match(workflow, /tool-timeout:\s*15minutes/);
+  assert.match(workflow, /timeout-minutes:\s*12/);
+  assert.match(workflow, /tool-timeout:\s*8minutes/);
+  assert.match(workflow, /Validate Codacy text inputs are UTF-8/);
+  assert.match(workflow, /node scripts\/check-codacy-input-utf8\.js/);
+  assert.match(workflow, /tool:\s*eslint-9/);
+  assert.match(workflow, /parallel:\s*1/);
+  assert.match(workflow, /fail-if-incomplete:\s*true/);
   assert.match(workflow, /output:\s*\/tmp\/direct-xfer-codacy-results\.sarif/);
   assert.match(workflow, /Filter Codacy SARIF for GitHub Security/);
   assert.match(workflow, /RAW_SARIF=\/tmp\/direct-xfer-codacy-results\.sarif/);

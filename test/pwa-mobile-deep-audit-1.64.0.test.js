@@ -9,9 +9,9 @@ const releaseVersion=JSON.parse(read('package.json')).version;
 const releaseRe=releaseVersion.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
 const app=read('pwa/app.js'), sw=read('pwa/sw.js'), mobile=read('pwa/mobile-intelligence.js');
 
-test('1.71.32 release and pwa495 are synchronized',()=>{
+test('1.71.33 release and pwa496 are synchronized',()=>{
   assert.equal(JSON.parse(read('package.json')).version,releaseVersion);
-  for(const f of ['pwa/app.js','pwa/index.html','pwa/sw.js','pwa/theme-init.js','pwa/admin-advanced.js','pwa/mobile-intelligence.js']) assert.match(read(f),new RegExp(`${releaseRe}|pwa495|v=476`));
+  for(const f of ['pwa/app.js','pwa/index.html','pwa/sw.js','pwa/theme-init.js','pwa/admin-advanced.js','pwa/mobile-intelligence.js']) assert.match(read(f),new RegExp(`${releaseRe}|pwa496|v=477`));
   assert.doesNotMatch(read('pwa/index.html')+read('pwa/sw.js'),/pwa324|v=324/);
 });
 
@@ -113,7 +113,7 @@ test('background aggregate excludes Wi-Fi-blocked records from moving progress',
   assert.match(sw,/retry = transportable\.length !== eligible\.length/);
 });
 
-test('shortcut manifests use the current pwa495 cache buster on app and login paths',()=>{
-  assert.match(app,/manifestHref = '\/direct-xfer-pwa\.webmanifest\?v=476'/);
-  assert.match(read('pwa/login.html'),/direct-xfer-pwa\.webmanifest\?v=476/);
+test('shortcut manifests use the current pwa496 cache buster on app and login paths',()=>{
+  assert.match(app,/manifestHref = '\/direct-xfer-pwa\.webmanifest\?v=477'/);
+  assert.match(read('pwa/login.html'),/direct-xfer-pwa\.webmanifest\?v=477/);
 });

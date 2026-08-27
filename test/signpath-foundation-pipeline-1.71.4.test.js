@@ -8,7 +8,7 @@ const path = require('node:path');
 const ROOT = path.resolve(__dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 
-const workflow = read('.github/workflows/build-windows-csharp.yml');
+const workflow = read('.github/workflows/build-windows-csharp.yml').replace(/\r\n?/g, '\n');
 const executablesConfig = read('signpath/artifact-configuration-executables.xml');
 const installerConfig = read('signpath/artifact-configuration-installer.xml');
 const policy = read('CODE_SIGNING_POLICY.md');

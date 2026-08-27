@@ -1,31 +1,51 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://github.com/ManixQC/Direct-Xfer/security/openvex-1.71.37",
+  "@id": "https://github.com/ManixQC/Direct-Xfer/security/openvex-1.71.39",
   "author": "Direct-Xfer project",
-  "timestamp": "2026-08-26T00:00:00Z",
+  "timestamp": "2026-08-27T04:09:13Z",
   "version": 2,
   "tooling": "Direct-Xfer container security review",
   "statements": [
     {
-      "vulnerability": { "name": "CVE-2024-45993" },
-      "products": [{ "@id": "pkg:deb/debian/libgif7" }],
+      "vulnerability": {
+        "name": "CVE-2024-45993"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libgif7"
+        }
+      ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_present",
       "impact_statement": "The issue is confined to the gif2rgb command-line utility. Direct-Xfer installs libgif7 as a Leptonica dependency but does not install or invoke gif2rgb."
     },
     {
-      "vulnerability": { "name": "CVE-2006-5201" },
-      "products": [{ "@id": "pkg:deb/debian/libnss3" }],
+      "vulnerability": {
+        "name": "CVE-2006-5201"
+      },
+      "products": [
+        {
+          "@id": "pkg:deb/debian/libnss3"
+        }
+      ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_present",
       "impact_statement": "The historical issue applies to the Solaris NSS implementation, not Debian's Mozilla NSS library."
     },
     {
-      "vulnerability": { "name": "CVE-2026-8376" },
+      "vulnerability": {
+        "name": "CVE-2026-8376"
+      },
       "products": [
-        { "@id": "pkg:deb/debian/perl?arch=amd64" },
-        { "@id": "pkg:deb/debian/perl-base?arch=amd64" },
-        { "@id": "pkg:deb/debian/libperl5.40?arch=amd64" }
+        {
+          "@id": "pkg:deb/debian/perl?arch=amd64"
+        },
+        {
+          "@id": "pkg:deb/debian/perl-base?arch=amd64"
+        },
+        {
+          "@id": "pkg:deb/debian/libperl5.40?arch=amd64"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_present",

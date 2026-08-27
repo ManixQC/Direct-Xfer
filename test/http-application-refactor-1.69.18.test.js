@@ -185,6 +185,12 @@ test('security middleware shares a request-local nonce with rendering and preser
   security({ secure:true, headers:{} }, res, () => { store = h.requestContext.getStore(); });
   assert.ok(store && /^[A-Za-z0-9+/]+=*$/.test(store.cspNonce));
   assert.match(res.headers['content-security-policy'], new RegExp(`nonce-${store.cspNonce.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
+  const csp = String(res.headers['content-security-policy'] || '');
+  assert.doesNotMatch(csp, /(?:^|;\s*)style-src\s+[^;]*'unsafe-inline'/);
+  assert.match(csp, /style-src 'self' 'nonce-[^']+'/);
+  assert.match(csp, /style-src-elem 'self' 'nonce-[^']+'/);
+  assert.match(csp, /style-src-attr 'unsafe-inline'/);
+  assert.match(csp, /script-src-attr 'none'/);
   assert.equal(res.headers['strict-transport-security'], 'max-age=31536000; includeSubDomains');
   assert.equal(res.headers['x-content-type-options'], 'nosniff');
   assert.equal(res.headers['x-frame-options'], 'DENY');

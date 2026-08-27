@@ -51,8 +51,13 @@ for (const site of array(raw.site)) {
 const rules = new Map();
 const results = [];
 for (const alert of alerts) {
-  const pluginId = String(alert.pluginid || alert.alertRef || 'unknown');
-  const ruleId = `zap/${pluginId}`;
+  const pluginId = String(alert.pluginid || 'unknown').trim() || 'unknown';
+  const alertRef = String(alert.alertRef || '').trim();
+  // ZAP plugins can emit multiple distinct sub-alerts (for example 10055-5 and
+  // 10055-6 for CSP). Prefer alertRef so GitHub Code Scanning does not merge
+  // unrelated findings under one plugin-level rule identity.
+  const ruleKey = alertRef || pluginId;
+  const ruleId = `zap/${ruleKey}`;
   const risk = riskOf(alert);
   const name = text(alert.alert || alert.name || `ZAP alert ${pluginId}`);
   const desc = text(alert.desc || alert.description || name);
@@ -78,7 +83,7 @@ for (const alert of alerts) {
 
   const instances = array(alert.instances);
   const urls = [...new Set(instances.map((x) => String((x && x.uri) || '').trim()).filter(Boolean))].slice(0, 5);
-  const fingerprintSource = JSON.stringify({ pluginId, name, urls });
+  const fingerprintSource = JSON.stringify({ ruleKey, pluginId, alertRef, name, urls });
   const fingerprint = crypto.createHash('sha256').update(fingerprintSource).digest('hex');
   const detail = [name, `Risk: ${text(alert.riskdesc || risk)}`];
   if (urls.length) detail.push(`Observed at: ${urls.join(', ')}`);
@@ -98,6 +103,7 @@ for (const alert of alerts) {
     partialFingerprints: { 'direct-xfer/zap-alert/v1': fingerprint },
     properties: {
       zapPluginId: pluginId,
+      ...(alertRef ? { zapAlertRef: alertRef } : {}),
       zapRiskCode: risk,
       zapRiskDescription: text(alert.riskdesc || ''),
       zapConfidence: text(alert.confidence || ''),

@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "generatedAt": "2026-08-27T03:43:51.671Z",
-  "version": "1.71.37",
-  "sourceTreeSha256": "7a19b6492caa1e33ca5ef144d8a9a2e4e968bb8dbe8d624fc081cfd69d154991",
+  "generatedAt": "2026-08-27T04:29:10.992Z",
+  "version": "1.71.39",
+  "sourceTreeSha256": "fd6b127e1d63963d74020146756c3219fef1d9b132ef80183bcaa186dbb60231",
   "filesScanned": 127,
   "scope": [
     "server.js",
@@ -2440,12 +2440,12 @@
         },
         {
           "file": "lib/server/http-application.js",
-          "line": 488,
+          "line": 489,
           "token": "response-sink"
         },
         {
           "file": "lib/server/http-application.js",
-          "line": 501,
+          "line": 502,
           "token": "response-sink"
         },
         {
@@ -4410,7 +4410,7 @@
         },
         {
           "file": "lib/server/http-application.js",
-          "line": 471,
+          "line": 472,
           "token": "request-input"
         },
         {
@@ -4475,12 +4475,12 @@
         },
         {
           "file": "lib/server/public-pages.js",
-          "line": 217,
+          "line": 218,
           "token": "request-input"
         },
         {
           "file": "lib/server/public-pages.js",
-          "line": 217,
+          "line": 218,
           "token": "request-input"
         },
         {
@@ -6515,7 +6515,7 @@
         },
         {
           "file": "lib/server/http-application.js",
-          "line": 468,
+          "line": 469,
           "token": "body-parser"
         },
         {
@@ -11300,17 +11300,17 @@
         },
         {
           "file": "lib/server/public-pages.js",
-          "line": 857,
+          "line": 872,
           "token": "lifecycle"
         },
         {
           "file": "lib/server/public-pages.js",
-          "line": 938,
+          "line": 953,
           "token": "lifecycle"
         },
         {
           "file": "lib/server/public-pages.js",
-          "line": 1678,
+          "line": 1693,
           "token": "lifecycle"
         },
         {
@@ -13800,7 +13800,7 @@
         },
         {
           "file": "lib/server/public-pages.js",
-          "line": 717,
+          "line": 718,
           "token": "outbound"
         },
         {

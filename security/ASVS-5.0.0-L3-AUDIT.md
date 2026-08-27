@@ -1,17 +1,25 @@
 # Direct-Xfer — OWASP ASVS 5.0.0 Level 3 audit
 
-Audit date: 2026-08-26
+Audit date: 2026-08-27
 Target: OWASP Application Security Verification Standard 5.0.0, Level 3
 Repository: `ManixQC/Direct-Xfer`
-Release: Direct-Xfer `1.71.37`
+Release: Direct-Xfer `1.71.39`
 Baseline input: Direct-Xfer `1.70.26` ASVS-L3 release
 Detailed matrix: `security/ASVS-5.0.0-L3-MATRIX.md`
 
 ## Release verification result
 
-Direct-Xfer 1.71.37 hardens the dynamic web-application security coverage added in the previous release. The OWASP ZAP workflow now passes actionlint/ShellCheck, emits a stable repository `locations[]` entry for every Medium/High SARIF result so GitHub Code Scanning can process the report, preserves the actual scanned URL in each finding, and always executes the Medium/High gate even if the SARIF upload step fails. The official ZAP action and ZAP 2.17.0 image remain immutably pinned. Windows provenance continues to validate and attest the release CycloneDX SBOM and SHA-256 manifest alongside the launcher, ServerHost and installer. Existing Codacy filtering/legacy cleanup, CodeQL, Trivy, Scorecard, zizmor, immutable workflow pins, least-privilege token scopes and Docker checksum verification/retry remain in force. The ASVS status matrix remains 253 PASS / 92 N/A / 0 MANUAL / 0 PARTIAL / 0 FAIL / 0 REVIEW.
+Direct-Xfer 1.71.39 closes the real Medium OWASP ZAP CSP finding surfaced by the corrected 1.71.37 DAST gate. The common HTTP boundary removes `'unsafe-inline'` from `style-src`, requires the per-response cryptographic nonce for inline style elements through `style-src` / `style-src-elem`, forbids inline script attributes with `script-src-attr 'none'`, and scopes the remaining legacy inline style-attribute compatibility to `style-src-attr 'unsafe-inline'`. Generated public/share HTML propagates the same nonce to inline `<style>` and `<script>` blocks. The previous actionlint/ShellCheck fixes, stable ZAP SARIF repository location, preserved observed URLs and always-run Medium/High gate remain in force. The official ZAP action and ZAP 2.17.0 image remain immutably pinned. Windows provenance continues to validate and attest the release CycloneDX SBOM and SHA-256 manifest alongside the launcher, ServerHost and installer. Existing Codacy filtering/legacy cleanup, CodeQL, Trivy, Scorecard, zizmor, immutable workflow pins, least-privilege token scopes and Docker checksum verification/retry remain in force. The ASVS status matrix remains 253 PASS / 92 N/A / 0 MANUAL / 0 PARTIAL / 0 FAIL / 0 REVIEW.
 
-### 1.71.37 GitHub security workflow hardening
+### 1.71.39 CSP / ZAP finding closure
+
+- The 1.71.37 DAST pipeline successfully uploaded its SARIF and then failed correctly on a real Medium alert: ZAP plugin 10055 reported `CSP: style-src unsafe-inline`. 1.71.39 fixes the application policy rather than suppressing the alert.
+- `lib/server/http-application.js` removes `'unsafe-inline'` from the `style-src` fallback and emits nonce-only `style-src` plus `style-src-elem`, using the same cryptographically random per-response nonce already required for scripts.
+- `script-src-attr 'none'` explicitly forbids executable script attributes. Legacy visual style attributes remain temporarily compatible only through the narrower `style-src-attr 'unsafe-inline'` directive; this no longer grants arbitrary inline `<style>` blocks.
+- `lib/server/public-pages.js` propagates the active nonce to generated `<style>` tags as well as `<script>` tags, including collaboration/gallery fragments passed through `pageShell`, preventing the tightened policy from breaking public pages.
+- Regression coverage asserts the exact CSP directive split and generated-style nonce handling so a future refactor cannot restore blanket `style-src 'unsafe-inline'`. On the next successful ZAP run, `zap/10055` should no longer be emitted; GitHub Code Scanning remains authoritative for closing the previously uploaded alert.
+
+### 1.71.39 GitHub security workflow hardening
 
 - `.github/workflows/zap.yml` adds OWASP ZAP baseline DAST on canonical `main`, manual dispatch and a weekly schedule. It scans only an ephemeral local Docker instance bound to loopback, waits for `/healthz`, and never targets a production URL.
 - ZAP uses `zaproxy/action-baseline` pinned to its immutable v0.15.0 release commit and a digest-pinned ZAP 2.17.0 linux/amd64 image. Automatic issue creation is disabled and the workflow has only `contents: read` plus job-scoped `security-events: write`.
@@ -83,9 +91,9 @@ Repository/release gates completed for this candidate:
 - Full source-only regression tree: **1174/1185 passed**; the 11 failures all require `express`, which is intentionally excluded from the source ZIP. The dependency-backed **CI REQUIRED** gate remains `npm ci` followed by `npm test`.
 - Static ASVS audit: **PASS** — 127 production JavaScript source files, 10 reviewed decoder sites.
 - PARTIAL-closure audit: **PASS** — 127 production JavaScript source files, 38 repository-verifiable controls, 0 blocking findings.
-- Security inventory regenerated for 1.71.37 — **960 entries**.
+- Security inventory regenerated for 1.71.39 — **960 entries**.
 - Windows ServerHost critical runtime manifest: **103 entries, 0 stale source-resident hashes** after final synchronization; the missing build-time Express entry remains pinned by `package-lock.json` to 4.22.2.
-- CycloneDX SBOM root component synchronized to 1.71.37.
+- CycloneDX SBOM root component synchronized to 1.71.39.
 
 This document is an implementation/evidence audit, not a third-party certification. A production installation can operate in `ASVS_L3_MODE=true` only while all mandatory runtime controls and the signed deployment evidence are valid.
 
@@ -161,8 +169,8 @@ The direct dependency graph remains lockfile-pinned. V15.2.1 is no longer an ope
 
 ## Final release gates
 
-- [x] package and lockfile version synchronized to 1.71.37.
-- [x] PWA version/cache generation synchronized to 1.71.37 / pwa500.
+- [x] package and lockfile version synchronized to 1.71.39.
+- [x] PWA version/cache generation synchronized to 1.71.39 / pwa502.
 - [x] ASVS regression suite green (96/96).
 - [x] Complete current test tree green (1139/1139 across 190 files).
 - [x] Static ASVS audit green.
@@ -170,7 +178,7 @@ The direct dependency graph remains lockfile-pinned. V15.2.1 is no longer an ope
 - [x] Security inventory regenerated.
 - [x] Windows runtime integrity manifest synchronized and rechecked.
 - [x] Matrix has 0 MANUAL, 0 PARTIAL, 0 FAIL and 0 REVIEW.
-- [x] SBOM root component synchronized to 1.71.37.
+- [x] SBOM root component synchronized to 1.71.39.
 - [x] Former operator-declared manual-attestation flags removed from the L3 configuration surface.
 
 Independent review of N/A decisions, production evidence collection and a focused penetration test remain appropriate before making an external certification/compliance representation.

@@ -5,7 +5,7 @@ Standard: OWASP ASVS 5.0.0 Level 3 (L3 includes applicable L1 and L2 requirement
 Repository: `ManixQC/Direct-Xfer`
 Initial historical baseline: `3d2c0b5c668c9136a05490b25b76f4166a5940e8`
 Baseline input: Direct-Xfer `1.70.23` ASVS-updated archive
-Current audited source snapshot: Direct-Xfer `1.71.37` release
+Current audited source snapshot: Direct-Xfer `1.71.39` release
 Baseline archive SHA-256: `6ed5f230e1e73e540a00dc545d3d0098946a8a75257423041492875fe8ef59cb`
 ASVS regression verification: `node --test test/asvs-l3-*.test.js` — 96 passed, 0 failed, 0 skipped
 Full regression verification: all 190 `test/*.test.js` files — 1139 passed, 0 failed, 0 skipped
@@ -96,7 +96,7 @@ Status meanings and remediation priorities are defined in `security/ASVS-5.0.0-L
 | V3.3.5 | **PASS** | Authentication cookies have fixed, small token formats far below the 4096-byte cookie limit. |
 | V3.4.1 | **PASS** | `ASVS_L3_MODE` rejects application HTTP and emits one-year HSTS with `includeSubDomains; preload`; weaker Local-CA/plain-LAN compatibility behavior is outside the L3 profile. |
 | V3.4.2 | **PASS** | No permissive CORS policy or reflected `Access-Control-Allow-Origin` behavior was found in the application. |
-| V3.4.3 | **PASS** | The common HTTP boundary emits a per-response cryptographic CSP nonce and includes `object-src 'none'` and `base-uri 'none'`. Static administrator/PWA HTML contains no executable inline script; the first-paint theme bootstrap is served as same-origin `/theme-init.js`, with regression coverage. |
+| V3.4.3 | **PASS** | The common HTTP boundary emits a per-response cryptographic CSP nonce, nonce-only `style-src` / `style-src-elem`, `script-src-attr 'none'`, `object-src 'none'` and `base-uri 'none'`. Legacy style attributes are isolated to `style-src-attr`; generated public `<style>` blocks receive the response nonce. Static administrator/PWA HTML contains no executable inline script; the first-paint theme bootstrap is served as same-origin `/theme-init.js`, with regression coverage. |
 | V3.4.4 | **PASS** | The common HTTP boundary emits `X-Content-Type-Options: nosniff`. |
 | V3.4.5 | **PASS** | The common HTTP boundary emits `Referrer-Policy: no-referrer`. |
 | V3.4.6 | **PASS** | CSP includes `frame-ancestors 'none'` for the common web boundary. |

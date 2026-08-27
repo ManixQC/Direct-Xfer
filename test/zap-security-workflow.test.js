@@ -70,3 +70,51 @@ test('ZAP workflow keeps shell blocks actionlint/ShellCheck-safe and validates S
   assert.doesNotMatch(workflow, /for attempt in \$\(seq 1 60\); do/);
   assert.match(workflow, /locations\[0\]\.physicalLocation\.artifactLocation\.uri == \"security\/zap-dast-target\.md\"/);
 });
+
+
+test('ZAP CSP regression removes unsafe-inline from style-src while nonceing style elements', () => {
+  const http = fs.readFileSync(path.join(ROOT, 'lib', 'server', 'http-application.js'), 'utf8');
+  const pages = fs.readFileSync(path.join(ROOT, 'lib', 'server', 'public-pages.js'), 'utf8');
+  assert.doesNotMatch(http, /style-src 'self' 'unsafe-inline'/);
+  assert.match(http, /style-src 'self' 'nonce-\$\{cspNonce\}'/);
+  assert.match(http, /style-src-elem 'self' 'nonce-\$\{cspNonce\}'/);
+  assert.match(http, /style-src-attr 'unsafe-inline'/);
+  assert.match(http, /script-src-attr 'none'/);
+  assert.match(pages, /<style\$\{nonceAttr\}>\$\{publicStyleBlock\(\)\}<\/style>/);
+  assert.match(pages, /\.replace\(\/<style\(\?=\[\\s>\]\)\/g, `<style\$\{nonceAttr\}`\)/);
+});
+
+test('ZAP SARIF keeps distinct alertRef identities within one plugin', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dx-zap-alertref-'));
+  const input = path.join(dir, 'report.json');
+  const output = path.join(dir, 'report.sarif');
+  fs.writeFileSync(input, JSON.stringify(fixture([
+    { pluginid: '10055', alertRef: '10055-5', alert: 'CSP script-src unsafe-inline', riskcode: '2', riskdesc: 'Medium (High)', instances: [{ uri: 'http://127.0.0.1:55750/' }] },
+    { pluginid: '10055', alertRef: '10055-6', alert: 'CSP style-src unsafe-inline', riskcode: '2', riskdesc: 'Medium (High)', instances: [{ uri: 'http://127.0.0.1:55750/' }] },
+  ])), 'utf8');
+  const result = runScript('zap-report-to-sarif.js', [input, output]);
+  assert.equal(result.status, 0, result.stderr);
+  const sarif = JSON.parse(fs.readFileSync(output, 'utf8'));
+  assert.deepEqual(sarif.runs[0].results.map((x) => x.ruleId).sort(), ['zap/10055-5', 'zap/10055-6']);
+  assert.equal(sarif.runs[0].tool.driver.rules.length, 2);
+  assert.equal(sarif.runs[0].results[0].properties.zapPluginId, '10055');
+  assert.match(sarif.runs[0].results[0].properties.zapAlertRef, /^10055-[56]$/);
+});
+
+test('strict CSP does not leave blocked public inline handlers or OAuth unsafe-inline styles', () => {
+  const pages = fs.readFileSync(path.join(ROOT, 'lib', 'server', 'public-pages.js'), 'utf8');
+  assert.doesNotMatch(pages, /\sonerror=/i);
+  assert.match(pages, /data-dx-video-fallback/);
+  assert.match(pages, /addEventListener\('error'/);
+  for (const rel of [
+    'oauth-broker/server.js',
+    'oauth-broker/cloudflare-worker/src/index.js',
+    'lib/assets/oauth-broker-worker.mjs',
+  ]) {
+    const source = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+    assert.doesNotMatch(source, /style-src 'unsafe-inline'/);
+    assert.doesNotMatch(source, /<body style=/);
+    assert.match(source, /style-src 'nonce-\$\{nonce\}'/);
+    assert.match(source, /style-src-attr 'none'/);
+  }
+});

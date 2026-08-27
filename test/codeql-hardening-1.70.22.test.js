@@ -96,8 +96,8 @@ test('adjacent file-derived object URLs pass through a URI sanitizer or fixed me
 
 test('CodeQL PWA manifest and image-link preview sinks accept only fixed or pixel-reencoded data', () => {
   const src = read('pwa/app.js');
-  assert.match(src, /var manifestHref = '\/direct-xfer-pwa\.webmanifest\?v=481'/);
-  assert.match(src, /if \(lang === 'en'\) manifestHref = '\/direct-xfer-pwa-en\.webmanifest\?v=481'/);
+  assert.match(src, /var manifestHref = '\/direct-xfer-pwa\.webmanifest\?v=483'/);
+  assert.match(src, /if \(lang === 'en'\) manifestHref = '\/direct-xfer-pwa-en\.webmanifest\?v=483'/);
   assert.doesNotMatch(src, /manifest\.href\s*=.*\+\s*lang/);
   assert.match(src, /function managedImagePreviewUrl\(photo, kind\)/);
   assert.doesNotMatch(src, /var previews = photo && photo\.previewUrls/);

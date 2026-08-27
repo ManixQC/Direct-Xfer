@@ -2,13 +2,13 @@
 #if EnvAppVersion != ""
   #define AppVersion EnvAppVersion
 #else
-  #define AppVersion "1.71.37"
+  #define AppVersion "1.71.39"
 #endif
 #define EnvSourceDir GetEnv("DX_INNO_SOURCE_DIR")
 #if EnvSourceDir != ""
   #define SourceDir EnvSourceDir
 #else
-  #define SourceDir "..\dist\Direct-Xfer-1.71.37-Windows-CSharp"
+  #define SourceDir "..\dist\Direct-Xfer-1.71.39-Windows-CSharp"
 #endif
 #define EnvOutputDir GetEnv("DX_INNO_OUTPUT_DIR")
 #if EnvOutputDir != ""

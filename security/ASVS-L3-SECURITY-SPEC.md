@@ -1,6 +1,6 @@
 # Direct-Xfer — ASVS 5.0.0 Level 3 security specification
 
-Version scope: Direct-Xfer 1.71.37 and later when `ASVS_L3_MODE=true`.
+Version scope: Direct-Xfer 1.71.39 and later when `ASVS_L3_MODE=true`.
 
 This document is normative for the Direct-Xfer ASVS L3 profile. Compatibility mode may intentionally allow weaker deployment choices. A deployment must not claim the Direct-Xfer L3 profile unless the startup policy passes and the deployment checklist in `ASVS-L3-DEPLOYMENT.md` is completed.
 
@@ -18,7 +18,7 @@ Business limits are enforced in backend services. Relevant defaults/maximums inc
 
 Required browser capabilities for the administrator application in L3 are HTTPS secure context, cookies with Secure/HttpOnly/SameSite support, CSP, Fetch Metadata, Web Crypto/WebAuthn, and modern ES support. The administrator application must block rather than silently downgrade when a phishing-resistant passkey ceremony is unavailable. L3 requires TLS termination at an independently verified external edge and rejects application HTTP except the loopback liveness exception. HSTS is emitted with `includeSubDomains` and `preload`; current signed deployment evidence must prove the public domain is actually preloaded and the deployed edge satisfies the protocol requirements.
 
-The common web boundary emits CSP with a cryptographic nonce, `object-src 'none'`, `base-uri 'none'`, `frame-ancestors 'none'`, CSP reporting, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, and `Cross-Origin-Opener-Policy: same-origin`. State-changing administrator requests also require a CSRF token and pass same-origin / Fetch Metadata defenses.
+The common web boundary emits CSP with a cryptographic nonce, nonce-only `style-src` / `style-src-elem`, `script-src-attr 'none'`, `object-src 'none'`, `base-uri 'none'`, `frame-ancestors 'none'`, CSP reporting, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, and `Cross-Origin-Opener-Policy: same-origin`. Legacy inline style attributes are confined to `style-src-attr 'unsafe-inline'`; generated public `<style>` blocks receive the per-response nonce. State-changing administrator requests also require a CSRF token and pass same-origin / Fetch Metadata defenses.
 
 Unsupported browsers are denied sensitive authentication/administration functionality; the UI shows a passkey-support error instead of falling back to a weaker L3 administrator login. On explicit L3 logout, authenticated PWA IndexedDB stores, queued destinations, cached private data, OPFS queue material and sensitive local/session-storage values are cleared. E2E destination keys are never persisted to browser storage in L3. Resource identifiers that may remain during an authenticated session are C1/C2 metadata, not standalone authorization credentials: the L3 public-link policy requires independent password/approval authorization.
 

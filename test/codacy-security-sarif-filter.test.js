@@ -91,13 +91,20 @@ test('dedicated security scanners keep their complete result set', () => {
   assert.equal(filtered.stats.filteredResults, 0);
 });
 
-test('codacy workflow uploads legacy cleanup and current security SARIF, never raw Codacy output', () => {
+test('codacy workflow keeps SARIF outside checkout, times out, and uploads only filtered outputs', () => {
   const workflow = fs.readFileSync(path.join(ROOT, '.github', 'workflows', 'codacy.yml'), 'utf8');
+  assert.match(workflow, /timeout-minutes:\s*20/);
+  assert.match(workflow, /tool-timeout:\s*15minutes/);
+  assert.match(workflow, /output:\s*\/tmp\/direct-xfer-codacy-results\.sarif/);
   assert.match(workflow, /Filter Codacy SARIF for GitHub Security/);
-  assert.match(workflow, /node scripts\/filter-codacy-sarif\.js results\.sarif results\.security\.sarif results\.legacy-tombstones\.sarif/);
+  assert.match(workflow, /RAW_SARIF=\/tmp\/direct-xfer-codacy-results\.sarif/);
+  assert.match(workflow, /SECURITY_SARIF=\/tmp\/direct-xfer-codacy-security\.sarif/);
+  assert.match(workflow, /LEGACY_SARIF=\/tmp\/direct-xfer-codacy-legacy-tombstones\.sarif/);
+  assert.match(workflow, /node scripts\/filter-codacy-sarif\.js "\$RAW_SARIF" "\$SECURITY_SARIF" "\$LEGACY_SARIF"/);
   assert.match(workflow, /Close legacy Codacy quality alerts/);
-  assert.match(workflow, /sarif_file:\s*results\.legacy-tombstones\.sarif/);
+  assert.match(workflow, /sarif_file:\s*\/tmp\/direct-xfer-codacy-legacy-tombstones\.sarif/);
   assert.match(workflow, /Upload filtered Codacy security results/);
-  assert.match(workflow, /sarif_file:\s*results\.security\.sarif/);
+  assert.match(workflow, /sarif_file:\s*\/tmp\/direct-xfer-codacy-security\.sarif/);
+  assert.doesNotMatch(workflow, /output:\s*results\.sarif\s*$/m);
   assert.doesNotMatch(workflow, /sarif_file:\s*results\.sarif\s*$/m);
 });

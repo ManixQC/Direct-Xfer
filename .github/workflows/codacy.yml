@@ -33,6 +33,7 @@ jobs:
       actions: read # only required for a private repository by github/codeql-action/upload-sarif to get the Action run status
     name: Codacy Security Scan
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       # Checkout the repository to the GitHub Actions runner
       - name: Checkout code
@@ -46,13 +47,17 @@ jobs:
           # You can also omit the token and run the tools that support default configurations
           project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
           verbose: true
-          output: results.sarif
+          # Keep Codacy output outside the checkout so the analysis cannot ingest
+          # its own partially-written SARIF as an uncommitted repository file.
+          output: /tmp/direct-xfer-codacy-results.sarif
           format: sarif
           # Adjust severity of non-security issues
           gh-code-scanning-compat: true
           # Force 0 exit code to allow SARIF file generation
           # This will handover control about PR rejection to the GitHub side
           max-allowed-issues: 2147483647
+          # Bound individual analyzer execution as well as the whole job timeout.
+          tool-timeout: 15minutes
 
       # GitHub Security is for actionable security findings, not code-style debt.
       # Filter Codacy SARIF before upload. Current security findings use their own
@@ -65,33 +70,37 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test -s results.sarif
-          node scripts/filter-codacy-sarif.js results.sarif results.security.sarif results.legacy-tombstones.sarif
-          test -s results.security.sarif
-          test -s results.legacy-tombstones.sarif
-          jq -e '.version and (.runs | type == "array") and (.runs | length > 0)' results.security.sarif >/dev/null
-          jq -e '.version and (.runs | type == "array") and (.runs | length == 13) and all(.runs[]; (.results | length) == 0)' results.legacy-tombstones.sarif >/dev/null
+          RAW_SARIF=/tmp/direct-xfer-codacy-results.sarif
+          SECURITY_SARIF=/tmp/direct-xfer-codacy-security.sarif
+          LEGACY_SARIF=/tmp/direct-xfer-codacy-legacy-tombstones.sarif
 
-          run_count="$(jq '.runs | length' results.security.sarif)"
-          max_results="$(jq '[.runs[].results | length] | max // 0' results.security.sarif)"
-          unique_count="$(jq '[.runs[].automationDetails.id] | unique | length' results.security.sarif)"
+          test -s "$RAW_SARIF"
+          node scripts/filter-codacy-sarif.js "$RAW_SARIF" "$SECURITY_SARIF" "$LEGACY_SARIF"
+          test -s "$SECURITY_SARIF"
+          test -s "$LEGACY_SARIF"
+          jq -e '.version and (.runs | type == "array") and (.runs | length > 0)' "$SECURITY_SARIF" >/dev/null
+          jq -e '.version and (.runs | type == "array") and (.runs | length == 13) and all(.runs[]; (.results | length) == 0)' "$LEGACY_SARIF" >/dev/null
+
+          run_count="$(jq '.runs | length' "$SECURITY_SARIF")"
+          max_results="$(jq '[.runs[].results | length] | max // 0' "$SECURITY_SARIF")"
+          unique_count="$(jq '[.runs[].automationDetails.id] | unique | length' "$SECURITY_SARIF")"
           if [ "$run_count" -gt 20 ] || [ "$max_results" -gt 5000 ] || [ "$run_count" -ne "$unique_count" ]; then
             echo "::error::Filtered Codacy SARIF violates GitHub Code Scanning limits or category uniqueness."
             exit 1
           fi
 
           echo "Filtered Codacy SARIF runs: $run_count; max results/run: $max_results"
-          jq -r '.runs[] | "\(.automationDetails.id) tool=\(.tool.driver.name // "tool") security-results=\(.results | length)"' results.security.sarif
+          jq -r '.runs[] | "\(.automationDetails.id) tool=\(.tool.driver.name // "tool") security-results=\(.results | length)"' "$SECURITY_SARIF"
 
       # First publish exact empty historical categories so the broad Stylelint,
       # JSHint and other quality findings from ff5ccb27 are retired.
       - name: Close legacy Codacy quality alerts
         uses: github/codeql-action/upload-sarif@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4.37.4
         with:
-          sarif_file: results.legacy-tombstones.sarif
+          sarif_file: /tmp/direct-xfer-codacy-legacy-tombstones.sarif
 
       # Current Codacy security findings live in a distinct stable namespace.
       - name: Upload filtered Codacy security results
         uses: github/codeql-action/upload-sarif@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4.37.4
         with:
-          sarif_file: results.security.sarif
+          sarif_file: /tmp/direct-xfer-codacy-security.sarif

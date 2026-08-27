@@ -3,15 +3,15 @@
 Audit date: 2026-08-26
 Target: OWASP Application Security Verification Standard 5.0.0, Level 3
 Repository: `ManixQC/Direct-Xfer`
-Release: Direct-Xfer `1.71.31`
+Release: Direct-Xfer `1.71.32`
 Baseline input: Direct-Xfer `1.70.26` ASVS-L3 release
 Detailed matrix: `security/ASVS-5.0.0-L3-MATRIX.md`
 
 ## Release verification result
 
-Direct-Xfer 1.71.31 hardens the GitHub security pipeline over 1.71.30. The Windows release-dispatch workflow no longer template-expands workflow inputs inside executable PowerShell; inputs cross the GitHub expression boundary only through environment variables and the dispatch script validates the requested Git ref before invoking `gh`. Codacy now separates current security findings into a stable `codacy-security/*` namespace and publishes an exact 13-run empty tombstone set for the historical ff5ccb27 broad categories, allowing legacy Stylelint/JSHint/quality alerts to close without reclassifying style debt as security. Existing Scorecard allowlisting, immutable workflow pins, least-privilege token scopes, Docker checksum verification and bounded network retry remain in force. The ASVS status matrix remains 253 PASS / 92 N/A / 0 MANUAL / 0 PARTIAL / 0 FAIL / 0 REVIEW.
+Direct-Xfer 1.71.32 hardens the GitHub security pipeline over 1.71.30. The Windows release-dispatch workflow no longer template-expands workflow inputs inside executable PowerShell; inputs cross the GitHub expression boundary only through environment variables and the dispatch script validates the requested Git ref before invoking `gh`. Codacy now separates current security findings into a stable `codacy-security/*` namespace and publishes an exact 13-run empty tombstone set for the historical ff5ccb27 broad categories, allowing legacy Stylelint/JSHint/quality alerts to close without reclassifying style debt as security. Existing Scorecard allowlisting, immutable workflow pins, least-privilege token scopes, Docker checksum verification and bounded network retry remain in force. The ASVS status matrix remains 253 PASS / 92 N/A / 0 MANUAL / 0 PARTIAL / 0 FAIL / 0 REVIEW.
 
-### 1.71.31 GitHub security workflow hardening
+### 1.71.32 GitHub security workflow hardening
 
 - `.github/workflows/release-windows-build-chain.yml` passes `ref` and SignPath intent through `env` rather than embedding `${{ inputs.* }}` in its PowerShell `run` body, removing the zizmor `template-injection` sink.
 - `.github/scripts/dispatch-windows-release-build.ps1` is restored to the source package and rejects empty, oversized, metacharacter-bearing, ambiguous (`..`, `@{`, `//`) and malformed refs before dispatch.
@@ -74,9 +74,9 @@ Repository/release gates completed for this candidate:
 - Full source-only regression tree: **1159/1170 passed**; the 11 failures all require `express`, which is intentionally excluded from the source ZIP. The dependency-backed **CI REQUIRED** gate remains `npm ci` followed by `npm test`.
 - Static ASVS audit: **PASS** — 127 production JavaScript source files, 10 reviewed decoder sites.
 - PARTIAL-closure audit: **PASS** — 127 production JavaScript source files, 38 repository-verifiable controls, 0 blocking findings.
-- Security inventory regenerated for 1.71.31 — **956 entries**.
+- Security inventory regenerated for 1.71.32 — **956 entries**.
 - Windows ServerHost critical runtime manifest: **103 entries, 0 stale source-resident hashes** after final synchronization; the missing build-time Express entry remains pinned by `package-lock.json` to 4.22.2.
-- CycloneDX SBOM root component synchronized to 1.71.31.
+- CycloneDX SBOM root component synchronized to 1.71.32.
 
 This document is an implementation/evidence audit, not a third-party certification. A production installation can operate in `ASVS_L3_MODE=true` only while all mandatory runtime controls and the signed deployment evidence are valid.
 
@@ -152,8 +152,8 @@ The direct dependency graph remains lockfile-pinned. V15.2.1 is no longer an ope
 
 ## Final release gates
 
-- [x] package and lockfile version synchronized to 1.71.31.
-- [x] PWA version/cache generation synchronized to 1.71.31 / pwa494.
+- [x] package and lockfile version synchronized to 1.71.32.
+- [x] PWA version/cache generation synchronized to 1.71.32 / pwa495.
 - [x] ASVS regression suite green (96/96).
 - [x] Complete current test tree green (1139/1139 across 190 files).
 - [x] Static ASVS audit green.
@@ -161,7 +161,7 @@ The direct dependency graph remains lockfile-pinned. V15.2.1 is no longer an ope
 - [x] Security inventory regenerated.
 - [x] Windows runtime integrity manifest synchronized and rechecked.
 - [x] Matrix has 0 MANUAL, 0 PARTIAL, 0 FAIL and 0 REVIEW.
-- [x] SBOM root component synchronized to 1.71.31.
+- [x] SBOM root component synchronized to 1.71.32.
 - [x] Former operator-declared manual-attestation flags removed from the L3 configuration surface.
 
 Independent review of N/A decisions, production evidence collection and a focused penetration test remain appropriate before making an external certification/compliance representation.

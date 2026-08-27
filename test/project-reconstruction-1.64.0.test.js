@@ -24,7 +24,7 @@ test('source tree does not keep a redundant prebuilt Windows runtime', () => {
   assert.ok(workflow.includes("Copy-Item @('lib','public','pwa','scripts','security') $app -Recurse"));
   assert.match(workflow, /npm ci --omit=dev --ignore-scripts --no-audit --no-fund/);
 });
-test('Windows metadata keeps app 1.71.31 separate from stable Windows component identities', () => {
+test('Windows metadata keeps app 1.71.32 separate from stable Windows component identities', () => {
   const launcher = read('windows-launcher/Program.cs');
   const host = read('windows-server-host/Program.cs');
   const hostProject = read('windows-server-host/DirectXfer.ServerHost.csproj');
@@ -63,7 +63,7 @@ test('forbidden generated project files are absent', () => {
   assert.deepEqual(forbidden, []);
 });
 
-test('Windows GitHub Actions run name follows Direct-Xfer 1.71.31', () => {
+test('Windows GitHub Actions run name follows Direct-Xfer 1.71.32', () => {
   const workflow = read('.github/workflows/build-windows-csharp.yml');
   assert.match(workflow, new RegExp(`^run-name: v${releaseRe}$`, 'm'));
 });

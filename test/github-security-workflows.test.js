@@ -28,7 +28,7 @@ test("zizmor publishes only medium-confidence, medium-severity security findings
   assert.match(text, /security-events:\s*write/);
 });
 
-test("OpenSSF Scorecard is the only new explicit SARIF uploader", () => {
+test("OpenSSF Scorecard uploads its filtered technical security SARIF", () => {
   const scorecard = read(".github/workflows/scorecard.yml");
   assert.match(scorecard, /ossf\/scorecard-action@[0-9a-f]{40}/);
   assert.match(scorecard, /github\/codeql-action\/upload-sarif@[0-9a-f]{40}/);
@@ -157,4 +157,35 @@ test("Windows release dispatch keeps workflow inputs out of executable PowerShel
   assert.match(dispatcher, /Invalid release ref/);
   assert.match(dispatcher, /\$Ref\.Contains\('\.\.'\)/);
   assert.match(dispatcher, /gh workflow run build-windows-csharp\.yml/);
+});
+
+test("OWASP ZAP DAST scans an isolated local target and sends only Medium/High findings to Code Scanning", () => {
+  const workflow = read(".github/workflows/zap.yml");
+  const converter = read("scripts/zap-report-to-sarif.js");
+  const gate = read("scripts/check-zap-report.js");
+  assert.match(workflow, /zaproxy\/action-baseline@[0-9a-f]{40}/);
+  assert.match(workflow, /zaproxy\/zap-stable@sha256:[0-9a-f]{64}/);
+  assert.match(workflow, /allow_issue_writing:\s*false/);
+  assert.match(workflow, /fail_action:\s*false/);
+  assert.match(workflow, /target:\s*http:\/\/127\.0\.0\.1:55750\//);
+  assert.match(workflow, /ADMIN_ALLOW_ANY=true/);
+  assert.match(workflow, /export ADMIN_PASSWORD=\"\$\(openssl rand -hex 32\)\"/);
+  assert.match(workflow, /--env ADMIN_PASSWORD/);
+  assert.match(workflow, /zap-report-to-sarif\.js report_json\.json zap-security\.sarif/);
+  assert.match(workflow, /category:\s*owasp-zap-baseline/);
+  assert.match(workflow, /check-zap-report\.js report_json\.json/);
+  assert.match(converter, /ZAP_MIN_RISK \|\| 2/);
+  assert.match(converter, /automationDetails:\s*\{ id: 'owasp-zap\/baseline\/' \}/);
+  assert.match(converter, /'security-severity'/);
+  assert.match(gate, /risk >= minRisk/);
+});
+
+test("Windows provenance also attests the CycloneDX SBOM and SHA-256 manifest", () => {
+  const text = read(".github/workflows/build-windows-csharp.yml");
+  assert.match(text, /Checkout release SBOM/);
+  assert.match(text, /Direct-Xfer-\$\{DX_VERSION\}-SHA256SUMS\.txt/);
+  assert.match(text, /sha256sum source\/security\/sbom\.cdx\.json/);
+  assert.match(text, /Direct-Xfer-\$\{\{ env\.DX_VERSION \}\}-provenance-metadata/);
+  assert.match(text, /provenance\/source\/security\/sbom\.cdx\.json/);
+  assert.match(text, /actions\/attest@[0-9a-f]{40}/);
 });

@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-08-27T02:57:08.018Z",
-  "version": "1.71.35",
+  "generatedAt": "2026-08-27T03:14:46.935Z",
+  "version": "1.71.36",
   "categories": {
     "crypto": [
       {
@@ -1452,6 +1452,11 @@
         "file": "scripts/verify-audit-proof.js",
         "line": 33,
         "text": "const trusted = crypto.createPublicKey(String(options.publicKey));"
+      },
+      {
+        "file": "scripts/zap-report-to-sarif.js",
+        "line": 82,
+        "text": "const fingerprint = crypto.createHash('sha256').update(fingerprintSource).digest('hex');"
       },
       {
         "file": "test/asvs-l3-account-factor-hardening-1.70.22.test.js",
@@ -3310,7 +3315,7 @@
       {
         "file": "test/pwa-admin-features-15-19-21-1.64.0.test.js",
         "line": 196,
-        "text": "const asset = await fetch(base + '/app/admin-audit-connectors.js?v=479');"
+        "text": "const asset = await fetch(base + '/app/admin-audit-connectors.js?v=480');"
       },
       {
         "file": "test/pwa-admin-features-15-19-21-1.64.0.test.js",
@@ -3360,7 +3365,7 @@
       {
         "file": "test/pwa-admin-features-3-7-1.64.0.test.js",
         "line": 218,
-        "text": "const publicAsset = await fetch(base + '/app/admin-advanced.js?v=479');"
+        "text": "const publicAsset = await fetch(base + '/app/admin-advanced.js?v=480');"
       },
       {
         "file": "test/pwa-admin-features-3-7-1.64.0.test.js",
@@ -3450,12 +3455,12 @@
       {
         "file": "test/pwa-mobile-features-24-25-27-29-31-42-45-46-47-1.64.0.test.js",
         "line": 150,
-        "text": "const mod = await fetch(base + '/app/mobile-intelligence.js?v=479');"
+        "text": "const mod = await fetch(base + '/app/mobile-intelligence.js?v=480');"
       },
       {
         "file": "test/pwa-mobile-features-24-25-27-29-31-42-45-46-47-1.64.0.test.js",
         "line": 154,
-        "text": "const r = await fetch(base + '/app/' + name + '?v=479');"
+        "text": "const r = await fetch(base + '/app/' + name + '?v=480');"
       },
       {
         "file": "test/pwa-routes-refactor.test.js",

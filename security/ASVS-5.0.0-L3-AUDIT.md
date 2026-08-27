@@ -3,16 +3,22 @@
 Audit date: 2026-08-26
 Target: OWASP Application Security Verification Standard 5.0.0, Level 3
 Repository: `ManixQC/Direct-Xfer`
-Release: Direct-Xfer `1.71.35`
+Release: Direct-Xfer `1.71.36`
 Baseline input: Direct-Xfer `1.70.26` ASVS-L3 release
 Detailed matrix: `security/ASVS-5.0.0-L3-MATRIX.md`
 
 ## Release verification result
 
-Direct-Xfer 1.71.35 hardens the GitHub security pipeline over the previous release. Current Codacy results remain isolated in the stable `codacy-security/*` namespace, while a new fail-closed cleanup removes the historical broad Codacy quality analysis series from GitHub Code Scanning through the official analyses API. Cleanup is restricted to `ManixQC/Direct-Xfer`, `refs/heads/main`, and an exact allowlist of legacy `(... reported by Codacy)` tool identities; CodeQL, Trivy, Scorecard, zizmor and current `Eslint-9` analyses are never targets. This replaces the incomplete synthetic-tombstone approach, which could not match every pre-category and pre-chunking historical SARIF identity. Existing workflow-input hardening, Scorecard allowlisting, immutable workflow pins, least-privilege token scopes, Docker checksum verification and bounded network retry remain in force. The ASVS status matrix remains 253 PASS / 92 N/A / 0 MANUAL / 0 PARTIAL / 0 FAIL / 0 REVIEW.
+Direct-Xfer 1.71.36 adds dynamic web-application security coverage and stronger release provenance. A new OWASP ZAP baseline workflow builds and starts an isolated local Direct-Xfer Docker target, waits for the real health endpoint, scans it with the official ZAP baseline action and exports only Medium/High alerts to GitHub Code Scanning; Low/Informational observations remain report-only. The ZAP action is pinned to an immutable commit and ZAP 2.17.0 is pinned to an amd64 image digest. The Windows provenance job now validates and attests the release CycloneDX SBOM and a SHA-256 manifest alongside the launcher, ServerHost and installer, while keeping OIDC/attestation privileges isolated from the signing/build job. Existing Codacy filtering/legacy cleanup, CodeQL, Trivy, Scorecard, zizmor, immutable workflow pins, least-privilege token scopes and Docker checksum verification/retry remain in force. The ASVS status matrix remains 253 PASS / 92 N/A / 0 MANUAL / 0 PARTIAL / 0 FAIL / 0 REVIEW.
 
-### 1.71.35 GitHub security workflow hardening
+### 1.71.36 GitHub security workflow hardening
 
+- `.github/workflows/zap.yml` adds OWASP ZAP baseline DAST on canonical `main`, manual dispatch and a weekly schedule. It scans only an ephemeral local Docker instance bound to loopback, waits for `/healthz`, and never targets a production URL.
+- ZAP uses `zaproxy/action-baseline` pinned to its immutable v0.15.0 release commit and a digest-pinned ZAP 2.17.0 linux/amd64 image. Automatic issue creation is disabled and the workflow has only `contents: read` plus job-scoped `security-events: write`.
+- `scripts/zap-report-to-sarif.js` converts only ZAP risk codes Medium/High to stable `owasp-zap/baseline/` SARIF; `scripts/check-zap-report.js` gates those same severities. Low/Informational alerts remain in the full ZAP JSON/Markdown/HTML report artifact and do not pollute Code Scanning.
+- The DAST target receives a random ephemeral `ADMIN_PASSWORD` so failure logs cannot expose an automatically generated owner credential.
+- `attest-windows-provenance` now checks out and version-validates `security/sbom.cdx.json`, emits `Direct-Xfer-${DX_VERSION}-SHA256SUMS.txt`, uploads both as provenance metadata, and includes them in the existing GitHub build-provenance attestation alongside the final launcher, ServerHost and installer. OIDC/attestation permissions remain confined to the separate provenance job.
+- Regression coverage in `test/zap-security-workflow.test.js` and `test/github-security-workflows.test.js` locks the ZAP severity boundary, immutable pins, local-only target and extended provenance subjects.
 - `.github/workflows/release-windows-build-chain.yml` passes `ref` and SignPath intent through `env` rather than embedding `${{ inputs.* }}` in its PowerShell `run` body, removing the zizmor `template-injection` sink.
 - `.github/scripts/dispatch-windows-release-build.ps1` is restored to the source package and rejects empty, oversized, metacharacter-bearing, ambiguous (`..`, `@{`, `//`) and malformed refs before dispatch.
 - `scripts/filter-codacy-sarif.js` moves current security findings to stable `codacy-security/*` categories and excludes quality-only analyzers from that namespace.
@@ -71,13 +77,13 @@ Direct-Xfer 1.70.26 closes the 26 deployment-bound `MANUAL` rows from 1.70.25 wi
 
 Repository/release gates completed for this candidate:
 
-- Code Scanning / release regression subset: **114 passed, 0 failed, 0 skipped**, covering Codacy legacy-analysis API cleanup, zizmor template-injection hardening, existing CodeQL/OAuth regressions, Trivy/OpenVEX, Scorecard filtering, Windows/SignPath and release-maintenance invariants.
-- Full source-only regression tree: **1169/1180 passed**; the 11 failures all require `express`, which is intentionally excluded from the source ZIP. The dependency-backed **CI REQUIRED** gate remains `npm ci` followed by `npm test`.
+- Code Scanning / release regression subset: **144 passed, 0 failed, 0 skipped**, covering OWASP ZAP DAST/SARIF gating, extended GitHub Artifact Attestations, Codacy legacy-analysis cleanup, zizmor template-injection hardening, existing CodeQL/OAuth regressions, Trivy/OpenVEX, Scorecard filtering, Windows/SignPath and release-maintenance invariants.
+- Full source-only regression tree: **1173/1184 passed**; the 11 failures all require `express`, which is intentionally excluded from the source ZIP. The dependency-backed **CI REQUIRED** gate remains `npm ci` followed by `npm test`.
 - Static ASVS audit: **PASS** — 127 production JavaScript source files, 10 reviewed decoder sites.
 - PARTIAL-closure audit: **PASS** — 127 production JavaScript source files, 38 repository-verifiable controls, 0 blocking findings.
-- Security inventory regenerated for 1.71.35 — **959 entries**.
+- Security inventory regenerated for 1.71.36 — **960 entries**.
 - Windows ServerHost critical runtime manifest: **103 entries, 0 stale source-resident hashes** after final synchronization; the missing build-time Express entry remains pinned by `package-lock.json` to 4.22.2.
-- CycloneDX SBOM root component synchronized to 1.71.35.
+- CycloneDX SBOM root component synchronized to 1.71.36.
 
 This document is an implementation/evidence audit, not a third-party certification. A production installation can operate in `ASVS_L3_MODE=true` only while all mandatory runtime controls and the signed deployment evidence are valid.
 
@@ -153,8 +159,8 @@ The direct dependency graph remains lockfile-pinned. V15.2.1 is no longer an ope
 
 ## Final release gates
 
-- [x] package and lockfile version synchronized to 1.71.35.
-- [x] PWA version/cache generation synchronized to 1.71.35 / pwa498.
+- [x] package and lockfile version synchronized to 1.71.36.
+- [x] PWA version/cache generation synchronized to 1.71.36 / pwa499.
 - [x] ASVS regression suite green (96/96).
 - [x] Complete current test tree green (1139/1139 across 190 files).
 - [x] Static ASVS audit green.
@@ -162,7 +168,7 @@ The direct dependency graph remains lockfile-pinned. V15.2.1 is no longer an ope
 - [x] Security inventory regenerated.
 - [x] Windows runtime integrity manifest synchronized and rechecked.
 - [x] Matrix has 0 MANUAL, 0 PARTIAL, 0 FAIL and 0 REVIEW.
-- [x] SBOM root component synchronized to 1.71.35.
+- [x] SBOM root component synchronized to 1.71.36.
 - [x] Former operator-declared manual-attestation flags removed from the L3 configuration surface.
 
 Independent review of N/A decisions, production evidence collection and a focused penetration test remain appropriate before making an external certification/compliance representation.

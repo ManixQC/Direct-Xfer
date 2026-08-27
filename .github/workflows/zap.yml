@@ -1,0 +1,146 @@
+name: OWASP ZAP DAST
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+  schedule:
+    - cron: "41 4 * * 3"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: zap-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DX_PORT: '55750'
+  ZAP_MIN_RISK: '2'
+  # ZAP 2.17.0 linux/amd64 manifest digest. Keep immutable so DAST is reproducible.
+  ZAP_DOCKER_IMAGE: zaproxy/zap-stable@sha256:71db37cd5b75663b35758d10aaec05bf6fbac23f5020e3046c70e628a5f84efa
+
+jobs:
+  zap-baseline:
+    name: OWASP ZAP baseline scan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build Direct-Xfer DAST image
+        shell: bash
+        run: |
+          set -euo pipefail
+          built=0
+          for attempt in 1 2 3; do
+            if docker build --pull --platform=linux/amd64 --tag direct-xfer:zap .; then
+              built=1
+              break
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "Docker build hit a transient failure; retrying attempt $((attempt + 1))/3 after backoff."
+              sleep "$((attempt * 15))"
+            fi
+          done
+          test "$built" = "1"
+          test "$(docker image inspect direct-xfer:zap --format '{{.Architecture}}')" = "amd64"
+
+      - name: Start isolated Direct-Xfer target
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="$RUNNER_TEMP/direct-xfer-zap"
+          mkdir -p "$base/data" "$base/images" "$base/inbox" "$base/host"
+          export ADMIN_PASSWORD="$(openssl rand -hex 32)"
+          docker run --detach \
+            --name direct-xfer-zap \
+            --publish "127.0.0.1:${DX_PORT}:${DX_PORT}" \
+            --env "PORT=${DX_PORT}" \
+            --env "PUBLIC_URL=http://127.0.0.1:${DX_PORT}" \
+            --env "ADMIN_ALLOW_ANY=true" \
+            --env ADMIN_PASSWORD \
+            --env "PUID=1000" \
+            --env "PGID=1000" \
+            --volume "$base/data:/data" \
+            --volume "$base/images:/Images" \
+            --volume "$base/inbox:/Direct-Xfer" \
+            --volume "$base/host:/host:ro" \
+            direct-xfer:zap
+
+      - name: Wait for Direct-Xfer health
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent --show-error "http://127.0.0.1:${DX_PORT}/healthz" >/dev/null; then
+              echo "Direct-Xfer is ready for DAST."
+              exit 0
+            fi
+            state="$(docker inspect direct-xfer-zap --format '{{.State.Status}}' 2>/dev/null || true)"
+            if [[ "$state" == "exited" || "$state" == "dead" ]]; then
+              docker logs direct-xfer-zap || true
+              echo "Direct-Xfer stopped before ZAP could scan it." >&2
+              exit 1
+            fi
+            sleep 2
+          done
+          docker logs direct-xfer-zap || true
+          echo "Direct-Xfer did not become healthy before timeout." >&2
+          exit 1
+
+      - name: Run OWASP ZAP baseline
+        uses: zaproxy/action-baseline@de8ad967d3548d44ef623df22cf95c3b0baf8b25 # v0.15.0
+        with:
+          target: http://127.0.0.1:55750/
+          docker_name: ${{ env.ZAP_DOCKER_IMAGE }}
+          cmd_options: '-m 2 -T 10'
+          allow_issue_writing: false
+          fail_action: false
+          artifact_name: direct-xfer-zap-baseline
+
+      - name: Convert Medium/High ZAP findings to SARIF
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s report_json.json
+          node scripts/zap-report-to-sarif.js report_json.json zap-security.sarif
+          jq -e '.version == "2.1.0" and (.runs | length == 1) and (.runs[0].results | type == "array")' zap-security.sarif >/dev/null
+          jq -r '"ZAP security findings uploaded: \(.runs[0].results | length)"' zap-security.sarif
+
+      - name: Upload ZAP security findings to Code Scanning
+        if: always() && hashFiles('zap-security.sarif') != ''
+        uses: github/codeql-action/upload-sarif@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4.37.4
+        with:
+          sarif_file: zap-security.sarif
+          category: owasp-zap-baseline
+
+      - name: Upload filtered ZAP SARIF
+        if: always() && hashFiles('zap-security.sarif') != ''
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: direct-xfer-zap-security-sarif
+          path: zap-security.sarif
+          if-no-files-found: error
+
+      - name: Enforce Medium/High ZAP gate
+        shell: bash
+        run: node scripts/check-zap-report.js report_json.json
+
+      - name: Print Direct-Xfer logs
+        if: failure()
+        shell: bash
+        run: docker logs direct-xfer-zap || true
+
+      - name: Stop DAST target
+        if: always()
+        shell: bash
+        run: docker rm --force direct-xfer-zap >/dev/null 2>&1 || true

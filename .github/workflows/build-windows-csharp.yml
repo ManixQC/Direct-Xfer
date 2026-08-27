@@ -1,5 +1,5 @@
 name: Build Direct-Xfer Windows C# + Installer
-run-name: v1.71.35
+run-name: v1.71.36
 
 on:
   workflow_dispatch:
@@ -41,7 +41,7 @@ jobs:
   build-windows:
     runs-on: windows-2025
     env:
-      DX_VERSION: '1.71.35'
+      DX_VERSION: '1.71.36'
       # Runtime identity is independent from the stable launcher component version.
       DX_RUNTIME_BUILD: 'runtime169'
       DX_LAUNCHER_COMPONENT_VERSION: '1.70.1'
@@ -647,10 +647,10 @@ jobs:
     name: Attest Windows release provenance
     if: ${{ github.repository == 'ManixQC/Direct-Xfer' }}
     needs: build-windows
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
-      DX_VERSION: '1.71.35'
+      DX_VERSION: '1.71.36'
     # Keep OIDC/attestation privileges out of the build/signing job. This job only
     # reads the final immutable Actions artifacts and creates GitHub attestations.
     permissions:
@@ -659,6 +659,12 @@ jobs:
       id-token: write
       attestations: write
     steps:
+      - name: Checkout release SBOM
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          path: provenance/source
+
       - name: Download portable Windows artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -681,6 +687,32 @@ jobs:
           [[ ${#launchers[@]} -eq 1 ]] || { echo "Expected exactly one launcher attestation subject, found ${#launchers[@]}" >&2; exit 1; }
           [[ ${#hosts[@]} -eq 1 ]] || { echo "Expected exactly one ServerHost attestation subject, found ${#hosts[@]}" >&2; exit 1; }
           [[ ${#installers[@]} -eq 1 ]] || { echo "Expected exactly one installer attestation subject, found ${#installers[@]}" >&2; exit 1; }
+          node -e "const s=require('./provenance/source/security/sbom.cdx.json'); if(s?.metadata?.component?.version !== process.env.DX_VERSION) process.exit(1)"
+
+      - name: Generate release SHA-256 manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          manifest=provenance/Direct-Xfer-${DX_VERSION}-SHA256SUMS.txt
+          : > "$manifest"
+          (
+            cd provenance
+            find portable installer -type f \
+              \( -name 'Direct-Xfer.exe' -o -name 'Direct-Xfer.ServerHost.exe' -o -name "Direct-Xfer-Setup-${DX_VERSION}.exe" \) \
+              -print0 | sort -z | xargs -0 sha256sum
+            sha256sum source/security/sbom.cdx.json
+          ) >> "$manifest"
+          test "$(wc -l < "$manifest")" -eq 4
+          cat "$manifest"
+
+      - name: Upload provenance metadata
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: Direct-Xfer-${{ env.DX_VERSION }}-provenance-metadata
+          path: |
+            provenance/Direct-Xfer-${{ env.DX_VERSION }}-SHA256SUMS.txt
+            provenance/source/security/sbom.cdx.json
+          if-no-files-found: error
 
       - name: Generate GitHub build provenance attestations
         uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
@@ -689,3 +721,5 @@ jobs:
             provenance/portable/**/Direct-Xfer.exe
             provenance/portable/**/Direct-Xfer.ServerHost.exe
             provenance/installer/**/Direct-Xfer-Setup-${{ env.DX_VERSION }}.exe
+            provenance/Direct-Xfer-${{ env.DX_VERSION }}-SHA256SUMS.txt
+            provenance/source/security/sbom.cdx.json

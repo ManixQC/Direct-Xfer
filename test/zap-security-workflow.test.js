@@ -132,7 +132,7 @@ test('public page nonce injector preserves an existing nonce instead of duplicat
 test('public page nonce injection is idempotent at runtime', () => {
   const { createPublicPages } = require('../lib/server/public-pages');
   const pages = createPublicPages({
-    APP_NAME:'Direct-Xfer', APP_VERSION:'1.71.41', APP_YEAR:'2026',
+    APP_NAME:'Direct-Xfer', APP_VERSION:'1.71.42', APP_YEAR:'2026',
     requestContext:{ getStore:() => ({ cspNonce:'fresh-nonce' }) }, recipientByToken:new Map(),
     pubIp:(x) => x, linkPrefix:() => '/s/', shareEffectiveExpiry:() => 0,
     getSettings:() => ({}), clientIp:() => '127.0.0.1', parseCookies:() => ({}),

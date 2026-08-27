@@ -2,13 +2,13 @@
 #if EnvAppVersion != ""
   #define AppVersion EnvAppVersion
 #else
-  #define AppVersion "1.71.41"
+  #define AppVersion "1.71.42"
 #endif
 #define EnvSourceDir GetEnv("DX_INNO_SOURCE_DIR")
 #if EnvSourceDir != ""
   #define SourceDir EnvSourceDir
 #else
-  #define SourceDir "..\dist\Direct-Xfer-1.71.41-Windows-CSharp"
+  #define SourceDir "..\dist\Direct-Xfer-1.71.42-Windows-CSharp"
 #endif
 #define EnvOutputDir GetEnv("DX_INNO_OUTPUT_DIR")
 #if EnvOutputDir != ""
@@ -78,12 +78,56 @@ SetupLogging=yes
 Uninstallable=yes
 CreateUninstallRegKey=yes
 InfoBeforeFile=..\PRIVACY.md
+ShowLanguageDialog=yes
+LanguageDetectionMethod=uilanguage
+
+[Languages]
+Name: "en"; MessagesFile: "compiler:Default.isl"
+Name: "fr"; MessagesFile: "compiler:Languages\French.isl"; InfoBeforeFile: "PRIVACY.fr.txt"
+Name: "es"; MessagesFile: "compiler:Languages\Spanish.isl"; InfoBeforeFile: "PRIVACY.es.txt"
+
+[CustomMessages]
+en.InstallOptions=Installation options:
+en.PrivacyNetworkOptions=Privacy and network options:
+en.AdditionalShortcuts=Additional shortcuts:
+en.TaskAutostart=Start Direct-Xfer automatically with Windows
+en.TaskUpdateCheck=Allow automatic update checks (contacts Docker Hub)
+en.TaskPublicIp=Allow public IP discovery at startup (contacts public IP services)
+en.TaskDesktopIcon=Create a desktop shortcut
+en.RunDirectXfer=Launch Direct-Xfer
+en.NodeRuntimeInvalid=The bundled Node.js {#NodeVersion} runtime is missing, corrupt, wrong-architecture, or cannot be executed by the Direct-Xfer user. Re-run the installer and check antivirus/quarantine logs.
+en.DotNetRuntimeInvalid=The bundled private .NET runtime is incomplete after installation. Direct-Xfer was not started. Re-run the installer and check antivirus/quarantine logs if the problem persists.
+en.ServerHostStopTimeout=Direct-Xfer Server Host did not stop in time. Close the current Windows session or restart Windows, then run the installer again.
+
+fr.InstallOptions=Options d’installation :
+fr.PrivacyNetworkOptions=Options de confidentialité et de réseau :
+fr.AdditionalShortcuts=Raccourcis supplémentaires :
+fr.TaskAutostart=Démarrer Direct-Xfer automatiquement avec Windows
+fr.TaskUpdateCheck=Autoriser la vérification automatique des mises à jour (contacte Docker Hub)
+fr.TaskPublicIp=Autoriser la détection de l’adresse IP publique au démarrage (contacte des services d’IP publique)
+fr.TaskDesktopIcon=Créer un raccourci sur le Bureau
+fr.RunDirectXfer=Lancer Direct-Xfer
+fr.NodeRuntimeInvalid=Le runtime Node.js {#NodeVersion} inclus est manquant, corrompu, d’une architecture incorrecte ou ne peut pas être exécuté par l’utilisateur Direct-Xfer. Relancez le programme d’installation et vérifiez les journaux de l’antivirus ou de la quarantaine.
+fr.DotNetRuntimeInvalid=Le runtime .NET privé inclus est incomplet après l’installation. Direct-Xfer n’a pas été démarré. Relancez le programme d’installation et vérifiez les journaux de l’antivirus ou de la quarantaine si le problème persiste.
+fr.ServerHostStopTimeout=Direct-Xfer Server Host ne s’est pas arrêté à temps. Fermez la session Windows actuelle ou redémarrez Windows, puis relancez le programme d’installation.
+
+es.InstallOptions=Opciones de instalación:
+es.PrivacyNetworkOptions=Opciones de privacidad y red:
+es.AdditionalShortcuts=Accesos directos adicionales:
+es.TaskAutostart=Iniciar Direct-Xfer automáticamente con Windows
+es.TaskUpdateCheck=Permitir la comprobación automática de actualizaciones (contacta con Docker Hub)
+es.TaskPublicIp=Permitir la detección de la IP pública al iniciar (contacta con servicios de IP pública)
+es.TaskDesktopIcon=Crear un acceso directo en el escritorio
+es.RunDirectXfer=Iniciar Direct-Xfer
+es.NodeRuntimeInvalid=El runtime Node.js {#NodeVersion} incluido falta, está dañado, tiene una arquitectura incorrecta o no puede ejecutarse con el usuario de Direct-Xfer. Vuelva a ejecutar el instalador y revise los registros del antivirus o de la cuarentena.
+es.DotNetRuntimeInvalid=El runtime privado de .NET incluido está incompleto después de la instalación. Direct-Xfer no se inició. Vuelva a ejecutar el instalador y revise los registros del antivirus o de la cuarentena si el problema continúa.
+es.ServerHostStopTimeout=Direct-Xfer Server Host no se detuvo a tiempo. Cierre la sesión actual de Windows o reinicie Windows y vuelva a ejecutar el instalador.
 
 [Tasks]
-Name: "autostart"; Description: "Start Direct-Xfer automatically with Windows"; GroupDescription: "Installation options:"
-Name: "updatecheck"; Description: "Allow automatic update checks (contacts Docker Hub)"; GroupDescription: "Privacy and network options:"
-Name: "publicip"; Description: "Allow public IP discovery at startup (contacts public IP services)"; GroupDescription: "Privacy and network options:"
-Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional shortcuts:"; Flags: unchecked
+Name: "autostart"; Description: "{cm:TaskAutostart}"; GroupDescription: "{cm:InstallOptions}"
+Name: "updatecheck"; Description: "{cm:TaskUpdateCheck}"; GroupDescription: "{cm:PrivacyNetworkOptions}"
+Name: "publicip"; Description: "{cm:TaskPublicIp}"; GroupDescription: "{cm:PrivacyNetworkOptions}"
+Name: "desktopicon"; Description: "{cm:TaskDesktopIcon}"; GroupDescription: "{cm:AdditionalShortcuts}"; Flags: unchecked
 
 [InstallDelete]
 ; Remove old heavyweight helpers left by <=1.66.4 bundled-component builds. New optional
@@ -118,7 +162,7 @@ Name: "{autodesktop}\Direct-Xfer"; Filename: "{app}\{#AppExeName}"; WorkingDir: 
 
 [Run]
 Filename: "{app}\Direct-Xfer.ServerHost.exe"; WorkingDir: "{app}"; Flags: nowait runasoriginaluser; BeforeInstall: ValidateAndCleanupPrivateDotNet
-Filename: "{app}\{#AppExeName}"; Description: "Launch Direct-Xfer"; WorkingDir: "{app}"; Flags: nowait postinstall skipifsilent runasoriginaluser; Check: PrivateDotNetVersionIsComplete
+Filename: "{app}\{#AppExeName}"; Description: "{cm:RunDirectXfer}"; WorkingDir: "{app}"; Flags: nowait postinstall skipifsilent runasoriginaluser; Check: PrivateDotNetVersionIsComplete
 
 [Code]
 const
@@ -227,7 +271,7 @@ end;
 procedure FinalizeAndValidateNodeRuntime;
 begin
   if not IsPinnedPrivateNode then
-    RaiseException('The bundled Node.js {#NodeVersion} runtime is missing, corrupt, wrong-architecture, or cannot be executed by the Direct-Xfer user. Re-run the installer and check antivirus/quarantine logs.');
+    RaiseException(CustomMessage('NodeRuntimeInvalid'));
   // Old 1.66.5-1.67.1 on-demand builds could leave an external-node receipt behind.
   // The bundled runtime is authoritative again, so remove that obsolete fallback record.
   DeleteFile(NodeReceiptPath);
@@ -248,7 +292,7 @@ end;
 procedure ValidateInstalledPrivateDotNet;
 begin
   if not PrivateDotNetVersionIsComplete then
-    RaiseException('The bundled private .NET runtime is incomplete after installation. Direct-Xfer was not started. Re-run the installer and check antivirus/quarantine logs if the problem persists.');
+    RaiseException(CustomMessage('DotNetRuntimeInvalid'));
 end;
 
 procedure CleanupOldDotNetVersionsIn(const BaseDir, KeepVersion: String);
@@ -305,7 +349,7 @@ end;
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
   if not StopServerHostAndWait then begin
-    Result := 'Direct-Xfer Server Host did not stop in time. Close the current Windows session or restart Windows, then run the installer again.';
+    Result := CustomMessage('ServerHostStopTimeout');
     exit;
   end;
   Result := '';

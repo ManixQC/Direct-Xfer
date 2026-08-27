@@ -65,7 +65,8 @@ test('installer updates and ships the single private runtime without pre-deletin
   assert.match(installer, /PrivateDotNetVersionIsComplete/);
   assert.match(installer, /AfterInstall: ValidateInstalledPrivateDotNet/);
   assert.match(installer, /BeforeInstall: ValidateAndCleanupPrivateDotNet/);
-  assert.match(installer, /RaiseException\('The bundled private \.NET runtime is incomplete after installation/);
+  assert.match(installer, /RaiseException\(CustomMessage\('DotNetRuntimeInvalid'\)\)/);
+  assert.match(installer, /^en\.DotNetRuntimeInvalid=The bundled private \.NET runtime is incomplete after installation/m);
   assert.match(installer, /CleanupOldPrivateDotNetVersions/);
   assert.match(installer, /Source: "\{#SourceDir\}\\\*"; DestDir: "\{app\}"/);
   assert.doesNotMatch(installer, /HasNet10DesktopRuntime|OfferNet10DesktopRuntimeDownload|DotNet10DesktopRuntimeUrl/);

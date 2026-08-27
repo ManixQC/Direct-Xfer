@@ -3,15 +3,15 @@
 Audit date: 2026-08-27
 Target: OWASP Application Security Verification Standard 5.0.0, Level 3
 Repository: `ManixQC/Direct-Xfer`
-Release: Direct-Xfer `1.71.41`
+Release: Direct-Xfer `1.71.42`
 Baseline input: Direct-Xfer `1.70.26` ASVS-L3 release
 Detailed matrix: `security/ASVS-5.0.0-L3-MATRIX.md`
 
 ## Release verification result
 
-Direct-Xfer 1.71.41 separates Windows preview and release channels after the Smart App Control finding: unsigned outputs remain downloadable for development/testing only under explicit `-UNSIGNED` artifact names, while canonical release names and Windows provenance attestations remain restricted to an explicit SignPath signing dispatch that passes final Authenticode verification of launcher, ServerHost and installer. The CSP/ZAP, nonce, SARIF, SBOM/provenance, Codacy, CodeQL, Trivy, Scorecard, zizmor, immutable workflow pins, least-privilege token scopes and Docker checksum verification/retry hardening from the preceding hardening pass remains in force. The ASVS status matrix remains 253 PASS / 92 N/A / 0 MANUAL / 0 PARTIAL / 0 FAIL / 0 REVIEW.
+Direct-Xfer 1.71.42 separates Windows preview and release channels after the Smart App Control finding: unsigned outputs remain downloadable for development/testing only under explicit `-UNSIGNED` artifact names, while canonical release names and Windows provenance attestations remain restricted to an explicit SignPath signing dispatch that passes final Authenticode verification of launcher, ServerHost and installer. The CSP/ZAP, nonce, SARIF, SBOM/provenance, Codacy, CodeQL, Trivy, Scorecard, zizmor, immutable workflow pins, least-privilege token scopes and Docker checksum verification/retry hardening from the preceding hardening pass remains in force. The ASVS status matrix remains 253 PASS / 92 N/A / 0 MANUAL / 0 PARTIAL / 0 FAIL / 0 REVIEW.
 
-### 1.71.41 unsigned-preview / signed-release separation
+### 1.71.42 unsigned-preview / signed-release separation
 
 - Automatic and manual Windows builds now publish a portable preview and installer preview only under names containing `-UNSIGNED`; the installer file itself is copied to `Direct-Xfer-Setup-<version>-UNSIGNED.exe`.
 - The workflow validates all three preview binaries as `NotSigned` before upload and explicitly warns that Smart App Control may block them. No claim is made that unsigned previews are suitable as trusted release binaries.
@@ -22,15 +22,15 @@ Direct-Xfer 1.71.41 separates Windows preview and release channels after the Sma
 - Regression coverage verifies the preview-before-request ordering, unsigned naming, signed installer rebuild, canonical signed-artifact gates and signed-only provenance.
 - Targeted release/security regression gate: **152/152 PASS**. Full source-only suite: **1181/1192 PASS**, with the same 11 dependency-backed tests failing only because `express` is absent from the source ZIP and restored by `npm ci` in CI.
 
-### 1.71.41 CSP / ZAP finding closure
+### 1.71.42 CSP / ZAP finding closure
 
-- The 1.71.37 DAST pipeline successfully uploaded its SARIF and then failed correctly on a real Medium alert: ZAP plugin 10055 reported `CSP: style-src unsafe-inline`. 1.71.41 fixes the application policy rather than suppressing the alert.
+- The 1.71.37 DAST pipeline successfully uploaded its SARIF and then failed correctly on a real Medium alert: ZAP plugin 10055 reported `CSP: style-src unsafe-inline`. 1.71.42 fixes the application policy rather than suppressing the alert.
 - `lib/server/http-application.js` removes `'unsafe-inline'` from the `style-src` fallback and emits nonce-only `style-src` plus `style-src-elem`, using the same cryptographically random per-response nonce already required for scripts.
 - `script-src-attr 'none'` explicitly forbids executable script attributes. Legacy visual style attributes remain temporarily compatible only through the narrower `style-src-attr 'unsafe-inline'` directive; this no longer grants arbitrary inline `<style>` blocks.
 - `lib/server/public-pages.js` propagates the active nonce to generated `<style>` tags as well as `<script>` tags, including collaboration/gallery fragments passed through `pageShell`, preventing the tightened policy from breaking public pages.
 - Regression coverage asserts the exact CSP directive split and generated-style nonce handling so a future refactor cannot restore blanket `style-src 'unsafe-inline'`. Nonce insertion is idempotent, so already-nonced generated fragments cannot receive duplicate `nonce` attributes. On the next successful ZAP run, `zap/10055-6` should no longer be emitted; GitHub Code Scanning remains authoritative for closing the previously uploaded alert.
 
-### 1.71.41 GitHub security workflow hardening
+### 1.71.42 GitHub security workflow hardening
 
 - The ZAP SARIF adapter now prefers ZAP `alertRef` (for example `10055-6`) over the coarser plugin id (`10055`), preventing different passive-scan sub-rules from collapsing into one GitHub rule. Normalized future rule identifiers receive a deterministic hash suffix if normalization/truncation is required, preventing collisions.
 - ZAP threshold parsing, every alert `riskcode`, the presence of at least one scanned site, and each site alert collection are validated fail-closed. A scanner/report failure can no longer degrade into an apparent zero-finding pass. SARIF is written atomically and fingerprints are based on stable rule identity rather than mutable display text.
@@ -107,9 +107,9 @@ Repository/release gates completed for this candidate:
 - Full source-only regression tree: **1181/1192 passed**; the 11 failures all require `express`, which is intentionally excluded from the source ZIP. The dependency-backed **CI REQUIRED** gate remains `npm ci` followed by `npm test`.
 - Static ASVS audit: **PASS** — 127 production JavaScript source files, 10 reviewed decoder sites.
 - PARTIAL-closure audit: **PASS** — 127 production JavaScript source files, 38 repository-verifiable controls, 0 blocking findings.
-- Security inventory regenerated for 1.71.41 — **961 entries**.
+- Security inventory regenerated for 1.71.42 — **961 entries**.
 - Windows ServerHost critical runtime manifest: **103 entries, 0 stale source-resident hashes** after final synchronization; the missing build-time Express entry remains pinned by `package-lock.json` to 4.22.2.
-- CycloneDX SBOM root component synchronized to 1.71.41.
+- CycloneDX SBOM root component synchronized to 1.71.42.
 
 This document is an implementation/evidence audit, not a third-party certification. A production installation can operate in `ASVS_L3_MODE=true` only while all mandatory runtime controls and the signed deployment evidence are valid.
 
@@ -185,8 +185,8 @@ The direct dependency graph remains lockfile-pinned. V15.2.1 is no longer an ope
 
 ## Final release gates
 
-- [x] package and lockfile version synchronized to 1.71.41.
-- [x] PWA version/cache generation synchronized to 1.71.41 / pwa504.
+- [x] package and lockfile version synchronized to 1.71.42.
+- [x] PWA version/cache generation synchronized to 1.71.42 / pwa505.
 - [x] ASVS regression suite green (96/96).
 - [x] Complete current test tree green (1139/1139 across 190 files).
 - [x] Static ASVS audit green.
@@ -194,7 +194,7 @@ The direct dependency graph remains lockfile-pinned. V15.2.1 is no longer an ope
 - [x] Security inventory regenerated.
 - [x] Windows runtime integrity manifest synchronized and rechecked.
 - [x] Matrix has 0 MANUAL, 0 PARTIAL, 0 FAIL and 0 REVIEW.
-- [x] SBOM root component synchronized to 1.71.41.
+- [x] SBOM root component synchronized to 1.71.42.
 - [x] Former operator-declared manual-attestation flags removed from the L3 configuration surface.
 
 Independent review of N/A decisions, production evidence collection and a focused penetration test remain appropriate before making an external certification/compliance representation.

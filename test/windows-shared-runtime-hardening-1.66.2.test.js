@@ -43,7 +43,8 @@ test('installer preserves the current private .NET tree until replacement succee
   assert.match(installer, /AfterInstall: ValidateInstalledPrivateDotNet/);
   assert.match(installer, /procedure ValidateInstalledPrivateDotNet;/);
   assert.match(installer, /if not PrivateDotNetVersionIsComplete then/);
-  assert.match(installer, /RaiseException\('The bundled private \.NET runtime is incomplete after installation/);
+  assert.match(installer, /RaiseException\(CustomMessage\('DotNetRuntimeInvalid'\)\)/);
+  assert.match(installer, /^en\.DotNetRuntimeInvalid=The bundled private \.NET runtime is incomplete after installation/m);
   assert.match(installer, /BeforeInstall: ValidateAndCleanupPrivateDotNet/);
   assert.match(installer, /procedure ValidateAndCleanupPrivateDotNet;/);
   assert.match(installer, /ValidateInstalledPrivateDotNet;/);

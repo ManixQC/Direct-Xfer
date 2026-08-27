@@ -1,0 +1,19 @@
+Confidentialité de Direct-Xfer
+
+Direct-Xfer est auto-hébergé. Il n’intègre aucune publicité, aucun SDK d’analyse et aucune télémétrie d’utilisation envoyée au projet Direct-Xfer. Les fichiers, métadonnées de liens, comptes, données d’audit et paramètres restent sur les systèmes contrôlés par l’opérateur, sauf lorsqu’une fonctionnalité activée ou utilisée communique avec un autre système.
+
+REQUÊTES RÉSEAU SORTANTES
+
+Direct-Xfer peut effectuer les requêtes sortantes documentées suivantes :
+
+- Vérification des mises à jour : activée par défaut. Sous Windows, le programme d’installation affiche une option explicite permettant d’autoriser les vérifications automatiques avant le premier lancement. Ce réglage reste modifiable dans Direct-Xfer. Lorsqu’elle est activée, cette fonction interroge Docker Hub pour connaître les versions d’image publiées.
+- Détection de l’IP publique et diagnostics réseau : la détection de l’IP publique est activée par défaut. Sous Windows, le programme d’installation propose explicitement d’autoriser cette détection au démarrage, et ce réglage reste modifiable ensuite. Direct-Xfer peut interroger api.ipify.org, ifconfig.me/ip ou icanhazip.com pour connaître l’adresse IP publique du serveur. Les tests de port et d’accessibilité ne sont jamais lancés automatiquement ; ils le sont uniquement à la demande de l’opérateur.
+- Intégrations configurées par l’opérateur : SMTP, webhooks, OAuth Google, stockages cloud/rclone, reverse proxies et autres destinations ne sont contactés que lorsqu’ils sont configurés ou utilisés.
+- Composants Windows facultatifs : rclone et Tesseract sont téléchargés uniquement après activation explicite par l’opérateur. Le build Windows inclut également les runtimes documentés dans le paquet de la version.
+- Transferts demandés par l’utilisateur : le partage, la réception, la collaboration et l’import/export cloud transfèrent nécessairement des données vers les destinations choisies par l’opérateur ou l’utilisateur.
+
+Ces requêtes servent au fonctionnement de l’application et ne constituent pas de la télémétrie du projet. L’opérateur peut désactiver la vérification des mises à jour et la détection de l’IP publique pendant l’installation Windows ou plus tard dans les paramètres de Direct-Xfer, et choisir s’il souhaite configurer des intégrations facultatives. Les déploiements Docker ou avancés peuvent aussi définir UPDATE_CHECK=false. Direct-Xfer ne vend pas les données des utilisateurs.
+
+SERVICES TIERS
+
+Lorsqu’un opérateur active un service tiers, les conditions de confidentialité de ce service s’appliquent au trafic qui lui est envoyé. Direct-Xfer affiche ou documente l’intégration concernée afin que l’opérateur puisse faire ce choix en connaissance de cause.

@@ -21,6 +21,6 @@ test('completed diagnostic summary survives translation and periodic health refr
 
 test('System Health JavaScript cache busters are synchronized after summary fix', () => {
   assert.match(html, /server-health-dashboard\.js\?v=7/);
-  assert.match(pwaAdmin, /server-health-dashboard\.js\?v=485/);
-  assert.match(sw, /server-health-dashboard\.js\?v=485/);
+  assert.match(pwaAdmin, /server-health-dashboard\.js\?v=486/);
+  assert.match(sw, /server-health-dashboard\.js\?v=486/);
 });

@@ -1,0 +1,19 @@
+Privacidad de Direct-Xfer
+
+Direct-Xfer es autoalojado. No incluye publicidad, SDK de analítica ni telemetría de uso enviada al proyecto Direct-Xfer. Los archivos, metadatos de enlaces, cuentas, datos de auditoría y configuración permanecen en sistemas controlados por el operador, salvo cuando una función habilitada o utilizada se comunica con otro sistema.
+
+SOLICITUDES DE RED SALIENTES
+
+Direct-Xfer puede realizar las siguientes solicitudes salientes documentadas:
+
+- Comprobación de actualizaciones: activada de forma predeterminada. En Windows, el instalador muestra una opción explícita para permitir las comprobaciones automáticas antes del primer inicio. La misma opción se puede modificar después en Direct-Xfer. Cuando está habilitada, Direct-Xfer consulta Docker Hub para conocer las etiquetas de imagen publicadas.
+- Detección de IP pública y diagnósticos de red: la detección de IP pública está activada de forma predeterminada. En Windows, el instalador muestra una opción explícita para permitirla al iniciar y el ajuste se puede modificar más tarde. Direct-Xfer puede consultar api.ipify.org, ifconfig.me/ip o icanhazip.com para conocer la IP pública del servidor. Las pruebas de puerto o accesibilidad nunca se ejecutan automáticamente; solo se realizan cuando el operador solicita una prueba.
+- Integraciones configuradas por el operador: SMTP, webhooks, OAuth de Google, almacenamientos cloud/rclone, proxies inversos y otros destinos solo se contactan cuando el operador los configura o utiliza.
+- Componentes opcionales de Windows: rclone y Tesseract solo se descargan después de que el operador los active explícitamente. La compilación de Windows también incluye los runtimes documentados en el paquete de la versión.
+- Transferencias solicitadas por el usuario: compartir, recibir, colaborar e importar/exportar desde la nube necesariamente transfiere datos a los destinos elegidos por el operador o el usuario.
+
+Estas solicitudes son tráfico funcional de la aplicación y no telemetría del proyecto. Los operadores pueden desactivar tanto las comprobaciones de actualizaciones como la detección de IP pública durante la instalación de Windows o posteriormente en la configuración de Direct-Xfer, y pueden decidir si configuran integraciones opcionales. Los despliegues Docker o avanzados también pueden establecer UPDATE_CHECK=false. Direct-Xfer no vende los datos de los usuarios.
+
+SERVICIOS DE TERCEROS
+
+Cuando un operador habilita un servicio de terceros, las condiciones de privacidad de ese servicio se aplican al tráfico enviado. Direct-Xfer muestra o documenta la integración correspondiente para que el operador pueda tomar esa decisión de forma informada.

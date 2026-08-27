@@ -9,9 +9,12 @@ const read = rel => fs.readFileSync(path.join(root, rel), 'utf8');
 test('1.69.6 installer makes startup and outbound privacy choices explicit', () => {
   const iss = read('installer/Direct-Xfer.iss');
   assert.match(iss, /InfoBeforeFile=\.\.\\PRIVACY\.md/);
-  assert.match(iss, /Name: "autostart"; Description: "Start Direct-Xfer automatically with Windows"/);
-  assert.match(iss, /Name: "updatecheck"; Description: "Allow automatic update checks \(contacts Docker Hub\)"/);
-  assert.match(iss, /Name: "publicip"; Description: "Allow public IP discovery at startup \(contacts public IP services\)"/);
+  assert.match(iss, /Name: "autostart"; Description: "\{cm:TaskAutostart\}"/);
+  assert.match(iss, /^en\.TaskAutostart=Start Direct-Xfer automatically with Windows$/m);
+  assert.match(iss, /Name: "updatecheck"; Description: "\{cm:TaskUpdateCheck\}"/);
+  assert.match(iss, /^en\.TaskUpdateCheck=Allow automatic update checks \(contacts Docker Hub\)$/m);
+  assert.match(iss, /Name: "publicip"; Description: "\{cm:TaskPublicIp\}"/);
+  assert.match(iss, /^en\.TaskPublicIp=Allow public IP discovery at startup \(contacts public IP services\)$/m);
   assert.match(iss, /\{userstartup\}\\Direct-Xfer Server Host[^\n]+Tasks: autostart/);
   assert.match(iss, /install-update-check-disable\.flag/);
   assert.match(iss, /install-public-ip-disable\.flag/);

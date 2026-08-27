@@ -75,25 +75,21 @@ jobs:
 
       # GitHub Security is for actionable security findings, not code-style debt.
       # Filter Codacy SARIF before upload. Current security findings use their own
-      # codacy-security/* category namespace. A separate 13-run legacy tombstone
-      # file reproduces the exact ff5ccb27 category IDs that originally uploaded
-      # Stylelint/JSHint/quality debt, allowing GitHub to close those old alerts.
-      # ESLint remains subject to the same fail-closed security-metadata filter, so
-      # ordinary lint/style debt still never reaches GitHub Code Scanning.
+      # codacy-security/* category namespace. Legacy broad quality analyses are
+      # removed separately through the Code Scanning API using an exact tool-name
+      # allowlist, because historical SARIF identities predate the current category
+      # scheme and cannot be reliably retired by synthetic tombstones alone.
       - name: Filter Codacy SARIF for GitHub Security
         shell: bash
         run: |
           set -euo pipefail
           RAW_SARIF=/tmp/direct-xfer-codacy-results.sarif
           SECURITY_SARIF=/tmp/direct-xfer-codacy-security.sarif
-          LEGACY_SARIF=/tmp/direct-xfer-codacy-legacy-tombstones.sarif
 
           test -s "$RAW_SARIF"
-          node scripts/filter-codacy-sarif.js "$RAW_SARIF" "$SECURITY_SARIF" "$LEGACY_SARIF"
+          node scripts/filter-codacy-sarif.js "$RAW_SARIF" "$SECURITY_SARIF"
           test -s "$SECURITY_SARIF"
-          test -s "$LEGACY_SARIF"
           jq -e '.version and (.runs | type == "array") and (.runs | length > 0)' "$SECURITY_SARIF" >/dev/null
-          jq -e '.version and (.runs | type == "array") and (.runs | length == 13) and all(.runs[]; (.results | length) == 0)' "$LEGACY_SARIF" >/dev/null
 
           run_count="$(jq '.runs | length' "$SECURITY_SARIF")"
           max_results="$(jq '[.runs[].results | length] | max // 0' "$SECURITY_SARIF")"
@@ -106,15 +102,19 @@ jobs:
           echo "Filtered Codacy SARIF runs: $run_count; max results/run: $max_results"
           jq -r '.runs[] | "\(.automationDetails.id) tool=\(.tool.driver.name // "tool") security-results=\(.results | length)"' "$SECURITY_SARIF"
 
-      # First publish exact empty historical categories so the broad Stylelint,
-      # JSHint and other quality findings from ff5ccb27 are retired.
-      - name: Close legacy Codacy quality alerts
-        uses: github/codeql-action/upload-sarif@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4.37.4
-        with:
-          sarif_file: /tmp/direct-xfer-codacy-legacy-tombstones.sarif
-
       # Current Codacy security findings live in a distinct stable namespace.
       - name: Upload filtered Codacy security results
         uses: github/codeql-action/upload-sarif@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4.37.4
         with:
           sarif_file: /tmp/direct-xfer-codacy-security.sarif
+
+      # The old broad Codacy workflow created thousands of quality analyses under
+      # tool identities such as Stylelint/JSHint/CSSLint. They are no longer part
+      # of the security workflow. Delete only those explicitly allowlisted legacy
+      # analysis series on canonical main; current security tools are never targets.
+      - name: Remove legacy Codacy quality analyses
+        if: github.event_name != 'pull_request' && github.repository == 'ManixQC/Direct-Xfer' && github.ref == 'refs/heads/main'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/cleanup-legacy-codacy-analyses.js --apply

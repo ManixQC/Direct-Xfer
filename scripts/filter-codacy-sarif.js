@@ -18,9 +18,10 @@ const SECURITY_MARKER_RE = /(?:\bsecurity\b|vulnerab|cwe[-_:/ ]?\d+|\bowasp\b|\b
 
 // Exact categories produced by commit ff5ccb27 (the historical broad Codacy
 // upload that populated GitHub Security with Stylelint/JSHint/quality debt).
-// Keep these empty tombstones for backward compatibility so GitHub can close
-// those legacy analyses even though current security findings use a new,
-// stable codacy-security/* namespace.
+// Kept only as an offline compatibility fixture for regression tests and older
+// release tooling. The active workflow no longer uploads these synthetic
+// tombstones; legacy broad analyses are removed by the allowlisted Code Scanning
+// API cleanup in cleanup-legacy-codacy-analyses.js.
 const LEGACY_BROAD_CODACY_CATEGORIES = Object.freeze([
   ['SQLint (reported by Codacy)', 'codacy/sqlint-reported-by-codacy-0/'],
   ['Hadolint (reported by Codacy)', 'codacy/hadolint-reported-by-codacy-1/'],
@@ -226,16 +227,18 @@ function buildLegacyCodacyTombstoneSarif(sourceDocument = {}) {
 function main(argv = process.argv.slice(2)) {
   const inputPath = path.resolve(argv[0] || 'results.sarif');
   const outputPath = path.resolve(argv[1] || 'results.security.sarif');
-  const legacyOutputPath = path.resolve(argv[2] || 'results.legacy-tombstones.sarif');
+  const legacyOutputPath = argv[2] ? path.resolve(argv[2]) : null;
   const source = JSON.parse(fs.readFileSync(inputPath, 'utf8'));
   const filtered = filterCodacySarif(source);
-  const legacy = buildLegacyCodacyTombstoneSarif(source);
   fs.writeFileSync(outputPath, `${JSON.stringify(filtered.document, null, 2)}\n`, 'utf8');
-  fs.writeFileSync(legacyOutputPath, `${JSON.stringify(legacy, null, 2)}\n`, 'utf8');
 
   const { stats } = filtered;
   console.log(`Codacy SARIF security filter: source=${stats.sourceResults} upload=${stats.uploadedResults} filtered=${stats.filteredResults} runs=${stats.runCount} tombstones=${stats.tombstoneRuns}`);
-  console.log(`Codacy legacy cleanup tombstones: runs=${legacy.runs.length}`);
+  if (legacyOutputPath) {
+    const legacy = buildLegacyCodacyTombstoneSarif(source);
+    fs.writeFileSync(legacyOutputPath, `${JSON.stringify(legacy, null, 2)}\n`, 'utf8');
+    console.log(`Codacy legacy cleanup tombstones: runs=${legacy.runs.length}`);
+  }
   for (const row of filtered.summary) {
     console.log(`  ${row.tool}: mode=${row.mode} source=${row.source} upload=${row.uploaded} filtered=${row.filtered} chunks=${row.chunks}`);
   }

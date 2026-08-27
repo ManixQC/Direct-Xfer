@@ -104,10 +104,13 @@ test('codacy workflow keeps SARIF outside checkout, times out, and uploads only 
   assert.match(workflow, /Filter Codacy SARIF for GitHub Security/);
   assert.match(workflow, /RAW_SARIF=\/tmp\/direct-xfer-codacy-results\.sarif/);
   assert.match(workflow, /SECURITY_SARIF=\/tmp\/direct-xfer-codacy-security\.sarif/);
-  assert.match(workflow, /LEGACY_SARIF=\/tmp\/direct-xfer-codacy-legacy-tombstones\.sarif/);
-  assert.match(workflow, /node scripts\/filter-codacy-sarif\.js "\$RAW_SARIF" "\$SECURITY_SARIF" "\$LEGACY_SARIF"/);
-  assert.match(workflow, /Close legacy Codacy quality alerts/);
-  assert.match(workflow, /sarif_file:\s*\/tmp\/direct-xfer-codacy-legacy-tombstones\.sarif/);
+  assert.match(workflow, /node scripts\/filter-codacy-sarif\.js "\$RAW_SARIF" "\$SECURITY_SARIF"/);
+  assert.match(workflow, /Remove legacy Codacy quality analyses/);
+  assert.match(workflow, /node scripts\/cleanup-legacy-codacy-analyses\.js --apply/);
+  assert.match(workflow, /github\.repository == 'ManixQC\/Direct-Xfer'/);
+  assert.match(workflow, /github\.ref == 'refs\/heads\/main'/);
+  assert.match(workflow, /GH_TOKEN:\s*\$\{\{ github\.token \}\}/);
+  assert.doesNotMatch(workflow, /direct-xfer-codacy-legacy-tombstones\.sarif/);
   assert.match(workflow, /Upload filtered Codacy security results/);
   assert.match(workflow, /sarif_file:\s*\/tmp\/direct-xfer-codacy-security\.sarif/);
   assert.doesNotMatch(workflow, /output:\s*results\.sarif\s*$/m);

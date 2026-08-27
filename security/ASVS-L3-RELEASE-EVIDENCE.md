@@ -1,6 +1,6 @@
-# Direct-Xfer 1.71.34 — ASVS L3 release evidence
+# Direct-Xfer 1.71.35 — ASVS L3 release evidence
 
-> 1.71.34 replaces incomplete legacy Codacy SARIF tombstones with an allowlisted Code Scanning analysis cleanup. The workflow deletes only historical broad quality tools on canonical `main`, while CodeQL, Trivy, Scorecard, zizmor and current `Eslint-9` remain protected from deletion. Current Codacy findings continue through the `codacy-security/*` filter, so quality debt cannot be reintroduced into GitHub Security. Existing workflow-input hardening, Scorecard filtering, immutable dependency pins, least-privilege permissions and Docker retry/checksum hardening remain active. PWA advances to pwa497 / cache-buster v=478.
+> 1.71.35 replaces incomplete legacy Codacy SARIF tombstones with an allowlisted Code Scanning analysis cleanup. The workflow deletes only historical broad quality tools on canonical `main`, while CodeQL, Trivy, Scorecard, zizmor and current `Eslint-9` remain protected from deletion. Current Codacy findings continue through the `codacy-security/*` filter, so quality debt cannot be reintroduced into GitHub Security. Existing workflow-input hardening, Scorecard filtering, immutable dependency pins, least-privilege permissions and Docker retry/checksum hardening remain active. PWA advances to pwa498 / cache-buster v=479.
 
 Release date: 2026-08-26
 Profile: `ASVS_L3_MODE=true`
@@ -9,16 +9,16 @@ Profile: `ASVS_L3_MODE=true`
 
 | Gate | Result | Evidence |
 |---|---|---|
-| Release-targeted regression tests | PASS | 137 passed, 0 failed, 0 skipped, including Codacy legacy-analysis API cleanup, zizmor template-injection regression coverage, Docker Go-network resilience, Scorecard SARIF filtering, CodeQL/OAuth regressions, dependency floors, Windows metadata and SignPath release invariants |
-| Complete current regression tree | CI REQUIRED | Source-only run: 1177 discovered; 1166 PASS / 11 FAIL, all 11 due to intentionally absent `node_modules/express`; run `npm ci` + `npm test` in CI before publishing binaries |
+| Release-targeted regression tests | PASS | 114 passed, 0 failed, 0 skipped, including Codacy legacy-analysis API cleanup, zizmor template-injection regression coverage, Docker Go-network resilience, Scorecard SARIF filtering, CodeQL/OAuth regressions, dependency floors, Windows metadata and SignPath release invariants |
+| Complete current regression tree | CI REQUIRED | Source-only run: 1180 discovered; 1169 PASS / 11 FAIL, all 11 due to intentionally absent `node_modules/express`; run `npm ci` + `npm test` in CI before publishing binaries |
 | PARTIAL-closure audit | PASS | 127 production JS files; 38 repository-verifiable controls; 0 blocking findings |
 | Static ASVS audit | PASS | 127 production JS files; 10 reviewed decoder sites |
-| Security inventory | PASS | Regenerated for 1.71.34; 959 inventory entries |
+| Security inventory | PASS | Regenerated for 1.71.35; 959 inventory entries |
 | Windows runtime integrity | PASS | 103 entries; 0 stale source-resident hashes after final synchronization; build-time Express entry remains pinned to lockfile `4.22.2` |
 | Matrix triage | PASS | 345/345 triaged; 253 PASS; 0 PARTIAL; 0 FAIL; 92 N/A; 0 REVIEW; 0 MANUAL |
 | Signed-evidence verifier | PASS | 22 required external requirement IDs; Ed25519 signature; requirement-specific method/predicate; canonical SHA-256; release/origin binding; ≤7-day TTL |
 | Isolated crypto provider gate | PASS | L3 self-test requires hardware backing, non-exportable keys, key isolation and isolated encrypt/decrypt/HMAC/sign operations |
-| CycloneDX SBOM | PASS | Root component synchronized to Direct-Xfer 1.71.34 |
+| CycloneDX SBOM | PASS | Root component synchronized to Direct-Xfer 1.71.35 |
 | Connected dependency/container scan | DEPLOYMENT EVIDENCE | V15.2.1 startup evidence requires real release-bound dependency + container scans with zero High/Critical findings |
 
 ## Matrix state
@@ -35,7 +35,7 @@ The source matrix has no unresolved `MANUAL`, `PARTIAL`, `FAIL` or `REVIEW` rows
 
 ## Regression note
 
-The 1.71.34 packaging pass executed 137 release/security-targeted tests with zero failures or skips, plus both repository-verifiable ASVS audits. The complete source-only suite executed 1177 tests: 1166 passed and the 11 expected real-server/platform-boundary tests failed only because `express` is intentionally absent from the source ZIP and is restored by `npm ci` in CI. The source archive intentionally excludes `node_modules`; real-server tests that require `express` therefore belong to the dependency-backed `npm ci` + `npm test` CI release gate rather than the source-only packaging pass.
+The 1.71.35 packaging pass executed 114 release/security-targeted tests with zero failures or skips, plus both repository-verifiable ASVS audits. The complete source-only suite executed 1180 tests: 1169 passed and the 11 expected real-server/platform-boundary tests failed only because `express` is intentionally absent from the source ZIP and is restored by `npm ci` in CI. The source archive intentionally excludes `node_modules`; real-server tests that require `express` therefore belong to the dependency-backed `npm ci` + `npm test` CI release gate rather than the source-only packaging pass.
 
 ## Commands/gates used
 

@@ -142,3 +142,86 @@ test('destructive cleanup refuses non-canonical repository or ref', async () => 
     /Refusing destructive cleanup outside refs\/heads\/main/,
   );
 });
+
+test('cleanup is idempotent when GitHub relists an analysis already deleted in the same run', async () => {
+  let listCalls = 0;
+  let deleteCalls = 0;
+  const stale = { id: 42, ref: CANONICAL_REF, tool: { name: 'Stylelint (reported by Codacy)' }, category: 'codacy/stylelint-reported-by-codacy-10-part-1', deletable: true };
+  const fetchImpl = async (_url, init) => {
+    if (init.method === 'GET') {
+      listCalls += 1;
+      // GitHub may briefly return the just-deleted analysis again.
+      return responseJson([stale]);
+    }
+    if (init.method === 'DELETE') {
+      deleteCalls += 1;
+      return responseEmpty(200);
+    }
+    throw new Error(`unexpected method ${init.method}`);
+  };
+
+  const result = await cleanupLegacyCodacyAnalyses({
+    fetchImpl,
+    token: 'test-token',
+    repository: CANONICAL_REPOSITORY,
+    ref: CANONICAL_REF,
+    apply: true,
+  });
+
+  assert.equal(deleteCalls, 1, 'a stale re-listed analysis must not be deleted twice');
+  assert.equal(result.deleted, 1);
+  assert.equal(result.alreadyAbsent, 0);
+  assert.equal(result.remaining, 0);
+  assert.equal(listCalls, 2);
+});
+
+test('cleanup treats a targeted DELETE 404 as already absent and continues safely', async () => {
+  let listCalls = 0;
+  let deleteCalls = 0;
+  const stale = { id: 77, ref: CANONICAL_REF, tool: { name: 'JSHint (reported by Codacy)' }, category: 'codacy/jshint-reported-by-codacy-2', deletable: true };
+  const fetchImpl = async (_url, init) => {
+    if (init.method === 'GET') {
+      listCalls += 1;
+      return responseJson([stale]);
+    }
+    if (init.method === 'DELETE') {
+      deleteCalls += 1;
+      return responseJson({ message: 'No analysis found for analysis ID 77' }, 404);
+    }
+    throw new Error(`unexpected method ${init.method}`);
+  };
+
+  const result = await cleanupLegacyCodacyAnalyses({
+    fetchImpl,
+    token: 'test-token',
+    repository: CANONICAL_REPOSITORY,
+    ref: CANONICAL_REF,
+    apply: true,
+  });
+
+  assert.equal(deleteCalls, 1);
+  assert.equal(result.deleted, 0);
+  assert.equal(result.alreadyAbsent, 1);
+  assert.equal(result.remaining, 0);
+  assert.equal(listCalls, 2);
+});
+
+test('cleanup remains fail-closed for non-404 DELETE failures', async () => {
+  const target = { id: 88, ref: CANONICAL_REF, tool: { name: 'Stylelint (reported by Codacy)' }, category: '', deletable: true };
+  const fetchImpl = async (_url, init) => {
+    if (init.method === 'GET') return responseJson([target]);
+    if (init.method === 'DELETE') return responseJson({ message: 'Forbidden' }, 403);
+    throw new Error(`unexpected method ${init.method}`);
+  };
+
+  await assert.rejects(
+    cleanupLegacyCodacyAnalyses({
+      fetchImpl,
+      token: 'test-token',
+      repository: CANONICAL_REPOSITORY,
+      ref: CANONICAL_REF,
+      apply: true,
+    }),
+    /DELETE failed for 88 \(403\)/,
+  );
+});

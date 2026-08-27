@@ -93,6 +93,7 @@ test('dedicated security scanners keep their complete result set', () => {
 
 test('codacy workflow keeps SARIF outside checkout, times out, and uploads only filtered outputs', () => {
   const workflow = fs.readFileSync(path.join(ROOT, '.github', 'workflows', 'codacy.yml'), 'utf8');
+  assert.match(workflow, /concurrency:\s*[\s\S]*group:\s*codacy-security-\$\{\{ github\.ref \}\}[\s\S]*cancel-in-progress:\s*false/);
   assert.match(workflow, /timeout-minutes:\s*12/);
   assert.match(workflow, /tool-timeout:\s*8minutes/);
   assert.match(workflow, /Validate Codacy text inputs are UTF-8/);

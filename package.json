@@ -1,6 +1,6 @@
 {
   "name": "direct-xfer",
-  "version": "1.71.34",
+  "version": "1.71.35",
   "description": "Direct-Xfer — direct HTTP file sharing, no third-party server. Web interface, revocable shares, automatic IP detection and port testing.",
   "main": "server.js",
   "type": "commonjs",

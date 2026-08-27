@@ -84,9 +84,18 @@ async function deleteCodeScanningAnalysis({ fetchImpl, token, owner, repo, analy
   }
   const url = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/code-scanning/analyses/${analysisId}?confirm_delete=true`;
   const response = await fetchImpl(url, { method: 'DELETE', headers: githubHeaders(token) });
+  // GitHub's analyses listing is eventually consistent after DELETE. An analysis
+  // may remain visible for a few seconds even though a prior DELETE succeeded.
+  // Treat 404 as an idempotent success only for the exact analysis id that this
+  // tightly allowlisted cleanup already selected. All other HTTP failures stay
+  // fail-closed.
+  if (response.status === 404) {
+    return { deleted: false, alreadyAbsent: true };
+  }
   if (!response.ok) {
     throw new Error(`GitHub Code Scanning analysis DELETE failed for ${analysisId} (${response.status}): ${await responseBody(response)}`);
   }
+  return { deleted: true, alreadyAbsent: false };
 }
 
 function toolNameOf(analysis) {
@@ -128,8 +137,10 @@ async function cleanupLegacyCodacyAnalyses(options = {}) {
 
   const { owner, repo } = parseRepository(repository);
   let deleted = 0;
+  let alreadyAbsent = 0;
   let passes = 0;
   let lastCandidates = [];
+  const completedIds = new Set();
 
   while (passes < maxPasses) {
     passes += 1;
@@ -140,7 +151,7 @@ async function cleanupLegacyCodacyAnalyses(options = {}) {
     lastCandidates = candidates;
 
     if (candidates.length === 0) {
-      return { apply, deleted, passes, remaining: 0, byTool: [] };
+      return { apply, deleted, alreadyAbsent, passes, remaining: 0, byTool: [] };
     }
 
     const byTool = summarizeCandidates(candidates);
@@ -148,19 +159,34 @@ async function cleanupLegacyCodacyAnalyses(options = {}) {
       return { apply, deleted: 0, passes, remaining: candidates.length, byTool };
     }
 
-    const deletable = candidates.filter((analysis) => analysis?.deletable === true);
+    // Ignore stale copies of analyses already completed in this process. GitHub
+    // can return a just-deleted analysis again on the next list request.
+    const pending = candidates.filter((analysis) => !completedIds.has(analysis?.id));
+    if (pending.length === 0) {
+      return { apply, deleted, alreadyAbsent, passes, remaining: 0, byTool: [] };
+    }
+
+    const deletable = pending.filter((analysis) => analysis?.deletable === true);
     if (deletable.length === 0) {
-      const sample = candidates.slice(0, 5).map((analysis) => (
+      const sample = pending.slice(0, 5).map((analysis) => (
         `${analysis.id}:${toolNameOf(analysis)}:${categoryOf(analysis) || '(no category)'}`
       )).join(', ');
       throw new Error(`Legacy Codacy analyses remain but none are deletable. Sample: ${sample}`);
     }
 
     for (const analysis of deletable) {
-      if (deleted >= maxDeletes) {
-        throw new Error(`Refusing to delete more than ${maxDeletes} Code Scanning analyses in one run.`);
+      // Defensive against duplicate items across a paginated GitHub snapshot.
+      if (completedIds.has(analysis.id)) continue;
+      if ((deleted + alreadyAbsent) >= maxDeletes) {
+        throw new Error(`Refusing to process more than ${maxDeletes} Code Scanning analysis deletions in one run.`);
       }
-      await deleteCodeScanningAnalysis({ fetchImpl, token, owner, repo, analysisId: analysis.id });
+      const outcome = await deleteCodeScanningAnalysis({ fetchImpl, token, owner, repo, analysisId: analysis.id });
+      completedIds.add(analysis.id);
+      if (outcome.alreadyAbsent) {
+        alreadyAbsent += 1;
+        console.log(`Legacy Codacy analysis already absent id=${analysis.id} tool=${toolNameOf(analysis)} category=${categoryOf(analysis) || '(none)'}; continuing`);
+        continue;
+      }
       deleted += 1;
       console.log(`Deleted legacy Codacy analysis id=${analysis.id} tool=${toolNameOf(analysis)} category=${categoryOf(analysis) || '(none)'}`);
     }
@@ -185,7 +211,7 @@ async function main(argv = process.argv.slice(2)) {
     for (const [tool, count] of result.byTool) console.log(`  ${tool}: ${count}`);
     return;
   }
-  console.log(`Legacy Codacy cleanup complete: deleted=${result.deleted} passes=${result.passes} remaining=${result.remaining}`);
+  console.log(`Legacy Codacy cleanup complete: deleted=${result.deleted} already-absent=${result.alreadyAbsent || 0} passes=${result.passes} remaining=${result.remaining}`);
 }
 
 if (require.main === module) {
@@ -203,6 +229,7 @@ module.exports = {
   normalizeToolName,
   isLegacyCodacyQualityTool,
   listCodeScanningAnalyses,
+  deleteCodeScanningAnalysis,
   cleanupLegacyCodacyAnalyses,
   parseArgs,
 };

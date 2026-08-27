@@ -25,6 +25,12 @@ on:
 permissions:
   contents: read
 
+# Prevent overlapping push/schedule runs from racing while retiring the same
+# legacy Code Scanning analysis series. Pull requests get their own ref group.
+concurrency:
+  group: codacy-security-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   codacy-security-scan:
     permissions:

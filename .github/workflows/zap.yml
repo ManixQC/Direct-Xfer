@@ -60,7 +60,8 @@ jobs:
           set -euo pipefail
           base="$RUNNER_TEMP/direct-xfer-zap"
           mkdir -p "$base/data" "$base/images" "$base/inbox" "$base/host"
-          export ADMIN_PASSWORD="$(openssl rand -hex 32)"
+          ADMIN_PASSWORD="$(openssl rand -hex 32)"
+          export ADMIN_PASSWORD
           docker run --detach \
             --name direct-xfer-zap \
             --publish "127.0.0.1:${DX_PORT}:${DX_PORT}" \
@@ -80,7 +81,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for attempt in $(seq 1 60); do
+          for _ in $(seq 1 60); do
             if curl --fail --silent --show-error "http://127.0.0.1:${DX_PORT}/healthz" >/dev/null; then
               echo "Direct-Xfer is ready for DAST."
               exit 0
@@ -113,7 +114,7 @@ jobs:
           set -euo pipefail
           test -s report_json.json
           node scripts/zap-report-to-sarif.js report_json.json zap-security.sarif
-          jq -e '.version == "2.1.0" and (.runs | length == 1) and (.runs[0].results | type == "array")' zap-security.sarif >/dev/null
+          jq -e '.version == "2.1.0" and (.runs | length == 1) and (.runs[0].results | type == "array") and all(.runs[0].results[]; (.locations | type == "array") and (.locations | length >= 1) and (.locations[0].physicalLocation.artifactLocation.uri == "security/zap-dast-target.md"))' zap-security.sarif >/dev/null
           jq -r '"ZAP security findings uploaded: \(.runs[0].results | length)"' zap-security.sarif
 
       - name: Upload ZAP security findings to Code Scanning
@@ -132,6 +133,7 @@ jobs:
           if-no-files-found: error
 
       - name: Enforce Medium/High ZAP gate
+        if: always()
         shell: bash
         run: node scripts/check-zap-report.js report_json.json
 

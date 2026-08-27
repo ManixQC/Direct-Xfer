@@ -32,15 +32,21 @@ test('ZAP SARIF exporter keeps Medium/High alerts and excludes Low/Info', () => 
     { pluginid: '10020', alert: 'Low header note', riskcode: '1', riskdesc: 'Low (Medium)', instances: [{ uri: 'http://127.0.0.1:55750/' }] },
     { pluginid: '40012', alert: 'Reflected XSS', riskcode: '3', riskdesc: 'High (High)', cweid: '79', solution: 'Encode output', instances: [{ uri: 'http://127.0.0.1:55750/test' }] },
     { pluginid: '10038', alert: 'CSP issue', riskcode: '2', riskdesc: 'Medium (High)', instances: [{ uri: 'http://127.0.0.1:55750/' }] },
+    { pluginid: '20000', alert: 'Medium finding without instances', riskcode: '2', riskdesc: 'Medium (Medium)' },
   ])), 'utf8');
   const result = runScript('zap-report-to-sarif.js', [input, output]);
   assert.equal(result.status, 0, result.stderr);
   const sarif = JSON.parse(fs.readFileSync(output, 'utf8'));
   assert.equal(sarif.runs.length, 1);
   assert.equal(sarif.runs[0].automationDetails.id, 'owasp-zap/baseline/');
-  assert.equal(sarif.runs[0].results.length, 2);
-  assert.deepEqual(sarif.runs[0].results.map((x) => x.ruleId).sort(), ['zap/10038', 'zap/40012']);
+  assert.equal(sarif.runs[0].results.length, 3);
+  assert.deepEqual(sarif.runs[0].results.map((x) => x.ruleId).sort(), ['zap/10038', 'zap/20000', 'zap/40012']);
   assert.equal(sarif.runs[0].results.find((x) => x.ruleId === 'zap/40012').level, 'error');
+  for (const finding of sarif.runs[0].results) {
+    assert.equal(finding.locations.length, 1);
+    assert.equal(finding.locations[0].physicalLocation.artifactLocation.uri, 'security/zap-dast-target.md');
+    assert.equal(finding.locations[0].physicalLocation.region.startLine, 1);
+  }
 });
 
 test('ZAP gate passes Low-only reports and fails Medium/High reports', () => {
@@ -53,4 +59,14 @@ test('ZAP gate passes Low-only reports and fails Medium/High reports', () => {
   const blocked = runScript('check-zap-report.js', [medium]);
   assert.equal(blocked.status, 1);
   assert.match(blocked.stderr, /OWASP ZAP gate failed/);
+});
+
+
+test('ZAP workflow keeps shell blocks actionlint/ShellCheck-safe and validates SARIF locations', () => {
+  const workflow = fs.readFileSync(path.join(ROOT, '.github', 'workflows', 'zap.yml'), 'utf8');
+  assert.doesNotMatch(workflow, /export ADMIN_PASSWORD="\$\(/);
+  assert.match(workflow, /ADMIN_PASSWORD="\$\(openssl rand -hex 32\)"\s+export ADMIN_PASSWORD/);
+  assert.match(workflow, /for _ in \$\(seq 1 60\); do/);
+  assert.doesNotMatch(workflow, /for attempt in \$\(seq 1 60\); do/);
+  assert.match(workflow, /locations\[0\]\.physicalLocation\.artifactLocation\.uri == \"security\/zap-dast-target\.md\"/);
 });

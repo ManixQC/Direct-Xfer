@@ -88,6 +88,13 @@ for (const alert of alerts) {
     ruleId,
     level: levelFor(risk),
     message: { text: detail.join('\n') },
+    locations: [{
+      physicalLocation: {
+        artifactLocation: { uri: 'security/zap-dast-target.md' },
+        region: { startLine: 1 },
+      },
+      message: { text: urls.length ? `Observed at ${urls.join(', ')}` : 'Observed by the Direct-Xfer OWASP ZAP baseline scan.' },
+    }],
     partialFingerprints: { 'direct-xfer/zap-alert/v1': fingerprint },
     properties: {
       zapPluginId: pluginId,

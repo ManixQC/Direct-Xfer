@@ -169,14 +169,16 @@ test("OWASP ZAP DAST scans an isolated local target and sends only Medium/High f
   assert.match(workflow, /fail_action:\s*false/);
   assert.match(workflow, /target:\s*http:\/\/127\.0\.0\.1:55750\//);
   assert.match(workflow, /ADMIN_ALLOW_ANY=true/);
-  assert.match(workflow, /export ADMIN_PASSWORD=\"\$\(openssl rand -hex 32\)\"/);
+  assert.match(workflow, /ADMIN_PASSWORD=\"\$\(openssl rand -hex 32\)\"\s+export ADMIN_PASSWORD/);
   assert.match(workflow, /--env ADMIN_PASSWORD/);
   assert.match(workflow, /zap-report-to-sarif\.js report_json\.json zap-security\.sarif/);
   assert.match(workflow, /category:\s*owasp-zap-baseline/);
-  assert.match(workflow, /check-zap-report\.js report_json\.json/);
+  assert.match(workflow, /Enforce Medium\/High ZAP gate[\s\S]*?if:\s*always\(\)[\s\S]*?check-zap-report\.js report_json\.json/);
   assert.match(converter, /ZAP_MIN_RISK \|\| 2/);
   assert.match(converter, /automationDetails:\s*\{ id: 'owasp-zap\/baseline\/' \}/);
   assert.match(converter, /'security-severity'/);
+  assert.match(converter, /artifactLocation: \{ uri: 'security\/zap-dast-target\.md' \}/);
+  assert.match(workflow, /locations\[0\]\.physicalLocation\.artifactLocation\.uri == \"security\/zap-dast-target\.md\"/);
   assert.match(gate, /risk >= minRisk/);
 });
 

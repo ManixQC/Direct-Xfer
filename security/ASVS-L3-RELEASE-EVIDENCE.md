@@ -1,6 +1,6 @@
-# Direct-Xfer 1.71.36 — ASVS L3 release evidence
+# Direct-Xfer 1.71.37 — ASVS L3 release evidence
 
-> 1.71.36 adds an OWASP ZAP baseline DAST workflow against an isolated local Direct-Xfer Docker target and extends GitHub Artifact Attestations to the CycloneDX SBOM plus a SHA-256 release manifest in addition to the signed Windows binaries. ZAP uses the official action pinned to an immutable commit and a digest-pinned ZAP 2.17.0 amd64 image; only Medium/High findings are converted to SARIF and gated in Code Scanning, while Low/Informational observations remain in the complete ZAP report artifact. Existing Codacy security filtering/legacy cleanup, CodeQL, Trivy, Scorecard, zizmor, SignPath, immutable dependency pins and least-privilege token scopes remain active. PWA advances to pwa499 / cache-buster v=480.
+> 1.71.37 hardens the OWASP ZAP DAST integration introduced in the previous release. The workflow now satisfies actionlint/ShellCheck by separating ADMIN_PASSWORD assignment/export and removing the unused health-loop counter, and every Medium/High ZAP SARIF result is anchored to the stable repository artifact `security/zap-dast-target.md` so GitHub Code Scanning accepts the upload while retaining the actual observed HTTP URL in the finding message. The Medium/High gate now runs with `if: always()` so a SARIF transport failure cannot hide the underlying DAST verdict. Existing ZAP immutable pins, Artifact Attestations for Windows/SBOM/SHA-256 provenance, Codacy filtering/cleanup, CodeQL, Trivy, Scorecard, zizmor, SignPath and least-privilege token scopes remain active. PWA advances to pwa500 / cache-buster v=481.
 
 Release date: 2026-08-26
 Profile: `ASVS_L3_MODE=true`
@@ -9,16 +9,16 @@ Profile: `ASVS_L3_MODE=true`
 
 | Gate | Result | Evidence |
 |---|---|---|
-| Release-targeted regression tests | PASS | 144 passed, 0 failed, 0 skipped, including OWASP ZAP DAST/SARIF gating, extended artifact provenance, Codacy legacy-analysis API cleanup, zizmor template-injection regression coverage, Docker Go-network resilience, Scorecard filtering, CodeQL/OAuth regressions, dependency floors, Windows metadata and SignPath invariants |
-| Complete current regression tree | CI REQUIRED | Source-only run: 1184 discovered; 1173 PASS / 11 FAIL, all 11 due to intentionally absent `node_modules/express`; run `npm ci` + `npm test` in CI before publishing binaries |
+| Release-targeted regression tests | PASS | 145 passed, 0 failed, 0 skipped, including OWASP ZAP DAST/SARIF gating, extended artifact provenance, Codacy legacy-analysis API cleanup, zizmor template-injection regression coverage, Docker Go-network resilience, Scorecard filtering, CodeQL/OAuth regressions, dependency floors, Windows metadata and SignPath invariants |
+| Complete current regression tree | CI REQUIRED | Source-only run: 1185 discovered; 1174 PASS / 11 FAIL, all 11 due to intentionally absent `node_modules/express`; run `npm ci` + `npm test` in CI before publishing binaries |
 | PARTIAL-closure audit | PASS | 127 production JS files; 38 repository-verifiable controls; 0 blocking findings |
 | Static ASVS audit | PASS | 127 production JS files; 10 reviewed decoder sites |
-| Security inventory | PASS | Regenerated for 1.71.36; 960 inventory entries |
+| Security inventory | PASS | Regenerated for 1.71.37; 960 inventory entries |
 | Windows runtime integrity | PASS | 103 entries; 0 stale source-resident hashes after final synchronization; build-time Express entry remains pinned to lockfile `4.22.2` |
 | Matrix triage | PASS | 345/345 triaged; 253 PASS; 0 PARTIAL; 0 FAIL; 92 N/A; 0 REVIEW; 0 MANUAL |
 | Signed-evidence verifier | PASS | 22 required external requirement IDs; Ed25519 signature; requirement-specific method/predicate; canonical SHA-256; release/origin binding; ≤7-day TTL |
 | Isolated crypto provider gate | PASS | L3 self-test requires hardware backing, non-exportable keys, key isolation and isolated encrypt/decrypt/HMAC/sign operations |
-| CycloneDX SBOM + provenance | PASS | Root component synchronized to Direct-Xfer 1.71.36; Windows provenance job validates/attests the SBOM and a four-subject SHA-256 release manifest alongside launcher, ServerHost and installer provenance |
+| CycloneDX SBOM + provenance | PASS | Root component synchronized to Direct-Xfer 1.71.37; Windows provenance job validates/attests the SBOM and a four-subject SHA-256 release manifest alongside launcher, ServerHost and installer provenance |
 | Connected dependency/container scan | DEPLOYMENT EVIDENCE | V15.2.1 startup evidence requires real release-bound dependency + container scans with zero High/Critical findings |
 
 ## Matrix state
@@ -35,7 +35,7 @@ The source matrix has no unresolved `MANUAL`, `PARTIAL`, `FAIL` or `REVIEW` rows
 
 ## Regression note
 
-The 1.71.36 packaging pass executed 144 release/security-targeted tests with zero failures or skips, including the ZAP DAST/SARIF and extended artifact-attestation regressions, plus both repository-verifiable ASVS audits. The complete source-only suite executed 1184 tests: 1173 passed and the 11 expected real-server/platform-boundary tests failed only because `express` is intentionally absent from the source ZIP and is restored by `npm ci` in CI. The source archive intentionally excludes `node_modules`; real-server tests that require `express` therefore belong to the dependency-backed `npm ci` + `npm test` CI release gate rather than the source-only packaging pass.
+The 1.71.37 packaging pass executed 145 release/security-targeted tests with zero failures or skips, including the ZAP DAST/SARIF and extended artifact-attestation regressions, plus both repository-verifiable ASVS audits. The complete source-only suite executed 1185 tests: 1174 passed and the 11 expected real-server/platform-boundary tests failed only because `express` is intentionally absent from the source ZIP and is restored by `npm ci` in CI. The source archive intentionally excludes `node_modules`; real-server tests that require `express` therefore belong to the dependency-backed `npm ci` + `npm test` CI release gate rather than the source-only packaging pass.
 
 ## Commands/gates used
 

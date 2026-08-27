@@ -36,9 +36,22 @@
     el.__dxResumeSavedAt = now;
     try { localStorage.setItem(key, JSON.stringify({ time:t, duration:d || 0, at:now })); } catch (_) {}
   }
+  function revealVideoFallback(el) {
+    if (!el || el.getAttribute('data-dx-video-fallback') !== '1') return;
+    el.style.display = 'none';
+    var parent = el.parentNode;
+    var fallback = parent && parent.querySelector ? parent.querySelector('.vfallback') : null;
+    if (fallback) fallback.style.display = 'block';
+  }
   function attach(el) {
     if (!el || el.__dxResumeAttached) return;
     el.__dxResumeAttached = true;
+    if (String(el.tagName || '').toLowerCase() === 'video' && el.getAttribute('data-dx-video-fallback') === '1') {
+      el.addEventListener('error', function () { revealVideoFallback(el); });
+      // The resource may fail while HTML is still being parsed, before this
+      // deferred helper attaches. Honor an already-recorded failure too.
+      if (el.error || Number(el.networkState) === 3) revealVideoFallback(el);
+    }
     el.addEventListener('loadedmetadata', function () {
       var key = storageKey(el), d = Number(el.duration) || 0;
       el.__dxResumeKey = key;

@@ -1,6 +1,6 @@
 # SignPath Foundation setup for Direct-Xfer
 
-Direct-Xfer 1.71.39 is prepared for SignPath Foundation Open Source Code Signing. Source-side preparation is complete; the remaining work is the one-time external SignPath approval/configuration and GitHub secret/variable setup.
+Direct-Xfer 1.71.41 is prepared for SignPath Foundation Open Source Code Signing. Source-side preparation is complete; the remaining work is the one-time external SignPath approval/configuration and GitHub secret/variable setup.
 
 ## 1. Apply to SignPath Foundation
 
@@ -54,7 +54,7 @@ A signing-enabled workflow run is accepted only when all of these are true:
 6. both EXEs have `ProductName=Direct-Xfer`, `CompanyName=Direct-Xfer`, the common release `ProductVersion`, and the expected component `FileVersion`;
 7. SignPath returns a Windows-trusted `Valid` Authenticode signature before any signed file is packaged or published.
 
-Push builds remain unsigned and do not create SignPath signing requests.
+Push builds remain unsigned and do not create SignPath signing requests. They publish only clearly labelled `-UNSIGNED` preview artifacts; canonical artifact names are reserved for successful SignPath releases.
 
 ## 5. Produce a signed Windows release
 
@@ -64,14 +64,15 @@ The workflow will:
 
 1. build and test Direct-Xfer on `windows-2025`;
 2. build the launcher and ServerHost with the current Direct-Xfer release as PE ProductVersion while preserving their component FileVersion values;
-3. verify both fresh EXEs are unsigned and their metadata matches the artifact configuration;
-4. upload both EXEs as a GitHub artifact and submit SignPath signing request 1;
-5. wait up to one hour for the required manual SignPath approval;
-6. validate the returned Authenticode signatures and install the signed EXEs into the portable tree;
-7. build the Inno Setup installer from those signed EXEs;
-8. upload the installer and submit SignPath signing request 2;
-9. wait for manual approval and validate the signed installer;
-10. publish the final portable and installer GitHub Actions artifacts.
+3. assemble the unsigned portable payload and initial Inno Setup installer;
+4. verify launcher, ServerHost and initial installer are `NotSigned`;
+5. publish the clearly labelled `-UNSIGNED` portable and installer preview artifacts immediately;
+6. validate the SignPath repository configuration, upload both application EXEs as a private SignPath input artifact, and submit signing request 1;
+7. wait up to one hour for manual approval while the unsigned previews remain downloadable;
+8. validate the returned launcher/ServerHost Authenticode signatures, copy those signed EXEs into the portable payload, and rebuild the installer;
+9. verify the rebuilt installer is still unsigned, then upload it and submit SignPath signing request 2;
+10. wait for manual approval and validate all three final Authenticode signatures;
+11. publish the canonical signed portable/installer artifacts and create the signed-release provenance attestations.
 
 The SignPath GitHub action receives the current GitHub artifact ID and explicit `GITHUB_TOKEN`; repository permissions are limited to `contents: read` and `actions: read`.
 

@@ -57,10 +57,10 @@ function html(res, status, title, message, close = false, extraHeaders = {}) {
   const esc = (s) => String(s || '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const nonce = base64url(crypto.randomBytes(18));
   const script = close ? `<script nonce="${nonce}">try{window.opener&&window.opener.postMessage({type:'dx-oauth-broker-complete'},'*')}catch(_){}setTimeout(()=>window.close(),350);</script>` : '';
-  const body = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><style nonce="${nonce}">body{font-family:system-ui;background:#111;color:#eee;display:grid;place-items:center;min-height:100vh;margin:0}main{max-width:640px;padding:32px;text-align:center}</style></head><body><main><h1>${esc(title)}</h1><p>${esc(message)}</p></main>${script}</body></html>`;
+  const body = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title></head><body style="font-family:system-ui;background:#111;color:#eee;display:grid;place-items:center;min-height:100vh;margin:0"><main style="max-width:640px;padding:32px;text-align:center"><h1>${esc(title)}</h1><p>${esc(message)}</p></main>${script}</body></html>`;
   res.writeHead(status, {
     'Content-Type':'text/html; charset=utf-8', 'Cache-Control':'no-store', 'X-Content-Type-Options':'nosniff',
-    'Referrer-Policy':'no-referrer', 'Content-Security-Policy':`default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; style-src-attr 'none'; script-src-attr 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'`,
+    'Referrer-Policy':'no-referrer', 'Content-Security-Policy':`default-src 'none'; script-src 'nonce-${nonce}'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'`,
     ...extraHeaders,
   });
   res.end(body);

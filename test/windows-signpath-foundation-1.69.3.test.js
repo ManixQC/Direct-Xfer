@@ -61,7 +61,7 @@ test('Windows metadata is component-scoped for SignPath Foundation restrictions'
   assert.match(installer, /VersionInfoOriginalFileName=Direct-Xfer-Setup-\{#AppVersion\}\.exe/);
 });
 
-test('GitHub Actions signs own executables before rebuilding and signing installer', () => {
+test('GitHub Actions publishes unsigned previews before SignPath, then rebuilds and signs the installer', () => {
   const workflow = read('.github/workflows/build-windows-csharp.yml');
   assert.match(workflow, /sign_with_signpath:/);
   assert.match(workflow, /actions: read/);
@@ -77,10 +77,19 @@ test('GitHub Actions signs own executables before rebuilding and signing install
   assert.equal((workflow.match(/signpath\/github-action-submit-signing-request@[0-9a-f]{40}/g) || []).length, 2);
   assert.match(workflow, /github-artifact-id: '\$\{\{ steps\.upload-signpath-executables\.outputs\.artifact-id \}\}'/);
   assert.match(workflow, /github-artifact-id: '\$\{\{ steps\.upload-signpath-installer\.outputs\.artifact-id \}\}'/);
-  const signExecutablesAt = workflow.indexOf('Sign Direct-Xfer executables with SignPath Foundation');
   const buildInstallerAt = workflow.indexOf('- name: Build installer');
+  const unsignedUploadAt = workflow.indexOf('Upload unsigned portable Windows preview');
+  const signExecutablesAt = workflow.indexOf('Sign Direct-Xfer executables with SignPath Foundation');
+  const rebuildInstallerAt = workflow.indexOf('Rebuild installer with SignPath-signed executables');
   const signInstallerAt = workflow.indexOf('Sign Direct-Xfer installer with SignPath Foundation');
-  assert.ok(signExecutablesAt > 0 && buildInstallerAt > signExecutablesAt && signInstallerAt > buildInstallerAt);
+  assert.ok(
+    buildInstallerAt > 0 &&
+    unsignedUploadAt > buildInstallerAt &&
+    signExecutablesAt > unsignedUploadAt &&
+    rebuildInstallerAt > signExecutablesAt &&
+    signInstallerAt > rebuildInstallerAt
+  );
+  assert.match(workflow, /Destinations = @\(\(Join-Path \$PWD 'build\\windows-dotnet10\\launcher\\Direct-Xfer\.exe'\), \(Join-Path \$portableRoot 'Direct-Xfer\.exe'\)\)/);
   assert.match(workflow, /Verify final SignPath release signatures/);
   assert.match(workflow, /Get-AuthenticodeSignature/);
   assert.match(workflow, /Copy-Item 'LICENSE' \(Join-Path \$dist 'LICENSE\.txt'\)/);

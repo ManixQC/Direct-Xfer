@@ -21,7 +21,7 @@ function count(source, expression) {
   return [...source.matchAll(expression)].length;
 }
 
-test('1.71.39 SignPath executable configuration uses one release ProductVersion for every Direct-Xfer binary', () => {
+test(`${releaseVersion} SignPath executable configuration uses one release ProductVersion for every Direct-Xfer binary`, () => {
   assert.match(executablesConfig, /<parameter name="version" required="true"\s*\/>/);
   assert.match(executablesConfig, /<parameter name="launcherFileVersion" required="true"\s*\/>/);
   assert.match(executablesConfig, /<parameter name="serverHostFileVersion" required="true"\s*\/>/);
@@ -35,7 +35,7 @@ test('1.71.39 SignPath executable configuration uses one release ProductVersion 
   assert.match(executablesConfig, /path="server-host\/Direct-Xfer\.ServerHost\.exe"/);
 });
 
-test('1.71.39 Windows CI builds SignPath inputs with release ProductVersion and component FileVersion checks', () => {
+test(`${releaseVersion} Windows CI builds SignPath inputs with release ProductVersion and component FileVersion checks`, () => {
   assert.match(workflow, new RegExp(`DX_VERSION: '${releaseRe}'`));
   assert.equal(count(workflow, /-p:InformationalVersion=\$env:DX_VERSION/g), 3);
   assert.match(workflow, /ProductVersion -ne \$env:DX_VERSION/);
@@ -52,13 +52,34 @@ test('SignPath requests are manual, origin-restricted, version-bound and use cur
   assert.match(workflow, /refs\/heads\/main/);
   assert.match(workflow, /refs\/tags\/v\$env:DX_VERSION/);
   assert.match(workflow, /oauth-broker\/cloudflare-worker\/package\.json/);
-  assert.equal(count(workflow, /uses: actions\/upload-artifact@[0-9a-f]{40}/g), 5);
+  assert.equal(count(workflow, /uses: actions\/upload-artifact@[0-9a-f]{40}/g), 7);
   assert.equal(count(workflow, /uses: signpath\/github-action-submit-signing-request@[0-9a-f]{40}/g), 2);
   assert.equal(count(workflow, /github-token: '\$\{\{ secrets\.GITHUB_TOKEN \}\}'/g), 2);
   assert.match(workflow, /permissions:\s*\n\s*contents: read\s*\n\s*actions: read/);
   assert.match(workflow, /cancel-in-progress: false/);
   assert.match(workflow, /name: Direct-Xfer-\$\{\{ env\.DX_VERSION \}\}-Windows-CSharp/);
   assert.match(workflow, /name: Direct-Xfer-Setup-\$\{\{ env\.DX_VERSION \}\}/);
+});
+
+
+test('unsigned Windows previews remain downloadable while canonical signed artifacts stay gated', () => {
+  assert.match(workflow, /name: Direct-Xfer-\$\{\{ env\.DX_VERSION \}\}-Windows-CSharp-UNSIGNED/);
+  assert.match(workflow, /name: Direct-Xfer-Setup-\$\{\{ env\.DX_VERSION \}\}-UNSIGNED/);
+  assert.match(workflow, /Direct-Xfer-Setup-\$\{\{ env\.DX_VERSION \}\}-UNSIGNED\.exe/);
+  assert.match(workflow, /Unsigned preview must not already be signed/);
+  assert.match(workflow, /intentionally unsigned and may be blocked by Windows Smart App Control/);
+
+  const unsignedUpload = workflow.indexOf('Upload unsigned portable Windows preview');
+  const configValidation = workflow.indexOf('Validate SignPath Foundation configuration');
+  const signRequest = workflow.indexOf('Sign Direct-Xfer executables with SignPath Foundation');
+  assert.ok(unsignedUpload >= 0 && configValidation > unsignedUpload && signRequest > configValidation,
+    'unsigned previews must be uploaded before SignPath validation/request can wait or fail');
+
+  assert.match(workflow, new RegExp('uses: actions/upload-artifact@[0-9a-f]{40}[^\\n]*\\n\\s*if: \\$\\{\\{ inputs\\.sign_with_signpath \\}\\}\\n\\s*with:\\n\\s*name: Direct-Xfer-\\$\\{\\{ env\\.DX_VERSION \\}\\}-Windows-CSharp'));
+  assert.match(workflow, new RegExp('uses: actions/upload-artifact@[0-9a-f]{40}[^\\n]*\\n\\s*if: \\$\\{\\{ inputs\\.sign_with_signpath \\}\\}\\n\\s*with:\\n\\s*name: Direct-Xfer-Setup-\\$\\{\\{ env\\.DX_VERSION \\}\\}'));
+  assert.match(workflow, /attest-windows-provenance:[\s\S]*?if: \$\{\{ github\.repository == 'ManixQC\/Direct-Xfer' && github\.event_name == 'workflow_dispatch' && inputs\.sign_with_signpath \}\}/);
+  assert.match(workflow, /Rebuild installer with SignPath-signed executables[\s\S]*?Verify installer is ready for SignPath/);
+  assert.match(workflow, /Verify final SignPath release signatures[\s\S]*?Canonical release artifact names are reserved for the SignPath-validated path/);
 });
 
 test('SignPath installer configuration signs only the final Direct-Xfer setup with release metadata', () => {

@@ -3,23 +3,39 @@
 Audit date: 2026-08-27
 Target: OWASP Application Security Verification Standard 5.0.0, Level 3
 Repository: `ManixQC/Direct-Xfer`
-Release: Direct-Xfer `1.71.39`
+Release: Direct-Xfer `1.71.41`
 Baseline input: Direct-Xfer `1.70.26` ASVS-L3 release
 Detailed matrix: `security/ASVS-5.0.0-L3-MATRIX.md`
 
 ## Release verification result
 
-Direct-Xfer 1.71.39 closes the real Medium OWASP ZAP CSP finding surfaced by the corrected 1.71.37 DAST gate. The common HTTP boundary removes `'unsafe-inline'` from `style-src`, requires the per-response cryptographic nonce for inline style elements through `style-src` / `style-src-elem`, forbids inline script attributes with `script-src-attr 'none'`, and scopes the remaining legacy inline style-attribute compatibility to `style-src-attr 'unsafe-inline'`. Generated public/share HTML propagates the same nonce to inline `<style>` and `<script>` blocks. The previous actionlint/ShellCheck fixes, stable ZAP SARIF repository location, preserved observed URLs and always-run Medium/High gate remain in force. The official ZAP action and ZAP 2.17.0 image remain immutably pinned. Windows provenance continues to validate and attest the release CycloneDX SBOM and SHA-256 manifest alongside the launcher, ServerHost and installer. Existing Codacy filtering/legacy cleanup, CodeQL, Trivy, Scorecard, zizmor, immutable workflow pins, least-privilege token scopes and Docker checksum verification/retry remain in force. The ASVS status matrix remains 253 PASS / 92 N/A / 0 MANUAL / 0 PARTIAL / 0 FAIL / 0 REVIEW.
+Direct-Xfer 1.71.41 separates Windows preview and release channels after the Smart App Control finding: unsigned outputs remain downloadable for development/testing only under explicit `-UNSIGNED` artifact names, while canonical release names and Windows provenance attestations remain restricted to an explicit SignPath signing dispatch that passes final Authenticode verification of launcher, ServerHost and installer. The CSP/ZAP, nonce, SARIF, SBOM/provenance, Codacy, CodeQL, Trivy, Scorecard, zizmor, immutable workflow pins, least-privilege token scopes and Docker checksum verification/retry hardening from the preceding hardening pass remains in force. The ASVS status matrix remains 253 PASS / 92 N/A / 0 MANUAL / 0 PARTIAL / 0 FAIL / 0 REVIEW.
 
-### 1.71.39 CSP / ZAP finding closure
+### 1.71.41 unsigned-preview / signed-release separation
 
-- The 1.71.37 DAST pipeline successfully uploaded its SARIF and then failed correctly on a real Medium alert: ZAP plugin 10055 reported `CSP: style-src unsafe-inline`. 1.71.39 fixes the application policy rather than suppressing the alert.
+- Automatic and manual Windows builds now publish a portable preview and installer preview only under names containing `-UNSIGNED`; the installer file itself is copied to `Direct-Xfer-Setup-<version>-UNSIGNED.exe`.
+- The workflow validates all three preview binaries as `NotSigned` before upload and explicitly warns that Smart App Control may block them. No claim is made that unsigned previews are suitable as trusted release binaries.
+- Preview uploads occur before SignPath repository-setting validation and before signing request 1, so the artifacts are immediately downloadable while manual approval is pending or even if the signing configuration subsequently fails closed.
+- Canonical portable/installer artifact names remain gated on `workflow_dispatch` with `sign_with_signpath=true` and the final Authenticode validation of launcher, ServerHost and installer.
+- After SignPath returns the signed launcher and ServerHost, the workflow copies them into both the build tree and portable payload, rebuilds the installer from those signed inner binaries, then submits the rebuilt installer for SignPath signing request 2.
+- Windows provenance/attestation remains restricted to the signed canonical release path; unsigned previews are not subjects of the final-release attestation job.
+- Regression coverage verifies the preview-before-request ordering, unsigned naming, signed installer rebuild, canonical signed-artifact gates and signed-only provenance.
+- Targeted release/security regression gate: **152/152 PASS**. Full source-only suite: **1181/1192 PASS**, with the same 11 dependency-backed tests failing only because `express` is absent from the source ZIP and restored by `npm ci` in CI.
+
+### 1.71.41 CSP / ZAP finding closure
+
+- The 1.71.37 DAST pipeline successfully uploaded its SARIF and then failed correctly on a real Medium alert: ZAP plugin 10055 reported `CSP: style-src unsafe-inline`. 1.71.41 fixes the application policy rather than suppressing the alert.
 - `lib/server/http-application.js` removes `'unsafe-inline'` from the `style-src` fallback and emits nonce-only `style-src` plus `style-src-elem`, using the same cryptographically random per-response nonce already required for scripts.
 - `script-src-attr 'none'` explicitly forbids executable script attributes. Legacy visual style attributes remain temporarily compatible only through the narrower `style-src-attr 'unsafe-inline'` directive; this no longer grants arbitrary inline `<style>` blocks.
 - `lib/server/public-pages.js` propagates the active nonce to generated `<style>` tags as well as `<script>` tags, including collaboration/gallery fragments passed through `pageShell`, preventing the tightened policy from breaking public pages.
-- Regression coverage asserts the exact CSP directive split and generated-style nonce handling so a future refactor cannot restore blanket `style-src 'unsafe-inline'`. On the next successful ZAP run, `zap/10055` should no longer be emitted; GitHub Code Scanning remains authoritative for closing the previously uploaded alert.
+- Regression coverage asserts the exact CSP directive split and generated-style nonce handling so a future refactor cannot restore blanket `style-src 'unsafe-inline'`. Nonce insertion is idempotent, so already-nonced generated fragments cannot receive duplicate `nonce` attributes. On the next successful ZAP run, `zap/10055-6` should no longer be emitted; GitHub Code Scanning remains authoritative for closing the previously uploaded alert.
 
-### 1.71.39 GitHub security workflow hardening
+### 1.71.41 GitHub security workflow hardening
+
+- The ZAP SARIF adapter now prefers ZAP `alertRef` (for example `10055-6`) over the coarser plugin id (`10055`), preventing different passive-scan sub-rules from collapsing into one GitHub rule. Normalized future rule identifiers receive a deterministic hash suffix if normalization/truncation is required, preventing collisions.
+- ZAP threshold parsing, every alert `riskcode`, the presence of at least one scanned site, and each site alert collection are validated fail-closed. A scanner/report failure can no longer degrade into an apparent zero-finding pass. SARIF is written atomically and fingerprints are based on stable rule identity rather than mutable display text.
+- The CSP follow-up removes the public video element's inline `onerror` handler, which `script-src-attr 'none'` would correctly block, and moves the fallback to the nonce-compatible external media helper with an already-failed-media race check.
+- Windows release provenance now creates an exact `git archive` source package, includes it in the SHA-256/provenance set, and binds the npm/source CycloneDX document only to that source package. Launcher, ServerHost and installer keep build-provenance attestations but no longer receive a misleading SBOM predicate for components the npm SBOM does not describe.
 
 - `.github/workflows/zap.yml` adds OWASP ZAP baseline DAST on canonical `main`, manual dispatch and a weekly schedule. It scans only an ephemeral local Docker instance bound to loopback, waits for `/healthz`, and never targets a production URL.
 - ZAP uses `zaproxy/action-baseline` pinned to its immutable v0.15.0 release commit and a digest-pinned ZAP 2.17.0 linux/amd64 image. Automatic issue creation is disabled and the workflow has only `contents: read` plus job-scoped `security-events: write`.
@@ -27,7 +43,7 @@ Direct-Xfer 1.71.39 closes the real Medium OWASP ZAP CSP finding surfaced by the
 - `scripts/check-zap-report.js` gates those same severities and the workflow executes this gate with `if: always()` so an upload/transport failure cannot suppress the DAST verdict. Low/Informational alerts remain in the full ZAP JSON/Markdown/HTML report artifact and do not pollute Code Scanning.
 - The ZAP shell blocks separate `ADMIN_PASSWORD` assignment from export and use an intentionally ignored health-loop variable, closing actionlint/ShellCheck SC2155 and SC2034 without suppressions.
 - The DAST target receives a random ephemeral `ADMIN_PASSWORD` so failure logs cannot expose an automatically generated owner credential.
-- `attest-windows-provenance` now checks out and version-validates `security/sbom.cdx.json`, emits `Direct-Xfer-${DX_VERSION}-SHA256SUMS.txt`, uploads both as provenance metadata, and includes them in the existing GitHub build-provenance attestation alongside the final launcher, ServerHost and installer. OIDC/attestation permissions remain confined to the separate provenance job.
+- `attest-windows-provenance` checks out and version-validates `security/sbom.cdx.json`, creates `Direct-Xfer-${DX_VERSION}-source.zip` directly from the workflow commit with `git archive`, emits a five-entry `Direct-Xfer-${DX_VERSION}-SHA256SUMS.txt`, and uploads the source/SBOM/manifest metadata. Build provenance covers the final launcher, ServerHost, installer, source archive and checksum manifest, while a separate SBOM predicate binds the CycloneDX document only to the source archive. OIDC/attestation permissions remain confined to the separate provenance job.
 - Regression coverage in `test/zap-security-workflow.test.js` and `test/github-security-workflows.test.js` locks the ZAP severity boundary, immutable pins, local-only target and extended provenance subjects.
 - `.github/workflows/release-windows-build-chain.yml` passes `ref` and SignPath intent through `env` rather than embedding `${{ inputs.* }}` in its PowerShell `run` body, removing the zizmor `template-injection` sink.
 - `.github/scripts/dispatch-windows-release-build.ps1` is restored to the source package and rejects empty, oversized, metacharacter-bearing, ambiguous (`..`, `@{`, `//`) and malformed refs before dispatch.
@@ -87,13 +103,13 @@ Direct-Xfer 1.70.26 closes the 26 deployment-bound `MANUAL` rows from 1.70.25 wi
 
 Repository/release gates completed for this candidate:
 
-- Code Scanning / release regression subset: **145 passed, 0 failed, 0 skipped**, covering OWASP ZAP DAST/SARIF gating, extended GitHub Artifact Attestations, Codacy legacy-analysis cleanup, zizmor template-injection hardening, existing CodeQL/OAuth regressions, Trivy/OpenVEX, Scorecard filtering, Windows/SignPath and release-maintenance invariants.
-- Full source-only regression tree: **1174/1185 passed**; the 11 failures all require `express`, which is intentionally excluded from the source ZIP. The dependency-backed **CI REQUIRED** gate remains `npm ci` followed by `npm test`.
+- Code Scanning / release regression subset: **152 passed, 0 failed, 0 skipped**, covering OWASP ZAP DAST/SARIF gating, extended GitHub Artifact Attestations, Codacy legacy-analysis cleanup, zizmor template-injection hardening, existing CodeQL/OAuth regressions, Trivy/OpenVEX, Scorecard filtering, Windows/SignPath and release-maintenance invariants.
+- Full source-only regression tree: **1181/1192 passed**; the 11 failures all require `express`, which is intentionally excluded from the source ZIP. The dependency-backed **CI REQUIRED** gate remains `npm ci` followed by `npm test`.
 - Static ASVS audit: **PASS** — 127 production JavaScript source files, 10 reviewed decoder sites.
 - PARTIAL-closure audit: **PASS** — 127 production JavaScript source files, 38 repository-verifiable controls, 0 blocking findings.
-- Security inventory regenerated for 1.71.39 — **960 entries**.
+- Security inventory regenerated for 1.71.41 — **961 entries**.
 - Windows ServerHost critical runtime manifest: **103 entries, 0 stale source-resident hashes** after final synchronization; the missing build-time Express entry remains pinned by `package-lock.json` to 4.22.2.
-- CycloneDX SBOM root component synchronized to 1.71.39.
+- CycloneDX SBOM root component synchronized to 1.71.41.
 
 This document is an implementation/evidence audit, not a third-party certification. A production installation can operate in `ASVS_L3_MODE=true` only while all mandatory runtime controls and the signed deployment evidence are valid.
 
@@ -169,8 +185,8 @@ The direct dependency graph remains lockfile-pinned. V15.2.1 is no longer an ope
 
 ## Final release gates
 
-- [x] package and lockfile version synchronized to 1.71.39.
-- [x] PWA version/cache generation synchronized to 1.71.39 / pwa502.
+- [x] package and lockfile version synchronized to 1.71.41.
+- [x] PWA version/cache generation synchronized to 1.71.41 / pwa504.
 - [x] ASVS regression suite green (96/96).
 - [x] Complete current test tree green (1139/1139 across 190 files).
 - [x] Static ASVS audit green.
@@ -178,7 +194,7 @@ The direct dependency graph remains lockfile-pinned. V15.2.1 is no longer an ope
 - [x] Security inventory regenerated.
 - [x] Windows runtime integrity manifest synchronized and rechecked.
 - [x] Matrix has 0 MANUAL, 0 PARTIAL, 0 FAIL and 0 REVIEW.
-- [x] SBOM root component synchronized to 1.71.39.
+- [x] SBOM root component synchronized to 1.71.41.
 - [x] Former operator-declared manual-attestation flags removed from the L3 configuration surface.
 
 Independent review of N/A decisions, production evidence collection and a focused penetration test remain appropriate before making an external certification/compliance representation.

@@ -174,20 +174,28 @@ test("OWASP ZAP DAST scans an isolated local target and sends only Medium/High f
   assert.match(workflow, /zap-report-to-sarif\.js report_json\.json zap-security\.sarif/);
   assert.match(workflow, /category:\s*owasp-zap-baseline/);
   assert.match(workflow, /Enforce Medium\/High ZAP gate[\s\S]*?if:\s*always\(\)[\s\S]*?check-zap-report\.js report_json\.json/);
-  assert.match(converter, /ZAP_MIN_RISK \|\| 2/);
+  assert.match(read("scripts/zap-report-utils.js"), /Invalid ZAP_MIN_RISK/);
   assert.match(converter, /automationDetails:\s*\{ id: 'owasp-zap\/baseline\/' \}/);
   assert.match(converter, /'security-severity'/);
   assert.match(converter, /artifactLocation: \{ uri: 'security\/zap-dast-target\.md' \}/);
   assert.match(workflow, /locations\[0\]\.physicalLocation\.artifactLocation\.uri == \"security\/zap-dast-target\.md\"/);
-  assert.match(gate, /risk >= minRisk/);
+  assert.match(gate, /parseRiskCode\(alert\) >= minRisk/);
 });
 
-test("Windows provenance also attests the CycloneDX SBOM and SHA-256 manifest", () => {
+test("Windows provenance attests binaries while the project SBOM is bound to the source package it describes", () => {
   const text = read(".github/workflows/build-windows-csharp.yml");
   assert.match(text, /Checkout release SBOM/);
+  assert.match(text, /Create SBOM-described source package/);
+  assert.match(text, /git -C provenance\/source archive/);
+  assert.match(text, /Direct-Xfer-\$\{DX_VERSION\}-source\.zip/);
   assert.match(text, /Direct-Xfer-\$\{DX_VERSION\}-SHA256SUMS\.txt/);
   assert.match(text, /sha256sum source\/security\/sbom\.cdx\.json/);
+  assert.match(text, /sha256sum "Direct-Xfer-\$\{DX_VERSION\}-source\.zip"/);
   assert.match(text, /Direct-Xfer-\$\{\{ env\.DX_VERSION \}\}-provenance-metadata/);
-  assert.match(text, /provenance\/source\/security\/sbom\.cdx\.json/);
   assert.match(text, /actions\/attest@[0-9a-f]{40}/);
+  assert.match(text, /Generate GitHub SBOM attestation for source package/);
+  assert.match(text, /subject-path:\s*provenance\/Direct-Xfer-\$\{\{ env\.DX_VERSION \}\}-source\.zip/);
+  assert.match(text, /sbom-path:\s*provenance\/source\/security\/sbom\.cdx\.json/);
+  const sbomStep = text.match(/- name: Generate GitHub SBOM attestation for source package[\s\S]*$/)?.[0] || '';
+  assert.doesNotMatch(sbomStep, /subject-path:\s*\|[\s\S]*Direct-Xfer\.exe/, 'npm/source SBOM must not claim to describe the launcher apphost');
 });

@@ -1,5 +1,5 @@
 name: Build Direct-Xfer Windows C# + Installer
-run-name: v1.71.39
+run-name: v1.71.41
 
 on:
   workflow_dispatch:
@@ -41,7 +41,7 @@ jobs:
   build-windows:
     runs-on: windows-2025
     env:
-      DX_VERSION: '1.71.39'
+      DX_VERSION: '1.71.41'
       # Runtime identity is independent from the stable launcher component version.
       DX_RUNTIME_BUILD: 'runtime169'
       DX_LAUNCHER_COMPONENT_VERSION: '1.70.1'
@@ -144,128 +144,6 @@ jobs:
             if ($versionInfo.FileVersion -ne $entry.FileVersion) { throw "$exe FileVersion '$($versionInfo.FileVersion)' does not match component version $($entry.FileVersion)." }
             if ($versionInfo.CompanyName -ne 'Direct-Xfer') { throw "$exe CompanyName '$($versionInfo.CompanyName)' is not Direct-Xfer." }
           }
-      - name: Validate SignPath Foundation configuration
-        if: ${{ inputs.sign_with_signpath }}
-        shell: pwsh
-        env:
-          SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
-          SIGNPATH_ORGANIZATION_ID: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
-          SIGNPATH_PROJECT_SLUG: ${{ vars.SIGNPATH_PROJECT_SLUG }}
-          SIGNPATH_SIGNING_POLICY_SLUG: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
-          SIGNPATH_EXECUTABLES_ARTIFACT_CONFIGURATION_SLUG: ${{ vars.SIGNPATH_EXECUTABLES_ARTIFACT_CONFIGURATION_SLUG }}
-          SIGNPATH_INSTALLER_ARTIFACT_CONFIGURATION_SLUG: ${{ vars.SIGNPATH_INSTALLER_ARTIFACT_CONFIGURATION_SLUG }}
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $required = @(
-            'SIGNPATH_API_TOKEN',
-            'SIGNPATH_ORGANIZATION_ID',
-            'SIGNPATH_PROJECT_SLUG',
-            'SIGNPATH_SIGNING_POLICY_SLUG',
-            'SIGNPATH_EXECUTABLES_ARTIFACT_CONFIGURATION_SLUG',
-            'SIGNPATH_INSTALLER_ARTIFACT_CONFIGURATION_SLUG'
-          )
-          $missing = @($required | Where-Object { [string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($_)) })
-          if ($missing.Count -gt 0) {
-            throw ('SignPath signing was requested but these GitHub repository settings are missing: ' + ($missing -join ', '))
-          }
-
-          if ($env:GITHUB_EVENT_NAME -ne 'workflow_dispatch') {
-            throw 'SignPath release signing is allowed only from an explicit workflow_dispatch run.'
-          }
-          if ($env:GITHUB_REPOSITORY -ne 'ManixQC/Direct-Xfer') {
-            throw "SignPath release signing is restricted to ManixQC/Direct-Xfer, not '$env:GITHUB_REPOSITORY'."
-          }
-          $allowedRefs = @('refs/heads/main', "refs/tags/v$env:DX_VERSION")
-          if ($allowedRefs -notcontains $env:GITHUB_REF) {
-            throw "SignPath release signing is allowed only from main or refs/tags/v$env:DX_VERSION; current ref is '$env:GITHUB_REF'."
-          }
-
-          $package = Get-Content -LiteralPath 'package.json' -Raw | ConvertFrom-Json
-          $lock = Get-Content -LiteralPath 'package-lock.json' -Raw | ConvertFrom-Json
-          $broker = Get-Content -LiteralPath 'oauth-broker/package.json' -Raw | ConvertFrom-Json
-          $worker = Get-Content -LiteralPath 'oauth-broker/cloudflare-worker/package.json' -Raw | ConvertFrom-Json
-          foreach ($entry in @(
-            @{ Name='package.json'; Version=[string]$package.version },
-            @{ Name='package-lock.json'; Version=[string]$lock.version },
-            @{ Name='package-lock root'; Version=[string]$lock.packages.PSObject.Properties[''].Value.version },
-            @{ Name='oauth-broker/package.json'; Version=[string]$broker.version },
-            @{ Name='oauth-broker/cloudflare-worker/package.json'; Version=[string]$worker.version }
-          )) {
-            if ($entry.Version -ne $env:DX_VERSION) {
-              throw "$($entry.Name) version '$($entry.Version)' does not match release $env:DX_VERSION."
-            }
-          }
-
-      # Sign Direct-Xfer's own launcher and ServerHost before assembling the portable
-      # package and Inno Setup installer. SignPath Foundation requires manual approval
-      # for each release; the action waits for that approval and returns the signed ZIP.
-      - name: Upload Direct-Xfer executables for SignPath
-        if: ${{ inputs.sign_with_signpath }}
-        id: upload-signpath-executables
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: _signpath-input-executables-${{ env.DX_VERSION }}
-          path: |
-            build/windows-dotnet10/launcher/Direct-Xfer.exe
-            build/windows-dotnet10/server-host/Direct-Xfer.ServerHost.exe
-          if-no-files-found: error
-          retention-days: 1
-
-      - name: Sign Direct-Xfer executables with SignPath Foundation
-        if: ${{ inputs.sign_with_signpath }}
-        id: signpath-executables
-        uses: signpath/github-action-submit-signing-request@c92b958760219087e01f8d67a1669ed57afe2627 # v2
-        with:
-          api-token: '${{ secrets.SIGNPATH_API_TOKEN }}'
-          organization-id: '${{ vars.SIGNPATH_ORGANIZATION_ID }}'
-          project-slug: '${{ vars.SIGNPATH_PROJECT_SLUG }}'
-          signing-policy-slug: '${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}'
-          artifact-configuration-slug: '${{ vars.SIGNPATH_EXECUTABLES_ARTIFACT_CONFIGURATION_SLUG }}'
-          github-artifact-id: '${{ steps.upload-signpath-executables.outputs.artifact-id }}'
-          github-token: '${{ secrets.GITHUB_TOKEN }}'
-          wait-for-completion: true
-          wait-for-completion-timeout-in-seconds: 3600
-          output-artifact-directory: 'build/signpath-signed-executables'
-          parameters: |
-            version: "${{ env.DX_VERSION }}"
-            launcherFileVersion: "${{ env.DX_LAUNCHER_COMPONENT_VERSION }}"
-            serverHostFileVersion: "${{ env.DX_SERVER_HOST_COMPONENT_VERSION }}"
-
-      - name: Install SignPath-signed Direct-Xfer executables into build tree
-        if: ${{ inputs.sign_with_signpath }}
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $signedRoot = Join-Path $PWD 'build\signpath-signed-executables'
-          $targets = @(
-            @{ Name = 'Direct-Xfer.exe'; Destination = Join-Path $PWD 'build\windows-dotnet10\launcher\Direct-Xfer.exe' },
-            @{ Name = 'Direct-Xfer.ServerHost.exe'; Destination = Join-Path $PWD 'build\windows-dotnet10\server-host\Direct-Xfer.ServerHost.exe' }
-          )
-          foreach ($target in $targets) {
-            $matches = @(Get-ChildItem -LiteralPath $signedRoot -Recurse -File -Filter $target.Name)
-            if ($matches.Count -ne 1) {
-              throw "Expected exactly one SignPath output named $($target.Name), found $($matches.Count)."
-            }
-            $sig = Get-AuthenticodeSignature -LiteralPath $matches[0].FullName
-            if ($sig.Status -ne 'Valid' -or -not $sig.SignerCertificate) {
-              throw "SignPath returned an invalid signature for $($target.Name): $($sig.Status)"
-            }
-            Copy-Item -LiteralPath $matches[0].FullName -Destination $target.Destination -Force
-          }
-
-      - name: Verify SignPath-signed Direct-Xfer executables
-        if: ${{ inputs.sign_with_signpath }}
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          foreach ($exe in @('build\windows-dotnet10\launcher\Direct-Xfer.exe','build\windows-dotnet10\server-host\Direct-Xfer.ServerHost.exe')) {
-            $sig = Get-AuthenticodeSignature -LiteralPath $exe
-            if ($sig.Status -ne 'Valid' -or -not $sig.SignerCertificate) {
-              throw "Expected a valid SignPath Authenticode signature on $exe; status=$($sig.Status)"
-            }
-            Write-Host "$exe signed by $($sig.SignerCertificate.Subject)"
-          }
-
       - name: Create portable runtime
         shell: pwsh
         run: |
@@ -550,6 +428,197 @@ jobs:
           $env:DX_INNO_OUTPUT_DIR = Join-Path $PWD 'dist\installer'
           & $env:DX_ISCC 'installer\Direct-Xfer.iss'
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed: $LASTEXITCODE" }
+      - name: Verify unsigned Windows preview artifacts
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $portable = Join-Path $PWD "dist\Direct-Xfer-$env:DX_VERSION-Windows-CSharp"
+          $setup = Join-Path $PWD "dist\installer\Direct-Xfer-Setup-$env:DX_VERSION.exe"
+          $files = @(
+            (Join-Path $portable 'Direct-Xfer.exe'),
+            (Join-Path $portable 'Direct-Xfer.ServerHost.exe'),
+            $setup
+          )
+          foreach ($file in $files) {
+            if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { throw "Missing unsigned preview artifact: $file" }
+            $sig = Get-AuthenticodeSignature -LiteralPath $file
+            if ($sig.Status -ne 'NotSigned') { throw "Unsigned preview must not already be signed: $file status=$($sig.Status)" }
+          }
+          $unsignedSetup = Join-Path $PWD "dist\installer\Direct-Xfer-Setup-$env:DX_VERSION-UNSIGNED.exe"
+          Copy-Item -LiteralPath $setup -Destination $unsignedSetup -Force
+          if ($env:GITHUB_STEP_SUMMARY) {
+            Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Value @(
+              '### Unsigned Windows preview artifacts',
+              "- Direct-Xfer $env:DX_VERSION unsigned portable preview is available immediately.",
+              "- Direct-Xfer-Setup-$env:DX_VERSION-UNSIGNED.exe is intentionally unsigned and may be blocked by Windows Smart App Control.",
+              '- Signed release artifacts, when requested, are published separately only after SignPath and Authenticode validation.'
+            )
+          }
+
+      - name: Upload unsigned portable Windows preview
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: Direct-Xfer-${{ env.DX_VERSION }}-Windows-CSharp-UNSIGNED
+          path: dist/Direct-Xfer-${{ env.DX_VERSION }}-Windows-CSharp/**
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload unsigned installer preview
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: Direct-Xfer-Setup-${{ env.DX_VERSION }}-UNSIGNED
+          path: dist/installer/Direct-Xfer-Setup-${{ env.DX_VERSION }}-UNSIGNED.exe
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Validate SignPath Foundation configuration
+        if: ${{ inputs.sign_with_signpath }}
+        shell: pwsh
+        env:
+          SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
+          SIGNPATH_ORGANIZATION_ID: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          SIGNPATH_PROJECT_SLUG: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          SIGNPATH_SIGNING_POLICY_SLUG: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          SIGNPATH_EXECUTABLES_ARTIFACT_CONFIGURATION_SLUG: ${{ vars.SIGNPATH_EXECUTABLES_ARTIFACT_CONFIGURATION_SLUG }}
+          SIGNPATH_INSTALLER_ARTIFACT_CONFIGURATION_SLUG: ${{ vars.SIGNPATH_INSTALLER_ARTIFACT_CONFIGURATION_SLUG }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $required = @(
+            'SIGNPATH_API_TOKEN',
+            'SIGNPATH_ORGANIZATION_ID',
+            'SIGNPATH_PROJECT_SLUG',
+            'SIGNPATH_SIGNING_POLICY_SLUG',
+            'SIGNPATH_EXECUTABLES_ARTIFACT_CONFIGURATION_SLUG',
+            'SIGNPATH_INSTALLER_ARTIFACT_CONFIGURATION_SLUG'
+          )
+          $missing = @($required | Where-Object { [string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($_)) })
+          if ($missing.Count -gt 0) {
+            throw ('SignPath signing was requested but these GitHub repository settings are missing: ' + ($missing -join ', '))
+          }
+
+          if ($env:GITHUB_EVENT_NAME -ne 'workflow_dispatch') {
+            throw 'SignPath release signing is allowed only from an explicit workflow_dispatch run.'
+          }
+          if ($env:GITHUB_REPOSITORY -ne 'ManixQC/Direct-Xfer') {
+            throw "SignPath release signing is restricted to ManixQC/Direct-Xfer, not '$env:GITHUB_REPOSITORY'."
+          }
+          $allowedRefs = @('refs/heads/main', "refs/tags/v$env:DX_VERSION")
+          if ($allowedRefs -notcontains $env:GITHUB_REF) {
+            throw "SignPath release signing is allowed only from main or refs/tags/v$env:DX_VERSION; current ref is '$env:GITHUB_REF'."
+          }
+
+          $package = Get-Content -LiteralPath 'package.json' -Raw | ConvertFrom-Json
+          $lock = Get-Content -LiteralPath 'package-lock.json' -Raw | ConvertFrom-Json
+          $broker = Get-Content -LiteralPath 'oauth-broker/package.json' -Raw | ConvertFrom-Json
+          $worker = Get-Content -LiteralPath 'oauth-broker/cloudflare-worker/package.json' -Raw | ConvertFrom-Json
+          foreach ($entry in @(
+            @{ Name='package.json'; Version=[string]$package.version },
+            @{ Name='package-lock.json'; Version=[string]$lock.version },
+            @{ Name='package-lock root'; Version=[string]$lock.packages.PSObject.Properties[''].Value.version },
+            @{ Name='oauth-broker/package.json'; Version=[string]$broker.version },
+            @{ Name='oauth-broker/cloudflare-worker/package.json'; Version=[string]$worker.version }
+          )) {
+            if ($entry.Version -ne $env:DX_VERSION) {
+              throw "$($entry.Name) version '$($entry.Version)' does not match release $env:DX_VERSION."
+            }
+          }
+
+      # After the clearly labelled unsigned preview artifacts have been published,
+      # submit Direct-Xfer's launcher and ServerHost to SignPath. The action may wait
+      # for manual approval while the unsigned previews remain immediately downloadable.
+      - name: Upload Direct-Xfer executables for SignPath
+        if: ${{ inputs.sign_with_signpath }}
+        id: upload-signpath-executables
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: _signpath-input-executables-${{ env.DX_VERSION }}
+          path: |
+            build/windows-dotnet10/launcher/Direct-Xfer.exe
+            build/windows-dotnet10/server-host/Direct-Xfer.ServerHost.exe
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Sign Direct-Xfer executables with SignPath Foundation
+        if: ${{ inputs.sign_with_signpath }}
+        id: signpath-executables
+        uses: signpath/github-action-submit-signing-request@c92b958760219087e01f8d67a1669ed57afe2627 # v2
+        with:
+          api-token: '${{ secrets.SIGNPATH_API_TOKEN }}'
+          organization-id: '${{ vars.SIGNPATH_ORGANIZATION_ID }}'
+          project-slug: '${{ vars.SIGNPATH_PROJECT_SLUG }}'
+          signing-policy-slug: '${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}'
+          artifact-configuration-slug: '${{ vars.SIGNPATH_EXECUTABLES_ARTIFACT_CONFIGURATION_SLUG }}'
+          github-artifact-id: '${{ steps.upload-signpath-executables.outputs.artifact-id }}'
+          github-token: '${{ secrets.GITHUB_TOKEN }}'
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 3600
+          output-artifact-directory: 'build/signpath-signed-executables'
+          parameters: |
+            version: "${{ env.DX_VERSION }}"
+            launcherFileVersion: "${{ env.DX_LAUNCHER_COMPONENT_VERSION }}"
+            serverHostFileVersion: "${{ env.DX_SERVER_HOST_COMPONENT_VERSION }}"
+
+      - name: Install SignPath-signed Direct-Xfer executables into build tree
+        if: ${{ inputs.sign_with_signpath }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $signedRoot = Join-Path $PWD 'build\signpath-signed-executables'
+          $portableRoot = Join-Path $PWD "dist\Direct-Xfer-$env:DX_VERSION-Windows-CSharp"
+          $targets = @(
+            @{ Name = 'Direct-Xfer.exe'; Destinations = @((Join-Path $PWD 'build\windows-dotnet10\launcher\Direct-Xfer.exe'), (Join-Path $portableRoot 'Direct-Xfer.exe')) },
+            @{ Name = 'Direct-Xfer.ServerHost.exe'; Destinations = @((Join-Path $PWD 'build\windows-dotnet10\server-host\Direct-Xfer.ServerHost.exe'), (Join-Path $portableRoot 'Direct-Xfer.ServerHost.exe')) }
+          )
+          foreach ($target in $targets) {
+            $matches = @(Get-ChildItem -LiteralPath $signedRoot -Recurse -File -Filter $target.Name)
+            if ($matches.Count -ne 1) {
+              throw "Expected exactly one SignPath output named $($target.Name), found $($matches.Count)."
+            }
+            $sig = Get-AuthenticodeSignature -LiteralPath $matches[0].FullName
+            if ($sig.Status -ne 'Valid' -or -not $sig.SignerCertificate) {
+              throw "SignPath returned an invalid signature for $($target.Name): $($sig.Status)"
+            }
+            foreach ($destination in $target.Destinations) {
+              Copy-Item -LiteralPath $matches[0].FullName -Destination $destination -Force
+            }
+          }
+
+      - name: Verify SignPath-signed Direct-Xfer executables
+        if: ${{ inputs.sign_with_signpath }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $portableRoot = Join-Path $PWD "dist\Direct-Xfer-$env:DX_VERSION-Windows-CSharp"
+          foreach ($exe in @(
+            'build\windows-dotnet10\launcher\Direct-Xfer.exe',
+            'build\windows-dotnet10\server-host\Direct-Xfer.ServerHost.exe',
+            (Join-Path $portableRoot 'Direct-Xfer.exe'),
+            (Join-Path $portableRoot 'Direct-Xfer.ServerHost.exe')
+          )) {
+            $sig = Get-AuthenticodeSignature -LiteralPath $exe
+            if ($sig.Status -ne 'Valid' -or -not $sig.SignerCertificate) {
+              throw "Expected a valid SignPath Authenticode signature on $exe; status=$($sig.Status)"
+            }
+            Write-Host "$exe signed by $($sig.SignerCertificate.Subject)"
+          }
+
+      - name: Rebuild installer with SignPath-signed executables
+        if: ${{ inputs.sign_with_signpath }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $env:DX_INNO_APP_VERSION = $env:DX_VERSION
+          $env:DX_INNO_DOTNET_RUNTIME_VERSION = $env:DX_DOTNET_RUNTIME_VERSION
+          $env:DX_INNO_NODE_VERSION = $env:DX_NODE_VERSION
+          $env:DX_INNO_NODE_EXE_SHA256 = $env:DX_NODE_EXE_SHA256
+          $env:DX_INNO_SOURCE_DIR = Join-Path $PWD "dist\Direct-Xfer-$env:DX_VERSION-Windows-CSharp"
+          $env:DX_INNO_OUTPUT_DIR = Join-Path $PWD 'dist\installer'
+          $setup = Join-Path $env:DX_INNO_OUTPUT_DIR "Direct-Xfer-Setup-$env:DX_VERSION.exe"
+          Remove-Item -LiteralPath $setup -Force -ErrorAction SilentlyContinue
+          & $env:DX_ISCC 'installer\Direct-Xfer.iss'
+          if ($LASTEXITCODE -ne 0) { throw "Signed-input Inno Setup rebuild failed: $LASTEXITCODE" }
+          if (-not (Test-Path -LiteralPath $setup -PathType Leaf)) { throw "Signed-input installer rebuild did not produce $setup" }
+
       - name: Verify installer is ready for SignPath
         if: ${{ inputs.sign_with_signpath }}
         shell: pwsh
@@ -632,12 +701,16 @@ jobs:
             )
           }
 
+      # Canonical release artifact names are reserved for the SignPath-validated path.
+      # Unsigned previews were already uploaded earlier under explicit -UNSIGNED names.
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: ${{ inputs.sign_with_signpath }}
         with:
           name: Direct-Xfer-${{ env.DX_VERSION }}-Windows-CSharp
           path: dist/Direct-Xfer-${{ env.DX_VERSION }}-Windows-CSharp/**
           if-no-files-found: error
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: ${{ inputs.sign_with_signpath }}
         with:
           name: Direct-Xfer-Setup-${{ env.DX_VERSION }}
           path: dist/installer/Direct-Xfer-Setup-${{ env.DX_VERSION }}.exe
@@ -645,12 +718,14 @@ jobs:
 
   attest-windows-provenance:
     name: Attest Windows release provenance
-    if: ${{ github.repository == 'ManixQC/Direct-Xfer' }}
+    # Provenance for Windows release binaries is meaningful only for the explicit
+    # signed release path. Never attest unsigned push-CI binaries.
+    if: ${{ github.repository == 'ManixQC/Direct-Xfer' && github.event_name == 'workflow_dispatch' && inputs.sign_with_signpath }}
     needs: build-windows
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
-      DX_VERSION: '1.71.39'
+      DX_VERSION: '1.71.41'
     # Keep OIDC/attestation privileges out of the build/signing job. This job only
     # reads the final immutable Actions artifacts and creates GitHub attestations.
     permissions:
@@ -664,6 +739,19 @@ jobs:
         with:
           persist-credentials: false
           path: provenance/source
+
+      - name: Create SBOM-described source package
+        shell: bash
+        run: |
+          set -euo pipefail
+          git -C provenance/source archive \
+            --format=zip \
+            --prefix="Direct-Xfer-${DX_VERSION}/" \
+            --output="../Direct-Xfer-${DX_VERSION}-source.zip" \
+            HEAD
+          test -s "provenance/Direct-Xfer-${DX_VERSION}-source.zip"
+          unzip -tq "provenance/Direct-Xfer-${DX_VERSION}-source.zip"
+          node -e "const p=require('./provenance/source/package.json'); if(p.version !== process.env.DX_VERSION) process.exit(1)"
 
       - name: Download portable Windows artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -701,8 +789,9 @@ jobs:
               \( -name 'Direct-Xfer.exe' -o -name 'Direct-Xfer.ServerHost.exe' -o -name "Direct-Xfer-Setup-${DX_VERSION}.exe" \) \
               -print0 | sort -z | xargs -0 sha256sum
             sha256sum source/security/sbom.cdx.json
+            sha256sum "Direct-Xfer-${DX_VERSION}-source.zip"
           ) >> "$manifest"
-          test "$(wc -l < "$manifest")" -eq 4
+          test "$(wc -l < "$manifest")" -eq 5
           cat "$manifest"
 
       - name: Upload provenance metadata
@@ -711,6 +800,7 @@ jobs:
           name: Direct-Xfer-${{ env.DX_VERSION }}-provenance-metadata
           path: |
             provenance/Direct-Xfer-${{ env.DX_VERSION }}-SHA256SUMS.txt
+            provenance/Direct-Xfer-${{ env.DX_VERSION }}-source.zip
             provenance/source/security/sbom.cdx.json
           if-no-files-found: error
 
@@ -722,4 +812,13 @@ jobs:
             provenance/portable/**/Direct-Xfer.ServerHost.exe
             provenance/installer/**/Direct-Xfer-Setup-${{ env.DX_VERSION }}.exe
             provenance/Direct-Xfer-${{ env.DX_VERSION }}-SHA256SUMS.txt
-            provenance/source/security/sbom.cdx.json
+            provenance/Direct-Xfer-${{ env.DX_VERSION }}-source.zip
+
+      - name: Generate GitHub SBOM attestation for source package
+        uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
+        with:
+          # The committed CycloneDX document describes the Direct-Xfer npm/source
+          # package, not the .NET apphost executables individually. Bind it to the
+          # exact source archive produced from this workflow commit.
+          subject-path: provenance/Direct-Xfer-${{ env.DX_VERSION }}-source.zip
+          sbom-path: provenance/source/security/sbom.cdx.json

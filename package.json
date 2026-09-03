@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "archiver": "^8.0.0",
-    "express": "^4.22.2",
+    "express": "^5.2.1",
     "node-forge": "^1.4.0",
     "nodemailer": "^9.0.5",
     "qrcode": "^1.5.4",

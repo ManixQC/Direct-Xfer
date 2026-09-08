@@ -3,14 +3,16 @@
 # but pin the distribution so package provenance does not change silently.
 # The rclone toolchain is pinned more strictly because its Go stdlib is copied
 # into the final binary and therefore becomes part of the runtime attack surface.
-ARG DX_RCLONE_BUILD_VERSION=v1.75.0
-ARG DX_RCLONE_GO_BUILD_VERSION=1.25.14
+ARG DX_RCLONE_BUILD_VERSION=v1.75.1
+ARG DX_RCLONE_GO_BUILD_VERSION=1.26.6
+ARG DX_RCLONE_X_CRYPTO_VERSION=v0.56.0
 ARG DX_RCLONE_X_IMAGE_VERSION=v0.45.0
 ARG DX_TESSERACT_BUILD_VERSION=5.5.3
 ARG DX_TESSERACT_BUILD_COMMIT=db0ec62f81b0737fbbe184d8fea40af5738f8eef
-FROM golang:${DX_RCLONE_GO_BUILD_VERSION}-bookworm@sha256:3b4a11519ad929d1e1d261a12cff056f0c85b735253d7d861346b9c6f8b36437 AS rclone-builder
+FROM golang:${DX_RCLONE_GO_BUILD_VERSION}-bookworm@sha256:116d58cbd88c1297624acc6e967a060012422bacf9930927e23fb719189c6f36 AS rclone-builder
 ARG DX_RCLONE_BUILD_VERSION
 ARG DX_RCLONE_GO_BUILD_VERSION
+ARG DX_RCLONE_X_CRYPTO_VERSION
 ARG DX_RCLONE_X_IMAGE_VERSION
 
 # Debian Trixie still ships an old rclone built with a vulnerable Go stdlib.
@@ -18,7 +20,7 @@ ARG DX_RCLONE_X_IMAGE_VERSION
 # Go's machine-readable binary metadata instead of parsing rclone's human-facing
 # version report, whose formatting is not an API and must never break the image.
 # IMPORTANT: do not name Docker build args RCLONE_VERSION/RCLONE_*: rclone imports
-# RCLONE_* environment variables as CLI flags, and RCLONE_VERSION=v1.75.0 is
+# RCLONE_* environment variables as CLI flags, and RCLONE_VERSION=v1.75.1 is
 # interpreted as the boolean --version flag, which makes every rclone invocation fail.
 # GOTOOLCHAIN=local forbids an implicit toolchain download.
 ENV GOTOOLCHAIN=local \
@@ -26,13 +28,14 @@ ENV GOTOOLCHAIN=local \
     GOPROXY=https://proxy.golang.org,direct \
     GODEBUG=http2client=0
 RUN mkdir -p /out /src \
-  && test "${DX_RCLONE_BUILD_VERSION}" = "v1.75.0" \
+  && test "${DX_RCLONE_BUILD_VERSION}" = "v1.75.1" \
+  && test "${DX_RCLONE_X_CRYPTO_VERSION}" = "v0.56.0" \
   && test "${DX_RCLONE_X_IMAGE_VERSION}" = "v0.45.0" \
   && test "$(go env GOVERSION)" = "go${DX_RCLONE_GO_BUILD_VERSION}"
-# rclone v1.75.0 still resolves golang.org/x/image v0.44.0, which is affected by
-# CVE-2026-46603. Build the exact tagged rclone source but raise only x/image to
-# the fixed v0.45.0 release before compiling. This keeps the rclone release pinned
-# while preventing the vulnerable image decoder from being embedded in the binary.
+# rclone v1.75.1 is the upstream security release that raises golang.org/x/crypto
+# to v0.56.0 (fixing CVE-2026-56854 and companion SSH DoS issues), x/image to
+# v0.45.0, and its Go requirement to 1.26. Build the exact tag with Go 1.26.6 and
+# verify the embedded module graph instead of relying on the human-facing version text.
 RUN set -eux; \
   retry_go() { \
     attempt=1; \
@@ -50,14 +53,11 @@ RUN set -eux; \
 
 WORKDIR /src/rclone
 
-# Let the Go module resolver perform the security upgrade so transitive
-# requirements (notably x/text v0.41.0 required by x/image v0.45.0) remain
-# internally consistent. Editing only the x/image require line can leave the
-# copied release module in a graph that needs further go.mod updates at build time.
 # GitHub-hosted Docker builds occasionally see transient HTTP/2 stream resets from
 # proxy.golang.org/sum.golang.org. Keep checksum verification enabled, force the
-# simpler HTTP/1.1 transport, and retry only network operations. A bad checksum
-# still fails closed at go get/go mod download/go mod verify.
+# simpler HTTP/1.1 transport, and retry only network operations. The v1.75.1 tag
+# already pins the patched crypto/image modules, so do not mutate upstream go.mod;
+# validate the resolved graph and fail closed if either security floor regresses.
 RUN set -eux; \
   retry_go() { \
     attempt=1; \
@@ -67,9 +67,9 @@ RUN set -eux; \
       attempt="$((attempt + 1))"; \
     done; \
   }; \
-  retry_go go get "golang.org/x/image@${DX_RCLONE_X_IMAGE_VERSION}"; \
-  test "$(go list -m -f '{{.Version}}' golang.org/x/image)" = "${DX_RCLONE_X_IMAGE_VERSION}"; \
   retry_go go mod download all; \
+  test "$(go list -m -f '{{.Version}}' golang.org/x/crypto)" = "${DX_RCLONE_X_CRYPTO_VERSION}"; \
+  test "$(go list -m -f '{{.Version}}' golang.org/x/image)" = "${DX_RCLONE_X_IMAGE_VERSION}"; \
   go mod verify
 
 RUN CGO_ENABLED=0 go build -trimpath \
@@ -79,9 +79,10 @@ RUN CGO_ENABLED=0 go build -trimpath \
 RUN go version /out/rclone | tee /out/rclone-go-version.txt \
   && grep -F " go${DX_RCLONE_GO_BUILD_VERSION}" /out/rclone-go-version.txt >/dev/null \
   && go version -m /out/rclone > /out/rclone-buildinfo.txt \
+  && grep -F "$(printf '\tdep\tgolang.org/x/crypto\t%s' "${DX_RCLONE_X_CRYPTO_VERSION}")" /out/rclone-buildinfo.txt >/dev/null \
   && grep -F "$(printf '\tdep\tgolang.org/x/image\t%s' "${DX_RCLONE_X_IMAGE_VERSION}")" /out/rclone-buildinfo.txt >/dev/null \
   && env -u RCLONE_VERSION -u RCLONE_GO_VERSION /out/rclone version > /out/rclone-version.txt \
-  && printf 'rclone=%s\ngo=%s\nx-image=%s\n' "${DX_RCLONE_BUILD_VERSION}" "go${DX_RCLONE_GO_BUILD_VERSION}" "${DX_RCLONE_X_IMAGE_VERSION}" > /out/rclone-build-manifest.txt \
+  && printf 'rclone=%s\ngo=%s\nx-crypto=%s\nx-image=%s\n' "${DX_RCLONE_BUILD_VERSION}" "go${DX_RCLONE_GO_BUILD_VERSION}" "${DX_RCLONE_X_CRYPTO_VERSION}" "${DX_RCLONE_X_IMAGE_VERSION}" > /out/rclone-build-manifest.txt \
   && test -s /out/rclone-buildinfo.txt \
   && test -s /out/rclone-version.txt \
   && test -s /out/rclone-build-manifest.txt
@@ -148,6 +149,7 @@ RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
 FROM node:22.23.2-trixie-slim@sha256:7b8a0c89c54499bee567618f96578e1a12a800f062fbdbfd1fb6a443fa6f6284
 ARG DX_RCLONE_BUILD_VERSION
 ARG DX_RCLONE_GO_BUILD_VERSION
+ARG DX_RCLONE_X_CRYPTO_VERSION
 ARG DX_RCLONE_X_IMAGE_VERSION
 ARG DX_TESSERACT_BUILD_VERSION
 ARG DX_TESSERACT_BUILD_COMMIT
@@ -225,6 +227,7 @@ RUN set -eux; \
   test -s /usr/share/doc/direct-xfer/rclone-version.txt; \
   grep -Fx "rclone=${DX_RCLONE_BUILD_VERSION}" /usr/share/doc/direct-xfer/rclone-build-manifest.txt >/dev/null; \
   grep -Fx "go=go${DX_RCLONE_GO_BUILD_VERSION}" /usr/share/doc/direct-xfer/rclone-build-manifest.txt >/dev/null; \
+  grep -Fx "x-crypto=${DX_RCLONE_X_CRYPTO_VERSION}" /usr/share/doc/direct-xfer/rclone-build-manifest.txt >/dev/null; \
   grep -Fx "x-image=${DX_RCLONE_X_IMAGE_VERSION}" /usr/share/doc/direct-xfer/rclone-build-manifest.txt >/dev/null; \
   grep -Fx "tesseract=${DX_TESSERACT_BUILD_VERSION}" /usr/share/doc/direct-xfer/tesseract-build-manifest.txt >/dev/null; \
   grep -Fx "commit=${DX_TESSERACT_BUILD_COMMIT}" /usr/share/doc/direct-xfer/tesseract-build-manifest.txt >/dev/null; \

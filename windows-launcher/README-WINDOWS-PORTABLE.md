@@ -31,7 +31,7 @@ The Inno Setup installer displays the repository privacy policy before installat
 
 Right-click the Direct-Xfer icon in the Windows system tray and open **Optional components / Composants optionnels**. Each component is downloaded only after an explicit confirmation:
 
-- **rclone 1.75.0** → `%LOCALAPPDATA%\Direct-Xfer\tools\rclone\1.75.0\rclone.exe`
+- **rclone 1.75.1** → `%LOCALAPPDATA%\Direct-Xfer\tools\rclone\1.75.1\rclone.exe`
 - **Tesseract OCR 5.5.3** → `%LOCALAPPDATA%\Direct-Xfer\tools\tesseract\5.5.3\`
 
 Activating or removing a component signals ServerHost to reload automatically; the main Direct-Xfer installer does not need to be run again. The menu also provides a remove/deactivate action that deletes the per-user optional component.
@@ -47,7 +47,7 @@ Direct-Xfer keeps its rclone configuration under `%LOCALAPPDATA%\Direct-Xfer\dat
 After activation, the per-user rclone configuration can also be edited manually from PowerShell:
 
 ```powershell
-& "$env:LOCALAPPDATA\Direct-Xfer\tools\rclone\1.75.0\rclone.exe" config --config "$env:LOCALAPPDATA\Direct-Xfer\data\rclone\rclone.conf"
+& "$env:LOCALAPPDATA\Direct-Xfer\tools\rclone\1.75.1\rclone.exe" config --config "$env:LOCALAPPDATA\Direct-Xfer\data\rclone\rclone.conf"
 ```
 
 ## OCR / Tesseract

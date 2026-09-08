@@ -36,7 +36,7 @@ namespace DirectXfer.WindowsServerHost
         internal const int HealthProbeFailureThreshold = 3;
         internal const long EmergencyLogMaxBytes = 2L * 1024 * 1024;
         internal const string NodeVersion = "24.19.0";
-        internal const string RcloneVersion = "1.75.0";
+        internal const string RcloneVersion = "1.75.1";
         internal const string TesseractVersion = "5.5.3";
         internal const string OptionalActivationMarkerFileName = ".direct-xfer-enabled";
         internal const string NodeExeSha256 = "3602f2bb1a10f2cbab4c36886218a33c1ab3db87290e73b033c46c77147d0237";
@@ -121,8 +121,8 @@ namespace DirectXfer.WindowsServerHost
         private static readonly IDictionary<string, string> CriticalRuntimeSha256 =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                { "package.json", "3daf0cb61f830274c9d884550204d2481f2d3c05c86f46b36e12fe256c76138a" },
-                { "package-lock.json", "758a38fcae9b687ab95a33fcaaa29e6e8be557e6bb5e89e1e6ca4c9d436321c9" },
+                { "package.json", "9df6ac0fddda73418ff40c76c70f4b14eaffa6268a5f3c1f358f5e726d1ca6b1" },
+                { "package-lock.json", "bb04ecd4476f333d836f17f5f2898bc551d1939d87a69c51405b916cc15b66ce" },
                 { "server.js", "3c3e5d2fb770c3030f328795d3d16963df095d45c76ea0a10016e842ec2e9ccd" },
                 { "lib/core-utils.js", "5b80d10afa030ccf8ebff5eb70147e4216f4a095821633be6f89aa11b73e2550" },
                 { "lib/server/config.js", "210656fbb97a22442b06fa4df0a049eff78a76438615bd7a428213e101888df6" },
@@ -148,7 +148,7 @@ namespace DirectXfer.WindowsServerHost
                 { "lib/server/windows-launcher-routes.js", "f0432186d7555e7b7767a3c37da1a10de16adb6c9d30fefa027614e49d9f0223" },
                 { "lib/server/root-routes.js", "00b6257f0ae1792acea8025aebd8ce8b932bb23364ebb7df1c9aac03c11abee8" },
                 { "lib/server/http-application.js", "e69b531aa780fe3fca1a696d3e49e027331182c5164da2620f3aa03195de9705" },
-                { "lib/server/http-pwa-lifecycle-application.js", "31425511748ff345326837b2cf0e125758242cd1a6f7cfbb7c80e2c6053ca625" },
+                { "lib/server/http-pwa-lifecycle-application.js", "8dd1616676442affd048770bd8bbe52ad0fde7b783b4c83e3845d8dfc540a4fa" },
                 { "lib/server/final-http-application.js", "743f350fb1b8eb15062893f249350fdb2bc5e4e70cb4adb82cd4bcee558561e5" },
                 { "lib/server/activity-presence-service.js", "3de3f0f22b2bd323f077b7b82be9cc04ae2d91c075eb18942512f4c12f2c6ade" },
                 { "lib/server/share-presentation-service.js", "9ce1280efbd8f4dbc0ae398716a2988c99de5f87a8d7edfa40ad96dab4bf2247" },
@@ -173,7 +173,7 @@ namespace DirectXfer.WindowsServerHost
                 { "lib/server/public-access-service.js", "ecb326d8018a563a7417bc696a581c255bc583d93399c557e16804d9aadc5668" },
                 { "lib/server/public-abuse-service.js", "2a83c3fd143d4de4154514181512b5476b51f6fe8e3e5fb3600dd06ce50ab6da" },
                 { "lib/auth-utils.js", "d216e696e3fecf9224211a2ee490feac5b941235aa7fc7c67bc8c7398e7c8d07" },
-                { "lib/server/account-service.js", "016c539f4776c2d76f8ebcdbd23375342f75ef4e1592fd48e42811840e68c446" },
+                { "lib/server/account-service.js", "7396815a30eaae78408244f14d503f8441740de9a610a3bdd9bf699c996dbb51" },
                 { "lib/server/auth-service.js", "294572013dc7a092accf88b7535b3061667a9d680a2c130bcaf7e40c478b43fe" },
                 { "lib/server/session-service.js", "855b3e447c60ee25057c2abad5418a198cfc8e1f18809a006bc8c2fb93c44f75" },
                 { "lib/server/state-store.js", "6a914dc6a9d9d4fd7284eee1d1bc7cd9fbd166575e84e5cfd03485b7ba2227e6" },
@@ -209,14 +209,14 @@ namespace DirectXfer.WindowsServerHost
                 { "lib/server/notification-center-service.js", "ea19300a7f24fc42c5db39c0fd3e3a23c74a6104957b3e23f0cec05493dbac53" },
                 { "lib/server/pwa-notification-service.js", "408ff37bc00c481be61cfa85960bc0170bb4845b87105cf4dbf36e08f97a54b5" },
                 { "public/app.js", "d624247c683d2ed3bd85257ce4d2d3e4ede771f991c0ea9c28cc37288ec87e6e" },
-                { "pwa/app.js", "8ff58e0ac1c0788c3cfc488df3b7b35d3aca2534346992dd63e76faa1bdeb037" },
+                { "pwa/app.js", "e0d165713c3e06c3b3cce907c52c9d0a7aaa0832e28e109a42aa9c0018ad100f" },
                 { "lib/dlp-utils.js", "0d8f768c3457ec713199ce9e82f9483be21df2ea01dce6ead26675d240fde768" },
                 { "lib/fd-utils.js", "947deee8d45440f49c4497621b8479f1a92ff4703789099b24aae4a81dd29bb5" },
                 { "pwa/dlp-local.js", "246267542621fc92f759438b2295b87f777ba6d6aa88b3c4d23dea25aebe7390" },
                 { "lib/storage-connectors.js", "90cc270a3e713b11460d950d013eee737b5aaaf8cb01d53db75ef3e8f4184e91" },
                 { "lib/web-storage-share.js", "16f747b2632a7eca5a17c80bb34ce7b97a3f066779afa523f730bedda4c1295f" },
                 { "lib/web-storage-writable.js", "f4b8e54f665ba6b7f5975522f009e06cbad20d69822d27dcc80363b58198081c" },
-                { "public/index.html", "a76cacfc47160eec53bbd5153568dc112c7209d3b839b0ecae78d0b8d8c71981" },
+                { "public/index.html", "498e370454c87f08371f775eca634e5d4fb2c88e0dc62646f1aa754620bb933d" },
                 { "public/theme-init.js", "f9cf54c5ca7007f29570f6e517524af50da90ed3ae2a8af15100d5d7ef9752d8" },
                 { "public/oauth-bridge.html", "1b394bbf8583f1a4cf3e27b46457afefcafe054327e78af3bada2ce3d22c4afb" },
                 { "public/oauth-bridge.css", "32a468581ae0ae93c818fe00217a55cdec62dc5cb4796c748003ad4f71bbbbbb" },

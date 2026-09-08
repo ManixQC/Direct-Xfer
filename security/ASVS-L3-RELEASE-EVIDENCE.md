@@ -1,24 +1,25 @@
-# Direct-Xfer 1.71.42 — ASVS L3 release evidence
+# Direct-Xfer 1.71.46 — ASVS L3 release evidence
 
-> 1.71.42 restores deliberately unsigned Windows preview artifacts without recreating the 1.71.39 release-name ambiguity. Every Windows build publishes clearly labelled `-UNSIGNED` portable/installer previews before any SignPath configuration validation or manual approval wait; canonical artifact names and Windows provenance attestations remain reserved for the explicit `workflow_dispatch` + `sign_with_signpath=true` path after fail-closed Authenticode validation. On the signed path, launcher/ServerHost signatures are copied into the portable payload and the installer is rebuilt before its second SignPath request. Unsigned previews are development/test artifacts and may still be blocked by Windows Smart App Control. The CSP/ZAP, nonce, SARIF and SBOM/provenance hardening remains active. PWA advances to pwa505 / cache-buster v=486.
+> 1.71.46 is a targeted dependency/container-security maintenance release. Express remains on 4.22.2; npm `overrides` forces transitive `qs` to 6.16.0, closing CVE-2026-82562 / GHSA-x5fp-wj9c-mxmx and CVE-2026-82417 / GHSA-4mjr-xmp4-gh2g without an Express 5 migration. Docker rclone is pinned to security release v1.75.1, built with Go 1.26.6 and verified `golang.org/x/crypto` v0.56.0, closing CVE-2026-56854. Windows optional rclone uses the same v1.75.1 release. The 1.71.42 SignPath/CSP/ZAP/provenance controls remain the audited baseline.
 
-Release date: 2026-08-27
+
+Release date: 2026-09-08
 Profile: `ASVS_L3_MODE=true`
 
 ## Source/release gates
 
 | Gate | Result | Evidence |
 |---|---|---|
-| Release-targeted regression tests | PASS | 152 passed, 0 failed, 0 skipped, including unsigned-preview/signed-release separation, SignPath ordering/rebuild invariants, OWASP ZAP DAST/SARIF gating, CSP nonce/style-src regression coverage, artifact provenance, Codacy cleanup, Docker Go-network resilience and Scorecard filtering |
-| Complete current regression tree | CI REQUIRED | Source-only run: 1192 discovered; 1181 PASS / 11 FAIL, all 11 due to intentionally absent `node_modules/express`; run `npm ci` + `npm test` in CI before publishing binaries |
+| Release/dependency/container/version regression tests | PASS | 98 passed, 0 failed, 0 skipped in the expanded 1.71.46 maintenance gate, including both qs vulnerability regressions, rclone/Go/x-crypto pins, the reviewed GitHub Actions dependency pins, Windows optional-rclone checksum/version synchronization, lock consistency, Windows/SignPath version synchronization, PWA cache synchronization and OAuth broker release parity |
+| Complete current regression tree | CI REQUIRED | The source archive omits generated `node_modules`; run `npm ci` + `npm test` in CI before publishing binaries. The 1.71.46 ASVS subset separately reports 94/96 because two pre-existing dependency-unrelated regressions remain outside this patch. |
 | PARTIAL-closure audit | PASS | 127 production JS files; 38 repository-verifiable controls; 0 blocking findings |
-| Static ASVS audit | PASS | 127 production JS files; 10 reviewed decoder sites; 4539 fixed-regex literals estimated |
-| Security inventory | PASS | Regenerated for 1.71.42; 961 inventory entries |
+| Static ASVS audit | PASS | 127 production JS files; 10 reviewed decoder sites; 4538 fixed-regex literals estimated |
+| Security inventory | PASS | Regenerated for 1.71.46; 983 inventory entries |
 | Windows runtime integrity | PASS | 103 entries; 0 stale source-resident hashes after final synchronization; build-time Express entry remains pinned to lockfile `4.22.2` |
 | Matrix triage | PASS | 345/345 triaged; 253 PASS; 0 PARTIAL; 0 FAIL; 92 N/A; 0 REVIEW; 0 MANUAL |
 | Signed-evidence verifier | PASS | 22 required external requirement IDs; Ed25519 signature; requirement-specific method/predicate; canonical SHA-256; release/origin binding; ≤7-day TTL |
 | Isolated crypto provider gate | PASS | L3 self-test requires hardware backing, non-exportable keys, key isolation and isolated encrypt/decrypt/HMAC/sign operations |
-| CycloneDX SBOM + provenance | PASS | Root component synchronized to Direct-Xfer 1.71.42; Windows provenance job validates the SBOM, emits build-provenance attestations for launcher, ServerHost, installer, the SHA-256 release manifest and an exact `git archive` source package, then binds the npm/source CycloneDX SBOM only to that source package so the SBOM subject accurately matches what it describes |
+| CycloneDX SBOM + provenance | PASS | Root component synchronized to Direct-Xfer 1.71.46 and transitive qs synchronized to 6.16.0; Windows provenance job validates the SBOM, emits build-provenance attestations for launcher, ServerHost, installer, the SHA-256 release manifest and an exact `git archive` source package, then binds the npm/source CycloneDX SBOM only to that source package so the SBOM subject accurately matches what it describes |
 | Connected dependency/container scan | DEPLOYMENT EVIDENCE | V15.2.1 startup evidence requires real release-bound dependency + container scans with zero High/Critical findings |
 
 ## Matrix state
@@ -35,12 +36,12 @@ The source matrix has no unresolved `MANUAL`, `PARTIAL`, `FAIL` or `REVIEW` rows
 
 ## Regression note
 
-The 1.71.42 packaging pass executed 152 release/security-targeted tests with zero failures or skips, including the unsigned-preview-before-SignPath ordering and canonical signed-artifact separation regressions. The complete source-only suite executed 1192 tests: 1181 passed and the 11 expected real-server/platform-boundary tests failed only because `express` is intentionally absent from the source ZIP and is restored by `npm ci` in CI. The source archive intentionally excludes `node_modules`; real-server tests that require `express` therefore belong to the dependency-backed `npm ci` + `npm test` CI release gate rather than the source-only packaging pass.
+The expanded 1.71.46 maintenance gate executed 98 targeted release/dependency/container/version tests with zero failures or skips, including a regression that locks the reviewed Dependabot GitHub Actions SHAs. Express stays at 4.22.2 and `qs` is forced to 6.16.0; dependency-backed CI exercises both the bracket-key/comma `arrayLimit` regression and the attacker-controlled `constructor.isBuffer` parse→stringify regression. Docker rclone is pinned to v1.75.1 / Go 1.26.6 and the Dockerfile verifies embedded `golang.org/x/crypto` v0.56.0 plus `golang.org/x/image` v0.45.0 before publishing the binary; Windows optional rclone is pinned to the same release and verified archive hash. Static and PARTIAL audits remain green. The ASVS-specific suite executed 96 tests: 94 passed and the same two pre-existing, dependency-unrelated source regressions failed. A full dependency-backed `npm ci` + `npm test` run remains required in CI before publishing binaries.
 
 ## Commands/gates used
 
 ```text
-node --test test/dependency-security-floors-1.71.8.test.js test/npm-audit-ci-1.71.8.test.js test/docker-scout-go-runtime-hardening-1.70.22.test.js test/windows-latest-deep-audit-1.66.6.test.js test/pwa-mobile-deep-audit-1.64.0.test.js test/signpath-foundation-pipeline-1.71.4.test.js test/project-reconstruction-1.64.0.test.js test/windows-recent-deep-audit-1.66.4.test.js test/windows-modern-dotnet-1.64.10.test.js test/release-maintenance.test.js test/trivy-container-hardening.test.js test/windows-passkey-loopback-1.71.6.test.js test/historical-test-manifest-1.64.0.test.js test/code-scanning-notification-url-hardening.test.js test/codeql-security-regressions-1.70.22.test.js test/oauth-broker-service-1.67.20.test.js test/asvs-l3-partial-closure-1.70.25.test.js test/codacy-security-sarif-filter.test.js test/cleanup-legacy-codacy-analyses.test.js test/github-security-workflows.test.js test/scorecard-sarif-filter.test.js test/zap-security-workflow.test.js
+node --test test/github-actions-dependency-pins-1.71.46.test.js test/qs-array-limit-security-1.71.46.test.js test/dependency-security-floors-1.71.8.test.js test/release-maintenance.test.js test/signpath-foundation-pipeline-1.71.4.test.js test/windows-latest-deep-audit-1.66.6.test.js test/windows-recent-deep-audit-1.66.4.test.js test/project-reconstruction-1.64.0.test.js test/oauth-broker-public-deep-audit-1.67.25.test.js test/pwa-mobile-deep-audit-1.64.0.test.js test/pwa-system-health-bottom-nav-1.64.4.test.js test/docker-scout-go-runtime-hardening-1.70.22.test.js test/docker-scout-go-runtime-hardening-deep-audit-1.70.22.test.js test/windows-modern-dotnet-1.64.10.test.js
 npm run security:partial-audit
 npm run security:static-audit
 npm run security:inventory

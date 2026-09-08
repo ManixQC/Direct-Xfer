@@ -33,8 +33,8 @@ namespace DirectXfer.WindowsLauncher
         internal const string MutexName = @"Local\DirectXferLauncherInstance";
         internal const string OpenEventName = @"Local\DirectXferLauncherOpen";
         internal const string ServerHostReloadEventName = @"Local\DirectXferServerHostReload";
-        internal const string RcloneVersion = "1.75.0";
-        internal const string RcloneZipSha256 = "203581f0a7baeae873f2347483a798c79e2eaf5c384a4e9d866aa374f1c89ac0";
+        internal const string RcloneVersion = "1.75.1";
+        internal const string RcloneZipSha256 = "200eb602c126d82aa38b51e0f6b9ae837473ff99b51278d3f6f837574c494d6e";
         internal const string TesseractVersion = "5.5.3";
         internal const string TesseractPackageVersion = "5.5.3.20260724";
         internal const string TesseractSetupSha256 = "bee9e3434bd94fd65387d9be28cd467a41f61b1275383b55b0f59a1331270ae4";
@@ -1714,7 +1714,7 @@ namespace DirectXfer.WindowsLauncher
                         AppTitle = "Direct-Xfer " + Program.AppVersion, Open = "Ouvrir Direct-Xfer", Logs = "Ouvrir les journaux",
                         Configure = "Configurer les dossiers…", ResetAdminPassword = "Réinitialiser le mot de passe admin…",
                         Language = "Langue", Stop = "Quitter",
-                        OptionalComponents = "Composants optionnels", ActivateRclone = "Activer rclone (télécharger)…", RemoveRclone = "Désactiver et supprimer rclone", RcloneActive = "✓ rclone 1.75.0 activé",
+                        OptionalComponents = "Composants optionnels", ActivateRclone = "Activer rclone (télécharger)…", RemoveRclone = "Désactiver et supprimer rclone", RcloneActive = "✓ rclone " + Program.RcloneVersion + " activé",
                         ActivateTesseract = "Activer Tesseract OCR (télécharger)…", RemoveTesseract = "Désactiver et supprimer Tesseract OCR", TesseractActive = "✓ Tesseract OCR 5.5.3 activé",
                         OptionalInstallConfirm = "{0} est optionnel et n’est pas inclus dans l’installateur Direct-Xfer. Le télécharger et l’activer maintenant ?",
                         OptionalRemoveConfirm = "Désactiver et supprimer {0} de cet utilisateur ?", OptionalInstalling = "Téléchargement et installation de {0}…",
@@ -1743,7 +1743,7 @@ namespace DirectXfer.WindowsLauncher
                         AppTitle = "Direct-Xfer " + Program.AppVersion, Open = "Abrir Direct-Xfer", Logs = "Abrir registros",
                         Configure = "Configurar carpetas…", ResetAdminPassword = "Restablecer la contraseña de administrador…",
                         Language = "Idioma", Stop = "Salir",
-                        OptionalComponents = "Componentes opcionales", ActivateRclone = "Activar rclone (descargar)…", RemoveRclone = "Desactivar y eliminar rclone", RcloneActive = "✓ rclone 1.75.0 activado",
+                        OptionalComponents = "Componentes opcionales", ActivateRclone = "Activar rclone (descargar)…", RemoveRclone = "Desactivar y eliminar rclone", RcloneActive = "✓ rclone " + Program.RcloneVersion + " activado",
                         ActivateTesseract = "Activar Tesseract OCR (descargar)…", RemoveTesseract = "Desactivar y eliminar Tesseract OCR", TesseractActive = "✓ Tesseract OCR 5.5.3 activado",
                         OptionalInstallConfirm = "{0} es opcional y no está incluido en el instalador de Direct-Xfer. ¿Descargarlo y activarlo ahora?",
                         OptionalRemoveConfirm = "¿Desactivar y eliminar {0} para este usuario?", OptionalInstalling = "Descargando e instalando {0}…",
@@ -1772,7 +1772,7 @@ namespace DirectXfer.WindowsLauncher
                         AppTitle = "Direct-Xfer " + Program.AppVersion, Open = "Open Direct-Xfer", Logs = "Open logs",
                         Configure = "Configure folders…", ResetAdminPassword = "Reset admin password…",
                         Language = "Language", Stop = "Exit",
-                        OptionalComponents = "Optional components", ActivateRclone = "Activate rclone (download)…", RemoveRclone = "Deactivate and remove rclone", RcloneActive = "✓ rclone 1.75.0 active",
+                        OptionalComponents = "Optional components", ActivateRclone = "Activate rclone (download)…", RemoveRclone = "Deactivate and remove rclone", RcloneActive = "✓ rclone " + Program.RcloneVersion + " active",
                         ActivateTesseract = "Activate Tesseract OCR (download)…", RemoveTesseract = "Deactivate and remove Tesseract OCR", TesseractActive = "✓ Tesseract OCR 5.5.3 active",
                         OptionalInstallConfirm = "{0} is optional and is not included in the Direct-Xfer installer. Download and activate it now?",
                         OptionalRemoveConfirm = "Deactivate and remove {0} for this user?", OptionalInstalling = "Downloading and installing {0}…",

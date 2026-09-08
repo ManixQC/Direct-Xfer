@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const ROOT = path.join(__dirname, '..');
+const rootPkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 const { GoogleOAuthBrokerClient, cleanBrokerUrl } = require('../lib/google-oauth-broker-client');
 
@@ -87,7 +88,7 @@ test('1.67.26 redeploy scripts preserve the broker data key and clean temporary 
 
 test('1.67.26 public broker pins a Wrangler baseline that supports required-secret validation', () => {
   const pkg = JSON.parse(read('oauth-broker/cloudflare-worker/package.json'));
-  assert.equal(pkg.version, '1.71.42');
+  assert.equal(pkg.version, rootPkg.version);
   assert.match(String(pkg.devDependencies && pkg.devDependencies.wrangler || ''), /^4\.94\.0$/);
 });
 

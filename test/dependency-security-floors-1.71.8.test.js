@@ -29,18 +29,24 @@ function declaredFloor(spec) {
   return match[1];
 }
 
-test('1.71.42 dependency declarations no longer advertise vulnerable Express/node-forge floors', () => {
+test(`${pkg.version} dependency declarations keep Express 4/node-forge safe floors and force patched qs`, () => {
   assert.ok(atLeast(declaredFloor(pkg.dependencies.express), '4.22.2'));
   assert.ok(atLeast(declaredFloor(pkg.dependencies['node-forge']), '1.4.0'));
   assert.doesNotMatch(pkg.dependencies.express, /4\.19\.2/);
   assert.doesNotMatch(pkg.dependencies['node-forge'], /1\.3\.1/);
+  assert.equal(pkg.overrides && pkg.overrides.qs, '6.16.0');
 });
 
-test('1.71.42 lockfile resolves the dependency floors to the audited safe versions', () => {
-  assert.equal(lock.version, '1.71.42');
-  assert.equal(lock.packages[''].version, '1.71.42');
+test(`${pkg.version} lockfile resolves dependency floors and the patched qs override`, () => {
+  assert.equal(lock.version, pkg.version);
+  assert.equal(lock.packages[''].version, pkg.version);
   assert.equal(lock.packages[''].dependencies.express, pkg.dependencies.express);
   assert.equal(lock.packages[''].dependencies['node-forge'], pkg.dependencies['node-forge']);
   assert.ok(atLeast(lock.packages['node_modules/express'].version, '4.22.2'));
   assert.ok(atLeast(lock.packages['node_modules/node-forge'].version, '1.4.0'));
+  const qsEntries = Object.entries(lock.packages).filter(([name, meta]) => /(?:^|\/)node_modules\/qs$/.test(name) && meta && meta.version);
+  assert.ok(qsEntries.length >= 1, 'lockfile must contain qs');
+  for (const [name, meta] of qsEntries) {
+    assert.ok(atLeast(meta.version, '6.16.0'), `${name} must resolve qs >= 6.16.0`);
+  }
 });

@@ -39,7 +39,7 @@ test('1.71.42 bump advances the PWA cache generation so changed release metadata
   assert.equal(JSON.parse(read('package.json')).version, releaseVersion);
   for (const rel of ['pwa/app.js', 'pwa/index.html', 'pwa/sw.js', 'pwa/theme-init.js', 'pwa/admin-advanced.js', 'pwa/mobile-intelligence.js']) {
     const source = read(rel);
-    assert.match(source, new RegExp(`${releaseRe}|pwa505|v=486`));
+    assert.match(source, new RegExp(`${releaseRe}|pwa509|v=489`));
     assert.doesNotMatch(source, /1\.69\.12|pwa419|v=405|pwa353|v=353/);
   }
 });

@@ -1,5 +1,5 @@
 name: Build Direct-Xfer Windows C# + Installer
-run-name: v1.71.42
+run-name: v1.71.46
 
 on:
   workflow_dispatch:
@@ -41,7 +41,7 @@ jobs:
   build-windows:
     runs-on: windows-2025
     env:
-      DX_VERSION: '1.71.42'
+      DX_VERSION: '1.71.46'
       # Runtime identity is independent from the stable launcher component version.
       DX_RUNTIME_BUILD: 'runtime169'
       DX_LAUNCHER_COMPONENT_VERSION: '1.70.1'
@@ -725,7 +725,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
-      DX_VERSION: '1.71.42'
+      DX_VERSION: '1.71.46'
     # Keep OIDC/attestation privileges out of the build/signing job. This job only
     # reads the final immutable Actions artifacts and creates GitHub attestations.
     permissions:
@@ -805,7 +805,7 @@ jobs:
           if-no-files-found: error
 
       - name: Generate GitHub build provenance attestations
-        uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-path: |
             provenance/portable/**/Direct-Xfer.exe
@@ -815,7 +815,7 @@ jobs:
             provenance/Direct-Xfer-${{ env.DX_VERSION }}-source.zip
 
       - name: Generate GitHub SBOM attestation for source package
-        uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           # The committed CycloneDX document describes the Direct-Xfer npm/source
           # package, not the .NET apphost executables individually. Bind it to the

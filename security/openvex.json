@@ -1,9 +1,9 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://github.com/ManixQC/Direct-Xfer/security/openvex-1.71.42",
+  "@id": "https://github.com/ManixQC/Direct-Xfer/security/openvex-1.71.46",
   "author": "Direct-Xfer project",
-  "timestamp": "2026-08-27T04:09:13Z",
-  "version": 2,
+  "timestamp": "2026-09-08T15:49:24Z",
+  "version": 4,
   "tooling": "Direct-Xfer container security review",
   "statements": [
     {
@@ -50,6 +50,42 @@
       "status": "not_affected",
       "justification": "vulnerable_code_not_present",
       "impact_statement": "CVE-2026-8376 is specific to 32-bit Perl builds. The Direct-Xfer CI image is built and scanned on linux/amd64, so the 32-bit integer-overflow condition is absent."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-82562"
+      },
+      "products": [
+        {
+          "@id": "pkg:npm/direct-xfer@1.71.46"
+        }
+      ],
+      "status": "fixed",
+      "impact_statement": "Direct-Xfer 1.71.46 forces transitive qs to 6.16.0, which contains the arrayLimit/comma parser fix."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-82417"
+      },
+      "products": [
+        {
+          "@id": "pkg:npm/direct-xfer@1.71.46"
+        }
+      ],
+      "status": "fixed",
+      "impact_statement": "Direct-Xfer 1.71.46 forces transitive qs to 6.16.0, which contains the attacker-controlled isBuffer denial-of-service fix."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56854"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/rclone/rclone@v1.75.1"
+        }
+      ],
+      "status": "fixed",
+      "impact_statement": "The Direct-Xfer container builds rclone v1.75.1 with Go 1.26.6 and verifies embedded golang.org/x/crypto v0.56.0 in go version -m output."
     }
   ]
 }

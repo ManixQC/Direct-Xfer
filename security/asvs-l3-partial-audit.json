@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "generatedAt": "2026-08-27T14:19:39.972Z",
-  "version": "1.71.42",
-  "sourceTreeSha256": "001236b833ed8bf5f6fcfe2fd9ac7b19768a410b686f3d6ff157f4923cab49ad",
+  "generatedAt": "2026-09-08T16:23:07.910Z",
+  "version": "1.71.46",
+  "sourceTreeSha256": "96afb6009523feb658d854011cdaf1294ed6e9690d8d537ec949f90994e7ed1e",
   "filesScanned": 127,
   "scope": [
     "server.js",
@@ -6520,7 +6520,7 @@
         },
         {
           "file": "lib/server/http-pwa-lifecycle-application.js",
-          "line": 326,
+          "line": 327,
           "token": "body-parser"
         },
         {
@@ -6595,7 +6595,7 @@
       "rows": [
         {
           "file": "lib/server/account-service.js",
-          "line": 227,
+          "line": 248,
           "token": "persistence"
         },
         {
@@ -7970,7 +7970,7 @@
         },
         {
           "file": "lib/server/http-pwa-lifecycle-application.js",
-          "line": 469,
+          "line": 470,
           "token": "concurrency-control"
         },
         {

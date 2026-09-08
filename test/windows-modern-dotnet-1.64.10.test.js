@@ -330,8 +330,8 @@ test('Windows rclone is an on-demand per-user component instead of installer pay
   assert.match(workflow, /optional rclone\/Tesseract excluded/);
   assert.match(workflow, /runtime\\rclone','runtime\\tesseract/);
 
-  assert.match(launcher, /RcloneVersion = "1\.75\.0"/);
-  assert.match(launcher, /RcloneZipSha256 = "203581f0a7baeae873f2347483a798c79e2eaf5c384a4e9d866aa374f1c89ac0"/i);
+  assert.match(launcher, /RcloneVersion = "1\.75\.1"/);
+  assert.match(launcher, /RcloneZipSha256 = "200eb602c126d82aa38b51e0f6b9ae837473ff99b51278d3f6f837574c494d6e"/i);
   assert.match(launcher, /downloads\.rclone\.org\/v" \+ Program\.RcloneVersion/);
   assert.match(launcher, /DownloadOptionalFile\(url, zip, Program\.RcloneZipSha256/);
   assert.match(launcher, /OptionalRclonePath/);
@@ -344,5 +344,5 @@ test('Windows rclone is an on-demand per-user component instead of installer pay
   assert.match(bootstrap, /function resolveRcloneBinary\(\)/);
   assert.match(installer, /\{app\}\\runtime\\rclone/); // upgrade cleanup only
   assert.match(portable, /rclone is optional on Windows/i);
-  assert.match(portable, /%LOCALAPPDATA%\\Direct-Xfer\\tools\\rclone\\1\.75\.0/);
+  assert.match(portable, /%LOCALAPPDATA%\\Direct-Xfer\\tools\\rclone\\1\.75\.1/);
 });

@@ -1,15 +1,23 @@
 # Direct-Xfer — OWASP ASVS 5.0.0 Level 3 audit
 
-Audit date: 2026-08-27
+Audit date: 2026-09-08
 Target: OWASP Application Security Verification Standard 5.0.0, Level 3
 Repository: `ManixQC/Direct-Xfer`
-Release: Direct-Xfer `1.71.42`
-Baseline input: Direct-Xfer `1.70.26` ASVS-L3 release
+Release: Direct-Xfer `1.71.46`
+Baseline input: Direct-Xfer `1.71.42` ASVS-L3 release
 Detailed matrix: `security/ASVS-5.0.0-L3-MATRIX.md`
 
 ## Release verification result
 
-Direct-Xfer 1.71.42 separates Windows preview and release channels after the Smart App Control finding: unsigned outputs remain downloadable for development/testing only under explicit `-UNSIGNED` artifact names, while canonical release names and Windows provenance attestations remain restricted to an explicit SignPath signing dispatch that passes final Authenticode verification of launcher, ServerHost and installer. The CSP/ZAP, nonce, SARIF, SBOM/provenance, Codacy, CodeQL, Trivy, Scorecard, zizmor, immutable workflow pins, least-privilege token scopes and Docker checksum verification/retry hardening from the preceding hardening pass remains in force. The ASVS status matrix remains 253 PASS / 92 N/A / 0 MANUAL / 0 PARTIAL / 0 FAIL / 0 REVIEW.
+### 1.71.46 dependency security maintenance
+
+Direct-Xfer 1.71.46 is a targeted dependency/container-security maintenance release on top of the 1.71.45 working tree. It keeps Express on the audited 4.x line (`4.22.2`) and uses the npm `overrides` mechanism to force every transitive `qs` resolution to `6.16.0`, closing both CVE-2026-82562 / GHSA-x5fp-wj9c-mxmx (bracket-key comma `arrayLimit` bypass) and CVE-2026-82417 / GHSA-4mjr-xmp4-gh2g (attacker-controlled `constructor.isBuffer` DoS) without taking the breaking Express 5 migration. The lockfile resolves `node_modules/qs` to 6.16.0 with the published npm integrity. The source archive omits generated `node_modules`, so installed dependencies always come from the patched lock/override graph.
+
+The Docker rclone build is also moved from v1.75.0/Go 1.25.14 to the upstream security release **rclone v1.75.1**, built with pinned **Go 1.26.6** and verified embedded **golang.org/x/crypto v0.56.0** plus **golang.org/x/image v0.45.0**. The build fails closed if `go version -m` does not contain those exact module floors, closing CVE-2026-56854 reported by Trivy for `/usr/local/bin/rclone`. Windows optional rclone is synchronized to v1.75.1 and the official Windows-amd64 archive SHA-256 `200eb602c126d82aa38b51e0f6b9ae837473ff99b51278d3f6f837574c494d6e`.
+
+Release metadata remains 1.71.46 across the root package/lockfile, Windows workflow and installer defaults, OAuth broker packages, PWA (`pwa509`, cache generation `v=489`), OpenVEX identity and CycloneDX root/qs components. The Windows ServerHost critical runtime manifest was regenerated and rechecked at 103 entries with 0 stale hashes. Expanded targeted release/dependency/container/version regression coverage passes **97/97**. The static ASVS audit passes on 127 production JavaScript files with 10 reviewed decoder sites; the PARTIAL-closure audit passes 38/38 controls with 0 blocking findings; the security inventory contains 983 entries. The ASVS regression subset currently reports **94/96** because two pre-existing 1.71.45 regressions remain outside this dependency patch (fresh-owner bootstrap semantics and byte identity between the OAuth Worker source and embedded asset); this release does not misstate those as fixed.
+
+The fully audited 1.71.42 baseline separates Windows preview and release channels after the Smart App Control finding: unsigned outputs remain downloadable for development/testing only under explicit `-UNSIGNED` artifact names, while canonical release names and Windows provenance attestations remain restricted to an explicit SignPath signing dispatch that passes final Authenticode verification of launcher, ServerHost and installer. The CSP/ZAP, nonce, SARIF, SBOM/provenance, Codacy, CodeQL, Trivy, Scorecard, zizmor, immutable workflow pins, least-privilege token scopes and Docker checksum verification/retry hardening from the preceding hardening pass remains in force. The ASVS status matrix remains 253 PASS / 92 N/A / 0 MANUAL / 0 PARTIAL / 0 FAIL / 0 REVIEW.
 
 ### 1.71.42 unsigned-preview / signed-release separation
 
@@ -107,9 +115,9 @@ Repository/release gates completed for this candidate:
 - Full source-only regression tree: **1181/1192 passed**; the 11 failures all require `express`, which is intentionally excluded from the source ZIP. The dependency-backed **CI REQUIRED** gate remains `npm ci` followed by `npm test`.
 - Static ASVS audit: **PASS** — 127 production JavaScript source files, 10 reviewed decoder sites.
 - PARTIAL-closure audit: **PASS** — 127 production JavaScript source files, 38 repository-verifiable controls, 0 blocking findings.
-- Security inventory regenerated for 1.71.42 — **961 entries**.
+- Security inventory regenerated for 1.71.46 — **983 entries**.
 - Windows ServerHost critical runtime manifest: **103 entries, 0 stale source-resident hashes** after final synchronization; the missing build-time Express entry remains pinned by `package-lock.json` to 4.22.2.
-- CycloneDX SBOM root component synchronized to 1.71.42.
+- CycloneDX SBOM root component synchronized to 1.71.46; `qs` synchronized to 6.16.0.
 
 This document is an implementation/evidence audit, not a third-party certification. A production installation can operate in `ASVS_L3_MODE=true` only while all mandatory runtime controls and the signed deployment evidence are valid.
 
@@ -185,16 +193,16 @@ The direct dependency graph remains lockfile-pinned. V15.2.1 is no longer an ope
 
 ## Final release gates
 
-- [x] package and lockfile version synchronized to 1.71.42.
-- [x] PWA version/cache generation synchronized to 1.71.42 / pwa505.
-- [x] ASVS regression suite green (96/96).
-- [x] Complete current test tree green (1139/1139 across 190 files).
+- [x] package and lockfile version synchronized to 1.71.46.
+- [x] PWA version/cache generation synchronized to 1.71.46 / pwa509 / cache `v=489`.
+- [ ] ASVS regression suite: 94/96 in this source snapshot; two pre-existing, dependency-unrelated regressions remain to be closed separately.
+- [ ] Complete dependency-backed test tree remains a CI-required `npm ci` + `npm test` gate; this source maintenance patch does not claim a full green result.
 - [x] Static ASVS audit green.
 - [x] PARTIAL-closure audit green.
 - [x] Security inventory regenerated.
 - [x] Windows runtime integrity manifest synchronized and rechecked.
 - [x] Matrix has 0 MANUAL, 0 PARTIAL, 0 FAIL and 0 REVIEW.
-- [x] SBOM root component synchronized to 1.71.42.
+- [x] SBOM root component synchronized to 1.71.46 and `qs` component synchronized to 6.16.0.
 - [x] Former operator-declared manual-attestation flags removed from the L3 configuration surface.
 
 Independent review of N/A decisions, production evidence collection and a focused penetration test remain appropriate before making an external certification/compliance representation.

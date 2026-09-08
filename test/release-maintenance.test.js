@@ -27,6 +27,8 @@ test(`${releaseVersion} keeps the audited dependency maintenance baseline`, () =
   assert.equal(lock.packages['node_modules/node-forge'].version, '1.4.0');
   assert.equal(pkg.dependencies.nodemailer, '^9.0.5');
   assert.equal(lock.packages['node_modules/nodemailer'].version, '9.0.5');
+  assert.equal(pkg.overrides && pkg.overrides.qs, '6.16.0');
+  assert.equal(lock.packages['node_modules/qs'].version, '6.16.0');
 });
 
 test(`${releaseVersion} PWA release metadata advances atomically without release-specific test literals`, () => {

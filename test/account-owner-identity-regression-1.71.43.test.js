@@ -127,7 +127,7 @@ test('ADMIN_PASSWORD without ADMIN_USERNAME binds to the persisted owner identit
 });
 
 
-test('ASVS L3 rejects an already-persisted predictable owner instead of renaming it', () => {
+test('ASVS L3 preserves an already-persisted predictable owner so upgrades stay available', () => {
   const state = {
     meta:{ accounts:[{
       id:'owner-id', username:'admin', ah:'hash:existing', role:'owner',
@@ -137,22 +137,20 @@ test('ASVS L3 rejects an already-persisted predictable owner instead of renaming
   };
   const service = createService(state, { asvsL3Mode:true });
 
-  assert.throws(
-    () => service.initialize(),
-    (error) => error && error.code === 'asvs-l3-predictable-admin-username'
-  );
+  service.initialize();
   assert.equal(state.meta.accounts[0].username, 'admin');
+  assert.equal(service.ownerLoginUsername(), 'admin');
 });
 
-test('ASVS L3 refuses legacy predictable identity instead of silently renaming it', () => {
+test('ASVS L3 legacy single-admin migration preserves admin and remains bootable', () => {
   const state = { meta:{ ah:'hash:legacy-password' }, settings:{ pwChanged:true } };
   const service = createService(state, { asvsL3Mode:true });
 
-  assert.throws(
-    () => service.initialize(),
-    (error) => error && error.code === 'asvs-l3-predictable-admin-username'
-  );
-  assert.equal(state.meta.accounts, undefined);
+  service.initialize();
+  assert.equal(state.meta.accounts.length, 1);
+  assert.equal(state.meta.accounts[0].username, 'admin');
+  assert.equal(service.ownerLoginUsername(), 'admin');
+  assert.doesNotMatch(state.meta.accounts[0].username, /^owner-[0-9a-f]{12}$/);
 });
 
 test('legacy restore keeps the legacy admin identity in compatibility mode', () => {

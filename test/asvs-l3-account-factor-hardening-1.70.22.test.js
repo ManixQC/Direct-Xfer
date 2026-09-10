@@ -12,7 +12,7 @@ test('ASVS V6.3.2 fresh owner bootstrap has no predictable admin default', () =>
   const source = read('lib/server/account-service.js');
   assert.doesNotMatch(source, /env\.ADMIN_USERNAME\s*\|\|\s*['"]admin['"]/);
   assert.match(source, /owner-\$\{crypto\.randomBytes\(6\)\.toString\('hex'\)\}/);
-  assert.match(source, /persistedOwnerUsername/);
+  assert.match(source, /usePersistedOwnerUsername/);
 });
 
 test('ASVS V7.4.3 TOTP enable and disable invalidate sibling sessions', () => {

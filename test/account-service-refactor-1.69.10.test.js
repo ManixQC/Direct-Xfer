@@ -43,6 +43,7 @@ function fixture(options = {}) {
     passwordHasher:fakeHash,
     passwordParser:fakeParse,
     now:() => currentTime,
+    ASVS_L3_MODE:options.asvsL3Mode === true,
     logger:{
       log:(...args) => logs.push(args.join(' ')),
       warn:(...args) => logs.push(args.join(' ')),
@@ -105,7 +106,7 @@ test('service construction fails closed when account persistence dependencies ar
   assert.throws(() => createAccountService({}), /requires getState\(\)/);
 });
 
-test('first startup creates one durable owner with a randomized non-default identity', () => {
+test('compatibility-mode first startup creates one durable owner without silently changing the historical admin identity', () => {
   const f = fixture();
   try {
     const first = f.service.initialize();
@@ -117,14 +118,12 @@ test('first startup creates one durable owner with a randomized non-default iden
     assert.equal(first.initialPasswordExpiresAt, 123456 + 15 * 60 * 1000);
     assert.equal(first.ownerAvailable, true);
     assert.equal(f.persistCalls, 1);
-    assert.match(owner.username, /^owner-[a-f0-9]{12}$/);
-    assert.notEqual(owner.username.toLowerCase(), 'admin');
+    assert.equal(owner.username, 'admin');
     assert.equal(owner.role, 'owner');
     assert.equal(owner.createdAt, 123456);
     assert.equal(owner.bootstrapPasswordExpiresAt, first.initialPasswordExpiresAt);
     assert.equal(owner.ah, fakeHash(password));
-    assert.equal(f.service.findAccountByName(` ${owner.username.toUpperCase()} `), owner);
-    assert.equal(f.service.findAccountByName('admin'), null);
+    assert.equal(f.service.findAccountByName(' ADMIN '), owner);
     assert.equal(f.service.getAccountById(owner.id), owner);
 
     // Process-local idempotency must not generate or persist a second secret.
@@ -135,6 +134,20 @@ test('first startup creates one durable owner with a randomized non-default iden
     f.service.clearInitialPassword();
     assert.equal(f.service.hasFreshInitialPassword(), false);
     assert.equal(f.service.initialPassword(), null);
+  } finally {
+    f.close();
+  }
+});
+
+test('ASVS L3 first startup keeps the randomized non-default owner identity requirement', () => {
+  const f = fixture({ asvsL3Mode:true });
+  try {
+    f.service.initialize();
+    const owner = f.service.ownerAccount();
+    assert.match(owner.username, /^owner-[a-f0-9]{12}$/);
+    assert.notEqual(owner.username.toLowerCase(), 'admin');
+    assert.equal(f.service.findAccountByName(owner.username), owner);
+    assert.equal(f.service.findAccountByName('admin'), null);
   } finally {
     f.close();
   }

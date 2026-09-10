@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "generatedAt": "2026-09-08T16:23:07.910Z",
-  "version": "1.71.46",
-  "sourceTreeSha256": "96afb6009523feb658d854011cdaf1294ed6e9690d8d537ec949f90994e7ed1e",
+  "generatedAt": "2026-09-09T02:35:58.872Z",
+  "version": "1.71.47",
+  "sourceTreeSha256": "241f289c5a3aa024eaed0fa5a3af3bc0a350c683a8fbc611c9f52c47d02317ce",
   "filesScanned": 127,
   "scope": [
     "server.js",
@@ -6595,7 +6595,7 @@
       "rows": [
         {
           "file": "lib/server/account-service.js",
-          "line": 248,
+          "line": 260,
           "token": "persistence"
         },
         {

@@ -18,7 +18,7 @@ function runtimeAptInstallBlock() {
   return dockerfile.slice(start, end);
 }
 
-test('1.71.46 rebuilds rclone 1.75.1 with patched Go/x-crypto security floors', () => {
+test('1.71.47 rebuilds rclone 1.75.1 with patched Go/x-crypto security floors', () => {
   assert.match(dockerfile, /ARG DX_RCLONE_BUILD_VERSION=v1\.75\.1/);
   assert.match(dockerfile, /ARG DX_RCLONE_GO_BUILD_VERSION=1\.26\.6/);
   assert.match(dockerfile, /ARG DX_RCLONE_X_CRYPTO_VERSION=v0\.56\.0/);

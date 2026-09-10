@@ -82,7 +82,9 @@ test("rclone Go dependency downloads retry transient network failures without di
   assert.match(dockerfile, /GOPROXY=https:\/\/proxy\.golang\.org,direct/);
   assert.match(dockerfile, /GODEBUG=http2client=0/);
   assert.match(dockerfile, /retry_go go mod download "github\.com\/rclone\/rclone@\$\{DX_RCLONE_BUILD_VERSION\}"/);
-  assert.match(dockerfile, /retry_go go get "golang\.org\/x\/image@\$\{DX_RCLONE_X_IMAGE_VERSION\}"/);
+  assert.match(dockerfile, /test "\$\(go list -m -f '\{\{\.Version\}\}' golang\.org\/x\/crypto\)" = "\$\{DX_RCLONE_X_CRYPTO_VERSION\}"/);
+  assert.match(dockerfile, /test "\$\(go list -m -f '\{\{\.Version\}\}' golang\.org\/x\/image\)" = "\$\{DX_RCLONE_X_IMAGE_VERSION\}"/);
+  assert.doesNotMatch(dockerfile, /go get "golang\.org\/x\/(?:crypto|image)@/);
   assert.match(dockerfile, /retry_go go mod download all/);
   assert.match(dockerfile, /go mod verify/);
   assert.doesNotMatch(dockerfile, /GOSUMDB=off/);

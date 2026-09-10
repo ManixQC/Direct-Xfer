@@ -5,12 +5,12 @@ Standard: OWASP ASVS 5.0.0 Level 3 (L3 includes applicable L1 and L2 requirement
 Repository: `ManixQC/Direct-Xfer`
 Initial historical baseline: `3d2c0b5c668c9136a05490b25b76f4166a5940e8`
 Baseline input: Direct-Xfer `1.70.23` ASVS-updated archive
-Current maintained source snapshot: Direct-Xfer `1.71.46` release
+Current maintained source snapshot: Direct-Xfer `1.71.47` release
 Last fully green ASVS regression baseline: Direct-Xfer `1.71.42`
 Baseline archive SHA-256: `6ed5f230e1e73e540a00dc545d3d0098946a8a75257423041492875fe8ef59cb`
 ASVS baseline verification (1.71.42): `node --test test/asvs-l3-*.test.js` — 96 passed, 0 failed, 0 skipped
-1.71.46 maintenance recheck: 94 passed, 2 pre-existing dependency-unrelated failures (owner-bootstrap regression and OAuth Worker embedded-source byte identity)
-Full regression verification: all 190 `test/*.test.js` files — 1139 passed, 0 failed, 0 skipped
+1.71.47 maintenance recheck with runtime dependencies present: 96 passed, 0 failed, 0 skipped
+Dependency-backed full regression verification: CI REQUIRED after `npm ci`; source/release security gate: 124 passed, 0 failed, 0 skipped
 Static source verification: `npm run security:static-audit` — PASS (127 production JS files; 10 reviewed decoder sites)
 Windows runtime integrity: `node scripts/sync-windows-runtime-manifest.js --check` — PASS (103 entries; 0 stale hashes)
 

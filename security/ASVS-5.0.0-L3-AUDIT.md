@@ -3,19 +3,19 @@
 Audit date: 2026-09-08
 Target: OWASP Application Security Verification Standard 5.0.0, Level 3
 Repository: `ManixQC/Direct-Xfer`
-Release: Direct-Xfer `1.71.49`
+Release: Direct-Xfer `1.71.50`
 Baseline input: Direct-Xfer `1.71.42` ASVS-L3 release
 Detailed matrix: `security/ASVS-5.0.0-L3-MATRIX.md`
 
 ## Release verification result
 
-### 1.71.49 dependency security maintenance
+### 1.71.50 dependency security maintenance
 
-Direct-Xfer 1.71.49 is a targeted dependency/container-security maintenance release on top of the 1.71.45 working tree. It keeps Express on the audited 4.x line (`4.22.2`) and uses the npm `overrides` mechanism to force every transitive `qs` resolution to `6.16.0`, closing both CVE-2026-82562 / GHSA-x5fp-wj9c-mxmx (bracket-key comma `arrayLimit` bypass) and CVE-2026-82417 / GHSA-4mjr-xmp4-gh2g (attacker-controlled `constructor.isBuffer` DoS) without taking the breaking Express 5 migration. The lockfile resolves `node_modules/qs` to 6.16.0 with the published npm integrity. The source archive omits generated `node_modules`, so installed dependencies always come from the patched lock/override graph.
+Direct-Xfer 1.71.50 is a targeted dependency/container-security maintenance release on top of the 1.71.45 working tree. It keeps Express on the audited 4.x line (`4.22.2`) and uses the npm `overrides` mechanism to force every transitive `qs` resolution to `6.16.0`, closing both CVE-2026-82562 / GHSA-x5fp-wj9c-mxmx (bracket-key comma `arrayLimit` bypass) and CVE-2026-82417 / GHSA-4mjr-xmp4-gh2g (attacker-controlled `constructor.isBuffer` DoS) without taking the breaking Express 5 migration. The lockfile resolves `node_modules/qs` to 6.16.0 with the published npm integrity. The source archive omits generated `node_modules`, so installed dependencies always come from the patched lock/override graph.
 
 The Docker rclone build is also moved from v1.75.0/Go 1.25.14 to the upstream security release **rclone v1.75.1**, built with pinned **Go 1.26.6** and verified embedded **golang.org/x/crypto v0.56.0**, **golang.org/x/image v0.45.0**, and patched **google.golang.org/grpc v1.85.0-dev.0.20260825072537-93e31b48545e**. The build fails closed if `go version -m` does not contain those exact module floors, closing CVE-2026-56854 and CVE-2026-84445 reported by Trivy for `/usr/local/bin/rclone`. Windows optional rclone is synchronized to v1.75.1 and the official Windows-amd64 archive SHA-256 `200eb602c126d82aa38b51e0f6b9ae837473ff99b51278d3f6f837574c494d6e`.
 
-Release metadata remains 1.71.49 across the root package/lockfile, Windows workflow and installer defaults, OAuth broker packages, PWA (`pwa512`, cache generation `v=492`, build `2026.09.11-pwa512`), OpenVEX identity and CycloneDX root/qs components. This release also closes the CodeQL `js/clear-text-logging` finding in `account-service.js`: account-bootstrap warning paths now select from an internal allowlisted fixed-message catalog and never forward exception messages, usernames, paths, process-environment-derived values, or other runtime identifiers to the logger. The deep audit additionally fixed a stale historical account-service regression that incorrectly required randomized `owner-*` identities in normal compatibility mode; compatibility mode now asserts the stable `admin` bootstrap and a separate ASVS L3 regression still requires a randomized owner. The Windows CI regression caused by stale PWA build/cache expectations is synchronized to the current build identifiers. The embedded OAuth Worker asset is byte-for-byte synchronized with its canonical source. The Windows ServerHost critical runtime manifest was regenerated and rechecked at 103 entries with 0 stale source-resident hashes. The previously established release/security gate remains **124/124**, and this vulnerability follow-up adds a focused Docker/GitHub security set that passes **30/30**. The static ASVS audit passes on 127 production JavaScript files with 10 reviewed decoder sites and 4538 fixed-regex literals estimated; the PARTIAL-closure audit passes 38/38 controls with 0 blocking findings; the regenerated security inventory contains 995 entries. The clean source archive intentionally omits `node_modules`. In this audited source tree, `npm test` executes **1237** tests with **1226 PASS / 11 dependency-backed failures**, and every failure is caused by the intentionally absent `express` module rather than an assertion or semantic regression. The ASVS wildcard gate similarly executes **89** tests with **88 PASS / 1 dependency-backed failure** for the Express-backed HTTP/CSV test. CI must therefore run `npm ci` followed by the complete test tree before publishing binaries.
+Release metadata remains 1.71.50 across the root package/lockfile, Windows workflow and installer defaults, OAuth broker packages, PWA (`pwa513`, cache generation `v=493`, build `2026.09.11-pwa513`), OpenVEX identity and CycloneDX root/qs components. This release also closes the CodeQL `js/clear-text-logging` finding in `account-service.js`: account-bootstrap warning paths now select from an internal allowlisted fixed-message catalog and never forward exception messages, usernames, paths, process-environment-derived values, or other runtime identifiers to the logger. The deep audit additionally fixed a stale historical account-service regression that incorrectly required randomized `owner-*` identities in normal compatibility mode; compatibility mode now asserts the stable `admin` bootstrap and a separate ASVS L3 regression still requires a randomized owner. The Windows CI regression caused by stale PWA build/cache expectations is synchronized to the current build identifiers. The embedded OAuth Worker asset is byte-for-byte synchronized with its canonical source. The Windows ServerHost critical runtime manifest was regenerated and rechecked at 103 entries with 0 stale source-resident hashes. The previously established release/security gate remains **124/124**, and this vulnerability follow-up adds a focused Docker/GitHub security set that passes **30/30**. The static ASVS audit passes on 127 production JavaScript files with 10 reviewed decoder sites and 4538 fixed-regex literals estimated; the PARTIAL-closure audit passes 38/38 controls with 0 blocking findings; the regenerated security inventory contains 995 entries. The clean source archive intentionally omits `node_modules`. In this audited source tree, `npm test` executes **1237** tests with **1226 PASS / 11 dependency-backed failures**, and every failure is caused by the intentionally absent `express` module rather than an assertion or semantic regression. The ASVS wildcard gate similarly executes **89** tests with **88 PASS / 1 dependency-backed failure** for the Express-backed HTTP/CSV test. CI must therefore run `npm ci` followed by the complete test tree before publishing binaries.
 
 The fully audited 1.71.42 baseline separates Windows preview and release channels after the Smart App Control finding: unsigned outputs remain downloadable for development/testing only under explicit `-UNSIGNED` artifact names, while canonical release names and Windows provenance attestations remain restricted to an explicit SignPath signing dispatch that passes final Authenticode verification of launcher, ServerHost and installer. The CSP/ZAP, nonce, SARIF, SBOM/provenance, Codacy, CodeQL, Trivy, Scorecard, zizmor, immutable workflow pins, least-privilege token scopes and Docker checksum verification/retry hardening from the preceding hardening pass remains in force. The ASVS status matrix remains 253 PASS / 92 N/A / 0 MANUAL / 0 PARTIAL / 0 FAIL / 0 REVIEW.
 
@@ -115,9 +115,9 @@ Repository/release gates completed for this candidate:
 - Full source-only regression tree: **1181/1192 passed**; the 11 failures all require `express`, which is intentionally excluded from the source ZIP. The dependency-backed **CI REQUIRED** gate remains `npm ci` followed by `npm test`.
 - Static ASVS audit: **PASS** — 127 production JavaScript source files, 10 reviewed decoder sites.
 - PARTIAL-closure audit: **PASS** — 127 production JavaScript source files, 38 repository-verifiable controls, 0 blocking findings.
-- Security inventory regenerated for 1.71.49 — **995 entries**.
+- Security inventory regenerated for 1.71.50 — **995 entries**.
 - Windows ServerHost critical runtime manifest: **103 entries, 0 stale source-resident hashes** after final synchronization; the missing build-time Express entry remains pinned by `package-lock.json` to 4.22.2.
-- CycloneDX SBOM root component synchronized to 1.71.49; `qs` synchronized to 6.16.0.
+- CycloneDX SBOM root component synchronized to 1.71.50; `qs` synchronized to 6.16.0.
 
 This document is an implementation/evidence audit, not a third-party certification. A production installation can operate in `ASVS_L3_MODE=true` only while all mandatory runtime controls and the signed deployment evidence are valid.
 
@@ -193,8 +193,8 @@ The direct dependency graph remains lockfile-pinned. V15.2.1 is no longer an ope
 
 ## Final release gates
 
-- [x] package and lockfile version synchronized to 1.71.49.
-- [x] PWA version/cache generation synchronized to 1.71.49 / pwa512 / cache `v=492`.
+- [x] package and lockfile version synchronized to 1.71.50.
+- [x] PWA version/cache generation synchronized to 1.71.50 / pwa513 / cache `v=493`.
 - [x] ASVS clean-source regression gate: 88/89 pass; the sole failure is the Express-backed HTTP/CSV test because `node_modules` is intentionally absent, with no assertion/semantic ASVS regression observed.
 - [ ] Complete dependency-backed ASVS and full test trees remain CI-required `npm ci` + `npm test` gates; this clean source package does not claim a dependency-backed full-green result.
 - [x] Static ASVS audit green.
@@ -202,7 +202,7 @@ The direct dependency graph remains lockfile-pinned. V15.2.1 is no longer an ope
 - [x] Security inventory regenerated.
 - [x] Windows runtime integrity manifest synchronized and rechecked.
 - [x] Matrix has 0 MANUAL, 0 PARTIAL, 0 FAIL and 0 REVIEW.
-- [x] SBOM root component synchronized to 1.71.49 and `qs` component synchronized to 6.16.0.
+- [x] SBOM root component synchronized to 1.71.50 and `qs` component synchronized to 6.16.0.
 - [x] Former operator-declared manual-attestation flags removed from the L3 configuration surface.
 
 Independent review of N/A decisions, production evidence collection and a focused penetration test remain appropriate before making an external certification/compliance representation.

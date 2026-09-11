@@ -1,6 +1,6 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://github.com/ManixQC/Direct-Xfer/security/openvex-1.71.49",
+  "@id": "https://github.com/ManixQC/Direct-Xfer/security/openvex-1.71.50",
   "author": "Direct-Xfer project",
   "timestamp": "2026-09-10T18:50:00Z",
   "version": 6,
@@ -57,11 +57,11 @@
       },
       "products": [
         {
-          "@id": "pkg:npm/direct-xfer@1.71.49"
+          "@id": "pkg:npm/direct-xfer@1.71.50"
         }
       ],
       "status": "fixed",
-      "impact_statement": "Direct-Xfer 1.71.49 forces transitive qs to 6.16.0, which contains the arrayLimit/comma parser fix."
+      "impact_statement": "Direct-Xfer 1.71.50 forces transitive qs to 6.16.0, which contains the arrayLimit/comma parser fix."
     },
     {
       "vulnerability": {
@@ -69,11 +69,11 @@
       },
       "products": [
         {
-          "@id": "pkg:npm/direct-xfer@1.71.49"
+          "@id": "pkg:npm/direct-xfer@1.71.50"
         }
       ],
       "status": "fixed",
-      "impact_statement": "Direct-Xfer 1.71.49 forces transitive qs to 6.16.0, which contains the attacker-controlled isBuffer denial-of-service fix."
+      "impact_statement": "Direct-Xfer 1.71.50 forces transitive qs to 6.16.0, which contains the attacker-controlled isBuffer denial-of-service fix."
     },
     {
       "vulnerability": {
@@ -105,7 +105,7 @@
       },
       "products": [
         {
-          "@id": "pkg:npm/direct-xfer@1.71.49"
+          "@id": "pkg:npm/direct-xfer@1.71.50"
         }
       ],
       "status": "fixed",
@@ -117,7 +117,7 @@
       },
       "products": [
         {
-          "@id": "pkg:npm/direct-xfer@1.71.49"
+          "@id": "pkg:npm/direct-xfer@1.71.50"
         }
       ],
       "status": "fixed",
@@ -129,7 +129,7 @@
       },
       "products": [
         {
-          "@id": "pkg:npm/direct-xfer@1.71.49"
+          "@id": "pkg:npm/direct-xfer@1.71.50"
         }
       ],
       "status": "fixed",
@@ -141,7 +141,7 @@
       },
       "products": [
         {
-          "@id": "pkg:npm/direct-xfer@1.71.49"
+          "@id": "pkg:npm/direct-xfer@1.71.50"
         }
       ],
       "status": "fixed",

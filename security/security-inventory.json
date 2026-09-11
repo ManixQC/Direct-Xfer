@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-09-09T02:35:59.470Z",
-  "version": "1.71.47",
+  "generatedAt": "2026-09-11T05:18:33.786Z",
+  "version": "1.71.48",
   "categories": {
     "crypto": [
       {
@@ -3048,6 +3048,21 @@
         "text": "platform:{ fs, path, crypto, os, net, tls, forge:null, nodemailer:null, webpush:null },"
       },
       {
+        "file": "test/github-vulnerability-remediation-1.71.48.test.js",
+        "line": 19,
+        "text": "assert.equal(pkg.dependencies.nodemailer, \"^9.1.1\");"
+      },
+      {
+        "file": "test/github-vulnerability-remediation-1.71.48.test.js",
+        "line": 20,
+        "text": "assert.equal(lock.packages[\"node_modules/nodemailer\"].version, \"9.1.1\");"
+      },
+      {
+        "file": "test/github-vulnerability-remediation-1.71.48.test.js",
+        "line": 21,
+        "text": "assert.doesNotMatch(JSON.stringify(lock), /\\\"nodemailer\\\"[^\\n]*9\\.0\\.5|node_modules\\/nodemailer[\\s\\S]{0,300}\\\"version\\\":\\\"?9\\.0\\.5/);"
+      },
+      {
         "file": "test/google-drive-least-privilege-1.67.30.test.js",
         "line": 24,
         "text": "const client=new GoogleOAuthBrokerClient({baseUrl:'https://oauth.example.test',version:'1.67.30',fetch:async(_url,options)=>{"
@@ -3056,6 +3071,51 @@
         "file": "test/google-drive-least-privilege-1.67.30.test.js",
         "line": 37,
         "text": "const client=new GoogleOAuthBrokerClient({baseUrl:'https://oauth.example.test',version:'1.67.30',fetch:async()=>new Response(JSON.stringify(brokerResponse(GOOGLE_DRIVE_SCOPE_MAP.full)),{status:201,headers:{'content-type':'application/json'}"
+      },
+      {
+        "file": "test/nodemailer-security-1.71.48.test.js",
+        "line": 15,
+        "text": "assert.equal(pkg.dependencies.nodemailer, '^9.1.1');"
+      },
+      {
+        "file": "test/nodemailer-security-1.71.48.test.js",
+        "line": 16,
+        "text": "assert.equal(lock.packages[''].dependencies.nodemailer, '^9.1.1');"
+      },
+      {
+        "file": "test/nodemailer-security-1.71.48.test.js",
+        "line": 17,
+        "text": "const resolved = lock.packages['node_modules/nodemailer'];"
+      },
+      {
+        "file": "test/nodemailer-security-1.71.48.test.js",
+        "line": 20,
+        "text": "assert.match(resolved.resolved || '', /nodemailer-9\\.1\\.1\\.tgz$/);"
+      },
+      {
+        "file": "test/nodemailer-security-1.71.48.test.js",
+        "line": 27,
+        "text": "const version = lock.packages['node_modules/nodemailer'].version;"
+      },
+      {
+        "file": "test/nodemailer-security-1.71.48.test.js",
+        "line": 28,
+        "text": "const component = (sbom.components || []).find((entry) => entry && entry.name === 'nodemailer');"
+      },
+      {
+        "file": "test/nodemailer-security-1.71.48.test.js",
+        "line": 31,
+        "text": "assert.equal(component['bom-ref'], `nodemailer@${version}`);"
+      },
+      {
+        "file": "test/nodemailer-security-1.71.48.test.js",
+        "line": 32,
+        "text": "assert.equal(component.purl, `pkg:npm/nodemailer@${version}`);"
+      },
+      {
+        "file": "test/nodemailer-security-1.71.48.test.js",
+        "line": 34,
+        "text": "assert.ok(rootDependency && rootDependency.dependsOn.includes(`nodemailer@${version}`));"
       },
       {
         "file": "test/notification-application-refactor-1.70.7.test.js",
@@ -3320,7 +3380,7 @@
       {
         "file": "test/pwa-admin-features-15-19-21-1.64.0.test.js",
         "line": 196,
-        "text": "const asset = await fetch(base + '/app/admin-audit-connectors.js?v=490');"
+        "text": "const asset = await fetch(base + '/app/admin-audit-connectors.js?v=491');"
       },
       {
         "file": "test/pwa-admin-features-15-19-21-1.64.0.test.js",
@@ -3370,7 +3430,7 @@
       {
         "file": "test/pwa-admin-features-3-7-1.64.0.test.js",
         "line": 218,
-        "text": "const publicAsset = await fetch(base + '/app/admin-advanced.js?v=490');"
+        "text": "const publicAsset = await fetch(base + '/app/admin-advanced.js?v=491');"
       },
       {
         "file": "test/pwa-admin-features-3-7-1.64.0.test.js",
@@ -3460,12 +3520,12 @@
       {
         "file": "test/pwa-mobile-features-24-25-27-29-31-42-45-46-47-1.64.0.test.js",
         "line": 150,
-        "text": "const mod = await fetch(base + '/app/mobile-intelligence.js?v=490');"
+        "text": "const mod = await fetch(base + '/app/mobile-intelligence.js?v=491');"
       },
       {
         "file": "test/pwa-mobile-features-24-25-27-29-31-42-45-46-47-1.64.0.test.js",
         "line": 154,
-        "text": "const r = await fetch(base + '/app/' + name + '?v=490');"
+        "text": "const r = await fetch(base + '/app/' + name + '?v=491');"
       },
       {
         "file": "test/pwa-routes-refactor.test.js",
@@ -3575,12 +3635,12 @@
       {
         "file": "test/release-maintenance.test.js",
         "line": 28,
-        "text": "assert.equal(pkg.dependencies.nodemailer, '^9.0.5');"
+        "text": "assert.equal(pkg.dependencies.nodemailer, '^9.1.1');"
       },
       {
         "file": "test/release-maintenance.test.js",
         "line": 29,
-        "text": "assert.equal(lock.packages['node_modules/nodemailer'].version, '9.0.5');"
+        "text": "assert.equal(lock.packages['node_modules/nodemailer'].version, '9.1.1');"
       },
       {
         "file": "test/reverse-proxy-multi-domain-1.64.1.test.js",

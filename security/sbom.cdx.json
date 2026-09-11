@@ -2,10 +2,10 @@
   "$schema": "http://cyclonedx.org/schema/bom-1.5.schema.json",
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
-  "serialNumber": "urn:uuid:6e151485-3998-4522-b3c2-16591dfe5c9e",
+  "serialNumber": "urn:uuid:d71f0f18-27c9-48e3-89be-6002d3a4f87d",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-09-08T14:56:30Z",
+    "timestamp": "2026-09-10T14:21:27Z",
     "lifecycles": [
       {
         "phase": "build"
@@ -19,13 +19,13 @@
       }
     ],
     "component": {
-      "bom-ref": "direct-xfer@1.71.47",
+      "bom-ref": "direct-xfer@1.71.48",
       "type": "library",
       "name": "Direct-Xfer",
-      "version": "1.71.47",
+      "version": "1.71.48",
       "scope": "required",
       "description": "Direct-Xfer — direct HTTP file sharing, no third-party server. Web interface, revocable shares, automatic IP detection and port testing.",
-      "purl": "pkg:npm/direct-xfer@1.71.47",
+      "purl": "pkg:npm/direct-xfer@1.71.48",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -4769,14 +4769,14 @@
       ]
     },
     {
-      "bom-ref": "nodemailer@9.0.5",
+      "bom-ref": "nodemailer@9.1.1",
       "type": "library",
       "name": "nodemailer",
-      "version": "9.0.5",
+      "version": "9.1.1",
       "scope": "required",
       "author": "Andris Reinman",
       "description": "Easy as cake e-mail sending from your Node.js applications",
-      "purl": "pkg:npm/nodemailer@9.0.5",
+      "purl": "pkg:npm/nodemailer@9.1.1",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -4786,7 +4786,7 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/nodemailer/-/nodemailer-9.0.5.tgz"
+          "url": "https://registry.npmjs.org/nodemailer/-/nodemailer-9.1.1.tgz"
         },
         {
           "type": "vcs",
@@ -4804,7 +4804,7 @@
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "c2f8e22af8dcce6b0ded4ffcd34e8939d5ee6e0064d971406e2a0331b4feb0cedc3ecd10ae12536ba281457ecfe511061a40dc2d4cff11aad689d6fc1bc0b58d"
+          "content": "8b3c3d9952858b1e984a70bd78b815ea0d68a65f43525462a3d64d72af96bbd5239f653017ef0d97407c9f3db69040be093642be29e4c702740de15b6fa37071"
         }
       ],
       "licenses": [
@@ -7297,12 +7297,12 @@
   ],
   "dependencies": [
     {
-      "ref": "direct-xfer@1.71.47",
+      "ref": "direct-xfer@1.71.48",
       "dependsOn": [
         "archiver@8.0.0",
         "express@4.22.2",
         "node-forge@1.4.0",
-        "nodemailer@9.0.5",
+        "nodemailer@9.1.1",
         "qrcode@1.5.4",
         "web-push@3.6.7"
       ]
@@ -7897,7 +7897,7 @@
       "dependsOn": []
     },
     {
-      "ref": "nodemailer@9.0.5",
+      "ref": "nodemailer@9.1.1",
       "dependsOn": []
     },
     {

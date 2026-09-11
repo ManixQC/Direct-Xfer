@@ -32,6 +32,7 @@ The Inno Setup installer displays the repository privacy policy before installat
 Right-click the Direct-Xfer icon in the Windows system tray and open **Optional components / Composants optionnels**. Each component is downloaded only after an explicit confirmation:
 
 - **rclone 1.75.1** → `%LOCALAPPDATA%\Direct-Xfer\tools\rclone\1.75.1\rclone.exe`
+  - The upstream Windows binary embeds grpc-go 1.84, but Direct-Xfer uses rclone only as a client process and never starts an xDS gRPC server, so CVE-2026-84445 is not reachable on this path. The Docker image is nevertheless rebuilt with the patched grpc-go module because Trivy scans embedded Go modules conservatively.
 - **Tesseract OCR 5.5.3** → `%LOCALAPPDATA%\Direct-Xfer\tools\tesseract\5.5.3\`
 
 Activating or removing a component signals ServerHost to reload automatically; the main Direct-Xfer installer does not need to be run again. The menu also provides a remove/deactivate action that deletes the per-user optional component.

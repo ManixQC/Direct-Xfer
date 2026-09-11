@@ -7,6 +7,7 @@ ARG DX_RCLONE_BUILD_VERSION=v1.75.1
 ARG DX_RCLONE_GO_BUILD_VERSION=1.26.6
 ARG DX_RCLONE_X_CRYPTO_VERSION=v0.56.0
 ARG DX_RCLONE_X_IMAGE_VERSION=v0.45.0
+ARG DX_RCLONE_GRPC_VERSION=v1.85.0-dev.0.20260825072537-93e31b48545e
 ARG DX_TESSERACT_BUILD_VERSION=5.5.3
 ARG DX_TESSERACT_BUILD_COMMIT=db0ec62f81b0737fbbe184d8fea40af5738f8eef
 FROM golang:${DX_RCLONE_GO_BUILD_VERSION}-bookworm@sha256:116d58cbd88c1297624acc6e967a060012422bacf9930927e23fb719189c6f36 AS rclone-builder
@@ -14,6 +15,7 @@ ARG DX_RCLONE_BUILD_VERSION
 ARG DX_RCLONE_GO_BUILD_VERSION
 ARG DX_RCLONE_X_CRYPTO_VERSION
 ARG DX_RCLONE_X_IMAGE_VERSION
+ARG DX_RCLONE_GRPC_VERSION
 
 # Debian Trixie still ships an old rclone built with a vulnerable Go stdlib.
 # Build the pinned rclone release with a patched Go toolchain. Verification uses
@@ -31,6 +33,7 @@ RUN mkdir -p /out /src \
   && test "${DX_RCLONE_BUILD_VERSION}" = "v1.75.1" \
   && test "${DX_RCLONE_X_CRYPTO_VERSION}" = "v0.56.0" \
   && test "${DX_RCLONE_X_IMAGE_VERSION}" = "v0.45.0" \
+  && test "${DX_RCLONE_GRPC_VERSION}" = "v1.85.0-dev.0.20260825072537-93e31b48545e" \
   && test "$(go env GOVERSION)" = "go${DX_RCLONE_GO_BUILD_VERSION}"
 # rclone v1.75.1 is the upstream security release that raises golang.org/x/crypto
 # to v0.56.0 (fixing CVE-2026-56854 and companion SSH DoS issues), x/image to
@@ -56,8 +59,10 @@ WORKDIR /src/rclone
 # GitHub-hosted Docker builds occasionally see transient HTTP/2 stream resets from
 # proxy.golang.org/sum.golang.org. Keep checksum verification enabled, force the
 # simpler HTTP/1.1 transport, and retry only network operations. The v1.75.1 tag
-# already pins the patched crypto/image modules, so do not mutate upstream go.mod;
-# validate the resolved graph and fail closed if either security floor regresses.
+# already pins the patched crypto/image modules. Its grpc-go dependency predates
+# the upstream fix for CVE-2026-84445, so Direct-Xfer raises only that module to
+# the exact version used by rclone upstream's verified security commit. The
+# resolved graph is then verified and fails closed if any security floor regresses.
 RUN set -eux; \
   retry_go() { \
     attempt=1; \
@@ -67,9 +72,11 @@ RUN set -eux; \
       attempt="$((attempt + 1))"; \
     done; \
   }; \
+  retry_go go get "google.golang.org/grpc@${DX_RCLONE_GRPC_VERSION}"; \
   retry_go go mod download all; \
   test "$(go list -m -f '{{.Version}}' golang.org/x/crypto)" = "${DX_RCLONE_X_CRYPTO_VERSION}"; \
   test "$(go list -m -f '{{.Version}}' golang.org/x/image)" = "${DX_RCLONE_X_IMAGE_VERSION}"; \
+  test "$(go list -m -f '{{.Version}}' google.golang.org/grpc)" = "${DX_RCLONE_GRPC_VERSION}"; \
   go mod verify
 
 RUN CGO_ENABLED=0 go build -trimpath \
@@ -81,8 +88,9 @@ RUN go version /out/rclone | tee /out/rclone-go-version.txt \
   && go version -m /out/rclone > /out/rclone-buildinfo.txt \
   && grep -F "$(printf '\tdep\tgolang.org/x/crypto\t%s' "${DX_RCLONE_X_CRYPTO_VERSION}")" /out/rclone-buildinfo.txt >/dev/null \
   && grep -F "$(printf '\tdep\tgolang.org/x/image\t%s' "${DX_RCLONE_X_IMAGE_VERSION}")" /out/rclone-buildinfo.txt >/dev/null \
+  && grep -F "$(printf '\tdep\tgoogle.golang.org/grpc\t%s' "${DX_RCLONE_GRPC_VERSION}")" /out/rclone-buildinfo.txt >/dev/null \
   && env -u RCLONE_VERSION -u RCLONE_GO_VERSION /out/rclone version > /out/rclone-version.txt \
-  && printf 'rclone=%s\ngo=%s\nx-crypto=%s\nx-image=%s\n' "${DX_RCLONE_BUILD_VERSION}" "go${DX_RCLONE_GO_BUILD_VERSION}" "${DX_RCLONE_X_CRYPTO_VERSION}" "${DX_RCLONE_X_IMAGE_VERSION}" > /out/rclone-build-manifest.txt \
+  && printf 'rclone=%s\ngo=%s\nx-crypto=%s\nx-image=%s\ngrpc=%s\n' "${DX_RCLONE_BUILD_VERSION}" "go${DX_RCLONE_GO_BUILD_VERSION}" "${DX_RCLONE_X_CRYPTO_VERSION}" "${DX_RCLONE_X_IMAGE_VERSION}" "${DX_RCLONE_GRPC_VERSION}" > /out/rclone-build-manifest.txt \
   && test -s /out/rclone-buildinfo.txt \
   && test -s /out/rclone-version.txt \
   && test -s /out/rclone-build-manifest.txt
@@ -151,6 +159,7 @@ ARG DX_RCLONE_BUILD_VERSION
 ARG DX_RCLONE_GO_BUILD_VERSION
 ARG DX_RCLONE_X_CRYPTO_VERSION
 ARG DX_RCLONE_X_IMAGE_VERSION
+ARG DX_RCLONE_GRPC_VERSION
 ARG DX_TESSERACT_BUILD_VERSION
 ARG DX_TESSERACT_BUILD_COMMIT
 
@@ -229,6 +238,7 @@ RUN set -eux; \
   grep -Fx "go=go${DX_RCLONE_GO_BUILD_VERSION}" /usr/share/doc/direct-xfer/rclone-build-manifest.txt >/dev/null; \
   grep -Fx "x-crypto=${DX_RCLONE_X_CRYPTO_VERSION}" /usr/share/doc/direct-xfer/rclone-build-manifest.txt >/dev/null; \
   grep -Fx "x-image=${DX_RCLONE_X_IMAGE_VERSION}" /usr/share/doc/direct-xfer/rclone-build-manifest.txt >/dev/null; \
+  grep -Fx "grpc=${DX_RCLONE_GRPC_VERSION}" /usr/share/doc/direct-xfer/rclone-build-manifest.txt >/dev/null; \
   grep -Fx "tesseract=${DX_TESSERACT_BUILD_VERSION}" /usr/share/doc/direct-xfer/tesseract-build-manifest.txt >/dev/null; \
   grep -Fx "commit=${DX_TESSERACT_BUILD_COMMIT}" /usr/share/doc/direct-xfer/tesseract-build-manifest.txt >/dev/null; \
   test -s /usr/share/doc/direct-xfer/rclone-COPYING; \

@@ -1,6 +1,6 @@
 # Direct-Xfer — ASVS 5.0.0 Level 3 deployment
 
-Direct-Xfer 1.71.47 inherits the 1.71.42 matrix with no unresolved `MANUAL`, `PARTIAL`, `FAIL`, or `REVIEW` row in its source matrix. This does **not** mean a source ZIP certifies an installation. Facts that only exist at the production edge/host/provider are now mandatory, machine-validated startup evidence rather than operator declarations. A specific deployment can use the L3 profile only while its signed evidence remains valid.
+Direct-Xfer 1.71.48 inherits the 1.71.42 matrix with no unresolved `MANUAL`, `PARTIAL`, `FAIL`, or `REVIEW` row in its source matrix. This does **not** mean a source ZIP certifies an installation. Facts that only exist at the production edge/host/provider are now mandatory, machine-validated startup evidence rather than operator declarations. A specific deployment can use the L3 profile only while its signed evidence remains valid.
 
 ## Mandatory L3 runtime profile
 

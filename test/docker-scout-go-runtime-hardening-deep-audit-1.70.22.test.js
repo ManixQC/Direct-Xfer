@@ -112,11 +112,13 @@ test('1.70.22 treats rclone source, toolchain, module metadata and licence as on
   assert.match(dockerfile, /ARG DX_RCLONE_GO_BUILD_VERSION=1\.26\.6/);
   assert.match(dockerfile, /ARG DX_RCLONE_X_CRYPTO_VERSION=v0\.56\.0/);
   assert.match(dockerfile, /ARG DX_RCLONE_X_IMAGE_VERSION=v0\.45\.0/);
+  assert.match(dockerfile, /ARG DX_RCLONE_GRPC_VERSION=v1\.85\.0-dev\.0\.20260825072537-93e31b48545e/);
   assert.match(dockerfile, /@sha256:116d58cbd88c1297624acc6e967a060012422bacf9930927e23fb719189c6f36/);
   assert.match(dockerfile, /ENV GOTOOLCHAIN=local \\\n    GOSUMDB=sum\.golang\.org/);
   assert.match(dockerfile, /test "\$\{DX_RCLONE_BUILD_VERSION\}" = "v1\.75\.1"/);
   assert.match(dockerfile, /test "\$\{DX_RCLONE_X_CRYPTO_VERSION\}" = "v0\.56\.0"/);
   assert.match(dockerfile, /test "\$\{DX_RCLONE_X_IMAGE_VERSION\}" = "v0\.45\.0"/);
+  assert.match(dockerfile, /test "\$\{DX_RCLONE_GRPC_VERSION\}" = "v1\.85\.0-dev\.0\.20260825072537-93e31b48545e"/);
   assert.doesNotMatch(dockerfile, /go get "golang\.org\/x\/(?:crypto|image)@/);
   assert.doesNotMatch(dockerfile, /go mod edit -require=.*golang\.org\/x\/(?:crypto|image)/);
   assert.match(dockerfile, /go list -m -f '\{\{\.Version\}\}' golang\.org\/x\/crypto/);
@@ -127,7 +129,7 @@ test('1.70.22 treats rclone source, toolchain, module metadata and licence as on
   assert.match(dockerfile, /env -u RCLONE_VERSION -u RCLONE_GO_VERSION rclone version > \/usr\/share\/doc\/direct-xfer\/rclone-version\.txt/);
   assert.doesNotMatch(dockerfile, /^ARG RCLONE_VERSION(?:=|$)/m);
   assert.doesNotMatch(dockerfile, /^ARG RCLONE_GO_VERSION(?:=|$)/m);
-  assert.match(dockerfile, /printf 'rclone=%s\\ngo=%s\\nx-crypto=%s\\nx-image=%s\\n'/);
+  assert.match(dockerfile, /printf 'rclone=%s\\ngo=%s\\nx-crypto=%s\\nx-image=%s\\ngrpc=%s\\n'/);
   assert.match(dockerfile, /COPY third_party\/rclone\/COPYING \/usr\/share\/doc\/direct-xfer\/rclone-COPYING/);
   assert.match(dockerfile, /COPY --from=rclone-builder \/out\/rclone-buildinfo\.txt \/usr\/share\/doc\/direct-xfer\/rclone-buildinfo\.txt/);
   assert.match(dockerfile, /COPY --from=rclone-builder \/out\/rclone-build-manifest\.txt \/usr\/share\/doc\/direct-xfer\/rclone-build-manifest\.txt/);
@@ -136,11 +138,12 @@ test('1.70.22 treats rclone source, toolchain, module metadata and licence as on
 
 test('1.70.22 keeps build-arg verification coherent across builder and final stages', () => {
   const finalStage = dockerfile.slice(dockerfile.lastIndexOf('FROM node:22.23.2-trixie-slim@sha256:'));
-  assert.match(finalStage, /^FROM node:22\.23\.2-trixie-slim@sha256:[0-9a-f]{64}\nARG DX_RCLONE_BUILD_VERSION\nARG DX_RCLONE_GO_BUILD_VERSION\nARG DX_RCLONE_X_CRYPTO_VERSION\nARG DX_RCLONE_X_IMAGE_VERSION/m);
+  assert.match(finalStage, /^FROM node:22\.23\.2-trixie-slim@sha256:[0-9a-f]{64}\nARG DX_RCLONE_BUILD_VERSION\nARG DX_RCLONE_GO_BUILD_VERSION\nARG DX_RCLONE_X_CRYPTO_VERSION\nARG DX_RCLONE_X_IMAGE_VERSION\nARG DX_RCLONE_GRPC_VERSION/m);
   assert.match(finalStage, /rclone=\$\{DX_RCLONE_BUILD_VERSION\}/);
   assert.match(finalStage, /go=go\$\{DX_RCLONE_GO_BUILD_VERSION\}/);
   assert.match(finalStage, /x-crypto=\$\{DX_RCLONE_X_CRYPTO_VERSION\}/);
   assert.match(finalStage, /x-image=\$\{DX_RCLONE_X_IMAGE_VERSION\}/);
+  assert.match(finalStage, /grpc=\$\{DX_RCLONE_GRPC_VERSION\}/);
   assert.doesNotMatch(finalStage, /rclone-version\.txt.*go\/version:/);
   assert.doesNotMatch(finalStage, /grep -F "rclone v1\.75\.1"/);
 });

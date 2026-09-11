@@ -40,7 +40,7 @@ test(`${releaseVersion} version, Windows builds and PWA generation are synchroni
   assert.match(read('windows-launcher/app.manifest'), /assemblyIdentity version="1\.70\.1\.0"/);
   assert.match(read('windows-server-host/app.manifest'), /assemblyIdentity version="1\.70\.22\.0"/);
   for (const rel of ['pwa/theme-init.js','pwa/mobile-intelligence.js','pwa/index.html','pwa/admin-advanced.js','pwa/app.js','pwa/sw.js']) {
-    assert.match(read(rel), new RegExp(`${releaseRe}|pwa510`));
+    assert.match(read(rel), new RegExp(`${releaseRe}|pwa511`));
   }
   for (const rel of ['pwa/login.html','pwa/theme-init.js','pwa/index.html','pwa/login.js','pwa/admin-advanced.js','pwa/app.js','pwa/sw.js']) {
     assert.doesNotMatch(read(rel), /v=356/);

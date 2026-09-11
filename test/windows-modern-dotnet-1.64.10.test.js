@@ -242,6 +242,10 @@ test('Windows C# source eliminates the remaining nullable and unused-field warni
   // ServerHost does not consume this launcher-only preference, so it must not keep a dead field.
   assert.doesNotMatch(host, /public bool openBrowser\s*;/);
 
+  // ServerHost config is populated by System.Text.Json at runtime; explicitly initializing the
+  // reflected field prevents CS0649 while preserving 0 as the legacy automatic-port sentinel.
+  assert.match(host, /public int port\s*=\s*0;/);
+
   // Shutdown is best-effort: only call the authenticated endpoint when a token is actually present.
   assert.match(host, /var token = _token;[\s\S]*?if \(!string\.IsNullOrWhiteSpace\(token\)\)[\s\S]*?LauncherRequest\("POST", _port, "\/__dx_launcher\/shutdown", token,/);
   assert.doesNotMatch(host, /LauncherRequest\("POST", _port, "\/__dx_launcher\/shutdown", _token,/);

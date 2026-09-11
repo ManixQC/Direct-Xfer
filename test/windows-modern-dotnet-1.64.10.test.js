@@ -202,12 +202,12 @@ test('SDK-generated assembly metadata replaces manual assembly attributes', () =
     assert.doesNotMatch(project, /<GenerateAssemblyInfo>\s*false\s*<\/GenerateAssemblyInfo>/);
     assert.match(project, /<IncludeSourceRevisionInInformationalVersion>false<\/IncludeSourceRevisionInInformationalVersion>/);
   }
-  assert.match(launcherProject, /<AssemblyVersion>1\.70\.1\.0<\/AssemblyVersion>/);
-  assert.match(launcherProject, /<FileVersion>1\.70\.1\.0<\/FileVersion>/);
-  assert.match(launcherProject, /<InformationalVersion>1\.70\.1<\/InformationalVersion>/);
-  assert.match(hostProject, /<AssemblyVersion>1\.70\.22\.0<\/AssemblyVersion>/);
-  assert.match(hostProject, /<FileVersion>1\.70\.22\.0<\/FileVersion>/);
-  assert.match(hostProject, /<InformationalVersion>1\.70\.22<\/InformationalVersion>/);
+  assert.match(launcherProject, /<AssemblyVersion>1\.70\.2\.0<\/AssemblyVersion>/);
+  assert.match(launcherProject, /<FileVersion>1\.70\.2\.0<\/FileVersion>/);
+  assert.match(launcherProject, /<InformationalVersion>1\.70\.2<\/InformationalVersion>/);
+  assert.match(hostProject, /<AssemblyVersion>1\.70\.23\.0<\/AssemblyVersion>/);
+  assert.match(hostProject, /<FileVersion>1\.70\.23\.0<\/FileVersion>/);
+  assert.match(hostProject, /<InformationalVersion>1\.70\.23<\/InformationalVersion>/);
   assert.doesNotMatch(launcherSource, /\[assembly:\s*Assembly(?:Title|Description|Company|Product|Copyright|Version|FileVersion|InformationalVersion)/);
   assert.doesNotMatch(hostSource, /\[assembly:\s*Assembly(?:Title|Description|Company|Product|Copyright|Version|FileVersion|InformationalVersion)/);
 });

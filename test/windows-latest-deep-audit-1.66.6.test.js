@@ -30,17 +30,17 @@ test(`${releaseVersion} version, Windows builds and PWA generation are synchroni
   assert.equal(lock.packages[''].version, releaseVersion);
   assert.match(workflow, new RegExp(`^run-name: v${releaseRe}$`, 'm'));
   assert.match(workflow, /DX_RUNTIME_BUILD: 'runtime169'/);
-  assert.match(workflow, /DX_LAUNCHER_COMPONENT_VERSION: '1\.70\.1'/);
-  assert.match(workflow, /DX_SERVER_HOST_COMPONENT_VERSION: '1\.70\.22'/);
+  assert.match(workflow, /DX_LAUNCHER_COMPONENT_VERSION: '1\.70\.2'/);
+  assert.match(workflow, /DX_SERVER_HOST_COMPONENT_VERSION: '1\.70\.23'/);
   assert.doesNotMatch(workflow, /DX_SERVER_HOST_BUILD:/);
-  assert.match(launcher, /LauncherVersion = "1\.70\.1"/);
+  assert.match(launcher, /LauncherVersion = "1\.70\.2"/);
   assert.match(launcher, /AppVersion[\s\S]{0,700}?package\.json/);
-  assert.match(host, /ServerHostVersion = "1\.70\.22"/);
+  assert.match(host, /ServerHostVersion = "1\.70\.23"/);
   assert.match(host, /ReadApplicationVersion\(appDir\)/);
-  assert.match(read('windows-launcher/app.manifest'), /assemblyIdentity version="1\.70\.1\.0"/);
-  assert.match(read('windows-server-host/app.manifest'), /assemblyIdentity version="1\.70\.22\.0"/);
+  assert.match(read('windows-launcher/app.manifest'), /assemblyIdentity version="1\.70\.2\.0"/);
+  assert.match(read('windows-server-host/app.manifest'), /assemblyIdentity version="1\.70\.23\.0"/);
   for (const rel of ['pwa/theme-init.js','pwa/mobile-intelligence.js','pwa/index.html','pwa/admin-advanced.js','pwa/app.js','pwa/sw.js']) {
-    assert.match(read(rel), new RegExp(`${releaseRe}|pwa514`));
+    assert.match(read(rel), new RegExp(`${releaseRe}|pwa515`));
   }
   for (const rel of ['pwa/login.html','pwa/theme-init.js','pwa/index.html','pwa/login.js','pwa/admin-advanced.js','pwa/app.js','pwa/sw.js']) {
     assert.doesNotMatch(read(rel), /v=356/);

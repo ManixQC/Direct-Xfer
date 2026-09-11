@@ -12,8 +12,8 @@ const launcherProject = read('windows-launcher/DirectXfer.Launcher.csproj');
 const workflow = read('.github/workflows/build-windows-csharp.yml');
 
 test('stable launcher discovers app release and runtime build from the installed payload', () => {
-  assert.match(launcher, /internal const string LauncherVersion = "1\.70\.1"/);
-  assert.match(launcher, /internal const string LauncherBuild = "launcher149-csharp"/);
+  assert.match(launcher, /internal const string LauncherVersion = "1\.70\.2"/);
+  assert.match(launcher, /internal const string LauncherBuild = "launcher150-csharp"/);
   assert.match(launcher, /internal static string AppVersion[\s\S]{0,900}?RuntimeAppDirectory[\s\S]{0,900}?package\.json/);
   assert.match(launcher, /internal static string RuntimeBuild[\s\S]{0,700}?runtime-build\.txt/);
   assert.doesNotMatch(launcher, /internal const string AppVersion\s*=/);
@@ -32,7 +32,7 @@ test('launcher attachment negotiates stable protocols and payload identity rathe
 });
 
 test('ServerHost publishes runtime-discovered identity with independent component build', () => {
-  assert.match(host, /ServerHostBuild = "serverhost142-csharp"/);
+  assert.match(host, /ServerHostBuild = "serverhost143-csharp"/);
   assert.match(host, /ExpectedRuntimeBuild = "runtime169"/);
   assert.match(host, /markerValue, Program\.ExpectedRuntimeBuild/);
   assert.match(host, /value, Program\.ExpectedRuntimeBuild/);
@@ -48,9 +48,9 @@ test('ServerHost publishes runtime-discovered identity with independent componen
 
 test('GitHub Actions enforces deterministic launcher output and release-independent runtime marker naming', () => {
   assert.match(workflow, /DX_RUNTIME_BUILD: 'runtime169'/);
-  assert.match(workflow, /DX_LAUNCHER_COMPONENT_VERSION: '1\.70\.1'/);
-  assert.match(workflow, /DX_SERVER_HOST_COMPONENT_VERSION: '1\.70\.22'/);
-  assert.doesNotMatch(workflow, /DX_RUNTIME_BUILD: '1\.70\.22-/);
+  assert.match(workflow, /DX_LAUNCHER_COMPONENT_VERSION: '1\.70\.2'/);
+  assert.match(workflow, /DX_SERVER_HOST_COMPONENT_VERSION: '1\.70\.23'/);
+  assert.doesNotMatch(workflow, /DX_RUNTIME_BUILD: '1\.70\.23-/);
   assert.match(workflow, /launcher-repeat/);
   assert.match(workflow, /Remove-Item 'windows-launcher\\bin','windows-launcher\\obj' -Recurse -Force/);
   assert.match(workflow, /Get-FileHash -Algorithm SHA256 \$launcherPrimary/);

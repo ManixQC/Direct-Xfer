@@ -118,6 +118,14 @@ namespace DirectXfer.WindowsLauncher
             dialog.ShowModal();
         }
 
+
+        internal static bool PromptText(IntPtr owner, IntPtr icon, string title, string prompt, string initialValue,
+            string okText, string cancelText, out string value)
+        {
+            using var dialog = new NativeTextInputDialog(owner, icon, title, prompt, initialValue, okText, cancelText);
+            return dialog.ShowModal(out value);
+        }
+
         internal static bool SetClipboardText(IntPtr owner, string text)
         {
             const uint GmemMoveable = 0x0002;
@@ -461,6 +469,203 @@ namespace DirectXfer.WindowsLauncher
         public override SynchronizationContext CreateCopy() { return new NativeWindowSynchronizationContext(_window); }
     }
 
+
+    internal sealed class NativeTextInputDialog : IDisposable
+    {
+        private const uint WmClose = 0x0010;
+        private const uint WmDestroy = 0x0002;
+        private const uint WmCommand = 0x0111;
+        private const uint WmSetFont = 0x0030;
+        private const uint WmSetIcon = 0x0080;
+        private const uint EmSetSel = 0x00B1;
+        private const uint WsCaption = 0x00C00000;
+        private const uint WsSysMenu = 0x00080000;
+        private const uint WsChild = 0x40000000;
+        private const uint WsVisible = 0x10000000;
+        private const uint WsTabStop = 0x00010000;
+        private const uint WsExClientEdge = 0x00000200;
+        private const uint WsExAppWindow = 0x00040000;
+        private const uint EsAutoHScroll = 0x0080;
+        private const uint EsNumber = 0x2000;
+        private const uint BsDefaultPushButton = 0x0001;
+        private const int SwShow = 5;
+        private const int DefaultGuiFont = 17;
+        private const int IdOk = 1;
+        private const int IdCancel = 2;
+        private static readonly Dictionary<IntPtr, NativeTextInputDialog> Instances = new();
+        private static readonly object ClassSync = new();
+        private static NativeMethods.WndProc? _classProc;
+        private static string? _className;
+        private readonly IntPtr _owner;
+        private readonly IntPtr _icon;
+        private IntPtr _hwnd;
+        private IntPtr _edit;
+        private IntPtr _font;
+        private bool _ownsFont;
+        private bool _closed;
+        private bool _accepted;
+        private string _value = string.Empty;
+
+        internal NativeTextInputDialog(IntPtr owner, IntPtr icon, string title, string prompt, string initialValue, string okText, string cancelText)
+        {
+            _owner = owner;
+            _icon = icon;
+            EnsureClass();
+            var dpi = owner != IntPtr.Zero ? NativeMethods.GetDpiForWindow(owner) : NativeMethods.GetDpiForSystem();
+            if (dpi == 0) dpi = 96;
+            int Scale(int value) => Math.Max(1, (int)Math.Round(value * (dpi / 96.0)));
+            var width = Scale(560);
+            var height = Scale(205);
+            var x = Scale(100);
+            var y = Scale(100);
+            if (owner != IntPtr.Zero && NativeMethods.GetWindowRect(owner, out var ownerRect) && ownerRect.Right > ownerRect.Left && ownerRect.Bottom > ownerRect.Top)
+            {
+                x = ownerRect.Left + Math.Max(0, (ownerRect.Right - ownerRect.Left - width) / 2);
+                y = ownerRect.Top + Math.Max(0, (ownerRect.Bottom - ownerRect.Top - height) / 2);
+            }
+            else if (NativeMethods.SystemParametersInfoW(48, 0, out var work, 0))
+            {
+                x = work.Left + Math.Max(0, (work.Right - work.Left - width) / 2);
+                y = work.Top + Math.Max(0, (work.Bottom - work.Top - height) / 2);
+            }
+
+            _hwnd = NativeMethods.CreateWindowExW(WsExAppWindow, _className!, title ?? "Direct-Xfer", WsCaption | WsSysMenu,
+                x, y, width, height, owner, IntPtr.Zero, NativeMethods.GetModuleHandleW(null), IntPtr.Zero);
+            if (_hwnd == IntPtr.Zero) throw new Win32Exception(Marshal.GetLastWin32Error());
+            lock (Instances) Instances[_hwnd] = this;
+            if (_icon != IntPtr.Zero)
+            {
+                NativeMethods.SendMessageW(_hwnd, WmSetIcon, new IntPtr(0), _icon);
+                NativeMethods.SendMessageW(_hwnd, WmSetIcon, new IntPtr(1), _icon);
+            }
+
+            _font = NativeMethods.CreateFontW(-Scale(12), 0, 0, 0, 400, 0, 0, 0, 1, 0, 0, 5, 0, "Segoe UI");
+            _ownsFont = _font != IntPtr.Zero;
+            if (_font == IntPtr.Zero) _font = NativeMethods.GetStockObject(DefaultGuiFont);
+            CreateStatic(prompt, Scale(20), Scale(18), Scale(510), Scale(46));
+            _edit = NativeMethods.CreateWindowExW(WsExClientEdge, "EDIT", initialValue ?? string.Empty,
+                WsChild | WsVisible | WsTabStop | EsAutoHScroll | EsNumber, Scale(20), Scale(72), Scale(510), Scale(28),
+                _hwnd, new IntPtr(2001), NativeMethods.GetModuleHandleW(null), IntPtr.Zero);
+            ApplyFont(_edit);
+            var cancel = NativeMethods.CreateWindowExW(0, "BUTTON", cancelText ?? "Cancel", WsChild | WsVisible | WsTabStop,
+                Scale(325), Scale(120), Scale(100), Scale(34), _hwnd, new IntPtr(IdCancel), NativeMethods.GetModuleHandleW(null), IntPtr.Zero);
+            ApplyFont(cancel);
+            var ok = NativeMethods.CreateWindowExW(0, "BUTTON", okText ?? "OK", WsChild | WsVisible | WsTabStop | BsDefaultPushButton,
+                Scale(430), Scale(120), Scale(100), Scale(34), _hwnd, new IntPtr(IdOk), NativeMethods.GetModuleHandleW(null), IntPtr.Zero);
+            ApplyFont(ok);
+        }
+
+        internal bool ShowModal(out string value)
+        {
+            if (_owner != IntPtr.Zero) NativeMethods.EnableWindow(_owner, false);
+            try
+            {
+                NativeMethods.ShowWindow(_hwnd, SwShow);
+                NativeMethods.UpdateWindow(_hwnd);
+                if (_edit != IntPtr.Zero)
+                {
+                    NativeMethods.SetFocus(_edit);
+                    NativeMethods.SendMessageW(_edit, EmSetSel, IntPtr.Zero, new IntPtr(-1));
+                }
+                NativeMethods.MSG message;
+                while (!_closed)
+                {
+                    var result = NativeMethods.GetMessageW(out message, IntPtr.Zero, 0, 0);
+                    if (result == 0) { NativeMethods.PostQuitMessage(unchecked((int)message.wParam.ToInt64())); break; }
+                    if (result < 0) throw new Win32Exception(Marshal.GetLastWin32Error());
+                    if (_hwnd != IntPtr.Zero && NativeMethods.IsDialogMessageW(_hwnd, ref message)) continue;
+                    NativeMethods.TranslateMessage(ref message);
+                    NativeMethods.DispatchMessageW(ref message);
+                }
+            }
+            finally
+            {
+                if (_owner != IntPtr.Zero)
+                {
+                    NativeMethods.EnableWindow(_owner, true);
+                    NativeMethods.SetForegroundWindow(_owner);
+                }
+            }
+            value = _value;
+            return _accepted;
+        }
+
+        private void Accept()
+        {
+            if (_edit != IntPtr.Zero)
+            {
+                var length = Math.Min(64, Math.Max(0, NativeMethods.GetWindowTextLengthW(_edit)));
+                var buffer = new StringBuilder(length + 1);
+                NativeMethods.GetWindowTextW(_edit, buffer, buffer.Capacity);
+                _value = buffer.ToString();
+            }
+            _accepted = true;
+            if (_hwnd != IntPtr.Zero) NativeMethods.DestroyWindow(_hwnd);
+        }
+
+        private void CreateStatic(string text, int x, int y, int width, int height)
+        {
+            var control = NativeMethods.CreateWindowExW(0, "STATIC", text ?? string.Empty, WsChild | WsVisible, x, y, width, height,
+                _hwnd, IntPtr.Zero, NativeMethods.GetModuleHandleW(null), IntPtr.Zero);
+            ApplyFont(control);
+        }
+
+        private void ApplyFont(IntPtr hwnd)
+        {
+            if (hwnd != IntPtr.Zero && _font != IntPtr.Zero) NativeMethods.SendMessageW(hwnd, WmSetFont, _font, new IntPtr(1));
+        }
+
+        private static void EnsureClass()
+        {
+            lock (ClassSync)
+            {
+                if (_className != null) return;
+                _className = "DirectXferTextInputDialog_" + Environment.ProcessId.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                _classProc = StaticWindowProc;
+                var wc = new NativeMethods.WNDCLASSEXW
+                {
+                    cbSize = (uint)Marshal.SizeOf<NativeMethods.WNDCLASSEXW>(),
+                    lpfnWndProc = Marshal.GetFunctionPointerForDelegate(_classProc),
+                    hInstance = NativeMethods.GetModuleHandleW(null),
+                    hCursor = NativeMethods.LoadCursorW(IntPtr.Zero, new IntPtr(32512)),
+                    hbrBackground = new IntPtr(6),
+                    lpszClassName = _className
+                };
+                if (NativeMethods.RegisterClassExW(ref wc) == 0) throw new Win32Exception(Marshal.GetLastWin32Error());
+            }
+        }
+
+        private static IntPtr StaticWindowProc(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam)
+        {
+            NativeTextInputDialog? dialog;
+            lock (Instances) Instances.TryGetValue(hwnd, out dialog);
+            if (dialog == null) return NativeMethods.DefWindowProcW(hwnd, msg, wParam, lParam);
+            if (msg == WmCommand)
+            {
+                var id = unchecked((int)(wParam.ToInt64() & 0xFFFF));
+                if (id == IdOk) { dialog.Accept(); return IntPtr.Zero; }
+                if (id == IdCancel) { NativeMethods.DestroyWindow(hwnd); return IntPtr.Zero; }
+            }
+            if (msg == WmClose) { NativeMethods.DestroyWindow(hwnd); return IntPtr.Zero; }
+            if (msg == WmDestroy)
+            {
+                dialog._closed = true;
+                dialog._hwnd = IntPtr.Zero;
+                lock (Instances) Instances.Remove(hwnd);
+                return IntPtr.Zero;
+            }
+            return NativeMethods.DefWindowProcW(hwnd, msg, wParam, lParam);
+        }
+
+        public void Dispose()
+        {
+            if (_hwnd != IntPtr.Zero) { NativeMethods.DestroyWindow(_hwnd); _hwnd = IntPtr.Zero; }
+            if (_ownsFont && _font != IntPtr.Zero) NativeMethods.DeleteObject(_font);
+            _font = IntPtr.Zero;
+            _ownsFont = false;
+        }
+    }
+
     internal sealed class NativePasswordDialog : IDisposable
     {
         private const uint WmClose = 0x0010;
@@ -770,6 +975,8 @@ namespace DirectXfer.WindowsLauncher
         [DllImport("user32.dll")] internal static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
         [DllImport("user32.dll")] internal static extern bool UpdateWindow(IntPtr hWnd);
         [DllImport("user32.dll")] internal static extern IntPtr SetFocus(IntPtr hWnd);
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)] internal static extern int GetWindowTextLengthW(IntPtr hWnd);
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)] internal static extern int GetWindowTextW(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
         [DllImport("user32.dll")] internal static extern IntPtr SendMessageW(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
         [DllImport("user32.dll", CharSet = CharSet.Unicode, EntryPoint = "SendMessageW")] internal static extern IntPtr SendMessageStringW(IntPtr hWnd, uint msg, IntPtr wParam, string lParam);
         [DllImport("user32.dll", SetLastError = true)] internal static extern IntPtr CreatePopupMenu();

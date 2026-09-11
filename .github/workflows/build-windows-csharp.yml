@@ -1,5 +1,5 @@
 name: Build Direct-Xfer Windows C# + Installer
-run-name: v1.71.51
+run-name: v1.72.0
 
 on:
   workflow_dispatch:
@@ -41,11 +41,11 @@ jobs:
   build-windows:
     runs-on: windows-2025
     env:
-      DX_VERSION: '1.71.51'
+      DX_VERSION: '1.72.0'
       # Runtime identity is independent from the stable launcher component version.
       DX_RUNTIME_BUILD: 'runtime169'
-      DX_LAUNCHER_COMPONENT_VERSION: '1.70.1'
-      DX_SERVER_HOST_COMPONENT_VERSION: '1.70.22'
+      DX_LAUNCHER_COMPONENT_VERSION: '1.70.2'
+      DX_SERVER_HOST_COMPONENT_VERSION: '1.70.23'
       DX_DOTNET_RUNTIME_VERSION: '10.0.11'
       DX_DOTNET_RUNTIME_ZIP_SHA512: 'd9ab9c0d9916b8fa3585b5f403057f594ffffb8364dac09e0007dd8ac671c86754935b980d8fb5da83cb1b82ac3cd57cc407c969e6d837aaa2fae21047cb7448'
       DX_NODE_VERSION: '24.19.0'
@@ -725,7 +725,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
-      DX_VERSION: '1.71.51'
+      DX_VERSION: '1.72.0'
     # Keep OIDC/attestation privileges out of the build/signing job. This job only
     # reads the final immutable Actions artifacts and creates GitHub attestations.
     permissions:

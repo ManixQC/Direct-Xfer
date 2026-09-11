@@ -29,11 +29,11 @@ test('Windows metadata keeps app 1.71.42 separate from stable Windows component 
   const host = read('windows-server-host/Program.cs');
   const hostProject = read('windows-server-host/DirectXfer.ServerHost.csproj');
   const manifestSync = read('scripts/sync-windows-runtime-manifest.js');
-  assert.match(launcher, /LauncherVersion = "1\.70\.1"/);
-  assert.match(launcher, /LauncherBuild = "launcher149-csharp"/);
+  assert.match(launcher, /LauncherVersion = "1\.70\.2"/);
+  assert.match(launcher, /LauncherBuild = "launcher150-csharp"/);
   assert.match(launcher, /RuntimeProtocol = "1"/);
   assert.match(launcher, /ServerHostProtocol = "1"/);
-  assert.match(host, /ServerHostBuild = "serverhost142-csharp"/);
+  assert.match(host, /ServerHostBuild = "serverhost143-csharp"/);
   assert.match(host, /RuntimeProtocol = "1"/);
   assert.match(host, /ServerHostProtocol = "1"/);
   assert.doesNotMatch(launcher, /RuntimeAppBuild\s*=/);

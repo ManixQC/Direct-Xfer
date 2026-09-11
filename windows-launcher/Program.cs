@@ -8,6 +8,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Security;
 using System.Net.Http;
+using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -22,8 +23,8 @@ namespace DirectXfer.WindowsLauncher
         // Windows component identity is deliberately decoupled from the Direct-Xfer
         // application release. Keep these values stable across app-only releases so an
         // unchanged launcher can rebuild to the same binary identity/hash.
-        internal const string LauncherVersion = "1.70.1";
-        internal const string LauncherBuild = "launcher149-csharp";
+        internal const string LauncherVersion = "1.70.2";
+        internal const string LauncherBuild = "launcher150-csharp";
         internal const string RuntimeProtocol = "1";
         internal const string ServerHostProtocol = "1";
         internal const string ServerHostFileName = "Direct-Xfer.ServerHost.exe";
@@ -180,6 +181,9 @@ namespace DirectXfer.WindowsLauncher
         public string imagesDir = string.Empty;
         public bool openBrowser;
         public string language = string.Empty;
+        // 0 keeps the historical automatic 55750-55769 fallback behavior.
+        // A value from 1..65535 pins Direct-Xfer to that exact user-selected port.
+        public int port;
     }
 
     internal sealed class LauncherSession
@@ -215,6 +219,7 @@ namespace DirectXfer.WindowsLauncher
         private bool _exiting;
         private bool _disposed;
         private bool _optionalToolBusy;
+        private bool _portChangeBusy;
         private int _deferredMaintenanceScheduled;
         private string _lastAttachFailure = string.Empty;
 
@@ -289,7 +294,8 @@ namespace DirectXfer.WindowsLauncher
                 hostRoot = home,
                 imagesDir = Path.Combine(dxDocs, "Images"),
                 openBrowser = true,
-                language = DetectLanguage()
+                language = DetectLanguage(),
+                port = 0
             };
         }
 
@@ -315,6 +321,7 @@ namespace DirectXfer.WindowsLauncher
                     if (string.IsNullOrWhiteSpace(cfg.inboxDir)) cfg.inboxDir = fallback.inboxDir;
                     if (string.IsNullOrWhiteSpace(cfg.hostRoot)) cfg.hostRoot = fallback.hostRoot;
                     if (string.IsNullOrWhiteSpace(cfg.imagesDir)) cfg.imagesDir = fallback.imagesDir;
+                    if (cfg.port < 0 || cfg.port > 65535) cfg.port = fallback.port;
                     cfg.version = Program.AppVersion;
                     exists = true;
                     if (!string.Equals(candidate, ConfigPath, StringComparison.OrdinalIgnoreCase))
@@ -392,7 +399,7 @@ namespace DirectXfer.WindowsLauncher
             return new LauncherConfig
             {
                 version = c.version, dataDir = c.dataDir, logsDir = c.logsDir, inboxDir = c.inboxDir,
-                hostRoot = c.hostRoot, imagesDir = c.imagesDir, openBrowser = c.openBrowser, language = c.language
+                hostRoot = c.hostRoot, imagesDir = c.imagesDir, openBrowser = c.openBrowser, language = c.language, port = c.port
             };
         }
 
@@ -573,7 +580,7 @@ namespace DirectXfer.WindowsLauncher
         private void CompleteStartup()
         {
             if (_exiting) return;
-            if (_runtimePort != Program.DefaultPort)
+            if (_config.port == 0 && _runtimePort != Program.DefaultPort)
                 NativeUi.Info(_tray.WindowHandle, Tr.AppTitle, string.Format(Tr.PortFallback, Program.DefaultPort, _runtimePort));
             ShowInitialAdminPassword();
             // Readiness was just authenticated above; do not immediately perform a
@@ -1029,7 +1036,7 @@ namespace DirectXfer.WindowsLauncher
 
         private async Task InstallOptionalToolAsync(string tool)
         {
-            if (_optionalToolBusy) return;
+            if (_optionalToolBusy || _portChangeBusy) return;
             var tr = Tr;
             var displayName = string.Equals(tool, "rclone", StringComparison.OrdinalIgnoreCase)
                 ? "rclone " + Program.RcloneVersion
@@ -1093,7 +1100,7 @@ namespace DirectXfer.WindowsLauncher
 
         private async Task RemoveOptionalToolAsync(string tool)
         {
-            if (_optionalToolBusy) return;
+            if (_optionalToolBusy || _portChangeBusy) return;
             var tr = Tr;
             var displayName = string.Equals(tool, "rclone", StringComparison.OrdinalIgnoreCase)
                 ? "rclone " + Program.RcloneVersion
@@ -1514,6 +1521,7 @@ namespace DirectXfer.WindowsLauncher
         private const int TrayLogs = 1002;
         private const int TrayConfigure = 1003;
         private const int TrayResetPassword = 1004;
+        private const int TrayChangePort = 1005;
         private const int TrayRcloneStatus = 1101;
         private const int TrayRcloneRemove = 1102;
         private const int TrayRcloneInstall = 1103;
@@ -1531,10 +1539,12 @@ namespace DirectXfer.WindowsLauncher
             var menu = new NativeMenuBuilder();
             menu.AddItem(TrayOpen, tr.Open);
             menu.AddItem(TrayLogs, tr.Logs);
-            menu.AddItem(TrayConfigure, tr.Configure);
-            menu.AddItem(TrayResetPassword, tr.ResetAdminPassword);
+            menu.AddItem(TrayConfigure, tr.Configure, !_portChangeBusy);
+            var displayedPort = _runtimePort > 0 ? _runtimePort : (_config.port > 0 ? _config.port : Program.DefaultPort);
+            menu.AddItem(TrayChangePort, string.Format(CultureInfo.CurrentCulture, tr.ChangePort, displayedPort), !_portChangeBusy && !_optionalToolBusy);
+            menu.AddItem(TrayResetPassword, tr.ResetAdminPassword, !_portChangeBusy);
 
-            var optional = menu.AddSubMenu(tr.OptionalComponents, !_optionalToolBusy);
+            var optional = menu.AddSubMenu(tr.OptionalComponents, !_optionalToolBusy && !_portChangeBusy);
             if (OptionalRcloneInstalled())
             {
                 optional.AddItem(TrayRcloneStatus, tr.RcloneActive, false);
@@ -1550,7 +1560,7 @@ namespace DirectXfer.WindowsLauncher
             else optional.AddItem(TrayTesseractInstall, tr.ActivateTesseract);
 
             menu.AddSeparator();
-            var languages = menu.AddSubMenu(tr.Language);
+            var languages = menu.AddSubMenu(tr.Language, !_portChangeBusy);
             languages.AddItem(TrayLanguageFr, "Français");
             languages.AddItem(TrayLanguageEn, "English");
             languages.AddItem(TrayLanguageEs, "Español");
@@ -1566,6 +1576,7 @@ namespace DirectXfer.WindowsLauncher
                 case TrayOpen: OpenBrowser(); break;
                 case TrayLogs: OpenLogs(); break;
                 case TrayConfigure: ConfigureFolders(false); break;
+                case TrayChangePort: ChangeServerPort(); break;
                 case TrayResetPassword: OpenPasswordReset(); break;
                 case TrayRcloneRemove: _ = RemoveOptionalToolAsync("rclone"); break;
                 case TrayRcloneInstall: _ = InstallOptionalToolAsync("rclone"); break;
@@ -1578,6 +1589,128 @@ namespace DirectXfer.WindowsLauncher
             }
         }
 
+
+        private void ChangeServerPort()
+        {
+            if (_portChangeBusy || _optionalToolBusy) return;
+            var tr = Tr;
+            var currentPort = _runtimePort > 0 ? _runtimePort : (_config.port > 0 ? _config.port : Program.DefaultPort);
+            if (!NativeUi.PromptText(_tray.WindowHandle, _tray.IconHandle, tr.ChangePortTitle,
+                tr.ChangePortPrompt, currentPort.ToString(CultureInfo.InvariantCulture), tr.PortApply, tr.PortCancel, out var entered)) return;
+
+            if (!int.TryParse((entered ?? string.Empty).Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out var requestedPort) ||
+                requestedPort < 1 || requestedPort > 65535)
+            {
+                NativeUi.Warning(_tray.WindowHandle, tr.AppTitle, tr.PortInvalid);
+                return;
+            }
+
+            // Selecting the port already used by this Direct-Xfer instance only persists it
+            // as an explicit preference; restarting would add downtime without changing the
+            // listening socket. Every other port is preflighted before we stop the backend.
+            if (requestedPort != _runtimePort && !IsTcpPortAvailable(requestedPort))
+            {
+                NativeUi.Warning(_tray.WindowHandle, tr.AppTitle, string.Format(CultureInfo.CurrentCulture, tr.PortInUse, requestedPort));
+                return;
+            }
+
+            var previousPreference = _config.port;
+            var previousRuntimePort = _runtimePort;
+            _config.port = requestedPort;
+            try
+            {
+                SaveConfig();
+            }
+            catch (Exception ex)
+            {
+                _config.port = previousPreference;
+                NativeUi.Error(_tray.WindowHandle, tr.AppTitle, ex.Message);
+                return;
+            }
+
+            if (requestedPort == previousRuntimePort && previousRuntimePort > 0)
+            {
+                RebuildTrayMenu();
+                NativeUi.Info(_tray.WindowHandle, tr.AppTitle, string.Format(CultureInfo.CurrentCulture, tr.PortSaved, requestedPort));
+                return;
+            }
+
+            _portChangeBusy = true;
+            RebuildTrayMenu();
+            SignalServerHostReload();
+            StartExpectedServerHost();
+            _ = Task.Run(() => CompletePortChange(requestedPort, previousPreference));
+        }
+
+        private void CompletePortChange(int requestedPort, int previousPreference)
+        {
+            var deadline = Stopwatch.StartNew();
+            while (!_lifetime.IsCancellationRequested && !_exiting && deadline.ElapsedMilliseconds < Program.StartupReadyTimeoutMs)
+            {
+                var session = ReadSession();
+                if (session != null && session.port == requestedPort && TryAttachReadySession(session))
+                {
+                    Ui(() =>
+                    {
+                        _portChangeBusy = false;
+                        RebuildTrayMenu();
+                        NativeUi.Info(_tray.WindowHandle, Tr.AppTitle, string.Format(CultureInfo.CurrentCulture, Tr.PortChanged, requestedPort));
+                    });
+                    return;
+                }
+                Thread.Sleep(125);
+            }
+
+            if (_lifetime.IsCancellationRequested || _exiting) return;
+
+            // Fail closed and restore the last known configuration. This prevents an
+            // unlucky bind race from leaving the Windows edition permanently offline.
+            try
+            {
+                _config.port = previousPreference;
+                SaveConfig();
+                // The first port write made the last known-good config the backup; the
+                // rollback would otherwise make the failed port the backup. Keep both
+                // recovery copies on the restored, usable preference.
+                try { File.Copy(ConfigPath, ConfigPath + ".bak", true); } catch { }
+                SignalServerHostReload();
+                StartExpectedServerHost();
+            }
+            catch { }
+
+            // Best-effort reattachment to the restored backend so tray actions continue to
+            // use the current token/port after the rollback.
+            var rollbackWatch = Stopwatch.StartNew();
+            while (!_lifetime.IsCancellationRequested && !_exiting && rollbackWatch.ElapsedMilliseconds < 15000)
+            {
+                if (TryAttachReadySession(ReadSession())) break;
+                Thread.Sleep(125);
+            }
+
+            Ui(() =>
+            {
+                _portChangeBusy = false;
+                RebuildTrayMenu();
+                NativeUi.Error(_tray.WindowHandle, Tr.AppTitle, string.Format(CultureInfo.CurrentCulture, Tr.PortChangeFailed, requestedPort));
+            });
+        }
+
+        private static bool IsTcpPortAvailable(int port)
+        {
+            if (port < 1 || port > 65535) return false;
+            TcpListener? listener = null;
+            try
+            {
+                listener = new TcpListener(IPAddress.Any, port);
+                listener.Server.ExclusiveAddressUse = true;
+                listener.Start(1);
+                return true;
+            }
+            catch (SocketException) { return false; }
+            catch (UnauthorizedAccessException) { return false; }
+            finally { try { listener?.Stop(); } catch { } }
+        }
+
         private void RebuildTrayMenu()
         {
             _tray.UpdateTooltip($"Direct-Xfer {Program.AppVersion}");
@@ -1585,6 +1718,7 @@ namespace DirectXfer.WindowsLauncher
 
         private void SetLanguage(string language)
         {
+            if (_portChangeBusy) return;
             if (language != "fr" && language != "en" && language != "es") return;
             var previous = _config.language;
             _config.language = language;
@@ -1643,7 +1777,7 @@ namespace DirectXfer.WindowsLauncher
                 if ((File.GetAttributes(SessionPath) & FileAttributes.ReparsePoint) != 0) return null;
                 var session = Json.Deserialize<LauncherSession>(File.ReadAllText(SessionPath, Encoding.UTF8));
                 if (session == null || session.hostPid <= 0 || session.serverPid <= 0 ||
-                    session.serverStartedUtcTicks <= 0 || session.port < Program.DefaultPort || session.port > Program.MaxFallbackPort) return null;
+                    session.serverStartedUtcTicks <= 0 || session.port < 1 || session.port > 65535) return null;
                 if (string.IsNullOrWhiteSpace(session.token) || session.token.Length != 48 ||
                     !session.token.All(IsHexDigit) || string.IsNullOrWhiteSpace(session.appVersion) ||
                     string.IsNullOrWhiteSpace(session.runtimeProtocol) || string.IsNullOrWhiteSpace(session.runtimeBuild) ||
@@ -1695,11 +1829,12 @@ namespace DirectXfer.WindowsLauncher
 
     internal sealed class Texts
     {
-        internal string AppTitle = string.Empty, Open = string.Empty, Logs = string.Empty, Configure = string.Empty, ResetAdminPassword = string.Empty, Language = string.Empty, Stop = string.Empty;
+        internal string AppTitle = string.Empty, Open = string.Empty, Logs = string.Empty, Configure = string.Empty, ChangePort = string.Empty, ResetAdminPassword = string.Empty, Language = string.Empty, Stop = string.Empty;
         internal string OptionalComponents = string.Empty, ActivateRclone = string.Empty, RemoveRclone = string.Empty, RcloneActive = string.Empty, ActivateTesseract = string.Empty, RemoveTesseract = string.Empty, TesseractActive = string.Empty;
         internal string OptionalInstallConfirm = string.Empty, OptionalRemoveConfirm = string.Empty, OptionalInstalling = string.Empty, OptionalInstalled = string.Empty, OptionalRemoved = string.Empty, OptionalFailed = string.Empty, OptionalCleanupFailed = string.Empty, OptionalBusyOtherSession = string.Empty;
         internal string FirstRunTitle = string.Empty, FirstRunBody = string.Empty, PickHost = string.Empty, PickInbox = string.Empty, PickImages = string.Empty;
         internal string ConfigSaved = string.Empty, ConfigSavedRestart = string.Empty, StartError = string.Empty, ServerStopped = string.Empty, ServerHostUnavailable = string.Empty, LogLabel = string.Empty, PortFallback = string.Empty, NoFreePort = string.Empty;
+        internal string ChangePortTitle = string.Empty, ChangePortPrompt = string.Empty, PortApply = string.Empty, PortCancel = string.Empty, PortInvalid = string.Empty, PortInUse = string.Empty, PortChanged = string.Empty, PortSaved = string.Empty, PortChangeFailed = string.Empty;
         internal string ResetPasswordError = string.Empty, ResetPasswordEnvManaged = string.Empty;
         internal string InitialPasswordTitle = string.Empty, InitialPasswordError = string.Empty, InitialPasswordIntro = string.Empty, InitialPasswordAccount = string.Empty;
         internal string InitialPasswordLabel = string.Empty, InitialPasswordSave = string.Empty, InitialPasswordCopy = string.Empty, InitialPasswordOK = string.Empty;
@@ -1712,7 +1847,7 @@ namespace DirectXfer.WindowsLauncher
                     return new Texts
                     {
                         AppTitle = "Direct-Xfer " + Program.AppVersion, Open = "Ouvrir Direct-Xfer", Logs = "Ouvrir les journaux",
-                        Configure = "Configurer les dossiers…", ResetAdminPassword = "Réinitialiser le mot de passe admin…",
+                        Configure = "Configurer les dossiers…", ChangePort = "Changer le port… (actuel : {0})", ResetAdminPassword = "Réinitialiser le mot de passe admin…",
                         Language = "Langue", Stop = "Quitter",
                         OptionalComponents = "Composants optionnels", ActivateRclone = "Activer rclone (télécharger)…", RemoveRclone = "Désactiver et supprimer rclone", RcloneActive = "✓ rclone " + Program.RcloneVersion + " activé",
                         ActivateTesseract = "Activer Tesseract OCR (télécharger)…", RemoveTesseract = "Désactiver et supprimer Tesseract OCR", TesseractActive = "✓ Tesseract OCR 5.5.3 activé",
@@ -1728,6 +1863,10 @@ namespace DirectXfer.WindowsLauncher
                         ServerHostUnavailable = "Le composant Direct-Xfer Server Host n’est pas prêt. Vérifiez son démarrage automatique Windows ou réinstallez Direct-Xfer.",
                         LogLabel = "Journal", PortFallback = "Le port {0} est déjà utilisé. Direct-Xfer utilisera le port {1} pour cette session.",
                         NoFreePort = "Aucun port libre n’a été trouvé entre {0} et {1}.",
+                        ChangePortTitle = "Changer le port Direct-Xfer", ChangePortPrompt = "Choisissez le nouveau port d’écoute (1 à 65535). Direct-Xfer redémarrera le serveur sur ce port.",
+                        PortApply = "Appliquer et redémarrer", PortCancel = "Annuler", PortInvalid = "Le port doit être un nombre entre 1 et 65535.",
+                        PortInUse = "Le port {0} est déjà utilisé. Le serveur n’a pas été redémarré.", PortChanged = "Direct-Xfer a redémarré sur le port {0}.",
+                        PortSaved = "Le port {0} est maintenant enregistré comme port Direct-Xfer.", PortChangeFailed = "Direct-Xfer n’a pas pu redémarrer sur le port {0}. L’ancienne configuration a été restaurée.",
                         ResetPasswordError = "Impossible d’ouvrir la réinitialisation du mot de passe administrateur.",
                         ResetPasswordEnvManaged = "Le mot de passe propriétaire est géré par ADMIN_PASSWORD et ne peut pas être réinitialisé depuis la systray.",
                         InitialPasswordTitle = "Mot de passe administrateur",
@@ -1741,7 +1880,7 @@ namespace DirectXfer.WindowsLauncher
                     return new Texts
                     {
                         AppTitle = "Direct-Xfer " + Program.AppVersion, Open = "Abrir Direct-Xfer", Logs = "Abrir registros",
-                        Configure = "Configurar carpetas…", ResetAdminPassword = "Restablecer la contraseña de administrador…",
+                        Configure = "Configurar carpetas…", ChangePort = "Cambiar puerto… (actual: {0})", ResetAdminPassword = "Restablecer la contraseña de administrador…",
                         Language = "Idioma", Stop = "Salir",
                         OptionalComponents = "Componentes opcionales", ActivateRclone = "Activar rclone (descargar)…", RemoveRclone = "Desactivar y eliminar rclone", RcloneActive = "✓ rclone " + Program.RcloneVersion + " activado",
                         ActivateTesseract = "Activar Tesseract OCR (descargar)…", RemoveTesseract = "Desactivar y eliminar Tesseract OCR", TesseractActive = "✓ Tesseract OCR 5.5.3 activado",
@@ -1757,6 +1896,10 @@ namespace DirectXfer.WindowsLauncher
                         ServerHostUnavailable = "Direct-Xfer Server Host no está listo. Comprueba su inicio automático de Windows o reinstala Direct-Xfer.",
                         LogLabel = "Registro", PortFallback = "El puerto {0} ya está en uso. Direct-Xfer usará el puerto {1} durante esta sesión.",
                         NoFreePort = "No se encontró ningún puerto libre entre {0} y {1}.",
+                        ChangePortTitle = "Cambiar el puerto de Direct-Xfer", ChangePortPrompt = "Elige el nuevo puerto de escucha (1 a 65535). Direct-Xfer reiniciará el servidor en ese puerto.",
+                        PortApply = "Aplicar y reiniciar", PortCancel = "Cancelar", PortInvalid = "El puerto debe ser un número entre 1 y 65535.",
+                        PortInUse = "El puerto {0} ya está en uso. El servidor no se reinició.", PortChanged = "Direct-Xfer se reinició en el puerto {0}.",
+                        PortSaved = "El puerto {0} está guardado como puerto de Direct-Xfer.", PortChangeFailed = "Direct-Xfer no pudo reiniciarse en el puerto {0}. Se restauró la configuración anterior.",
                         ResetPasswordError = "No se pudo abrir el restablecimiento de la contraseña de administrador.",
                         ResetPasswordEnvManaged = "La contraseña del propietario está gestionada por ADMIN_PASSWORD y no puede restablecerse desde la bandeja del sistema.",
                         InitialPasswordTitle = "Contraseña de administrador",
@@ -1770,7 +1913,7 @@ namespace DirectXfer.WindowsLauncher
                     return new Texts
                     {
                         AppTitle = "Direct-Xfer " + Program.AppVersion, Open = "Open Direct-Xfer", Logs = "Open logs",
-                        Configure = "Configure folders…", ResetAdminPassword = "Reset admin password…",
+                        Configure = "Configure folders…", ChangePort = "Change port… (current: {0})", ResetAdminPassword = "Reset admin password…",
                         Language = "Language", Stop = "Exit",
                         OptionalComponents = "Optional components", ActivateRclone = "Activate rclone (download)…", RemoveRclone = "Deactivate and remove rclone", RcloneActive = "✓ rclone " + Program.RcloneVersion + " active",
                         ActivateTesseract = "Activate Tesseract OCR (download)…", RemoveTesseract = "Deactivate and remove Tesseract OCR", TesseractActive = "✓ Tesseract OCR 5.5.3 active",
@@ -1786,6 +1929,10 @@ namespace DirectXfer.WindowsLauncher
                         ServerHostUnavailable = "Direct-Xfer Server Host is not ready. Check its Windows auto-start entry or reinstall Direct-Xfer.",
                         LogLabel = "Log", PortFallback = "Port {0} is already in use. Direct-Xfer will use port {1} for this session.",
                         NoFreePort = "No free port was found between {0} and {1}.",
+                        ChangePortTitle = "Change Direct-Xfer port", ChangePortPrompt = "Choose the new listening port (1 to 65535). Direct-Xfer will restart the server on this port.",
+                        PortApply = "Apply and restart", PortCancel = "Cancel", PortInvalid = "The port must be a number between 1 and 65535.",
+                        PortInUse = "Port {0} is already in use. The server was not restarted.", PortChanged = "Direct-Xfer restarted on port {0}.",
+                        PortSaved = "Port {0} is now saved as the Direct-Xfer port.", PortChangeFailed = "Direct-Xfer could not restart on port {0}. The previous configuration was restored.",
                         ResetPasswordError = "The administrator password reset page could not be opened.",
                         ResetPasswordEnvManaged = "The owner password is managed by ADMIN_PASSWORD and cannot be reset from the system tray.",
                         InitialPasswordTitle = "Administrator password",

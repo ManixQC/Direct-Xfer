@@ -1,6 +1,6 @@
 # Direct-Xfer — ASVS 5.0.0 Level 3 security specification
 
-Version scope: Direct-Xfer 1.71.42 and later when `ASVS_L3_MODE=true`; current maintained source release: 1.71.51.
+Version scope: Direct-Xfer 1.71.42 and later when `ASVS_L3_MODE=true`; current maintained source release: 1.72.0.
 
 This document is normative for the Direct-Xfer ASVS L3 profile. Compatibility mode may intentionally allow weaker deployment choices. A deployment must not claim the Direct-Xfer L3 profile unless the startup policy passes and the deployment checklist in `ASVS-L3-DEPLOYMENT.md` is completed.
 

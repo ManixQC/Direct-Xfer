@@ -86,11 +86,17 @@ test(`${releaseVersion} test runner ignores stale version-stamped maintenance co
     'trivy-container-hardening-1.71.16.test.js',
     'release-maintenance-1.71.11.test.js',
     'release-maintenance-1.71.12.test.js',
+    'qs-array-limit-security-1.71.48.test.js',
+    'nodemailer-security-1.71.47.test.js',
     'trivy-container-hardening.test.js',
     'release-maintenance.test.js',
+    'qs-array-limit-security.test.js',
+    'nodemailer-security.test.js',
   ];
   const { retired, selected } = selectTests(fixture);
   assert.deepEqual(retired, [
+    'nodemailer-security-1.71.47.test.js',
+    'qs-array-limit-security-1.71.48.test.js',
     'release-maintenance-1.71.11.test.js',
     'release-maintenance-1.71.12.test.js',
     'trivy-container-hardening-1.71.15.test.js',
@@ -99,6 +105,8 @@ test(`${releaseVersion} test runner ignores stale version-stamped maintenance co
   assert.ok(selected.includes('account-service-deep-audit-1.69.11.test.js'));
   assert.ok(selected.includes('release-maintenance.test.js'));
   assert.ok(selected.includes('trivy-container-hardening.test.js'));
+  assert.ok(selected.includes('qs-array-limit-security.test.js'));
+  assert.ok(selected.includes('nodemailer-security.test.js'));
 });
 
 test(`${releaseVersion} Tesseract source acquisition targets the exact annotated release tag ref`, () => {

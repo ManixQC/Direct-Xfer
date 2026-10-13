@@ -5,7 +5,7 @@
   "serialNumber": "urn:uuid:d71f0f18-27c9-48e3-89be-6002d3a4f87d",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-09-10T14:21:27Z",
+    "timestamp": "2026-10-13T13:00:00Z",
     "lifecycles": [
       {
         "phase": "build"
@@ -19,13 +19,13 @@
       }
     ],
     "component": {
-      "bom-ref": "direct-xfer@1.72.1",
+      "bom-ref": "direct-xfer@1.72.4",
       "type": "library",
       "name": "Direct-Xfer",
-      "version": "1.72.1",
+      "version": "1.72.4",
       "scope": "required",
       "description": "Direct-Xfer — direct HTTP file sharing, no third-party server. Web interface, revocable shares, automatic IP detection and port testing.",
-      "purl": "pkg:npm/direct-xfer@1.72.1",
+      "purl": "pkg:npm/direct-xfer@1.72.4",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -934,13 +934,13 @@
       ]
     },
     {
-      "bom-ref": "brace-expansion@5.0.9",
+      "bom-ref": "brace-expansion@5.0.12",
       "type": "library",
       "name": "brace-expansion",
-      "version": "5.0.9",
+      "version": "5.0.12",
       "scope": "required",
       "description": "Brace expansion as known from sh/bash",
-      "purl": "pkg:npm/brace-expansion@5.0.9",
+      "purl": "pkg:npm/brace-expansion@5.0.12",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -950,7 +950,7 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/brace-expansion/-/brace-expansion-5.0.9.tgz"
+          "url": "https://registry.npmjs.org/brace-expansion/-/brace-expansion-5.0.12.tgz"
         },
         {
           "type": "vcs",
@@ -968,7 +968,7 @@
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "49c43822ebc8105d533253fb66dfaf8c9ffff7394f6f64837315b13376e4f2ceade8619d27b28ed5d09c4e274e3c929e3d6df42c4ff6713ef00b23e1a3dfd6c6"
+          "content": "628bd0debce168b308ac38cd0cc90d4b4d6d79af77aa11211b9c72f1febe47497e770dca8bee6c0a822823de368ae2d94c75a881692d830543854d3d88d12299"
         }
       ],
       "licenses": [
@@ -2668,14 +2668,14 @@
       ]
     },
     {
-      "bom-ref": "express@4.22.2",
+      "bom-ref": "express@4.22.3",
       "type": "library",
       "name": "express",
-      "version": "4.22.2",
+      "version": "4.22.3",
       "scope": "required",
       "author": "TJ Holowaychuk",
       "description": "Fast, unopinionated, minimalist web framework",
-      "purl": "pkg:npm/express@4.22.2",
+      "purl": "pkg:npm/express@4.22.3",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -2685,7 +2685,7 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/express/-/express-4.22.2.tgz"
+          "url": "https://registry.npmjs.org/express/-/express-4.22.3.tgz"
         },
         {
           "type": "vcs",
@@ -2703,7 +2703,7 @@
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "22e2fe125ae8bb666f0851ecd7cfc2233cb6373be8db99d9d7f0f6788665cfb73e4146b201c62888cd81b610a3b3e1011d5a6362372e2c302209681e217dd7d5"
+          "content": "05d72ce3edea969565c763519fa7e05f651edbf80645a3de6b079b81c94cd044520aa0e903ea301757dd3f08c951300958c4ee01ac630dffa1cdbd3fe1e2afbf"
         }
       ],
       "licenses": [
@@ -3421,7 +3421,7 @@
       "bom-ref": "debug@4.4.3",
       "type": "library",
       "name": "debug",
-      "version": "4.4.3",
+      "version": "2.6.9",
       "scope": "required",
       "author": "Josh Junon",
       "description": "Lightweight debugging utility for Node.js and the browser",
@@ -3435,7 +3435,7 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/debug/-/debug-4.4.3.tgz"
+          "url": "https://registry.npmjs.org/debug/-/debug-2.6.9.tgz"
         },
         {
           "type": "vcs",
@@ -3453,7 +3453,7 @@
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "446c305a7c10be455f6af295b76d8518bc3ec5849dcc04709b4aeee83853540dee994e6165cdbc57790ee2cb6062bcab4e52e9baf808f468a28e5b408cd6dca8"
+          "content": "6c2ec496b7496899cf6c03fed44a2d62fa99b1bdde725e708ba05f8ba0494d470da30a7a72fb298348d7ce74532838e6fc4ec076014155e00f54c35c286b0730"
         }
       ],
       "licenses": [
@@ -3468,7 +3468,7 @@
       "bom-ref": "ms@2.1.3",
       "type": "library",
       "name": "ms",
-      "version": "2.1.3",
+      "version": "2.0.0",
       "scope": "required",
       "description": "Tiny millisecond conversion utility",
       "purl": "pkg:npm/ms@2.1.3",
@@ -3481,7 +3481,7 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/ms/-/ms-2.1.3.tgz"
+          "url": "https://registry.npmjs.org/ms/-/ms-2.0.0.tgz"
         },
         {
           "type": "vcs",
@@ -3499,7 +3499,7 @@
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "e85973b9b4cb646dc9d9afcd542025784863ceae68c601f268253dc985ef70bb2fa1568726afece715c8ebf5d73fab73ed1f7100eb479d23bfb57b45dd645394"
+          "content": "4e9a7ad0fe885090d3b8eabfe59f1c76c93326e8dfc2a7ce4e4af02308fb211212a679099d3e92c89e0f08f9c63281630bd75d85a979295218b40b7dee2c74e4"
         }
       ],
       "licenses": [
@@ -3983,7 +3983,7 @@
       "bom-ref": "readable-stream@2.3.8",
       "type": "library",
       "name": "readable-stream",
-      "version": "2.3.8",
+      "version": "4.7.0",
       "scope": "required",
       "description": "Streams3, a user-land copy of the stream library from Node.js",
       "purl": "pkg:npm/readable-stream@2.3.8",
@@ -3996,7 +3996,7 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/readable-stream/-/readable-stream-2.3.8.tgz"
+          "url": "https://registry.npmjs.org/readable-stream/-/readable-stream-4.7.0.tgz"
         },
         {
           "type": "vcs",
@@ -4014,7 +4014,7 @@
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "f29d00524e173838087b04a2d25f04a63b3e1159d688aecda03204194d07844efe67263c0f520c63ba1dbb9951ac55c683bd4bd79286f10acf9ae9b8e514ed74"
+          "content": "a0818699ca532f03e06bc067ebf67be5255a1f5cf9754badda26d2c80315866520816a660e7d9d6a90749fb7fc9f0692891b5ea40b1f2727d720ee4309500e0e"
         }
       ],
       "licenses": [
@@ -4029,7 +4029,7 @@
       "bom-ref": "safe-buffer@5.1.2",
       "type": "library",
       "name": "safe-buffer",
-      "version": "5.1.2",
+      "version": "5.2.1",
       "scope": "required",
       "author": "Feross Aboukhadijeh",
       "description": "Safer Node.js Buffer API",
@@ -4043,7 +4043,7 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/safe-buffer/-/safe-buffer-5.1.2.tgz"
+          "url": "https://registry.npmjs.org/safe-buffer/-/safe-buffer-5.2.1.tgz"
         },
         {
           "type": "vcs",
@@ -4061,7 +4061,7 @@
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "19dd94641243917958ec66c9c5fb04f3f9ef2a45045351b7f1cd6c88de903fa6bd3d3f4c98707c1a7a6c71298c252a05f0b388aedf2e77fc0fb688f2b381bafa"
+          "content": "ae9dd2a34eca71d9a629b1af81a37141226bedb1954959394bd12ad45fa9a5b468ef4f9879a0f1930e4377c34f37e183e9b8e7626d95b8fb825e6a6e62f9825d"
         }
       ],
       "licenses": [
@@ -4076,7 +4076,7 @@
       "bom-ref": "string_decoder@1.1.1",
       "type": "library",
       "name": "string_decoder",
-      "version": "1.1.1",
+      "version": "1.3.0",
       "scope": "required",
       "description": "The string_decoder module from Node core",
       "purl": "pkg:npm/string_decoder@1.1.1",
@@ -4089,7 +4089,7 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/string_decoder/-/string_decoder-1.1.1.tgz"
+          "url": "https://registry.npmjs.org/string_decoder/-/string_decoder-1.3.0.tgz"
         },
         {
           "type": "vcs",
@@ -4107,7 +4107,7 @@
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "9ff4a19ef0e2e851db6d57ef8aba3e5a88e2173bfeb3c30f30705ccd578f7d4a4324bc282d3d21b759786300426e2f29240bde104767907c8fc933ff9b345fc2"
+          "content": "864457f14d568c915df0bb03276c90ff0596c5aa2912c0015355df90cf00fa3d3ef392401a9a6dd7a72bd56860e8a21b6f8a2453a32a97a04e8febaea7fc0a78"
         }
       ],
       "licenses": [
@@ -4724,59 +4724,14 @@
       ]
     },
     {
-      "bom-ref": "node-forge@1.4.0",
-      "type": "library",
-      "name": "node-forge",
-      "version": "1.4.0",
-      "scope": "required",
-      "author": "Digital Bazaar, Inc.",
-      "description": "JavaScript implementations of network transports, cryptography, ciphers, PKI, message digests, and various utilities.",
-      "purl": "pkg:npm/node-forge@1.4.0",
-      "properties": [
-        {
-          "name": "cdx:npm:package:path",
-          "value": "node_modules/node-forge"
-        }
-      ],
-      "externalReferences": [
-        {
-          "type": "distribution",
-          "url": "https://registry.npmjs.org/node-forge/-/node-forge-1.4.0.tgz"
-        },
-        {
-          "type": "vcs",
-          "url": "git+https://github.com/digitalbazaar/forge.git"
-        },
-        {
-          "type": "website",
-          "url": "https://github.com/digitalbazaar/forge"
-        },
-        {
-          "type": "issue-tracker",
-          "url": "https://github.com/digitalbazaar/forge/issues"
-        }
-      ],
-      "hashes": [
-        {
-          "alg": "SHA-512",
-          "content": "2daac51f4fba55fae2121a8c31c2d7d85ed2c125de5b09c400912c626e50296721895615bc9c95f6fed40ef52ffb0e473b6dd9a504d70effc6c5d0dd3323aea1"
-        }
-      ],
-      "licenses": [
-        {
-          "expression": "(BSD-3-Clause OR GPL-2.0)"
-        }
-      ]
-    },
-    {
-      "bom-ref": "nodemailer@9.1.1",
+      "bom-ref": "nodemailer@10.0.10",
       "type": "library",
       "name": "nodemailer",
-      "version": "9.1.1",
+      "version": "10.0.10",
       "scope": "required",
       "author": "Andris Reinman",
       "description": "Easy as cake e-mail sending from your Node.js applications",
-      "purl": "pkg:npm/nodemailer@9.1.1",
+      "purl": "pkg:npm/nodemailer@10.0.10",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -4786,7 +4741,7 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/nodemailer/-/nodemailer-9.1.1.tgz"
+          "url": "https://registry.npmjs.org/nodemailer/-/nodemailer-10.0.10.tgz"
         },
         {
           "type": "vcs",
@@ -4804,7 +4759,7 @@
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "8b3c3d9952858b1e984a70bd78b815ea0d68a65f43525462a3d64d72af96bbd5239f653017ef0d97407c9f3db69040be093642be29e4c702740de15b6fa37071"
+          "content": "1def57b243859aceb64b200a90bbbc09c19c607028f814874ac39123cb383c91fca998196382f89437efc8dd2dc2f99ba721be786af1a72065b248fd77dac9f0"
         }
       ],
       "licenses": [
@@ -5375,14 +5330,14 @@
       ]
     },
     {
-      "bom-ref": "proxy-addr@2.0.7",
+      "bom-ref": "proxy-addr@2.0.8",
       "type": "library",
       "name": "proxy-addr",
-      "version": "2.0.7",
+      "version": "2.0.8",
       "scope": "required",
       "author": "Douglas Christopher Wilson",
       "description": "Determine address of proxied request",
-      "purl": "pkg:npm/proxy-addr@2.0.7",
+      "purl": "pkg:npm/proxy-addr@2.0.8",
       "properties": [
         {
           "name": "cdx:npm:package:path",
@@ -5392,7 +5347,7 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/proxy-addr/-/proxy-addr-2.0.7.tgz"
+          "url": "https://registry.npmjs.org/proxy-addr/-/proxy-addr-2.0.8.tgz"
         },
         {
           "type": "vcs",
@@ -5410,7 +5365,7 @@
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "96542c30b4940d43d3e388ddad4fcedfbaa59e27e2b433fe670ae699972848ac8b2afb59c69c95d27dbf6c3fcde2d040019fe024475953b28cadaa0ad7e5d802"
+          "content": "e679f1d321b2554718eadf519d6700456b704fd1750fc3bdaedd3c86d3ef9dde3d5b522066d98b921bbd59f333423d5c1718c720ee9ca279d43555b993b015c9"
         }
       ],
       "licenses": [
@@ -5940,7 +5895,7 @@
       "bom-ref": "ms@2.1.3",
       "type": "library",
       "name": "ms",
-      "version": "2.1.3",
+      "version": "2.0.0",
       "scope": "required",
       "description": "Tiny millisecond conversion utility",
       "purl": "pkg:npm/ms@2.1.3",
@@ -5953,7 +5908,7 @@
       "externalReferences": [
         {
           "type": "distribution",
-          "url": "https://registry.npmjs.org/ms/-/ms-2.1.3.tgz"
+          "url": "https://registry.npmjs.org/ms/-/ms-2.0.0.tgz"
         },
         {
           "type": "vcs",
@@ -5971,7 +5926,7 @@
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "e85973b9b4cb646dc9d9afcd542025784863ceae68c601f268253dc985ef70bb2fa1568726afece715c8ebf5d73fab73ed1f7100eb479d23bfb57b45dd645394"
+          "content": "4e9a7ad0fe885090d3b8eabfe59f1c76c93326e8dfc2a7ce4e4af02308fb211212a679099d3e92c89e0f08f9c63281630bd75d85a979295218b40b7dee2c74e4"
         }
       ],
       "licenses": [
@@ -7297,12 +7252,11 @@
   ],
   "dependencies": [
     {
-      "ref": "direct-xfer@1.72.1",
+      "ref": "direct-xfer@1.72.4",
       "dependsOn": [
         "archiver@8.0.0",
-        "express@4.22.2",
-        "node-forge@1.4.0",
-        "nodemailer@9.1.1",
+        "express@4.22.3",
+        "nodemailer@10.0.10",
         "qrcode@1.5.4",
         "web-push@3.6.7"
       ]
@@ -7432,7 +7386,7 @@
       ]
     },
     {
-      "ref": "brace-expansion@5.0.9",
+      "ref": "brace-expansion@5.0.12",
       "dependsOn": [
         "balanced-match@4.0.4"
       ]
@@ -7620,7 +7574,7 @@
       ]
     },
     {
-      "ref": "express@4.22.2",
+      "ref": "express@4.22.3",
       "dependsOn": [
         "accepts@1.3.8",
         "array-flatten@1.1.1",
@@ -7642,7 +7596,7 @@
         "on-finished@2.4.1",
         "parseurl@1.3.3",
         "path-to-regexp@0.1.13",
-        "proxy-addr@2.0.7",
+        "proxy-addr@2.0.8",
         "qs@6.16.0",
         "range-parser@1.2.1",
         "safe-buffer@5.2.1",
@@ -7877,7 +7831,7 @@
     {
       "ref": "minimatch@10.2.6",
       "dependsOn": [
-        "brace-expansion@5.0.9"
+        "brace-expansion@5.0.12"
       ]
     },
     {
@@ -7893,11 +7847,7 @@
       "dependsOn": []
     },
     {
-      "ref": "node-forge@1.4.0",
-      "dependsOn": []
-    },
-    {
-      "ref": "nodemailer@9.1.1",
+      "ref": "nodemailer@10.0.10",
       "dependsOn": []
     },
     {
@@ -7955,7 +7905,7 @@
       "dependsOn": []
     },
     {
-      "ref": "proxy-addr@2.0.7",
+      "ref": "proxy-addr@2.0.8",
       "dependsOn": [
         "forwarded@0.2.0",
         "ipaddr.js@1.9.1"

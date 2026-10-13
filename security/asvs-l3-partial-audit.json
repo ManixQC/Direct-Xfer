@@ -1,9 +1,9 @@
 {
   "schema": 1,
-  "generatedAt": "2026-09-11T16:02:32.504Z",
-  "version": "1.72.1",
-  "sourceTreeSha256": "3eb4b39565939fc5220984f3a45d2c3f49b33dca76d7925bb9f8f980fe123a78",
-  "filesScanned": 127,
+  "generatedAt": "2026-10-13T13:30:15.472Z",
+  "version": "1.72.4",
+  "sourceTreeSha256": "3a600780b6b23bbf762f3982adf634183f97887d764426650648d0797a6b8100",
+  "filesScanned": 128,
   "scope": [
     "server.js",
     "lib",

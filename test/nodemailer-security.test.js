@@ -9,17 +9,17 @@ const ROOT = path.resolve(__dirname, '..');
 const readJson = (rel) => JSON.parse(fs.readFileSync(path.join(ROOT, rel), 'utf8'));
 const releaseVersion = readJson('package.json').version;
 
-test(`${releaseVersion} resolves Nodemailer at the audited 9.1.1 security floor`, () => {
+test(`${releaseVersion} resolves Nodemailer at the audited 10.0.10 security floor`, () => {
   const pkg = readJson('package.json');
   const lock = readJson('package-lock.json');
   assert.equal(pkg.version, lock.version);
   assert.equal(lock.packages[''].version, pkg.version);
-  assert.equal(pkg.dependencies.nodemailer, '^9.1.1');
-  assert.equal(lock.packages[''].dependencies.nodemailer, '^9.1.1');
+  assert.equal(pkg.dependencies.nodemailer, '^10.0.10');
+  assert.equal(lock.packages[''].dependencies.nodemailer, '^10.0.10');
   const resolved = lock.packages['node_modules/nodemailer'];
   assert.ok(resolved, 'Nodemailer must remain locked');
-  assert.equal(resolved.version, '9.1.1');
-  assert.match(resolved.resolved || '', /nodemailer-9\.1\.1\.tgz$/);
+  assert.equal(resolved.version, '10.0.10');
+  assert.match(resolved.resolved || '', /nodemailer-10\.0\.10\.tgz$/);
   assert.match(resolved.integrity || '', /^sha512-/);
 });
 

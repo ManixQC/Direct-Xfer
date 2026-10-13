@@ -14,8 +14,8 @@ test('1.71.15 keeps the audited dependency maintenance baseline', () => {
   assert.equal(pkg.version, '1.71.15');
   assert.equal(pkg.dependencies.express, '^4.22.2');
   assert.equal(lock.packages['node_modules/express'].version, '4.22.2');
-  assert.equal(pkg.dependencies['node-forge'], '^1.4.0');
-  assert.equal(lock.packages['node_modules/node-forge'].version, '1.4.0');
+  assert.equal(pkg.dependencies['node-forge'], undefined);
+  assert.equal(lock.packages['node_modules/node-forge'], undefined);
   assert.equal(pkg.dependencies.nodemailer, '^9.0.5');
   assert.equal(lock.packages['node_modules/nodemailer'].version, '9.0.5');
 });

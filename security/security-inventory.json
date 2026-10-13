@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-09-11T16:02:31.605Z",
-  "version": "1.72.1",
+  "generatedAt": "2026-10-13T13:29:38.315Z",
+  "version": "1.72.4",
   "categories": {
     "crypto": [
       {
@@ -544,6 +544,31 @@
         "text": "dedupeKey:`retention-delete:${crypto.createHash('sha1').update(managedPath).digest('hex').slice(0, 12)}:${expiry}`,"
       },
       {
+        "file": "lib/server/native-x509-compat.js",
+        "line": 70,
+        "text": "function subKeyId(publicKey){const spki=(publicKey.type==='public'?publicKey:crypto.createPublicKey(publicKey)).export({type:'spki',format:'der'});const elements=derChildren(spki,read(spki,0));const bits=spki.subarray(elements[1].start+1,el"
+      },
+      {
+        "file": "lib/server/native-x509-compat.js",
+        "line": 116,
+        "text": "const p=k.type==='public'?k:crypto.createPublicKey(k);const pub=p.export({format:'jwk'});"
+      },
+      {
+        "file": "lib/server/native-x509-compat.js",
+        "line": 120,
+        "text": "function fromPem(input){return rsaWrap(crypto.createPrivateKey(input));}"
+      },
+      {
+        "file": "lib/server/native-x509-compat.js",
+        "line": 121,
+        "text": "function publicFromPem(input){return rsaWrap(crypto.createPublicKey(input));}"
+      },
+      {
+        "file": "lib/server/native-x509-compat.js",
+        "line": 160,
+        "text": "const pk=this.publicKey.key||this.publicKey;const spki=(pk.type==='public'?pk:crypto.createPublicKey(pk)).export({format:'der',type:'spki'});"
+      },
+      {
         "file": "lib/server/notification-center-service.js",
         "line": 57,
         "text": "const id = crypto.createHash('sha256').update(accountId + '\\0' + dedupeKey).digest('hex');"
@@ -670,7 +695,7 @@
       },
       {
         "file": "lib/server/platform-dependencies.js",
-        "line": 78,
+        "line": 79,
         "text": "return objectLike(value) && ownFunction(value, 'createHash') && ownFunction(value, 'randomBytes') && ownFunction(value, 'timingSafeEqual');"
       },
       {
@@ -1644,6 +1669,11 @@
         "text": "const hash = crypto.createHash('sha256').update(read(rel)).digest('hex');"
       },
       {
+        "file": "test/native-x509-security.test.js",
+        "line": 32,
+        "text": "assert.equal(leaf.checkPrivateKey(crypto.createPrivateKey(first.key)),true);"
+      },
+      {
         "file": "test/photo-service-refactor-1.69.6.test.js",
         "line": 67,
         "text": "function sha256(buf) { return crypto.createHash('sha256').update(buf).digest('hex'); }"
@@ -2134,27 +2164,27 @@
       },
       {
         "file": "lib/server/platform-dependencies.js",
-        "line": 15,
+        "line": 16,
         "text": "coreState:Object.freeze(['fs', 'path', 'crypto', 'os', 'net', 'tls', 'forge', 'nodemailer', 'webpush']),"
       },
       {
         "file": "lib/server/platform-dependencies.js",
-        "line": 16,
+        "line": 17,
         "text": "notification:Object.freeze(['nodemailer', 'webpush']),"
       },
       {
         "file": "lib/server/platform-dependencies.js",
-        "line": 21,
+        "line": 22,
         "text": "directDomains:Object.freeze(['fs', 'path', 'crypto', 'express', 'QRCode', 'nodemailer', 'webpush', 'forge', 'pwaAdminHealth']),"
       },
       {
         "file": "lib/server/platform-dependencies.js",
-        "line": 161,
+        "line": 162,
         "text": "nodemailer:optionalModule(load, 'nodemailer', validNodemailer),"
       },
       {
         "file": "lib/server/platform-dependencies.js",
-        "line": 162,
+        "line": 163,
         "text": "webpush:optionalModule(load, 'web-push', validWebpush),"
       },
       {
@@ -2970,7 +3000,7 @@
       {
         "file": "scripts/run-tests.js",
         "line": 9,
-        "text": "const RETIRED_RELEASE_TEST = /^(?:trivy-container-hardening|release-maintenance|qs-array-limit-security|nodemailer-security)-\\d+\\.\\d+\\.\\d+\\.test\\.js$/;"
+        "text": "const RETIRED_RELEASE_TEST = /^(?:trivy-container-hardening|release-maintenance|qs-array-limit-security|nodemailer-security|github-actions-dependency-pins|github-vulnerability-remediation)-\\d+\\.\\d+\\.\\d+\\.test\\.js$/;"
       },
       {
         "file": "scripts/run-tests.js",
@@ -3058,14 +3088,34 @@
         "text": "platform:{ fs, path, crypto, os, net, tls, forge:null, nodemailer:null, webpush:null },"
       },
       {
+        "file": "test/dependabot-workflow-pins.test.js",
+        "line": 39,
+        "text": "const semvers = {express:'4.22.3', nodemailer:'10.0.10'};"
+      },
+      {
+        "file": "test/github-vulnerability-remediation-1.71.48.test.js",
+        "line": 19,
+        "text": "assert.equal(pkg.dependencies.nodemailer, \"^9.1.1\");"
+      },
+      {
+        "file": "test/github-vulnerability-remediation-1.71.48.test.js",
+        "line": 20,
+        "text": "assert.equal(lock.packages[\"node_modules/nodemailer\"].version, \"9.1.1\");"
+      },
+      {
+        "file": "test/github-vulnerability-remediation-1.71.48.test.js",
+        "line": 21,
+        "text": "assert.doesNotMatch(JSON.stringify(lock), /\\\"nodemailer\\\"[^\\n]*9\\.0\\.5|node_modules\\/nodemailer[\\s\\S]{0,300}\\\"version\\\":\\\"?9\\.0\\.5/);"
+      },
+      {
         "file": "test/github-vulnerability-remediation.test.js",
         "line": 20,
-        "text": "assert.equal(pkg.dependencies.nodemailer, \"^9.1.1\");"
+        "text": "assert.equal(pkg.dependencies.nodemailer, \"^10.0.10\");"
       },
       {
         "file": "test/github-vulnerability-remediation.test.js",
         "line": 21,
-        "text": "assert.equal(lock.packages[\"node_modules/nodemailer\"].version, \"9.1.1\");"
+        "text": "assert.equal(lock.packages[\"node_modules/nodemailer\"].version, \"10.0.10\");"
       },
       {
         "file": "test/github-vulnerability-remediation.test.js",
@@ -3083,14 +3133,59 @@
         "text": "const client=new GoogleOAuthBrokerClient({baseUrl:'https://oauth.example.test',version:'1.67.30',fetch:async()=>new Response(JSON.stringify(brokerResponse(GOOGLE_DRIVE_SCOPE_MAP.full)),{status:201,headers:{'content-type':'application/json'}"
       },
       {
+        "file": "test/nodemailer-security-1.71.48.test.js",
+        "line": 15,
+        "text": "assert.equal(pkg.dependencies.nodemailer, '^9.1.1');"
+      },
+      {
+        "file": "test/nodemailer-security-1.71.48.test.js",
+        "line": 16,
+        "text": "assert.equal(lock.packages[''].dependencies.nodemailer, '^9.1.1');"
+      },
+      {
+        "file": "test/nodemailer-security-1.71.48.test.js",
+        "line": 17,
+        "text": "const resolved = lock.packages['node_modules/nodemailer'];"
+      },
+      {
+        "file": "test/nodemailer-security-1.71.48.test.js",
+        "line": 20,
+        "text": "assert.match(resolved.resolved || '', /nodemailer-9\\.1\\.1\\.tgz$/);"
+      },
+      {
+        "file": "test/nodemailer-security-1.71.48.test.js",
+        "line": 27,
+        "text": "const version = lock.packages['node_modules/nodemailer'].version;"
+      },
+      {
+        "file": "test/nodemailer-security-1.71.48.test.js",
+        "line": 28,
+        "text": "const component = (sbom.components || []).find((entry) => entry && entry.name === 'nodemailer');"
+      },
+      {
+        "file": "test/nodemailer-security-1.71.48.test.js",
+        "line": 31,
+        "text": "assert.equal(component['bom-ref'], `nodemailer@${version}`);"
+      },
+      {
+        "file": "test/nodemailer-security-1.71.48.test.js",
+        "line": 32,
+        "text": "assert.equal(component.purl, `pkg:npm/nodemailer@${version}`);"
+      },
+      {
+        "file": "test/nodemailer-security-1.71.48.test.js",
+        "line": 34,
+        "text": "assert.ok(rootDependency && rootDependency.dependsOn.includes(`nodemailer@${version}`));"
+      },
+      {
         "file": "test/nodemailer-security.test.js",
         "line": 17,
-        "text": "assert.equal(pkg.dependencies.nodemailer, '^9.1.1');"
+        "text": "assert.equal(pkg.dependencies.nodemailer, '^10.0.10');"
       },
       {
         "file": "test/nodemailer-security.test.js",
         "line": 18,
-        "text": "assert.equal(lock.packages[''].dependencies.nodemailer, '^9.1.1');"
+        "text": "assert.equal(lock.packages[''].dependencies.nodemailer, '^10.0.10');"
       },
       {
         "file": "test/nodemailer-security.test.js",
@@ -3100,7 +3195,7 @@
       {
         "file": "test/nodemailer-security.test.js",
         "line": 22,
-        "text": "assert.match(resolved.resolved || '', /nodemailer-9\\.1\\.1\\.tgz$/);"
+        "text": "assert.match(resolved.resolved || '', /nodemailer-10\\.0\\.10\\.tgz$/);"
       },
       {
         "file": "test/nodemailer-security.test.js",
@@ -3360,12 +3455,12 @@
       {
         "file": "test/platform-config-factorization-1.70.19.test.js",
         "line": 19,
-        "text": "for (const request of ['fs', 'path', 'crypto', 'os', 'net', 'tls', 'events', 'async_hooks', 'express', 'qrcode', 'node-forge', 'nodemailer', 'web-push']) {"
+        "text": "for (const request of ['fs', 'path', 'crypto', 'os', 'net', 'tls', 'events', 'async_hooks', 'express', 'qrcode', 'nodemailer', 'web-push']) {"
       },
       {
         "file": "test/platform-config-factorization-1.70.19.test.js",
         "line": 27,
-        "text": "const optional = new Set(['node-forge', 'nodemailer', 'web-push']);"
+        "text": "const optional = new Set(['nodemailer', 'web-push']);"
       },
       {
         "file": "test/platform-config-factorization-1.70.19.test.js",
@@ -3390,7 +3485,7 @@
       {
         "file": "test/pwa-admin-features-15-19-21-1.64.0.test.js",
         "line": 196,
-        "text": "const asset = await fetch(base + '/app/admin-audit-connectors.js?v=496');"
+        "text": "const asset = await fetch(base + '/app/admin-audit-connectors.js?v=498');"
       },
       {
         "file": "test/pwa-admin-features-15-19-21-1.64.0.test.js",
@@ -3440,7 +3535,7 @@
       {
         "file": "test/pwa-admin-features-3-7-1.64.0.test.js",
         "line": 218,
-        "text": "const publicAsset = await fetch(base + '/app/admin-advanced.js?v=496');"
+        "text": "const publicAsset = await fetch(base + '/app/admin-advanced.js?v=498');"
       },
       {
         "file": "test/pwa-admin-features-3-7-1.64.0.test.js",
@@ -3530,12 +3625,12 @@
       {
         "file": "test/pwa-mobile-features-24-25-27-29-31-42-45-46-47-1.64.0.test.js",
         "line": 150,
-        "text": "const mod = await fetch(base + '/app/mobile-intelligence.js?v=496');"
+        "text": "const mod = await fetch(base + '/app/mobile-intelligence.js?v=498');"
       },
       {
         "file": "test/pwa-mobile-features-24-25-27-29-31-42-45-46-47-1.64.0.test.js",
         "line": 154,
-        "text": "const r = await fetch(base + '/app/' + name + '?v=496');"
+        "text": "const r = await fetch(base + '/app/' + name + '?v=498');"
       },
       {
         "file": "test/pwa-routes-refactor.test.js",
@@ -3645,31 +3740,31 @@
       {
         "file": "test/release-maintenance.test.js",
         "line": 28,
-        "text": "assert.equal(pkg.dependencies.nodemailer, '^9.1.1');"
+        "text": "assert.equal(pkg.dependencies.nodemailer, '^10.0.10');"
       },
       {
         "file": "test/release-maintenance.test.js",
         "line": 29,
-        "text": "assert.equal(lock.packages['node_modules/nodemailer'].version, '9.1.1');"
+        "text": "assert.equal(lock.packages['node_modules/nodemailer'].version, '10.0.10');"
       },
       {
         "file": "test/release-maintenance.test.js",
-        "line": 90,
+        "line": 92,
         "text": "'nodemailer-security-1.71.47.test.js',"
       },
       {
         "file": "test/release-maintenance.test.js",
-        "line": 94,
+        "line": 96,
         "text": "'nodemailer-security.test.js',"
       },
       {
         "file": "test/release-maintenance.test.js",
-        "line": 98,
+        "line": 100,
         "text": "'nodemailer-security-1.71.47.test.js',"
       },
       {
         "file": "test/release-maintenance.test.js",
-        "line": 109,
+        "line": 111,
         "text": "assert.ok(selected.includes('nodemailer-security.test.js'));"
       },
       {

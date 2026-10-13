@@ -1,6 +1,6 @@
 {
   "name": "direct-xfer",
-  "version": "1.72.1",
+  "version": "1.72.4",
   "description": "Direct-Xfer — direct HTTP file sharing, no third-party server. Web interface, revocable shares, automatic IP detection and port testing.",
   "main": "server.js",
   "type": "commonjs",
@@ -24,14 +24,15 @@
   },
   "dependencies": {
     "archiver": "^8.0.0",
-    "express": "^4.22.2",
-    "node-forge": "^1.4.0",
-    "nodemailer": "^9.1.1",
+    "express": "^4.22.3",
+    "nodemailer": "^10.0.10",
     "qrcode": "^1.5.4",
     "web-push": "^3.6.7"
   },
   "license": "MIT",
   "overrides": {
-    "qs": "6.16.0"
+    "qs": "6.16.0",
+    "proxy-addr": "2.0.8",
+    "brace-expansion": "5.0.12"
   }
 }

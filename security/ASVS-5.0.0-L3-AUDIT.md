@@ -72,7 +72,7 @@ The fully audited 1.71.42 baseline separates Windows preview and release channel
 ### 1.71.8 dependency floor hardening
 
 - The root dependency declaration for Express now starts at `^4.22.2` instead of the older `^4.19.2` floor. The lockfile continues to resolve Express to `4.22.2`.
-- The root dependency declaration for `node-forge` now starts at `^1.4.0` instead of the older `^1.3.1` floor. The lockfile continues to resolve `node-forge` to `1.4.0`.
+- Historical note (prior to v1.72.4): the root `node-forge` dependency used to be `^1.4.0`. Starting with v1.72.4, Direct-Xfer removes `node-forge` and uses Node.js native crypto/OpenSSL for Local-CA X.509 generation/verification to address GHSA-86w9-cpqp-85rv.
 - A release regression test verifies both the manifest floors and the resolved lockfile versions so future version bumps cannot silently re-advertise the older vulnerable ranges.
 - Application/package metadata was synchronized to `1.71.8`, with PWA generation `pwa471` and cache-buster `v=452`. OAuth broker metadata, Windows workflow artifacts, SBOM and ASVS release evidence were synchronized to that release.
 

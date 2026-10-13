@@ -18,17 +18,19 @@ function runtimeAptInstallBlock() {
   return dockerfile.slice(start, end);
 }
 
-test('1.72.1 rebuilds rclone 1.75.1 with patched Go/x-crypto security floors', () => {
-  assert.match(dockerfile, /ARG DX_RCLONE_BUILD_VERSION=v1\.75\.1/);
-  assert.match(dockerfile, /ARG DX_RCLONE_GO_BUILD_VERSION=1\.26\.6/);
-  assert.match(dockerfile, /ARG DX_RCLONE_X_CRYPTO_VERSION=v0\.56\.0/);
+test('1.72.3 rebuilds rclone 1.75.2 with patched Go/x-crypto security floors', () => {
+  assert.match(dockerfile, /ARG DX_RCLONE_BUILD_VERSION=v1\.75\.2/);
+  assert.match(dockerfile, /ARG DX_RCLONE_GO_BUILD_VERSION=1\.26\.9/);
+  assert.match(dockerfile, /ARG DX_RCLONE_X_CRYPTO_VERSION=v0\.57\.0/);
+  assert.match(dockerfile, /ARG DX_RCLONE_X_NET_VERSION=v0\.60\.0/);
   assert.match(dockerfile, /ARG DX_RCLONE_X_IMAGE_VERSION=v0\.45\.0/);
   assert.match(dockerfile, /ARG DX_RCLONE_GRPC_VERSION=v1\.85\.0-dev\.0\.20260825072537-93e31b48545e/);
-  assert.match(dockerfile, /FROM golang:\$\{DX_RCLONE_GO_BUILD_VERSION\}-bookworm@sha256:[0-9a-f]{64} AS rclone-builder/);
+  assert.match(dockerfile, /FROM golang:1\.26\.6-bookworm@sha256:[0-9a-f]{64} AS rclone-builder/);
   assert.match(dockerfile, /GOTOOLCHAIN=local/);
   assert.match(dockerfile, /test "\$\(go env GOVERSION\)" = "go\$\{DX_RCLONE_GO_BUILD_VERSION\}"/);
   assert.match(dockerfile, /go mod download "github\.com\/rclone\/rclone@\$\{DX_RCLONE_BUILD_VERSION\}"/);
   assert.match(dockerfile, /go list -m -f '\{\{\.Version\}\}' golang\.org\/x\/crypto/);
+  assert.match(dockerfile, /go list -m -f '\{\{\.Version\}\}' golang\.org\/x\/net/);
   assert.match(dockerfile, /go list -m -f '\{\{\.Version\}\}' golang\.org\/x\/image/);
   assert.match(dockerfile, /go get "google\.golang\.org\/grpc@\$\{DX_RCLONE_GRPC_VERSION\}"/);
   assert.match(dockerfile, /go list -m -f '\{\{\.Version\}\}' google\.golang\.org\/grpc/);
@@ -40,8 +42,10 @@ test('1.72.1 rebuilds rclone 1.75.1 with patched Go/x-crypto security floors', (
   assert.match(dockerfile, /go version \/out\/rclone \| tee \/out\/rclone-go-version\.txt/);
   assert.match(dockerfile, /go version -m \/out\/rclone > \/out\/rclone-buildinfo\.txt/);
   assert.match(dockerfile, /golang\.org\/x\/crypto/);
+  assert.match(dockerfile, /golang\.org\/x\/net/);
   assert.match(dockerfile, /golang\.org\/x\/image/);
   assert.match(dockerfile, /x-crypto=\$\{DX_RCLONE_X_CRYPTO_VERSION\}/);
+  assert.match(dockerfile, /x-net=\$\{DX_RCLONE_X_NET_VERSION\}/);
   assert.match(dockerfile, /x-image=\$\{DX_RCLONE_X_IMAGE_VERSION\}/);
   assert.match(dockerfile, /grpc=\$\{DX_RCLONE_GRPC_VERSION\}/);
   assert.match(dockerfile, /env -u RCLONE_VERSION -u RCLONE_GO_VERSION \/out\/rclone version > \/out\/rclone-version\.txt/);

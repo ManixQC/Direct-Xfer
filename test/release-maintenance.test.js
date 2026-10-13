@@ -21,14 +21,16 @@ function capture(source, re, label) {
 test(`${releaseVersion} keeps the audited dependency maintenance baseline`, () => {
   assert.equal(lock.version, releaseVersion);
   assert.equal(lock.packages[''].version, releaseVersion);
-  assert.equal(pkg.dependencies.express, '^4.22.2');
-  assert.equal(lock.packages['node_modules/express'].version, '4.22.2');
-  assert.equal(pkg.dependencies['node-forge'], '^1.4.0');
-  assert.equal(lock.packages['node_modules/node-forge'].version, '1.4.0');
-  assert.equal(pkg.dependencies.nodemailer, '^9.1.1');
-  assert.equal(lock.packages['node_modules/nodemailer'].version, '9.1.1');
+  assert.equal(pkg.dependencies.express, '^4.22.3');
+  assert.equal(lock.packages['node_modules/express'].version, '4.22.3');
+  assert.equal(pkg.dependencies['node-forge'], undefined);
+  assert.equal(lock.packages['node_modules/node-forge'], undefined);
+  assert.equal(pkg.dependencies.nodemailer, '^10.0.10');
+  assert.equal(lock.packages['node_modules/nodemailer'].version, '10.0.10');
   assert.equal(pkg.overrides && pkg.overrides.qs, '6.16.0');
   assert.equal(lock.packages['node_modules/qs'].version, '6.16.0');
+  assert.equal(lock.packages['node_modules/proxy-addr'].version, '2.0.8');
+  assert.equal(lock.packages['node_modules/brace-expansion'].version, '5.0.12');
 });
 
 test(`${releaseVersion} PWA release metadata advances atomically without release-specific test literals`, () => {

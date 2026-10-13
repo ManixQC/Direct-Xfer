@@ -6,7 +6,7 @@ const { spawnSync } = require('node:child_process');
 
 const ROOT = path.resolve(__dirname, '..');
 const TEST_DIR = path.join(ROOT, 'test');
-const RETIRED_RELEASE_TEST = /^(?:trivy-container-hardening|release-maintenance|qs-array-limit-security|nodemailer-security)-\d+\.\d+\.\d+\.test\.js$/;
+const RETIRED_RELEASE_TEST = /^(?:trivy-container-hardening|release-maintenance|qs-array-limit-security|nodemailer-security|github-actions-dependency-pins|github-vulnerability-remediation)-\d+\.\d+\.\d+\.test\.js$/;
 const REQUIRED_CURRENT_TESTS = Object.freeze([
   'trivy-container-hardening.test.js',
   'release-maintenance.test.js',

@@ -22,11 +22,11 @@ function atLeast(actual, minimum) {
   return true;
 }
 
-test(`${pkg.version} keeps Express on 4.22.2 and forces qs 6.16.0 for GHSA-x5fp-wj9c-mxmx and GHSA-4mjr-xmp4-gh2g`, () => {
+test(`${pkg.version} keeps Express on 4.22.3 and forces qs 6.16.0 for GHSA-x5fp-wj9c-mxmx and GHSA-4mjr-xmp4-gh2g`, () => {
   assert.equal(pkg.version, lock.version);
   assert.equal(lock.packages[''].version, pkg.version);
-  assert.equal(pkg.dependencies.express, '^4.22.2');
-  assert.equal(lock.packages['node_modules/express'].version, '4.22.2');
+  assert.equal(pkg.dependencies.express, '^4.22.3');
+  assert.equal(lock.packages['node_modules/express'].version, '4.22.3');
   assert.equal(pkg.overrides && pkg.overrides.qs, '6.16.0');
 
   const qsEntries = Object.entries(lock.packages)

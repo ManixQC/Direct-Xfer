@@ -9,8 +9,8 @@ const ROOT = path.resolve(__dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8').replace(/\r\n?/g, '\n');
 
 const ATTEST_SHA = '1e69f48acb82d1966a394da916b4c1698aa569d6';
-const CODEQL_SHA = 'cdf488f595d80d6e07e03d4674febd5ab45fa938';
-const ZIZMOR_SHA = '70fb788f84895a7701f5643d103d587e460b5c99';
+const CODEQL_SHA = '24c54180a607b1449ed407dd24f251e4e9147c8d';
+const ZIZMOR_SHA = 'cc914d7f3750a2d13d75c7f184a1060aa0e9d482';
 
 const OLD_ATTEST_SHA = '508db95dd578ae2727ebd6217d5ba78e4fbda05d';
 const OLD_CODEQL_SHA = 'f205ea1c3313d32999d8d6a48b4f6530d4437b38';
@@ -30,12 +30,12 @@ test('GitHub Actions security dependencies use the reviewed Dependabot pins', ()
 
   for (const workflow of [codacy, scorecard, trivy, zap]) {
     assert.match(workflow, new RegExp(`github/codeql-action/upload-sarif@${CODEQL_SHA}`));
-    assert.match(workflow, /# v4\.37\.9/);
+    assert.match(workflow, /# v4\.38\.3/);
     assert.doesNotMatch(workflow, new RegExp(OLD_CODEQL_SHA));
   }
   assert.equal((trivy.match(new RegExp(`github/codeql-action/upload-sarif@${CODEQL_SHA}`, 'g')) || []).length, 2);
 
   assert.match(zizmor, new RegExp(`zizmorcore/zizmor-action@${ZIZMOR_SHA}`));
-  assert.match(zizmor, /# v0\.6\.3/);
+  assert.match(zizmor, /# v0\.6\.4/);
   assert.doesNotMatch(zizmor, new RegExp(OLD_ZIZMOR_SHA));
 });

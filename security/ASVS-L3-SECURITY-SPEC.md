@@ -1,6 +1,6 @@
 # Direct-Xfer — ASVS 5.0.0 Level 3 security specification
 
-Version scope: Direct-Xfer 1.71.42 and later when `ASVS_L3_MODE=true`; current maintained source release: 1.72.1.
+Version scope: Direct-Xfer 1.71.42 and later when `ASVS_L3_MODE=true`; current maintained source release: 1.72.4.
 
 This document is normative for the Direct-Xfer ASVS L3 profile. Compatibility mode may intentionally allow weaker deployment choices. A deployment must not claim the Direct-Xfer L3 profile unless the startup policy passes and the deployment checklist in `ASVS-L3-DEPLOYMENT.md` is completed.
 
@@ -111,7 +111,7 @@ Secret rotation baseline: session/CSRF/challenges are ephemeral; OAuth transacti
 
 Dependency vulnerabilities are reviewed on every release and at least monthly for a maintained deployment. Remediation SLA from confirmed exposure: Critical <= 72 hours, High <= 7 days, Medium <= 30 days, Low <= 90 days, or a documented risk acceptance with compensating control and expiry. Unsupported/end-of-life dependencies are not permitted in the L3 release baseline.
 
-Current direct runtime dependencies are Express, Archiver, node-forge, Nodemailer, QRCode and web-push. Higher-risk boundaries are `node-forge` (certificate/crypto parsing), Nodemailer (SMTP), Archiver (archive generation), web-push (outbound push), and all transitive packages that parse untrusted structured data. They require special attention during advisories.
+Current direct runtime dependencies are Express, Archiver, Nodemailer, QRCode and web-push. Local-CA certificates are generated and verified using the built-in Node.js `crypto`/OpenSSL APIs (`lib/server/native-x509-compat.js`); `node-forge` is not shipped as a runtime dependency. Higher-risk boundaries are native X.509 certificate parsing and key lifecycle, Nodemailer (SMTP), Archiver (archive generation), web-push (outbound push), and all transitive packages that parse untrusted structured data. They require special attention during advisories.
 
 Dangerous functionality inventory: child-process/native-tool launch (`rclone`, `tesseract`, malware scanner helpers), filesystem writes/deletes/restore, archive creation/extraction/introspection, outbound HTTP(S), SMTP/webhooks/Web Push, dynamic URL handling, cryptographic key import/export, and admin backup/restore/shutdown. Shell execution with attacker-controlled strings is prohibited; native tools use argument arrays and positive validation. The generated inventory is refreshed by `npm run security:inventory`.
 

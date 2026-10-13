@@ -16,7 +16,7 @@ test('priority 6 moves process/platform package loading out of server.js', () =>
   const platform = read('lib/server/platform-dependencies.js');
 
   assert.match(server, /createPlatformDependencies\(\)/);
-  for (const request of ['fs', 'path', 'crypto', 'os', 'net', 'tls', 'events', 'async_hooks', 'express', 'qrcode', 'node-forge', 'nodemailer', 'web-push']) {
+  for (const request of ['fs', 'path', 'crypto', 'os', 'net', 'tls', 'events', 'async_hooks', 'express', 'qrcode', 'nodemailer', 'web-push']) {
     assert.doesNotMatch(server, new RegExp(`require\\(['\"]${request.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}['\"]\\)`));
     assert.match(platform, new RegExp(`[\"']${request.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[\"']`));
   }
@@ -24,7 +24,7 @@ test('priority 6 moves process/platform package loading out of server.js', () =>
 });
 
 test('platform boundary exposes frozen exact dependency views and preserves optional degradation', () => {
-  const optional = new Set(['node-forge', 'nodemailer', 'web-push']);
+  const optional = new Set(['nodemailer', 'web-push']);
   const dependencies = createPlatformDependencies({
     load(name) {
       if (optional.has(name)) throw new Error(`missing ${name}`);
@@ -35,7 +35,7 @@ test('platform boundary exposes frozen exact dependency views and preserves opti
     },
   });
 
-  assert.equal(dependencies.forge, null);
+  assert.equal(typeof dependencies.forge.pki.certificateFromPem, 'function');
   assert.equal(dependencies.nodemailer, null);
   assert.equal(dependencies.webpush, null);
   assert.ok(Object.isFrozen(dependencies));

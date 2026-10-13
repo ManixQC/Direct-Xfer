@@ -31,7 +31,7 @@ test('optional platform modules with incompatible exports degrade to null withou
 
   assert.equal(dependencies.nodemailer, null);
   assert.equal(dependencies.webpush, null);
-  assert.equal(dependencies.forge, null);
+  assert.equal(typeof dependencies.forge.pki.certificateFromPem, 'function');
   assert.equal(getterReads, 0, 'platform preflight must inspect descriptors without executing accessors');
   assert.equal(dependencies.views.notification.nodemailer, null);
   assert.equal(dependencies.views.notification.webpush, null);

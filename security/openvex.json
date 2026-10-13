@@ -1,9 +1,9 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://github.com/ManixQC/Direct-Xfer/security/openvex-1.72.1",
+  "@id": "https://github.com/ManixQC/Direct-Xfer/security/openvex-1.72.4",
   "author": "Direct-Xfer project",
-  "timestamp": "2026-09-10T18:50:00Z",
-  "version": 6,
+  "timestamp": "2026-10-13T13:00:00Z",
+  "version": 9,
   "tooling": "Direct-Xfer container security review",
   "statements": [
     {
@@ -57,11 +57,11 @@
       },
       "products": [
         {
-          "@id": "pkg:npm/direct-xfer@1.72.1"
+          "@id": "pkg:npm/direct-xfer@1.72.4"
         }
       ],
       "status": "fixed",
-      "impact_statement": "Direct-Xfer 1.72.1 forces transitive qs to 6.16.0, which contains the arrayLimit/comma parser fix."
+      "impact_statement": "Direct-Xfer 1.72.4 forces transitive qs to 6.16.0, which contains the arrayLimit/comma parser fix."
     },
     {
       "vulnerability": {
@@ -69,11 +69,11 @@
       },
       "products": [
         {
-          "@id": "pkg:npm/direct-xfer@1.72.1"
+          "@id": "pkg:npm/direct-xfer@1.72.4"
         }
       ],
       "status": "fixed",
-      "impact_statement": "Direct-Xfer 1.72.1 forces transitive qs to 6.16.0, which contains the attacker-controlled isBuffer denial-of-service fix."
+      "impact_statement": "Direct-Xfer 1.72.4 forces transitive qs to 6.16.0, which contains the attacker-controlled isBuffer denial-of-service fix."
     },
     {
       "vulnerability": {
@@ -81,11 +81,11 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/github.com/rclone/rclone@v1.75.1"
+          "@id": "pkg:golang/github.com/rclone/rclone@v1.75.2"
         }
       ],
       "status": "fixed",
-      "impact_statement": "The Direct-Xfer container builds rclone v1.75.1 with Go 1.26.6 and verifies embedded golang.org/x/crypto v0.56.0 in go version -m output."
+      "impact_statement": "The Direct-Xfer container builds rclone v1.75.2 with Go 1.26.9 and verifies embedded golang.org/x/crypto v0.57.0 in go version -m output."
     },
     {
       "vulnerability": {
@@ -93,11 +93,11 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/github.com/rclone/rclone@v1.75.1"
+          "@id": "pkg:golang/github.com/rclone/rclone@v1.75.2"
         }
       ],
       "status": "fixed",
-      "impact_statement": "Direct-Xfer keeps rclone v1.75.1 source but updates its embedded google.golang.org/grpc module to v1.85.0-dev.0.20260825072537-93e31b48545e, the exact upstream security-fix version for CVE-2026-84445, and verifies it in go version -m output before publishing the container binary."
+      "impact_statement": "Direct-Xfer keeps rclone v1.75.2 source but updates its embedded google.golang.org/grpc module to v1.85.0-dev.0.20260825072537-93e31b48545e, the exact upstream security-fix version for CVE-2026-84445, and verifies it in go version -m output before publishing the container binary."
     },
     {
       "vulnerability": {
@@ -105,11 +105,11 @@
       },
       "products": [
         {
-          "@id": "pkg:npm/direct-xfer@1.72.1"
+          "@id": "pkg:npm/direct-xfer@1.72.4"
         }
       ],
       "status": "fixed",
-      "impact_statement": "Nodemailer 9.1.1 fixes the resolveContent access-policy bypass affecting versions through 9.1.0."
+      "impact_statement": "Nodemailer 10.0.10 fixes the resolveContent access-policy bypass affecting versions through 9.1.0."
     },
     {
       "vulnerability": {
@@ -117,11 +117,11 @@
       },
       "products": [
         {
-          "@id": "pkg:npm/direct-xfer@1.72.1"
+          "@id": "pkg:npm/direct-xfer@1.72.4"
         }
       ],
       "status": "fixed",
-      "impact_statement": "Nodemailer 9.1.1 includes the IDN/Punycode recipient-domain validation fix introduced in the 9.1.x security line."
+      "impact_statement": "Nodemailer 10.0.10 includes the IDN/Punycode recipient-domain validation fix introduced in the 9.1.x security line."
     },
     {
       "vulnerability": {
@@ -129,11 +129,11 @@
       },
       "products": [
         {
-          "@id": "pkg:npm/direct-xfer@1.72.1"
+          "@id": "pkg:npm/direct-xfer@1.72.4"
         }
       ],
       "status": "fixed",
-      "impact_statement": "Nodemailer 9.1.1 includes the linear-time address parsing fix for the crafted address-list denial-of-service issue."
+      "impact_statement": "Nodemailer 10.0.10 includes the linear-time address parsing fix for the crafted address-list denial-of-service issue."
     },
     {
       "vulnerability": {
@@ -141,11 +141,11 @@
       },
       "products": [
         {
-          "@id": "pkg:npm/direct-xfer@1.72.1"
+          "@id": "pkg:npm/direct-xfer@1.72.4"
         }
       ],
       "status": "fixed",
-      "impact_statement": "Nodemailer 9.1.1 includes the RFC 5322 comment parsing fix for recipient-domain validation."
+      "impact_statement": "Nodemailer 10.0.10 includes the RFC 5322 comment parsing fix for recipient-domain validation."
     }
   ]
 }

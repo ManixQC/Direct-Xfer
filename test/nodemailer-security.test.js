@@ -9,17 +9,17 @@ const ROOT = path.resolve(__dirname, '..');
 const readJson = (rel) => JSON.parse(fs.readFileSync(path.join(ROOT, rel), 'utf8'));
 const releaseVersion = readJson('package.json').version;
 
-test(`${releaseVersion} resolves Nodemailer at the audited 10.0.10 security floor`, () => {
+test(`${releaseVersion} resolves Nodemailer at the audited 10.1.0 security floor`, () => {
   const pkg = readJson('package.json');
   const lock = readJson('package-lock.json');
   assert.equal(pkg.version, lock.version);
   assert.equal(lock.packages[''].version, pkg.version);
-  assert.equal(pkg.dependencies.nodemailer, '^10.0.10');
-  assert.equal(lock.packages[''].dependencies.nodemailer, '^10.0.10');
+  assert.equal(pkg.dependencies.nodemailer, '^10.1.0');
+  assert.equal(lock.packages[''].dependencies.nodemailer, '^10.1.0');
   const resolved = lock.packages['node_modules/nodemailer'];
   assert.ok(resolved, 'Nodemailer must remain locked');
-  assert.equal(resolved.version, '10.0.10');
-  assert.match(resolved.resolved || '', /nodemailer-10\.0\.10\.tgz$/);
+  assert.equal(resolved.version, '10.1.0');
+  assert.match(resolved.resolved || '', /nodemailer-10\.1\.0\.tgz$/);
   assert.match(resolved.integrity || '', /^sha512-/);
 });
 
@@ -32,6 +32,12 @@ test(`${releaseVersion} SBOM reports the same Nodemailer version as package-lock
   assert.equal(component.version, version);
   assert.equal(component['bom-ref'], `nodemailer@${version}`);
   assert.equal(component.purl, `pkg:npm/nodemailer@${version}`);
+  const integrity = lock.packages['node_modules/nodemailer'].integrity;
+  assert.ok(Array.isArray(component.hashes) && component.hashes.length, 'SBOM must carry Nodemailer hashes');
+  const sbomSha512 = component.hashes.find((item) => item && item.alg === 'SHA-512');
+  assert.ok(sbomSha512, 'SBOM must record a SHA-512 checksum');
+  assert.equal(sbomSha512.content, Buffer.from(integrity.replace(/^sha512-/, ''), 'base64').toString('hex'));
+
   const rootDependency = (sbom.dependencies || []).find((entry) => entry && entry.ref === `direct-xfer@${readJson('package.json').version}`);
   assert.ok(rootDependency && rootDependency.dependsOn.includes(`nodemailer@${version}`));
 });

@@ -36,7 +36,7 @@ test('Dependabot GitHub Actions updates retain reviewed immutable SHA pins', () 
 test('npm lockfile metadata matches patched Express and Nodemailer releases', () => {
   const pkg = require('../package.json');
   const lock = require('../package-lock.json');
-  const semvers = {express:'4.22.3', nodemailer:'10.0.10'};
+  const semvers = {express:'4.22.3', nodemailer:'10.1.0'};
   assert.equal(pkg.version,lock.version);
   for (const [name,version] of Object.entries(semvers)) {
     assert.equal(pkg.dependencies[name], `^${version}`);

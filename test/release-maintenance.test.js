@@ -25,8 +25,8 @@ test(`${releaseVersion} keeps the audited dependency maintenance baseline`, () =
   assert.equal(lock.packages['node_modules/express'].version, '4.22.3');
   assert.equal(pkg.dependencies['node-forge'], undefined);
   assert.equal(lock.packages['node_modules/node-forge'], undefined);
-  assert.equal(pkg.dependencies.nodemailer, '^10.0.10');
-  assert.equal(lock.packages['node_modules/nodemailer'].version, '10.0.10');
+  assert.equal(pkg.dependencies.nodemailer, '^10.1.0');
+  assert.equal(lock.packages['node_modules/nodemailer'].version, '10.1.0');
   assert.equal(pkg.overrides && pkg.overrides.qs, '6.16.0');
   assert.equal(lock.packages['node_modules/qs'].version, '6.16.0');
   assert.equal(lock.packages['node_modules/proxy-addr'].version, '2.0.8');
